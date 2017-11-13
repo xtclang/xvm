@@ -211,7 +211,7 @@ public class MethodStructure
         Code code = ensureCode();
         if (code != null)
             {
-            aop = code.getOps();
+            aop = code.getAssembledOps();
             }
 
         return aop;
@@ -705,7 +705,7 @@ public class MethodStructure
             }
         else
             {
-            code.ensureAssembled();
+            code.registerConstants();
             }
         }
 
@@ -906,7 +906,7 @@ public class MethodStructure
         /**
          * @return the array of Ops that make up the Code
          */
-        public Op[] getOps()
+        public Op[] getAssembledOps()
             {
             ensureAssembled();
             return m_aop;
@@ -986,7 +986,7 @@ public class MethodStructure
                 }
 
             @Override
-            public Op[] getOps()
+            public Op[] getAssembledOps()
                 {
                 throw new IllegalStateException();
                 }
@@ -1000,7 +1000,7 @@ public class MethodStructure
 
         // ----- internal ---------------------------------------------------------------------
 
-        private void ensureAppending()
+        protected void ensureAppending()
             {
             if (m_abOps != null)
                 {
@@ -1013,41 +1013,40 @@ public class MethodStructure
                 }
             }
 
-        private void ensureAssembled()
+        protected void registerConstants()
+            {
+            Op[] aop = ensureOps();
+            if (aop != null)
+                {
+                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
+                for (Op op : aop)
+                    {
+                    op.registerConstants(registry);
+                    }
+                }
+            }
+
+        protected void ensureAssembled()
             {
             if (m_abOps == null)
                 {
                 // build the local constant array
-                Op[] aop = m_aop;
-                if (aop == null)
-                    {
-                    if (m_listOps == null)
-                        {
-                        MethodStructure method = MethodStructure.this;
-                        throw new UnsupportedOperationException("Class=" + method.getParent().getParent().getName() +
-                            "; method=" + method.getIdentityConstant().getSignature() + "\nis neither native nor compiled");
-                        }
-                    m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
-                    }
-
-                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
-                Scope scope = createInitialScope();
-                for (int i = 0, c = aop.length; i < c; ++i)
-                    {
-                    Op op = aop[i];
-                    op.registerConstants(registry);
-                    op.simulate(scope);
-                    op.resolveAddress(this, i);
-                    }
+                Op[] aop = ensureOps();
 
                 // assemble the ops into bytes
+                Scope scope = createInitialScope();
+                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 DataOutputStream outData = new DataOutputStream(outBytes);
                 try
                     {
-                    for (Op op : aop)
+                    for (int i = 0, c = aop.length; i < c; ++i)
                         {
+                        Op op = aop[i];
+
+                        op.resolveAddress(this, i);
                         op.write(outData, registry);
+                        op.simulate(scope);
                         }
                     }
                 catch (IOException e)
@@ -1063,14 +1062,29 @@ public class MethodStructure
                 }
             }
 
-        private void calcVars()
+        private Op[] ensureOps()
             {
-            Scope scope = createInitialScope();
+            Op[] aop = m_aop;
+            if (aop == null)
+                {
+                if (m_listOps == null)
+                    {
+                    MethodStructure method = MethodStructure.this;
+                    throw new UnsupportedOperationException("Method: " +
+                        method.getIdentityConstant().getPathString() + "\nis neither native nor compiled");
+                    }
+                m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
+                }
+            return aop;
+            }
 
-            Op[] aop = getOps();
+        protected void calcVars()
+            {
             if (m_cScopes == 0)
                 {
-                for (Op op : aop)
+                Scope scope = createInitialScope();
+
+                for (Op op : getAssembledOps())
                     {
                     op.simulate(scope);
                     }
