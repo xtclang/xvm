@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.quotedString;

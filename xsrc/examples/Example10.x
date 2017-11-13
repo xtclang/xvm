@@ -310,3 +310,59 @@ for (Int n : list)
 //   Continue:
 //   JMP Repeat
 //   Break:
+
+
+// for persistent operations
+
+    // currently
+    (set, Boolean fAdded) = set.add(x);
+
+    // why not
+    if (set : set.add(x))
+        {
+        // ...
+        }
+
+    // don't care about the boolean?
+    if (set : set.add(x)) {}    // ugly
+
+    // could have also done:
+    (_, set) = set.add(x);      // uglier?
+
+    // why not just ...
+    set := set.union(x);
+
+    list2 := list + x;
+
+    List list2 = list + x;          // compiler error
+    List list3 := list + x;         // no compiler error here
+    int c = list3.size;             // compiler error (list3 is NOT definitely assigned)
+
+    List list4 = list.removeAll(list3) : list;   // ok but ugly
+    int c4 = list4.size;            // ok
+
+    List list2 = list;
+    list2 := list + x;
+
+    List list2 = list;
+    list2 += x;
+
+    // compiles same as
+    if (set : set.add(x)) {}
+
+    // or just ...
+    set += x;
+    list += x;
+    set -= x;
+    set |= set2;    // union
+    set &= set2;    // intersection
+    set ^= set2;    // symmetric difference
+    // implies that the compiler understands a conditional @Op return (!!!)
+
+    // e.g.
+    if (set :  x)
+        {
+
+        }
+
+

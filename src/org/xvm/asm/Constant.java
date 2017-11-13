@@ -649,6 +649,7 @@ public abstract class Constant
         Set,
         MapEntry,
         Map,
+        Interval,
 
         /*
          * Structural identifiers.

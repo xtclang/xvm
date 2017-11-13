@@ -6,7 +6,7 @@
  * TODO need a const array
  */
 class Array<ElementType>
-        implements Sequence<ElementType>
+        implements List<ElementType>
     {
     /**
      * Construct a dynamically growing array with the specified initial capacity.
