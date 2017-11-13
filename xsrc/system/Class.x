@@ -235,7 +235,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * * A Mixin or Trait _may_ have a super-class, which would be a {@code mixin} or {@code trait}.
      * * An Interface will *never* have a super-class.
      */
-    Class? superClass.calc()
+    @Lazy Class? superClass.calc()
         {
         if (category == Interface)
             {

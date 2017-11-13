@@ -13,11 +13,11 @@ const BiType<DataType extends BiType>(Type type1, Type type2)
 
     @Lazy Set<Method> allMethods.calc()
         {
-        // TODO
+        TODO
         }
 
     @Lazy Map<String, Type> typeParamsByName.calc()
         {
+        TODO
         }
-
     }
