@@ -13,61 +13,14 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-
 import java.util.Map;
+
 import org.xvm.asm.Constant.Format;
 
-import org.xvm.asm.constants.AccessTypeConstant;
-import org.xvm.asm.constants.AllCondition;
-import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.AnyCondition;
-import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.DecimalConstant;
-import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.ChildClassConstant;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.DifferenceTypeConstant;
-import org.xvm.asm.constants.IntervalConstant;
-import org.xvm.asm.constants.SingletonConstant;
-import org.xvm.asm.constants.Float128Constant;
-import org.xvm.asm.constants.Float16Constant;
-import org.xvm.asm.constants.Float32Constant;
-import org.xvm.asm.constants.Float64Constant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.Int8Constant;
-import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
-import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.MapConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
-import org.xvm.asm.constants.NamedCondition;
-import org.xvm.asm.constants.NotCondition;
-import org.xvm.asm.constants.PackageConstant;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
-import org.xvm.asm.constants.ParentClassConstant;
-import org.xvm.asm.constants.PresentCondition;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PseudoConstant;
-import org.xvm.asm.constants.RegisterConstant;
-import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TerminalTypeConstant;
-import org.xvm.asm.constants.ThisClassConstant;
-import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UInt8Constant;
-import org.xvm.asm.constants.UInt8ArrayConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
-import org.xvm.asm.constants.VarFPConstant;
-import org.xvm.asm.constants.VersionConstant;
-import org.xvm.asm.constants.VersionMatchesCondition;
-import org.xvm.asm.constants.VersionedCondition;
+import org.xvm.asm.constants.*;
 
 import org.xvm.type.Decimal;
+
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
