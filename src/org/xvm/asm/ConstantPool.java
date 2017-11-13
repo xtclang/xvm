@@ -991,16 +991,23 @@ public class ConstantPool
                 sSub = "Null";
                 break;
 
+            case "false":
+            case "False":
+                sClz = "Boolean";
+                sSub = "False";
+                break;
+
             case "true":
             case "True":
                 sClz = "Boolean";
                 sSub = "True";
                 break;
 
-            case "false":
-            case "False":
-                sClz = "Boolean";
-                sSub = "False";
+            case "Lesser":
+            case "Equal":
+            case "Greater":
+                sClz = "Ordered";
+                sSub = sName;
                 break;
 
             case "Atomic":
@@ -1670,10 +1677,13 @@ public class ConstantPool
     public ClassConstant     clzException()     {ClassConstant     c = m_clzException;    if (c == null) {m_clzException    = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"  );} return c;}
     public ClassConstant     clzFunction()      {ClassConstant     c = m_clzFunction;     if (c == null) {m_clzFunction     = c = (ClassConstant) getImplicitlyImportedIdentity("Function"   );} return c;}
     public ClassConstant     clzBoolean()       {ClassConstant     c = m_clzBoolean;      if (c == null) {m_clzBoolean      = c = (ClassConstant) getImplicitlyImportedIdentity("Boolean"    );} return c;}
-    public ClassConstant     clzTrue()          {ClassConstant     c = m_clzTrue;         if (c == null) {m_clzTrue         = c = (ClassConstant) getImplicitlyImportedIdentity("True"       );} return c;}
     public ClassConstant     clzFalse()         {ClassConstant     c = m_clzFalse;        if (c == null) {m_clzFalse        = c = (ClassConstant) getImplicitlyImportedIdentity("False"      );} return c;}
-    public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"   );} return c;}
+    public ClassConstant     clzTrue()          {ClassConstant     c = m_clzTrue;         if (c == null) {m_clzTrue         = c = (ClassConstant) getImplicitlyImportedIdentity("True"       );} return c;}
     public ClassConstant     clzOrdered()       {ClassConstant     c = m_clzOrdered;      if (c == null) {m_clzOrdered      = c = (ClassConstant) getImplicitlyImportedIdentity("Ordered"    );} return c;}
+    public ClassConstant     clzLesser()        {ClassConstant     c = m_clzLesser;       if (c == null) {m_clzLesser       = c = (ClassConstant) getImplicitlyImportedIdentity("Lesser"     );} return c;}
+    public ClassConstant     clzEqual()         {ClassConstant     c = m_clzEqual;        if (c == null) {m_clzEqual        = c = (ClassConstant) getImplicitlyImportedIdentity("Equal"      );} return c;}
+    public ClassConstant     clzGreater()       {ClassConstant     c = m_clzGreater;      if (c == null) {m_clzGreater      = c = (ClassConstant) getImplicitlyImportedIdentity("Greater"    );} return c;}
+    public ClassConstant     clzNullable()      {ClassConstant     c = m_clzNullable;     if (c == null) {m_clzNullable     = c = (ClassConstant) getImplicitlyImportedIdentity("Nullable"   );} return c;}
     public ClassConstant     clzNull()          {ClassConstant     c = m_clzNull;         if (c == null) {m_clzNull         = c = (ClassConstant) getImplicitlyImportedIdentity("Null"       );} return c;}
     public ClassConstant     clzChar()          {ClassConstant     c = m_clzChar;         if (c == null) {m_clzChar         = c = (ClassConstant) getImplicitlyImportedIdentity("Char"       );} return c;}
     public ClassConstant     clzIntLiteral()    {ClassConstant     c = m_clzIntLiteral;   if (c == null) {m_clzIntLiteral   = c = (ClassConstant) getImplicitlyImportedIdentity("IntLiteral" );} return c;}
@@ -1735,8 +1745,32 @@ public class ConstantPool
     public IntConstant       val1()             {IntConstant       c = m_val1;            if (c == null) {m_val1            = c = ensureIntConstant(1)                                        ;} return c;}
     public SingletonConstant valFalse()         {SingletonConstant c = m_valFalse;        if (c == null) {m_valFalse        = c = ensureSingletonConstConstant(clzFalse())                    ;} return c;}
     public SingletonConstant valTrue()          {SingletonConstant c = m_valTrue;         if (c == null) {m_valTrue         = c = ensureSingletonConstConstant(clzTrue())                     ;} return c;}
+    public SingletonConstant valLesser()        {SingletonConstant c = m_valLesser;       if (c == null) {m_valLesser       = c = ensureSingletonConstConstant(clzLesser())                   ;} return c;}
+    public SingletonConstant valEqual()         {SingletonConstant c = m_valEqual;        if (c == null) {m_valEqual        = c = ensureSingletonConstConstant(clzEqual())                    ;} return c;}
+    public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
     public ArrayConstant     valVoid()          {ArrayConstant     c = m_valVoid;         if (c == null) {m_valVoid         = c = ensureTupleConstant(typeVoid(), Constant.NO_CONSTS)         ;} return c;}
+
+    public SingletonConstant valOf(boolean f)
+        {
+        return f ? valTrue() : valFalse();
+        }
+
+    public SingletonConstant valOrd(int n)
+        {
+        if (n < 0)
+            {
+            return valLesser();
+            }
+        else if (n == 0)
+            {
+            return valEqual();
+            }
+        else
+            {
+            return valGreater();
+            }
+        }
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------
@@ -2320,10 +2354,13 @@ public class ConstantPool
     private transient ClassConstant     m_clzException;
     private transient ClassConstant     m_clzFunction;
     private transient ClassConstant     m_clzBoolean;
-    private transient ClassConstant     m_clzTrue;
     private transient ClassConstant     m_clzFalse;
-    private transient ClassConstant     m_clzNullable;
+    private transient ClassConstant     m_clzTrue;
     private transient ClassConstant     m_clzOrdered;
+    private transient ClassConstant     m_clzLesser;
+    private transient ClassConstant     m_clzEqual;
+    private transient ClassConstant     m_clzGreater;
+    private transient ClassConstant     m_clzNullable;
     private transient ClassConstant     m_clzNull;
     private transient ClassConstant     m_clzChar;
     private transient ClassConstant     m_clzIntLiteral;
@@ -2381,6 +2418,9 @@ public class ConstantPool
     private transient IntConstant       m_val1;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;
+    private transient SingletonConstant m_valLesser;
+    private transient SingletonConstant m_valEqual;
+    private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
     private transient ArrayConstant     m_valVoid;
     }

@@ -17,6 +17,8 @@ import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
 
+import org.xvm.compiler.Token;
+
 
 /**
  * A Constant value stored in the ConstantPool of an XVM FileStructure.
@@ -164,6 +166,21 @@ public abstract class Constant
     public Constant simplify()
         {
         return this;
+        }
+
+    /**
+     * Apply the specified operation to this Constant.
+     *
+     * @param op    the token id representing the operation
+     * @param that  the Constant on the right side of the operation
+     *
+     * @return the result as a Constant
+     */
+    public Constant apply(Token.Id op, Constant that)
+        {
+        throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
+                + ", op=" + op.TEXT
+                + that == null ? "" : ", that=" + that.getClass().getSimpleName());
         }
 
     /**

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readUtf8String;
@@ -64,34 +65,6 @@ public class StringConstant
         return m_sVal;
         }
 
-    /**
-     * Add the value of a CharConstant to the value of this StringConstant to produce a new
-     * StringConstant, following the same rules that the runtime String class would use.
-     *
-     * @param that  the CharConstant
-     *
-     * @return a resulting concatenated StringConstant
-     */
-    public StringConstant add(CharConstant that)
-        {
-        assert Character.isValidCodePoint((int) that.getValue());
-        return getConstantPool().ensureStringConstant(this.m_sVal
-                + Character.valueOf((char) (int) that.getValue()));
-        }
-
-    /**
-     * Add the value of another StringConstant to the value of this StringConstant to produce a new
-     * StringConstant, following the same rules that the runtime String class would use.
-     *
-     * @param that  another StringConstant
-     *
-     * @return a resulting concatenated StringConstant
-     */
-    public StringConstant add(StringConstant that)
-        {
-        return getConstantPool().ensureStringConstant(this.m_sVal + that.m_sVal);
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -105,6 +78,25 @@ public class StringConstant
     public TypeConstant getType()
         {
         return getConstantPool().typeString();
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        ConstantPool pool = getConstantPool();
+        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "String+String":
+                return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
+
+            case "String+Char":
+                assert Character.isValidCodePoint(((CharConstant) that).getValue());
+                return pool.ensureStringConstant(
+                        this.m_sVal + (char) (int) ((CharConstant) that).getValue());
+
+            default:
+                return super.apply(op, that);
+            }
         }
 
     @Override

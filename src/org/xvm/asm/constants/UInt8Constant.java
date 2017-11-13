@@ -8,6 +8,10 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token;
+
+import org.xvm.util.PackedInteger;
+
 import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.nibbleToChar;
 
@@ -86,24 +90,32 @@ public class UInt8Constant
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**
-     * Add the value of another Int8Constant to the value of this Int8Constant, resulting in a new
-     * Int8Constant.
+     * Create a new UInt8Constant with the specified value, but only if it is in the legal range.
      *
-     * @param that  another Int8Constant to add to this
+     * @param n  an integer value
      *
-     * @return the sum
+     * @return the corresponding UInt8Constant
      *
-     * @throws ArithmeticException  on overflow
+     * @throws ArithmeticException  if the value is out of range
      */
-    public UInt8Constant add(UInt8Constant that)
+    public UInt8Constant validate(int n)
         {
-        int nSum = this.getValue() + that.getValue();
-        if (nSum < 0 || nSum > 255)
+        if (n < 0 || n > 255)
             {
             throw new ArithmeticException("overflow");
             }
 
-        return getConstantPool().ensureUInt8Constant(nSum);
+        return getConstantPool().ensureUInt8Constant(n);
+        }
+
+    static int nonzero(int n)
+        {
+        if (n == 0)
+            {
+            throw new ArithmeticException("zero");
+            }
+
+        return n;
         }
 
 
@@ -127,6 +139,78 @@ public class UInt8Constant
     public Format getFormat()
         {
         return m_format;
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "UInt8+IntLiteral":
+            case "UInt8-IntLiteral":
+            case "UInt8*IntLiteral":
+            case "UInt8/IntLiteral":
+            case "UInt8%IntLiteral":
+            case "UInt8&IntLiteral":
+            case "UInt8|IntLiteral":
+            case "UInt8^IntLiteral":
+            case "UInt8==IntLiteral":
+            case "UInt8!=IntLiteral":
+            case "UInt8<IntLiteral":
+            case "UInt8<=IntLiteral":
+            case "UInt8>IntLiteral":
+            case "UInt8>=IntLiteral":
+            case "UInt8<=>IntLiteral":
+                return apply(op, ((LiteralConstant) that).toUInt8Constant());
+
+            case "UInt8<<IntLiteral":
+            case "UInt8>>IntLiteral":
+            case "UInt8>>>IntLiteral":
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
+
+            case "UInt8+UInt8":
+                return validate(this.m_nVal + ((UInt8Constant) that).m_nVal);
+            case "UInt8-UInt8":
+                return validate(this.m_nVal - ((UInt8Constant) that).m_nVal);
+            case "UInt8*UInt8":
+                return validate(this.m_nVal * ((UInt8Constant) that).m_nVal);
+            case "UInt8/UInt8":
+                return validate(this.m_nVal / nonzero(((UInt8Constant) that).m_nVal));
+            case "UInt8%UInt8":
+                // no special handling needed for Java's negative "modulos" (remainders) here since
+                // we're dealing with unsigned values
+                return validate(this.m_nVal % nonzero(((UInt8Constant) that).m_nVal));
+            case "UInt8&UInt8":
+                return validate(this.m_nVal & ((UInt8Constant) that).m_nVal);
+            case "UInt8|UInt8":
+                return validate(this.m_nVal | ((UInt8Constant) that).m_nVal);
+            case "UInt8^UInt8":
+                return validate(this.m_nVal ^ ((UInt8Constant) that).m_nVal);
+
+            case "UInt8<<Int64":
+                return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
+            case "UInt8>>Int64":
+            case "UInt8>>>Int64":
+                return validate(this.m_nVal >>> ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
+
+            case "UInt8==UInt8":
+                return getConstantPool().valOf(this.m_nVal == ((UInt8Constant) that).m_nVal);
+            case "UInt8!=UInt8":
+                return getConstantPool().valOf(this.m_nVal != ((UInt8Constant) that).m_nVal);
+            case "UInt8<UInt8":
+                return getConstantPool().valOf(this.m_nVal < ((UInt8Constant) that).m_nVal);
+            case "UInt8<=UInt8":
+                return getConstantPool().valOf(this.m_nVal <= ((UInt8Constant) that).m_nVal);
+            case "UInt8>UInt8":
+                return getConstantPool().valOf(this.m_nVal > ((UInt8Constant) that).m_nVal);
+            case "UInt8>=UInt8":
+                return getConstantPool().valOf(this.m_nVal >= ((UInt8Constant) that).m_nVal);
+            
+            case "UInt8<=>UInt8":
+                return getConstantPool().valOrd(this.m_nVal - ((UInt8Constant) that).m_nVal);
+            }
+
+        return super.apply(op, that);
         }
 
     @Override

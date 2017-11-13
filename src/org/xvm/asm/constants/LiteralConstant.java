@@ -13,6 +13,13 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token;
+
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal128;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -164,9 +171,14 @@ public class LiteralConstant
         }
 
     /**
+     /**
+     * Obtain the radix of the integer literal.
+     * <p/>
+     * This must not be called if the constant is not an IntLiteral.
+     *
      * @return the radix of an IntLiteral
      */
-    public int getIntegerRadix()
+    public int getIntRadix()
         {
         assert getFormat() == Format.IntLiteral;
         String s = getValue();
@@ -191,13 +203,17 @@ public class LiteralConstant
         }
 
     /**
+     * Obtain the value of the integer literal.
+     * <p/>
+     * This must not be called if the constant is not an IntLiteral.
+     *
      * @return the PackedInteger value of an IntLiteral
      */
-    public PackedInteger getIntegerValue()
+    public PackedInteger getPackedInteger()
         {
         assert getFormat() == Format.IntLiteral;
         String s = getValue();
-        int    r = getIntegerRadix();
+        int    r = getIntRadix();
         if (r == 10)
             {
             return s.length() < 20
@@ -215,47 +231,96 @@ public class LiteralConstant
     /**
      * Obtain the radix of the floating point literal.
      * <p/>
-     * This should only be called if the constant is an FPLiteral.
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
      * @return 2 iff the floating point literal specifies a binary radix, otherwise 10
      */
     public int getFPRadix()
         {
+        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral;
+
         // Ecstasy always uses decimal by default, unless forced to use base 2 floating point
-        assert getFormat() == Format.FPLiteral;
         return m_constStr.getValue().indexOf('E') >= 0 || m_constStr.getValue().indexOf('e') >= 0
                 ? 2
                 : 10;
         }
 
     /**
-     * Obtain the decimal value of the floating point literal.
+     * Obtain the BigDecimal value of the floating point literal.
      * <p/>
-     * This should only be called if the constant is an FPLiteral and the value's radix is 10.
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral of radix 10.
      *
-     * @return the decimal value of the floating point literal
+     * @return the BigDecimal value of the floating point literal
      */
-    public BigDecimal getFPDecimal()
+    public BigDecimal getBigDecimal()
         {
-        assert getFormat() == Format.FPLiteral && getFPRadix() == 10;
+        assert getFormat() == Format.IntLiteral || getFormat() == Format.FPLiteral && getFPRadix() == 10;
 
-        // BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
-        return new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
+        // Java BigDecimal uses "E" to indicate a decimal exponent, while ISO uses "P"
+        return getFormat() == Format.IntLiteral
+                ? new BigDecimal(getPackedInteger().getBigInteger())
+                : new BigDecimal(m_constStr.getValue().replace('p', 'e').replace('P', 'E'));
+        }
+
+    /**
+     * Obtain the Decimal value of the floating point literal.
+     * <p/>
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral of radix 10.
+     *
+     * @return the Decimal value of the floating point literal
+     */
+    public Decimal getDecimal()
+        {
+        BigDecimal bigdec = getBigDecimal();
+        switch (getFormat())
+            {
+            case Dec32:
+                return new Decimal32(bigdec);
+            case Dec64:
+                return new Decimal64(bigdec);
+            case Dec128:
+                return new Decimal128(bigdec);
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
      * Obtain the radix-2 value of the floating point literal.
      * <p/>
-     * This should only be called if the constant is an FPLiteral.
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
      *
-     * @return the decimal value of the floating point literal
+     * @return the Java "float" value of the floating point literal
      */
-    public double getFPDouble()
+    public float getFloat()
         {
-        assert getFormat() == Format.FPLiteral;
+        if (getFormat() == Format.IntLiteral)
+            {
+            return getPackedInteger().getBigInteger().floatValue();
+            }
+
+        return getFPRadix() == 2
+                ? Float.parseFloat(m_constStr.getValue())
+                : getBigDecimal().floatValue();
+        }
+
+    /**
+     * Obtain the radix-2 value of the floating point literal.
+     * <p/>
+     * This must not be called if the constant is not an IntLiteral or an FPLiteral.
+     *
+     * @return the Java "double" value of the floating point literal
+     */
+    public double getDouble()
+        {
+        if (getFormat() == Format.IntLiteral)
+            {
+            return getPackedInteger().getBigInteger().doubleValue();
+            }
+
         return getFPRadix() == 2
                 ? Double.parseDouble(m_constStr.getValue())
-                : getFPDecimal().doubleValue();
+                : getBigDecimal().doubleValue();
         }
 
     /**
@@ -273,7 +338,7 @@ public class LiteralConstant
             throw new IllegalStateException("format=" + getFormat());
             }
 
-        PackedInteger pi = getIntegerValue();
+        PackedInteger pi = getPackedInteger();
         if (pi.isBig() || pi.getLong() < -128 || pi.getLong() > 127)
             {
             throw new ArithmeticException("out of range: " + pi);
@@ -297,7 +362,7 @@ public class LiteralConstant
             throw new IllegalStateException("format=" + getFormat());
             }
 
-        PackedInteger pi = getIntegerValue();
+        PackedInteger pi = getPackedInteger();
         if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 255)
             {
             throw new ArithmeticException("out of range: " + pi);
@@ -322,7 +387,7 @@ public class LiteralConstant
             throw new IllegalStateException("format=" + getFormat());
             }
 
-        PackedInteger pi = getIntegerValue();
+        PackedInteger pi = getPackedInteger();
         if (       pi.compareTo(IntConstant.getMinLimit(format)) < 0
                 || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
             {
@@ -333,96 +398,69 @@ public class LiteralConstant
         }
 
     /**
-     * Add the value of a LiteralConstant to the value of this LiteralConstant, resulting in the
-     * creation of a result LiteralConstant.
-     *
-     * @param that  another LiteralConstant of a type that can be added to the type of this
-     *
-     * @return a new LiteralConstant representing the result of adding <i>that</i> to <i>this</i>
+     * @return the equivalent Float16Constant for this LiteralConstant
      */
-    public LiteralConstant add(LiteralConstant that)
+    public Float16Constant toFloat16Constant()
         {
-        ConstantPool pool = getConstantPool();
-        String       sLit = null;
-        switch (m_fmt)
-            {
-            case IntLiteral:
-                // can add an FPLiteral (commutative)
-                if (that.m_fmt == Format.FPLiteral)
-                    {
-                    return that.add(this);
-                    }
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat16Constant(getFloat());
+        }
 
-                if (that.m_fmt == Format.IntLiteral)
-                    {
-                    sLit = getIntegerValue().add(that.getIntegerValue()).toString(getIntegerRadix());
-                    }
-                break;
+    /**
+     * @return the equivalent Float32Constant for this LiteralConstant
+     */
+    public Float32Constant toFloat32Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat32Constant(getFloat());
+        }
 
-            case FPLiteral:
-                {
-                // can add either an FPLiteral or an IntLiteral to an FPLiteral, resulting in a new
-                // FPLiteral
-                if (getFPRadix() == 2)
-                    {
-                    double dflThis = getFPDouble();
-                    if (that.getFormat() == Format.FPLiteral)
-                        {
-                        sLit = Double.toString(dflThis + that.getFPDouble());
-                        }
-                    else if (that.getFormat() == Format.IntLiteral)
-                        {
-                        PackedInteger piThat = that.getIntegerValue();
-                        double dflSum = piThat.isBig()
-                                ? dflThis + piThat.getBigInteger().doubleValue()
-                                : dflThis + piThat.getLong();
-                        sLit = Double.toString(dflSum);
-                        }
-                    }
-                else
-                    {
-                    BigDecimal decThis = getFPDecimal();
-                    if (that.getFormat() == Format.FPLiteral)
-                        {
-                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
-                                .toString().replace('E', 'P');
-                        }
-                    else if (that.getFormat() == Format.IntLiteral)
-                        {
-                        sLit = decThis.add(new BigDecimal(that.getIntegerValue().getBigInteger()))
-                                .toString().replace('E', 'P');
-                        }
-                    }
-                }
-                break;
+    /**
+     * @return the equivalent Float64Constant for this LiteralConstant
+     */
+    public Float64Constant toFloat64Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureFloat64Constant(getDouble());
+        }
 
-            case Date:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
+    /**
+     * @return the equivalent Float128Constant for this LiteralConstant
+     */
+    public Float128Constant toFloat128Constant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
+        }
 
-            case Time:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
+    /**
+     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     *         FPLiteral value
+     */
+    public VarFPConstant toVarFloatConstant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
+        }
 
-            case DateTime:
-                // TODO can add a duration
-                throw new UnsupportedOperationException();
+    /**
+     * @return the equivalent DecimalConstant of the specified format for this LiteralConstant
+     *         holding a FPLiteral value
+     */
+    public DecimalConstant toDecimalConstant(Format format)
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        return getConstantPool().ensureDecimalConstant(getDecimal());
+        }
 
-            case Duration:
-                // TODO can add another duration
-                throw new UnsupportedOperationException();
-
-            case TimeInterval:
-                // TODO not sure why we even have this type - can you add another time interval? a duration?
-                throw new UnsupportedOperationException();
-            }
-
-        if (sLit != null)
-            {
-            return pool.ensureLiteralConstant(this.getFormat(), sLit);
-            }
-
-        throw new IllegalStateException("this=" + this.getFormat().name() + ", that=" + that.getFormat().name());
+    /**
+     * @return the equivalent VarFPConstant of type VarFloat for this LiteralConstant holding a
+     *         FPLiteral value
+     */
+    public VarFPConstant toVarDecConstant()
+        {
+        assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
+        throw new UnsupportedOperationException();
         }
 
 
@@ -439,6 +477,370 @@ public class LiteralConstant
         {
         m_constStr = (StringConstant) m_constStr.simplify();
         return this;
+        }
+
+    @Override
+    public Constant apply(Token.Id op, Constant that)
+        {
+        ConstantPool pool = getConstantPool();
+        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+            {
+            case "IntLiteral+IntLiteral":
+            case "IntLiteral-IntLiteral":
+            case "IntLiteral*IntLiteral":
+            case "IntLiteral/IntLiteral":
+            case "IntLiteral%IntLiteral":
+            case "IntLiteral&IntLiteral":
+            case "IntLiteral|IntLiteral":
+            case "IntLiteral^IntLiteral":
+            case "IntLiteral<<IntLiteral":
+            case "IntLiteral>>IntLiteral":
+            case "IntLiteral>>>IntLiteral":
+                {
+                PackedInteger piThis   = this.getPackedInteger();
+                PackedInteger piThat   = ((LiteralConstant) that).getPackedInteger();
+                PackedInteger piResult;
+                switch (op)
+                    {
+                    case ADD:
+                        piResult = piThis.add(piThat);
+                        break;
+                    case SUB:
+                        piResult = piThis.sub(piThat);
+                        break;
+                    case MUL:
+                        piResult = piThis.mul(piThat);
+                        break;
+                    case DIV:
+                        piResult = piThis.div(piThat);
+                        break;
+                    case MOD:
+                        piResult = piThis.mod(piThat);
+                        break;
+                    case BIT_AND:
+                        piResult = piThis.and(piThat);
+                        break;
+                    case BIT_OR:
+                        piResult = piThis.or(piThat);
+                        break;
+                    case BIT_XOR:
+                        piResult = piThis.xor(piThat);
+                        break;
+                    case SHL:
+                        piResult = piThis.shl(piThat);
+                        break;
+                    case SHR:
+                        piResult = piThis.shr(piThat);
+                        break;
+                    case USHR:
+                        piResult = piThis.ushr(piThat);
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                    }
+                return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(this.getIntRadix()));
+                }
+
+            case "IntLiteral==IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) == 0);
+            case "IntLiteral!=IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) != 0);
+            case "IntLiteral<IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) < 0);
+            case "IntLiteral<=IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) <= 0);
+            case "IntLiteral>IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) > 0);
+            case "IntLiteral>=IntLiteral":
+                return getConstantPool().valOf(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()) >= 0);
+            case "IntLiteral<=>IntLiteral":
+                return getConstantPool().valOrd(
+                        getPackedInteger().cmp(((LiteralConstant) that).getPackedInteger()));
+
+            case "FPLiteral+IntLiteral":
+            case "FPLiteral+FPLiteral":
+            case "IntLiteral+FPLiteral":
+                {
+                String sLit;
+                if (this.getFPRadix() == 2 || ((LiteralConstant) that).getFPRadix() == 2)
+                    {
+                    sLit = Double.toString(this.getDouble() + ((LiteralConstant) that).getDouble());
+                    }
+                else
+                    {
+                    BigDecimal decThis = this.getBigDecimal();
+                    BigDecimal decThat = ((LiteralConstant) that).getBigDecimal();
+                    sLit = decThis.add(decThat).toString().replace('E', 'P');
+                    }
+                return pool.ensureLiteralConstant(Format.FPLiteral, sLit);
+                }
+
+            case "FPLiteral-IntLiteral":
+            case "FPLiteral-FPLiteral":
+            case "IntLiteral-FPLiteral":
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "FPLiteral*IntLiteral":
+            case "FPLiteral*FPLiteral":
+            case "IntLiteral*FPLiteral":
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "FPLiteral/IntLiteral":
+            case "FPLiteral/FPLiteral":
+            case "IntLiteral/FPLiteral":
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case "IntLiteral+Int8":
+            case "IntLiteral-Int8":
+            case "IntLiteral*Int8":
+            case "IntLiteral/Int8":
+            case "IntLiteral%Int8":
+            case "IntLiteral&Int8":
+            case "IntLiteral|Int8":
+            case "IntLiteral^Int8":
+            case "IntLiteral==Int8":
+            case "IntLiteral!=Int8":
+            case "IntLiteral<Int8":
+            case "IntLiteral<=Int8":
+            case "IntLiteral>Int8":
+            case "IntLiteral>=Int8":
+            case "IntLiteral<=>Int8":
+                return this.toInt8Constant().apply(op, that);
+
+            case "IntLiteral+UInt8":
+            case "IntLiteral-UInt8":
+            case "IntLiteral*UInt8":
+            case "IntLiteral/UInt8":
+            case "IntLiteral%UInt8":
+            case "IntLiteral&UInt8":
+            case "IntLiteral|UInt8":
+            case "IntLiteral^UInt8":
+            case "IntLiteral==UInt8":
+            case "IntLiteral!=UInt8":
+            case "IntLiteral<UInt8":
+            case "IntLiteral<=UInt8":
+            case "IntLiteral>UInt8":
+            case "IntLiteral>=UInt8":
+            case "IntLiteral<=>UInt8":
+                return this.toUInt8Constant().apply(op, that);
+
+            case "IntLiteral+Int16":
+            case "IntLiteral-Int16":
+            case "IntLiteral*Int16":
+            case "IntLiteral/Int16":
+            case "IntLiteral%Int16":
+            case "IntLiteral&Int16":
+            case "IntLiteral|Int16":
+            case "IntLiteral^Int16":
+            case "IntLiteral==Int16":
+            case "IntLiteral!=Int16":
+            case "IntLiteral<Int16":
+            case "IntLiteral<=Int16":
+            case "IntLiteral>Int16":
+            case "IntLiteral>=Int16":
+            case "IntLiteral<=>Int16":
+
+            case "IntLiteral+Int32":
+            case "IntLiteral-Int32":
+            case "IntLiteral*Int32":
+            case "IntLiteral/Int32":
+            case "IntLiteral%Int32":
+            case "IntLiteral&Int32":
+            case "IntLiteral|Int32":
+            case "IntLiteral^Int32":
+            case "IntLiteral==Int32":
+            case "IntLiteral!=Int32":
+            case "IntLiteral<Int32":
+            case "IntLiteral<=Int32":
+            case "IntLiteral>Int32":
+            case "IntLiteral>=Int32":
+            case "IntLiteral<=>Int32":
+
+            case "IntLiteral+Int64":
+            case "IntLiteral-Int64":
+            case "IntLiteral*Int64":
+            case "IntLiteral/Int64":
+            case "IntLiteral%Int64":
+            case "IntLiteral&Int64":
+            case "IntLiteral|Int64":
+            case "IntLiteral^Int64":
+            case "IntLiteral==Int64":
+            case "IntLiteral!=Int64":
+            case "IntLiteral<Int64":
+            case "IntLiteral<=Int64":
+            case "IntLiteral>Int64":
+            case "IntLiteral>=Int64":
+            case "IntLiteral<=>Int64":
+
+            case "IntLiteral+Int128":
+            case "IntLiteral-Int128":
+            case "IntLiteral*Int128":
+            case "IntLiteral/Int128":
+            case "IntLiteral%Int128":
+            case "IntLiteral&Int128":
+            case "IntLiteral|Int128":
+            case "IntLiteral^Int128":
+            case "IntLiteral==Int128":
+            case "IntLiteral!=Int128":
+            case "IntLiteral<Int128":
+            case "IntLiteral<=Int128":
+            case "IntLiteral>Int128":
+            case "IntLiteral>=Int128":
+            case "IntLiteral<=>Int128":
+
+            case "IntLiteral+VarInt":
+            case "IntLiteral-VarInt":
+            case "IntLiteral*VarInt":
+            case "IntLiteral/VarInt":
+            case "IntLiteral%VarInt":
+            case "IntLiteral&VarInt":
+            case "IntLiteral|VarInt":
+            case "IntLiteral^VarInt":
+            case "IntLiteral==VarInt":
+            case "IntLiteral!=VarInt":
+            case "IntLiteral<VarInt":
+            case "IntLiteral<=VarInt":
+            case "IntLiteral>VarInt":
+            case "IntLiteral>=VarInt":
+            case "IntLiteral<=>VarInt":
+
+            case "IntLiteral+UInt16":
+            case "IntLiteral-UInt16":
+            case "IntLiteral*UInt16":
+            case "IntLiteral/UInt16":
+            case "IntLiteral%UInt16":
+            case "IntLiteral&UInt16":
+            case "IntLiteral|UInt16":
+            case "IntLiteral^UInt16":
+            case "IntLiteral==UInt16":
+            case "IntLiteral!=UInt16":
+            case "IntLiteral<UInt16":
+            case "IntLiteral<=UInt16":
+            case "IntLiteral>UInt16":
+            case "IntLiteral>=UInt16":
+            case "IntLiteral<=>UInt16":
+
+            case "IntLiteral+UInt32":
+            case "IntLiteral-UInt32":
+            case "IntLiteral*UInt32":
+            case "IntLiteral/UInt32":
+            case "IntLiteral%UInt32":
+            case "IntLiteral&UInt32":
+            case "IntLiteral|UInt32":
+            case "IntLiteral^UInt32":
+            case "IntLiteral==UInt32":
+            case "IntLiteral!=UInt32":
+            case "IntLiteral<UInt32":
+            case "IntLiteral<=UInt32":
+            case "IntLiteral>UInt32":
+            case "IntLiteral>=UInt32":
+            case "IntLiteral<=>UInt32":
+
+            case "IntLiteral+UInt64":
+            case "IntLiteral-UInt64":
+            case "IntLiteral*UInt64":
+            case "IntLiteral/UInt64":
+            case "IntLiteral%UInt64":
+            case "IntLiteral&UInt64":
+            case "IntLiteral|UInt64":
+            case "IntLiteral^UInt64":
+            case "IntLiteral==UInt64":
+            case "IntLiteral!=UInt64":
+            case "IntLiteral<UInt64":
+            case "IntLiteral<=UInt64":
+            case "IntLiteral>UInt64":
+            case "IntLiteral>=UInt64":
+            case "IntLiteral<=>UInt64":
+
+            case "IntLiteral+UInt128":
+            case "IntLiteral-UInt128":
+            case "IntLiteral*UInt128":
+            case "IntLiteral/UInt128":
+            case "IntLiteral%UInt128":
+            case "IntLiteral&UInt128":
+            case "IntLiteral|UInt128":
+            case "IntLiteral^UInt128":
+            case "IntLiteral==UInt128":
+            case "IntLiteral!=UInt128":
+            case "IntLiteral<UInt128":
+            case "IntLiteral<=UInt128":
+            case "IntLiteral>UInt128":
+            case "IntLiteral>=UInt128":
+            case "IntLiteral<=>UInt128":
+
+            case "IntLiteral+VarUInt":
+            case "IntLiteral-VarUInt":
+            case "IntLiteral*VarUInt":
+            case "IntLiteral/VarUInt":
+            case "IntLiteral%VarUInt":
+            case "IntLiteral&VarUInt":
+            case "IntLiteral|VarUInt":
+            case "IntLiteral^VarUInt":
+            case "IntLiteral==VarUInt":
+            case "IntLiteral!=VarUInt":
+            case "IntLiteral<VarUInt":
+            case "IntLiteral<=VarUInt":
+            case "IntLiteral>VarUInt":
+            case "IntLiteral>=VarUInt":
+            case "IntLiteral<=>VarUInt":
+                return this.toIntConstant(that.getFormat()).apply(op, that);
+
+            case "IntLiteral+Float16":
+            case "FPLiteral+Float16":
+                // TODO other ops
+                return this.toFloat16Constant().apply(op, that);
+
+            case "IntLiteral+Float32":
+            case "FPLiteral+Float32":
+                // TODO other ops
+                return this.toFloat32Constant().apply(op, that);
+
+            case "IntLiteral+Float64":
+            case "FPLiteral+Float64":
+                // TODO other ops
+                return this.toFloat64Constant().apply(op, that);
+
+            case "IntLiteral+Float128":
+            case "FPLiteral+Float128":
+                // TODO other ops
+                return this.toFloat128Constant().apply(op, that);
+
+            case "IntLiteral+VarFloat":
+            case "FPLiteral+VarFloat":
+                // TODO other ops
+                return this.toVarFloatConstant().apply(op, that);
+
+            case "IntLiteral+Dec32":
+            case "IntLiteral+Dec64":
+            case "IntLiteral+Dec128":
+            case "FPLiteral+Dec32":
+            case "FPLiteral+Dec64":
+            case "FPLiteral+Dec128":
+                // TODO other ops
+                return this.toDecimalConstant(that.getFormat()).apply(op, that);
+
+            case "IntLiteral+VarDec":
+            case "FPLiteral+VarDec":
+                // TODO other ops
+                return this.toVarDecConstant().apply(op, that);
+
+            // case Date: // TODO can add a duration
+            // case Time: // TODO can add a duration
+            // case DateTime: // TODO can add a duration
+            // case Duration: // TODO can add another duration
+            // case TimeInterval: // TODO not sure why we even have this type - can you add another time interval? a duration?
+            }
+
+        return super.apply(op, that);
         }
 
     @Override
