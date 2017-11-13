@@ -2175,8 +2175,7 @@ public class ConstantPool
 
         if (fOptimize)
             {
-            // TODO: this is called too late in the compilation cycle and messes up the op-code asm
-            // optimize();
+            optimize();
             }
         }
 
