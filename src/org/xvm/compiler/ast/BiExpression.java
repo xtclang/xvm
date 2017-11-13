@@ -9,20 +9,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
-import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.DecimalConstant;
-import org.xvm.asm.constants.Float128Constant;
-import org.xvm.asm.constants.Float16Constant;
-import org.xvm.asm.constants.Float32Constant;
-import org.xvm.asm.constants.Float64Constant;
-import org.xvm.asm.constants.Int8Constant;
-import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.UInt8Constant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -172,69 +162,440 @@ public class BiExpression
                         + operator.getId().TEXT
                         + type2.getEcstasyClassName() )
                     {
-                    case "Char+Char":                       // TODO
-                    case "Char+String":                     // TODO
+                    case "Char+Char":
+                    case "Char+String":
                         m_constType = pool.typeString();
                         m_constVal  = expr1.toConstant().apply(operator.getId(), expr2.toConstant());
                         return true;
 
                     case "String+String":
                     case "String+Char":
-                    case "FPLiteral+FPLiteral":
-                    case "FPLiteral+IntLiteral":
+
                     case "IntLiteral+IntLiteral":
-                    case "Int8+Int8":
+                    case "IntLiteral-IntLiteral":
+                    case "IntLiteral*IntLiteral":
+                    case "IntLiteral/IntLiteral":
+                    case "IntLiteral%IntLiteral":
+                    case "IntLiteral&IntLiteral":
+                    case "IntLiteral|IntLiteral":
+                    case "IntLiteral^IntLiteral":
+                    case "IntLiteral<<IntLiteral":
+                    case "IntLiteral>>IntLiteral":
+                    case "IntLiteral>>>IntLiteral":
+
                     case "Int8+IntLiteral":
-                    case "Int16+Int16":
-                    case "Int16+IntLiteral":
-                    case "Int32+Int32":
-                    case "Int32+IntLiteral":
-                    case "Int64+Int64":
-                    case "Int64+IntLiteral":
-                    case "Int128+Int128":
-                    case "Int128+IntLiteral":
-                    case "VarInt+VarInt":
-                    case "VarInt+IntLiteral":
-                    case "UInt8+UInt8":
+                    case "Int8-IntLiteral":
+                    case "Int8*IntLiteral":
+                    case "Int8/IntLiteral":
+                    case "Int8%IntLiteral":
+                    case "Int8&IntLiteral":
+                    case "Int8|IntLiteral":
+                    case "Int8^IntLiteral":
+                    case "Int8<<IntLiteral":
+                    case "Int8>>IntLiteral":
+                    case "Int8>>>IntLiteral":
+
                     case "UInt8+IntLiteral":
-                    case "UInt16+UInt16":
+                    case "UInt8-IntLiteral":
+                    case "UInt8*IntLiteral":
+                    case "UInt8/IntLiteral":
+                    case "UInt8%IntLiteral":
+                    case "UInt8&IntLiteral":
+                    case "UInt8|IntLiteral":
+                    case "UInt8^IntLiteral":
+                    case "UInt8<<IntLiteral":
+                    case "UInt8>>IntLiteral":
+                    case "UInt8>>>IntLiteral":
+
+                    case "Int16+IntLiteral":
+                    case "Int16-IntLiteral":
+                    case "Int16*IntLiteral":
+                    case "Int16/IntLiteral":
+                    case "Int16%IntLiteral":
+                    case "Int16&IntLiteral":
+                    case "Int16|IntLiteral":
+                    case "Int16^IntLiteral":
+                    case "Int16<<IntLiteral":
+                    case "Int16>>IntLiteral":
+                    case "Int16>>>IntLiteral":
+
                     case "UInt16+IntLiteral":
-                    case "UInt32+UInt32":
+                    case "UInt16-IntLiteral":
+                    case "UInt16*IntLiteral":
+                    case "UInt16/IntLiteral":
+                    case "UInt16%IntLiteral":
+                    case "UInt16&IntLiteral":
+                    case "UInt16|IntLiteral":
+                    case "UInt16^IntLiteral":
+                    case "UInt16<<IntLiteral":
+                    case "UInt16>>IntLiteral":
+                    case "UInt16>>>IntLiteral":
+
+                    case "Int32+IntLiteral":
+                    case "Int32-IntLiteral":
+                    case "Int32*IntLiteral":
+                    case "Int32/IntLiteral":
+                    case "Int32%IntLiteral":
+                    case "Int32&IntLiteral":
+                    case "Int32|IntLiteral":
+                    case "Int32^IntLiteral":
+                    case "Int32<<IntLiteral":
+                    case "Int32>>IntLiteral":
+                    case "Int32>>>IntLiteral":
+
                     case "UInt32+IntLiteral":
-                    case "UInt64+UInt64":
+                    case "UInt32-IntLiteral":
+                    case "UInt32*IntLiteral":
+                    case "UInt32/IntLiteral":
+                    case "UInt32%IntLiteral":
+                    case "UInt32&IntLiteral":
+                    case "UInt32|IntLiteral":
+                    case "UInt32^IntLiteral":
+                    case "UInt32<<IntLiteral":
+                    case "UInt32>>IntLiteral":
+                    case "UInt32>>>IntLiteral":
+
+                    case "Int64+IntLiteral":
+                    case "Int64-IntLiteral":
+                    case "Int64*IntLiteral":
+                    case "Int64/IntLiteral":
+                    case "Int64%IntLiteral":
+                    case "Int64&IntLiteral":
+                    case "Int64|IntLiteral":
+                    case "Int64^IntLiteral":
+                    case "Int64<<IntLiteral":
+                    case "Int64>>IntLiteral":
+                    case "Int64>>>IntLiteral":
+
                     case "UInt64+IntLiteral":
-                    case "UInt128+UInt128":
+                    case "UInt64-IntLiteral":
+                    case "UInt64*IntLiteral":
+                    case "UInt64/IntLiteral":
+                    case "UInt64%IntLiteral":
+                    case "UInt64&IntLiteral":
+                    case "UInt64|IntLiteral":
+                    case "UInt64^IntLiteral":
+                    case "UInt64<<IntLiteral":
+                    case "UInt64>>IntLiteral":
+                    case "UInt64>>>IntLiteral":
+
+                    case "Int128+IntLiteral":
+                    case "Int128-IntLiteral":
+                    case "Int128*IntLiteral":
+                    case "Int128/IntLiteral":
+                    case "Int128%IntLiteral":
+                    case "Int128&IntLiteral":
+                    case "Int128|IntLiteral":
+                    case "Int128^IntLiteral":
+                    case "Int128<<IntLiteral":
+                    case "Int128>>IntLiteral":
+                    case "Int128>>>IntLiteral":
+
                     case "UInt128+IntLiteral":
-                    case "VarUInt+VarUInt":
+                    case "UInt128-IntLiteral":
+                    case "UInt128*IntLiteral":
+                    case "UInt128/IntLiteral":
+                    case "UInt128%IntLiteral":
+                    case "UInt128&IntLiteral":
+                    case "UInt128|IntLiteral":
+                    case "UInt128^IntLiteral":
+                    case "UInt128<<IntLiteral":
+                    case "UInt128>>IntLiteral":
+                    case "UInt128>>>IntLiteral":
+
+                    case "VarInt+IntLiteral":
+                    case "VarInt-IntLiteral":
+                    case "VarInt*IntLiteral":
+                    case "VarInt/IntLiteral":
+                    case "VarInt%IntLiteral":
+                    case "VarInt&IntLiteral":
+                    case "VarInt|IntLiteral":
+                    case "VarInt^IntLiteral":
+                    case "VarInt<<IntLiteral":
+                    case "VarInt>>IntLiteral":
+                    case "VarInt>>>IntLiteral":
+
                     case "VarUInt+IntLiteral":
-                    case "Float16+Float16":                 // TODO
-                    case "Float16+IntLiteral":              // TODO
-                    case "Float16+FPLiteral":               // TODO
-                    case "Float32+Float32":                 // TODO
-                    case "Float32+IntLiteral":              // TODO
-                    case "Float32+FPLiteral":               // TODO
-                    case "Float64+Float64":                 // TODO
-                    case "Float64+IntLiteral":              // TODO
-                    case "Float64+FPLiteral":               // TODO
-                    case "Float128+Float128":               // TODO
-                    case "Float128+IntLiteral":             // TODO
-                    case "Float128+FPLiteral":              // TODO
-                    case "VarFloat+VarFloat":               // TODO
-                    case "VarFloat+IntLiteral":             // TODO
-                    case "VarFloat+FPLiteral":              // TODO
-                    case "Dec32+Dec32":                     // TODO
-                    case "Dec32+IntLiteral":                // TODO
-                    case "Dec32+FPLiteral":                 // TODO
-                    case "Dec64+Dec64":                     // TODO
-                    case "Dec64+IntLiteral":                // TODO
-                    case "Dec64+FPLiteral":                 // TODO
-                    case "Dec128+Dec128":                   // TODO
-                    case "Dec128+IntLiteral":               // TODO
-                    case "Dec128+FPLiteral":                // TODO
-                    case "VarDec+VarDec":                   // TODO
-                    case "VarDec+IntLiteral":               // TODO
-                    case "VarDec+FPLiteral":                // TODO
-                    // TODO - * / %
+                    case "VarUInt-IntLiteral":
+                    case "VarUInt*IntLiteral":
+                    case "VarUInt/IntLiteral":
+                    case "VarUInt%IntLiteral":
+                    case "VarUInt&IntLiteral":
+                    case "VarUInt|IntLiteral":
+                    case "VarUInt^IntLiteral":
+                    case "VarUInt<<IntLiteral":
+                    case "VarUInt>>IntLiteral":
+                    case "VarUInt>>>IntLiteral":
+
+                    case "Int8+Int8":
+                    case "Int8-Int8":
+                    case "Int8*Int8":
+                    case "Int8/Int8":
+                    case "Int8%Int8":
+                    case "Int8&Int8":
+                    case "Int8|Int8":
+                    case "Int8^Int8":
+                    case "Int8<<Int64":
+                    case "Int8>>Int64":
+                    case "Int8>>>Int64":
+
+                    case "UInt8+UInt8":
+                    case "UInt8-UInt8":
+                    case "UInt8*UInt8":
+                    case "UInt8/UInt8":
+                    case "UInt8%UInt8":
+                    case "UInt8&UInt8":
+                    case "UInt8|UInt8":
+                    case "UInt8^UInt8":
+                    case "UInt8<<Int64":
+                    case "UInt8>>Int64":
+                    case "UInt8>>>Int64":
+
+                    case "Int16+Int16":
+                    case "Int16-Int16":
+                    case "Int16*Int16":
+                    case "Int16/Int16":
+                    case "Int16%Int16":
+                    case "Int16&Int16":
+                    case "Int16|Int16":
+                    case "Int16^Int16":
+                    case "Int16<<Int64":
+                    case "Int16>>Int64":
+                    case "Int16>>>Int64":
+
+                    case "UInt16+UInt16":
+                    case "UInt16-UInt16":
+                    case "UInt16*UInt16":
+                    case "UInt16/UInt16":
+                    case "UInt16%UInt16":
+                    case "UInt16&UInt16":
+                    case "UInt16|UInt16":
+                    case "UInt16^UInt16":
+                    case "UInt16<<Int64":
+                    case "UInt16>>Int64":
+                    case "UInt16>>>Int64":
+
+                    case "Int32+Int32":
+                    case "Int32-Int32":
+                    case "Int32*Int32":
+                    case "Int32/Int32":
+                    case "Int32%Int32":
+                    case "Int32&Int32":
+                    case "Int32|Int32":
+                    case "Int32^Int32":
+                    case "Int32<<Int64":
+                    case "Int32>>Int64":
+                    case "Int32>>>Int64":
+
+                    case "UInt32+UInt32":
+                    case "UInt32-UInt32":
+                    case "UInt32*UInt32":
+                    case "UInt32/UInt32":
+                    case "UInt32%UInt32":
+                    case "UInt32&UInt32":
+                    case "UInt32|UInt32":
+                    case "UInt32^UInt32":
+                    case "UInt32<<Int64":
+                    case "UInt32>>Int64":
+                    case "UInt32>>>Int64":
+
+                    case "Int64+Int64":
+                    case "Int64-Int64":
+                    case "Int64*Int64":
+                    case "Int64/Int64":
+                    case "Int64%Int64":
+                    case "Int64&Int64":
+                    case "Int64|Int64":
+                    case "Int64^Int64":
+                    case "Int64<<Int64":
+                    case "Int64>>Int64":
+                    case "Int64>>>Int64":
+
+                    case "UInt64+UInt64":
+                    case "UInt64-UInt64":
+                    case "UInt64*UInt64":
+                    case "UInt64/UInt64":
+                    case "UInt64%UInt64":
+                    case "UInt64&UInt64":
+                    case "UInt64|UInt64":
+                    case "UInt64^UInt64":
+                    case "UInt64<<Int64":
+                    case "UInt64>>Int64":
+                    case "UInt64>>>Int64":
+
+                    case "Int128+Int128":
+                    case "Int128-Int128":
+                    case "Int128*Int128":
+                    case "Int128/Int128":
+                    case "Int128%Int128":
+                    case "Int128&Int128":
+                    case "Int128|Int128":
+                    case "Int128^Int128":
+                    case "Int128<<Int64":
+                    case "Int128>>Int64":
+                    case "Int128>>>Int64":
+
+                    case "UInt128+UInt128":
+                    case "UInt128-UInt128":
+                    case "UInt128*UInt128":
+                    case "UInt128/UInt128":
+                    case "UInt128%UInt128":
+                    case "UInt128&UInt128":
+                    case "UInt128|UInt128":
+                    case "UInt128^UInt128":
+                    case "UInt128<<Int64":
+                    case "UInt128>>Int64":
+                    case "UInt128>>>Int64":
+
+                    case "VarInt+VarInt":
+                    case "VarInt-VarInt":
+                    case "VarInt*VarInt":
+                    case "VarInt/VarInt":
+                    case "VarInt%VarInt":
+                    case "VarInt&VarInt":
+                    case "VarInt|VarInt":
+                    case "VarInt^VarInt":
+                    case "VarInt<<Int64":
+                    case "VarInt>>Int64":
+                    case "VarInt>>>Int64":
+
+                    case "VarUInt+VarUInt":
+                    case "VarUInt-VarUInt":
+                    case "VarUInt*VarUInt":
+                    case "VarUInt/VarUInt":
+                    case "VarUInt%VarUInt":
+                    case "VarUInt&VarUInt":
+                    case "VarUInt|VarUInt":
+                    case "VarUInt^VarUInt":
+                    case "VarUInt<<Int64":
+                    case "VarUInt>>Int64":
+                    case "VarUInt>>>Int64":
+
+                    case "FPLiteral+IntLiteral":
+                    case "FPLiteral-IntLiteral":
+                    case "FPLiteral*IntLiteral":
+                    case "FPLiteral/IntLiteral":
+                    case "FPLiteral+FPLiteral":
+                    case "FPLiteral-FPLiteral":
+                    case "FPLiteral*FPLiteral":
+                    case "FPLiteral/FPLiteral":
+
+                    case "Float16+IntLiteral":
+                    case "Float16-IntLiteral":
+                    case "Float16*IntLiteral":
+                    case "Float16/IntLiteral":
+                    case "Float16+FPLiteral":
+                    case "Float16-FPLiteral":
+                    case "Float16*FPLiteral":
+                    case "Float16/FPLiteral":
+                    case "Float16+Float16":
+                    case "Float16-Float16":
+                    case "Float16*Float16":
+                    case "Float16/Float16":
+
+                    case "Float32+IntLiteral":
+                    case "Float32-IntLiteral":
+                    case "Float32*IntLiteral":
+                    case "Float32/IntLiteral":
+                    case "Float32+FPLiteral":
+                    case "Float32-FPLiteral":
+                    case "Float32*FPLiteral":
+                    case "Float32/FPLiteral":
+                    case "Float32+Float32":
+                    case "Float32-Float32":
+                    case "Float32*Float32":
+                    case "Float32/Float32":
+
+                    case "Float64+IntLiteral":
+                    case "Float64-IntLiteral":
+                    case "Float64*IntLiteral":
+                    case "Float64/IntLiteral":
+                    case "Float64+FPLiteral":
+                    case "Float64-FPLiteral":
+                    case "Float64*FPLiteral":
+                    case "Float64/FPLiteral":
+                    case "Float64+Float64":
+                    case "Float64-Float64":
+                    case "Float64*Float64":
+                    case "Float64/Float64":
+
+                    case "Float128+IntLiteral":
+                    case "Float128-IntLiteral":
+                    case "Float128*IntLiteral":
+                    case "Float128/IntLiteral":
+                    case "Float128+FPLiteral":
+                    case "Float128-FPLiteral":
+                    case "Float128*FPLiteral":
+                    case "Float128/FPLiteral":
+                    case "Float128+Float128":
+                    case "Float128-Float128":
+                    case "Float128*Float128":
+                    case "Float128/Float128":
+
+                    case "VarFloat+IntLiteral":
+                    case "VarFloat-IntLiteral":
+                    case "VarFloat*IntLiteral":
+                    case "VarFloat/IntLiteral":
+                    case "VarFloat+FPLiteral":
+                    case "VarFloat-FPLiteral":
+                    case "VarFloat*FPLiteral":
+                    case "VarFloat/FPLiteral":
+                    case "VarFloat+VarFloat":
+                    case "VarFloat-VarFloat":
+                    case "VarFloat*VarFloat":
+                    case "VarFloat/VarFloat":
+
+                    case "Dec32+IntLiteral":
+                    case "Dec32-IntLiteral":
+                    case "Dec32*IntLiteral":
+                    case "Dec32/IntLiteral":
+                    case "Dec32+FPLiteral":
+                    case "Dec32-FPLiteral":
+                    case "Dec32*FPLiteral":
+                    case "Dec32/FPLiteral":
+                    case "Dec32+Dec32":
+                    case "Dec32-Dec32":
+                    case "Dec32*Dec32":
+                    case "Dec32/Dec32":
+
+                    case "Dec64+IntLiteral":
+                    case "Dec64-IntLiteral":
+                    case "Dec64*IntLiteral":
+                    case "Dec64/IntLiteral":
+                    case "Dec64+FPLiteral":
+                    case "Dec64-FPLiteral":
+                    case "Dec64*FPLiteral":
+                    case "Dec64/FPLiteral":
+                    case "Dec64+Dec64":
+                    case "Dec64-Dec64":
+                    case "Dec64*Dec64":
+                    case "Dec64/Dec64":
+
+                    case "Dec128+IntLiteral":
+                    case "Dec128-IntLiteral":
+                    case "Dec128*IntLiteral":
+                    case "Dec128/IntLiteral":
+                    case "Dec128+FPLiteral":
+                    case "Dec128-FPLiteral":
+                    case "Dec128*FPLiteral":
+                    case "Dec128/FPLiteral":
+                    case "Dec128+Dec128":
+                    case "Dec128-Dec128":
+                    case "Dec128*Dec128":
+                    case "Dec128/Dec128":
+
+                    case "VarDec+IntLiteral":
+                    case "VarDec-IntLiteral":
+                    case "VarDec*IntLiteral":
+                    case "VarDec/IntLiteral":
+                    case "VarDec+FPLiteral":
+                    case "VarDec-FPLiteral":
+                    case "VarDec*FPLiteral":
+                    case "VarDec/FPLiteral":
+                    case "VarDec+VarDec":
+                    case "VarDec-VarDec":
+                    case "VarDec*VarDec":
+                    case "VarDec/VarDec":
                         m_constType = type1;
                         m_constVal  = expr1.toConstant();
                         try
@@ -244,7 +605,6 @@ public class BiExpression
                             }
                         catch (ArithmeticException e)
                             {
-
                             log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
                                     getSource().toString(getStartPosition(), getEndPosition()));
                             return false;
@@ -294,7 +654,44 @@ public class BiExpression
                                     getSource().toString(getStartPosition(), getEndPosition()));
                             return false;
                             }
-                    
+
+                    case "FPLiteral==FPLiteral":
+                    case "FPLiteral!=FPLiteral":
+                    case "FPLiteral<FPLiteral":
+                    case "FPLiteral<=FPLiteral":
+                    case "FPLiteral>FPLiteral":
+                    case "FPLiteral>=FPLiteral":
+
+                    case "FPLiteral==IntLiteral":
+                    case "FPLiteral!=IntLiteral":
+                    case "FPLiteral<IntLiteral":
+                    case "FPLiteral<=IntLiteral":
+                    case "FPLiteral>IntLiteral":
+                    case "FPLiteral>=IntLiteral":
+
+                    case "IntLiteral==IntLiteral":
+                    case "IntLiteral!=IntLiteral":
+                    case "IntLiteral<IntLiteral":
+                    case "IntLiteral<=IntLiteral":
+                    case "IntLiteral>IntLiteral":
+                    case "IntLiteral>=IntLiteral":
+                        
+                    case "IntLiteral==FPLiteral":
+                    case "IntLiteral!=FPLiteral":
+                    case "IntLiteral<FPLiteral":
+                    case "IntLiteral<=FPLiteral":
+                    case "IntLiteral>FPLiteral":
+                    case "IntLiteral>=FPLiteral":
+                        // TODO boolean result
+
+                    case "FPLiteral<=>FPLiteral":
+                    case "FPLiteral<=>IntLiteral":
+                    case "IntLiteral<=>IntLiteral":
+                    case "IntLiteral<=>FPLiteral":
+                        // TODO ordered result
+
+
+                        
 //                  case "TerminalType":
 //                  case "ImmutableType":
 //                  case "AccessType":
@@ -672,9 +1069,9 @@ public class BiExpression
                         Argument arg2 = expr1.generateConstant(code, type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
-                            PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
-                            PackedInteger pi2      = ((LiteralConstant) arg2).getIntegerValue();
-                            int           radix    = ((LiteralConstant) arg1).getIntegerRadix();
+                            PackedInteger pi1      = ((LiteralConstant) arg1).getPackedInteger();
+                            PackedInteger pi2      = ((LiteralConstant) arg2).getPackedInteger();
+                            int           radix    = ((LiteralConstant) arg1).getIntRadix();
                             PackedInteger piResult = pi1.isBig() || pi2.isBig()
                                     ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
                                     : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());
@@ -687,9 +1084,9 @@ public class BiExpression
                         Argument arg2 = expr1.generateConstant(code, type, errs);
                         if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
                             {
-                            PackedInteger pi1      = ((LiteralConstant) arg1).getIntegerValue();
-                            PackedInteger pi2      = ((LiteralConstant) arg2).getIntegerValue();
-                            int           radix    = ((LiteralConstant) arg1).getIntegerRadix();
+                            PackedInteger pi1      = ((LiteralConstant) arg1).getPackedInteger();
+                            PackedInteger pi2      = ((LiteralConstant) arg2).getPackedInteger();
+                            int           radix    = ((LiteralConstant) arg1).getIntRadix();
                             PackedInteger piResult = pi1.isBig() || pi2.isBig()
                                     ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
                                     : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());

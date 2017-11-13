@@ -116,20 +116,64 @@ public class Int8Constant
             case "*IntLiteral":
             case "/IntLiteral":
             case "%IntLiteral":
+            case "&IntLiteral":
+            case "|IntLiteral":
+            case "^IntLiteral":
+            case "==IntLiteral":
+            case "!=IntLiteral":
+            case "<IntLiteral":
+            case "<=IntLiteral":
+            case ">IntLiteral":
+            case ">=IntLiteral":
+            case "<=>IntLiteral":
                 return apply(op, ((LiteralConstant) that).toInt8Constant());
 
+            case "<<IntLiteral":
+            case ">>IntLiteral":
+            case ">>>IntLiteral":
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
+
             case "+Int8":
-                return validate(this.getValue() + ((Int8Constant) that).getValue());
+                return validate(this.m_nVal + ((Int8Constant) that).m_nVal);
             case "-Int8":
-                return validate(this.getValue() - ((Int8Constant) that).getValue());
+                return validate(this.m_nVal - ((Int8Constant) that).m_nVal);
             case "*Int8":
-                return validate(this.getValue() * ((Int8Constant) that).getValue());
+                return validate(this.m_nVal * ((Int8Constant) that).m_nVal);
             case "/Int8":
-                return validate(this.getValue() / nonzero(((Int8Constant) that).getValue()));
+                return validate(this.m_nVal / nonzero(((Int8Constant) that).m_nVal));
             case "%Int8":
-                int nDivisor = nonzero(((Int8Constant) that).getValue());
-                int nModulo  = this.getValue() % nDivisor;
+                int nDivisor = nonzero(((Int8Constant) that).m_nVal);
+                int nModulo  = this.m_nVal % nDivisor;
                 return validate(nModulo < 0 ? nModulo + nDivisor : nModulo);
+            case "&Int8":
+                return validate(this.m_nVal & ((Int8Constant) that).m_nVal);
+            case "|Int8":
+                return validate(this.m_nVal | ((Int8Constant) that).m_nVal);
+            case "^Int8":
+                return validate(this.m_nVal ^ ((Int8Constant) that).m_nVal);
+
+            case "<<Int64":
+                return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
+            case ">>Int64":
+                return validate(this.m_nVal >> ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
+            case ">>>Int64":
+                return validate(this.m_nVal >>> ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());
+
+            case "==Int8":
+                return getConstantPool().valOf(this.m_nVal == ((Int8Constant) that).m_nVal);
+            case "!=Int8":
+                return getConstantPool().valOf(this.m_nVal != ((Int8Constant) that).m_nVal);
+            case "<Int8":
+                return getConstantPool().valOf(this.m_nVal < ((Int8Constant) that).m_nVal);
+            case "<=Int8":
+                return getConstantPool().valOf(this.m_nVal <= ((Int8Constant) that).m_nVal);
+            case ">Int8":
+                return getConstantPool().valOf(this.m_nVal > ((Int8Constant) that).m_nVal);
+            case ">=Int8":
+                return getConstantPool().valOf(this.m_nVal >= ((Int8Constant) that).m_nVal);
+
+            case "<=>Int8":
+                return getConstantPool().valOrd(this.m_nVal - ((Int8Constant) that).m_nVal);
             }
 
         return super.apply(op, that);

@@ -317,7 +317,7 @@ public class IntConstant
             throw new IllegalStateException();
             }
 
-        PackedInteger piThat = that.getIntegerValue();
+        PackedInteger piThat = that.getPackedInteger();
         if (piThat.compareTo(getMinLimit()) < 0 || piThat.compareTo(getMaxLimit()) > 0)
             {
             throw new ArithmeticException("value to add is out of range");
@@ -395,52 +395,184 @@ public class IntConstant
             case "Int16*IntLiteral":
             case "Int16/IntLiteral":
             case "Int16%IntLiteral":
+            case "Int16&IntLiteral":
+            case "Int16|IntLiteral":
+            case "Int16^IntLiteral":
+            case "Int16==IntLiteral":
+            case "Int16!=IntLiteral":
+            case "Int16<IntLiteral":
+            case "Int16<=IntLiteral":
+            case "Int16>IntLiteral":
+            case "Int16>=IntLiteral":
+            case "Int16<=>IntLiteral":
             case "Int32+IntLiteral":
             case "Int32-IntLiteral":
             case "Int32*IntLiteral":
             case "Int32/IntLiteral":
             case "Int32%IntLiteral":
+            case "Int32&IntLiteral":
+            case "Int32|IntLiteral":
+            case "Int32^IntLiteral":
+            case "Int32==IntLiteral":
+            case "Int32!=IntLiteral":
+            case "Int32<IntLiteral":
+            case "Int32<=IntLiteral":
+            case "Int32>IntLiteral":
+            case "Int32>=IntLiteral":
+            case "Int32<=>IntLiteral":
             case "Int64+IntLiteral":
             case "Int64-IntLiteral":
             case "Int64*IntLiteral":
             case "Int64/IntLiteral":
             case "Int64%IntLiteral":
+            case "Int64&IntLiteral":
+            case "Int64|IntLiteral":
+            case "Int64^IntLiteral":
+            case "Int64==IntLiteral":
+            case "Int64!=IntLiteral":
+            case "Int64<IntLiteral":
+            case "Int64<=IntLiteral":
+            case "Int64>IntLiteral":
+            case "Int64>=IntLiteral":
+            case "Int64<=>IntLiteral":
             case "Int128+IntLiteral":
             case "Int128-IntLiteral":
             case "Int128*IntLiteral":
             case "Int128/IntLiteral":
             case "Int128%IntLiteral":
+            case "Int128&IntLiteral":
+            case "Int128|IntLiteral":
+            case "Int128^IntLiteral":
+            case "Int128==IntLiteral":
+            case "Int128!=IntLiteral":
+            case "Int128<IntLiteral":
+            case "Int128<=IntLiteral":
+            case "Int128>IntLiteral":
+            case "Int128>=IntLiteral":
+            case "Int128<=>IntLiteral":
             case "VarInt+IntLiteral":
             case "VarInt-IntLiteral":
             case "VarInt*IntLiteral":
             case "VarInt/IntLiteral":
             case "VarInt%IntLiteral":
+            case "VarInt&IntLiteral":
+            case "VarInt|IntLiteral":
+            case "VarInt^IntLiteral":
+            case "VarInt==IntLiteral":
+            case "VarInt!=IntLiteral":
+            case "VarInt<IntLiteral":
+            case "VarInt<=IntLiteral":
+            case "VarInt>IntLiteral":
+            case "VarInt>=IntLiteral":
+            case "VarInt<=>IntLiteral":
             case "UInt16+IntLiteral":
             case "UInt16-IntLiteral":
             case "UInt16*IntLiteral":
             case "UInt16/IntLiteral":
             case "UInt16%IntLiteral":
+            case "UInt16&IntLiteral":
+            case "UInt16|IntLiteral":
+            case "UInt16^IntLiteral":
+            case "UInt16==IntLiteral":
+            case "UInt16!=IntLiteral":
+            case "UInt16<IntLiteral":
+            case "UInt16<=IntLiteral":
+            case "UInt16>IntLiteral":
+            case "UInt16>=IntLiteral":
+            case "UInt16<=>IntLiteral":
             case "UInt32+IntLiteral":
             case "UInt32-IntLiteral":
             case "UInt32*IntLiteral":
             case "UInt32/IntLiteral":
             case "UInt32%IntLiteral":
+            case "UInt32&IntLiteral":
+            case "UInt32|IntLiteral":
+            case "UInt32^IntLiteral":
+            case "UInt32==IntLiteral":
+            case "UInt32!=IntLiteral":
+            case "UInt32<IntLiteral":
+            case "UInt32<=IntLiteral":
+            case "UInt32>IntLiteral":
+            case "UInt32>=IntLiteral":
+            case "UInt32<=>IntLiteral":
             case "UInt64+IntLiteral":
             case "UInt64-IntLiteral":
             case "UInt64*IntLiteral":
             case "UInt64/IntLiteral":
             case "UInt64%IntLiteral":
+            case "UInt64&IntLiteral":
+            case "UInt64|IntLiteral":
+            case "UInt64^IntLiteral":
+            case "UInt64==IntLiteral":
+            case "UInt64!=IntLiteral":
+            case "UInt64<IntLiteral":
+            case "UInt64<=IntLiteral":
+            case "UInt64>IntLiteral":
+            case "UInt64>=IntLiteral":
+            case "UInt64<=>IntLiteral":
             case "UInt128+IntLiteral":
             case "UInt128-IntLiteral":
             case "UInt128*IntLiteral":
             case "UInt128/IntLiteral":
             case "UInt128%IntLiteral":
+            case "UInt128&IntLiteral":
+            case "UInt128|IntLiteral":
+            case "UInt128^IntLiteral":
+            case "UInt128==IntLiteral":
+            case "UInt128!=IntLiteral":
+            case "UInt128<IntLiteral":
+            case "UInt128<=IntLiteral":
+            case "UInt128>IntLiteral":
+            case "UInt128>=IntLiteral":
+            case "UInt128<=>IntLiteral":
             case "VarUInt+IntLiteral":
             case "VarUInt-IntLiteral":
             case "VarUInt*IntLiteral":
             case "VarUInt/IntLiteral":
             case "VarUInt%IntLiteral":
+            case "VarUInt&IntLiteral":
+            case "VarUInt|IntLiteral":
+            case "VarUInt^IntLiteral":
+            case "VarUInt==IntLiteral":
+            case "VarUInt!=IntLiteral":
+            case "VarUInt<IntLiteral":
+            case "VarUInt<=IntLiteral":
+            case "VarUInt>IntLiteral":
+            case "VarUInt>=IntLiteral":
+            case "VarUInt<=>IntLiteral":
                 return apply(op, ((LiteralConstant) that).toIntConstant(getFormat()));
+
+            case "Int16<<IntLiteral":
+            case "Int16>>IntLiteral":
+            case "Int16>>>IntLiteral":
+            case "Int32<<IntLiteral":
+            case "Int32>>IntLiteral":
+            case "Int32>>>IntLiteral":
+            case "Int64<<IntLiteral":
+            case "Int64>>IntLiteral":
+            case "Int64>>>IntLiteral":
+            case "Int128<<IntLiteral":
+            case "Int128>>IntLiteral":
+            case "Int128>>>IntLiteral":
+            case "VarInt<<IntLiteral":
+            case "VarInt>>IntLiteral":
+            case "VarInt>>>IntLiteral":
+            case "UInt16<<IntLiteral":
+            case "UInt16>>IntLiteral":
+            case "UInt16>>>IntLiteral":
+            case "UInt32<<IntLiteral":
+            case "UInt32>>IntLiteral":
+            case "UInt32>>>IntLiteral":
+            case "UInt64<<IntLiteral":
+            case "UInt64>>IntLiteral":
+            case "UInt64>>>IntLiteral":
+            case "UInt128<<IntLiteral":
+            case "UInt128>>IntLiteral":
+            case "UInt128>>>IntLiteral":
+            case "VarUInt<<IntLiteral":
+            case "VarUInt>>IntLiteral":
+            case "VarUInt>>>IntLiteral":
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
 
             case "Int16+Int16":
             case "Int32+Int32":
@@ -501,6 +633,179 @@ public class IntConstant
             case "UInt128%UInt128":
             case "VarUInt%VarUInt":
                 return validate(this.getValue().mod(((IntConstant) that).getValue()));
+
+            case "Int16&Int16":
+            case "Int32&Int32":
+            case "Int64&Int64":
+            case "Int128&Int128":
+            case "VarInt&VarInt":
+            case "UInt16&UInt16":
+            case "UInt32&UInt32":
+            case "UInt64&UInt64":
+            case "UInt128&UInt128":
+            case "VarUInt&VarUInt":
+                return validate(this.getValue().and(((IntConstant) that).getValue()));
+
+            case "Int16|Int16":
+            case "Int32|Int32":
+            case "Int64|Int64":
+            case "Int128|Int128":
+            case "VarInt|VarInt":
+            case "UInt16|UInt16":
+            case "UInt32|UInt32":
+            case "UInt64|UInt64":
+            case "UInt128|UInt128":
+            case "VarUInt|VarUInt":
+                return validate(this.getValue().or(((IntConstant) that).getValue()));
+
+            case "Int16^Int16":
+            case "Int32^Int32":
+            case "Int64^Int64":
+            case "Int128^Int128":
+            case "VarInt^VarInt":
+            case "UInt16^UInt16":
+            case "UInt32^UInt32":
+            case "UInt64^UInt64":
+            case "UInt128^UInt128":
+            case "VarUInt^VarUInt":
+                return validate(this.getValue().xor(((IntConstant) that).getValue()));
+
+            case "Int16==Int16":
+            case "Int32==Int32":
+            case "Int64==Int64":
+            case "Int128==Int128":
+            case "VarInt==VarInt":
+            case "UInt16==UInt16":
+            case "UInt32==UInt32":
+            case "UInt64==UInt64":
+            case "UInt128==UInt128":
+            case "VarUInt==VarUInt":
+            case "Int16!=Int16":
+            case "Int32!=Int32":
+            case "Int64!=Int64":
+            case "Int128!=Int128":
+            case "VarInt!=VarInt":
+            case "UInt16!=UInt16":
+            case "UInt32!=UInt32":
+            case "UInt64!=UInt64":
+            case "UInt128!=UInt128":
+            case "VarUInt!=VarUInt":
+            case "Int16<Int16":
+            case "Int32<Int32":
+            case "Int64<Int64":
+            case "Int128<Int128":
+            case "VarInt<VarInt":
+            case "UInt16<UInt16":
+            case "UInt32<UInt32":
+            case "UInt64<UInt64":
+            case "UInt128<UInt128":
+            case "VarUInt<VarUInt":
+            case "Int16<=Int16":
+            case "Int32<=Int32":
+            case "Int64<=Int64":
+            case "Int128<=Int128":
+            case "VarInt<=VarInt":
+            case "UInt16<=UInt16":
+            case "UInt32<=UInt32":
+            case "UInt64<=UInt64":
+            case "UInt128<=UInt128":
+            case "VarUInt<=VarUInt":
+            case "Int16>Int16":
+            case "Int32>Int32":
+            case "Int64>Int64":
+            case "Int128>Int128":
+            case "VarInt>VarInt":
+            case "UInt16>UInt16":
+            case "UInt32>UInt32":
+            case "UInt64>UInt64":
+            case "UInt128>UInt128":
+            case "VarUInt>VarUInt":
+            case "Int16>=Int16":
+            case "Int32>=Int32":
+            case "Int64>=Int64":
+            case "Int128>=Int128":
+            case "VarInt>=VarInt":
+            case "UInt16>=UInt16":
+            case "UInt32>=UInt32":
+            case "UInt64>=UInt64":
+            case "UInt128>=UInt128":
+            case "VarUInt>=VarUInt":
+                {
+                int     n = this.getValue().cmp(((IntConstant) that).getValue());
+                boolean f;
+                switch (op)
+                    {
+                    case COMP_EQ:
+                        f = n == 0;
+                        break;
+                    case COMP_NEQ:
+                        f = n != 0;
+                        break;
+                    case COMP_LT:
+                        f = n < 0;
+                        break;
+                    case COMP_LTEQ:
+                        f = n <= 0;
+                        break;
+                    case COMP_GT:
+                        f = n > 0;
+                        break;
+                    case COMP_GTEQ:
+                        f = n >= 0;
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                    }
+                return getConstantPool().valOf(f);
+                }
+
+            case "Int16<=>Int16":
+            case "Int32<=>Int32":
+            case "Int64<=>Int64":
+            case "Int128<=>Int128":
+            case "VarInt<=>VarInt":
+            case "UInt16<=>UInt16":
+            case "UInt32<=>UInt32":
+            case "UInt64<=>UInt64":
+            case "UInt128<=>UInt128":
+            case "VarUInt<=>VarUInt":
+                return getConstantPool().valOrd(this.getValue().cmp(((IntConstant) that).getValue()));
+
+            case "Int16<<Int64":
+            case "Int32<<Int64":
+            case "Int64<<Int64":
+            case "Int128<<Int64":
+            case "VarInt<<Int64":
+            case "UInt16<<Int64":
+            case "UInt32<<Int64":
+            case "UInt64<<Int64":
+            case "UInt128<<Int64":
+            case "VarUInt<<Int64":
+                return validate(this.getValue().shl(((IntConstant) that).getValue()));
+
+            case "Int16>>Int64":
+            case "Int32>>Int64":
+            case "Int64>>Int64":
+            case "Int128>>Int64":
+            case "VarInt>>Int64":
+            case "UInt16>>Int64":
+            case "UInt32>>Int64":
+            case "UInt64>>Int64":
+            case "UInt128>>Int64":
+            case "VarUInt>>Int64":
+                return validate(this.getValue().shr(((IntConstant) that).getValue()));
+
+            case "Int16>>>Int64":
+            case "Int32>>>Int64":
+            case "Int64>>>Int64":
+            case "Int128>>>Int64":
+            case "VarInt>>>Int64":
+            case "UInt16>>>Int64":
+            case "UInt32>>>Int64":
+            case "UInt64>>>Int64":
+            case "UInt128>>>Int64":
+            case "VarUInt>>>Int64":
+                return validate(this.getValue().ushr(((IntConstant) that).getValue()));
             }
 
         return super.apply(op, that);

@@ -14,8 +14,6 @@ import static org.xvm.util.Handy.writePackedLong;
  * A PackedInteger represents a 2s-complement integer of 1, 2, 4, 8, 16, or 32
  * bytes. Values up to 8 bytes can be accessed as a <tt>long</tt> value, while
  * values of any size can be accessed as a BigInteger.
- *
- * @author cp 2015.12.16
  */
 public class PackedInteger
         implements Comparable<PackedInteger>
@@ -314,13 +312,52 @@ public class PackedInteger
      *
      * @param that  a second PackedInteger to divide this by, resulting in a modulo
      *
-     * @return the resulting PackedInteger
+     * @return the resulting PackedInteger (never negative - modulo not remainder!)
      */
     public PackedInteger mod(PackedInteger that)
         {
         return new PackedInteger(this.getBigInteger().mod(that.getBigInteger()));
         }
-    
+
+    /**
+     * Calculate the bit-and of the value of this PackedInteger and the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to bit-and with this PackedInteger
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger and(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().and(that.getBigInteger()));
+        }
+
+    /**
+     * Calculate the bit-or of the value of this PackedInteger and the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to bit-or with this PackedInteger
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger or(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().or(that.getBigInteger()));
+        }
+
+    /**
+     * Calculate the bit-xor of the value of this PackedInteger and the value of a specified
+     * PackedInteger, resulting in a new PackedInteger.
+     *
+     * @param that  a second PackedInteger to bit-xor with this PackedInteger
+     *
+     * @return the resulting PackedInteger
+     */
+    public PackedInteger xor(PackedInteger that)
+        {
+        return new PackedInteger(this.getBigInteger().xor(that.getBigInteger()));
+        }
+
     /**
      * Shift left the bits in the value of this PackedInteger by the value of a specified
      * PackedInteger, resulting in a new PackedInteger.
@@ -344,8 +381,9 @@ public class PackedInteger
      */
     public PackedInteger shr(PackedInteger that)
         {
-        // TODO verify
-        return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        return that.isNegative()
+                ? this
+                : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
         }
     
     /**
@@ -358,60 +396,21 @@ public class PackedInteger
      */
     public PackedInteger ushr(PackedInteger that)
         {
-        // TODO
-        return new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
+        return that.isNegative()
+                ? this
+                : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
         }
     
     /**
-     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
+     * Compare the value of a specified PackedInteger with the value of this PackedInteger.
      *
-     * @param that  a second PackedInteger to TODO
+     * @param that  a second PackedInteger to compare to
      *
-     * @return the resulting PackedInteger
+     * @return -1, 0, or 1 if this is less than, equal to, or greater than that
      */
-    public PackedInteger cmp(PackedInteger that)
+    public int cmp(PackedInteger that)
         {
-        // TODO
-        return null;
-        }
-    
-    /**
-     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
-     *
-     * @param that  a second PackedInteger to TODO
-     *
-     * @return the resulting PackedInteger
-     */
-    public PackedInteger and(PackedInteger that)
-        {
-        // TODO
-        return null;
-        }
-    
-    /**
-     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
-     *
-     * @param that  a second PackedInteger to TODO
-     *
-     * @return the resulting PackedInteger
-     */
-    public PackedInteger or(PackedInteger that)
-        {
-        // TODO
-        return null;
-        }
-    
-    /**
-     * TODO the value of a specified PackedInteger TODO this PackedInteger, resulting in a new PackedInteger.
-     *
-     * @param that  a second PackedInteger to TODO
-     *
-     * @return the resulting PackedInteger
-     */
-    public PackedInteger xor(PackedInteger that)
-        {
-        // TODO
-        return null;
+        return this.getBigInteger().compareTo(that.getBigInteger());
         }
     
     /**
@@ -660,7 +659,8 @@ public class PackedInteger
     private static int calculateUnignedByteCount(BigInteger bigint)
         {
         // TODO this is from the signed version
-        return (bigint.bitLength() + 7) / 8;
+        // return (bigint.bitLength() + 7) / 8;
+        throw new UnsupportedOperationException();
         }
 
 
