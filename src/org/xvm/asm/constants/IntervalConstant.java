@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.compiler.Token.Id;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -69,15 +71,47 @@ public class IntervalConstant
         }
 
 
-    // ----- ValueConstant methods -----------------------------------------------------------------
+    // ----- type-specific methods -----------------------------------------------------------------
 
-    @Override
-    public TypeConstant getType()
+    /**
+     * @return  the first constant in the interval
+     */
+    public Constant getFirst()
         {
-        ConstantPool pool = getConstantPool();
+        return m_const1;
+        }
 
+    /**
+     * @return  the last constant in the interval
+     */
+    public Constant getLast()
+        {
+        return m_const2;
+        }
+
+    /**
+     * @return  true iff the last constant in the interval is ordered before the first constant in
+     *          the interval
+     */
+    public boolean isReverse()
+        {
+        // only indicate "Reverse" if the first constant is greater than the second constant when
+        // they are compared; apply() must return either valTrue() or valFalse() for this op
+        return m_const1.apply(Id.COMP_GT, m_const2) == getConstantPool().valTrue();
+        }
+
+    /**
+     * Helper.
+     *
+     * @param pool      the ConstantPool
+     * @param constVal  a value of an element in the interval
+     *
+     * @return the TypeConstant for the interval (or range)
+     */
+    public static TypeConstant getIntervalTypeFor(ConstantPool pool, Constant constVal)
+        {
         TypeConstant typeInterval;
-        switch (m_const1.getFormat())
+        switch (constVal.getFormat())
             {
             case IntLiteral:
             case Bit:
@@ -106,7 +140,16 @@ public class IntervalConstant
             }
 
         return pool.ensureImmutableTypeConstant(
-                pool.ensureParameterizedTypeConstant(typeInterval, m_const1.getType()));
+                pool.ensureParameterizedTypeConstant(typeInterval, constVal.getType()));
+        }
+
+
+    // ----- ValueConstant methods -----------------------------------------------------------------
+
+    @Override
+    public TypeConstant getType()
+        {
+        return getIntervalTypeFor(getConstantPool(), m_const1);
         }
 
     /**

@@ -61,6 +61,11 @@ const Char
         TODO
         }
 
+    @Op("*") String dup(Int n)
+        {
+        TODO
+        }
+
     Int calcUtf8Length()
         {
         if (codepoint <= 0x7f)

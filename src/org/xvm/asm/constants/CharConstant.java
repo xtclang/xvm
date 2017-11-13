@@ -78,10 +78,22 @@ public class CharConstant
     @Override
     public TypeConstant resultType(Id op, Constant that)
         {
-        if (op.equals(Id.ADD))
+        if (op.equals(Id.ADD) &&
+                (that.getFormat() == Format.Char || that.getFormat() == Format.String))
             {
             // char+char => str
             // char+str  => str
+            return getConstantPool().typeString();
+            }
+        
+        if (op.equals(Id.MUL) &&
+                (that.getFormat() == Format.IntLiteral || that.getFormat() == Format.Int64))
+            {
+            return getConstantPool().typeString();
+            }
+
+        if (op.equals(Id.DOTDOT) && that.getFormat() == Format.Char)
+            {
             return getConstantPool().typeString();
             }
 
@@ -112,6 +124,47 @@ public class CharConstant
                         .append((char) this.m_chVal)
                         .append(((CharConstant) that).m_chVal);
                 return getConstantPool().ensureStringConstant(sb.toString());
+                }
+
+            case "*IntLiteral":
+            case "*Int64":
+                {
+                assert Character.isValidCodePoint(this.m_chVal);
+                char ch = (char) this.m_chVal;
+
+                int n = that.getFormat() == Format.IntLiteral
+                        ? ((LiteralConstant) that).getPackedInteger().getInt()
+                        : ((IntConstant) that).getValue().getInt();
+                assert n >= 0 && n < 1000000;
+
+                char[] ach = new char[n];
+                for (int i = 0; i < n; ++i)
+                    {
+                    ach[i] = ch;
+                    }
+
+                return getConstantPool().ensureStringConstant(new String(ach));
+                }
+
+            case "==Char":
+                return getConstantPool().valOf(this.m_chVal == ((CharConstant) that).m_chVal);
+            case "!=Char":
+                return getConstantPool().valOf(this.m_chVal != ((CharConstant) that).m_chVal);
+            case "<Char":
+                return getConstantPool().valOf(this.m_chVal < ((CharConstant) that).m_chVal);
+            case "<=Char":
+                return getConstantPool().valOf(this.m_chVal <= ((CharConstant) that).m_chVal);
+            case ">Char":
+                return getConstantPool().valOf(this.m_chVal > ((CharConstant) that).m_chVal);
+            case ">=Char":
+                return getConstantPool().valOf(this.m_chVal >= ((CharConstant) that).m_chVal);
+
+            case "<=>Char":
+                return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
+                
+            case "..Char":
+                {
+                return getConstantPool().ensureIntervalConstant(this, that);
                 }
             }
 

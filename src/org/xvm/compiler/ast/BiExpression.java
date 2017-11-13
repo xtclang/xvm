@@ -10,6 +10,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -194,13 +195,18 @@ public class BiExpression
                     case COMP_LTEQ:
                     case COMP_GT:
                     case COMP_GTEQ:
-                        m_constType = pool.typeBoolean();
+                        m_constType = pool.ensureImmutableTypeConstant(pool.typeBoolean());
                         m_constVal  = pool.valFalse();
                         break;
 
                     case COMP_ORD:
-                        m_constType = pool.typeOrdered();
+                        m_constType = pool.ensureImmutableTypeConstant(pool.typeOrdered());
                         m_constVal  = pool.valEqual();
+                        break;
+
+                    case DOTDOT:
+                        m_constType = IntervalConstant.getIntervalTypeFor(pool, const1);
+                        m_constVal  = new IntervalConstant(pool, const1, const1);
                         break;
 
                     // TODO other operators
@@ -208,7 +214,6 @@ public class BiExpression
                     // case "t.as(t)":
                     // case "t.is(t)":
                     // case "t.instanceof(t)":
-                    // case "t..t":
 
                     // case "t:t":
                     // the types have to be equal, or the right expression must be assignable to the
