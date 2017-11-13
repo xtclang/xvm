@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import static org.xvm.util.Handy.appendIntAsHex;
 import static org.xvm.util.Handy.quotedChar;
@@ -72,6 +73,19 @@ public class CharConstant
     public Format getFormat()
         {
         return Format.Char;
+        }
+
+    @Override
+    public TypeConstant resultType(Id op, Constant that)
+        {
+        if (op.equals(Id.ADD))
+            {
+            // char+char => str
+            // char+str  => str
+            return getConstantPool().typeString();
+            }
+
+        return super.resultType(op, that);
         }
 
     @Override

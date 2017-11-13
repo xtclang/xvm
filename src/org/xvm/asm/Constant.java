@@ -19,6 +19,12 @@ import org.xvm.asm.constants.ValueConstant;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.type.Decimal128;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+
+import org.xvm.util.PackedInteger;
+
 
 /**
  * A Constant value stored in the ConstantPool of an XVM FileStructure.
@@ -168,6 +174,79 @@ public abstract class Constant
         return this;
         }
 
+    /**
+     * Determine the type of a binary operator on two constant values.
+     *
+     * @param op    the token id representing the operation
+     * @param that  the Constant on the right side of the operation
+     *
+     * @return the type of the resulting constant value
+     */
+    public TypeConstant resultType(Token.Id op, Constant that)
+        {
+        return getType();
+        }
+
+    public Constant defaultValue(TypeConstant type)
+        {
+        ConstantPool pool = getConstantPool();
+        switch (type.getEcstasyClassName())
+            {
+            case "Char":
+                return pool.ensureCharConstant('?');
+            
+            case "String":
+                return pool.ensureStringConstant("");
+
+            case "Bit":
+                return pool.ensureBitConstant(0);
+
+            case "Nibble":
+                return pool.ensureNibbleConstant(0);
+
+            case "Int8":
+                return pool.ensureInt8Constant(0);
+
+            case "UInt8":
+                return pool.ensureUInt8Constant(0);
+
+            case "Int16":
+            case "Int32":
+            case "Int64":
+            case "Int128":
+            case "VarInt":
+            case "UInt16":
+            case "UInt32":
+            case "UInt64":
+            case "UInt128":
+            case "VarUInt":
+                return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(type.getEcstasyClassName()));
+            
+            case "Dec32":
+                return pool.ensureDecimalConstant(Decimal32.POS_ZERO);
+            case "Dec64":
+                return pool.ensureDecimalConstant(Decimal64.POS_ZERO);
+            case "Dec128":
+                return pool.ensureDecimalConstant(Decimal128.POS_ZERO);
+            case "VarDec":
+                throw new UnsupportedOperationException();
+
+            case "Float16":
+                return pool.ensureFloat16Constant(0.0f);
+            case "Float32":
+                return pool.ensureFloat32Constant(0.0f);
+            case "Float64":
+                return pool.ensureFloat64Constant(0.0);
+            case "Float128":
+                return pool.ensureFloat128Constant(new byte[16]);
+            case "VarFloat":
+                throw new UnsupportedOperationException();
+
+            default:
+                // eventually this becomes an IllegalStateException
+                throw new UnsupportedOperationException("unsupported constant type: " + type);
+            }
+        }
     /**
      * Apply the specified operation to this Constant.
      *
@@ -480,6 +559,39 @@ public abstract class Constant
     protected static int indexOf(Constant constant)
         {
         return constant == null ? -1 : constant.getPosition();
+        }
+
+    /**
+     * Translate a comparison operator and and ordered result into a constant value.
+     *
+     * @param nOrder  a value of -1, 0, or 1 (or more loosely: negative, zero, or positive)
+     * @param op      a comparison operator
+     *
+     * @return one of {@code Boolean.True}, {@code Boolean.False}, {@code Ordered.Lesser},
+     *         {@code Ordered.Equal}, {@code Ordered.Greater}
+     */
+    protected Constant translateOrder(int nOrder, Token.Id op)
+        {
+        ConstantPool pool = getConstantPool();
+        switch (op)
+            {
+            case COMP_EQ:
+                return pool.valOf(nOrder == 0);
+            case COMP_NEQ:
+                return pool.valOf(nOrder != 0);
+            case COMP_LT:
+                return pool.valOf(nOrder < 0);
+            case COMP_LTEQ:
+                return pool.valOf(nOrder <= 0);
+            case COMP_GT:
+                return pool.valOf(nOrder > 0);
+            case COMP_GTEQ:
+                return pool.valOf(nOrder >= 0);
+            case COMP_ORD:
+                return pool.valOrd(nOrder);
+            default:
+                throw new IllegalStateException();
+            }
         }
 
 

@@ -158,550 +158,57 @@ public class BiExpression
             // validation of a constant expression is simpler, so do it first 
             if (isConstant())
                 {
-                switch (  type1.getEcstasyClassName()
-                        + operator.getId().TEXT
-                        + type2.getEcstasyClassName() )
+                // first determine the type of the result, and pick a suitable default value just in
+                // case everything blows up
+                Constant const1 = expr1.toConstant();
+                Constant const2 = expr2.toConstant();
+                switch (operator.getId())
                     {
-                    case "Char+Char":
-                    case "Char+String":
-                        m_constType = pool.typeString();
-                        m_constVal  = expr1.toConstant().apply(operator.getId(), expr2.toConstant());
-                        return true;
+                    case ADD:
+                    case SUB:
+                    case MUL:
+                    case DIV:
+                    case MOD:
+                    case BIT_AND:
+                    case BIT_OR:
+                    case BIT_XOR:
+                        m_constType = const1.resultType(operator.getId(), const2);
+                        // pick a default value just in case of an exception
+                        m_constVal  = m_constType == type1 ? const1
+                                    : m_constType == type2 ? const2
+                                    : const1.defaultValue(m_constType);
+                        break;
 
-                    case "String+String":
-                    case "String+Char":
-
-                    case "IntLiteral+IntLiteral":
-                    case "IntLiteral-IntLiteral":
-                    case "IntLiteral*IntLiteral":
-                    case "IntLiteral/IntLiteral":
-                    case "IntLiteral%IntLiteral":
-                    case "IntLiteral&IntLiteral":
-                    case "IntLiteral|IntLiteral":
-                    case "IntLiteral^IntLiteral":
-                    case "IntLiteral<<IntLiteral":
-                    case "IntLiteral>>IntLiteral":
-                    case "IntLiteral>>>IntLiteral":
-
-                    case "Int8+IntLiteral":
-                    case "Int8-IntLiteral":
-                    case "Int8*IntLiteral":
-                    case "Int8/IntLiteral":
-                    case "Int8%IntLiteral":
-                    case "Int8&IntLiteral":
-                    case "Int8|IntLiteral":
-                    case "Int8^IntLiteral":
-                    case "Int8<<IntLiteral":
-                    case "Int8>>IntLiteral":
-                    case "Int8>>>IntLiteral":
-
-                    case "UInt8+IntLiteral":
-                    case "UInt8-IntLiteral":
-                    case "UInt8*IntLiteral":
-                    case "UInt8/IntLiteral":
-                    case "UInt8%IntLiteral":
-                    case "UInt8&IntLiteral":
-                    case "UInt8|IntLiteral":
-                    case "UInt8^IntLiteral":
-                    case "UInt8<<IntLiteral":
-                    case "UInt8>>IntLiteral":
-                    case "UInt8>>>IntLiteral":
-
-                    case "Int16+IntLiteral":
-                    case "Int16-IntLiteral":
-                    case "Int16*IntLiteral":
-                    case "Int16/IntLiteral":
-                    case "Int16%IntLiteral":
-                    case "Int16&IntLiteral":
-                    case "Int16|IntLiteral":
-                    case "Int16^IntLiteral":
-                    case "Int16<<IntLiteral":
-                    case "Int16>>IntLiteral":
-                    case "Int16>>>IntLiteral":
-
-                    case "UInt16+IntLiteral":
-                    case "UInt16-IntLiteral":
-                    case "UInt16*IntLiteral":
-                    case "UInt16/IntLiteral":
-                    case "UInt16%IntLiteral":
-                    case "UInt16&IntLiteral":
-                    case "UInt16|IntLiteral":
-                    case "UInt16^IntLiteral":
-                    case "UInt16<<IntLiteral":
-                    case "UInt16>>IntLiteral":
-                    case "UInt16>>>IntLiteral":
-
-                    case "Int32+IntLiteral":
-                    case "Int32-IntLiteral":
-                    case "Int32*IntLiteral":
-                    case "Int32/IntLiteral":
-                    case "Int32%IntLiteral":
-                    case "Int32&IntLiteral":
-                    case "Int32|IntLiteral":
-                    case "Int32^IntLiteral":
-                    case "Int32<<IntLiteral":
-                    case "Int32>>IntLiteral":
-                    case "Int32>>>IntLiteral":
-
-                    case "UInt32+IntLiteral":
-                    case "UInt32-IntLiteral":
-                    case "UInt32*IntLiteral":
-                    case "UInt32/IntLiteral":
-                    case "UInt32%IntLiteral":
-                    case "UInt32&IntLiteral":
-                    case "UInt32|IntLiteral":
-                    case "UInt32^IntLiteral":
-                    case "UInt32<<IntLiteral":
-                    case "UInt32>>IntLiteral":
-                    case "UInt32>>>IntLiteral":
-
-                    case "Int64+IntLiteral":
-                    case "Int64-IntLiteral":
-                    case "Int64*IntLiteral":
-                    case "Int64/IntLiteral":
-                    case "Int64%IntLiteral":
-                    case "Int64&IntLiteral":
-                    case "Int64|IntLiteral":
-                    case "Int64^IntLiteral":
-                    case "Int64<<IntLiteral":
-                    case "Int64>>IntLiteral":
-                    case "Int64>>>IntLiteral":
-
-                    case "UInt64+IntLiteral":
-                    case "UInt64-IntLiteral":
-                    case "UInt64*IntLiteral":
-                    case "UInt64/IntLiteral":
-                    case "UInt64%IntLiteral":
-                    case "UInt64&IntLiteral":
-                    case "UInt64|IntLiteral":
-                    case "UInt64^IntLiteral":
-                    case "UInt64<<IntLiteral":
-                    case "UInt64>>IntLiteral":
-                    case "UInt64>>>IntLiteral":
-
-                    case "Int128+IntLiteral":
-                    case "Int128-IntLiteral":
-                    case "Int128*IntLiteral":
-                    case "Int128/IntLiteral":
-                    case "Int128%IntLiteral":
-                    case "Int128&IntLiteral":
-                    case "Int128|IntLiteral":
-                    case "Int128^IntLiteral":
-                    case "Int128<<IntLiteral":
-                    case "Int128>>IntLiteral":
-                    case "Int128>>>IntLiteral":
-
-                    case "UInt128+IntLiteral":
-                    case "UInt128-IntLiteral":
-                    case "UInt128*IntLiteral":
-                    case "UInt128/IntLiteral":
-                    case "UInt128%IntLiteral":
-                    case "UInt128&IntLiteral":
-                    case "UInt128|IntLiteral":
-                    case "UInt128^IntLiteral":
-                    case "UInt128<<IntLiteral":
-                    case "UInt128>>IntLiteral":
-                    case "UInt128>>>IntLiteral":
-
-                    case "VarInt+IntLiteral":
-                    case "VarInt-IntLiteral":
-                    case "VarInt*IntLiteral":
-                    case "VarInt/IntLiteral":
-                    case "VarInt%IntLiteral":
-                    case "VarInt&IntLiteral":
-                    case "VarInt|IntLiteral":
-                    case "VarInt^IntLiteral":
-                    case "VarInt<<IntLiteral":
-                    case "VarInt>>IntLiteral":
-                    case "VarInt>>>IntLiteral":
-
-                    case "VarUInt+IntLiteral":
-                    case "VarUInt-IntLiteral":
-                    case "VarUInt*IntLiteral":
-                    case "VarUInt/IntLiteral":
-                    case "VarUInt%IntLiteral":
-                    case "VarUInt&IntLiteral":
-                    case "VarUInt|IntLiteral":
-                    case "VarUInt^IntLiteral":
-                    case "VarUInt<<IntLiteral":
-                    case "VarUInt>>IntLiteral":
-                    case "VarUInt>>>IntLiteral":
-
-                    case "Int8+Int8":
-                    case "Int8-Int8":
-                    case "Int8*Int8":
-                    case "Int8/Int8":
-                    case "Int8%Int8":
-                    case "Int8&Int8":
-                    case "Int8|Int8":
-                    case "Int8^Int8":
-                    case "Int8<<Int64":
-                    case "Int8>>Int64":
-                    case "Int8>>>Int64":
-
-                    case "UInt8+UInt8":
-                    case "UInt8-UInt8":
-                    case "UInt8*UInt8":
-                    case "UInt8/UInt8":
-                    case "UInt8%UInt8":
-                    case "UInt8&UInt8":
-                    case "UInt8|UInt8":
-                    case "UInt8^UInt8":
-                    case "UInt8<<Int64":
-                    case "UInt8>>Int64":
-                    case "UInt8>>>Int64":
-
-                    case "Int16+Int16":
-                    case "Int16-Int16":
-                    case "Int16*Int16":
-                    case "Int16/Int16":
-                    case "Int16%Int16":
-                    case "Int16&Int16":
-                    case "Int16|Int16":
-                    case "Int16^Int16":
-                    case "Int16<<Int64":
-                    case "Int16>>Int64":
-                    case "Int16>>>Int64":
-
-                    case "UInt16+UInt16":
-                    case "UInt16-UInt16":
-                    case "UInt16*UInt16":
-                    case "UInt16/UInt16":
-                    case "UInt16%UInt16":
-                    case "UInt16&UInt16":
-                    case "UInt16|UInt16":
-                    case "UInt16^UInt16":
-                    case "UInt16<<Int64":
-                    case "UInt16>>Int64":
-                    case "UInt16>>>Int64":
-
-                    case "Int32+Int32":
-                    case "Int32-Int32":
-                    case "Int32*Int32":
-                    case "Int32/Int32":
-                    case "Int32%Int32":
-                    case "Int32&Int32":
-                    case "Int32|Int32":
-                    case "Int32^Int32":
-                    case "Int32<<Int64":
-                    case "Int32>>Int64":
-                    case "Int32>>>Int64":
-
-                    case "UInt32+UInt32":
-                    case "UInt32-UInt32":
-                    case "UInt32*UInt32":
-                    case "UInt32/UInt32":
-                    case "UInt32%UInt32":
-                    case "UInt32&UInt32":
-                    case "UInt32|UInt32":
-                    case "UInt32^UInt32":
-                    case "UInt32<<Int64":
-                    case "UInt32>>Int64":
-                    case "UInt32>>>Int64":
-
-                    case "Int64+Int64":
-                    case "Int64-Int64":
-                    case "Int64*Int64":
-                    case "Int64/Int64":
-                    case "Int64%Int64":
-                    case "Int64&Int64":
-                    case "Int64|Int64":
-                    case "Int64^Int64":
-                    case "Int64<<Int64":
-                    case "Int64>>Int64":
-                    case "Int64>>>Int64":
-
-                    case "UInt64+UInt64":
-                    case "UInt64-UInt64":
-                    case "UInt64*UInt64":
-                    case "UInt64/UInt64":
-                    case "UInt64%UInt64":
-                    case "UInt64&UInt64":
-                    case "UInt64|UInt64":
-                    case "UInt64^UInt64":
-                    case "UInt64<<Int64":
-                    case "UInt64>>Int64":
-                    case "UInt64>>>Int64":
-
-                    case "Int128+Int128":
-                    case "Int128-Int128":
-                    case "Int128*Int128":
-                    case "Int128/Int128":
-                    case "Int128%Int128":
-                    case "Int128&Int128":
-                    case "Int128|Int128":
-                    case "Int128^Int128":
-                    case "Int128<<Int64":
-                    case "Int128>>Int64":
-                    case "Int128>>>Int64":
-
-                    case "UInt128+UInt128":
-                    case "UInt128-UInt128":
-                    case "UInt128*UInt128":
-                    case "UInt128/UInt128":
-                    case "UInt128%UInt128":
-                    case "UInt128&UInt128":
-                    case "UInt128|UInt128":
-                    case "UInt128^UInt128":
-                    case "UInt128<<Int64":
-                    case "UInt128>>Int64":
-                    case "UInt128>>>Int64":
-
-                    case "VarInt+VarInt":
-                    case "VarInt-VarInt":
-                    case "VarInt*VarInt":
-                    case "VarInt/VarInt":
-                    case "VarInt%VarInt":
-                    case "VarInt&VarInt":
-                    case "VarInt|VarInt":
-                    case "VarInt^VarInt":
-                    case "VarInt<<Int64":
-                    case "VarInt>>Int64":
-                    case "VarInt>>>Int64":
-
-                    case "VarUInt+VarUInt":
-                    case "VarUInt-VarUInt":
-                    case "VarUInt*VarUInt":
-                    case "VarUInt/VarUInt":
-                    case "VarUInt%VarUInt":
-                    case "VarUInt&VarUInt":
-                    case "VarUInt|VarUInt":
-                    case "VarUInt^VarUInt":
-                    case "VarUInt<<Int64":
-                    case "VarUInt>>Int64":
-                    case "VarUInt>>>Int64":
-
-                    case "FPLiteral+IntLiteral":
-                    case "FPLiteral-IntLiteral":
-                    case "FPLiteral*IntLiteral":
-                    case "FPLiteral/IntLiteral":
-                    case "FPLiteral+FPLiteral":
-                    case "FPLiteral-FPLiteral":
-                    case "FPLiteral*FPLiteral":
-                    case "FPLiteral/FPLiteral":
-
-                    case "Float16+IntLiteral":
-                    case "Float16-IntLiteral":
-                    case "Float16*IntLiteral":
-                    case "Float16/IntLiteral":
-                    case "Float16+FPLiteral":
-                    case "Float16-FPLiteral":
-                    case "Float16*FPLiteral":
-                    case "Float16/FPLiteral":
-                    case "Float16+Float16":
-                    case "Float16-Float16":
-                    case "Float16*Float16":
-                    case "Float16/Float16":
-
-                    case "Float32+IntLiteral":
-                    case "Float32-IntLiteral":
-                    case "Float32*IntLiteral":
-                    case "Float32/IntLiteral":
-                    case "Float32+FPLiteral":
-                    case "Float32-FPLiteral":
-                    case "Float32*FPLiteral":
-                    case "Float32/FPLiteral":
-                    case "Float32+Float32":
-                    case "Float32-Float32":
-                    case "Float32*Float32":
-                    case "Float32/Float32":
-
-                    case "Float64+IntLiteral":
-                    case "Float64-IntLiteral":
-                    case "Float64*IntLiteral":
-                    case "Float64/IntLiteral":
-                    case "Float64+FPLiteral":
-                    case "Float64-FPLiteral":
-                    case "Float64*FPLiteral":
-                    case "Float64/FPLiteral":
-                    case "Float64+Float64":
-                    case "Float64-Float64":
-                    case "Float64*Float64":
-                    case "Float64/Float64":
-
-                    case "Float128+IntLiteral":
-                    case "Float128-IntLiteral":
-                    case "Float128*IntLiteral":
-                    case "Float128/IntLiteral":
-                    case "Float128+FPLiteral":
-                    case "Float128-FPLiteral":
-                    case "Float128*FPLiteral":
-                    case "Float128/FPLiteral":
-                    case "Float128+Float128":
-                    case "Float128-Float128":
-                    case "Float128*Float128":
-                    case "Float128/Float128":
-
-                    case "VarFloat+IntLiteral":
-                    case "VarFloat-IntLiteral":
-                    case "VarFloat*IntLiteral":
-                    case "VarFloat/IntLiteral":
-                    case "VarFloat+FPLiteral":
-                    case "VarFloat-FPLiteral":
-                    case "VarFloat*FPLiteral":
-                    case "VarFloat/FPLiteral":
-                    case "VarFloat+VarFloat":
-                    case "VarFloat-VarFloat":
-                    case "VarFloat*VarFloat":
-                    case "VarFloat/VarFloat":
-
-                    case "Dec32+IntLiteral":
-                    case "Dec32-IntLiteral":
-                    case "Dec32*IntLiteral":
-                    case "Dec32/IntLiteral":
-                    case "Dec32+FPLiteral":
-                    case "Dec32-FPLiteral":
-                    case "Dec32*FPLiteral":
-                    case "Dec32/FPLiteral":
-                    case "Dec32+Dec32":
-                    case "Dec32-Dec32":
-                    case "Dec32*Dec32":
-                    case "Dec32/Dec32":
-
-                    case "Dec64+IntLiteral":
-                    case "Dec64-IntLiteral":
-                    case "Dec64*IntLiteral":
-                    case "Dec64/IntLiteral":
-                    case "Dec64+FPLiteral":
-                    case "Dec64-FPLiteral":
-                    case "Dec64*FPLiteral":
-                    case "Dec64/FPLiteral":
-                    case "Dec64+Dec64":
-                    case "Dec64-Dec64":
-                    case "Dec64*Dec64":
-                    case "Dec64/Dec64":
-
-                    case "Dec128+IntLiteral":
-                    case "Dec128-IntLiteral":
-                    case "Dec128*IntLiteral":
-                    case "Dec128/IntLiteral":
-                    case "Dec128+FPLiteral":
-                    case "Dec128-FPLiteral":
-                    case "Dec128*FPLiteral":
-                    case "Dec128/FPLiteral":
-                    case "Dec128+Dec128":
-                    case "Dec128-Dec128":
-                    case "Dec128*Dec128":
-                    case "Dec128/Dec128":
-
-                    case "VarDec+IntLiteral":
-                    case "VarDec-IntLiteral":
-                    case "VarDec*IntLiteral":
-                    case "VarDec/IntLiteral":
-                    case "VarDec+FPLiteral":
-                    case "VarDec-FPLiteral":
-                    case "VarDec*FPLiteral":
-                    case "VarDec/FPLiteral":
-                    case "VarDec+VarDec":
-                    case "VarDec-VarDec":
-                    case "VarDec*VarDec":
-                    case "VarDec/VarDec":
+                    case SHL:
+                    case SHR:
+                    case USHR:
+                        // always use the type on the left hand side, since the numeric shifts all
+                        // take Int64 as the shift amount
                         m_constType = type1;
-                        m_constVal  = expr1.toConstant();
-                        try
-                            {
-                            m_constVal = m_constVal.apply(operator.getId(), expr2.toConstant());
-                            return true;
-                            }
-                        catch (ArithmeticException e)
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
-                                    getSource().toString(getStartPosition(), getEndPosition()));
-                            return false;
-                            }
-                        
-                    case "IntLiteral+FPLiteral":
-                    case "IntLiteral+Int8":
-                    case "IntLiteral+Int16":
-                    case "IntLiteral+Int32":
-                    case "IntLiteral+Int64":
-                    case "IntLiteral+Int128":
-                    case "IntLiteral+VarInt":
-                    case "IntLiteral+UInt8":
-                    case "IntLiteral+UInt16":
-                    case "IntLiteral+UInt32":
-                    case "IntLiteral+UInt64":
-                    case "IntLiteral+UInt128":
-                    case "IntLiteral+VarUInt":
-                    case "IntLiteral+Float16":
-                    case "IntLiteral+Float32":
-                    case "IntLiteral+Float64":
-                    case "IntLiteral+Float128":
-                    case "IntLiteral+VarFloat":
-                    case "IntLiteral+Dec32":
-                    case "IntLiteral+Dec64":
-                    case "IntLiteral+Dec128":
-                    case "IntLiteral+VarDec":
-                    case "FPLiteral+Float16":
-                    case "FPLiteral+Float32":
-                    case "FPLiteral+Float64":
-                    case "FPLiteral+Float128":
-                    case "FPLiteral+VarFloat":
-                    case "FPLiteral+Dec32":
-                    case "FPLiteral+Dec64":
-                    case "FPLiteral+Dec128":
-                    case "FPLiteral+VarDec":
-                        m_constType = type2;
-                        m_constVal  = expr2.toConstant();
-                        try
-                            {
-                            m_constVal = expr1.toConstant().apply(operator.getId(), m_constVal);
-                            return true;
-                            }
-                        catch (ArithmeticException e)
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
-                                    getSource().toString(getStartPosition(), getEndPosition()));
-                            return false;
-                            }
+                        m_constVal  = const1;
+                        break;
 
-                    case "FPLiteral==FPLiteral":
-                    case "FPLiteral!=FPLiteral":
-                    case "FPLiteral<FPLiteral":
-                    case "FPLiteral<=FPLiteral":
-                    case "FPLiteral>FPLiteral":
-                    case "FPLiteral>=FPLiteral":
+                    case COMP_EQ:
+                    case COMP_NEQ:
+                    case COMP_LT:
+                    case COMP_LTEQ:
+                    case COMP_GT:
+                    case COMP_GTEQ:
+                        m_constType = pool.typeBoolean();
+                        m_constVal  = pool.valFalse();
+                        break;
 
-                    case "FPLiteral==IntLiteral":
-                    case "FPLiteral!=IntLiteral":
-                    case "FPLiteral<IntLiteral":
-                    case "FPLiteral<=IntLiteral":
-                    case "FPLiteral>IntLiteral":
-                    case "FPLiteral>=IntLiteral":
+                    case COMP_ORD:
+                        m_constType = pool.typeOrdered();
+                        m_constVal  = pool.valEqual();
+                        break;
 
-                    case "IntLiteral==IntLiteral":
-                    case "IntLiteral!=IntLiteral":
-                    case "IntLiteral<IntLiteral":
-                    case "IntLiteral<=IntLiteral":
-                    case "IntLiteral>IntLiteral":
-                    case "IntLiteral>=IntLiteral":
-                        
-                    case "IntLiteral==FPLiteral":
-                    case "IntLiteral!=FPLiteral":
-                    case "IntLiteral<FPLiteral":
-                    case "IntLiteral<=FPLiteral":
-                    case "IntLiteral>FPLiteral":
-                    case "IntLiteral>=FPLiteral":
-                        // TODO boolean result
-
-                    case "FPLiteral<=>FPLiteral":
-                    case "FPLiteral<=>IntLiteral":
-                    case "IntLiteral<=>IntLiteral":
-                    case "IntLiteral<=>FPLiteral":
-                        // TODO ordered result
-
-
-                        
-//                  case "TerminalType":
-//                  case "ImmutableType":
-//                  case "AccessType":
-//                  case "AnnotatedType":
-//                  case "ParameterizedType":
-//                  case "UnionType":
-//                  case "IntersectionType":
-//                  case "DifferenceType":
-//                      // TODO case "type + type"
-//                      // - type<t1> + type<t2> = type<t1+t2>
+                    // TODO other operators
+                    // case "t/%t":
+                    // case "t.as(t)":
+                    // case "t.is(t)":
+                    // case "t.instanceof(t)":
+                    // case "t..t":
 
                     // case "t:t":
                     // the types have to be equal, or the right expression must be assignable to the
@@ -715,207 +222,38 @@ public class BiExpression
                     // determine an "implicit type" (the error is deferred until the compilation
                     // stage, so if the type is pushed to this expression, it can use that)
 
-                    // case "t||t":
-                    // case "t&&t":
-                    // case "t|t":
-                    // case "t^t":
-                    // case "t&t":
-                    // case "t<<t":
-                    // case "t>>t":
-                    // case "t>>>t":
+//                  case "TerminalType":
+//                  case "ImmutableType":
+//                  case "AccessType":
+//                  case "AnnotatedType":
+//                  case "ParameterizedType":
+//                  case "UnionType":
+//                  case "IntersectionType":
+//                  case "DifferenceType":
+                    // case "type + type"
+                    // - type<t1> + type<t2> = type<t1+t2>
 
                     default:
                         operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
                         return false;
                     }
+
+                // delegate the operation to the constants
+                try
+                    {
+                    m_constVal  = const1.apply(operator.getId(), const2);
+                    return true;
+                    }
+                catch (ArithmeticException e)
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
+                            getSource().toString(getStartPosition(), getEndPosition()));
+                    return false;
+                    }
                 }
             
             // TODO non-constants
             }
-
-
-//                                case "FPLiteral":
-//                                case "IntLiteral":
-//                                    switch (sConvertTo)
-//                                        {
-//                                        case "Int8":
-//                                            m_constType = type2;
-//                                            try
-//                                                {
-//                                                m_constVal = ((LiteralConstant) expr1.toConstant()).toInt8Constant()
-//                                                         .add((Int8Constant) expr2.toConstant());
-//                                                }
-//                                            catch (ArithmeticException e)
-//                                                {
-//                                                fValid = false;
-//                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-//                                                        getSource().toString(getStartPosition(), getEndPosition()));
-//
-//                                                // use a zero value, since it's an error anyways
-//                                                m_constVal = pool.ensureInt8Constant(0);
-//                                                }
-//                                            break;
-//
-//                                        case "UInt8":
-//                                            m_constType = type2;
-//                                            try
-//                                                {
-//                                                m_constVal = ((LiteralConstant) expr1.toConstant()).toUInt8Constant()
-//                                                         .add((UInt8Constant) expr2.toConstant());
-//                                                }
-//                                            catch (ArithmeticException e)
-//                                                {
-//                                                fValid = false;
-//                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-//                                                        getSource().toString(getStartPosition(), getEndPosition()));
-//
-//                                                // use a zero value, since it's an error anyways
-//                                                m_constVal = pool.ensureUInt8Constant(0);
-//                                                }
-//                                            break;
-//
-//                                        case "Int16":
-//                                        case "Int32":
-//                                        case "Int64":
-//                                        case "Int128":
-//                                        case "VarInt":
-//                                        case "UInt16":
-//                                        case "UInt32":
-//                                        case "UInt64":
-//                                        case "UInt128":
-//                                        case "VarUInt":
-//                                            m_constType = type2;
-//                                            try
-//                                                {
-//                                                LiteralConstant const1 = (LiteralConstant) expr1.toConstant();
-//                                                IntConstant     const2 = (IntConstant    ) expr2.toConstant();
-//                                                m_constVal = const1.toIntConstant(const2.getFormat()).add(
-//                                                        const2);
-//                                                }
-//                                            catch (ArithmeticException e)
-//                                                {
-//                                                fValid = false;
-//                                                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-//                                                        getSource().toString(getStartPosition(), getEndPosition()));
-//
-//                                                // use a zero value, since it's an error anyways
-//                                                m_constVal = pool.ensureIntConstant(PackedInteger.ZERO,
-//                                                        expr1.toConstant().getFormat());
-//                                                }
-//                                            break;
-//
-//                                        }
-//                                    break;
-//
-//                                case "Int8":
-//                                    if (sConvertTo.equals("IntLiteral"))
-//                                        {
-//                                        m_constType = type1;
-//                                        try
-//                                            {
-//                                            m_constVal = ((Int8Constant) expr1.toConstant())
-//                                                    .add((Int8Constant) expr2.toConstant());
-//                                            }
-//                                        catch (ArithmeticException e)
-//                                            {
-//                                            fValid = false;
-//                                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-//                                                    type1,
-//                                                    getSource().toString(getStartPosition(),
-//                                                            getEndPosition()));
-//
-//                                            // use a zero value, since it's an error anyways
-//                                            m_constVal = pool.ensureInt8Constant(0);
-//                                            }
-//                                        }
-//                                    break;
-//
-//                                case "UInt8":
-//                                    m_constType = type1;
-//                                    try
-//                                        {
-//                                        m_constVal = ((UInt8Constant) expr1.toConstant())
-//                                                .add((UInt8Constant) expr2.toConstant());
-//                                        }
-//                                    catch (ArithmeticException e)
-//                                        {
-//                                        fValid = false;
-//                                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-//                                                getSource().toString(getStartPosition(), getEndPosition()));
-//
-//                                        // use a zero value, since it's an error anyways
-//                                        m_constVal = pool.ensureUInt8Constant(0);
-//                                        }
-//                                    break;
-//
-//                                case "Int16":
-//                                case "Int32":
-//                                case "Int64":
-//                                case "Int128":
-//                                case "VarInt":
-//                                case "UInt16":
-//                                case "UInt32":
-//                                case "UInt64":
-//                                case "UInt128":
-//                                case "VarUInt":
-//                                    m_constType = type1;
-//                                    try
-//                                        {
-//                                        m_constVal = ((IntConstant) expr1.toConstant())
-//                                                .add((IntConstant) expr2.toConstant());
-//                                        }
-//                                    catch (ArithmeticException e)
-//                                        {
-//                                        fValid = false;
-//                                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, type1,
-//                                                getSource().toString(getStartPosition(), getEndPosition()));
-//
-//                                        // use a zero value, since it's an error anyways
-//                                        m_constVal = pool.ensureIntConstant(PackedInteger.ZERO,
-//                                                expr1.toConstant().getFormat());
-//                                        }
-//                                    break;
-//
-//
-//                                }
-//
-//                            // if the constant result wasn't calculated, that is an error, but if
-//                            // fValid is already set to false, that means that the error was logged
-//                            if (fValid && m_constVal == null)
-//                                {
-//                                fValid = false;
-//                                log(errs, Severity.ERROR, Compiler.INVALID_OPERATION);
-//                                }
-//
-
-                // case "t-t":
-                // case "t*t":
-                // case "t/t":
-                // case "t%t":
-                // case "t/%t":
-                // left-associative operators require that the operator (@Op <name>) be present
-                // on the type of the left side expression.
-
-                // case "t=t":
-                // case "t!=t":
-                // case "t<t":
-                // case "t>t":
-                // case "t<=t":
-                // case "t>=t":
-                // case "t<=>t":
-                // comparison operators require the types to be the same
-
-                //case "t.as(t)":
-                //case "t.is(t)":
-                //case "t.instanceof(t)":
-                //case "t..t":
-
-//                default:
-//                    operator.log(errs, getSource(), Severity.ERROR, Compiler.FATAL_ERROR);
-//                    fValid = false;
-//                    break;
-//                }
-//            }
 
         return fValid;
         }

@@ -366,16 +366,6 @@ public class IntConstant
         return getConstantPool().ensureIntConstant(n, getFormat());
         }
 
-    static PackedInteger nonzero(PackedInteger n)
-        {
-        if (!n.isBig() && n.getInt() == 0)
-            {
-            throw new ArithmeticException("zero");
-            }
-
-        return n;
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -730,35 +720,6 @@ public class IntConstant
             case "UInt64>=UInt64":
             case "UInt128>=UInt128":
             case "VarUInt>=VarUInt":
-                {
-                int     n = this.getValue().cmp(((IntConstant) that).getValue());
-                boolean f;
-                switch (op)
-                    {
-                    case COMP_EQ:
-                        f = n == 0;
-                        break;
-                    case COMP_NEQ:
-                        f = n != 0;
-                        break;
-                    case COMP_LT:
-                        f = n < 0;
-                        break;
-                    case COMP_LTEQ:
-                        f = n <= 0;
-                        break;
-                    case COMP_GT:
-                        f = n > 0;
-                        break;
-                    case COMP_GTEQ:
-                        f = n >= 0;
-                        break;
-                    default:
-                        throw new IllegalStateException();
-                    }
-                return getConstantPool().valOf(f);
-                }
-
             case "Int16<=>Int16":
             case "Int32<=>Int32":
             case "Int64<=>Int64":
@@ -769,7 +730,7 @@ public class IntConstant
             case "UInt64<=>UInt64":
             case "UInt128<=>UInt128":
             case "VarUInt<=>VarUInt":
-                return getConstantPool().valOrd(this.getValue().cmp(((IntConstant) that).getValue()));
+                return translateOrder(this.getValue().cmp(((IntConstant) that).getValue()), op);
 
             case "Int16<<Int64":
             case "Int32<<Int64":
@@ -814,7 +775,26 @@ public class IntConstant
     @Override
     public TypeConstant getType()
         {
-        return getConstantPool().typeInt();
+        ConstantPool pool = getConstantPool();
+        switch (m_fmt)
+            {
+            case Int64:
+                return pool.ensureImmutableTypeConstant(pool.typeInt());
+
+            case Int16:
+            case Int32:
+            case Int128:
+            case VarInt:
+            case UInt16:
+            case UInt32:
+            case UInt64:
+            case UInt128:
+            case VarUInt:
+                return pool.ensureImmutableTypeConstant(pool.ensureEcstasyTypeConstant(m_fmt.name()));
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
