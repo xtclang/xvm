@@ -78,23 +78,21 @@ public class CharConstant
     @Override
     public TypeConstant resultType(Id op, Constant that)
         {
-        if (op.equals(Id.ADD) &&
-                (that.getFormat() == Format.Char || that.getFormat() == Format.String))
+        ConstantPool pool = getConstantPool();
+        switch (op.TEXT + that.getFormat().name())
             {
-            // char+char => str
-            // char+str  => str
-            return getConstantPool().typeString();
-            }
-        
-        if (op.equals(Id.MUL) &&
-                (that.getFormat() == Format.IntLiteral || that.getFormat() == Format.Int64))
-            {
-            return getConstantPool().typeString();
-            }
+            case "+String":
+            case "+Char":
+                // char+char => str
+                // char+str  => str
+            case "*IntLiteral":
+            case "*Int64":
+                return pool.ensureImmutableTypeConstant(pool.typeString());
 
-        if (op.equals(Id.DOTDOT) && that.getFormat() == Format.Char)
-            {
-            return getConstantPool().typeString();
+            case "..Char":
+                return pool.ensureImmutableTypeConstant(
+                        pool.ensureParameterizedTypeConstant(pool.typeRange(),
+                                pool.ensureImmutableTypeConstant(pool.typeChar())));
             }
 
         return super.resultType(op, that);
@@ -163,9 +161,7 @@ public class CharConstant
                 return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
                 
             case "..Char":
-                {
                 return getConstantPool().ensureIntervalConstant(this, that);
-                }
             }
 
         return super.apply(op, that);
