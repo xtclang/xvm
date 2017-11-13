@@ -40,9 +40,9 @@ public class xTestApp extends xModule
         f_types.getTemplate("TestApp.TestService");
 
         // --- getIntValue
-        MethodStructure ftGetInt = ensureMethodStructure("getIntValue", VOID, INT);
-        ftGetInt.createCode()
-            .add(new Return_1(adapter.ensureValueConstantId(42)));
+//        MethodStructure ftGetInt = ensureMethodStructure("getIntValue", VOID, INT);
+//        ftGetInt.createCode()
+//            .add(new Return_1(adapter.ensureValueConstantId(42)));
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);

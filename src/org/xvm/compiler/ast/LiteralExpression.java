@@ -693,6 +693,9 @@ public class LiteralExpression
             case LIT_STRING:
                  return Handy.quotedString(String.valueOf(literal.getValue()));
 
+            case TODO:
+                return "TODO(" + Handy.quotedString(String.valueOf(literal.getValue())) + ')';
+
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
