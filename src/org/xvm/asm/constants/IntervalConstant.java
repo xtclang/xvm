@@ -139,8 +139,7 @@ public class IntervalConstant
                 break;
             }
 
-        return pool.ensureImmutableTypeConstant(
-                pool.ensureParameterizedTypeConstant(typeInterval, constVal.getType()));
+        return pool.ensureParameterizedTypeConstant(typeInterval, constVal.getType());
         }
 
     /**
@@ -177,7 +176,7 @@ public class IntervalConstant
             case "Ordered":
                 typeInterval = pool.typeRange();
                 break;
-            
+
             case "String":
             case "FPLiteral":
             case "Dec32":
@@ -199,8 +198,7 @@ public class IntervalConstant
                 break;
             }
 
-        return pool.ensureImmutableTypeConstant(
-                pool.ensureParameterizedTypeConstant(typeInterval, type));
+        return pool.ensureParameterizedTypeConstant(typeInterval, type);
         }
 
 

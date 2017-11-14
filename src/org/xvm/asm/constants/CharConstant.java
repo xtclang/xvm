@@ -87,12 +87,10 @@ public class CharConstant
                 // char+str  => str
             case "*IntLiteral":
             case "*Int64":
-                return pool.ensureImmutableTypeConstant(pool.typeString());
+                return pool.typeString();
 
             case "..Char":
-                return pool.ensureImmutableTypeConstant(
-                        pool.ensureParameterizedTypeConstant(pool.typeRange(),
-                                pool.ensureImmutableTypeConstant(pool.typeChar())));
+                return pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeChar());
             }
 
         return super.resultType(op, that);
@@ -159,7 +157,7 @@ public class CharConstant
 
             case "<=>Char":
                 return getConstantPool().valOrd(this.m_chVal - ((CharConstant) that).m_chVal);
-                
+
             case "..Char":
                 return getConstantPool().ensureIntervalConstant(this, that);
             }

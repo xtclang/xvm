@@ -156,7 +156,7 @@ public class IntConstant
         {
         return m_pint;
         }
-    
+
     /**
      * @return true iff the format is an unsigned integer format
      */
@@ -202,19 +202,19 @@ public class IntConstant
             {
             case Int16:
                 return PackedInteger.SINT2_MIN;
-            
+
             case Int32:
                 return PackedInteger.SINT4_MIN;
-            
+
             case Int64:
                 return PackedInteger.SINT8_MIN;
-            
+
             case Int128:
                 return PackedInteger.SINT16_MIN;
-            
+
             case VarInt:
                 // note: just an arbitrary limit; no such limit in Ecstasy
-                return PackedInteger.SINT32_MIN;    
+                return PackedInteger.SINT32_MIN;
 
             case UInt16:
             case UInt32:
@@ -247,19 +247,19 @@ public class IntConstant
             {
             case Int16:
                 return PackedInteger.SINT2_MAX;
-            
+
             case Int32:
                 return PackedInteger.SINT4_MAX;
-            
+
             case Int64:
                 return PackedInteger.SINT8_MAX;
-            
+
             case Int128:
                 return PackedInteger.SINT16_MAX;
-            
+
             case VarInt:
                 // note: just an arbitrary limit; no such limit in Ecstasy
-                return PackedInteger.SINT32_MAX;    
+                return PackedInteger.SINT32_MAX;
 
             case UInt16:
                 return PackedInteger.UINT2_MAX;
@@ -772,7 +772,7 @@ public class IntConstant
 
         return super.apply(op, that);
         }
-    
+
     @Override
     public TypeConstant getType()
         {
@@ -780,7 +780,7 @@ public class IntConstant
         switch (m_fmt)
             {
             case Int64:
-                return pool.ensureImmutableTypeConstant(pool.typeInt());
+                return pool.typeInt();
 
             case Int16:
             case Int32:
@@ -791,7 +791,7 @@ public class IntConstant
             case UInt64:
             case UInt128:
             case VarUInt:
-                return pool.ensureImmutableTypeConstant(pool.ensureEcstasyTypeConstant(m_fmt.name()));
+                return pool.ensureEcstasyTypeConstant(m_fmt.name());
 
             default:
                 throw new IllegalStateException();

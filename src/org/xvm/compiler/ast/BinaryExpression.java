@@ -68,9 +68,7 @@ public class BinaryExpression
     @Override
     public TypeConstant getImplicitType()
         {
-        final ConstantPool pool = pool();
-        return pool.ensureImmutableTypeConstant(pool.ensureParameterizedTypeConstant(
-                pool.typeArray(), new TypeConstant[] {pool.typeByte()}));
+        return pool().typeBinary();
         }
 
     @Override

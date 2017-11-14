@@ -62,9 +62,7 @@ public class UInt8ArrayConstant
     @Override
     public TypeConstant getType()
         {
-        ConstantPool pool = getConstantPool();
-        return pool.ensureImmutableTypeConstant(
-                pool.ensureClassTypeConstant(pool.clzArray(), null, pool.typeByte()));
+        return getConstantPool().typeBinary();
         }
 
     /**

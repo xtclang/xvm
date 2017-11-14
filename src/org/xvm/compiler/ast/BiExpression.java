@@ -190,12 +190,12 @@ public class BiExpression
                 case COMP_LTEQ:
                 case COMP_GT:
                 case COMP_GTEQ:
-                    m_constType = pool.ensureImmutableTypeConstant(pool.typeBoolean());
+                    m_constType = pool.typeBoolean();
                     m_constVal  = pool.valFalse();
                     break;
 
                 case COMP_ORD:
-                    m_constType = pool.ensureImmutableTypeConstant(pool.typeOrdered());
+                    m_constType = pool.typeOrdered();
                     m_constVal  = pool.valEqual();
                     break;
 
@@ -207,7 +207,7 @@ public class BiExpression
                 case IS:
                 case INSTANCEOF:
                     // left side is a value, right side is a type
-                    m_constType = pool.ensureImmutableTypeConstant(pool.typeBoolean());
+                    m_constType = pool.typeBoolean();
                     m_constVal  = pool.valOf(const1.getType().isA((TypeConstant) const2));
                     return fValid;
 

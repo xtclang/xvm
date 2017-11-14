@@ -119,28 +119,22 @@ public class LiteralExpression
         switch (literal.getId())
             {
             case LIT_CHAR:
-                type = pool.typeChar();
-                break;
+                return pool.typeChar();
 
             case TODO:              // the T0D0 keyword has a String text for the token's value
             case LIT_STRING:
-                type = pool.typeString();
-                break;
+                return pool.typeString();
 
             case LIT_INT:
-                type = pool.typeIntLiteral();
-                break;
+                return pool.typeIntLiteral();
 
             case LIT_DEC:
             case LIT_BIN:
-                type = pool.typeFPLiteral();
-                break;
+                return pool.typeFPLiteral();
 
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
-
-        return pool.ensureImmutableTypeConstant(type);
         }
 
     @Override

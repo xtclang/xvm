@@ -11,9 +11,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Constant.Format;
 
@@ -27,6 +29,7 @@ import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
+import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -1378,16 +1381,16 @@ public class ConstantPool
      *
      * @return the explicitly immutable form of the passed TypeConstant
      */
-    public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType)
+    public TypeConstant ensureImmutableTypeConstant(TypeConstant constType)
         {
-        ImmutableTypeConstant constant;
-        if (constType instanceof ImmutableTypeConstant)
+        TypeConstant constant;
+        if (constType.isImmutabilitySpecified() || KNOWN_CONSTS.contains(constType.getEcstasyClassName()))
             {
-            constant = (ImmutableTypeConstant) constType;
+            constant = constType;
             }
         else
             {
-            constant = (ImmutableTypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+            constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
             if (constant != null)
                 {
                 return constant;
@@ -1736,6 +1739,8 @@ public class ConstantPool
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
 
     public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES      );} return c;}
+    public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()       );} return c;}
+    public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray()                );} return c;}
 
     public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException()                 );} return c;}
     public TypeConstant      typeString१()      {TypeConstant      c = m_typeString१;     if (c == null) {m_typeString१     = c = ensureNullableTypeConstant(typeString()                    );} return c;}
@@ -2338,6 +2343,26 @@ public class ConstantPool
      */
     private final EnumMap<Format, HashMap<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
 
+    private static final Set<String> KNOWN_CONSTS = new HashSet<>();
+    static
+        {
+        String names = "Module,Package,Class,"
+                + "Boolean,Boolean.True,Boolean.False,Nullable,Nullable.Null,"
+                + "Orderable,Orderable.Lesser,Orderable.Equal,Orderable.Greater,"
+                + "IntLiteral,Bit,Nibble,Int8,Int16,Int32,Int64,Int128,VarInt,"
+                + "UInt8,UInt16,UInt32,UInt64,UInt128,VarUInt,"
+                + "FPLiteral,Dec32,Dec64,Dec128,VarDec,"
+                + "Float16,Float32,Float64,Float128,VarFloat,"
+                + "Interval,Range,Char,String,Date,Time,DateTime,Duration,"
+                + "CriticalSection,Timeout,"
+                + "Exception,DeadlockException,TimeoutException,ReadOnlyException,BoundsException,"
+                + "ConcurrentModificationException,AssertionException,UnsupportedOperationException";
+        for (String s : parseDelimitedString(names, ','))
+            {
+            KNOWN_CONSTS.add(s);
+            }
+        }
+
     /**
      * Tracks whether the ConstantPool should recursively register constants.
      */
@@ -2405,6 +2430,8 @@ public class ConstantPool
     private transient TypeConstant      m_typeString;
     private transient TypeConstant      m_typeString१;
     private transient TypeConstant      m_typeByte;
+    private transient TypeConstant      m_typeByteArray;
+    private transient TypeConstant      m_typeBinary;
     private transient TypeConstant      m_typeInt;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeSequence;
