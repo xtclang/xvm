@@ -1399,7 +1399,7 @@ public class ConstantPool
             constant = new ImmutableTypeConstant(this, constType);
             }
 
-        return (ImmutableTypeConstant) register(constant);
+        return (TypeConstant) register(constant);
         }
 
     /**
