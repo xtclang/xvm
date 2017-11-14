@@ -10,6 +10,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -144,115 +145,193 @@ public class BiExpression
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = expr1.validate(ctx, errs)
-                       & expr2.validate(ctx, errs);
+        ConstantPool pool   = pool();
+        boolean      fValid = expr1.validate(ctx, errs)
+                            & expr2.validate(ctx, errs);
 
-        // only bother checking the operation itself and calculating the "real" implicit type if
-        // the sub-expressions did not have any errors
-        if (fValid)
+        // validation of a constant expression is simpler, so do it first
+        TypeConstant type1 = expr1.getImplicitType();
+        TypeConstant type2 = expr2.getImplicitType();
+        if (isConstant())
             {
-            ConstantPool pool = pool();
-            TypeConstant type1 = expr1.getImplicitType();
-            TypeConstant type2 = expr2.getImplicitType();
-
-            // validation of a constant expression is simpler, so do it first 
-            if (isConstant())
+            // first determine the type of the result, and pick a suitable default value just in
+            // case everything blows up
+            Constant const1 = expr1.toConstant();
+            Constant const2 = expr2.toConstant();
+            switch (operator.getId())
                 {
-                // first determine the type of the result, and pick a suitable default value just in
-                // case everything blows up
-                Constant const1 = expr1.toConstant();
-                Constant const2 = expr2.toConstant();
-                switch (operator.getId())
+                case ADD:
+                case SUB:
+                case MUL:
+                case DIV:
+                case MOD:
+                case BIT_AND:
+                case BIT_OR:
+                case BIT_XOR:
+                    m_constType = const1.resultType(operator.getId(), const2);
+                    // pick a default value just in case of an exception
+                    m_constVal  = m_constType == type1 ? const1
+                                : m_constType == type2 ? const2
+                                : const1.defaultValue(m_constType);
+                    break;
+
+                case SHL:
+                case SHR:
+                case USHR:
+                    // always use the type on the left hand side, since the numeric shifts all
+                    // take Int64 as the shift amount
+                    m_constType = type1;
+                    m_constVal  = const1;
+                    break;
+
+                case COMP_EQ:
+                case COMP_NEQ:
+                case COMP_LT:
+                case COMP_LTEQ:
+                case COMP_GT:
+                case COMP_GTEQ:
+                    m_constType = pool.ensureImmutableTypeConstant(pool.typeBoolean());
+                    m_constVal  = pool.valFalse();
+                    break;
+
+                case COMP_ORD:
+                    m_constType = pool.ensureImmutableTypeConstant(pool.typeOrdered());
+                    m_constVal  = pool.valEqual();
+                    break;
+
+                case DOTDOT:
+                    m_constType = IntervalConstant.getIntervalTypeFor(const1);
+                    m_constVal  = new IntervalConstant(pool, const1, const1);
+                    break;
+
+                case IS:
+                case INSTANCEOF:
+                    // left side is a value, right side is a type
+                    m_constType = pool.ensureImmutableTypeConstant(pool.typeBoolean());
+                    m_constVal  = pool.valOf(const1.getType().isA((TypeConstant) const2));
+                    return fValid;
+
+                default:
+                    operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+                    return false;
+                }
+
+            // delegate the operation to the constants
+            try
+                {
+                m_constVal  = const1.apply(operator.getId(), const2);
+                return fValid;
+                }
+            catch (ArithmeticException e)
+                {
+                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
+                        getSource().toString(getStartPosition(), getEndPosition()));
+                return false;
+                }
+            }
+
+        // determine the type of this expression; this is even done if the sub-expressions did not
+        // validate, so that compilation doesn't have to grind to a halt for just one error
+        switch (operator.getId())
+            {
+            case COND_ELSE:
+                m_constType = expr1.getImplicitType().nonNullable();
+                if (fValid)
                     {
-                    case ADD:
-                    case SUB:
-                    case MUL:
-                    case DIV:
-                    case MOD:
-                    case BIT_AND:
-                    case BIT_OR:
-                    case BIT_XOR:
-                        m_constType = const1.resultType(operator.getId(), const2);
-                        // pick a default value just in case of an exception
-                        m_constVal  = m_constType == type1 ? const1
-                                    : m_constType == type2 ? const2
-                                    : const1.defaultValue(m_constType);
-                        break;
-
-                    case SHL:
-                    case SHR:
-                    case USHR:
-                        // always use the type on the left hand side, since the numeric shifts all
-                        // take Int64 as the shift amount
-                        m_constType = type1;
-                        m_constVal  = const1;
-                        break;
-
-                    case COMP_EQ:
-                    case COMP_NEQ:
-                    case COMP_LT:
-                    case COMP_LTEQ:
-                    case COMP_GT:
-                    case COMP_GTEQ:
-                        m_constType = pool.typeBoolean();
-                        m_constVal  = pool.valFalse();
-                        break;
-
-                    case COMP_ORD:
-                        m_constType = pool.typeOrdered();
-                        m_constVal  = pool.valEqual();
-                        break;
-
-                    // TODO other operators
-                    // case "t/%t":
-                    // case "t.as(t)":
-                    // case "t.is(t)":
-                    // case "t.instanceof(t)":
-                    // case "t..t":
-
-                    // case "t:t":
-                    // the types have to be equal, or the right expression must be assignable to the
-                    // type of the left expression, otherwise we cannot determine an "implicit type"
-                    // (the error is deferred until the compilation stage, so if the type is pushed
-                    // to this expression, it can use that, i.e. type inference)
-
-                    // case "t?:t":
                     // the left side must be nullable, and the right expression must be assignable
                     // to the non-nullable type of the left expression, otherwise we cannot
                     // determine an "implicit type" (the error is deferred until the compilation
                     // stage, so if the type is pushed to this expression, it can use that)
-
-//                  case "TerminalType":
-//                  case "ImmutableType":
-//                  case "AccessType":
-//                  case "AnnotatedType":
-//                  case "ParameterizedType":
-//                  case "UnionType":
-//                  case "IntersectionType":
-//                  case "DifferenceType":
-                    // case "type + type"
-                    // - type<t1> + type<t2> = type<t1+t2>
-
-                    default:
-                        operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-                        return false;
+                    // TODO
                     }
+                break;
 
-                // delegate the operation to the constants
-                try
+            case COND_OR:
+            case COND_AND:
+            case COMP_EQ:
+            case COMP_NEQ:
+            case COMP_LT:
+            case COMP_GT:
+            case COMP_LTEQ:
+            case COMP_GTEQ:
+                m_constType = pool.typeBoolean();
+                if (fValid)
                     {
-                    m_constVal  = const1.apply(operator.getId(), const2);
-                    return true;
+                    // the left side and right side types must be comparable
+                    // TODO
                     }
-                catch (ArithmeticException e)
+                break;
+
+            case IS:
+            case INSTANCEOF:
+                m_constType = pool.typeBoolean();
+                break;
+
+            case COMP_ORD:
+                m_constType = pool.typeOrdered();
+                if (fValid)
                     {
-                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
-                            getSource().toString(getStartPosition(), getEndPosition()));
-                    return false;
+                    // the left side and right side types must be comparable
+                    // TODO
                     }
-                }
-            
-            // TODO non-constants
+                break;
+
+            case AS:
+                m_constType = expr2.toTypeExpression().ensureTypeConstant();
+                break;
+
+            case DOTDOT:
+                m_constType = IntervalConstant.getIntervalTypeFor(expr1.getImplicitType());
+                if (fValid)
+                    {
+                    // the left side and right side types must be "the same", and that type must
+                    // be orderable
+                    // TODO
+                    }
+                break;
+
+            case DIVMOD:
+                m_constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
+                        expr1.getImplicitType(), expr1.getImplicitType());
+                if (fValid)
+                    {
+                    // find the operator on the type and determine the result of the operator
+                    // TODO this is an overridable Op
+                    }
+                break;
+
+            case BIT_OR:
+            case BIT_XOR:
+            case BIT_AND:
+            case SHL:
+            case SHR:
+            case USHR:
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+            case MOD:
+                if (fValid)
+                    {
+                    // find the operator on the type and determine the result of the operator
+                    // TODO these are all overridable Op
+                    }
+                m_constType = expr1.getImplicitType();
+                break;
+
+            case COLON:
+                // the types have to be equal, or the right expression must be assignable to the
+                // type of the left expression, otherwise we cannot determine an "implicit type"
+                // (the error is deferred until the compilation stage, so if the type is pushed
+                // to this expression, it can use that, i.e. type inference)
+                m_constType = expr1.getImplicitType();
+                break;
+
+            default:
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+                m_constType = expr1.getImplicitType();
+                fValid = false;
+                break;
             }
 
         return fValid;
@@ -268,83 +347,31 @@ public class BiExpression
     @Override
     public TypeConstant getImplicitType()
         {
-        switch (operator.getId())
-            {
-            case COMP_EQ:
-            case COMP_NEQ:
-            case COMP_LT:
-            case COMP_GT:
-            case COMP_LTEQ:
-            case COMP_GTEQ:
-            case AS:
-            case IS:
-            case INSTANCEOF:
-                return pool().typeBoolean();
-
-            case COMP_ORD:
-                return pool().typeOrdered();
-
-            case COLON:
-                return expr1.getImplicitType();
-
-            case COND_ELSE:
-                {
-                // TODO a?.b?.c : d
-                return expr1.getImplicitType().nonNullable();
-                }
-
-            case DOTDOT:
-                // Sequential: Range<expr1.getImplicitType()>
-                // Orderable: Interval<expr1.getImplicitType()>
-                // otherwise: will be detected as compiler error by validate(), so assume Orderable
-                {
-                ConstantPool pool = pool();
-                TypeConstant typeElement  = expr1.getImplicitType();
-                TypeConstant typeInterval = typeElement.isA(pool.typeSequential())
-                        ? pool.typeRange()
-                        : pool.typeInterval();
-                return pool.ensureParameterizedTypeConstant(typeInterval,
-                        new TypeConstant[] {typeElement});
-                }
-
-            case COND_OR:
-            case COND_AND:
-            case BIT_OR:
-            case BIT_XOR:
-            case BIT_AND:
-            case SHL:
-            case SHR:
-            case USHR:
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case MOD:
-                // TODO examine expr1's type's methods for @Op's and determine result type from that
-                return expr1.getImplicitType();
-
-            case DIVMOD:
-            default:
-                throw new IllegalStateException(operator.toString());
-            }
-        }
-
-    @Override
-    public TypeConstant[] getImplicitTypes()
-        {
-        if (operator.getId() == Id.DIVMOD)
-            {
-            // TODO examine expr1's type's methods for @Op's and determine result types from that
-            TypeConstant type = expr1.getImplicitType();
-            return new TypeConstant[] {type, type};
-            }
-
-        return super.getImplicitTypes();
+        TypeConstant type = m_constType;
+        assert type != null;
+        return type;
         }
 
     @Override
     public boolean isConstant()
         {
+        // it may have already been calculated
+        if (m_constType != null)
+            {
+            return m_constVal != null;
+            }
+
+        // just to reduce complexity, several expression types are not regarded as constant; these
+        // limitations may be relaxed in the future
+        switch (operator.getId())
+            {
+            case COLON:
+            case COND_ELSE:
+            case AS:
+            case DIVMOD:
+                return false;
+            }
+
         if (expr1.isConstant() && expr2.isConstant())
             {
             return true;
@@ -383,6 +410,14 @@ public class BiExpression
             }
 
         return false;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        assert isConstant();        // can we prove that it is a constant?
+        assert m_constVal != null;  // what happens if this is called before validation?
+        return m_constVal;
         }
 
     @Override

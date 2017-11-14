@@ -15,7 +15,7 @@ const String
         TODO -- native
         }
 
-    String reify()
+    String! reify()
         {
         if (this instanceof StringSub)
             {
@@ -53,6 +53,11 @@ const String
     Char[] to<Char[]>()
         {
         return chars;
+        }
+
+    @Op("*") String! dup(Int n)
+        {
+        TODO
         }
 
     //

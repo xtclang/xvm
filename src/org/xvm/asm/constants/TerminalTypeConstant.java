@@ -452,6 +452,24 @@ public class TerminalTypeConstant
             }
         }
 
+    @Override
+    public boolean isConstant()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).isConstant();
+
+            case Property:
+            case Register:
+                return false;
+
+            default:
+                return true;
+            }
+        }
+
     /**
      * Dereference a typedef constant to find the type to which it refers.
      *
