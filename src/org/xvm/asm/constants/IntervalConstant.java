@@ -103,13 +103,13 @@ public class IntervalConstant
     /**
      * Helper.
      *
-     * @param pool      the ConstantPool
      * @param constVal  a value of an element in the interval
      *
      * @return the TypeConstant for the interval (or range)
      */
-    public static TypeConstant getIntervalTypeFor(ConstantPool pool, Constant constVal)
+    public static TypeConstant getIntervalTypeFor(Constant constVal)
         {
+        ConstantPool pool = constVal.getConstantPool();
         TypeConstant typeInterval;
         switch (constVal.getFormat())
             {
@@ -143,13 +143,73 @@ public class IntervalConstant
                 pool.ensureParameterizedTypeConstant(typeInterval, constVal.getType()));
         }
 
+    /**
+     * Helper.
+     *
+     * @param type  the type of an element in the interval
+     *
+     * @return the TypeConstant for the interval (or range)
+     */
+    public static TypeConstant getIntervalTypeFor(TypeConstant type)
+        {
+        ConstantPool pool = type.getConstantPool();
+        TypeConstant typeInterval;
+        switch (type.getEcstasyClassName())
+            {
+            case "IntLiteral":
+            case "Bit":
+            case "Nibble":
+            case "Int8":
+            case "Int16":
+            case "Int32":
+            case "Int64":
+            case "Int128":
+            case "VarInt":
+            case "UInt8":
+            case "UInt16":
+            case "UInt32":
+            case "UInt64":
+            case "UInt128":
+            case "VarUInt":
+            case "Date":
+            case "Char":
+            case "Boolean":
+            case "Ordered":
+                typeInterval = pool.typeRange();
+                break;
+            
+            case "String":
+            case "FPLiteral":
+            case "Dec32":
+            case "Dec64":
+            case "Dec128":
+            case "VarDec":
+            case "Float16":
+            case "Float32":
+            case "Float64":
+            case "Float128":
+            case "VarFloat":
+                typeInterval = pool.typeInterval();
+                break;
+
+            default:
+                typeInterval = type.isA(pool.typeSequential())
+                        ? pool.typeRange()
+                        : pool.typeInterval();
+                break;
+            }
+
+        return pool.ensureImmutableTypeConstant(
+                pool.ensureParameterizedTypeConstant(typeInterval, type));
+        }
+
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
     public TypeConstant getType()
         {
-        return getIntervalTypeFor(getConstantPool(), m_const1);
+        return getIntervalTypeFor(m_const1);
         }
 
     /**

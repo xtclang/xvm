@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -65,6 +66,23 @@ public abstract class TypeExpression
         {
         // store the new type constant
         m_constType = constType;
+        }
+
+
+    // ----- Expression methods --------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        return ensureTypeConstant().isConstant();
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        TypeConstant type = ensureTypeConstant();
+        assert type.isConstant();
+        return type;
         }
 
 
