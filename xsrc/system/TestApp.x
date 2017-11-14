@@ -19,12 +19,16 @@ class TestApp
         return 42;
         }
 
+    static String getStringValue()
+        {
+        return "Hello world!";
+        }
 
     static Void test1()
         {
         @Inject io.Console console;
 
-        String s = "Hello world!";
+        String s = getStringValue();
         console.print("\n*** ");
         console.println(s);
         console.println();

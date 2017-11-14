@@ -206,15 +206,14 @@ public class MethodStructure
      */
     public Op[] getOps()
         {
-        Op[] aop = null;
-
         Code code = ensureCode();
-        if (code != null)
+        if (code == null)
             {
-            aop = code.getAssembledOps();
+            throw new IllegalStateException("Method \"" +
+                getIdentityConstant().getPathString() + "\" has not been compiled");
             }
 
-        return aop;
+        return code.getAssembledOps();
         }
 
     public Constant[] getLocalConstants()
@@ -1070,8 +1069,8 @@ public class MethodStructure
                 if (m_listOps == null)
                     {
                     MethodStructure method = MethodStructure.this;
-                    throw new UnsupportedOperationException("Method: " +
-                        method.getIdentityConstant().getPathString() + "\nis neither native nor compiled");
+                    throw new UnsupportedOperationException("Method \"" +
+                        method.getIdentityConstant().getPathString() + "\" is neither native nor compiled");
                     }
                 m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
                 }

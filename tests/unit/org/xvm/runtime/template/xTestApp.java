@@ -39,10 +39,9 @@ public class xTestApp extends xModule
         f_types.getTemplate("TestApp.TestClass2");
         f_types.getTemplate("TestApp.TestService");
 
-        // --- getIntValue
-//        MethodStructure ftGetInt = ensureMethodStructure("getIntValue", VOID, INT);
-//        ftGetInt.createCode()
-//            .add(new Return_1(adapter.ensureValueConstantId(42)));
+        // --- getIntValue - compiled!
+        // --- getStringValue - compiled!
+        MethodStructure func = ensureMethodStructure("getStringValue", VOID, STRING);
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
@@ -51,9 +50,9 @@ public class xTestApp extends xModule
                 adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
                 adapter.ensureValueConstantId("console"))) // #0 (console)
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.test1() #")))
-            .add(new Var_IN(adapter.getClassTypeConstId("String"),
-                adapter.ensureValueConstantId("s"),
-                adapter.ensureValueConstantId("Hello world!"))) // #1 (s)
+            .add(new Var_N(adapter.getClassTypeConstId("String"),
+                adapter.ensureValueConstantId("s"))) // #1 (s)
+            .add(new Call_01(adapter.getMethodConstId("TestApp", "getStringValue"), 1))
             .add(new Invoke_10(0, adapter.getMethodConstId("io.Console", "print"),
                 adapter.ensureValueConstantId("\n***** ")))
             .add(new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"), 1))
