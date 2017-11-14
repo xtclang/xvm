@@ -173,6 +173,12 @@ public class TerminalTypeConstant
                 : typeResolved.isOnlyNullable();
         }
 
+    @Override
+    protected TypeConstant unwrapForComparison()
+        {
+        return resolveTypedefs().unwrapForComparison();
+        }
+
 
     // ----- run-time support -------------------------------------------------------------------
 

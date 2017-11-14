@@ -168,11 +168,14 @@ public class BiExpression
                 case BIT_AND:
                 case BIT_OR:
                 case BIT_XOR:
-                    m_constType = const1.resultType(operator.getId(), const2);
+                    {
+                    TypeConstant typeResult = const1.resultType(operator.getId(), const2);
+                    m_constType = typeResult;
                     // pick a default value just in case of an exception
-                    m_constVal  = m_constType == type1 ? const1
-                                : m_constType == type2 ? const2
-                                : const1.defaultValue(m_constType);
+                    m_constVal  = typeResult.isComparable(type1) ? const1
+                                : typeResult.isComparable(type2) ? const2
+                                : const1.defaultValue(typeResult);
+                    }
                     break;
 
                 case SHL:

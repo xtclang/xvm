@@ -108,6 +108,24 @@ public class UnionTypeConstant
                 : this;
         }
 
+    @Override
+    public boolean isComparable(TypeConstant that)
+        {
+        that = that.unwrapForComparison();
+        if (that instanceof UnionTypeConstant)
+            {
+            TypeConstant      this1 = this.m_constType1;
+            TypeConstant      this2 = this.m_constType2;
+            UnionTypeConstant thatU = (UnionTypeConstant) that;
+            TypeConstant      that1 = thatU.m_constType1;
+            TypeConstant      that2 = thatU.m_constType2;
+            return     (this1.isComparable(that1) && this2.isComparable(that2))
+                    || (this1.isComparable(that2) && this2.isComparable(that1));
+            }
+
+        return false;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

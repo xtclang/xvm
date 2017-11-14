@@ -102,6 +102,12 @@ public class ImmutableTypeConstant
                 : this;
         }
 
+    @Override
+    protected TypeConstant unwrapForComparison()
+        {
+        return m_constType.unwrapForComparison();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

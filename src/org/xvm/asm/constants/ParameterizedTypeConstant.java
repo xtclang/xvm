@@ -241,6 +241,34 @@ public class ParameterizedTypeConstant
         return false;
         }
 
+    @Override
+    public boolean isComparable(TypeConstant that)
+        {
+        that = that.unwrapForComparison();
+        if (that instanceof ParameterizedTypeConstant)
+            {
+            ParameterizedTypeConstant thatP = (ParameterizedTypeConstant) that;
+            if (this.m_constType.isComparable(thatP.m_constType))
+                {
+                List<TypeConstant> listThis = this.m_listTypeParams;
+                List<TypeConstant> listThat = thatP.m_listTypeParams;
+                int cParams = listThis.size();
+                if (listThat.size() == cParams)
+                    {
+                    for (int i = 0, c = listThis.size(); i < c; ++i)
+                        {
+                        if (!listThis.get(i).isComparable(listThat.get(i)))
+                            {
+                            return false;
+                            }
+                        }
+                    return true;
+                    }
+                }
+            }
+
+        return false;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

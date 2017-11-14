@@ -137,6 +137,11 @@ public class AccessTypeConstant
         return false;
         }
 
+    @Override
+    protected TypeConstant unwrapForComparison()
+        {
+        return m_constType.unwrapForComparison();
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

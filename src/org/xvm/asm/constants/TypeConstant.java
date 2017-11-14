@@ -338,12 +338,33 @@ public abstract class TypeConstant
         return false;
         }
 
+    /**
+     * @return true iff the type is the Nullable type itself, or a simple modification of the same
+     */
     public boolean isOnlyNullable()
         {
         // a type is considered only nullable if it is the Nullable type itself, or a simple
         // modification of the same
         return getUnderlyingType().isOnlyNullable()
                 && (!isRelationalType() || getUnderlyingType2().isOnlyNullable());
+        }
+
+    /**
+     * Determine if this type can be compared with another type, because the types are identical, or
+     * because they differ only in irrelevant ways, such as one being immutable.
+     *
+     * @param that  another type
+     *
+     * @return true iff the two types are compatible for purposes of value comparison
+     */
+    public boolean isComparable(TypeConstant that)
+        {
+        return this == that || this.unwrapForComparison().equals(that.unwrapForComparison());
+        }
+
+    protected TypeConstant unwrapForComparison()
+        {
+        return this;
         }
 
     /**

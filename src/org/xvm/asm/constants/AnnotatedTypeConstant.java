@@ -169,6 +169,13 @@ public class AnnotatedTypeConstant
                 : this;
         }
 
+    @Override
+    protected TypeConstant unwrapForComparison()
+        {
+        // TODO this is wrong, but the annotations aren't being applied correctly right now, so defer ...
+        return m_constType.unwrapForComparison();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

@@ -124,6 +124,24 @@ public class IntersectionTypeConstant
                                                                 m_constType2.nonNullable());
         }
 
+    @Override
+    public boolean isComparable(TypeConstant that)
+        {
+        that = that.unwrapForComparison();
+        if (that instanceof IntersectionTypeConstant)
+            {
+            TypeConstant             this1 = this.m_constType1;
+            TypeConstant             this2 = this.m_constType2;
+            IntersectionTypeConstant thatI = (IntersectionTypeConstant) that;
+            TypeConstant             that1 = thatI.m_constType1;
+            TypeConstant             that2 = thatI.m_constType2;
+            return     (this1.isComparable(that1) && this2.isComparable(that2))
+                    || (this1.isComparable(that2) && this2.isComparable(that1));
+            }
+
+        return false;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
