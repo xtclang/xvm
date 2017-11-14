@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -830,9 +829,16 @@ public abstract class Expression
      */
     protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
+        String sClassName = typeOut.getEcstasyClassName();
+        if (sClassName.equals(constIn.getFormat().name()))
+            {
+            // common case; no conversion is necessary
+            return constIn;
+            }
+
         Constant constOut = null;
 
-        if (!typeOut.getEcstasyClassName().equals("?")) // TODO barf
+        if (!sClassName.equals("?")) // TODO barf
             {
             // hand the conversion request down to the constant and see if it knows how to do it
             constOut = constIn.convertTo(typeOut);

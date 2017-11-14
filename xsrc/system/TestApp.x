@@ -21,7 +21,7 @@ class TestApp
 
     static String getStringValue()
         {
-        return "Hello world!";
+        return "Hello " + "world!";
         }
 
     static Void test1()
