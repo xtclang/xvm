@@ -98,10 +98,10 @@ public class ObjectHeap
             case Dec64:
             case Dec128:
             case VarDec:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Char:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case String:
                 return xString.INSTANCE;
@@ -112,7 +112,7 @@ public class ObjectHeap
             case Duration:
             case TimeInterval:
             case Version:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case SingletonConst:
                 {
@@ -126,18 +126,18 @@ public class ObjectHeap
                 return xTuple.INSTANCE;
 
             case UInt8Array:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Set:
             case MapEntry:
             case Map:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Module:
                 return xModule.INSTANCE;
 
             case Package:
-                throw new UnsupportedOperationException("TODO" + constValue);
+                throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Property:
                 return xProperty.INSTANCE;

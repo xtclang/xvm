@@ -194,9 +194,15 @@ public abstract class Constant
             {
             case "Char":
                 return pool.ensureCharConstant('?');
-            
+
             case "String":
                 return pool.ensureStringConstant("");
+
+            case "IntLiteral":
+                return pool.ensureLiteralConstant(Format.IntLiteral, "0");
+
+            case "FPLiteral":
+                return pool.ensureLiteralConstant(Format.FPLiteral, "0.0");
 
             case "Bit":
                 return pool.ensureBitConstant(0);
@@ -221,7 +227,7 @@ public abstract class Constant
             case "UInt128":
             case "VarUInt":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(type.getEcstasyClassName()));
-            
+
             case "Dec32":
                 return pool.ensureDecimalConstant(Decimal32.POS_ZERO);
             case "Dec64":
@@ -260,6 +266,18 @@ public abstract class Constant
         throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
                 + ", op=" + op.TEXT
                 + that == null ? "" : ", that=" + that.getClass().getSimpleName());
+        }
+
+    /**
+     * Convert this constant to a constant of the specified type.
+     *
+     * @param typeOut  the type that the constant must be assignable to
+     *
+     * @return the converted constant
+     */
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        throw new UnsupportedOperationException("unsupported conversion " + getClass().getSimpleName());
         }
 
     /**

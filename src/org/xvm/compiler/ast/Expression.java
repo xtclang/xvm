@@ -212,7 +212,7 @@ public abstract class Expression
             // it's reasonable to expect that classes will override this method as appropriate to
             // avoid this type of inefficiency
             assert type.isTuple() && type.isParamsSpecified();
-            List<TypeConstant> list = type.getParamTypes(); 
+            List<TypeConstant> list = type.getParamTypes();
             return list.toArray(new TypeConstant[list.size()]);
             }
         }
@@ -816,7 +816,7 @@ public abstract class Expression
         {
         return toConstant().equals(pool().valNull());
         }
-    
+
     /**
      * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
      * type, and do so.
@@ -830,21 +830,25 @@ public abstract class Expression
      */
     protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
-        // assume that the result is the same as what was passed in
-        Constant constOut = constIn;
+        Constant constOut = null;
 
-        TypeConstant typeIn =  constIn.getType();
-        if (!typeIn.equals(typeOut))
+        if (!typeOut.getEcstasyClassName().equals("?")) // TODO barf
             {
-            // verify that a conversion is possible
-            if (!typeIn.isA(typeOut))
-                {
-                // TODO isA() doesn't handle a lot of things that are actually assignable
-                // TODO for things provably not assignable, check for an @Auto method
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
-                }
+            // hand the conversion request down to the constant and see if it knows how to do it
+            constOut = constIn.convertTo(typeOut);
+            }
 
-            // TODO hard-coded conversions
+        if (constOut == null)
+            {
+            // we have to return something, even in the case of an error
+            constOut = constIn;
+
+            // it has to be assignable from the constant that got passed in, because the constant
+            // wasn't able to convert itself to the requested type
+            if (!constIn.getType().isA(constOut.getType()))
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, constIn.getType());
+                }
             }
 
         return constOut;

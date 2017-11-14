@@ -524,6 +524,10 @@ public class BiExpression
                     // Float16/32/64/128, VarFloat
                     // String
                     // Type
+                    if (m_constVal != null) // is constVal assignable to type?
+                        {
+                        return validateAndConvertConstant(m_constVal, type, errs);
+                        }
 
                 case SUB:
                 case MUL:

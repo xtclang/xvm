@@ -16,7 +16,7 @@ class TestApp
 
     static Int getIntValue()
         {
-        return 42;
+        return 40 + 2;
         }
 
     static String getStringValue()

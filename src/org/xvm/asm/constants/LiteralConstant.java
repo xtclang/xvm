@@ -29,15 +29,15 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * Represent a constant that stores its value as a StringConstant.
- * <p/> 
+ * <p/>
  * This class implements the following constant formats:
  * <ul>
  * <li>IntLiteral</li>
  * <li>FPLiteral</li>
- * <li>Date</li>        
- * <li>Time</li>        
- * <li>DateTime</li>    
- * <li>Duration</li>    
+ * <li>Date</li>
+ * <li>Time</li>
+ * <li>DateTime</li>
+ * <li>Duration</li>
  * <li>TimeInterval</li>
  * <li>Version (but via the {@link VersionConstant} sub-class)</li>
  * </ul>
@@ -85,7 +85,7 @@ public class LiteralConstant
             case IntLiteral:
                 // TODO
                 break;
-            
+
             case FPLiteral:
                 // TODO
                 break;
@@ -133,20 +133,20 @@ public class LiteralConstant
     private LiteralConstant(ConstantPool pool, Format format)
         {
         super(pool);
-        
+
         if (format == null)
             {
             throw new IllegalStateException("format required");
             }
-        
+
         switch (format)
             {
             case IntLiteral:
             case FPLiteral:
-            case Date:        
-            case Time:        
-            case DateTime:    
-            case Duration:    
+            case Date:
+            case Time:
+            case DateTime:
+            case Duration:
             case TimeInterval:
             case Version:
                 break;
@@ -270,10 +270,10 @@ public class LiteralConstant
      *
      * @return the Decimal value of the floating point literal
      */
-    public Decimal getDecimal()
+    public Decimal getDecimal(Format format)
         {
         BigDecimal bigdec = getBigDecimal();
-        switch (getFormat())
+        switch (format)
             {
             case Dec32:
                 return new Decimal32(bigdec);
@@ -451,7 +451,7 @@ public class LiteralConstant
     public DecimalConstant toDecimalConstant(Format format)
         {
         assert m_fmt == Format.IntLiteral || m_fmt == Format.FPLiteral;
-        return getConstantPool().ensureDecimalConstant(getDecimal());
+        return getConstantPool().ensureDecimalConstant(getDecimal(format));
         }
 
     /**
@@ -668,7 +668,7 @@ public class LiteralConstant
                         }
                     else
                         {
-                        nOrd = Double.compare(dflThis, dflThat); 
+                        nOrd = Double.compare(dflThis, dflThat);
                         }
                     }
                 else
@@ -1017,7 +1017,7 @@ public class LiteralConstant
             case "FPLiteral>Dec32":
             case "FPLiteral>=Dec32":
             case "FPLiteral<=>Dec32":
-            
+
             case "IntLiteral+Dec64":
             case "IntLiteral-Dec64":
             case "IntLiteral*Dec64":
@@ -1040,7 +1040,7 @@ public class LiteralConstant
             case "FPLiteral>Dec64":
             case "FPLiteral>=Dec64":
             case "FPLiteral<=>Dec64":
-            
+
             case "IntLiteral+Dec128":
             case "IntLiteral-Dec128":
             case "IntLiteral*Dec128":
@@ -1097,6 +1097,68 @@ public class LiteralConstant
             }
 
         return super.apply(op, that);
+        }
+
+    @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        switch (this.getFormat().name() + "->" + typeOut.getEcstasyClassName())
+            {
+            case "IntLiteral->Int8":
+                return toInt8Constant();
+
+            case "IntLiteral->UInt8":
+                return toUInt8Constant();
+
+            case "IntLiteral->Int16":
+            case "IntLiteral->Int32":
+            case "IntLiteral->Int64":
+            case "IntLiteral->Int128":
+            case "IntLiteral->VarInt":
+            case "IntLiteral->UInt16":
+            case "IntLiteral->UInt32":
+            case "IntLiteral->UInt64":
+            case "IntLiteral->UInt128":
+            case "IntLiteral->VarUInt":
+                return toIntConstant(Format.valueOf(typeOut.getEcstasyClassName()));
+
+            case "IntLiteral->FPLiteral":
+                return getConstantPool().ensureLiteralConstant(Format.FPLiteral, getValue());
+
+            case "IntLiteral->Float16":
+            case "FPLiteral->Float16":
+                return toFloat16Constant();
+
+            case "IntLiteral->Float32":
+            case "FPLiteral->Float32":
+                return toFloat32Constant();
+
+            case "IntLiteral->Float64":
+            case "FPLiteral->Float64":
+                return toFloat64Constant();
+
+            case "IntLiteral->Float128":
+            case "FPLiteral->Float128":
+                return toFloat128Constant();
+
+            case "IntLiteral->VarFloat":
+            case "FPLiteral->VarFloat":
+                return toVarFloatConstant();
+
+            case "IntLiteral->Dec32":
+            case "IntLiteral->Dec64":
+            case "IntLiteral->Dec128":
+            case "FPLiteral->Dec32":
+            case "FPLiteral->Dec64":
+            case "FPLiteral->Dec128":
+                return toDecimalConstant(Format.valueOf(typeOut.getEcstasyClassName()));
+
+            case "IntLiteral->VarDec":
+            case "FPLiteral->VarDec":
+                return toVarDecConstant();
+            }
+
+        return super.convertTo(typeOut);
         }
 
     @Override

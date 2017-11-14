@@ -236,8 +236,7 @@ public class LiteralExpression
         }
 
     @Override
-    public Constant generateConstant(Code code, TypeConstant type,
-            ErrorListener errs)
+    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
         {
         if (type.isSingleDefiningConstant()
                 && type.getDefiningConstant() instanceof ClassConstant
@@ -284,6 +283,7 @@ public class LiteralExpression
                         {
                         case LIT_CHAR:
                         case LIT_STRING:
+                        case TODO:
                             return pool.ensureStringConstant(literal.getValue().toString());
                         }
                     break;

@@ -142,7 +142,7 @@ public class TodoExpression
      * @param code  the code block
      * @param errs  the error list to log any errors to
      */
-    public void generateTodo(Code code, ErrorListener errs)
+    protected void generateTodo(Code code, ErrorListener errs)
         {
         // throw new UnsupportedOperationException(message, null)
         ConstantPool   pool     = pool();
@@ -178,12 +178,13 @@ public class TodoExpression
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append("TODO");
-        if (message != null)
+        if (message == null)
             {
-            sb.append('(')
-              .append(message)
-              .append(')');
+            sb.append("TODO");
+            }
+        else
+            {
+            sb.append(message);
             }
         return sb.toString();
         }

@@ -795,7 +795,6 @@ public class CommandLine
             }
 
         // determine if the errors are bad enough to quit
-if (false) // TODO: remove
         if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
             {
             out("xtc: Terminating.");
@@ -1397,7 +1396,7 @@ if (false) // TODO: remove
     /**
      * Print a blank line to the terminal.
      */
-    public static final void out()
+    public static void out()
         {
         out("");
         }
@@ -1405,7 +1404,7 @@ if (false) // TODO: remove
     /**
      * Print the String value of some object to the terminal.
      */
-    public static final void out(Object o)
+    public static void out(Object o)
         {
         System.out.println(o);
         }
