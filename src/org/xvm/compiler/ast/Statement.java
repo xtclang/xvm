@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Map;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -134,11 +135,11 @@ public abstract class Statement
     /**
      * Compiler context for compiling a method body.
      */
-    public static class Context
+    public abstract static class Context
         {
-        public Context(MethodStructure method)
+        public Context(Context ctxOuter)
             {
-            m_method = method;
+            m_ctxOuter = ctxOuter;
             }
 
         /**
@@ -146,22 +147,36 @@ public abstract class Statement
          */
         public MethodStructure getMethod()
             {
-            return m_method;
+            return m_ctxOuter.getMethod();
             }
 
         /**
          * @return the ConstantPool
          */
-        public ConstantPool getPool()
+        public ConstantPool pool()
             {
-            return m_method.getConstantPool();
+            return m_ctxOuter.pool();
             }
 
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @return the new (forked) context
+         */
         Context fork()
             {
             return new NestedContext(this);
             }
 
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param contexts  the previously forked contexts
+         */
         void join(Context... contexts)
             {
             // TODO
@@ -169,17 +184,37 @@ public abstract class Statement
 
         /**
          * Used in the validation phase to track scopes.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
          */
         public void enterScope()
             {
             // TODO
             }
 
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName
+         * @param reg
+         * @param errs
+         */
         public void registerVar(String sName, Register reg, ErrorListener errs)
             {
             // TODO
             }
 
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName
+         *
+         * @return
+         */
         public Argument resolveName(String sName)
             {
             // TODO
@@ -188,17 +223,34 @@ public abstract class Statement
 
         /**
          * Used in the validation phase to track scopes.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
          */
         public void exitScope()
             {
             // TODO
             }
 
+        /**
+         * Determine the current line number
+         * <p/>
+         * Note: This can only be used during the emit() stage.
+         *
+         * @return the current line number
+         */
         public int getLineNumber()
             {
             return m_nLine;
             }
 
+        /**
+         * Update the line number in the source code.
+         * <p/>
+         * Note: This can only be used during the emit() stage.
+         *
+         * @param code   the code being emitted to
+         * @param nLine  the new line number
+         */
         public void updateLineNumber(Code code, int nLine)
             {
             if (nLine != m_nLine)
@@ -209,12 +261,151 @@ public abstract class Statement
             }
 
         private MethodStructure m_method;
+
+        Context         m_ctxOuter;
+        Map<String, Register> m_mapVars;
+
         private int m_nLine = 0;
         }
 
+    /**
+     * Compiler context for compiling a method body.
+     */
+    public abstract static class Context
+        {
+        public Context(Context ctxOuter)
+            {
+            m_ctxOuter = ctxOuter;
+            }
+
+        /**
+         * @return the MethodStructure that the context represents
+         */
+        public MethodStructure getMethod()
+            {
+            return m_ctxOuter.getMethod();
+            }
+
+        /**
+         * @return the ConstantPool
+         */
+        public ConstantPool pool()
+            {
+            return m_ctxOuter.pool();
+            }
+
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @return the new (forked) context
+         */
+        Context fork()
+            {
+            return new NestedContext(this);
+            }
+
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param contexts  the previously forked contexts
+         */
+        void join(Context... contexts)
+            {
+            // TODO
+            }
+
+        /**
+         * Used in the validation phase to track scopes.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         */
+        public void enterScope()
+            {
+            // TODO
+            }
+
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName
+         * @param reg
+         * @param errs
+         */
+        public void registerVar(String sName, Register reg, ErrorListener errs)
+            {
+            // TODO
+            }
+
+        /**
+         * TODO
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName
+         *
+         * @return
+         */
+        public Argument resolveName(String sName)
+            {
+            // TODO
+            return null;
+            }
+
+        /**
+         * Used in the validation phase to track scopes.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         */
+        public void exitScope()
+            {
+            // TODO
+            }
+
+        /**
+         * Determine the current line number
+         * <p/>
+         * Note: This can only be used during the emit() stage.
+         *
+         * @return the current line number
+         */
+        public int getLineNumber()
+            {
+            return m_nLine;
+            }
+
+        /**
+         * Update the line number in the source code.
+         * <p/>
+         * Note: This can only be used during the emit() stage.
+         *
+         * @param code   the code being emitted to
+         * @param nLine  the new line number
+         */
+        public void updateLineNumber(Code code, int nLine)
+            {
+            if (nLine != m_nLine)
+                {
+                code.add(new Nop(nLine - m_nLine));
+                m_nLine = nLine;
+                }
+            }
+
+        private MethodStructure m_method;
+
+        Context         m_ctxOuter;
+        Map<String, Register> m_mapVars;
+
+        private int m_nLine = 0;
+        }
 
     /**
-     * TODO - consider making Context into an interface with 2 discrete sub-classes
+     * A nested context, representing a separate scope and/or code path.
      */
     public static class NestedContext
             extends Context
@@ -228,13 +419,13 @@ public abstract class Statement
         @Override
         public int getLineNumber()
             {
-            return m_ctxOuter.getLineNumber();
+            throw new IllegalStateException();
             }
 
         @Override
         public void updateLineNumber(Code code, int nLine)
             {
-            m_ctxOuter.updateLineNumber(code, nLine);
+            throw new IllegalStateException();
             }
 
         Context m_ctxOuter;

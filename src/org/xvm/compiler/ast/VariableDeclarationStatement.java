@@ -134,16 +134,23 @@ public class VariableDeclarationStatement
         // TODO make sure that # type fields == 1 for sequence type
 
         fValid &= type.validate(ctx, errs);
+
         if (value != null)
             {
             fValid &= value.validate(ctx, errs);
             }
+
+        m_reg = new Register(type.ensureTypeConstant());
+        ctx.registerVar(name.getValue().toString(), m_reg, errs);
+
         return fValid;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        boolean fCompletes = fReachable && (value == null || value.isCompletable());
+
         switch (getUsage())
             {
             case While:
@@ -153,15 +160,14 @@ public class VariableDeclarationStatement
                 code.add(new Var(pool().typeBoolean()));
                 Register regCond = code.lastRegister();
                 // next, declare the named variable
-                code.add(new Var_N(type.getTypeConstant(), pool().ensureStringConstant((String) name.getValue())));
-                Register regVal = code.lastRegister();
+                code.add(new Var_N(m_reg, pool().ensureStringConstant((String) name.getValue())));
                 // next, assign the r-value to the two variables
                 value.generateAssignments(code, new Assignable[]
-                        {value.new Assignable(regCond), value.new Assignable(regVal)}, errs);
+                        {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
                 code.add(getUsage() == Usage.If
                         ? new JumpFalse(regCond, getLabel())
                         : new JumpTrue (regCond, getLabel()));
-                return fReachable & value.isCompletable();
+                return fCompletes;
 
             case For:
                 // in the form "Type varname : Iterable"
@@ -182,10 +188,9 @@ public class VariableDeclarationStatement
         if (value == null)
             {
             code.add(new Var_N(typeV, constName));
-            return true;
+            return fCompletes;
             }
 
-        boolean fCompletes = value.isCompletable();
 
         // tuple or array initialization: use this for NON-constant values, since with constant
         // values, we can just use VAR_IN and point to the constant itself
@@ -227,8 +232,16 @@ public class VariableDeclarationStatement
             }
 
         // declare and initialize named var
-        // TODO this is wrong; push down the declaration into the RValue expression
-        code.add(new Var_IN(typeV, constName, value.generateArgument(code, typeV, false, errs)));
+        if (value.isConstant())
+            {
+            code.add(new Var_IN(typeV, constName, value.generateConstant(code, typeV, errs)));
+            }
+        else
+            {
+            code.add(new Var_N(m_reg, constName));
+            value.generateAssignment(code, value.new Assignable(m_reg), errs);
+            }
+
         return fCompletes;
         }
 
@@ -247,9 +260,9 @@ public class VariableDeclarationStatement
         if (value != null)
             {
             sb.append(' ')
-            .append(isConditional() ? ':' : '=')
-            .append(' ')
-            .append(value);
+              .append(isConditional() ? ':' : '=')
+              .append(' ')
+              .append(value);
             }
 
         if (term)
@@ -274,6 +287,8 @@ public class VariableDeclarationStatement
     protected Token          op;
     protected Expression     value;
     protected boolean        term;
+
+    private Register m_reg;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }
