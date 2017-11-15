@@ -125,9 +125,9 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public boolean isComparable(TypeConstant that)
+    public boolean isCongruentWith(TypeConstant that)
         {
-        that = that.unwrapForComparison();
+        that = that.unwrapForCongruence();
         if (that instanceof IntersectionTypeConstant)
             {
             TypeConstant             this1 = this.m_constType1;
@@ -135,8 +135,8 @@ public class IntersectionTypeConstant
             IntersectionTypeConstant thatI = (IntersectionTypeConstant) that;
             TypeConstant             that1 = thatI.m_constType1;
             TypeConstant             that2 = thatI.m_constType2;
-            return     (this1.isComparable(that1) && this2.isComparable(that2))
-                    || (this1.isComparable(that2) && this2.isComparable(that1));
+            return     (this1.isCongruentWith(that1) && this2.isCongruentWith(that2))
+                    || (this1.isCongruentWith(that2) && this2.isCongruentWith(that1));
             }
 
         return false;

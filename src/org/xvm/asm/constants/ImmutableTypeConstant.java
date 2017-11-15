@@ -103,9 +103,9 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    protected TypeConstant unwrapForComparison()
+    protected TypeConstant unwrapForCongruence()
         {
-        return m_constType.unwrapForComparison();
+        return m_constType.unwrapForCongruence();
         }
 
 

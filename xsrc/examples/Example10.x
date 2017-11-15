@@ -365,4 +365,16 @@ for (Int n : list)
 
         }
 
+// l-value bi-expression
 
+// obvious l-value:
+(foo() ? a : b)[i] = c;
+
+// is this an l-value?
+(foo() ? a : b) = c;
+
+// definitely legal:
+a?.b = c;
+
+// is this an l-value?
+(a?.b : c) = d;

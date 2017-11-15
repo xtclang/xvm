@@ -109,9 +109,9 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean isComparable(TypeConstant that)
+    public boolean isCongruentWith(TypeConstant that)
         {
-        that = that.unwrapForComparison();
+        that = that.unwrapForCongruence();
         if (that instanceof UnionTypeConstant)
             {
             TypeConstant      this1 = this.m_constType1;
@@ -119,8 +119,8 @@ public class UnionTypeConstant
             UnionTypeConstant thatU = (UnionTypeConstant) that;
             TypeConstant      that1 = thatU.m_constType1;
             TypeConstant      that2 = thatU.m_constType2;
-            return     (this1.isComparable(that1) && this2.isComparable(that2))
-                    || (this1.isComparable(that2) && this2.isComparable(that1));
+            return     (this1.isCongruentWith(that1) && this2.isCongruentWith(that2))
+                    || (this1.isCongruentWith(that2) && this2.isCongruentWith(that1));
             }
 
         return false;

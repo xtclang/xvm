@@ -242,13 +242,13 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean isComparable(TypeConstant that)
+    public boolean isCongruentWith(TypeConstant that)
         {
-        that = that.unwrapForComparison();
+        that = that.unwrapForCongruence();
         if (that instanceof ParameterizedTypeConstant)
             {
             ParameterizedTypeConstant thatP = (ParameterizedTypeConstant) that;
-            if (this.m_constType.isComparable(thatP.m_constType))
+            if (this.m_constType.isCongruentWith(thatP.m_constType))
                 {
                 List<TypeConstant> listThis = this.m_listTypeParams;
                 List<TypeConstant> listThat = thatP.m_listTypeParams;
@@ -257,7 +257,7 @@ public class ParameterizedTypeConstant
                     {
                     for (int i = 0, c = listThis.size(); i < c; ++i)
                         {
-                        if (!listThis.get(i).isComparable(listThat.get(i)))
+                        if (!listThis.get(i).isCongruentWith(listThat.get(i)))
                             {
                             return false;
                             }

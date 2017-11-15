@@ -153,20 +153,11 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean isComparable(TypeConstant that)
+    protected TypeConstant unwrapForCongruence()
         {
-        that = that.unwrapForComparison();
-        if (that instanceof DifferenceTypeConstant)
-            {
-            TypeConstant           this1 = this.m_constType1;
-            TypeConstant           this2 = this.m_constType2;
-            DifferenceTypeConstant thatD = (DifferenceTypeConstant) that;
-            TypeConstant           that1 = thatD.m_constType1;
-            TypeConstant           that2 = thatD.m_constType2;
-            return this1.isComparable(that1) && this2.isComparable(that2);
-            }
-
-        return this.m_constType1.isComparable(that);
+        // a difference type is just a duck-type, and has no equality definition of its own -- it
+        // uses the equality definition of the root object class itself
+        return getConstantPool().typeObject();
         }
 
 

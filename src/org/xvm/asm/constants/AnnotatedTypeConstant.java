@@ -170,10 +170,10 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    protected TypeConstant unwrapForComparison()
+    protected TypeConstant unwrapForCongruence()
         {
         // TODO this is wrong, but the annotations aren't being applied correctly right now, so defer ...
-        return m_constType.unwrapForComparison();
+        return m_constType.unwrapForCongruence();
         }
 
 

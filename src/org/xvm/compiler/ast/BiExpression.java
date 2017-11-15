@@ -4,16 +4,17 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IntervalConstant;
-import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.GP_Add;
+import org.xvm.asm.op.Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -21,7 +22,6 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
 
-import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
 
@@ -57,6 +57,38 @@ import org.xvm.util.Severity;
  * <li><tt>MOD:        "%"</tt> - </li>
  * <li><tt>DIVMOD:     "/%"</tt> - </li>
  * </ul>
+ *
+ * TODO remove cut&paste:
+    switch (operator.getId())
+        {
+        case COLON:
+        case COND_ELSE:
+        case COND_OR:
+        case COND_AND:
+        case BIT_OR:
+        case BIT_XOR:
+        case BIT_AND:
+        case COMP_EQ:
+        case COMP_NEQ:
+        case COMP_LT:
+        case COMP_GT:
+        case COMP_LTEQ:
+        case COMP_GTEQ:
+        case COMP_ORD:
+        case AS:
+        case IS:
+        case INSTANCEOF:
+        case DOTDOT:
+        case SHL:
+        case SHR:
+        case USHR:
+        case ADD:
+        case SUB:
+        case MUL:
+        case DIV:
+        case MOD:
+        case DIVMOD:
+        }
  */
 public class BiExpression
         extends Expression
@@ -172,8 +204,8 @@ public class BiExpression
                     TypeConstant typeResult = const1.resultType(operator.getId(), const2);
                     m_constType = typeResult;
                     // pick a default value just in case of an exception
-                    m_constVal  = typeResult.isComparable(type1) ? const1
-                                : typeResult.isComparable(type2) ? const2
+                    m_constVal  = typeResult.isCongruentWith(type1) ? const1
+                                : typeResult.isCongruentWith(type2) ? const2
                                 : const1.defaultValue(typeResult);
                     }
                     break;
@@ -356,9 +388,39 @@ public class BiExpression
         }
 
     @Override
+    public boolean isShortCircuiting()
+        {
+        // with the colon operator, we know that expr1 has to be short-circuiting (or it's a
+        // compiler error); all other operators are considered to be short circuiting if either
+        // sub-expression is short-circuiting
+        return operator.getId() == Id.COLON
+                ? expr2.isShortCircuiting()
+                : expr1.isShortCircuiting() || expr2.isShortCircuiting();
+        }
+
+    @Override
+    public boolean isCompletable()
+        {
+        switch (operator.getId())
+            {
+            case COLON:
+            case COND_ELSE:
+            case COND_OR:
+            case COND_AND:
+                // these can complete if the first expression can complete, because the result can
+                // be calculated from the first expression, depending on what its answer is
+                return expr1.isCompletable();
+
+            default:
+                // these can only complete if both sub-expressions can complete
+                return expr1.isCompletable() && expr2.isCompletable();
+            }
+        }
+
+    @Override
     public boolean isConstant()
         {
-        // it may have already been calculated
+        // it may have already been calculated by validate()
         if (m_constType != null)
             {
             return m_constVal != null;
@@ -424,11 +486,10 @@ public class BiExpression
         }
 
     @Override
-    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
         {
-        if (isConstant())
+        if (!isConstant())
             {
-            ConstantPool pool = pool();
             switch (operator.getId())
                 {
                 case COLON:
@@ -436,147 +497,279 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case COND_ELSE:
-                    return (expr1.isConstantNull() ? expr2 : expr1).generateConstant(code, type, errs);
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case COND_OR:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case COND_AND:
+                    // TODO
+                    throw new UnsupportedOperationException();
 
                 case BIT_OR:
-                    if (type.equals(pool.typeIntLiteral()))
-                        {
-                        Argument arg1 = expr1.generateConstant(code, type, errs);
-                        Argument arg2 = expr1.generateConstant(code, type, errs);
-                        if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
-                            {
-                            PackedInteger pi1      = ((LiteralConstant) arg1).getPackedInteger();
-                            PackedInteger pi2      = ((LiteralConstant) arg2).getPackedInteger();
-                            int           radix    = ((LiteralConstant) arg1).getIntRadix();
-                            PackedInteger piResult = pi1.isBig() || pi2.isBig()
-                                    ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
-                                    : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());
-                            return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(radix));
-                            }
-                        }
-                    else if (type.equals(pool.typeInt()))
-                        {
-                        Argument arg1 = expr1.generateConstant(code, type, errs);
-                        Argument arg2 = expr1.generateConstant(code, type, errs);
-                        if (arg1 instanceof LiteralConstant && arg2 instanceof LiteralConstant)
-                            {
-                            PackedInteger pi1      = ((LiteralConstant) arg1).getPackedInteger();
-                            PackedInteger pi2      = ((LiteralConstant) arg2).getPackedInteger();
-                            int           radix    = ((LiteralConstant) arg1).getIntRadix();
-                            PackedInteger piResult = pi1.isBig() || pi2.isBig()
-                                    ? new PackedInteger(pi1.getBigInteger().or(pi2.getBigInteger()))
-                                    : PackedInteger.valueOf(pi1.getLong() | pi2.getLong());
-                            return pool.ensureLiteralConstant(Format.IntLiteral, piResult.toString(radix));
-                            }
-                        }
-                    // else if (...) TODO Int and UInt 8-128 and Var length
-                    // else if (constType.equals())     TODO type | type
-
-                    // fall through for logical boolean "or"
-                case COND_OR:
-                    if (type.equals(pool.typeBoolean()))
-                        {
-                        // if the first expression is a boolean true, then the result is a boolean
-                        // true;  otherwise if the second expression is a boolean true, then the
-                        // result is a boolean true; otherwise the result is a boolean false
-                        Constant constVal = expr1.generateConstant(code, type, errs);
-                        return pool.valTrue().equals(constVal)
-                                ? constVal
-                                : expr2.generateConstant(code, type, errs);
-                        }
-                    break;
-
-                case BIT_AND:
-                    // TODO integer
-
-                    // fall through for logical boolean "and"
-                case COND_AND:
-                    if (type.equals(pool.typeBoolean()))
-                        {
-                        // if the first expression is a boolean false, then the result is a boolean
-                        // false;  otherwise if the second expression is a boolean true, then the
-                        // result is a boolean true; otherwise the result is a boolean false
-                        Constant constVal = expr1.generateConstant(code, type, errs);
-                        return pool.valFalse().equals(constVal)
-                                ? constVal
-                                : expr2.generateConstant(code, type, errs);
-                        }
-                    break;
+                    // TODO
+                    throw new UnsupportedOperationException();
 
                 case BIT_XOR:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case BIT_AND:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_EQ:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_NEQ:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_LT:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_GT:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_LTEQ:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_GTEQ:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COMP_ORD:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case AS:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case IS:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case INSTANCEOF:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case DOTDOT:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case SHL:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case SHR:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case USHR:
+                    // TODO
+                    throw new UnsupportedOperationException();
 
                 case ADD:
-                    // applies to:
-                    // Int8/16/32/64/128, VarInt
-                    // UInt8/16/32/64/128, VarUInt
-                    // Dec32/64/128, VarDec
-                    // Float16/32/64/128, VarFloat
-                    // String
-                    // Type
-                    if (m_constVal != null)
-                        {
-                        return validateAndConvertConstant(m_constVal, type, errs);
-                        }
+                    code.add(new Var(m_constType));
+                    Register regResult = code.lastRegister();
+                    generateAssignment(code, new Assignable(regResult), errs);
+                    return regResult;
 
                 case SUB:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case MUL:
+                    // TODO
+                    throw new UnsupportedOperationException();
 
                 case DIVMOD:
-                    // TODO same as DIV? or a Tuple result? and if so, then shouldn't all support that?
+                    if (type.isTuple())
+                        {
+                        // TODO
+                        throw new UnsupportedOperationException();
+                        }
                     // fall through
                 case DIV:
+                    // TODO
+                    throw new UnsupportedOperationException();
 
                 case MOD:
+                    // TODO
+                    throw new UnsupportedOperationException();
                 }
             }
 
-        return super.generateConstant(code, type, errs);
+        return super.generateArgument(code, type, fTupleOk, errs);
         }
 
-//            switch (operator.getId())
-//                {
-//                case COLON:
-//                case COND_ELSE:
-//                case COND_OR:
-//                case COND_AND:
-//                case BIT_OR:
-//                case BIT_XOR:
-//                case BIT_AND:
-//                case COMP_EQ:
-//                case COMP_NEQ:
-//                case COMP_LT:
-//                case COMP_GT:
-//                case COMP_LTEQ:
-//                case COMP_GTEQ:
-//                case COMP_ORD:
-//                case AS:
-//                case IS:
-//                case INSTANCEOF:
-//                case DOTDOT:
-//                case SHL:
-//                case SHR:
-//                case USHR:
-//                case ADD:
-//                case SUB:
-//                case MUL:
-//                case DIV:
-//                case MOD:
-//                case DIVMOD:
-//                }
+    @Override
+    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
+        {
+        if (operator.getId() == Id.DIVMOD && atype.length == 2)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return super.generateArguments(code, atype, fTupleOk, errs);
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        switch (operator.getId())
+            {
+            case COLON:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COND_ELSE:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COND_OR:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COND_AND:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case BIT_OR:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case BIT_XOR:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case BIT_AND:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_EQ:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_NEQ:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_LT:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_GT:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_LTEQ:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_GTEQ:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case COMP_ORD:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case AS:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case IS:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case INSTANCEOF:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case DOTDOT:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case SHL:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case SHR:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case USHR:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case ADD:
+                if (LVal.isLocalArgument())
+                    {
+                    // determine the types to request from the sub-expressions
+                    // TODO right now just use their implicit types, but for type inference to work, this should be based on the type that we're asked for
+                    assert LVal.getType().isCongruentWith(m_constType) || m_constType.isA(LVal.getType());
+                    TypeConstant type1 = expr1.getImplicitType();
+                    TypeConstant type2 = expr2.getImplicitType();
+
+                    // evaluate the sub-expressions
+                    // TODO if (LVal.isTemp() && LVal.getType().equals(type1)) -> genAssign, IP_ADD
+                    Argument arg1 = expr1.generateArgument(code, type1, false, errs);
+                    Argument arg2 = expr2.generateArgument(code, type2, false, errs);
+
+                    // generate an ADD op to add the sub-expressions together and store in the
+                    // local variable, local property, or black-hole
+                    code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
+                    return;
+                    }
+                break;
+
+            case SUB:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case MUL:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case DIVMOD:
+                if (LVal.getType().isTuple())
+                    {
+                    // TODO
+                    throw new UnsupportedOperationException();
+                    }
+                // fall through
+            case DIV:
+                // TODO
+                throw new UnsupportedOperationException();
+
+            case MOD:
+                // TODO
+                throw new UnsupportedOperationException();
+            }
+
+        super.generateAssignment(code, LVal, errs);
+        }
+
+    @Override
+    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+        {
+        if (operator.getId() == Id.DIVMOD && aLVal.length == 2)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        super.generateAssignments(code, aLVal, errs);
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

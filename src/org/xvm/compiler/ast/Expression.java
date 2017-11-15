@@ -1121,6 +1121,46 @@ public abstract class Expression
             }
 
         /**
+         * @return true iff the lvalue is a register for a LocalVar, the property constant for a
+         *         LocalProp, or the black-hole register for a BlackHole
+         */
+        public boolean isLocalArgument()
+            {
+            switch (m_nForm)
+                {
+                case BlackHole:
+                case LocalVar:
+                case LocalProp:
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
+
+        /**
+         * @return the register for a LocalVar, the property constant for a LocalProp, or the
+         *         black-hole register for a BlackHole
+         */
+        public Argument getLocalArgument()
+            {
+            switch (m_nForm)
+                {
+                case BlackHole:
+                    return new Register(pool().typeObject(), Op.A_IGNORE);
+
+                case LocalVar:
+                    return getRegister();
+
+                case LocalProp:
+                    return getProperty();
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
          * @return the property target, iff this Assignable represents a property
          */
         public Argument getTarget()
@@ -1245,10 +1285,10 @@ public abstract class Expression
         public static final int IndexedProp  = 6;
         public static final int IndexedNProp = 7;
 
-        private int      m_nForm;
-        private Register m_reg;
+        private int              m_nForm;
+        private Register         m_reg;
         private PropertyConstant m_prop;
-        private Object   m_oIndex;
+        private Object           m_oIndex;
         }
 
 

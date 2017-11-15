@@ -174,9 +174,9 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected TypeConstant unwrapForComparison()
+    protected TypeConstant unwrapForCongruence()
         {
-        return resolveTypedefs().unwrapForComparison();
+        return resolveTypedefs().unwrapForCongruence();
         }
 
 

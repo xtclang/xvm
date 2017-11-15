@@ -357,12 +357,12 @@ public abstract class TypeConstant
      *
      * @return true iff the two types are compatible for purposes of value comparison
      */
-    public boolean isComparable(TypeConstant that)
+    public boolean isCongruentWith(TypeConstant that)
         {
-        return this == that || this.unwrapForComparison().equals(that.unwrapForComparison());
+        return this == that || this.unwrapForCongruence().equals(that.unwrapForCongruence());
         }
 
-    protected TypeConstant unwrapForComparison()
+    protected TypeConstant unwrapForCongruence()
         {
         return this;
         }
