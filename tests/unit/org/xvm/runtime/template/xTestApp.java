@@ -41,7 +41,7 @@ public class xTestApp extends xModule
 
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-        MethodStructure func = ensureMethodStructure("getStringValue", VOID, STRING);
+        MethodStructure func = ensureMethodStructure("testReal1", VOID, VOID);
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
@@ -693,6 +693,8 @@ public class xTestApp extends xModule
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testTuple")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testConst")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testMixin")))
+
+            .add(new Call_00(adapter.getMethodConstId("TestApp", "testReal1")))
             .add(new Return_0());
         }
     }

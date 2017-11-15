@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.Collections;
 
+import org.xvm.compiler.ast.Expression.Assignable;
+
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.compiler.ErrorListener;
@@ -80,14 +82,42 @@ public class AssignmentStatement
     protected boolean validate(Context ctx, ErrorListener errs)
         {
         // TODO
-        return true;
+        return lvalue.validate(ctx, errs) && rvalue.validate(ctx, errs);
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        // TODO
-        return true;
+        switch (getUsage())
+            {
+            case While:
+            case If:
+            case For:
+            case Switch:
+                // TODO
+                throw notImplemented();
+
+            case Standalone:
+                return true; // TODO - break to the logic below
+            }
+
+        if (lvalue.isSingle() && op.getId() == Token.Id.ASN)
+            {
+            boolean fCompletes = fReachable;
+
+            Assignable asnL = lvalue.generateAssignable(code, errs);
+
+            if (fCompletes &= lvalue.isCompletable())
+                {
+                rvalue.generateAssignment(code, asnL, errs);
+
+                fCompletes &= rvalue.isCompletable();
+                }
+
+            return fCompletes;
+            }
+
+        throw notImplemented();
         }
 
 

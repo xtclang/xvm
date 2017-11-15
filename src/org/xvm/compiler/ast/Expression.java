@@ -21,10 +21,14 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 
+import org.xvm.asm.op.Move;
+import org.xvm.asm.op.P_Set;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
@@ -174,7 +178,7 @@ public abstract class Expression
      * Determine the implicit (or "natural") type of the expression, which is the type that the
      * expression would naturally compile to if no type were specified. For a multi-value
      * expression, the TypeConstant is returned as a tuple of the types of the multiple values.
-     * A Void type is indicated by a paramterized tuple type of zero parameters (fields).
+     * A Void type is indicated by a parameterized tuple type of zero parameters (fields).
      * <p/>
      * Either this method or {@link #getImplicitTypes()} must be overridden.
      *
@@ -969,63 +973,87 @@ public abstract class Expression
             {
             m_nForm = BlackHole;
             }
-// TODO docs
+
         /**
-         * local variable
+         * Construct an Assignable based on a local variable.
          *
-         * @param regVar
+         * @param regVar  the Register, representing the local variable
          */
         public Assignable(Register regVar)
             {
             m_nForm = LocalVar;
-            m_arg   = regVar;
+            m_reg   = regVar;
             }
 
         /**
-         * property (either local or target)
+         * Construct an Assignable based on a property (either local or "this").
          *
-         * @param argTarget
-         * @param constProp
+         * @param regTarget  the register, representing the property target
+         * @param constProp  the PropertyConstant
          */
-        public Assignable(Argument argTarget, PropertyConstant constProp)
+        public Assignable(Register regTarget, PropertyConstant constProp)
             {
-            m_nForm  = argTarget instanceof Register && ((Register) argTarget).getIndex() == Op.A_TARGET
-                    ? LocalProp
-                    : TargetProp;
-            m_arg    = argTarget;
-            m_oExtra = constProp;
+            m_nForm = regTarget.getIndex() == Op.A_TARGET ? LocalProp : TargetProp;
+            m_reg   = regTarget;
+            m_prop  = constProp;
             }
 
         /**
-         * single dimension array
+         * Construct an Assignable based on a single dimension array local variable.
          *
-         * @param regArray
-         * @param index
+         * @param argArray  the Register, representing the local variable holding an array
+         * @param index     the index into the array
          */
-        public Assignable(Register regArray, Argument index)
+        public Assignable(Register argArray, Argument index)
             {
             m_nForm  = Indexed;
-            m_arg    = regArray;
-            m_oExtra = index;
+            m_reg    = argArray;
+            m_oIndex = index;
             }
 
         /**
-         * multi (any) dimension array
+         * Construct an Assignable based on a multi (any) dimension array local variable.
          *
-         * @param regArray
-         * @param indexes
+         * @param regArray  the Register, representing the local variable holding an array
+         * @param indexes   an array of indexes into the array
          */
         public Assignable(Register regArray, Argument[] indexes)
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm  = indexes.length == 1
-                    ? Indexed
-                    : IndexedN;
-            m_arg    = regArray;
-            m_oExtra = indexes.length == 1
-                    ? indexes[0]
-                    : indexes;
+            m_nForm  = indexes.length == 1 ? Indexed : IndexedN;
+            m_reg    = regArray;
+            m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
+            }
+
+        /**
+         * Construct an Assignable based on a local property that is a single dimension array.
+         *
+         * @param argArray  the Register, representing the local variable holding an array
+         * @param index     the index into the array
+         */
+        public Assignable(Register argArray, PropertyConstant constProp, Argument index)
+            {
+            m_nForm  = IndexedProp;
+            m_reg    = argArray;
+            m_prop   = constProp;
+            m_oIndex = index;
+            }
+
+        /**
+         * Construct an Assignable based on a local property that is a a multi (any) dimension array.
+         *
+         * @param regArray  the Register, representing the local variable holding an array
+         * @param indexes   an array of indexes into the array
+         */
+        public Assignable(Register regArray, PropertyConstant constProp, Argument[] indexes)
+            {
+            assert indexes != null && indexes.length > 0;
+
+            m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
+            m_reg    = regArray;
+            m_prop   = constProp;
+            m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
         // ----- accessors ---------------------------------------------------------------------
@@ -1045,6 +1073,8 @@ public abstract class Expression
 
                 case LocalProp:
                 case TargetProp:
+                case IndexedProp:
+                case IndexedNProp:
                     return getProperty().getType();
 
                 case Indexed:
@@ -1066,6 +1096,8 @@ public abstract class Expression
          * <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
          * <li>{@link #Indexed} - an index into a single-dimensioned array</li>
          * <li>{@link #IndexedN} - an index into a multi-dimensioned array</li>
+         * <li>{@link #IndexedProp} - an index into a single-dimensioned array property</li>
+         * <li>{@link #IndexedNProp} - an index into a multi-dimensioned array property</li>
          * </ul>
          *
          * @return the form of the Assignable, one of: {@link #BlackHole}, {@link #LocalVar},
@@ -1085,7 +1117,7 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return (Register) m_arg;
+            return m_reg;
             }
 
         /**
@@ -1097,7 +1129,7 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return m_arg;
+            return m_reg;
             }
 
         /**
@@ -1109,19 +1141,19 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return (PropertyConstant) m_oExtra;
+            return m_prop;
             }
 
         /**
-         * @return the register for the array, iff this Assignable represents an array
+         * @return the argument for the array, iff this Assignable represents an array
          */
-        public Register getArray()
+        public Argument getArray()
             {
             if (m_nForm != Indexed && m_nForm != IndexedN)
                 {
                 throw new IllegalStateException();
                 }
-            return (Register) m_arg;
+            return m_reg;
             }
 
         /**
@@ -1129,9 +1161,9 @@ public abstract class Expression
          */
         public Argument getIndex()
             {
-            if (m_nForm == Indexed)
+            if (m_nForm == Indexed || m_nForm == IndexedProp)
                 {
-                return (Argument) m_oExtra;
+                return (Argument) m_oIndex;
                 }
 
             throw new IllegalStateException();
@@ -1142,14 +1174,14 @@ public abstract class Expression
          */
         public Argument[] getIndexes()
             {
-            if (m_nForm == Indexed)
+            if (m_nForm == Indexed || m_nForm == IndexedProp)
                 {
-                return new Argument[] {(Argument) m_oExtra};
+                return new Argument[] {(Argument) m_oIndex};
                 }
 
-            if (m_nForm == IndexedN)
+            if (m_nForm == IndexedN || m_nForm == IndexedNProp)
                 {
-                return (Argument[]) m_oExtra;
+                return (Argument[]) m_oIndex;
                 }
 
             throw new IllegalStateException();
@@ -1158,29 +1190,65 @@ public abstract class Expression
         // ----- compilation -------------------------------------------------------------------
 
         /**
-         * TODO
+         * Generate the assignment-specific assembly code.
          *
-         * @param arg
-         * @param code
-         * @param errs
+         * @param arg   the Argument, representing the R-value
+         * @param code  the code object to which the assembly is added
+         * @param errs  the error listener to log to
          */
         public void assign(Argument arg, Code code, ErrorListener errs)
             {
-            // TODO
+            switch (m_nForm)
+                {
+                case BlackHole:
+                    break;
+
+                case LocalVar:
+                    code.add(new Move(arg, getRegister()));
+                    break;
+
+                case LocalProp:
+                    code.add(new L_Set(getProperty(), arg));
+                    break;
+
+                case TargetProp:
+                    code.add(new P_Set(getProperty(), getTarget(), arg));
+                    break;
+
+                case Indexed:
+                    code.add(new I_Set(getArray(), getIndex(), arg));
+                    break;
+
+                case IndexedN:
+                    throw notImplemented();
+
+                case IndexedProp:
+                    code.add(new I_Set(getProperty(), getIndex(), arg));
+                    break;
+
+                case IndexedNProp:
+                    throw notImplemented();
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
 
         // ----- fields ------------------------------------------------------------------------
 
-        public static final int BlackHole  = 0;
-        public static final int LocalVar   = 1;
-        public static final int LocalProp  = 2;
-        public static final int TargetProp = 3;
-        public static final int Indexed    = 4;
-        public static final int IndexedN   = 5;
+        public static final int BlackHole    = 0;
+        public static final int LocalVar     = 1;
+        public static final int LocalProp    = 2;
+        public static final int TargetProp   = 3;
+        public static final int Indexed      = 4;
+        public static final int IndexedN     = 5;
+        public static final int IndexedProp  = 6;
+        public static final int IndexedNProp = 7;
 
         private int      m_nForm;
-        private Argument m_arg;
-        private Object   m_oExtra;
+        private Register m_reg;
+        private PropertyConstant m_prop;
+        private Object   m_oIndex;
         }
 
 

@@ -53,7 +53,7 @@ public class NameResolver
     /**
      * Resolve the name, or at least try to make progress doing so.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
      *                     pass
      * @param errs         the error list to log any errors etc. to
      *

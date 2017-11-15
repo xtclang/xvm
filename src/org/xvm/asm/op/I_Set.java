@@ -47,7 +47,7 @@ public class I_Set
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected I_Set(Argument argTarget, Argument argIndex, Argument argValue)
+    public I_Set(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }

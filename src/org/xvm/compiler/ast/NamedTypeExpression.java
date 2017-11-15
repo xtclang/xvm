@@ -11,13 +11,14 @@ import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.UnresolvedNameConstant;
+
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.NameResolver.Result;
+import org.xvm.compiler.ast.Statement.Context;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
@@ -125,7 +126,7 @@ public class NamedTypeExpression
             {
             return null;
             }
-        
+
         switch (access.getId())
             {
             case PUBLIC:
@@ -146,7 +147,7 @@ public class NamedTypeExpression
         {
         return nonnarrow != null;
         }
-    
+
     /**
      * Determine if this NamedTypeExpression could be a module name.
      *
@@ -270,8 +271,25 @@ public class NamedTypeExpression
             }
         }
 
+    @Override
+    protected boolean validate(Context ctx, ErrorListener errs)
+        {
+        boolean fValid = true;
 
-    // ----- debugging assistance ------------------------------------------------------------------
+        // TODO - @see NameResolver to resolve names: List<Token> names
+
+        if (paramTypes != null)
+            {
+            for (TypeExpression type : paramTypes)
+                {
+                fValid &= type.validate(ctx, errs);
+                }
+            }
+
+        return fValid;
+        }
+
+// ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()
@@ -295,7 +313,7 @@ public class NamedTypeExpression
             {
             sb.append('!');
             }
-        
+
         if (paramTypes != null)
             {
             sb.append('<');

@@ -12,6 +12,7 @@ class TestApp
         testArray();
         testTuple();
         testConst();
+        testReal1();
         }
 
     static Int getIntValue()
@@ -483,5 +484,14 @@ class TestApp
         Point p2 = new Point(2, 1);
         PrettyRectangle prr = new PrettyRectangle(prp, p2, "+++ ");
         print(prp);
+        }
+
+    static Void testReal1()
+        {
+        // @Inject io.Console console;
+
+        Int i;
+        Int j = 1;
+
         }
     }
