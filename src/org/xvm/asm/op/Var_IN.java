@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -30,14 +31,16 @@ public class Var_IN
      *
      * @param nType     the variable type id
      * @param nNameId   the name of the variable id
-     * @param nValueId  the initial value ide
+     * @param nValueId  the initial value id
+     *
+     * @deprecated
      */
     public Var_IN(int nType, int nNameId, int nValueId)
         {
-        super(null);
+        super();
 
-        m_nType = nType;
-        m_nNameId = nNameId;
+        m_nType    = nType;
+        m_nNameId  = nNameId;
         m_nValueId = nValueId;
         }
 
@@ -58,7 +61,27 @@ public class Var_IN
             }
 
         m_constName = constName;
-        m_argValue = argValue;
+        m_argValue  = argValue;
+        }
+
+    /**
+     * Construct a VAR_IN op for the specified register, name and argument.
+     *
+     * @param reg        the register
+     * @param constName  the name constant
+     * @param argValue   the value argument
+     */
+    public Var_IN(Register reg, StringConstant constName, Argument argValue)
+        {
+        super(reg);
+
+        if (argValue == null || constName == null)
+            {
+            throw new IllegalArgumentException("name and value required");
+            }
+
+        m_constName = constName;
+        m_argValue  = argValue;
         }
 
     /**
@@ -72,7 +95,7 @@ public class Var_IN
         {
         super(in, aconst);
 
-        m_nNameId = readPackedInt(in);
+        m_nNameId  = readPackedInt(in);
         m_nValueId = readPackedInt(in);
         }
 
@@ -84,7 +107,7 @@ public class Var_IN
 
         if (m_argValue != null)
             {
-            m_nNameId = encodeArgument(m_constName, registry);
+            m_nNameId  = encodeArgument(m_constName, registry);
             m_nValueId = encodeArgument(m_argValue, registry);
             }
 
@@ -132,5 +155,5 @@ public class Var_IN
     private int m_nValueId;
 
     private StringConstant m_constName;
-    private Argument m_argValue;
+    private Argument       m_argValue;
     }

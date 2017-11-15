@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -35,10 +36,12 @@ public class Var_SN
      * @param nType      the variable type id
      * @param nNameId    the name of the variable id
      * @param anValueId  the value ids for the sequence
+     *
+     * @deprecated
      */
     public Var_SN(int nType, int nNameId, int[] anValueId)
         {
-        super(null);
+        super();
 
         m_nType = nType;
         m_nNameId = nNameId;
@@ -55,6 +58,26 @@ public class Var_SN
     public Var_SN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
         {
         super(constType);
+
+        if (constName == null || aArgValue == null)
+            {
+            throw new IllegalArgumentException("name and values required");
+            }
+
+        m_constName = constName;
+        m_aArgValue = aArgValue;
+        }
+
+    /**
+     * Construct a VAR_SN op for the specified register, name and arguments.
+     *
+     * @param reg        the register
+     * @param constName  the name constant
+     * @param aArgValue  the value argument
+     */
+    public Var_SN(Register reg, StringConstant constName, Argument[] aArgValue)
+        {
+        super(reg);
 
         if (constName == null || aArgValue == null)
             {
@@ -138,9 +161,9 @@ public class Var_SN
         registerArguments(m_aArgValue, registry);
         }
 
-    private int m_nNameId;
+    private int   m_nNameId;
     private int[] m_anArgValue;
 
     private StringConstant m_constName;
-    private Argument[] m_aArgValue;
+    private Argument[]     m_aArgValue;
     }

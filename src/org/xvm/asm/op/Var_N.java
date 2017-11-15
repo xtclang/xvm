@@ -7,9 +7,11 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -30,7 +32,7 @@ public class Var_N
      */
     public Var_N(int nType, int nNameId)
         {
-        super(null);
+        super();
 
         m_nType = nType;
         m_nNameId = nNameId;
@@ -45,6 +47,24 @@ public class Var_N
     public Var_N(TypeConstant constType, StringConstant constName)
         {
         super(constType);
+
+        if (constName == null)
+            {
+            throw new IllegalArgumentException("name required");
+            }
+
+        m_constName = constName;
+        }
+
+    /**
+     * Construct a VAR_N op for the specified register and name.
+     *
+     * @param reg        the register
+     * @param constName  the name constant
+     */
+    public Var_N(Register reg, StringConstant constName)
+        {
+        super(reg);
 
         if (constName == null)
             {

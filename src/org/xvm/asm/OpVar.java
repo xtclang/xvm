@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -17,16 +18,31 @@ public abstract class OpVar
         extends Op
     {
     /**
+     * @deprecated constructor used by deprecated sub-class constructors
+     */
+    protected OpVar()
+        {
+        }
+
+    /**
      * Construct a variable that will hold the specified type.
      *
      * @param constType  the variable type
      */
     protected OpVar(TypeConstant constType)
         {
-        if (constType != null)
-            {
-            m_reg = new Register(constType);
-            }
+        this(new Register(constType));
+        }
+
+    /**
+     * Construct a variable that corresponds to the specified register.
+     *
+     * @param reg  the register for the variable
+     */
+    protected OpVar(Register reg)
+        {
+        assert reg != null;
+        m_reg = reg;
         }
 
     /**

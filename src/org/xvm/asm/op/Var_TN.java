@@ -5,20 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.List;
-import java.util.Map;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -44,10 +40,10 @@ public class Var_TN
      */
     public Var_TN(int nType, int nNameId, int[] anValueId)
         {
-        super(null);
+        super();
 
-        m_nType = nType;
-        m_nNameId = nNameId;
+        m_nType      = nType;
+        m_nNameId    = nNameId;
         m_anArgValue = anValueId;
         }
 
@@ -61,6 +57,26 @@ public class Var_TN
     public Var_TN(TypeConstant constType, StringConstant constName, Argument[] aArgValue)
         {
         super(constType);
+
+        if (constName == null || aArgValue == null)
+            {
+            throw new IllegalArgumentException("name and values required");
+            }
+
+        m_constName = constName;
+        m_aArgValue = aArgValue;
+        }
+
+    /**
+     * Construct a VAR_TN op for the specified register, name and arguments.
+     *
+     * @param reg        the register
+     * @param constName  the name constant
+     * @param aArgValue  the value argument
+     */
+    public Var_TN(Register reg, StringConstant constName, Argument[] aArgValue)
+        {
+        super(reg);
 
         if (constName == null || aArgValue == null)
             {
@@ -141,9 +157,9 @@ public class Var_TN
         registerArguments(m_aArgValue, registry);
         }
 
-    private int m_nNameId;
+    private int   m_nNameId;
     private int[] m_anArgValue;
 
     private StringConstant m_constName;
-    private Argument[] m_aArgValue;
+    private Argument[]     m_aArgValue;
     }

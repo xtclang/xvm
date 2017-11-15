@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -34,21 +35,39 @@ public class Var_T
      */
     public Var_T(int nType, int[] anValueId)
         {
-        super(null);
+        super();
 
-        m_nType = nType;
+        m_nType      = nType;
         m_anArgValue = anValueId;
         }
 
     /**
      * Construct a VAR_T op for the specified Tuple type and arguments.
      *
-     * @param constType the Tuple type
+     * @param constType  the Tuple type
      * @param aArgValue  the value argument
      */
     public Var_T(TypeConstant constType, Argument[] aArgValue)
         {
         super(constType);
+
+        if (aArgValue == null)
+            {
+            throw new IllegalArgumentException("values required");
+            }
+
+        m_aArgValue = aArgValue;
+        }
+
+    /**
+     * Construct a VAR_T op for the specified register and arguments.
+     *
+     * @param reg        the register
+     * @param aArgValue  the value argument
+     */
+    public Var_T(Register reg, Argument[] aArgValue)
+        {
+        super(reg);
 
         if (aArgValue == null)
             {

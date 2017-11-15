@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -30,7 +31,7 @@ public class Var_D
      */
     public Var_D(int nType)
         {
-        super(null);
+        super();
 
         m_nType = nType;
         }
@@ -43,6 +44,16 @@ public class Var_D
     public Var_D(TypeConstant constType)
         {
         super(constType);
+        }
+
+    /**
+     * Construct a VAR_D op for the specified register.
+     *
+     * @param reg  the register
+     */
+    public Var_D(Register reg)
+        {
+        super(reg);
         }
 
     /**

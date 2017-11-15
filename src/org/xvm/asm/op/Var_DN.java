@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -36,9 +37,9 @@ public class Var_DN
      */
     public Var_DN(int nType, int nNameId)
         {
-        super(null);
+        super();
 
-        m_nType = nType;
+        m_nType   = nType;
         m_nNameId = nNameId;
         }
 
@@ -51,6 +52,23 @@ public class Var_DN
     public Var_DN(TypeConstant constType, StringConstant constName)
         {
         super(constType);
+
+        if (constName == null)
+            {
+            throw new IllegalArgumentException("name required");
+            }
+        m_constName = constName;
+        }
+
+    /**
+     * Construct a VAR_DN op for the specified register and name.
+     *
+     * @param reg        the register
+     * @param constName  the name constant
+     */
+    public Var_DN(Register reg, StringConstant constName)
+        {
+        super(reg);
 
         if (constName == null)
             {

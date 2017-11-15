@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -35,7 +36,7 @@ public class Var_S
      */
     public Var_S(int nType, int[] anValueId)
         {
-        super(null);
+        super();
 
         m_nType = nType;
         m_anArgValue = anValueId;
@@ -50,6 +51,24 @@ public class Var_S
     public Var_S(TypeConstant constType, Argument[] aArgValue)
         {
         super(constType);
+
+        if (aArgValue == null)
+            {
+            throw new IllegalArgumentException("values required");
+            }
+
+        m_aArgValue = aArgValue;
+        }
+
+    /**
+     * Construct a VAR_S op for the specified register and arguments.
+     *
+     * @param reg        the register
+     * @param aArgValue  the value argument
+     */
+    public Var_S(Register reg, Argument[] aArgValue)
+        {
+        super(reg);
 
         if (aArgValue == null)
             {

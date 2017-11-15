@@ -6,8 +6,10 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 
 
@@ -26,7 +28,7 @@ public class Var
      */
     public Var(int nType)
         {
-        super(null);
+        super();
 
         m_nType = nType;
         }
@@ -39,6 +41,16 @@ public class Var
     public Var(TypeConstant constType)
         {
         super(constType);
+        }
+
+    /**
+     * Construct a VAR op for the specified register.
+     *
+     * @param reg  the register
+     */
+    public Var(Register reg)
+        {
+        super(reg);
         }
 
     /**
