@@ -341,7 +341,7 @@ public class Frame
                 return ServiceContext.getCurrentContext().m_hService;
 
             default:
-                throw new IllegalStateException("Invalid argument" + nArgId);
+                throw new IllegalStateException("Invalid argument " + nArgId);
             }
         }
 

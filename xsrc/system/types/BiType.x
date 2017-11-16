@@ -7,8 +7,8 @@ const BiType<DataType extends BiType>(Type type1, Type type2)
     {
     construct BiType(Type type1, Type type2)
         {
-        explicitlyImmutable = type1.explicitlyImmutable && type2.explicitlyImmutable;
-        resolved            = type1.resolved && type2.resolved;
+        // explicitlyImmutable = type1.explicitlyImmutable && type2.explicitlyImmutable;
+        // resolved            = type1.resolved && type2.resolved;
         }
 
     @Lazy Set<Method> allMethods.calc()

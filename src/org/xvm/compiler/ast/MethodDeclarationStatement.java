@@ -409,7 +409,7 @@ public class MethodDeclarationStatement
                     {
                     System.err.println("Compilation error: " +
                         method.getIdentityConstant().getPathString());
-                    System.err.println(errList.getErrors());
+                    errList.getErrors().forEach(System.err::println);
                     errList.clear();
                     method.setNative(true);
                     }

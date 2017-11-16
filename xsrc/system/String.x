@@ -3,6 +3,8 @@ const String
     {
     private construct String() {}
 
+    private Char[] chars;
+
     conditional Int indexOf(String value, Range<Int>? range = null)
         {
         TODO - native

@@ -6,6 +6,11 @@ const FPLiteral(String text)
         implements Orderable
     {
     /**
+     * The literal text.
+     */
+    private String text;
+
+    /**
      * Convert the number to a variable-length binary radix floating point number.
      */
     @Auto VarFloat to<VarFloat>();
