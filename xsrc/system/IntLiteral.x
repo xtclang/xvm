@@ -102,6 +102,7 @@ const IntLiteral(String text)
 
         assert:always digits > 0;
         this.magnitude = magnitude;
+        this.text = text;
         }
 
     /**
@@ -119,6 +120,11 @@ const IntLiteral(String text)
      * This is the value of the literal in VarInt form.
      */
     VarUInt magnitude;
+
+    /**
+     * The literal text.
+     */
+    private String text;
 
     /**
      * The minimum number of bits to store the IntLiteral's value as a signed integer in
