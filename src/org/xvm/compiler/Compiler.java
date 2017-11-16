@@ -422,6 +422,10 @@ public class Compiler
      * Variable {0} is already defined.
      */
     public static final String VAR_DEFINED                        = "COMPILER-51";
+    /**
+     * There is no "this".
+     */
+    public static final String NO_THIS                            = "COMPILER-52";
 
 
     // ----- data members --------------------------------------------------------------------------

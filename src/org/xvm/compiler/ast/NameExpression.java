@@ -159,8 +159,9 @@ public class NameExpression
         {
         boolean fValid = true;
 
-        String   sName = names.get(0).getValue().toString();
-        Argument arg   = ctx.resolveName(sName, errs);
+        Token    name  = names.get(0);
+        String   sName = name.getValue().toString();
+        Argument arg   = ctx.resolveName(name, errs);
         if (arg == null)
             {
             log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName,

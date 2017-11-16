@@ -166,15 +166,15 @@ module Test
 //        return ("hello", 0);
 //        }
 
-    conditional String foo6()
-        {
-        return false;
-        }
-
-    conditional String foo7()
-        {
-        return true, "hello";
-        }
+//    conditional String foo6()
+//        {
+//        return false;
+//        }
+//
+//    conditional String foo7()
+//        {
+//        return true, "hello";
+//        }
 
 //    Int foo8(Int a, Int b)
 //        {

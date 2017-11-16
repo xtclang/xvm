@@ -4,12 +4,18 @@ package org.xvm.compiler.ast;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Nop;
@@ -289,12 +295,31 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param sName  the name to resolve
+         * @param name  the name token to resolve
          *
          * @return the Argument representing the meaning of the name, or null
          */
-        public Argument resolveName(String sName, ErrorListener errs)
+        public Argument resolveName(Token name, ErrorListener errs)
             {
+            Argument arg = resolveReservedName(name, errs);
+            if (arg == null)
+                {
+                arg = resolveRegularName(name, errs);
+                }
+            return arg;
+            }
+
+        /**
+         * Resolve a name (other than a reserved name) to an argument.
+         *
+         * @param name  the potentially reserved name token
+         * @param errs  the error list to log errors to
+         *
+         * @return an Argument iff the name resolves to a reserved name; otherwise null
+         */
+        public Argument resolveRegularName(Token name, ErrorListener errs)
+            {
+            String                sName     = name.getValue().toString();
             Map<String, Argument> mapByName = m_mapByName;
             if (mapByName != null)
                 {
@@ -305,7 +330,20 @@ public abstract class Statement
                     }
                 }
 
-            return m_ctxOuter.resolveName(sName, errs);
+            return m_ctxOuter.resolveName(name, errs);
+            }
+
+        /**
+         * Resolve a reserved name to an argument.
+         *
+         * @param name  the potentially reserved name token
+         * @param errs  the error list to log errors to
+         *
+         * @return an Argument iff the name resolves to a reserved name; otherwise null
+         */
+        public Argument resolveReservedName(Token name, ErrorListener errs)
+            {
+            return m_ctxOuter.resolveReservedName(name, errs);
             }
 
         /**
@@ -468,12 +506,13 @@ public abstract class Statement
             }
 
         @Override
-        public Argument resolveName(String sName, ErrorListener errs)
+        public Argument resolveRegularName(Token name, ErrorListener errs)
             {
             checkValidating();
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
+            String                sName     = name.getValue().toString();
             Map<String, Argument> mapByName = ensureMethodParameters();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
@@ -484,6 +523,96 @@ public abstract class Statement
                     {
                     mapByName.put(sName, arg);
                     }
+                }
+
+            return arg;
+            }
+
+        @Override
+        public Argument resolveReservedName(Token name, ErrorListener errs)
+            {
+            checkValidating();
+
+            String       sName = name.getValue().toString();
+            boolean      fThis = false;
+            ConstantPool pool  = pool();
+            TypeConstant type;
+            int          nReg;
+            switch (sName)
+                {
+                case "this":
+                case "this:target":
+                    type  = pool.ensureTerminalTypeConstant(getThisIdentity());
+                    nReg  = Op.A_TARGET;
+                    fThis = true;
+                    break;
+
+                case "this:private":
+                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PRIVATE);
+                    nReg  = Op.A_PRIVATE;
+                    fThis = true;
+                    break;
+
+                case "this:protected":
+                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PROTECTED);
+                    nReg  = Op.A_PROTECTED;
+                    fThis = true;
+                    break;
+
+                case "this:public":
+                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PUBLIC);
+                    nReg  = Op.A_PUBLIC;
+                    fThis = true;
+                    break;
+
+                case "this:struct":
+                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.STRUCT);
+                    nReg  = Op.A_STRUCT;
+                    fThis = true;
+                    break;
+
+                case "this:type":
+                    type  = pool().typeType(); // TODO need the actual Type<actualType>
+                    nReg  = Op.A_TYPE;
+                    fThis = true;
+                    break;
+
+                case "this:frame":
+                    type = pool.typeFrame();
+                    nReg = Op.A_FRAME;
+                    break;
+
+                case "this:module":
+                    type = pool.typeModule(); // TODO needs to actually be "this module", not Module
+                    nReg = Op.A_MODULE;
+                    break;
+
+                case "this:service":
+                    type = pool.typeService();
+                    nReg = Op.A_SERVICE;
+                    break;
+
+                case "super":
+                    // TODO need to verify that there is a super
+                    type = pool().typeFunction(); // TODO need the actual sig of the super function
+                    nReg = Op.A_SUPER;
+                    break;
+
+                default:
+                    return null;
+                }
+
+            if (fThis && isStatic() && !m_fLoggedNoThis)
+                {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS, sName);
+                m_fLoggedNoThis = true;
+                }
+
+            Map<String, Argument> mapByName = ensureMethodParameters();
+            Argument              arg       = mapByName.get(sName);
+            if (arg == null)
+                {
+                arg = new Register(type, nReg);
                 }
 
             return arg;
@@ -508,6 +637,76 @@ public abstract class Statement
                 }
 
             return mapByName;
+            }
+
+        boolean isStatic()
+            {
+            Component parent = m_method;
+            while (true)
+                {
+                switch (parent.getFormat())
+                    {
+                    case INTERFACE:
+                    case CLASS:
+                    case CONST:
+                    case ENUM:
+                    case ENUMVALUE:
+                    case MIXIN:
+                    case TRAIT:
+                    case SERVICE:
+                    case PACKAGE:
+                    case MODULE:
+                        return false;
+
+                    case METHOD:
+                        if (parent.isStatic())
+                            {
+                            return true;
+                            }
+                        break;
+
+                    case PROPERTY:
+                    case MULTIMETHOD:
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                parent = parent.getParent();
+                }
+            }
+
+        IdentityConstant getThisIdentity()
+            {
+            Component parent = m_method;
+            while (true)
+                {
+                switch (parent.getFormat())
+                    {
+                    case INTERFACE:
+                    case CLASS:
+                    case CONST:
+                    case ENUM:
+                    case ENUMVALUE:
+                    case MIXIN:
+                    case TRAIT:
+                    case SERVICE:
+                    case PACKAGE:
+                    case MODULE:
+                        return parent.getIdentityConstant();
+
+                    case METHOD:
+                    case PROPERTY:
+                    case MULTIMETHOD:
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                parent = parent.getParent();
+                }
             }
 
         @Override
@@ -575,6 +774,7 @@ public abstract class Statement
         private StatementBlock  m_stmtBody;
         private boolean         m_fEmitting;
         private int             m_nLine;
+        private boolean         m_fLoggedNoThis;
         }
 
     /**

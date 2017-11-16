@@ -1668,6 +1668,7 @@ public class ConstantPool
 
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"     );} return c;}
     public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"        );} return c;}
+    public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"     );} return c;}
     public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"       );} return c;}
     public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
     public ClassConstant     clzConst()         {ClassConstant     c = m_clzConst;        if (c == null) {m_clzConst        = c = (ClassConstant) getImplicitlyImportedIdentity("Const"      );} return c;}
@@ -1703,8 +1704,10 @@ public class ConstantPool
     public ClassConstant     clzIterable()      {ClassConstant     c = m_clzIterable;     if (c == null) {m_clzIterable     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterable"   );} return c;}
     public ClassConstant     clzIterator()      {ClassConstant     c = m_clzIterator;     if (c == null) {m_clzIterator     = c = (ClassConstant) getImplicitlyImportedIdentity("Iterator"   );} return c;}
     public ClassConstant     clzTuple()         {ClassConstant     c = m_clzTuple;        if (c == null) {m_clzTuple        = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"      );} return c;}
+    public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
+    public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
     public TypeConstant      typeType()         {TypeConstant      c = m_typeType;        if (c == null) {m_typeType        = c = ensureTerminalTypeConstant(clzType()                       );} return c;}
     public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                      );} return c;}
     public TypeConstant      typeConst()        {TypeConstant      c = m_typeConst;       if (c == null) {m_typeConst       = c = ensureTerminalTypeConstant(clzConst()                      );} return c;}
@@ -1737,6 +1740,7 @@ public class ConstantPool
     public TypeConstant      typeIterable()     {TypeConstant      c = m_typeIterable;    if (c == null) {m_typeIterable    = c = ensureTerminalTypeConstant(clzIterable()                   );} return c;}
     public TypeConstant      typeIterator()     {TypeConstant      c = m_typeIterator;    if (c == null) {m_typeIterator    = c = ensureTerminalTypeConstant(clzIterator()                   );} return c;}
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
+    public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                      );} return c;}
 
     public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES      );} return c;}
     public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()       );} return c;}
@@ -2216,6 +2220,7 @@ public class ConstantPool
         m_valEcstasy      = null;
         m_clzObject       = null;
         m_clzRef          = null;
+        m_clzStruct       = null;
         m_clzType         = null;
         m_clzClass        = null;
         m_clzConst        = null;
@@ -2251,7 +2256,9 @@ public class ConstantPool
         m_clzIterable     = null;
         m_clzIterator     = null;
         m_clzTuple        = null;
+        m_clzFrame        = null;
         m_typeObject      = null;
+        m_typeStruct      = null;
         m_typeType        = null;
         m_typeClass       = null;
         m_typeConst       = null;
@@ -2288,6 +2295,7 @@ public class ConstantPool
         m_typeIterable    = null;
         m_typeIterator    = null;
         m_typeTuple       = null;
+        m_typeFrame       = null;
         m_typeVoid        = null;
         m_val0            = null;
         m_val1            = null;
@@ -2458,6 +2466,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzObject;
     private transient ClassConstant     m_clzRef;
     private transient ClassConstant     m_clzType;
+    private transient ClassConstant     m_clzStruct;
     private transient ClassConstant     m_clzClass;
     private transient ClassConstant     m_clzConst;
     private transient ClassConstant     m_clzService;
@@ -2492,8 +2501,10 @@ public class ConstantPool
     private transient ClassConstant     m_clzIterable;
     private transient ClassConstant     m_clzIterator;
     private transient ClassConstant     m_clzTuple;
+    private transient ClassConstant     m_clzFrame;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeType;
+    private transient TypeConstant      m_typeStruct;
     private transient TypeConstant      m_typeClass;
     private transient TypeConstant      m_typeConst;
     private transient TypeConstant      m_typeService;
@@ -2529,6 +2540,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterable;
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
+    private transient TypeConstant      m_typeFrame;
     private transient TypeConstant      m_typeVoid;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;
