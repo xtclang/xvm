@@ -72,7 +72,7 @@ public class IfStatement
         boolean fScope = cond.isScopeRequired();
         if (fScope)
             {
-            ctx.enterScope();
+            ctx = ctx.enterScope();
             }
 
         // TODO consider what to do when the condition is always true or false (is a fork still required?)
@@ -89,7 +89,7 @@ public class IfStatement
 
         if (fScope)
             {
-            ctx.exitScope();
+            ctx = ctx.exitScope();
             }
 
         return fValid;

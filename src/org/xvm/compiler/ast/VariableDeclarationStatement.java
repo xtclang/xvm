@@ -141,7 +141,7 @@ public class VariableDeclarationStatement
             }
 
         m_reg = new Register(type.ensureTypeConstant());
-        ctx.registerVar(name.getValue().toString(), m_reg, errs);
+        ctx.registerVar(name, m_reg, errs);
 
         return fValid;
         }

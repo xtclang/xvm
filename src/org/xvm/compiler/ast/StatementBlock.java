@@ -165,11 +165,11 @@ public class StatementBlock
      */
     public void compileMethod(Code code, ErrorListener errs)
         {
-        Context ctx = new Context(code.getMethodStructure());
+        RootContext ctx = new RootContext(code.getMethodStructure(), this);
 
-        if (validate(ctx, errs))
+        if (validate(ctx.validatingContext(), errs))
             {
-            boolean fCompletes = completes(ctx, true, code, errs);
+            boolean fCompletes = completes(ctx.emittingContext(), true, code, errs);
 
             if (fCompletes)
                 {
@@ -195,7 +195,7 @@ public class StatementBlock
         List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty())
             {
-            ctx.enterScope();
+            ctx = ctx.enterScope();
             for (Statement stmt : stmts)
                 {
                 if (!stmt.validate(ctx, errs) && ++cErrs > 10)
@@ -203,7 +203,7 @@ public class StatementBlock
                     break;
                     }
                 }
-            ctx.exitScope();
+            ctx = ctx.exitScope();
             }
 
         return cErrs == 0;

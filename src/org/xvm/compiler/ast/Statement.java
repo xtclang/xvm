@@ -1,18 +1,25 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.HashMap;
 import java.util.Map;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Nop;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -137,6 +144,11 @@ public abstract class Statement
      */
     public abstract static class Context
         {
+        /**
+         * Construct a Context.
+         *
+         * @param ctxOuter  the context that this Context is nested within
+         */
         public Context(Context ctxOuter)
             {
             m_ctxOuter = ctxOuter;
@@ -151,6 +163,14 @@ public abstract class Statement
             }
 
         /**
+         * @return the source for the method
+         */
+        public Source getSource()
+            {
+            return m_ctxOuter.getSource();
+            }
+
+        /**
          * @return the ConstantPool
          */
         public ConstantPool pool()
@@ -159,7 +179,7 @@ public abstract class Statement
             }
 
         /**
-         * TODO
+         * Create a nested fork of this context.
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
@@ -167,11 +187,14 @@ public abstract class Statement
          */
         Context fork()
             {
-            return new NestedContext(this);
+            checkForkable();
+
+            m_ctxInner = this;
+            return new NestedContext(this); // TODO could have a special "ForkedContext" impl if necessary
             }
 
         /**
-         * TODO
+         * Join multiple forks of this context back together.
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
@@ -179,7 +202,19 @@ public abstract class Statement
          */
         void join(Context... contexts)
             {
-            // TODO
+            checkForked();
+
+            for (Context ctx : contexts)
+                {
+                if (ctx.m_ctxOuter != this)
+                    {
+                    throw new IllegalStateException("not a fork of this context");
+                    }
+                }
+
+            // TODO merge info
+
+            m_ctxInner = null;
             }
 
         /**
@@ -187,48 +222,98 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public void enterScope()
+        public Context enterScope()
             {
-            // TODO
+            checkInnermost();
+
+            Context ctxInner = new NestedContext(this);
+            m_ctxInner = ctxInner;
+            return ctxInner;
             }
 
         /**
-         * TODO
+         * Register the specified variable name in this context.
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param sName
+         * @param tokName
          * @param reg
          * @param errs
          */
-        public void registerVar(String sName, Register reg, ErrorListener errs)
+        public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
-            // TODO
+            checkInnermost();
+
+            String sName = tokName.getValue().toString();
+            if (isVarDeclaredInThisScope(sName))
+                {
+                tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
+                }
+
+            Map<String, Argument> mapByName = m_mapByName;
+            if (mapByName == null)
+                {
+                m_mapByName = mapByName = new HashMap<>();
+                }
+            mapByName.put(sName, reg);
             }
 
         /**
-         * TODO
+         * Determine if the specified variable name is alread declared in the current scope.
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param sName
+         * @param sName  the variable name
          *
-         * @return
+         * @return true iff a variable of that name is already declared in this scope
+         */
+        public boolean isVarDeclaredInThisScope(String sName)
+            {
+            return m_mapByName != null && m_mapByName.containsKey(sName);
+            }
+
+        /**
+         * Resolve the name of a variable, structure, etc.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return the Argument representing the meaning of the name, or null
          */
         public Argument resolveName(String sName)
             {
-            // TODO
-            return null;
+            Map<String, Argument> mapByName = m_mapByName;
+            if (mapByName != null)
+                {
+                Argument arg = mapByName.get(sName);
+                if (arg != null)
+                    {
+                    return arg;
+                    }
+                }
+
+            return m_ctxOuter.resolveName(sName);
             }
 
         /**
-         * Used in the validation phase to track scopes.
+         * Exit the scope that was created by calling {@link #enterScope()}. Used in the validation
+         * phase to track scopes.
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public void exitScope()
+        public Context exitScope()
             {
-            // TODO
+            checkInnermost();
+
+            Context ctxOuter = m_ctxOuter;
+            assert ctxOuter.m_ctxInner == this;
+
+            // TODO copy variable assignment information from this scope to outer scope
+
+            m_ctxOuter = null;
+            ctxOuter.m_ctxInner = null;
+            return ctxOuter;
             }
 
         /**
@@ -240,7 +325,7 @@ public abstract class Statement
          */
         public int getLineNumber()
             {
-            return m_nLine;
+            throw new IllegalStateException();
             }
 
         /**
@@ -253,142 +338,175 @@ public abstract class Statement
          */
         public void updateLineNumber(Code code, int nLine)
             {
-            if (nLine != m_nLine)
+            throw new IllegalStateException();
+            }
+
+        /**
+         * Verify that this is the innermost context.
+         */
+        void checkInnermost()
+            {
+            if (m_ctxInner != null)
                 {
-                code.add(new Nop(nLine - m_nLine));
-                m_nLine = nLine;
+                throw new IllegalStateException();
                 }
             }
 
-        private MethodStructure m_method;
+        /**
+         * Verify that this is a forkable context.
+         */
+        void checkForkable()
+            {
+            if (m_ctxInner != null && m_ctxInner != this)
+                {
+                throw new IllegalStateException();
+                }
+            }
 
-        Context         m_ctxOuter;
-        Map<String, Register> m_mapVars;
+        /**
+         * Verify that this is a forked context.
+         */
+        void checkForked()
+            {
+            if (m_ctxInner != this)
+                {
+                throw new IllegalStateException();
+                }
+            }
 
-        private int m_nLine = 0;
+        Context               m_ctxOuter;
+        Context               m_ctxInner;
+        Map<String, Argument> m_mapByName;
         }
 
     /**
-     * Compiler context for compiling a method body.
+     * The outermost compiler context for compiling a method body. This context maintains a link
+     * with the method body that is being compiled, and represents the parameters to the method and
+     * the global names visible to the method.
      */
-    public abstract static class Context
+    public static class RootContext
+            extends Context
         {
-        public Context(Context ctxOuter)
+        public RootContext(MethodStructure method, StatementBlock stmtBody)
             {
-            m_ctxOuter = ctxOuter;
+            super(null);
+
+            m_method   = method;
+            m_stmtBody = stmtBody;
             }
 
-        /**
-         * @return the MethodStructure that the context represents
-         */
+        @Override
         public MethodStructure getMethod()
             {
-            return m_ctxOuter.getMethod();
+            return m_method;
             }
 
-        /**
-         * @return the ConstantPool
-         */
+        @Override
+        public Source getSource()
+            {
+            return m_stmtBody.getSource();
+            }
+
+        @Override
         public ConstantPool pool()
             {
-            return m_ctxOuter.pool();
+            return m_method.getConstantPool();
             }
 
-        /**
-         * TODO
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @return the new (forked) context
-         */
+        @Override
         Context fork()
             {
-            return new NestedContext(this);
+            checkValidating();
+            throw new IllegalStateException();
             }
 
-        /**
-         * TODO
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param contexts  the previously forked contexts
-         */
+        @Override
         void join(Context... contexts)
             {
-            // TODO
+            checkValidating();
+            throw new IllegalStateException();
             }
 
-        /**
-         * Used in the validation phase to track scopes.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         */
-        public void enterScope()
+        @Override
+        public Context enterScope()
             {
-            // TODO
+            checkValidating();
+            throw new IllegalStateException();
             }
 
-        /**
-         * TODO
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param sName
-         * @param reg
-         * @param errs
-         */
-        public void registerVar(String sName, Register reg, ErrorListener errs)
+        @Override
+        public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
-            // TODO
+            checkValidating();
+            throw new IllegalStateException();
             }
 
-        /**
-         * TODO
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param sName
-         *
-         * @return
-         */
+        @Override
+        public boolean isVarDeclaredInThisScope(String sName)
+            {
+            if (!super.isVarDeclaredInThisScope(sName))
+                {
+                return false;
+                }
+
+            Argument arg = m_mapByName.get(sName);
+            return arg instanceof Register && ((Register) arg).getIndex() >= 0;
+            }
+
+        @Override
         public Argument resolveName(String sName)
             {
-            // TODO
-            return null;
+            checkValidating();
+
+            Map<String, Argument> mapByName = m_mapByName;
+            if (mapByName == null)
+                {
+                mapByName = new HashMap<>();
+
+                MethodStructure method = m_method;
+                for (int i = 0, c = method.getParamCount(); i < c; ++i)
+                    {
+                    Parameter param = method.getParam(i);
+                    mapByName.put(param.getName(), new Register(param.getType(), i));
+                    }
+
+                m_mapByName = mapByName;
+                }
+
+            // check if the name is a parameter name, or a global name that has already been looked
+            // up and cached
+            Argument arg = mapByName.get(sName);
+            if (arg == null)
+                {
+                // TODO - resolve name, then cache it in the map
+
+                if (arg != null)
+                    {
+                    mapByName.put(sName, arg);
+                    }
+                }
+
+            return arg;
             }
 
-        /**
-         * Used in the validation phase to track scopes.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         */
-        public void exitScope()
+        @Override
+        public Context exitScope()
             {
-            // TODO
+            checkValidating();
+            throw new IllegalStateException();
             }
 
-        /**
-         * Determine the current line number
-         * <p/>
-         * Note: This can only be used during the emit() stage.
-         *
-         * @return the current line number
-         */
+        @Override
         public int getLineNumber()
             {
+            checkEmitting();
             return m_nLine;
             }
 
-        /**
-         * Update the line number in the source code.
-         * <p/>
-         * Note: This can only be used during the emit() stage.
-         *
-         * @param code   the code being emitted to
-         * @param nLine  the new line number
-         */
+        @Override
         public void updateLineNumber(Code code, int nLine)
             {
+            checkEmitting();
             if (nLine != m_nLine)
                 {
                 code.add(new Nop(nLine - m_nLine));
@@ -396,12 +514,46 @@ public abstract class Statement
                 }
             }
 
+        /**
+         * @return a Context that can be used while validating code
+         */
+        public Context validatingContext()
+            {
+            checkValidating();
+            return super.enterScope();
+            }
+
+        /**
+         * @return a Context that can be used while emitting code
+         */
+        public Context emittingContext()
+            {
+            checkValidating();
+            m_ctxInner.exitScope();
+            m_fEmitting = true;
+            return this;
+            }
+
+        private void checkValidating()
+            {
+            if (m_fEmitting)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        private void checkEmitting()
+            {
+            if (!m_fEmitting)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
         private MethodStructure m_method;
-
-        Context         m_ctxOuter;
-        Map<String, Register> m_mapVars;
-
-        private int m_nLine = 0;
+        private StatementBlock  m_stmtBody;
+        private boolean         m_fEmitting;
+        private int             m_nLine;
         }
 
     /**
@@ -412,23 +564,10 @@ public abstract class Statement
         {
         public NestedContext(Context ctxOuter)
             {
-            super(ctxOuter.getMethod());
-            m_ctxOuter = ctxOuter;
+            super(ctxOuter);
             }
 
-        @Override
-        public int getLineNumber()
-            {
-            throw new IllegalStateException();
-            }
-
-        @Override
-        public void updateLineNumber(Code code, int nLine)
-            {
-            throw new IllegalStateException();
-            }
-
-        Context m_ctxOuter;
+        // TODO whatever info needs to be accumulated for a nested or forked context, i.e. definite assignment info
         }
 
 

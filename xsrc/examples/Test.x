@@ -120,6 +120,17 @@ module Test
         return;
         }
 
+    Int foo2b(Int i)
+        {
+        return i;
+        }
+
+    Int foo2c()
+        {
+        Int i = 0;
+        return i;
+        }
+
     String foo3()
         {
         return "hello";

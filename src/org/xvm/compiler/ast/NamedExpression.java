@@ -63,8 +63,8 @@ public class NamedExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression expr;
     protected Token      name;
+    protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedExpression.class, "expr");
     }

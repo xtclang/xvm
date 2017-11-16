@@ -111,7 +111,7 @@ public class WhileStatement
         boolean fScope = cond.isScopeRequired();
         if (fScope)
             {
-            ctx.enterScope();
+            ctx = ctx.enterScope();
             }
 
         // TODO consider what to do when the condition is always true (is a fork still required?)
@@ -120,7 +120,7 @@ public class WhileStatement
 
         if (fScope)
             {
-            ctx.exitScope();
+            ctx = ctx.exitScope();
             }
 
         return fValid;

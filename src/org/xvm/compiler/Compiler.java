@@ -418,6 +418,10 @@ public class Compiler
      * Invalid operation.
      */
     public static final String INVALID_OPERATION                  = "COMPILER-50";
+    /**
+     * Variable {0} is already defined.
+     */
+    public static final String VAR_DEFINED                        = "COMPILER-51";
 
 
     // ----- data members --------------------------------------------------------------------------

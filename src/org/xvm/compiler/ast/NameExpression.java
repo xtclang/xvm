@@ -6,15 +6,21 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -153,8 +159,25 @@ public class NameExpression
         {
         boolean fValid = true;
 
-        // TODO - @see NameResolver to resolve names: List<Token> names
+        String   sName = names.get(0).getValue().toString();
+        Argument arg   = ctx.resolveName(sName);
+        if (arg == null)
+            {
+            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName);
+            fValid = false;
+            }
+        else
+            {
+            // TODO resolve subsequent names
+            if (names.size() > 1)
+                {
+                notImplemented();
+                }
 
+            m_arg = arg;
+            }
+
+        // TODO what does it mean if there are params?
         if (params != null)
             {
             for (TypeExpression type : params)
@@ -164,6 +187,49 @@ public class NameExpression
             }
 
         return fValid;
+        }
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        return m_arg == null
+                ? pool().typeObject()
+                : m_arg.getType();
+        }
+
+    @Override
+    public boolean isAssignable()
+        {
+        // TODO it needs to be an argument >= 0 but NOT a method parameter
+        return super.isAssignable();
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        // TODO verify that this is correct; what if the arg points to a Property, for example?
+        return m_arg != null && m_arg instanceof Constant;
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        assert isConstant();
+        return (Constant) m_arg;
+        }
+
+    @Override
+    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+        {
+        if (m_arg == null)
+            {
+            // TODO log error
+            return generateBlackHole(type);
+            }
+
+        return isConstant()
+                ? super.generateArgument(code, type, fTupleOk, errs)
+                : validateAndConvertSingle(m_arg, code, type, errs);
         }
 
 
@@ -222,6 +288,8 @@ public class NameExpression
     protected List<Token>          names;
     protected List<TypeExpression> params;
     protected long                 lEndPos;
+
+    private Argument m_arg;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }
