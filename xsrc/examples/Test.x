@@ -111,6 +111,16 @@ module Test
 //        {
 //        }
 
+    String foo1String()
+        {
+        return "hello" * 5;
+        }
+
+    String foo1String2()
+        {
+        return 'x' * 5;
+        }
+
 //    String foo1MissingReturn()
 //        {
 //        }
@@ -198,7 +208,7 @@ module Test
 //        return sum;
 //        }
 
-    Module bar()
+    Test bar()
         {
         return this;
         }

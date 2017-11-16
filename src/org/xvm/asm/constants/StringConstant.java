@@ -85,15 +85,52 @@ public class StringConstant
     public Constant apply(Token.Id op, Constant that)
         {
         ConstantPool pool = getConstantPool();
-        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+        switch (op.TEXT + that.getFormat().name())
             {
-            case "String+String":
+            case "+String":
                 return pool.ensureStringConstant(this.m_sVal + ((StringConstant) that).m_sVal);
 
-            case "String+Char":
+            case "+Char":
                 assert Character.isValidCodePoint(((CharConstant) that).getValue());
                 return pool.ensureStringConstant(
                         this.m_sVal + (char) (int) ((CharConstant) that).getValue());
+
+            case "*IntLiteral":
+            case "*Int64":
+                {
+                String s = m_sVal;
+                int n = that.getFormat() == Format.IntLiteral
+                        ? ((LiteralConstant) that).getPackedInteger().getInt()
+                        : ((IntConstant) that).getValue().getInt();
+                assert n >= 0 && n * s.length() < 1000000;
+
+                StringBuilder sb = new StringBuilder(n * s.length());
+                for (int i = 0; i < n; ++i)
+                    {
+                    sb.append(s);
+                    }
+
+                return getConstantPool().ensureStringConstant(sb.toString());
+                }
+
+            case "==String":
+                return getConstantPool().valOf(this.m_sVal.equals(((StringConstant) that).m_sVal));
+            case "!=String":
+                return getConstantPool().valOf(!this.m_sVal.equals(((StringConstant) that).m_sVal));
+            case "<String":
+                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) < 0);
+            case "<=String":
+                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) <= 0);
+            case ">String":
+                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) > 0);
+            case ">=String":
+                return getConstantPool().valOf(this.m_sVal.compareTo(((StringConstant) that).m_sVal) >= 0);
+
+            case "<=>String":
+                return getConstantPool().valOrd(this.m_sVal.compareTo(((StringConstant) that).m_sVal));
+
+            case "..String":
+                return getConstantPool().ensureIntervalConstant(this, that);
 
             default:
                 return super.apply(op, that);
