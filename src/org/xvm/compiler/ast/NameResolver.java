@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -27,19 +29,63 @@ import org.xvm.util.Severity;
 
 /**
  * This represents the progress toward resolution of a name for a particular AstNode.
- *
- * @author cp 2017.07.20
  */
 public class NameResolver
         implements ResolutionCollector
     {
+    /**
+     * Create a resolver for a single name.
+     *
+     * @param node   the node which is requesting the resolution of the name
+     * @param sName  the name to resolve
+     */
+    public NameResolver(AstNode node, String sName)
+        {
+        m_node  = node;
+        m_iter  = Collections.emptyIterator();
+        m_sName = sName;
+        }
+
+    /**
+     * Create a resolver used during the resolveNames() process that can evaluate a sequence of
+     * names.
+     *
+     * @param node       the NameResolving AstNode for which the resolution is occurring
+     * @param iterNames  the iterator of the sequence of names
+     */
     public NameResolver(AstNode node, Iterator<String> iterNames)
         {
         assert node instanceof NameResolving;
         assert iterNames != null && iterNames.hasNext();
 
-        m_node = node;
-        m_iter = iterNames;
+        m_node  = node;
+        m_iter  = iterNames;
+        m_sName = m_iter.next();
+        }
+
+    /**
+     * If the compilation stage is past the stage in which deferral can occur, then just force the
+     * completion of the resolution and treat anything else as an error.
+     *
+     * @param errs  the error list to log any errors to
+     *
+     * @return the constant representing the name, or null if the name could not be resolved
+     */
+    public Constant forceResolve(ErrorListener errs)
+        {
+        List<AstNode> listExcuses = new ArrayList<>(3);
+        switch (resolve(listExcuses, errs))
+            {
+            case RESOLVED:
+                return m_constant;
+
+            case DEFERRED:
+                m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                // fall through
+            case ERROR:
+            default:
+                return null;
+            }
         }
 
     /**
@@ -71,9 +117,6 @@ public class NameResolver
         switch (m_status)
             {
             case INITIAL:
-                // just starting out. load the first name to resolve
-                m_sName = m_iter.next();
-
                 // the first name could be an import, in which case that needs to be evaluated right
                 // away (because the imports will continue to be registered as the AST is resolved,
                 // so the answers to the questions about the imports will change if we don't ask now

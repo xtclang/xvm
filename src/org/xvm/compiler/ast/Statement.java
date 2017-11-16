@@ -149,7 +149,7 @@ public abstract class Statement
          *
          * @param ctxOuter  the context that this Context is nested within
          */
-        public Context(Context ctxOuter)
+        Context(Context ctxOuter)
             {
             m_ctxOuter = ctxOuter;
             }
@@ -185,7 +185,7 @@ public abstract class Statement
          *
          * @return the new (forked) context
          */
-        Context fork()
+        public Context fork()
             {
             checkForkable();
 
@@ -200,7 +200,7 @@ public abstract class Statement
          *
          * @param contexts  the previously forked contexts
          */
-        void join(Context... contexts)
+        public void join(Context... contexts)
             {
             checkForked();
 
@@ -259,7 +259,7 @@ public abstract class Statement
             }
 
         /**
-         * Determine if the specified variable name is alread declared in the current scope.
+         * Determine if the specified variable name is already declared in the current scope.
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
@@ -272,6 +272,13 @@ public abstract class Statement
             return m_mapByName != null && m_mapByName.containsKey(sName);
             }
 
+        /**
+         * Determine if the name refers to a writable variable.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return true iff the name refers to a variable, and the variable can be written to
+         */
         public boolean isVarWritable(String sName)
             {
             return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarWritable(sName);
@@ -286,7 +293,7 @@ public abstract class Statement
          *
          * @return the Argument representing the meaning of the name, or null
          */
-        public Argument resolveName(String sName)
+        public Argument resolveName(String sName, ErrorListener errs)
             {
             Map<String, Argument> mapByName = m_mapByName;
             if (mapByName != null)
@@ -298,7 +305,7 @@ public abstract class Statement
                     }
                 }
 
-            return m_ctxOuter.resolveName(sName);
+            return m_ctxOuter.resolveName(sName, errs);
             }
 
         /**
@@ -419,14 +426,14 @@ public abstract class Statement
             }
 
         @Override
-        Context fork()
+        public Context fork()
             {
             checkValidating();
             throw new IllegalStateException();
             }
 
         @Override
-        void join(Context... contexts)
+        public void join(Context... contexts)
             {
             checkValidating();
             throw new IllegalStateException();
@@ -449,13 +456,9 @@ public abstract class Statement
         @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            if (!super.isVarDeclaredInThisScope(sName))
-                {
-                return false;
-                }
-
-            Argument arg = m_mapByName.get(sName);
-            return arg instanceof Register && ((Register) arg).getIndex() >= 0;
+            Argument arg = ensureMethodParameters().get(sName);
+            return arg instanceof Register &&
+                    (((Register) arg).getIndex() >= 0 || ((Register) arg).isUnknown());
             }
 
         @Override
@@ -465,11 +468,31 @@ public abstract class Statement
             }
 
         @Override
-        public Argument resolveName(String sName)
+        public Argument resolveName(String sName, ErrorListener errs)
             {
             checkValidating();
 
+            // check if the name is a parameter name, or a global name that has already been looked
+            // up and cached
+            Map<String, Argument> mapByName = ensureMethodParameters();
+            Argument              arg       = mapByName.get(sName);
+            if (arg == null)
+                {
+                // resolve the name from outside of this statement
+                arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
+                if (arg != null)
+                    {
+                    mapByName.put(sName, arg);
+                    }
+                }
+
+            return arg;
+            }
+
+        Map<String, Argument> ensureMethodParameters()
+            {
             Map<String, Argument> mapByName = m_mapByName;
+
             if (mapByName == null)
                 {
                 mapByName = new HashMap<>();
@@ -484,20 +507,7 @@ public abstract class Statement
                 m_mapByName = mapByName;
                 }
 
-            // check if the name is a parameter name, or a global name that has already been looked
-            // up and cached
-            Argument arg = mapByName.get(sName);
-            if (arg == null)
-                {
-                // TODO - resolve name, then cache it in the map
-
-                if (arg != null)
-                    {
-                    mapByName.put(sName, arg);
-                    }
-                }
-
-            return arg;
+            return mapByName;
             }
 
         @Override

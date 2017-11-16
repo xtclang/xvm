@@ -160,7 +160,7 @@ public class NameExpression
         boolean fValid = true;
 
         String   sName = names.get(0).getValue().toString();
-        Argument arg   = ctx.resolveName(sName);
+        Argument arg   = ctx.resolveName(sName, errs);
         if (arg == null)
             {
             log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName);
