@@ -176,7 +176,10 @@ public class TerminalTypeConstant
     @Override
     protected TypeConstant unwrapForCongruence()
         {
-        return resolveTypedefs().unwrapForCongruence();
+        TypeConstant typeResolved = resolveTypedefs();
+        return typeResolved == this
+                ? this
+                : typeResolved.unwrapForCongruence();
         }
 
 

@@ -163,7 +163,8 @@ public class NameExpression
         Argument arg   = ctx.resolveName(sName, errs);
         if (arg == null)
             {
-            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName);
+            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName,
+                ctx.getMethod().getIdentityConstant().getSignature());
             fValid = false;
             }
         else
