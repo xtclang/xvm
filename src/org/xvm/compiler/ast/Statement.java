@@ -272,6 +272,11 @@ public abstract class Statement
             return m_mapByName != null && m_mapByName.containsKey(sName);
             }
 
+        public boolean isVarWritable(String sName)
+            {
+            return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarWritable(sName);
+            }
+
         /**
          * Resolve the name of a variable, structure, etc.
          * <p/>
@@ -451,6 +456,12 @@ public abstract class Statement
 
             Argument arg = m_mapByName.get(sName);
             return arg instanceof Register && ((Register) arg).getIndex() >= 0;
+            }
+
+        @Override
+        public boolean isVarWritable(String sName)
+            {
+            return false;
             }
 
         @Override

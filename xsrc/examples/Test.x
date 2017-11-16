@@ -131,6 +131,20 @@ module Test
         return i;
         }
 
+    Int foo2d()
+        {
+        Int i = 0;
+        i = i + 1;
+        return i;
+        }
+
+    Int foo2e()
+        {
+        Int i = 0;
+        i += 1;
+        return i;
+        }
+
     String foo3()
         {
         return "hello";

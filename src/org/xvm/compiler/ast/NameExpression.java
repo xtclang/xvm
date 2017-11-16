@@ -200,15 +200,13 @@ public class NameExpression
     @Override
     public boolean isAssignable()
         {
-        // TODO it needs to be an argument >= 0 but NOT a method parameter
-        return super.isAssignable();
+        return m_LVal != null;
         }
 
     @Override
     public boolean isConstant()
         {
-        // TODO verify that this is correct; what if the arg points to a Property, for example?
-        return m_arg != null && m_arg instanceof Constant;
+        return m_arg != null && m_arg instanceof Constant && m_LVal == null;
         }
 
     @Override
@@ -230,6 +228,14 @@ public class NameExpression
         return isConstant()
                 ? super.generateArgument(code, type, fTupleOk, errs)
                 : validateAndConvertSingle(m_arg, code, type, errs);
+        }
+
+    @Override
+    public Assignable generateAssignable(Code code, ErrorListener errs)
+        {
+        return isAssignable()
+                ? m_LVal
+                : super.generateAssignable(code, errs);
         }
 
 
@@ -289,7 +295,8 @@ public class NameExpression
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
-    private Argument m_arg;
+    private Argument   m_arg;
+    private Assignable m_LVal;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }

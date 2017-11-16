@@ -801,7 +801,7 @@ public abstract class Expression
      */
     public boolean isConstantFalse()
         {
-        return toConstant().equals(pool().valFalse());
+        return isConstant() && toConstant().equals(pool().valFalse());
         }
 
     /**
@@ -809,7 +809,7 @@ public abstract class Expression
      */
     public boolean isConstantTrue()
         {
-        return toConstant().equals(pool().valTrue());
+        return isConstant() && toConstant().equals(pool().valTrue());
         }
 
     /**
@@ -817,7 +817,7 @@ public abstract class Expression
      */
     public boolean isConstantNull()
         {
-        return toConstant().equals(pool().valNull());
+        return isConstant() && toConstant().equals(pool().valNull());
         }
 
     /**
