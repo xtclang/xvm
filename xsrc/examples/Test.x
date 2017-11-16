@@ -107,63 +107,64 @@ module Test
 //        construct ConstructorTest(String s) {} finally {}
 //        }
 
-    Void foo1()
-        {
-        }
+//    Void foo1()
+//        {
+//        }
 
-    String foo1MissingReturn()
-        {
-        }
+//    String foo1MissingReturn()
+//        {
+//        }
 
-    Void foo2()
-        {
-        return;
-        }
+//    Void foo2()
+//        {
+//        return;
+//        }
+//
+//    Int foo2b(Int i)
+//        {
+//        return i;
+//        }
+//
+//    Int foo2c()
+//        {
+//        Int i = 0;
+//        return i;
+//        }
+//
+//    Int foo2d()
+//        {
+//        Int i = 0;
+//        i = i + 1;
+//        return i;
+//        }
+//
+//    Int foo2e()
+//        {
+//        Int i = 0;
+//        i += 1;
+//        return i;
+//        }
+//
+//    String foo3()
+//        {
+//        return "hello";
+//        }
+//
+//    Int foo4()
+//        {
+//        return 0;
+//        }
+//
+//    (String, Int) foo5()
+//        {
+//        return "hello", 0;
+//        }
 
-    Int foo2b(Int i)
-        {
-        return i;
-        }
-
-    Int foo2c()
-        {
-        Int i = 0;
-        return i;
-        }
-
-    Int foo2d()
-        {
-        Int i = 0;
-        i = i + 1;
-        return i;
-        }
-
-    Int foo2e()
-        {
-        Int i = 0;
-        i += 1;
-        return i;
-        }
-
-    String foo3()
-        {
-        return "hello";
-        }
-
-    Int foo4()
-        {
-        return 0;
-        }
-
-    (String, Int) foo5()
-        {
-        return "hello", 0;
-        }
-
-    (String, Int) foo5b()
-        {
-        return ("hello", 0);
-        }
+// needs fix for isA: Tuple<String, Int>.isA(Tuple) == false
+//    (String, Int) foo5b()
+//        {
+//        return ("hello", 0);
+//        }
 
     conditional String foo6()
         {
@@ -175,25 +176,30 @@ module Test
         return true, "hello";
         }
 
-    Int foo8(Int a, Int b)
+//    Int foo8(Int a, Int b)
+//        {
+//        return a + b;
+//        }
+
+//    Int foo9(Iterator<Int> iter)
+//        {
+//        Int sum = 0;
+//        while (Int i : iter.next())
+//            {
+//            sum += i;
+//            }
+//
+//        // just for comparison
+//        while (sum < 10)
+//            {
+//            ++sum;
+//            }
+//
+//        return sum;
+//        }
+
+    Module bar()
         {
-        return a + b;
-        }
-
-    Int foo9(Iterator<Int> iter)
-        {
-        Int sum = 0;
-        while (Int i : iter.next())
-            {
-            sum += i;
-            }
-
-        // just for comparison
-        while (sum < 10)
-            {
-            ++sum;
-            }
-
-        return sum;
+        return this;
         }
     }

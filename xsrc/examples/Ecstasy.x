@@ -1,5 +1,8 @@
 module Ecstasy.xtclang.org
     {
+    const Module {}
+    const Package {}
+
     typedef Tuple<> Void;
 
     class Object
