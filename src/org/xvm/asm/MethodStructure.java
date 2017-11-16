@@ -21,6 +21,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Nop;
+
 import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
@@ -813,6 +815,16 @@ public class MethodStructure
         // ----- Code methods -----------------------------------------------------------------
 
         /**
+         * Update the "current" line number from the corresponding source code.
+         *
+         * @param nLine  the new line number
+         */
+        public void updateLineNumber(int nLine)
+            {
+            m_nCurLine = nLine;
+            }
+
+        /**
          * Add the specified op to the end of the code.
          *
          * @param op  the Op to add
@@ -822,6 +834,13 @@ public class MethodStructure
         public Code add(Op op)
             {
             ensureAppending();
+
+            int nLineDelta = m_nCurLine - m_nPrevLine;
+            if (nLineDelta != 0)
+                {
+                m_nPrevLine = m_nCurLine;
+                add(new Nop(nLineDelta));
+                }
 
             ArrayList<Op> listOps = m_listOps;
             if (m_fTrailingPrefix)
@@ -1119,6 +1138,16 @@ public class MethodStructure
          * A coding black hole.
          */
         private Code m_hole;
+
+        /**
+         * Previously advanced-to line number.
+         */
+        private int m_nPrevLine;
+
+        /**
+         * Current line number.
+         */
+        private int m_nCurLine;
         }
 
 

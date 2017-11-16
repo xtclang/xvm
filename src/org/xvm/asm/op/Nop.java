@@ -99,6 +99,14 @@ public class Nop extends Op
         return iPC + 1;
         }
 
+    @Override
+    public String toString()
+        {
+        return f_cLines == 0
+                ? super.toString()
+                : "Line " + (f_cLines > 0 ? "+" : "") + f_cLines;
+        }
+
     private final int f_nOp;
     private final int f_cLines;
     }

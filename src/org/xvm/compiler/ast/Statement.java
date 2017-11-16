@@ -98,7 +98,7 @@ public abstract class Statement
         {
         if (fReachable)
             {
-            ctx.updateLineNumber(code, Source.calculateLine(getStartPosition()));
+            code.updateLineNumber(Source.calculateLine(getStartPosition()));
             }
         else
             {
@@ -364,31 +364,6 @@ public abstract class Statement
             m_ctxOuter = null;
             ctxOuter.m_ctxInner = null;
             return ctxOuter;
-            }
-
-        /**
-         * Determine the current line number
-         * <p/>
-         * Note: This can only be used during the emit() stage.
-         *
-         * @return the current line number
-         */
-        public int getLineNumber()
-            {
-            throw new IllegalStateException();
-            }
-
-        /**
-         * Update the line number in the source code.
-         * <p/>
-         * Note: This can only be used during the emit() stage.
-         *
-         * @param code   the code being emitted to
-         * @param nLine  the new line number
-         */
-        public void updateLineNumber(Code code, int nLine)
-            {
-            throw new IllegalStateException();
             }
 
         /**
@@ -716,24 +691,6 @@ public abstract class Statement
             throw new IllegalStateException();
             }
 
-        @Override
-        public int getLineNumber()
-            {
-            checkEmitting();
-            return m_nLine;
-            }
-
-        @Override
-        public void updateLineNumber(Code code, int nLine)
-            {
-            checkEmitting();
-            if (nLine != m_nLine)
-                {
-                code.add(new Nop(nLine - m_nLine));
-                m_nLine = nLine;
-                }
-            }
-
         /**
          * @return a Context that can be used while validating code
          */
@@ -773,7 +730,6 @@ public abstract class Statement
         private MethodStructure m_method;
         private StatementBlock  m_stmtBody;
         private boolean         m_fEmitting;
-        private int             m_nLine;
         private boolean         m_fLoggedNoThis;
         }
 
