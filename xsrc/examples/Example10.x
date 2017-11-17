@@ -1,4 +1,3 @@
-
 // part of Ecstasy runtime
 interface RestClient
     {
@@ -378,3 +377,17 @@ a?.b = c;
 
 // is this an l-value?
 (a?.b : c) = d;
+
+
+// String building
+Int i = 7;
+
+String s = "There are " + (i+2) + " people in the room.";
+
+String s = {"There are {i+2} people in the room."};
+
+String s = new StringBuilder()
+            .append("There are ")
+            .append(i+2)
+            .append("people in the room.")
+            .toString();

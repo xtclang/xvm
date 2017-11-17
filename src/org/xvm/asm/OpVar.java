@@ -63,7 +63,7 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            m_nType = encodeArgument(m_reg.getType(), registry);
+            m_nType = encodeArgument(m_reg.getRefType(), registry);
             }
 
         out.writeByte(getOpCode());
@@ -75,7 +75,7 @@ public abstract class OpVar
      */
     public TypeConstant getType()
         {
-        return m_reg.getType();
+        return m_reg.getRefType();
         }
 
     /**
@@ -101,7 +101,7 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            registry.register(m_reg.getType());
+            registry.register(m_reg.getRefType());
             }
         }
 

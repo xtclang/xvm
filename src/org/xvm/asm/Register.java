@@ -64,7 +64,8 @@ public class Register
      *
      * @return the Register's type
      */
-    public TypeConstant getType()
+    @Override
+    public TypeConstant getRefType()
         {
         return m_type;
         }

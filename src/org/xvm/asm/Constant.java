@@ -117,6 +117,14 @@ public abstract class Constant
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
         }
 
+    @Override
+    public TypeConstant getRefType()
+        {
+        // it's possible that we want to push this decision down to e.g. ValueConstant, but
+        // it seems like a reasonable default for now
+        return getType();
+        }
+
     /**
      * @return true iff this constant represents a class at runtime, whether or not the exact
      *         identity of the class is known at compile time

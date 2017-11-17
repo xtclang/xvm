@@ -41,7 +41,7 @@ public class xTestApp extends xModule
 
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-        MethodStructure func = ensureMethodStructure("testReal1", VOID, VOID);
+        MethodStructure func = ensureMethodStructure("getStringValue", VOID, VOID);
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
@@ -73,7 +73,7 @@ public class xTestApp extends xModule
                     adapter.ensureValueConstantId(null)
                 },
                 new int[]{4, 3})) // next register #4
-            .add(new JumpFalse(4, 10)) // -> Exit
+            .add(new JumpFalse(4, 7)) // -> Exit
 
             .add(new P_Get(adapter.getPropertyConstId("String", "size"), 1, 5)) // next register #5
             .add(new GP_Add(5, 3, 5))

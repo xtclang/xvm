@@ -115,9 +115,9 @@ public abstract class Op
     public interface Argument
         {
         /**
-         * @return the type of the argument
+         * @return the RefType from the implicit Ref that this argument represents
          */
-        TypeConstant getType();
+        TypeConstant getRefType();
         }
 
     /**

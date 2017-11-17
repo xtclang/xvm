@@ -736,6 +736,12 @@ public class MethodStructure
             writePackedLong(out, aconst[i].getPosition());
             }
 
+        Code code = m_code;
+        if (code != null)
+            {
+            code.ensureAssembled();
+            }
+
         // write out the bytes (if there are any)
         byte[] abOps = m_abOps;
         int    cbOps = abOps == null ? 0 : abOps.length;
@@ -751,7 +757,6 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
-
                 .append("id=\"")
                 .append(getIdentityConstant().getValueString())
                 .append("\", sig=")
@@ -1063,8 +1068,8 @@ public class MethodStructure
                         Op op = aop[i];
 
                         op.resolveAddress(this, i);
-                        op.write(outData, registry);
                         op.simulate(scope);
+                        op.write(outData, registry);
                         }
                     }
                 catch (IOException e)

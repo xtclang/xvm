@@ -98,7 +98,7 @@ public class AssignmentStatement
                 throw notImplemented();
 
             case Standalone:
-                return true; // TODO - break to the logic below
+               break;
             }
 
         if (lvalue.isSingle() && op.getId() == Token.Id.ASN)

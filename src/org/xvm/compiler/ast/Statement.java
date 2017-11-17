@@ -17,8 +17,9 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.PropertyConstant;
+
 import org.xvm.asm.op.Label;
-import org.xvm.asm.op.Nop;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -477,6 +478,23 @@ public abstract class Statement
         @Override
         public boolean isVarWritable(String sName)
             {
+            Argument arg = ensureMethodParameters().get(sName);
+            if (arg instanceof Register)
+                {
+                return ((Register) arg).isWritable();
+                }
+
+            if (arg instanceof PropertyConstant)
+                {
+                // the context only answers the question of what the _first_ name is, so
+                // in the case of "a.b.c", this method is called only for "a", so if someone
+                // is asking if it's settable, then obviously there is no ".b.c" following;
+                // it's obviously a local property (since there is no "target." before it),
+                // so the only check to do here is to make sure that it is settable, i.e. not
+                // a calculated property
+                // TODO: check for a calculated property
+                return true;
+                }
             return false;
             }
 
@@ -593,7 +611,7 @@ public abstract class Statement
             return arg;
             }
 
-        Map<String, Argument> ensureMethodParameters()
+        protected Map<String, Argument> ensureMethodParameters()
             {
             Map<String, Argument> mapByName = m_mapByName;
 

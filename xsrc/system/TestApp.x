@@ -493,5 +493,6 @@ class TestApp
         Int i;
         Int j = 1;
 
+        i = j;
         }
     }

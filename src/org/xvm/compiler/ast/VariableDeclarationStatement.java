@@ -183,17 +183,16 @@ public class VariableDeclarationStatement
 
         // TODO DVAR support
 
-        TypeConstant   typeV     = type.ensureTypeConstant();
         StringConstant constName = pool().ensureStringConstant((String) name.getValue());
         if (value == null)
             {
-            code.add(new Var_N(typeV, constName));
+            code.add(new Var_N(m_reg, constName));
             return fCompletes;
             }
 
-
         // tuple or array initialization: use this for NON-constant values, since with constant
         // values, we can just use VAR_IN and point to the constant itself
+        TypeConstant typeV = type.ensureTypeConstant();
         if (typeV.isParamsSpecified() && !value.isConstant())
             {
             int                             nOp    = -1;
@@ -205,7 +204,7 @@ public class VariableDeclarationStatement
                 nOp    = Op.OP_VAR_TN;
                 vals   = ((TupleExpression) value).getExpressions();
                 List<TypeConstant> types = typeV.getParamTypes();
-                typeOf = i -> types.get(i);
+                typeOf = types::get;
                 }
             else if (value instanceof ListExpression && typeV.isA(pool().typeSequence()))
                 {
@@ -225,8 +224,8 @@ public class VariableDeclarationStatement
                     aArgs[i] = vals.get(i).generateArgument(code, typeOf.apply(i), false, errs);
                     }
                 code.add(nOp == Op.OP_VAR_TN
-                        ? new Var_TN(typeV, constName, aArgs)
-                        : new Var_SN(typeV, constName, aArgs));
+                        ? new Var_TN(m_reg, constName, aArgs)
+                        : new Var_SN(m_reg, constName, aArgs));
                 return fCompletes;
                 }
             }
@@ -234,7 +233,7 @@ public class VariableDeclarationStatement
         // declare and initialize named var
         if (value.isConstant())
             {
-            code.add(new Var_IN(typeV, constName, value.generateConstant(code, typeV, errs)));
+            code.add(new Var_IN(m_reg, constName, value.generateConstant(code, typeV, errs)));
             }
         else
             {

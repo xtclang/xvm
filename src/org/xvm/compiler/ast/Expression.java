@@ -881,7 +881,7 @@ public abstract class Expression
         // assume that the result is the same as what was passed in
         Argument argOut = argIn;
 
-        TypeConstant typeIn = argIn.getType();
+        TypeConstant typeIn = argIn.getRefType();
         if (!typeIn.equals(typeOut))
             {
             // verify that a conversion is possible
@@ -1069,7 +1069,7 @@ public abstract class Expression
                     return pool().typeObject();
 
                 case LocalVar:
-                    return getRegister().getType();
+                    return getRegister().getRefType();
 
                 case LocalProp:
                 case TargetProp:
@@ -1079,7 +1079,7 @@ public abstract class Expression
 
                 case Indexed:
                 case IndexedN:
-                    return getArray().getType();
+                    return getArray().getRefType();
 
                 default:
                     throw new IllegalStateException();

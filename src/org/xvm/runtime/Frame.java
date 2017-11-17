@@ -802,8 +802,8 @@ public class Frame
     // return the type of the local property specified by the PropertyConstant
     public Type getLocalPropertyType(int iArg)
         {
-        PropertyConstant constProperty = (PropertyConstant) getConstant(iArg);
-        return f_context.f_types.resolveType(constProperty.getRefType(), getActualTypes());
+        TypeConstant typeProp = getConstant(iArg).getRefType();
+        return f_context.f_types.resolveType(typeProp, getActualTypes());
         }
 
     // return the type of the specified argument
@@ -832,7 +832,7 @@ public class Frame
             }
 
         // "local property"
-        TypeConstant typeProp = ((PropertyConstant) getConstant(iArg)).getRefType();
+        TypeConstant typeProp = getConstant(iArg).getRefType();
         return f_context.f_types.resolveClass(typeProp, getActualTypes());
         }
 
@@ -1004,11 +1004,9 @@ public class Frame
             // TODO: the type id could be cached on the corresponding op-code
 
             // "local property" or a literal constant
-            Constant     constFrom = getConstant(nVarFrom);
-            TypeConstant constType = constFrom instanceof PropertyConstant
-                    ? ((PropertyConstant) constFrom).getRefType()   // the type of the val in the prop
-                    : constFrom.getType();                          // the type of the constant itself
-            f_aInfo[nVar] = new VarInfo(constType.getPosition(), VAR_STANDARD);
+            TypeConstant type = getConstant(nVarFrom).getRefType();
+
+            f_aInfo[nVar] = new VarInfo(type.getPosition(), VAR_STANDARD);
             }
         }
 
@@ -1466,10 +1464,7 @@ public class Frame
                 }
 
             // "local property" or a literal constant
-            Constant     constArray = frame.getConstant(nTargetReg);
-            TypeConstant typeArray  = constArray instanceof PropertyConstant
-                    ? ((PropertyConstant) constArray).getRefType()  // the prop holds an array
-                    : constArray.getType();                         // the constant is an array
+            TypeConstant typeArray = frame.getConstant(nTargetReg).getRefType();
             if (typeArray.isParamsSpecified())
                 {
                 TypeConstant constElType = typeArray.getParamTypes().get(0);

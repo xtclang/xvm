@@ -217,7 +217,13 @@ public class StatementBlock
         List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty())
             {
-            code.add(new Enter());
+            // there is an implicit scope for the top-most statement block of a method
+            boolean fImplicitScope = getParent() instanceof MethodDeclarationStatement;
+            if (!fImplicitScope)
+                {
+                code.add(new Enter());
+                }
+
             for (Statement stmt : stmts)
                 {
                 if (fReachable && !fCompletable)
@@ -229,7 +235,10 @@ public class StatementBlock
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
                 }
-            code.add(new Exit());
+            if (!fImplicitScope)
+                {
+                code.add(new Exit());
+                }
             }
 
         return fCompletable;

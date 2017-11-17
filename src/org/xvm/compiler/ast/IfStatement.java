@@ -80,7 +80,11 @@ public class IfStatement
         boolean fValid  = cond.validate(ctxThen, errs)
                         & stmtThen.validate(ctxThen, errs);
 
-        if (stmtElse != null)
+        if (stmtElse == null)
+            {
+            ctx.join(ctxThen);
+            }
+        else
             {
             Context ctxElse = ctx.fork();
             fValid &= stmtElse.validate(ctxElse, errs);

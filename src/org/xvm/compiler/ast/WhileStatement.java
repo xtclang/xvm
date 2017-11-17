@@ -50,7 +50,7 @@ public class WhileStatement
         {
         return keyword.getId() == Token.Id.DO;
         }
-    
+
     @Override
     public long getStartPosition()
         {
@@ -85,7 +85,7 @@ public class WhileStatement
 
 
     // ----- Continuable interface -----------------------------------------------------------------
-    
+
     @Override
     public Label getContinueLabel()
         {
@@ -97,7 +97,7 @@ public class WhileStatement
         return label;
         }
 
-    
+
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -114,9 +114,12 @@ public class WhileStatement
             ctx = ctx.enterScope();
             }
 
+        boolean fValid = cond.validate(ctx, errs);
+
         // TODO consider what to do when the condition is always true (is a fork still required?)
-        boolean fValid  = cond.validate(ctx, errs)
-                        & block.validate(ctx.fork(), errs);
+        Context ctxBlock = ctx.fork();
+        fValid &= block.validate(ctxBlock, errs);
+        ctx.join(ctxBlock);
 
         if (fScope)
             {
@@ -278,6 +281,6 @@ public class WhileStatement
 
     private Label m_labelBreak;
     private Label m_labelContinue;
-    
+
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");
     }

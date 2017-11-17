@@ -9,9 +9,12 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
@@ -168,15 +171,15 @@ public class NameExpression
                 ctx.getMethod().getIdentityConstant().getSignature());
             fValid = false;
             }
+        else if (names.size() == 1)
+            {
+            m_arg         = arg;
+            m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
+            }
         else
             {
             // TODO resolve subsequent names
-            if (names.size() > 1)
-                {
-                notImplemented();
-                }
-
-            m_arg = arg;
+            notImplemented();
             }
 
         // TODO what does it mean if there are params?
@@ -196,19 +199,19 @@ public class NameExpression
         {
         return m_arg == null
                 ? pool().typeObject()
-                : m_arg.getType();
+                : m_arg.getRefType();
         }
 
     @Override
     public boolean isAssignable()
         {
-        return m_LVal != null;
+        return m_fAssignable;
         }
 
     @Override
     public boolean isConstant()
         {
-        return m_arg != null && m_arg instanceof Constant && m_LVal == null;
+        return m_arg != null && m_arg instanceof Constant && !isAssignable();
         }
 
     @Override
@@ -235,11 +238,29 @@ public class NameExpression
     @Override
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
-        return isAssignable()
-                ? m_LVal
-                : super.generateAssignable(code, errs);
-        }
+        Assignable LVal = m_LVal;
+        if (LVal == null && isAssignable())
+            {
+            if (m_arg instanceof Register)
+                {
+                LVal = new Assignable((Register) m_arg);
+                }
+            else if (m_arg instanceof PropertyConstant)
+                {
+                // TODO: use getThisClass().toTypeConstant() for a type
+                LVal = new Assignable(
+                    new Register(pool().typeObject(), Op.A_TARGET),
+                    (PropertyConstant) m_arg);
+                }
+            else
+                {
+                LVal = super.generateAssignable(code, errs);
+                }
+            m_LVal = LVal;
+            }
 
+        return LVal;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -299,6 +320,7 @@ public class NameExpression
 
     private Argument   m_arg;
     private Assignable m_LVal;
+    private boolean    m_fAssignable;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }

@@ -301,7 +301,7 @@ public abstract class TypeConstant
      */
     public String getEcstasyClassName()
         {
-        // TODO might require additonal checks
+        // TODO might require additional checks
         return isSingleDefiningConstant()
                     && getDefiningConstant() instanceof ClassConstant
                     && ((ClassConstant) getDefiningConstant()).getModuleConstant().isEcstasyModule()
