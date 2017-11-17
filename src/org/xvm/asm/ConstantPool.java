@@ -788,14 +788,14 @@ public class ConstantPool
         }
 
     /**
-     * Given a ClassConstant for a singleton const class, obtain a constant that represents the
+     * Given an IdentityConstant for a singleton const class, obtain a constant that represents the
      * singleton instance of that class.
      *
-     * @param constClass  a ClassConstant of a singleton const class
+     * @param constClass  the IdentityConstant of the singleton const class
      *
      * @return an SingletonConstant representing the singleton const value
      */
-    public SingletonConstant ensureSingletonConstConstant(ClassConstant constClass)
+    public SingletonConstant ensureSingletonConstConstant(IdentityConstant constClass)
         {
         return (SingletonConstant) register(new SingletonConstant(this, Format.SingletonConst, constClass));
         }

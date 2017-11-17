@@ -285,6 +285,12 @@ public abstract class Constant
      */
     public Constant convertTo(TypeConstant typeOut)
         {
+        TypeConstant typeIn = getType();
+        if (typeIn.isA(typeOut))
+            {
+            return this;
+            }
+
         throw new UnsupportedOperationException("unsupported conversion " + getClass().getSimpleName());
         }
 

@@ -193,6 +193,13 @@ public class TerminalTypeConstant
             return true;
             }
 
+        // TODO GG:REVIEW - I think that this is a temporary fix
+        if (that instanceof TerminalTypeConstant && that.isSingleUnderlyingClass()
+                && this.extendsClass(that.getSingleUnderlyingClass()))
+            {
+            return true;
+            }
+
         // the only "extra" scenario we can cover at this layer is:
         // that = T (formal parameter type)
         // this = U (another formal parameter type), where U extends T

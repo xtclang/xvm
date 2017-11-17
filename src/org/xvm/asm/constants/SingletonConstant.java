@@ -41,11 +41,12 @@ public class SingletonConstant
 
     /**
      * Construct a constant whose value is a literal.
-     *  @param pool        the ConstantPool that will contain this Constant
+     *
+     * @param pool        the ConstantPool that will contain this Constant
      * @param format
      * @param constClass  the class constant for the singleton value
      */
-    public SingletonConstant(ConstantPool pool, Format format, ClassConstant constClass)
+    public SingletonConstant(ConstantPool pool, Format format, IdentityConstant constClass)
         {
         super(pool);
 
@@ -77,7 +78,7 @@ public class SingletonConstant
      * @return  the class constant for the singleton value
      */
     @Override
-    public ClassConstant getValue()
+    public IdentityConstant getValue()
         {
         return m_constClass;
         }
@@ -94,7 +95,7 @@ public class SingletonConstant
     @Override
     public Constant simplify()
         {
-        m_constClass = (ClassConstant) m_constClass.simplify();
+        m_constClass = (IdentityConstant) m_constClass.simplify();
         return this;
         }
 
@@ -129,13 +130,13 @@ public class SingletonConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        m_constClass = (ClassConstant) getConstantPool().getConstant(m_iClass);
+        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constClass = (ClassConstant) pool.register(m_constClass);
+        m_constClass = (IdentityConstant) pool.register(m_constClass);
         }
 
     @Override
@@ -175,7 +176,7 @@ public class SingletonConstant
     private transient int m_iClass;
 
     /**
-     * The Class Constant that of the singleton value.
+     * The IdentityConstant for the class of the singleton value.
      */
-    private ClassConstant m_constClass;
+    private IdentityConstant m_constClass;
     }

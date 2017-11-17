@@ -47,6 +47,42 @@ public class ClassStructure
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return true iff this class is a singleton
+     */
+    public boolean isSingleton()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case ENUMVALUE:
+                // these types are always singletons
+                return true;
+
+            case INTERFACE:
+            case CLASS:
+            case ENUM:
+            case MIXIN:
+            case TRAIT:
+                // these types are never singletons
+                return false;
+
+            case CONST:
+            case SERVICE:
+                // these COULD be singletons (if they are static and NOT an inner class)
+                if (isStatic())
+                    {
+                    Format format = getParent().getFormat();
+                    return format == Format.MODULE || format == Format.PACKAGE;
+                    }
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
      * a corresponding value of the type constraint for the parameter.
      *

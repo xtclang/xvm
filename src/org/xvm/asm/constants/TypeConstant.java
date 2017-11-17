@@ -493,7 +493,49 @@ public abstract class TypeConstant
      */
     public boolean isA(TypeConstant that)
         {
-        return this.equals(that);
+        if (this.equals(that))
+            {
+            return true;
+            }
+
+        if (that instanceof IntersectionTypeConstant)
+            {
+            return this.isA(that.getUnderlyingType()) || this.isA(that.getUnderlyingType2());
+            }
+
+        if (that instanceof UnionTypeConstant)
+            {
+            return this.isA(that.getUnderlyingType()) && this.isA(that.getUnderlyingType2());
+            }
+
+        if (that instanceof ImmutableTypeConstant)
+            {
+            if (this.isImmutabilitySpecified()) // TODO or this is a CONST / ENUM / MODULE / PACKAGE class
+                {
+                return this.isA(that.getUnderlyingType());
+                }
+            }
+
+        if (that instanceof AccessTypeConstant)
+            {
+            if (that.getAccess() == Access.PUBLIC)
+                {
+                return this.isA(that.getUnderlyingType());
+                }
+
+            // TODO protected, private, struct
+            }
+
+        if (that instanceof ParameterizedTypeConstant)
+            {
+            // TODO this could extend/implement/etc. something that is similarly parameterized
+            }
+
+        // TODO parameterized
+        // TODO annotations
+        // TODO difference type
+
+        return false;
         }
 
     /**

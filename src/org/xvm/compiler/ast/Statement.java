@@ -4,7 +4,9 @@ package org.xvm.compiler.ast;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -14,6 +16,7 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -331,7 +334,7 @@ public abstract class Statement
                     }
                 }
 
-            return m_ctxOuter.resolveName(name, errs);
+            return m_ctxOuter.resolveRegularName(name, errs);
             }
 
         /**
@@ -514,6 +517,34 @@ public abstract class Statement
                 arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
                 if (arg != null)
                     {
+                    // while the name resolved to something, we need to apply the rules of what that
+                    // something means from this context
+                    if (arg instanceof Constant)
+                        {
+                        Constant constant = (Constant) arg;
+                        switch (constant.getFormat())
+                            {
+                            case Class:
+                                if (!((ClassStructure) ((IdentityConstant) constant).getComponent()).isSingleton())
+                                    {
+                                    break;
+                                    }
+                                // fall through
+                            case Module:
+                            case Package:
+                                // these are always singletons
+                                arg = pool().ensureSingletonConstConstant((IdentityConstant) constant);
+                                break;
+
+
+                            case ThisClass:
+                            case ParentClass:
+                            case ChildClass:
+                                // TODO not sure how to handle these yet, but should be easy ...
+                                throw new UnsupportedOperationException("constant=" + constant);
+                            }
+                        }
+
                     mapByName.put(sName, arg);
                     }
                 }

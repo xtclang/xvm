@@ -98,6 +98,24 @@ public class ParameterizedTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isA(TypeConstant that)
+        {
+        // a List<Int> isA List<Int>, but a List<Int> is also a List
+        if (super.isA(that) || getUnderlyingType().isA(that))
+            {
+            return true;
+            }
+
+        // TODO see if this parameterized type is "of the" same underlying type as that
+        if (that instanceof ParameterizedTypeConstant)
+            {
+            // TODO match up parameters?
+            }
+
+        return false;
+        }
+
+    @Override
     public boolean isModifyingType()
         {
         return true;

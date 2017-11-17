@@ -9,7 +9,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.runtime.Frame;
@@ -21,8 +21,6 @@ import org.xvm.runtime.TypeSet;
 
 /**
  * A template for the base of all Enum classes
- *
- * @author gg 2017.02.27
  */
 public class Enum
         extends Const
@@ -75,7 +73,7 @@ public class Enum
         {
         if (constant instanceof SingletonConstant)
             {
-            ClassConstant constClass = ((SingletonConstant) constant).getValue();
+            IdentityConstant constClass = ((SingletonConstant) constant).getValue();
 
             Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
                 (Enum) getSuper() : this;

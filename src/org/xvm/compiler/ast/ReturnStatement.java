@@ -162,7 +162,7 @@ public class ReturnStatement
             }
         else
             {
-            switch (cReturns)
+            switch (cExprs)
                 {
                 case 0:
                     code.add(new Return_0());
