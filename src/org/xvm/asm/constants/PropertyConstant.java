@@ -64,6 +64,12 @@ public class PropertyConstant
     @Override
     public TypeConstant getType()
         {
+        // TODO return Property<> or Ref<>
+        throw new IllegalStateException("TODO: property type?!");
+        }
+
+    public TypeConstant getRefType()
+        {
         TypeConstant type = m_type;
         if (type == null)
             {

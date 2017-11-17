@@ -96,7 +96,7 @@ public class L_Get
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(constProperty.getType());
+            frame.introduceVar(constProperty.getRefType());
             }
 
         return hTarget.f_clazz.f_template.getPropertyValue(

@@ -1075,7 +1075,7 @@ public abstract class Expression
                 case TargetProp:
                 case IndexedProp:
                 case IndexedNProp:
-                    return getProperty().getType();
+                    return getProperty().getRefType();
 
                 case Indexed:
                 case IndexedN:

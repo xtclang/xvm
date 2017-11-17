@@ -59,6 +59,12 @@ public class PackageConstant
         return Format.Package;
         }
 
+    @Override
+    public boolean isClass()
+        {
+        return true;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

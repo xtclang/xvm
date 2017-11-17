@@ -134,6 +134,25 @@ public abstract class IdentityConstant
     // ----- constant methods ----------------------------------------------------------------------
 
     @Override
+    public TypeConstant getType()
+        {
+        if (isClass())
+            {
+            // if a class name is specified in code, and it resolves to a class constant, then the type
+            // of the expression that yields this constant is the Class type:
+            //  Class<PublicType, ProtectedType, PrivateType, StructType>
+            ConstantPool pool = getConstantPool();
+            return pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                    pool.ensureClassTypeConstant(this, Access.PUBLIC),
+                    pool.ensureClassTypeConstant(this, Access.PROTECTED),
+                    pool.ensureClassTypeConstant(this, Access.PRIVATE),
+                    pool.ensureClassTypeConstant(this, Access.STRUCT));
+            }
+
+        return super.getType();
+        }
+
+    @Override
     protected Object getLocator()
         {
         // this protected method must be present here to make it accessible to other classes in this

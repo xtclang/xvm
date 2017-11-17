@@ -1,5 +1,16 @@
 module Test
     {
+    // this causes IllegalStateException:
+    //  t i = 0;
+    // Exception in thread "main" java.lang.IllegalStateException: unresolved constant: TerminalType{type=t}
+    // 	at org.xvm.asm.ConstantPool.register(ConstantPool.java:109)
+    // 	at org.xvm.asm.PropertyStructure.registerConstants(PropertyStructure.java:178)
+    // 	at org.xvm.asm.Component.registerChildConstants(Component.java:1401)
+    // 	at org.xvm.asm.Component.registerChildrenConstants(Component.java:1381)
+    // 	at org.xvm.asm.Component.registerChildConstants(Component.java:1405)
+    // 	at org.xvm.asm.Component.registerChildrenConstants(Component.java:1381)
+    // 	at org.xvm.asm.FileStructure.registerConstants(FileStructure.java:736)
+
 //    class Fubar
 //        {
 //        Int number;
@@ -111,15 +122,15 @@ module Test
 //        {
 //        }
 
-    String foo1String()
-        {
-        return "hello" * 5;
-        }
-
-    String foo1String2()
-        {
-        return 'x' * 5;
-        }
+//    String foo1String()
+//        {
+//        return "hello" * 5;
+//        }
+//
+//    String foo1String2()
+//        {
+//        return 'x' * 5;
+//        }
 
 //    String foo1MissingReturn()
 //        {
@@ -176,15 +187,15 @@ module Test
 //        return ("hello", 0);
 //        }
 
-//    conditional String foo6()
-//        {
-//        return false;
-//        }
-//
-//    conditional String foo7()
-//        {
-//        return true, "hello";
-//        }
+    conditional String foo6()
+        {
+        return false;
+        }
+
+    conditional String foo7()
+        {
+        return true, "hello";
+        }
 
 //    Int foo8(Int a, Int b)
 //        {
@@ -208,8 +219,8 @@ module Test
 //        return sum;
 //        }
 
-    Test bar()
-        {
-        return this;
-        }
+//    Test bar()
+//        {
+//        return this;
+//        }
     }

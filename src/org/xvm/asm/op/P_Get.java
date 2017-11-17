@@ -112,7 +112,7 @@ public class P_Get
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(constProperty.getType());
+                frame.introduceVar(constProperty.getRefType());
                 }
 
             if (isProperty(hTarget))

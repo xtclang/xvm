@@ -167,6 +167,12 @@ public class ModuleConstant
         }
 
     @Override
+    public boolean isClass()
+        {
+        return true;
+        }
+
+    @Override
     public Constant simplify()
         {
         m_constName = (StringConstant) m_constName.simplify();
