@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.op.Label;
+
 import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -60,6 +62,35 @@ public abstract class OpJump
     public int process(Frame frame, int iPC)
         {
         throw new UnsupportedOperationException();
+        }
+
+    /**
+     * @return a String to use for debugging to denote the destination of the jump
+     */
+    protected String getLabelDesc()
+        {
+        if (m_opDest instanceof Label)
+            {
+            return ((Label) m_opDest).getName();
+            }
+        else if (m_ofJmp != 0)
+            {
+            return (m_ofJmp > 0 ? "+" : "") + m_ofJmp;
+            }
+        else if (m_opDest != null)
+            {
+            return "-> " + m_opDest;
+            }
+        else
+            {
+            return "???";
+            }
+        }
+
+    @Override
+    public String toString()
+        {
+        return toName(getOpCode()) + getLabelDesc();
         }
 
     protected int m_ofJmp;

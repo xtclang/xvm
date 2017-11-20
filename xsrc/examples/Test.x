@@ -187,15 +187,15 @@ module Test
 //        return ("hello", 0);
 //        }
 
-    conditional String foo6()
-        {
-        return false;
-        }
-
-    conditional String foo7()
-        {
-        return true, "hello";
-        }
+//    conditional String foo6()
+//        {
+//        return false;
+//        }
+//
+//    conditional String foo7()
+//        {
+//        return true, "hello";
+//        }
 
 //    Int foo8(Int a, Int b)
 //        {
@@ -224,46 +224,46 @@ module Test
 //        return this;
 //        }
 
-    class C
-        {
-        Int x = 0;
-        Void foo(Int i) {}
-        Void testVariations()
-            {
-            Int i = x;
-            x = i;
-
-            // TODO requires multi-name resolution
-            // this.x = i;
-
-            // TODO requires post-bang
-            // Property p = x!;
-
-            // TODO requires multi-name resolution
-            // Property p = this.x!;
-            // Property p = C.x;
-
-            // TODO requires pre-ampersand
-            // Ref<Int> = &x;
-
-            // TODO
-            // Function f1 = foo;
-            // Function<<Int>, Void> f1b = foo;
-
-            // TODO requires post-bang
-            // TODO Method m1 = foo!;
-
-            // TODO requires multi-name resolution
-            // Method m2 = C.testVariations;
-            // Function f2 = this.testVariations;
-
-            // TODO
-            // Function f3 = foo(?);
-            // Function<<Int>, Void> f3b = foo(?);
-            // Function f4 = foo(4)!;
-            // Function<Void, Void> f4b = foo(4);
-            }
-        }
+//    class C
+//        {
+//        Int x = 0;
+//        Void foo(Int i) {}
+//        Void testVariations()
+//            {
+//            Int i = x;
+//            x = i;
+//
+//            // TODO requires multi-name resolution
+//            // this.x = i;
+//
+//            // TODO requires post-bang
+//            // Property p = x!;
+//
+//            // TODO requires multi-name resolution
+//            // Property p = this.x!;
+//            // Property p = C.x;
+//
+//            // TODO requires pre-ampersand
+//            // Ref<Int> = &x;
+//
+//            // TODO
+//            // Function f1 = foo;
+//            // Function<<Int>, Void> f1b = foo;
+//
+//            // TODO requires post-bang
+//            // TODO Method m1 = foo!;
+//
+//            // TODO requires multi-name resolution
+//            // Method m2 = C.testVariations;
+//            // Function f2 = this.testVariations;
+//
+//            // TODO
+//            // Function f3 = foo(?);
+//            // Function<<Int>, Void> f3b = foo(?);
+//            // Function f4 = foo(4)!;
+//            // Function<Void, Void> f4b = foo(4);
+//            }
+//        }
 
     Int test(Int c)
         {

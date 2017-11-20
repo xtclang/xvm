@@ -182,13 +182,92 @@ public class Register
         return !m_fRO;
         }
 
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(m_type.getValueString())
+          .append(' ')
+          .append(getIdString());
+
+        if (m_fRO)
+            {
+            sb.append(" (Read-Only)");
+            }
+
+        return sb.toString();
+        }
+
+    /**
+     * @return a String that denotes the identity of the register, for debugging purposes
+     */
+    public String getIdString()
+        {
+        return m_iArg == UNKNOWN
+                ? "#? (@" + System.identityHashCode(this) + ")"
+                : getIdString(m_iArg);
+        }
+
+    /**
+     * Format the register identifier into a String
+     *
+     * @param nReg  the register number
+     *
+     * @return an identity String, for debugging purposes
+     */
+    public static String getIdString(int nReg)
+        {
+        switch (nReg)
+            {
+            case UNKNOWN:
+                return "#???";
+
+            case Op.A_IGNORE:
+                return "_";
+
+            case Op.A_PUBLIC:
+                return "this:public";
+
+            case Op.A_PROTECTED:
+                return "this:protected";
+
+            case Op.A_PRIVATE:
+                return "this:private";
+
+            case Op.A_TARGET:
+                return "this:target";
+
+            case Op.A_STRUCT:
+                return "this:struct";
+
+            case Op.A_FRAME:
+                return "this:frame";
+
+            case Op.A_SERVICE:
+                return "this:service";
+
+            case Op.A_MODULE:
+                return "this:module";
+
+            case Op.A_TYPE:
+                return "this:type";
+
+            case Op.A_SUPER:
+                return "super";
+
+            default:
+                return "#" + nReg;
+            }
+        }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.
      */
-    private static final int UNKNOWN = Integer.MIN_VALUE;
+    static final int UNKNOWN = Integer.MIN_VALUE;
 
     /**
      * The type of the value that will be held in the register.

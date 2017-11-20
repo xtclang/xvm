@@ -102,9 +102,9 @@ public class Nop extends Op
     @Override
     public String toString()
         {
-        return f_cLines == 0
-                ? super.toString()
-                : "Line " + (f_cLines > 0 ? "+" : "") + f_cLines;
+        return f_cLines >= 0 && f_cLines <= 3
+                ? toName(f_cLines)
+                : toName(OP_LINE_N) + " " + f_cLines;
         }
 
     private final int f_nOp;

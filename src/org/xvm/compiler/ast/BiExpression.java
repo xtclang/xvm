@@ -14,6 +14,12 @@ import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.GP_Add;
+import org.xvm.asm.op.IsEq;
+import org.xvm.asm.op.IsGt;
+import org.xvm.asm.op.IsGte;
+import org.xvm.asm.op.IsLt;
+import org.xvm.asm.op.IsLte;
+import org.xvm.asm.op.IsNotEq;
 import org.xvm.asm.op.Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
@@ -500,6 +506,95 @@ public class BiExpression
                     // TODO
                     throw new UnsupportedOperationException();
 
+                case AS:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case IS:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case INSTANCEOF:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case DOTDOT:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case ADD:
+                case SUB:
+                case MUL:
+                case DIV:
+                case MOD:
+                case COND_OR:
+                case COND_AND:
+                case BIT_OR:
+                case BIT_XOR:
+                case BIT_AND:
+                case SHL:
+                case SHR:
+                case USHR:
+                case COMP_EQ:
+                case COMP_NEQ:
+                case COMP_LT:
+                case COMP_GT:
+                case COMP_LTEQ:
+                case COMP_GTEQ:
+                case COMP_ORD:
+                    code.add(new Var(m_constType));
+                    Register regResult = code.lastRegister();
+                    generateAssignment(code, new Assignable(regResult), errs);
+                    return regResult;
+
+                case DIVMOD:
+                    // TODO
+                    throw new UnsupportedOperationException();
+                }
+            }
+
+        return super.generateArgument(code, type, fTupleOk, errs);
+        }
+
+    @Override
+    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
+        {
+        if (operator.getId() == Id.DIVMOD && atype.length == 2)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+            }
+
+        return super.generateArguments(code, atype, fTupleOk, errs);
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (LVal.isLocalArgument())
+            {
+            // determine the types to request from the sub-expressions
+            // TODO right now just use their implicit types, but for type inference to work, this should be based on the type that we're asked for
+            assert LVal.getType().isCongruentWith(m_constType) || m_constType.isA(LVal.getType());
+            TypeConstant type1 = expr1.getImplicitType();
+            TypeConstant type2 = expr2.getImplicitType();
+
+            // evaluate the sub-expressions
+            // TODO if (LVal.isTemp() && LVal.getType().equals(type1)) -> genAssign, IP_ADD
+            Argument arg1 = expr1.generateArgument(code, type1, false, errs);
+            Argument arg2 = expr2.generateArgument(code, type2, false, errs);
+
+            // generate the op that combines the two sub-expressions
+            switch (operator.getId())
+                {
+                case COLON:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
+                case COND_ELSE:
+                    // TODO
+                    throw new UnsupportedOperationException();
+
                 case COND_OR:
                     // TODO
                     throw new UnsupportedOperationException();
@@ -521,28 +616,28 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case COMP_EQ:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsEq(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_NEQ:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsNotEq(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_LT:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsLt(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_GT:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsGt(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_LTEQ:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsLte(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_GTEQ:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new IsGte(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case COMP_ORD:
                     // TODO
@@ -577,10 +672,8 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case ADD:
-                    code.add(new Var(m_constType));
-                    Register regResult = code.lastRegister();
-                    generateAssignment(code, new Assignable(regResult), errs);
-                    return regResult;
+                    code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case SUB:
                     // TODO
@@ -591,7 +684,7 @@ public class BiExpression
                     throw new UnsupportedOperationException();
 
                 case DIVMOD:
-                    if (type.isTuple())
+                    if (LVal.getType().isTuple())
                         {
                         // TODO
                         throw new UnsupportedOperationException();
@@ -605,155 +698,8 @@ public class BiExpression
                     // TODO
                     throw new UnsupportedOperationException();
                 }
-            }
 
-        return super.generateArgument(code, type, fTupleOk, errs);
-        }
-
-    @Override
-    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
-        {
-        if (operator.getId() == Id.DIVMOD && atype.length == 2)
-            {
-            // TODO
-            throw new UnsupportedOperationException();
-            }
-
-        return super.generateArguments(code, atype, fTupleOk, errs);
-        }
-
-    @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
-        {
-        switch (operator.getId())
-            {
-            case COLON:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COND_ELSE:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COND_OR:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COND_AND:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case BIT_OR:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case BIT_XOR:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case BIT_AND:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_EQ:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_NEQ:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_LT:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_GT:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_LTEQ:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_GTEQ:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case COMP_ORD:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case AS:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case IS:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case INSTANCEOF:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case DOTDOT:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case SHL:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case SHR:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case USHR:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case ADD:
-                if (LVal.isLocalArgument())
-                    {
-                    // determine the types to request from the sub-expressions
-                    // TODO right now just use their implicit types, but for type inference to work, this should be based on the type that we're asked for
-                    assert LVal.getType().isCongruentWith(m_constType) || m_constType.isA(LVal.getType());
-                    TypeConstant type1 = expr1.getImplicitType();
-                    TypeConstant type2 = expr2.getImplicitType();
-
-                    // evaluate the sub-expressions
-                    // TODO if (LVal.isTemp() && LVal.getType().equals(type1)) -> genAssign, IP_ADD
-                    Argument arg1 = expr1.generateArgument(code, type1, false, errs);
-                    Argument arg2 = expr2.generateArgument(code, type2, false, errs);
-
-                    // generate an ADD op to add the sub-expressions together and store in the
-                    // local variable, local property, or black-hole
-                    code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
-                    return;
-                    }
-                break;
-
-            case SUB:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case MUL:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case DIVMOD:
-                if (LVal.getType().isTuple())
-                    {
-                    // TODO
-                    throw new UnsupportedOperationException();
-                    }
-                // fall through
-            case DIV:
-                // TODO
-                throw new UnsupportedOperationException();
-
-            case MOD:
-                // TODO
-                throw new UnsupportedOperationException();
+            return;
             }
 
         super.generateAssignment(code, LVal, errs);
