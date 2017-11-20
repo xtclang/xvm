@@ -707,6 +707,10 @@ public abstract class Op
             case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
+            case OP_GP_SUB:      return new GP_Sub      (in, aconst);
+            case OP_GP_MUL:      return new GP_Mul      (in, aconst);
+            case OP_GP_DIV:      return new GP_Div      (in, aconst);
+            case OP_GP_MOD:      return new GP_Mod      (in, aconst);
             case OP_GP_NEG:      return new GP_Neg      (in, aconst);
 
             case OP_IP_INC:      return new IP_Inc      (in, aconst);

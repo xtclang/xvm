@@ -18,8 +18,6 @@ import org.xvm.runtime.template.collections.xIntArray;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xInt64
         extends Const
@@ -71,6 +69,48 @@ public class xInt64
 
         // TODO: check overflow
         ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
+        return frame.assignValue(iReturn, hResult);
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThat = (JavaLong) hArg;
+
+        // TODO: check overflow
+        ObjectHandle hResult = makeHandle(hThis.getValue() - hThat.getValue());
+        return frame.assignValue(iReturn, hResult);
+        }
+
+    @Override
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThat = (JavaLong) hArg;
+
+        // TODO: check overflow
+        ObjectHandle hResult = makeHandle(hThis.getValue() * hThat.getValue());
+        return frame.assignValue(iReturn, hResult);
+        }
+
+    @Override
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThat = (JavaLong) hArg;
+
+        ObjectHandle hResult = makeHandle(hThis.getValue() / hThat.getValue());
+        return frame.assignValue(iReturn, hResult);
+        }
+
+    @Override
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+        JavaLong hThat = (JavaLong) hArg;
+
+        ObjectHandle hResult = makeHandle(hThis.getValue() % hThat.getValue());
         return frame.assignValue(iReturn, hResult);
         }
 

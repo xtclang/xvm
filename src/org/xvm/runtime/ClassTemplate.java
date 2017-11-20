@@ -46,8 +46,7 @@ import org.xvm.util.ListMap;
 
 /**
  * ClassTemplate represents a run-time class.
- *
- * @author gg 2017.02.23
+
  */
 public abstract class ClassTemplate
     {
@@ -838,6 +837,34 @@ public abstract class ClassTemplate
     // Add operation; place the result into the specified frame register
     // return one of the Op.R_ values
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // Sub operation; place the result into the specified frame register
+    // return one of the Op.R_ values
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // Mul operation; place the result into the specified frame register
+    // return one of the Op.R_ values
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // Div operation; place the result into the specified frame register
+    // return one of the Op.R_ values
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Invalid op for " + f_sName);
+        }
+
+    // Mod operation; place the result into the specified frame register
+    // return one of the Op.R_ values
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
         }
