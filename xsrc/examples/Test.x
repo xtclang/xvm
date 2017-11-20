@@ -264,4 +264,14 @@ module Test
             // Function<Void, Void> f4b = foo(4);
             }
         }
+
+    Int test(Int c)
+        {
+        Int i = 0;
+        while (i < c)
+            {
+            i = i + 1;
+            }
+        return i;
+        }
     }
