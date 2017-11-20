@@ -6,8 +6,10 @@ const VarInt
     construct VarInt(Bit[] bits)
         {
         assert:always bits.length >= 8 && bits.length.bitCount == 1;
-        bits = bits;
+        this.bits = bits;
         }
+
+    private Bit[] bits;
 
     @Lazy Signum sign.get()
         {
@@ -16,17 +18,17 @@ const VarInt
             {
             return Negative;
             }
-        
+
         // any other bits set is positive
         if (Bit bit : iterator((bit) -> bit == 1))
             {
             return Positive;
             }
-        
+
         // no bits set is zero
         return Zero;
         }
-    
+
     Int bitLength.get()
         {
         return bits.length;
@@ -36,10 +38,10 @@ const VarInt
         {
         return bitLength / 8;
         }
-    
+
     VarUInt magnitude.get()
         {
-        // use the bits "as is" for zero, positive numbers, and 
+        // use the bits "as is" for zero, positive numbers, and
         Bit[] bits = this.bits;
         if (sign == Negative)
             {
