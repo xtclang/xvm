@@ -102,6 +102,19 @@ public class ErrorList
         m_severity = Severity.NONE;
         }
 
+    @Override
+    public String toString()
+        {
+        if (m_cErrors == 0)
+            {
+            return "Empty";
+            }
+
+        return "Count=" + m_cErrors
+                + ", Severity=" +  m_severity.name()
+                + ", Last=" + m_list.get(m_list.size()-1);
+        }
+
 
     // ----- inner class: ErrorInfo --------------------------------------------
 
@@ -118,7 +131,9 @@ public class ErrorList
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null
-         * TODO
+         * @param source      the source code
+         * @param lPosStart   the starting position in the source code
+         * @param lPosEnd     the ending position in the source code
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
                 Source source, long lPosStart, long lPosEnd)

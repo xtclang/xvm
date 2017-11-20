@@ -39,4 +39,10 @@ public class Exit
         {
         scope.exit();
         }
+
+    @Override
+    public String toString()
+        {
+        return "EXIT";
+        }
     }

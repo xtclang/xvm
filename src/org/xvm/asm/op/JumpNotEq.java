@@ -102,4 +102,10 @@ public class JumpNotEq
                 throw new IllegalStateException();
             }
         }
+
+    @Override
+    public String toString()
+        {
+        return "JMP_NEQ " + getArgDesc() + ' ' + getArg2Desc() + ' ' + getLabelDesc();
+        }
     }

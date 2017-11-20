@@ -118,6 +118,27 @@ public abstract class Op
          * @return the RefType from the implicit Ref that this argument represents
          */
         TypeConstant getRefType();
+
+        /**
+         * For debugging purposes, format the optional "arg" and position
+         * @param arg
+         * @param nArg
+         * @return
+         */
+        static String toIdString(Argument arg, int nArg)
+            {
+            if (arg instanceof Constant)
+                {
+                return ((Constant) arg).getValueString();
+                }
+
+            if (arg instanceof Register)
+                {
+                return ((Register) arg).getIdString();
+                }
+
+            return Register.getIdString(nArg);
+            }
         }
 
     /**
@@ -769,6 +790,140 @@ public abstract class Op
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
             case OP_CONSTR_N:    return new Construct_N (in, aconst);
             case OP_CONSTR_T:    return new Construct_T (in, aconst);
+
+            default:
+                throw new IllegalStateException("op=" + byteToHexString(nOp));
+            }
+        }
+
+    /**
+     * Obtain the name of a given op code.
+     *
+     * @param nOp  the op-code
+     *
+     * @return the op name
+     */
+    public static String toName(int nOp)
+        {
+        switch (nOp)
+            {
+            case OP_NOP:         return "NOP";
+            case OP_LINE_1:      return "LINE_1";
+            case OP_LINE_2:      return "LINE_2";
+            case OP_LINE_3:      return "LINE_3";
+            case OP_LINE_N:      return "LINE_N";
+            case OP_BREAK:       return "BREAK";
+            case OP_ENTER:       return "ENTER";
+            case OP_EXIT:        return "EXIT";
+            case OP_GUARD:       return "GUARD";
+            case OP_GUARD_END:   return "GUARD_E";
+            case OP_CATCH:       return "CATCH";
+            case OP_CATCH_END:   return "CATCH_E";
+            case OP_GUARD_ALL:   return "GUARD_ALL";
+            case OP_FINALLY:     return "FINALLY";
+            case OP_FINALLY_END: return "FINALLY_E";
+            case OP_THROW:       return "THROW";
+            case OP_ASSERT:      return "ASSERT";
+            case OP_ASSERT_M:    return "ASSERT_M";
+            case OP_ASSERT_V:    return "ASSERT_V";
+            case OP_RETURN_0:    return "RETURN_0";
+            case OP_RETURN_1:    return "RETURN_1";
+            case OP_RETURN_N:    return "RETURN_N";
+            case OP_RETURN_T:    return "RETURN_T";
+            case OP_MBIND:       return "BIND_M";
+            case OP_FBIND:       return "BIND_F";
+            case OP_JMP:         return "JMP";
+            case OP_JMP_TRUE:    return "JMP_TRUE";
+            case OP_JMP_FALSE:   return "JMP_FALSE";
+            case OP_JMP_ZERO:    return "JMP_ZERO";
+            case OP_JMP_NZERO:   return "JMP_NZERO";
+            case OP_JMP_NULL:    return "JMP_NULL";
+            case OP_JMP_NNULL:   return "JMP_NNULL";
+            case OP_JMP_EQ:      return "JMP_EQ";
+            case OP_JMP_NEQ:     return "JMP_NEQ";
+            case OP_JMP_LT:      return "JMP_LT";
+            case OP_JMP_LTE:     return "JMP_LTE";
+            case OP_JMP_GT:      return "JMP_GT";
+            case OP_JMP_GTE:     return "JMP_GTE";
+            case OP_IS_ZERO:     return "IS_ZERO";
+            case OP_IS_NZERO:    return "IS_NZERO";
+            case OP_IS_NULL:     return "IS_NULL";
+            case OP_IS_NNULL:    return "IS_NNULL";
+            case OP_IS_EQ:       return "IS_EQ";
+            case OP_IS_NEQ:      return "IS_NEQ";
+            case OP_IS_LT:       return "IS_LT";
+            case OP_IS_LTE:      return "IS_LTE";
+            case OP_IS_GT:       return "IS_GT";
+            case OP_IS_GTE:      return "IS_GTE";
+            case OP_IS_NOT:      return "IS_NOT";
+            case OP_VAR:         return "VAR";
+            case OP_VAR_I:       return "VAR_I";
+            case OP_VAR_N:       return "VAR_N";
+            case OP_VAR_IN:      return "VAR_IN";
+            case OP_VAR_D:       return "VAR_D";
+            case OP_VAR_DN:      return "VAR_DN";
+            case OP_VAR_S:       return "VAR_S";
+            case OP_VAR_SN:      return "VAR_SN";
+            case OP_VAR_T:       return "VAR_T";
+            case OP_VAR_TN:      return "VAR_TN";
+            case OP_MOV:         return "MOV";
+            case OP_REF:         return "REF";
+            case OP_CAST:        return "CAST";
+            case OP_GP_ADD:      return "GP_ADD";
+            case OP_GP_NEG:      return "GP_NEG";
+            case OP_L_GET:       return "L_GET";
+            case OP_L_SET:       return "L_SET";
+            case OP_P_GET:       return "P_GET";
+            case OP_P_SET:       return "P_SET";
+            case OP_IP_INC:      return "IP_INC";
+            case OP_IP_INCA:     return "IP_INCA";
+            case OP_IP_INCB:     return "IP_INCB";
+            case OP_PIP_INCA:    return "PIP_INCA";
+            case OP_PIP_INCB:    return "PIP_INCB";
+            case OP_I_GET:       return "I_GET";
+            case OP_I_SET:       return "I_SET";
+            case OP_I_REF:       return "I_REF";
+            case OP_CALL_00:     return "CALL_00";
+            case OP_CALL_01:     return "CALL_01";
+            case OP_CALL_0N:     return "CALL_0N";
+            case OP_CALL_0T:     return "CALL_0T";
+            case OP_CALL_10:     return "CALL_10";
+            case OP_CALL_11:     return "CALL_11";
+            case OP_CALL_1N:     return "CALL_1N";
+            case OP_CALL_1T:     return "CALL_1T";
+            case OP_CALL_N0:     return "CALL_N0";
+            case OP_CALL_N1:     return "CALL_N1";
+            case OP_CALL_NN:     return "CALL_NN";
+            case OP_CALL_NT:     return "CALL_NT";
+            case OP_CALL_T0:     return "CALL_T0";
+            case OP_CALL_T1:     return "CALL_T1";
+            case OP_CALL_TN:     return "CALL_TN";
+            case OP_CALL_TT:     return "CALL_TT";
+            case OP_NVOK_00:     return "NVOK_00";
+            case OP_NVOK_01:     return "NVOK_01";
+            case OP_NVOK_0N:     return "NVOK_0N";
+            case OP_NVOK_0T:     return "NVOK_0T";
+            case OP_NVOK_10:     return "NVOK_10";
+            case OP_NVOK_11:     return "NVOK_11";
+            case OP_NVOK_1N:     return "NVOK_1N";
+            case OP_NVOK_1T:     return "NVOK_1T";
+            case OP_NVOK_N0:     return "NVOK_N0";
+            case OP_NVOK_N1:     return "NVOK_N1";
+            case OP_NVOK_NN:     return "NVOK_NN";
+            case OP_NVOK_NT:     return "NVOK_NT";
+            case OP_NVOK_T0:     return "NVOK_T0";
+            case OP_NVOK_T1:     return "NVOK_T1";
+            case OP_NVOK_TN:     return "NVOK_TN";
+            case OP_NVOK_TT:     return "NVOK_TT";
+            case OP_NEW_1:       return "NEW_1";
+            case OP_NEW_N:       return "NEW_N";
+            case OP_NEWG_0:      return "NEWG_0";
+            case OP_NEWG_1:      return "NEWG_1";
+            case OP_NEWG_N:      return "NEWG_N";
+            case OP_CONSTR_0:    return "CONSTR_0";
+            case OP_CONSTR_1:    return "CONSTR_1";
+            case OP_CONSTR_N:    return "CONSTR_N";
+            case OP_CONSTR_T:    return "CONSTR_T";
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));

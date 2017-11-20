@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.op.JumpEq;
+import org.xvm.asm.op.Label;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -223,6 +226,113 @@ public abstract class OpCondJump
             {
             registerArgument(m_argVal2, registry);
             }
+        }
+
+    /**
+     * @return a String that identifies the argument, for debugging purposes
+     */
+    protected String getArgDesc()
+        {
+        return Argument.toIdString(m_argVal, m_nArg);
+        }
+
+    /**
+     * @return a String that identifies the second argument, for debugging purposes
+     */
+    protected String getArg2Desc()
+        {
+        assert isBinaryOp();
+        return Argument.toIdString(m_argVal2, m_nArg2);
+        }
+
+    /**
+     * @return a String to use for debugging to denote the destination of the jump
+     */
+    protected String getLabelDesc()
+        {
+        if (m_opDest instanceof Label)
+            {
+            return ((Label) m_opDest).getName();
+            }
+        else if (m_ofJmp != 0)
+            {
+            return (m_ofJmp > 0 ? "+" : "") + m_ofJmp;
+            }
+        else if (m_opDest != null)
+            {
+            return "-> " + m_opDest;
+            }
+        else
+            {
+            return "???";
+            }
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        switch (getOpCode())
+            {
+            case OP_JMP_EQ:
+                sb.append("JMP_EQ");
+                break;
+
+            case OP_JMP_NEQ:
+                sb.append("JMP_NEQ");
+                break;
+
+            case OP_JMP_LT:
+                sb.append("JMP_LT");
+                break;
+
+            case OP_JMP_LTE:
+                sb.append("JMP_LTE");
+                break;
+
+            case OP_JMP_GT:
+                sb.append("JMP_GT");
+                break;
+
+            case OP_JMP_GTE:
+                sb.append("JMP_GTE");
+                break;
+
+            case OP_JMP_FALSE:
+                sb.append("JMP_FALSE");
+                break;
+
+            case OP_JMP_TRUE:
+                sb.append("JMP_TRUE");
+                break;
+
+            case OP_JMP_ZERO:
+                sb.append("JMP_ZERO");
+                break;
+
+            case OP_JMP_NZERO:
+                sb.append("JMP_NZERO");
+                break;
+
+            // TODO
+            default:
+                sb.append("TODO");
+                break;
+            }
+
+        sb.append(' ')
+          .append(getArgDesc());
+
+        if (isBinaryOp())
+            {
+            sb.append(' ')
+                    .append(getArg2Desc());
+            }
+
+        sb.append(' ')
+                .append(getLabelDesc());
+
+        return sb.toString();
         }
 
     protected int m_nArg;
