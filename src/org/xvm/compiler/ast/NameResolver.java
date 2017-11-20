@@ -81,6 +81,7 @@ public class NameResolver
 
             case DEFERRED:
                 m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_status = Status.ERROR;
                 // fall through
             case ERROR:
             default:
