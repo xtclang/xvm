@@ -39,10 +39,4 @@ public class Enter
         {
         scope.enter();
         }
-
-    @Override
-    public String toString()
-        {
-        return "ENTER";
-        }
     }

@@ -44,7 +44,18 @@ public class Label
     @Override
     public String toString()
         {
-        return m_sName + ":";
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(m_sName)
+          .append(':');
+
+        Op op = getSuffix();
+        if (op != null)
+            {
+            sb.append(op.toString());
+            }
+
+        return sb.toString();
         }
 
     /**

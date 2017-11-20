@@ -64,10 +64,4 @@ public class Jump
         {
         return iPC + m_ofJmp;
         }
-
-    @Override
-    public String toString()
-        {
-        return "JMP " + getLabelDesc();
-        }
     }

@@ -272,65 +272,19 @@ public abstract class OpCondJump
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        switch (getOpCode())
-            {
-            case OP_JMP_EQ:
-                sb.append("JMP_EQ");
-                break;
 
-            case OP_JMP_NEQ:
-                sb.append("JMP_NEQ");
-                break;
-
-            case OP_JMP_LT:
-                sb.append("JMP_LT");
-                break;
-
-            case OP_JMP_LTE:
-                sb.append("JMP_LTE");
-                break;
-
-            case OP_JMP_GT:
-                sb.append("JMP_GT");
-                break;
-
-            case OP_JMP_GTE:
-                sb.append("JMP_GTE");
-                break;
-
-            case OP_JMP_FALSE:
-                sb.append("JMP_FALSE");
-                break;
-
-            case OP_JMP_TRUE:
-                sb.append("JMP_TRUE");
-                break;
-
-            case OP_JMP_ZERO:
-                sb.append("JMP_ZERO");
-                break;
-
-            case OP_JMP_NZERO:
-                sb.append("JMP_NZERO");
-                break;
-
-            // TODO
-            default:
-                sb.append("TODO");
-                break;
-            }
-
-        sb.append(' ')
+        sb.append(toName(getOpCode()))
+          .append(' ')
           .append(getArgDesc());
 
         if (isBinaryOp())
             {
             sb.append(' ')
-                    .append(getArg2Desc());
+              .append(getArg2Desc());
             }
 
         sb.append(' ')
-                .append(getLabelDesc());
+          .append(getLabelDesc());
 
         return sb.toString();
         }

@@ -18,7 +18,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.asm.op.Label;

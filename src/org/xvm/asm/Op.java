@@ -366,6 +366,12 @@ public abstract class Op
         return CONSTANT_OFFSET - id;
         }
 
+    @Override
+    public String toString()
+        {
+        return toName(getOpCode());
+        }
+
     // ----- inner class: Prefix Op ----------------------------------------------------------------
 
     /**
@@ -874,6 +880,10 @@ public abstract class Op
             case OP_REF:         return "REF";
             case OP_CAST:        return "CAST";
             case OP_GP_ADD:      return "GP_ADD";
+            case OP_GP_SUB:      return "GP_SUB";
+            case OP_GP_MUL:      return "GP_MUL";
+            case OP_GP_DIV:      return "GP_DIV";
+            case OP_GP_MOD:      return "GP_MOD";
             case OP_GP_NEG:      return "GP_NEG";
             case OP_L_GET:       return "L_GET";
             case OP_L_SET:       return "L_SET";

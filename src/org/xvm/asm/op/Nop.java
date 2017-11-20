@@ -102,17 +102,9 @@ public class Nop extends Op
     @Override
     public String toString()
         {
-        switch (f_cLines)
-            {
-            case 0:
-                return "NOP";
-            case 1:
-            case 2:
-            case 3:
-                return "LINE_" + f_cLines;
-            default:
-                return "LINE_N " + f_cLines;
-            }
+        return f_cLines >= 0 && f_cLines <= 3
+                ? toName(f_cLines)
+                : toName(OP_LINE_N) + " " + f_cLines;
         }
 
     private final int f_nOp;

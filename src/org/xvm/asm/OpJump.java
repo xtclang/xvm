@@ -87,6 +87,12 @@ public abstract class OpJump
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return toName(getOpCode()) + getLabelDesc();
+        }
+
     protected int m_ofJmp;
 
     private Op m_opDest;
