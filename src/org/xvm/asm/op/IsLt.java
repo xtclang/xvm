@@ -83,7 +83,7 @@ public class IsLt
             {
             case R_NEXT:
                 return frame.assignValue(m_nRetValue, xBoolean.makeHandle(
-                        frame.getFrameLocal() != xOrdered.LESSER));
+                        frame.getFrameLocal() == xOrdered.LESSER));
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->

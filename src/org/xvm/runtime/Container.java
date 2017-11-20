@@ -89,6 +89,7 @@ public class Container
 
         // every native class that has an INSTANCE static variable may need to be here
         f_types.getTemplate("String");
+        f_types.getTemplate("Boolean");
         f_types.getTemplate("Module");
         f_types.getTemplate("Class");
         f_types.getTemplate("Type");

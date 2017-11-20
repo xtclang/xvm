@@ -90,7 +90,7 @@ public abstract class OpJump
     @Override
     public String toString()
         {
-        return toName(getOpCode()) + getLabelDesc();
+        return toName(getOpCode()) + ' ' + getLabelDesc();
         }
 
     protected int m_ofJmp;
