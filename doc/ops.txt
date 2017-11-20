@@ -104,10 +104,10 @@
 // - the lvalue(s) can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
 +GP_ADD     rvalue1, rvalue2, lvalue                ; T + T -> T
- GP_SUB     rvalue1, rvalue2, lvalue                ; T - T -> T
- GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
- GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
- GP_MOD     rvalue1, rvalue2, lvalue                ; T % T -> T
++GP_SUB     rvalue1, rvalue2, lvalue                ; T - T -> T
++GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
++GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
++GP_MOD     rvalue1, rvalue2, lvalue                ; T % T -> T
  GP_SHL     rvalue1, rvalue2, lvalue                ; T << Int -> T
  GP_SHR     rvalue1, rvalue2, lvalue                ; T >> Int -> T
  GP_USHR    rvalue1, rvalue2, lvalue                ; T >>> Int -> T
