@@ -427,13 +427,13 @@ public abstract class Op
                 {
                 m_op = op;
                 }
-            else if (op instanceof Prefix)
+            else if (m_op instanceof Prefix)
                 {
-                ((Prefix) op).append(op);
+                ((Prefix) m_op).append(op);
                 }
             else
                 {
-                throw new IllegalStateException("");
+                throw new IllegalStateException();
                 }
             }
 
