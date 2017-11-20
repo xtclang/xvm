@@ -2,23 +2,16 @@ package org.xvm.asm.constants;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.function.Consumer;
-
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
-import static org.xvm.util.Handy.readMagnitude;
-import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
  * Represent a constant that specifies the intersection ("+") of two types.
  */
 public class IntersectionTypeConstant
-        extends TypeConstant
+        extends RelationalTypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -34,10 +27,7 @@ public class IntersectionTypeConstant
     public IntersectionTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
-        super(pool);
-
-        m_iType1 = readMagnitude(in);
-        m_iType2 = readMagnitude(in);
+        super(pool, format, in);
         }
 
     /**
@@ -49,37 +39,11 @@ public class IntersectionTypeConstant
      */
     public IntersectionTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {
-        super(pool);
-
-        if (constType1 == null || constType2 == null)
-            {
-            throw new IllegalArgumentException("types required");
-            }
-
-        m_constType1 = constType1;
-        m_constType2 = constType2;
+        super(pool, constType1, constType2);
         }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
-
-    @Override
-    public boolean isRelationalType()
-        {
-        return true;
-        }
-
-    @Override
-    public TypeConstant getUnderlyingType()
-        {
-        return m_constType1;
-        }
-
-    @Override
-    public TypeConstant getUnderlyingType2()
-        {
-        return m_constType2;
-        }
 
     @Override
     public TypeConstant resolveTypedefs()
@@ -152,68 +116,9 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public boolean containsUnresolved()
-        {
-        return m_constType1.containsUnresolved() || m_constType2.containsUnresolved();
-        }
-
-    @Override
-    public Constant simplify()
-        {
-        m_constType1 = (TypeConstant) m_constType1.simplify();
-        m_constType2 = (TypeConstant) m_constType2.simplify();
-        return this;
-        }
-
-    @Override
-    public void forEachUnderlying(Consumer<Constant> visitor)
-        {
-        visitor.accept(m_constType1);
-        visitor.accept(m_constType2);
-        }
-
-    @Override
-    protected int compareDetails(Constant that)
-        {
-        int n = this.m_constType1.compareTo(((IntersectionTypeConstant) that).m_constType1);
-        if (n == 0)
-            {
-            n = this.m_constType2.compareTo(((IntersectionTypeConstant) that).m_constType2);
-            }
-        return n;
-        }
-
-    @Override
     public String getValueString()
         {
         return m_constType1.getValueString() + " | " + m_constType2.getValueString();
-        }
-
-
-    // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected void disassemble(DataInput in)
-            throws IOException
-        {
-        m_constType1 = (TypeConstant) getConstantPool().getConstant(m_iType1);
-        m_constType2 = (TypeConstant) getConstantPool().getConstant(m_iType2);
-        }
-
-    @Override
-    protected void registerConstants(ConstantPool pool)
-        {
-        m_constType1 = (TypeConstant) pool.register(m_constType1);
-        m_constType2 = (TypeConstant) pool.register(m_constType2);
-        }
-
-    @Override
-    protected void assemble(DataOutput out)
-            throws IOException
-        {
-        out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constType1));
-        writePackedLong(out, indexOf(m_constType2));
         }
 
 
@@ -224,27 +129,4 @@ public class IntersectionTypeConstant
         {
         return "+".hashCode() ^ m_constType1.hashCode() ^ m_constType2.hashCode();
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * During disassembly, this holds the index of the first type constant.
-     */
-    private int m_iType1;
-
-    /**
-     * During disassembly, this holds the index of the second type constant.
-     */
-    private int m_iType2;
-
-    /**
-     * The first type referred to.
-     */
-    private TypeConstant m_constType1;
-
-    /**
-     * The second type referred to.
-     */
-    private TypeConstant m_constType2;
     }
