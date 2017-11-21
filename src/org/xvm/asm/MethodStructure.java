@@ -125,6 +125,29 @@ public class MethodStructure
         }
 
     /**
+     * @return an array of Parameter structures that represent all return values of the method
+     */
+    public Parameter[] getReturnArray()
+        {
+        return m_aReturns;
+        }
+
+    /**
+     * @return an array of TypeConstant structures that represent the return types of the method
+     */
+    public TypeConstant[] getReturnTypes()
+        {
+        Parameter[]    aparam = m_aReturns;
+        int            cparam = aparam.length;
+        TypeConstant[] atype  = new TypeConstant[cparam];
+        for (int i = 0; i < cparam; ++i)
+            {
+            atype[i] = aparam[i].getType();
+            }
+        return atype;
+        }
+
+    /**
      * @return the number of method parameters (including the number of type parameters)
      */
     public int getParamCount()

@@ -18,6 +18,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -158,7 +159,7 @@ public class NameExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -182,13 +183,26 @@ public class NameExpression
             notImplemented();
             }
 
-        // TODO what does it mean if there are params?
+        // TODO figure out under what conditions a NameExpression has "params"
+        // TODO make sure that the "params" are being handled correctly
         if (params != null)
             {
             for (TypeExpression type : params)
                 {
-                fValid &= type.validate(ctx, errs);
+                fValid &= type.validate(ctx, null, errs);
                 }
+            }
+
+        // validate that the expression can be of the required type
+        if (typeRequired != null)
+            {
+            if (arg != null && arg.getRefType().isA(typeRequired))  // TODO isConvertibleTo, not isA
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
+                fValid = false;
+                }
+
+            m_type = typeRequired;
             }
 
         return fValid;
@@ -197,9 +211,11 @@ public class NameExpression
     @Override
     public TypeConstant getImplicitType()
         {
-        return m_arg == null
-                ? pool().typeObject()
-                : m_arg.getRefType();
+        return m_type == null
+                ? m_arg == null
+                        ? pool().typeObject()
+                        : m_arg.getRefType()
+                : m_type;
         }
 
     @Override
@@ -318,9 +334,10 @@ public class NameExpression
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
-    private Argument   m_arg;
-    private Assignable m_LVal;
-    private boolean    m_fAssignable;
+    private Argument     m_arg;
+    private Assignable   m_LVal;
+    private boolean      m_fAssignable;
+    private TypeConstant m_type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
     }

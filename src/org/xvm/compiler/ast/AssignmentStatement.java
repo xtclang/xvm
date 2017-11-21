@@ -81,8 +81,13 @@ public class AssignmentStatement
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
         {
-        // TODO
-        return lvalue.validate(ctx, errs) && rvalue.validate(ctx, errs);
+        boolean fValid = lvalue.validate(ctx, null, errs);
+
+        // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
+        // and can validate that assignment can occur
+        fValid &= rvalue.validate(ctx, lvalue.getImplicitType(), errs);
+
+        return fValid;
         }
 
     @Override

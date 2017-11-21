@@ -297,7 +297,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return the Ecstasy class name, including package name(s)
+     * @return the Ecstasy class name, including package name(s), otherwise "?"
      */
     public String getEcstasyClassName()
         {

@@ -10,10 +10,12 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ErrorListener;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.ListMap;
@@ -58,7 +60,7 @@ public class BinaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         // a literal is validated by the lexer/parser, and there is nothing left to validate at this
         // point
@@ -72,47 +74,39 @@ public class BinaryExpression
         }
 
     @Override
-    public Constant toConstant()
+    public boolean isAssignableTo(TypeConstant typeThat)
         {
-        return pool().ensureByteStringConstant(bytes);
+        if (typeThat instanceof ImmutableTypeConstant)
+            {
+            // a binary literal is a "const" objects, so immutable is OK
+            return isAssignableTo(typeThat.getUnderlyingType());
+            }
+
+        switch (typeThat.getEcstasyClassName())
+            {
+            case "Object":
+            case "Const":
+            case "Orderable":
+            case "collections.Hashable":
+                return true;
+
+            case "collections.Array":
+            case "collections.List":
+            case "collections.Collection":
+            case "collections.Sequence":
+            case "Iterable":
+                return !typeThat.isParamsSpecified() || (typeThat.isParamsSpecified(1)
+                        && typeThat.getParamTypes().get(0).isA(pool().typeByte()));
+
+            default:
+                return super.isAssignableTo(typeThat);
+            }
         }
 
     @Override
-    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Constant toConstant()
         {
-        if (type.isSingleDefiningConstant()
-                && type.getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) type.getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                && (!type.isAccessSpecified() || type.getAccess() == Access.PUBLIC))
-            {
-            ConstantPool  pool     = pool();
-            ClassConstant constClz = (ClassConstant) type.getDefiningConstant();
-            String        sName    = constClz.getPathString();
-            switch (sName)
-                {
-                case "Iterable":
-                case "collections.Sequence":
-                case "collections.Array":
-                    if (type.isParamsSpecified())
-                        {
-                        // it must be Array<UInt8> (or something that Array<UInt8> can be
-                        // assigned to)
-                        List<TypeConstant> listParamTypes = type.getParamTypes();
-                        if (!(listParamTypes.size() == 1 && pool.typeByte().isA(listParamTypes.get(0))))
-                            {
-                            break;
-                            }
-                        }
-                    // fall through
-                case "Object":
-                case "Const":
-                case "Orderable":
-                case "collections.Hashable":
-                    return toConstant();
-                }
-            }
-
-        return super.generateConstant(code, type, errs);
+        return pool().ensureByteStringConstant(bytes);
         }
 
 

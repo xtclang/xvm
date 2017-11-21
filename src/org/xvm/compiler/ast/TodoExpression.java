@@ -63,14 +63,18 @@ public class TodoExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
         if (message != null)
             {
-            fValid &= message.validate(ctx, errs);
+            // note: the required type is ignored, since this is a T0D0 ...
+            fValid &= message.validate(ctx, null, errs);
             }
+
+        // pretend that we fulfill the type requirement
+        m_type = typeRequired;
 
         return fValid;
         }
@@ -80,7 +84,7 @@ public class TodoExpression
         {
         // it would be really nice to know what type they actually want, because we'd be glad to
         // pretend that we can provide one of those
-        return pool().typeObject();
+        return m_type == null ? pool().typeObject() : m_type;
         }
 
     @Override
@@ -93,6 +97,7 @@ public class TodoExpression
     @Override
     public boolean isCompletable()
         {
+        // a T0D0 cannot complete; it always throws
         return false;
         }
 
@@ -200,6 +205,8 @@ public class TodoExpression
 
     protected Token      keyword;
     protected Expression message;
+
+    private TypeConstant m_type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TodoExpression.class, "message");
     }
