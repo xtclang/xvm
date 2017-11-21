@@ -79,79 +79,124 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
-        TypeConstant[] atypeField = null;
+        TypeConstant[] atypeRequired  = null;   // the optional types passed in as a requirement
+        TypeConstant[] atypeSpecified = null;   // tuple field types specified in the source code
+
+        if (typeRequired != null && typeRequired.isParamsSpecified())
+            {
+            atypeRequired = typeRequired.getParamTypesArray();
+            }
+
+        TypeConstant typeSpecified = null;
         if (m_type != null)
             {
-            fValid &= m_type.validate(ctx, errs);
+            fValid &= m_type.validate(ctx, null, errs);
 
             // validate that the type is a tuple, and if it specifies any field types, then grab
             // those so that we can subsequently validate the values of those fields
-            TypeConstant type = m_type.ensureTypeConstant();
-            if (type.isTuple())
+            typeSpecified = m_type.ensureTypeConstant();
+            if (typeSpecified.isTuple())
                 {
-                if (type.isParamsSpecified())
+                if (typeSpecified.isParamsSpecified())
                     {
-                    atypeField  = type.getParamTypesArray();
-                    m_constType = type;
+                    atypeSpecified = typeSpecified.getParamTypesArray();
                     }
                 }
             else
                 {
                 // log an error
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool().typeTuple(), type);
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, pool().typeTuple(), typeSpecified);
                 fValid = false;
                 }
             }
 
-        List<Expression> listExprs = m_exprs;
-        int cExprs = listExprs == null ? 0 : listExprs.size();
-        int cTypes = atypeField == null ? 0 : atypeField.length;
-
-        boolean        fMismatch   = atypeField != null && cExprs != cTypes;
-        boolean        fBuildType  = atypeField == null || fMismatch;
-        TypeConstant[] atypeActual = fBuildType ? new TypeConstant[cExprs] : null;
+        List<Expression> listExprs    = m_exprs;
+        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        int              cTypeReqs    = atypeRequired  == null ? 0 : atypeRequired.length;
+        int              cTypeSpecs   = atypeSpecified == null ? 0 : atypeSpecified.length;
+        boolean          fMismatch    =  (atypeRequired  != null && cExprs != cTypeReqs )
+                                      || (atypeSpecified != null && cExprs != cTypeSpecs);
+        boolean          fBuildType   = (atypeRequired == null && atypeSpecified == null) || fMismatch;
+        TypeConstant[]   atypeImplied = fBuildType ? new TypeConstant[cExprs] : null;
 
         for (int i = 0; i < cExprs; ++i)
             {
-            // validate the field expression
-            Expression expr = listExprs.get(i);
-            fValid &= expr.validate(ctx, errs);
+            // validate the field expression; use the specified type, if it is provided, otherwise
+            // use he required type. the reason for going in two steps (implicit -> specified ->
+            // required) instead of testing directly for required is that the flow has to be
+            // verified to be legal, even if we skip the middle step in the compiled result
+            Expression   expr = listExprs.get(i);
+            TypeConstant type = i < cTypeSpecs
+                    ? atypeSpecified[i]
+                    : i < cTypeReqs
+                            ? atypeRequired[i]
+                            : null;
+            fValid &= expr.validate(ctx, type, errs);
 
             // validate the type of the field expression (if field types were specified)
-            if (i < cTypes)
+            if (i < cTypeReqs && i < cTypeSpecs)
                 {
-                TypeConstant typeField = atypeField[i];
-                if (!expr.isAssignableTo(typeField))
+                TypeConstant typeReq = atypeRequired[i];
+                if (!type.isA(typeReq))                     // TODO isConvertibleTo, not isA
                     {
-                    expr.log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeField, expr.getImplicitType());
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeReq, type);
                     fValid = false;
                     }
+
+                // the required type overrides the specified type
+                type = typeReq;
                 }
 
             if (fBuildType)
                 {
-                atypeActual[i] = expr.getImplicitType();
+                atypeImplied[i] = expr.getImplicitType();
                 }
             }
 
-        TypeConstant typeActual = null;
+        TypeConstant typeImplied = null;
         if (fBuildType)
             {
             ConstantPool pool = pool();
-            typeActual = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeActual);
-            if (m_constType == null)
-                {
-                m_constType = typeActual;
-                }
+            typeImplied = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeImplied);
+            m_constType = typeImplied;
+            }
+        else
+            {
+            m_constType = atypeRequired == null
+                    ? typeSpecified
+                    : typeRequired;
+            assert m_constType != null && m_constType.isTuple() && m_constType.isParamsSpecified();
             }
 
         if (fMismatch)
             {
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, m_type.ensureTypeConstant(), typeActual);
+            if (atypeSpecified != null)
+                {
+                assert cExprs != cTypeSpecs || (atypeRequired != null && cTypeSpecs != cTypeReqs);
+
+                if (cExprs != cTypeSpecs)
+                    {
+                    // possible issue converting from the actual tuple to the specified types ...
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeSpecified, typeImplied);
+                    }
+
+                // ... and from the specified types to the required types
+                if (atypeRequired != null && cTypeSpecs != cTypeReqs)
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, typeSpecified);
+                    }
+                }
+            else
+                {
+                assert atypeRequired != null && cExprs != cTypeReqs;
+
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, typeImplied);
+                }
+
             fValid = false;
             }
 

@@ -57,7 +57,7 @@ public class ThrowStatement
     protected boolean validate(Context ctx, ErrorListener errs)
         {
         // validate the throw value expressions
-        return expr.validate(ctx, errs);
+        return expr.validate(ctx, pool().typeException(), errs);
         }
 
     @Override

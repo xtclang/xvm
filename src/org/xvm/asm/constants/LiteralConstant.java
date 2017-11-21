@@ -325,6 +325,54 @@ public class LiteralConstant
         }
 
     /**
+     * Convert the LiteralConstant to an UInt8Constant of type bit, iff the LiteralConstant is an
+     * IntLiteral whose value is in the range 0..1.
+     *
+     * @return a UInt8Constant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public UInt8Constant toBitConstant()
+        {
+        if (getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException("format=" + getFormat());
+            }
+
+        PackedInteger pi = getPackedInteger();
+        if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 1)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureBitConstant(pi.getInt());
+        }
+
+    /**
+     * Convert the LiteralConstant to an UInt8Constant of type bit, iff the LiteralConstant is an
+     * IntLiteral whose value is in the range 0..1.
+     *
+     * @return a UInt8Constant
+     *
+     * @throws ArithmeticException  on overflow
+     */
+    public UInt8Constant toNibbleConstant()
+        {
+        if (getFormat() != Format.IntLiteral)
+            {
+            throw new IllegalStateException("format=" + getFormat());
+            }
+
+        PackedInteger pi = getPackedInteger();
+        if (pi.isBig() || pi.getLong() < 0x0 || pi.getLong() > 0xF)
+            {
+            throw new ArithmeticException("out of range: " + pi);
+            }
+
+        return getConstantPool().ensureNibbleConstant(pi.getInt());
+        }
+
+    /**
      * Convert the LiteralConstant to an Int8Constant, iff the LiteralConstant is an IntLiteral
      * whose value is in the range -128..127.
      *
@@ -1104,6 +1152,12 @@ public class LiteralConstant
         {
         switch (this.getFormat().name() + "->" + typeOut.getEcstasyClassName())
             {
+            case "IntLiteral->Bit":
+                return toBitConstant();
+
+            case "IntLiteral->Nibble":
+                return toNibbleConstant();
+
             case "IntLiteral->Int8":
                 return toInt8Constant();
 
@@ -1156,6 +1210,52 @@ public class LiteralConstant
             case "IntLiteral->VarDec":
             case "FPLiteral->VarDec":
                 return toVarDecConstant();
+            }
+
+        // handle conversions to unpredictable interface types
+        ConstantPool pool = getConstantPool();
+        switch (this.getFormat().name())
+            {
+            case "IntLiteral":
+                if (pool.typeInt().isA(typeOut))
+                    {
+                    return toIntConstant(Format.Int64);
+                    }
+                else if (pool.typeByte().isA(typeOut))
+                    {
+                    return toUInt8Constant();
+                    }
+                else
+                    {
+                    // go through the entire list of possibilities
+                    for (Format format = Format.Bit;
+                            format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
+                        {
+                        TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(format.name());
+                        if (typeSupported.isA(typeOut))
+                            {
+                            return convertTo(typeSupported);
+                            }
+                        }
+                    }
+                break;
+
+            case "FPLiteral":
+                // go through the entire list of possibilities
+                for (Format format = Format.Float16;
+                        format.ordinal() <= Format.VarDec.ordinal(); format = format.next())
+                    {
+                    TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(format.name());
+                    if (typeSupported.isA(typeOut))
+                        {
+                        return convertTo(typeSupported);
+                        }
+                    }
+                break;
+
+            default:
+                // TODO
+                throw new UnsupportedOperationException("TODO conversion");
             }
 
         return super.convertTo(typeOut);

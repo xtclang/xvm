@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
@@ -72,11 +73,11 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         // a literal is validated by the lexer/parser, and there is nothing left to validate at this
-        // point
-        return true;
+        // point, except the requested type
+        return typeRequired == null || isAssignableTo(typeRequired);
         }
 
     @Override
@@ -146,87 +147,79 @@ public class LiteralExpression
             return isAssignableTo(typeThat.getUnderlyingType());
             }
 
-        // TODO allow UncheckedInt annotation, but only for int/uint types
+        // TODO - verify that we allow UncheckedInt annotation, but only for int/uint types
 
-        if (typeThat.isSingleDefiningConstant()
-                && typeThat.getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) typeThat.getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                && typeThat.getAccess() == Access.PUBLIC)
+        Id id = literal.getId();
+        switch (typeThat.getEcstasyClassName())
             {
-            Id            id    = literal.getId();
-            PackedInteger piVal;
-            String        sName = ((ClassConstant) typeThat.getDefiningConstant()).getPathString();
-            switch (sName)
-                {
-                // all of the literal types are const objects
-                case "Object":
-                case "Const":
-                case "Orderable":
-                case "collections.Hashable":
-                    return true;
+            case "Object":
+            case "Const":
+            case "Orderable":
+            case "collections.Hashable":
+                return true;
 
-                case "Char":
-                case "Sequential":                  // char implements Sequential
-                    return id == Id.LIT_CHAR;
+            case "Char":
+            case "Sequential":                  // char implements Sequential
+                return id == Id.LIT_CHAR;
 
-                case "Sequence":
-                    if (typeThat.isParamsSpecified() && !(typeThat.isParamsSpecified(1)
-                            && typeThat.getParamTypes().get(0).isA(pool().typeChar())))
-                        {
-                        return false;
-                        }
-                    // fall through
-                case "String":
-                    return id == Id.LIT_CHAR || id == Id.LIT_STRING;
-
-                case "IntLiteral":
-                case "Bit":
-                case "Nibble":
-                case "Int8":
-                case "Int16":
-                case "Int32":
-                case "Int64":
-                case "Int128":
-                case "VarInt":
-                case "UInt8":
-                case "UInt16":
-                case "UInt32":
-                case "UInt64":
-                case "UInt128":
-                case "VarUInt":
-                case "annotations.UncheckedInt":
-                    return id == Id.LIT_INT;
-
-                case "Dec32":
-                case "Dec64":
-                case "Dec128":
-                case "VarDec":
-                    return id == Id.LIT_INT || id == Id.LIT_DEC;
-
-                case "FPLiteral":
-                case "Float16":
-                case "Float32":
-                case "Float64":
-                case "Float128":
-                case "VarFloat":
-                    return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
-
-                case "Number":
-                case "IntNumber":
-                case "UIntNumber":
-                case "FPNumber":
-                case "BinaryFPNumber":
-                case "DecimalFPNumber":
-                    // these types are ambiguous; while it's possible to covert to something that
-                    // implements the specified interface, the problem is that it's possible to
-                    // convert to _several_ different things that implement the same interface!
-                    // (we could let it fall through and let the default impl figure it out, but we
-                    // already know the answer)
+            case "collections.Sequence":
+                if (typeThat.isParamsSpecified() && !(typeThat.isParamsSpecified(1)
+                        && typeThat.getParamTypes().get(0).isA(pool().typeChar())))
+                    {
                     return false;
-                }
-            }
+                    }
+                // fall through
+            case "String":
+                return id == Id.LIT_CHAR || id == Id.LIT_STRING;
 
-        return super.isAssignableTo(typeThat);
+            case "IntLiteral":
+            case "Bit":
+            case "Nibble":
+            case "Int8":
+            case "Int16":
+            case "Int32":
+            case "Int64":
+            case "Int128":
+            case "VarInt":
+            case "UInt8":
+            case "UInt16":
+            case "UInt32":
+            case "UInt64":
+            case "UInt128":
+            case "VarUInt":
+            case "annotations.UncheckedInt":
+                return id == Id.LIT_INT;
+
+            case "Dec32":
+            case "Dec64":
+            case "Dec128":
+            case "VarDec":
+                return id == Id.LIT_INT || id == Id.LIT_DEC;
+
+            case "FPLiteral":
+            case "Float16":
+            case "Float32":
+            case "Float64":
+            case "Float128":
+            case "VarFloat":
+                return id == Id.LIT_INT || id == Id.LIT_DEC || id == Id.LIT_BIN;
+
+            case "Number":
+            case "IntNumber":
+            case "UIntNumber":
+            case "FPNumber":
+            case "BinaryFPNumber":
+            case "DecimalFPNumber":
+                // these types are ambiguous; while it's possible to covert to something that
+                // implements the specified interface, the problem is that it's possible to
+                // convert to _several_ different things that implement the same interface!
+                // (we could let it fall through and let the default impl figure it out, but we
+                // already know the answer)
+                return false;
+
+            default:
+                return super.isAssignableTo(typeThat);
+            }
         }
 
     @Override

@@ -181,11 +181,11 @@ public class BiExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool pool   = pool();
-        boolean      fValid = expr1.validate(ctx, errs)
-                            & expr2.validate(ctx, errs);
+        boolean      fValid = expr1.validate(ctx, , errs)
+                            & expr2.validate(ctx, , errs);
 
         // validation of a constant expression is simpler, so do it first
         TypeConstant type1 = expr1.getImplicitType();

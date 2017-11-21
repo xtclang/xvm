@@ -88,12 +88,80 @@ public class ReturnStatement
         {
         boolean fValid = true;
 
+        MethodStructure  structMethod = ctx.getMethod();
+        boolean          fConditional = structMethod.isConditionalReturn();
+        Parameter[]      aparamRets   = structMethod.getReturnArray();
+        int              cparamRets   = aparamRets.length;
+        List<Expression> listExprs    = this.exprs;
+        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+
+        // Void methods are the simplest
+        if (cExprs == 0)
+            {
+            if (cparamRets != 0)
+                {
+                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                }
+            }
+        else if (cExprs > 1)
+            {
+            // validate each expression, telling it what return type is expected
+            for (int i = 0; i < cExprs; ++i)
+                {
+                TypeConstant typeRet = i < cparamRets
+                        ? aparamRets[i].getType()
+                        : null;
+                fValid &= listExprs.get(i).validate(ctx, typeRet, errs);
+                }
+
+            // make sure the arity is correct
+            if (cExprs != cparamRets)
+                {
+                log(errs, Severity.ERROR, cparamRets == 0 ? Compiler.RETURN_VOID
+                        : Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
+                }
+            }
+        else // cExprs == 1
+            {
+            Expression expr  = listExprs.get(0);
+            int        cArgs = expr.getValueCount();
+            if (cArgs > 1)
+                {
+                // TODO  && (cparamRets > 1 || cparamRets == 1 && !aparamRets[0].getType().isTuple()))
+
+                // if there is exactly 1 expression, it can result in a tuple type, and the return
+                // type of the method is NOT a single tuple, then generate a RETURN_T op
+                m_fTupleReturn = true;
+                fValid &= expr.validateMulti(ctx, structMethod.getReturnTypes(), errs);
+                }
+            else if (fConditional)
+                {
+                assert aparamRets[0].getType().equals(pool().typeBoolean());
+                fValid &= expr.validate(ctx, aparamRets[0].getType(), errs);
+                }
+            else
+                {
+                expr.validate()
+                }
+            }
+
+
+        /*
+        if (cExprs == 1 && (cReturns > 1 || cReturns == 1 && !listRets.get(0).getType().isTuple())
+                && listExprs.get(0).getImplicitType().isTuple())
+            {
+            // if there is exactly 1 expression, it results in a tuple type, and the return type of
+            // the method is NOT a single tuple, then the return will generate a RETURN_T op
+            m_fTupleReturn = true;
+            }
+        else if (cExprs == 1 && structMethod.isConditionalReturn() && exprs.get(0).isConstantFalse())
+
         // validate the return value expressions
         List<Expression> listExprs = this.exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
         for (int i = 0; i < cExprs; ++i)
             {
-            fValid &= listExprs.get(i).validate(ctx, errs);
+            fValid &= listExprs.get(i).validate(ctx, , errs);
             }
 
         // check for special return modes: tuple-returns and conditional-returns
@@ -130,6 +198,7 @@ public class ReturnStatement
                 }
             fValid = false;
             }
+        */
 
         return fValid;
         }
@@ -243,7 +312,6 @@ public class ReturnStatement
     protected Token            keyword;
     protected List<Expression> exprs;
     protected boolean          m_fTupleReturn;
-    protected boolean          m_fCondReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
     }

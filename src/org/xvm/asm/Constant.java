@@ -195,11 +195,35 @@ public abstract class Constant
         return getType();
         }
 
-    public Constant defaultValue(TypeConstant type)
+    /**
+     * Generate some default constant value for the specified type, which should be the type of a
+     * particular constant.
+     *
+     * @param type  the desired type
+     *
+     * @return a Constant of the specfied type, if possible, otherwise the constant for False
+     */
+    public static Constant defaultValue(TypeConstant type)
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool = type.getConstantPool();
         switch (type.getEcstasyClassName())
             {
+            default:
+                // TODO this "throw" needs to be deleted once we verify that things are working
+                throw new IllegalStateException("unsupported constant type: " + type);
+                // fall through
+            case "Boolean":
+                return pool.valFalse();
+
+            case "Nullable":
+                return pool.valNull();
+
+            case "Ordered":
+                return pool.valOrd(0);
+
+            case "Boolean.True":
+                return pool.valTrue();
+
             case "Char":
                 return pool.ensureCharConstant('?');
 
@@ -256,9 +280,7 @@ public abstract class Constant
             case "VarFloat":
                 throw new UnsupportedOperationException();
 
-            default:
-                // eventually this becomes an IllegalStateException
-                throw new UnsupportedOperationException("unsupported constant type: " + type);
+            // TODO arrays and lists and maps and tuples and so on
             }
         }
     /**
@@ -281,17 +303,13 @@ public abstract class Constant
      *
      * @param typeOut  the type that the constant must be assignable to
      *
-     * @return the converted constant
+     * @return the converted constant, or null if the conversion is not implemented
+     *
+     * @throws ArithmeticException  on overflow
      */
     public Constant convertTo(TypeConstant typeOut)
         {
-        TypeConstant typeIn = getType();
-        if (typeIn.isA(typeOut))
-            {
-            return this;
-            }
-
-        throw new UnsupportedOperationException("unsupported conversion " + getClass().getSimpleName());
+        return getType().isA(typeOut) ? this : null;
         }
 
     /**
@@ -727,6 +745,11 @@ public abstract class Constant
         ConditionVersionMatches,
         ConditionVersioned,
         ;
+
+        public Format next()
+            {
+            return Format.valueOf(this.ordinal() + 1);
+            }
 
         /**
          * Look up a Format enum by its ordinal.

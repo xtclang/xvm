@@ -99,7 +99,7 @@ public class ExpressionStatement
     @Override
     protected boolean validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = expr.validate(ctx, errs);
+        boolean fValid = expr.validate(ctx, null, errs);
 
         if (getUsage() != Usage.Standalone)
             {

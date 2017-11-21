@@ -32,6 +32,8 @@ import org.xvm.asm.op.P_Set;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 
+import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.Severity;
 
 
@@ -80,13 +82,6 @@ import org.xvm.util.Severity;
  *
  * 6. An expression that is allowed to short-circuit must be provided with a label to which it can
  *    short-circuit. This also affects the definite assignment rules.
- * </pre>
- * <p/>
- * <ul> <li>TODO need to pass in Scope but one that knows name->Register association?
- * </li><li>TODO how to do captures?
- * </li><li>TODO how to do definite assignment?
- * </li><li>TODO a version of this for conditional? or just a boolean parameter that says this is asking for a conditional?
- * </li></ul>
  */
 public abstract class Expression
         extends AstNode
@@ -172,6 +167,75 @@ public abstract class Expression
     public boolean isConditional()
         {
         return false;
+        }
+
+    /**
+     * Before generating the code for the method body, resolve names and verify definite assignment,
+     * etc.
+     *
+     * @param ctx    the compilation context for the statement
+     * @param typeRequired
+     *@param errs   the error listener to log to
+     *  @return true iff the compilation can proceed
+     */
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        throw notImplemented();
+        }
+
+    /**
+     * Before generating the code for the method body, resolve names and verify definite assignment,
+     * etc.
+     * <p/>
+     * This method should be overridden by any Expression type that expects to result in multiple
+     * values.
+     *
+     * @param ctx            the compilation context for the statement
+     * @param atypeRequired  an array of required types
+     * @param errs           the error listener to log to
+     *
+     * @return true iff the compilation can proceed
+     */
+    protected boolean validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+        {
+        boolean      fValid       = true;
+        TypeConstant typeRequired = null;
+        if (atypeRequired != null)
+            {
+            switch (atypeRequired.length)
+                {
+                case 0:
+                    // no type expected
+                    break;
+
+                case 1:
+                    // single type expected
+                    typeRequired = atypeRequired[0];
+                    break;
+
+                default:
+                    if (getValueCount() >= atypeRequired.length)
+                        {
+                        // since this method was not overridden, see if the expression can deliver
+                        // the tuple form of the multiple requested types; if it's not supported,
+                        // the error may get detected by either the validate or the generate phase
+                        typeRequired = pool().ensureParameterizedTypeConstant(
+                                pool().typeTuple(), atypeRequired);
+                        }
+                    else
+                        {
+                        // log the error, but allow validation to continue (with no particular
+                        // expected type) so that we get as many errors exposed as possible in the
+                        // validate phase
+                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                                atypeRequired.length, getValueCount());
+                        fValid = false;
+                        }
+                    break;
+                }
+            }
+
+        return fValid & validate(ctx, typeRequired, errs);
         }
 
     /**
@@ -310,12 +374,22 @@ public abstract class Expression
 
         if (isConstant())
             {
-            return validateAndConvertConstant(toConstant(), type, errs);
+            if (isAssignableTo(type))
+                {
+                return validateAndConvertConstant(toConstant(), type, errs);
+                }
+
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, type, toConstant().getType());
+            }
+        else
+            {
+            log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
             }
 
-        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
         return generateFakeConstant(type);
         }
+
+    // TODO do we need generateConstants? (for "/%" operator for example)
 
     /**
      * Generate an argument that represents the result of this expression.
@@ -499,7 +573,8 @@ public abstract class Expression
         }
 
     /**
-     * TODO
+     * Generate the necessary code that jumps to the specified label if this expression evaluates
+     * to the boolean value indicated in <tt>fWhenTrue</tt>.
      *
      * @param code       the code block
      * @param label      the label to conditionally jump to
@@ -833,32 +908,30 @@ public abstract class Expression
      */
     protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
-        String sClassName = typeOut.getEcstasyClassName();
-        if (sClassName.equals(constIn.getFormat().name()))
+        TypeConstant typeIn = constIn.getType();
+        if (typeIn.isA(typeOut))
             {
             // common case; no conversion is necessary
             return constIn;
             }
 
-        Constant constOut = null;
-
-        if (!sClassName.equals("?")) // TODO barf
+        Constant constOut;
+        try
             {
-            // hand the conversion request down to the constant and see if it knows how to do it
             constOut = constIn.convertTo(typeOut);
+            }
+        catch (ArithmeticException e)
+            {
+            // conversion failure due to range etc.
+            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeOut, constIn.getValueString());
+            return generateFakeConstant(typeOut);
             }
 
         if (constOut == null)
             {
-            // we have to return something, even in the case of an error
-            constOut = constIn;
-
-            // it has to be assignable from the constant that got passed in, because the constant
-            // wasn't able to convert itself to the requested type
-            if (!constIn.getType().isA(constOut.getType()))
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, constIn.getType());
-                }
+            // conversion apparently was not possible
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
+            constOut = generateFakeConstant(typeOut);
             }
 
         return constOut;
@@ -913,22 +986,6 @@ public abstract class Expression
         }
 
     /**
-     *
-     * @param listTypes
-     * @return
-     */
-    protected List<Register> generateBlackHoles(List<TypeConstant> listTypes)
-        {
-        int       cTypes   = listTypes == null ? 0 : listTypes.size();
-        ArrayList listRegs = new ArrayList(cTypes);
-        for (int i = 0; i < cTypes; ++i)
-            {
-            listRegs.add(generateBlackHole(listTypes.get(i)));
-            }
-        return listRegs;
-        }
-
-    /**
      * When an error occurs during compilation, but a constant of a specific type is required, this
      * method comes to the rescue.
      *
@@ -938,8 +995,7 @@ public abstract class Expression
      */
     protected Constant generateFakeConstant(TypeConstant type)
         {
-        // TODO
-        return pool().valFalse();
+        return Constant.defaultValue(type);
         }
 
     /**

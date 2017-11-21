@@ -410,23 +410,6 @@ public abstract class AstNode
         }
 
 
-    // ----- method compilation --------------------------------------------------------------------
-
-    /**
-     * Before generating the code for the method body, resolve names and verify definite assignment,
-     * etc.
-     *
-     * @param ctx    the compilation context for the statement
-     * @param errs   the error listener to log to
-     *
-     * @return true iff the compilation can proceed
-     */
-    protected boolean validate(Context ctx, ErrorListener errs)
-        {
-        throw notImplemented();
-        }
-
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override

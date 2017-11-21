@@ -272,7 +272,7 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -282,7 +282,7 @@ public class NamedTypeExpression
             {
             for (TypeExpression type : paramTypes)
                 {
-                fValid &= type.validate(ctx, errs);
+                fValid &= type.validate(ctx, null, errs);
                 }
             }
 

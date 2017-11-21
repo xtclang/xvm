@@ -133,14 +133,15 @@ public class VariableDeclarationStatement
         // TODO make sure that # exprs == # type fields for tuple type
         // TODO make sure that # type fields == 1 for sequence type
 
-        fValid &= type.validate(ctx, errs);
+        fValid &= type.validate(ctx, null, errs);
 
+        TypeConstant typeVar = type.ensureTypeConstant();
         if (value != null)
             {
-            fValid &= value.validate(ctx, errs);
+            fValid &= value.validate(ctx, typeVar, errs);
             }
 
-        m_reg = new Register(type.ensureTypeConstant());
+        m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
         return fValid;
