@@ -183,9 +183,48 @@ public class BiExpression
     @Override
     protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        // so let's talk about "+"
+        // 1) any T1 that wants to support "+" has to have either:
+        //    a) @Op T3 add(T2)
+        //    b) @Op("+") T3 add(T2)
+        //    ... where T2 and/or T3 may or may not be the same as T1
+        // 2) within this expression, T1 is represented by expr1, and T2 by expr2, and T3 is
+        //    represented by this expression itself (or is specified by typeRequired, passed in)
+        // 3) so the first thing to do is to validate expr1 (the "this" of the op) to determine its
+        //    type
+        // 4) having determined its type, the type is asked to enumerate the various potential
+        //    matching ops -- i.e. any @Op-annotated method named "add", and any @Op-annotated
+        //    method whose annotation specifies the constant "+"
+        // 5) having determined the possible set of ops (methods), we need to reduce it by
+        //    evaluating the typeRequired, if a typeRequired is specified:
+        //    a) for each possible method, it will have one parameter and one return value
+        //    b) if the return value type of the op "isA" typeRequired, then that op is a possible
+        //    c) if the return value type of the op "is assignable to" (i.e. there exists a to<>()
+        //       conversion) to the typeRequired, then that op is a possible
+        //    d) all other ops are eliminated
+        // 6) if there is only one op left at this point, then validate expr2 using the type
+        //    specified as the parameter for the op method
+        // 7) otherwise, if there's more than one possibility, then validate with null and determine
+        //    the implicit type
+        //    a) for each remaining op, eliminate those that the implicit type of expr2 fails with
+        //       both "isA" and "is assignable to"
+        //    b) if more than one remains, then we have to find the "closest" using the method
+        //       matching rules:
+        //       i) exact match wins
+        //       ii) "isA" beats "is assignable to"; if there are any "isA" left, then discard all
+        //           "is assignable to" options
+        //       iii) for any two remaining op candidates, if the parameter type PT1 of one op "isA"
+        //            the other PT2, but the reverse is not true, then rank PT1 higher; if they are
+        //            both "isA" the other, or neither isA the other, then rank them the same; using
+        //            this approach, form a total ranking of the remaining ops
+        //       iv) if only one op remains, or if one "isA" rises above all others in the total
+        //           ranking, then that is the op to use; otherwise it is an error (ambiguous)
+        // TODO
+
         ConstantPool pool   = pool();
-        boolean      fValid = expr1.validate(ctx, , errs)
-                            & expr2.validate(ctx, , errs);
+        boolean      fValid = expr1.validate(ctx, null, errs);
+
+        fValid &= expr2.validate(ctx, null, errs);      // TODO need a type here
 
         // validation of a constant expression is simpler, so do it first
         TypeConstant type1 = expr1.getImplicitType();

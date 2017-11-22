@@ -96,12 +96,23 @@ public class ReturnStatement
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
         // Void methods are the simplest
-        if (cExprs == 0)
+        if (cparamRets == 0 && cExprs > 0)
             {
-            if (cparamRets != 0)
+            // check the expressions anyhow (even though they can't be used)
+            for (int i = 0; i < cExprs; ++i)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                listExprs.get(i).validate(ctx, null, errs);
                 }
+
+            // it was supposed to be a void return
+            log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+            fValid = false;
+            }
+        else if (cExprs == 0)
+            {
+            // the expressions are missing; it was NOT supposed to be a void return
+            log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+            fValid = false;
             }
         else if (cExprs > 1)
             {
@@ -114,91 +125,46 @@ public class ReturnStatement
                 fValid &= listExprs.get(i).validate(ctx, typeRet, errs);
                 }
 
-            // make sure the arity is correct
+            // make sure the arity is correct (the number of exprs has to match the number of rets)
             if (cExprs != cparamRets)
                 {
-                log(errs, Severity.ERROR, cparamRets == 0 ? Compiler.RETURN_VOID
-                        : Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
                 }
             }
         else // cExprs == 1
             {
-            Expression expr  = listExprs.get(0);
-            int        cArgs = expr.getValueCount();
-            if (cArgs > 1)
+            Expression expr       = listExprs.get(0);
+            int        cArgs      = expr.getValueCount();
+            boolean    fCondFalse = false;
+            if (cArgs > 1 && cparamRets > 1)
                 {
-                // TODO  && (cparamRets > 1 || cparamRets == 1 && !aparamRets[0].getType().isTuple()))
-
-                // if there is exactly 1 expression, it can result in a tuple type, and the return
-                // type of the method is NOT a single tuple, then generate a RETURN_T op
-                m_fTupleReturn = true;
+                // there is exactly 1 expression, and it results in multiple values, so allow a
+                // tuple return that will generate a RETURN_T op
                 fValid &= expr.validateMulti(ctx, structMethod.getReturnTypes(), errs);
+                m_fTupleReturn = true;
                 }
             else if (fConditional)
                 {
+                // it's allowed to have a single conditional return value, as long as it's False
                 assert aparamRets[0].getType().equals(pool().typeBoolean());
-                fValid &= expr.validate(ctx, aparamRets[0].getType(), errs);
+                fValid    &= expr.validate(ctx, aparamRets[0].getType(), errs);
+                fCondFalse = fValid && expr.isConstant() && expr.toConstant().equals(pool().valFalse());
                 }
             else
                 {
-                expr.validate()
+                // assume a simple 1:1 expression to return value mapping
+                fValid &= expr.validate(ctx, cparamRets > 0 ? aparamRets[0].getType() : null, errs);
                 }
-            }
 
-
-        /*
-        if (cExprs == 1 && (cReturns > 1 || cReturns == 1 && !listRets.get(0).getType().isTuple())
-                && listExprs.get(0).getImplicitType().isTuple())
-            {
-            // if there is exactly 1 expression, it results in a tuple type, and the return type of
-            // the method is NOT a single tuple, then the return will generate a RETURN_T op
-            m_fTupleReturn = true;
-            }
-        else if (cExprs == 1 && structMethod.isConditionalReturn() && exprs.get(0).isConstantFalse())
-
-        // validate the return value expressions
-        List<Expression> listExprs = this.exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        for (int i = 0; i < cExprs; ++i)
-            {
-            fValid &= listExprs.get(i).validate(ctx, , errs);
-            }
-
-        // check for special return modes: tuple-returns and conditional-returns
-        MethodStructure structMethod = ctx.getMethod();
-        int             cReturns     = structMethod.getReturnCount();
-        List<Parameter> listRets     = structMethod.getReturns();
-        if (cExprs == 1 && (cReturns > 1 || cReturns == 1 && !listRets.get(0).getType().isTuple())
-                && listExprs.get(0).getImplicitType().isTuple())
-            {
-            // if there is exactly 1 expression, it results in a tuple type, and the return type of
-            // the method is NOT a single tuple, then the return will generate a RETURN_T op
-            m_fTupleReturn = true;
-            }
-        else if (cExprs == 1 && structMethod.isConditionalReturn() && exprs.get(0).isConstantFalse())
-            {
-            // if there is exactly 1 expression, and it is "false", then that is a valid return
-            // from a method with a conditional-return
-            m_fCondReturn = true;
-            }
-        else if (cExprs != cReturns)
-            {
-            // error: unexpected number of return value expressions
-            if (cExprs == 0)
+            // verify that we had enough arguments from the expression to satisfy the # of returns
+            // (we could treat extras as an error, but consider the example of the expression being
+            // a method invocation returning 4 items, and we just want 3 of them, so we'll
+            // black-hole them)
+            if (expr.isCompletable() && cArgs < cparamRets && !fCondFalse)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
                 }
-            else if (cReturns == 0)
-                {
-                log(errs, Severity.ERROR, Compiler.RETURN_VOID);
-                }
-            else
-                {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
-                }
-            fValid = false;
             }
-        */
 
         return fValid;
         }

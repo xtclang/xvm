@@ -477,6 +477,59 @@ public abstract class TypeConstant
         return listParamTypes.get(i);
         }
 
+    /**
+     * Obtain all of the matching op methods for the specified name and/or the operator string, that
+     * take the specified number of params.
+     *
+     * @param sName    the default op name, such as "add"
+     * @param sOp      the operator string, such as "+"
+     * @param cParams  the number of parameters for the operator method, such as 1
+     *
+     * @return a set of zero or more method constants
+     */
+    public Set<MethodConstant> getOpMethods(String sName, String sOp, int cParams)
+        {
+        Set<MethodConstant> setOps = new HashSet<>(7);
+        collectOpMethods(setOps, sName, sOp, cParams);
+        return setOps;
+        }
+
+    /**
+     * For this type, find all of the ops that match the name and/or the operator string that take
+     * the specified number of params.
+     *
+     * @param setOps   the set to contribute to
+     * @param sName    the default op name, such as "add"
+     * @param sOp      the operator string, such as "+"
+     * @param cParams  the number of parameters for the operator method, such as 1
+     */
+    protected void collectOpMethods(Set<MethodConstant> setOps, String sName, String sOp, int cParams)
+        {
+        getUnderlyingType().collectOpMethods(setOps, sName, sOp, cParams);
+        }
+
+    /**
+     * Obtain all of the auto conversion methods found on this type.
+     *
+     * @return a set of zero or more method constants
+     */
+    public Set<MethodConstant> getAutoMethods()
+        {
+        Set<MethodConstant> setAuto = new HashSet<>(7);
+        collectAutoMethods(setAuto);
+        return setAuto;
+        }
+
+    /**
+     * For this type, all of the auto conversion methods.
+     *
+     * @param setAuto  the set to contribute to
+     */
+    protected void collectAutoMethods(Set<MethodConstant> setAuto)
+        {
+        getUnderlyingType().collectAutoMethods(setAuto);
+        }
+
 
     // ----- run-time support ----------------------------------------------------------------------
 

@@ -10,6 +10,7 @@ module Ecstasy.xtclang.org
         function Object() to<function Object()>();
         }
 
+    class IntLiteral
     class Int64
         {
         }
@@ -50,6 +51,8 @@ module Ecstasy.xtclang.org
 
     package annotations
         {
+        mixin Operator(String? token = null) {}
+
         mixin Override {}
 
         mixin InjectedRef<RefType> into Ref<RefType> {}
