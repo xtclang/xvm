@@ -402,8 +402,11 @@ public class MethodDeclarationStatement
                 // TODO: temporary
                 if (errList.getErrors().isEmpty())
                     {
-                    System.out.println("Successfully compiled: " +
-                        method.getIdentityConstant().getPathString());
+                    String sPath = method.getIdentityConstant().getPathString();
+                    if (sPath.startsWith("Test"))
+                        {
+                        System.out.println("Successfully compiled: " + sPath);
+                        }
                     }
                 else
                     {

@@ -250,6 +250,70 @@ public class ClassStructure
         return false;
         }
 
+    /**
+     * Recursively find a contribution by the specified id.
+     *
+     * @param constId  the identity to look for
+     * @return  the resulting contribution or null if none found
+     */
+    public Contribution findContribution(IdentityConstant constId)
+        {
+        if (constId.equals(getConstantPool().clzObject()))
+            {
+            // everything is considered to extend Object (even interfaces)
+            return new Contribution(Composition.Extends, getConstantPool().typeObject());
+            }
+
+        if (constId.equals(getIdentityConstant()))
+            {
+            return new Contribution(Composition.Equal, (TypeConstant) null);
+            }
+
+        ClassStructure structCur = this;
+
+        for (Contribution contrib : structCur.getContributionsAsList())
+            {
+            Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
+            if (constContrib.equals(constId))
+                {
+                return contrib;
+                }
+
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                case Into:
+                    // TODO:
+                    break;
+
+                case Incorporates:
+                case Implements:
+                case Extends:
+                    // even though this class may be a ModuleConstant or PackageConstant,
+                    // the super will always be a class (because a Module and a Package cannot be
+                    // extended)
+                    ClassConstant constSuper = (ClassConstant) constContrib;
+                    contrib = ((ClassStructure) constSuper.getComponent()).findContribution(constId);
+                    if (contrib != null)
+                        {
+                        // return as soon as a match is found
+                        // TODO: wrap it into a "DeepContribution" of this IdentityConstant,
+                        return contrib;
+                        }
+                    break;
+
+                case Enumerates:
+                case Impersonates:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return null;
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

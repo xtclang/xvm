@@ -6,11 +6,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 
 import java.util.Set;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -129,8 +130,7 @@ public abstract class TypeConstant
      */
     public boolean isImmutabilitySpecified()
         {
-        return getUnderlyingType().isImmutabilitySpecified()
-                && (!isRelationalType() || getUnderlyingType2().isImmutabilitySpecified());
+        return getUnderlyingType().isImmutabilitySpecified();
         }
 
     /**
@@ -138,14 +138,7 @@ public abstract class TypeConstant
      */
     public boolean isAccessSpecified()
         {
-        if (!getUnderlyingType().isAccessSpecified())
-            {
-            return false;
-            }
-
-        return !isRelationalType()
-                ||     getUnderlyingType2().isAccessSpecified()
-                    && getUnderlyingType().getAccess() == getUnderlyingType2().getAccess();
+        return getUnderlyingType().isAccessSpecified();
         }
 
     /**
@@ -156,17 +149,7 @@ public abstract class TypeConstant
      */
     public Access getAccess()
         {
-        Access access = getUnderlyingType().getAccess();
-
-        if (isRelationalType())
-            {
-            if (getUnderlyingType().getAccess() != access)
-                {
-                throw new UnsupportedOperationException("relational access mismatch");
-                }
-            }
-
-        return access;
+        return getUnderlyingType().getAccess();
         }
 
     /**
@@ -236,11 +219,6 @@ public abstract class TypeConstant
      */
     public Constant getDefiningConstant()
         {
-        if (isRelationalType())
-            {
-            throw new UnsupportedOperationException();
-            }
-
         return getUnderlyingType().getDefiningConstant();
         }
 
@@ -249,8 +227,7 @@ public abstract class TypeConstant
      */
     public boolean isAutoNarrowing()
         {
-        return getUnderlyingType().isAutoNarrowing()
-                && (!isRelationalType() || getUnderlyingType2().isAutoNarrowing());
+        return getUnderlyingType().isAutoNarrowing();
         }
 
     /**
@@ -259,8 +236,7 @@ public abstract class TypeConstant
      */
     public boolean isConstant()
         {
-        return getUnderlyingType().isConstant()
-                && (!isRelationalType() || getUnderlyingType2().isConstant());
+        return getUnderlyingType().isConstant();
         }
 
     /**
@@ -345,8 +321,7 @@ public abstract class TypeConstant
         {
         // a type is considered only nullable if it is the Nullable type itself, or a simple
         // modification of the same
-        return getUnderlyingType().isOnlyNullable()
-                && (!isRelationalType() || getUnderlyingType2().isOnlyNullable());
+        return getUnderlyingType().isOnlyNullable();
         }
 
     /**
@@ -531,7 +506,7 @@ public abstract class TypeConstant
         }
 
 
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- type comparison support ---------------------------------------------------------------
 
     /**
      * Determine if the specified TypeConstant represents a type that is assignable to values of
@@ -546,49 +521,42 @@ public abstract class TypeConstant
      */
     public boolean isA(TypeConstant that)
         {
-        if (this.equals(that))
+        if (this.equals(that) || that.equals(getConstantPool().typeObject()))
             {
             return true;
             }
 
-        if (that instanceof IntersectionTypeConstant)
+        // TODO: should be a list of contributions
+        Contribution relTo = this.checkAssignableTo(that);
+        if (relTo == null)
             {
-            return this.isA(that.getUnderlyingType()) || this.isA(that.getUnderlyingType2());
+            return false;
             }
 
-        if (that instanceof UnionTypeConstant)
+        Contribution relFrom = that.checkAssignableFrom(this);
+        if (relFrom == null)
             {
-            return this.isA(that.getUnderlyingType()) && this.isA(that.getUnderlyingType2());
+            return true; // TODO
             }
 
-        if (that instanceof ImmutableTypeConstant)
+        if (relFrom.getComposition() != Component.Composition.MaybeDuckType
+            && relTo.getComposition() != Component.Composition.MaybeDuckType)
             {
-            if (this.isImmutabilitySpecified()) // TODO or this is a CONST / ENUM / MODULE / PACKAGE class
-                {
-                return this.isA(that.getUnderlyingType());
-                }
+            return true;
             }
 
-        if (that instanceof AccessTypeConstant)
-            {
-            if (that.getAccess() == Access.PUBLIC)
-                {
-                return this.isA(that.getUnderlyingType());
-                }
-
-            // TODO protected, private, struct
-            }
-
-        if (that instanceof ParameterizedTypeConstant)
-            {
-            // TODO this could extend/implement/etc. something that is similarly parameterized
-            }
-
-        // TODO parameterized
-        // TODO annotations
-        // TODO difference type
-
+        // TODO: there is a "Maybe"; need to do the "duck type" check
         return false;
+        }
+
+    protected Contribution checkAssignableTo(TypeConstant that)
+        {
+        return getUnderlyingType().checkAssignableTo(that);
+        }
+
+    protected Contribution checkAssignableFrom(TypeConstant that)
+        {
+        return getUnderlyingType().checkAssignableFrom(that);
         }
 
     /**
@@ -618,8 +586,7 @@ public abstract class TypeConstant
      */
     public boolean extendsClass(IdentityConstant constClass)
         {
-        return getUnderlyingType().extendsClass(constClass)
-                || isRelationalType() && getUnderlyingType2().extendsClass(constClass);
+        return getUnderlyingType().extendsClass(constClass);
         }
 
     /**
@@ -631,8 +598,7 @@ public abstract class TypeConstant
      */
     public boolean impersonatesClass(IdentityConstant constClass)
         {
-        return getUnderlyingType().impersonatesClass(constClass)
-                || isRelationalType() && getUnderlyingType2().impersonatesClass(constClass);
+        return getUnderlyingType().impersonatesClass(constClass);
         }
 
     /**
@@ -644,8 +610,7 @@ public abstract class TypeConstant
      */
     public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
         {
-        return getUnderlyingType().extendsOrImpersonatesClass(constClass)
-                || isRelationalType() && getUnderlyingType2().extendsOrImpersonatesClass(constClass);
+        return getUnderlyingType().extendsOrImpersonatesClass(constClass);
         }
 
     public Set<MethodConstant> autoConverts()
@@ -670,8 +635,7 @@ public abstract class TypeConstant
     public boolean isClassType()
         {
         // generally, a type is a class type if any of the underlying types is a class type
-        return getUnderlyingType().isClassType()
-                || isRelationalType() && getUnderlyingType2().isClassType();
+        return getUnderlyingType().isClassType();
         }
 
     /**
@@ -679,8 +643,7 @@ public abstract class TypeConstant
      */
     public boolean isSingleUnderlyingClass()
         {
-        return getUnderlyingType().isSingleUnderlyingClass()
-                ^ (isRelationalType() && getUnderlyingType2().isSingleUnderlyingClass());
+        return getUnderlyingType().isSingleUnderlyingClass();
         }
 
     /**
@@ -692,12 +655,7 @@ public abstract class TypeConstant
         {
         assert isClassType() && isSingleUnderlyingClass();
 
-        IdentityConstant clz = getUnderlyingType().getSingleUnderlyingClass();
-        if (clz == null && isRelationalType())
-            {
-            clz = getUnderlyingType2().getSingleUnderlyingClass();
-            }
-        return clz;
+       return getUnderlyingType().getSingleUnderlyingClass();
         }
 
     /**
@@ -705,23 +663,18 @@ public abstract class TypeConstant
      */
     public Set<IdentityConstant> underlyingClasses()
         {
-        Set<IdentityConstant> set = getUnderlyingType().underlyingClasses();
-        if (isRelationalType())
-            {
-            Set<IdentityConstant> set2 = getUnderlyingType2().underlyingClasses();
-            if (set.isEmpty())
-                {
-                set = set2;
-                }
-            else if (!set2.isEmpty())
-                {
-                set = new HashSet<>(set);
-                set.addAll(set2);
-                }
-            }
-        return set;
+        return getUnderlyingType().underlyingClasses();
         }
 
+    /**
+     * Find an underlying TypeConstant of the specified class.
+     *
+     * @return the matching TypeConstant or null
+     */
+    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+        {
+        return clz == getClass() ? (T) this : getUnderlyingType().findFirst(clz);
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -732,8 +685,7 @@ public abstract class TypeConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(),
-                new TypeConstant[] {this});
+        return pool.ensureParameterizedTypeConstant(pool.typeType(), this);
         }
 
     @Override
@@ -760,8 +712,4 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
     }

@@ -454,9 +454,21 @@ public abstract class Component
      * @param constClass
      * @param mapConstraints
      */
-    public void addIncorporates(TypeConstant constClass, Map<String, TypeConstant> mapConstraints)
+    public void addIncorporates(TypeConstant constClass,
+                                Map<String, TypeConstant> mapConstraints)
         {
-        addContribution(new Contribution(constClass, mapConstraints));
+        ListMap<StringConstant, TypeConstant> map = null;
+        if (mapConstraints != null && !mapConstraints.isEmpty())
+            {
+            ConstantPool pool = getConstantPool();
+
+            map = new ListMap<>();
+            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
+                {
+                map.put(pool.ensureStringConstant(entry.getKey()), entry.getValue());
+                }
+            }
+        addContribution(new Contribution(constClass, map));
         }
 
     /**
@@ -2148,6 +2160,18 @@ public abstract class Component
          * The constant is a ModuleConstant.
          */
         ImportEmbedded,
+        /**
+         * Synthetic (transient) composition indicating a potential duck-type relation.
+         * <p/>
+         * The constant is a ClassConstant.
+         */
+        MaybeDuckType,
+        /**
+         * Synthetic (transient) composition indicating an equivalency.
+         * <p/>
+         * The constant is a ClassConstant.
+         */
+        Equal,
         ;
 
         /**
@@ -2185,7 +2209,7 @@ public abstract class Component
                 throws IOException
             {
             m_composition = Composition.valueOf(in.readUnsignedByte());
-            m_constContrib = (ClassConstant) pool.getConstant(readIndex(in));
+            m_constContrib = pool.getConstant(readIndex(in));
             switch (m_composition)
                 {
                 case Delegates:
@@ -2226,9 +2250,9 @@ public abstract class Component
          *                     Implements, Into, Incorporates, or Enumerates
          * @param constType    specifies the class type being contributed
          */
-        protected Contribution(Composition composition, TypeConstant constType)
+        public Contribution(Composition composition, TypeConstant constType)
             {
-            assert composition != null && constType != null;
+            assert composition != null;
 
             switch (composition)
                 {
@@ -2239,10 +2263,12 @@ public abstract class Component
                 case Incorporates:
                 case Enumerates:
                 case Impersonates:
+                case MaybeDuckType:
                     if (constType == null)
                         {
                         throw new IllegalArgumentException("type is required");
                         }
+                case Equal:
                     break;
 
                 case Delegates:
@@ -2345,21 +2371,14 @@ public abstract class Component
          * Construct an "incorporates conditional" Contribution.
          *
          * @param constType       the type of the mixin
-         * @param mapConstraints  the type constraints that make the mixim conditional
+         * @param mapConstraints  the type constraints that make the mixin conditional
          */
-        protected Contribution(TypeConstant constType, Map<String, TypeConstant> mapConstraints)
+        protected Contribution(TypeConstant constType,
+                               ListMap<StringConstant, TypeConstant> mapConstraints)
             {
             this(Composition.Incorporates, constType);
 
-            if (mapConstraints != null && !mapConstraints.isEmpty())
-                {
-                ListMap<StringConstant, TypeConstant> map = new ListMap<>();
-                for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
-                    {
-                    map.put(getConstantPool().ensureStringConstant(entry.getKey()), entry.getValue());
-                    }
-                m_mapParams = map;
-                }
+            m_mapParams = mapConstraints;
             }
 
         /**
@@ -2537,6 +2556,11 @@ public abstract class Component
         @Override
         public String toString()
             {
+            if (m_composition == Composition.Equal)
+                {
+                return "Equal";
+                }
+
             StringBuilder sb = new StringBuilder();
 
             if (m_composition == Composition.Annotation)

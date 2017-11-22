@@ -203,6 +203,16 @@ public abstract class RelationalTypeConstant
             && getUnderlyingType2().isOnlyNullable();
         }
 
+    @Override
+    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+        {
+        if (clz == getClass())
+            {
+            return (T) this;
+            }
+        throw new UnsupportedOperationException();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

@@ -591,6 +591,41 @@ class C<T>
     void foo(Int i) {...};
     }
 
+interface I1 {void foo(I2 i);}
+interface I2 {void foo(I1 i);}
+
+class C1
+    {
+    void foo(C2 c) { ... }
+    }
+
+class C2
+    {
+    void foo(C1 c) { ... }
+    }
+
+C1 c1 = ...;
+C1 c2 = ...;
+
+I1 i1 = (I1) c1; // should it compile?
+
+class C1 implements I1
+    {
+    void foo(I2 c) { ... }
+    }
+
+class C2 implements I2
+    {
+    void foo(I1 c) { ... }
+    }
+
+
+interface I<T, U> {void foo(T); Void bar(U);}
+class C<U, T> {void foo(T) {...} Void bar(U) {...}}
+
+C<String, Int> c = ...
+I<Int, String> i = c; // OK?
+
 **** Tuple return
 
 class MyClass
@@ -643,4 +678,28 @@ static <T extends Number> T bar(T t1, T t2)
     return f ? t1 : t2; // VAR ?
     }
 
+interface Finder<VF>
+    {
+    Boolean containsValue(VF value);
+    }
+class MyFinder<VMF> implements Finder<VMF> {}
 
+interface Map<K, V> {...}
+
+class MyClass1<K1, V1>
+    implements Map<K1, V1> {}
+
+class MyClass2<K2, V2>
+    implements Finder<V2> {}
+
+class MyClass3<K3, V3>
+    extends MyFinder<V3> {}
+
+MyClass1<String, Int> c1 = new MyClass1();
+Finder<Number> finder = c1; // OK; duck-typing
+
+MyClass2<String, Int> c2 = new MyClass2();
+Finder<Number> finder = c2; // OK; contribution by "Implements"
+
+MyClass3<String, Int> c3 = new MyClass3();
+Finder<Number> finder = c3; // OK; contribution by "Extends"

@@ -35,7 +35,7 @@ import org.xvm.util.PackedInteger;
  * refer to one location within the assembled binary FileStructure, saving space. Furthermore, it
  * allows a reference to a particular constant to be made from anywhere within the FileStructure
  * using an integer, which identifies the ordinal position (known as the <i>index</i>) of the
- * constant within the sequence of all constants (whose order does not follow any partiscular rule.)
+ * constant within the sequence of all constants (whose order does not follow any particular rule.)
  * <p/>
  * In addition to the simple examples of constant values above, constants also serve to identify
  * structures within the FileStructure, and to identify dependencies on other modules located in
