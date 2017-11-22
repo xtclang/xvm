@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -182,62 +183,6 @@ public class TerminalTypeConstant
                 : typeResolved.unwrapForCongruence();
         }
 
-
-    // ----- run-time support -------------------------------------------------------------------
-
-    @Override
-    public boolean isA(TypeConstant that)
-        {
-        if (super.isA(that))
-            {
-            return true;
-            }
-
-        // TODO GG:REVIEW - I think that this is a temporary fix
-        if (that instanceof TerminalTypeConstant && that.isSingleUnderlyingClass()
-                && this.extendsClass(that.getSingleUnderlyingClass()))
-            {
-            return true;
-            }
-
-        // the only "extra" scenario we can cover at this layer is:
-        // that = T (formal parameter type)
-        // this = U (another formal parameter type), where U extends T
-        Constant constIdThis = this.getDefiningConstant();
-        Constant constIdThat = that.getDefiningConstant();
-
-        if (constIdThis.getFormat() == Format.Property &&
-            constIdThat.getFormat() == Format.Property)
-            {
-            PropertyConstant propThis = (PropertyConstant) constIdThis;
-            PropertyConstant propThat = (PropertyConstant) constIdThat;
-
-            PropertyStructure property = (PropertyStructure) propThis.getComponent();
-            Constant constTypeId = property.getType().getDefiningConstant();
-            if (constTypeId.getFormat() == Format.Property)
-                {
-                PropertyConstant propThisType = (PropertyConstant) constTypeId;
-                return propThisType.getName().equals(propThat.getName());
-                }
-            }
-        return false;
-        }
-
-    @Override
-    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        return false;
-        }
-
-    @Override
-    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        Constant constId = getDefiningConstant();
-
-        return constId.getFormat() == Format.Property &&
-            ((PropertyConstant) constId).getName().equals(sTypeName);
-        }
-
     @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
@@ -322,7 +267,7 @@ public class TerminalTypeConstant
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant).extendsOrImpersonatesClass(
-                        constClass);
+                    constClass);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).extendsOrImpersonatesClass(constClass);
@@ -486,6 +431,12 @@ public class TerminalTypeConstant
             }
         }
 
+    @Override
+    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+        {
+        return clz == getClass() ? (T) this : null;
+        }
+
     /**
      * Dereference a typedef constant to find the type to which it refers.
      *
@@ -534,6 +485,126 @@ public class TerminalTypeConstant
         TypeConstant     typeParam   = atypeParams[nReg];
         assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
         return typeParam.getParamTypes().get(0);
+        }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected Contribution checkAssignableTo(TypeConstant that)
+        {
+        Constant constIdThis = this.getDefiningConstant();
+        Constant constIdThat = that.getDefiningConstant();
+
+        if (constIdThis.equals(constIdThat))
+            {
+            return ((IdentityConstant) constIdThis).getComponent().
+                new Contribution(Component.Composition.Equal, null);
+            }
+
+        switch (constIdThis.getFormat())
+            {
+            case Module:
+            case Package:
+                return null;
+
+            case Class:
+                switch (constIdThat.getFormat())
+                    {
+                    case Module:
+                    case Package:
+                        return null;
+
+                    case Class:
+                        // scenarios we can cover here are:
+                        // 1. this extends that (recursively)
+                        // 2. this or any of its contributions (recursively) impersonates that
+                        // 3. this or any of its contributions (recursively) incorporates that
+                        // 4. this or any of its contributions (recursively) delegates to that
+                        // 5. this or any of its contributions (recursively) declares to implement that
+                        {
+                        ClassStructure clzThis = (ClassStructure) ((IdentityConstant) constIdThis).getComponent();
+                        return clzThis.findContribution((IdentityConstant) constIdThat);
+                        }
+
+                    case Typedef:
+                        return this.checkAssignableTo(getTypedefTypeConstant((TypedefConstant) constIdThat));
+
+                    case Property:
+                        PropertyConstant constProp = (PropertyConstant) constIdThat;
+                        TypeConstant typeConstraint = constProp.getRefType();
+                        return this.checkAssignableTo(typeConstraint);
+
+                    case Register:
+                        return this.checkAssignableTo(getRegisterTypeConstant((RegisterConstant) constIdThat));
+
+                    case ThisClass:
+                    case ParentClass:
+                    case ChildClass:
+                        ClassStructure clz = (ClassStructure)
+                            ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
+                        return clz.getIdentityConstant().asTypeConstant().checkAssignableTo(that);
+
+                    case UnresolvedName:
+                        throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
+
+                    default:
+                        throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+                    }
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).checkAssignableTo(that);
+
+            case Property:
+                // scenario we can handle here is:
+                // 1. this = T (formal parameter type), constrained by U (other formal type)
+                //    that = U (formal parameter type)
+                //
+                // 2. this = T (formal parameter type), constrained by U (real type)
+                //    that = V (real type), where U "is a" V
+
+                PropertyConstant constProp = (PropertyConstant) constIdThis;
+                TypeConstant typeConstraint = constProp.getRefType();
+
+                return typeConstraint.checkAssignableTo(that);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).checkAssignableTo(that);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                ClassStructure clz = (ClassStructure)
+                    ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
+                return clz.getIdentityConstant().asTypeConstant().checkAssignableTo(that);
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+            }
+        }
+
+    @Override
+    protected Contribution checkAssignableFrom(TypeConstant that)
+        {
+        return null;
+        }
+
+    @Override
+    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
+        {
+        Constant constId = getDefiningConstant();
+
+        return constId.getFormat() == Format.Property &&
+            ((PropertyConstant) constId).getName().equals(sTypeName);
         }
 
 

@@ -17,14 +17,14 @@ class TestApp
 
     static Int getIntValue()
         {
-        Int c = 5;
-        Int i = 0;
-        while (i < c)
-            {
-            i = i + 2;
-            }
-        return i;
-//        return 40 + 2;
+//        Int c = 5;
+//        Int i = 0;
+//        while (i < c)
+//            {
+//            i = i + 2;
+//            }
+//        return i;
+        return 40 + 2;
         }
 
     static String getStringValue()

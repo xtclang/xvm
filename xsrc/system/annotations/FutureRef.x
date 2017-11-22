@@ -89,7 +89,7 @@ mixin FutureRef<RefType>
     @Override
     Boolean assigned.get()
         {
-        return completion != Pending;
+        return completion != Completion.Pending; // TODO can we drop the "Completion." using inference
         }
 
     /**

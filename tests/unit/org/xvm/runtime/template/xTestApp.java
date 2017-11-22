@@ -41,7 +41,7 @@ public class xTestApp extends xModule
 
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-        MethodStructure func = ensureMethodStructure("getStringValue", VOID, VOID);
+        MethodStructure func = ensureMethodStructure("getIntValue", null, null);
 
         // --- test1()
         MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
