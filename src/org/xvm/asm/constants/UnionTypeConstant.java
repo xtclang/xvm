@@ -4,6 +4,8 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.Set;
+
 import org.xvm.asm.ConstantPool;
 
 
@@ -89,6 +91,20 @@ public class UnionTypeConstant
             }
 
         return false;
+        }
+
+    @Override
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
+        {
+        m_constType1.collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
+        m_constType2.collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
+        }
+
+    @Override
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+        {
+        m_constType1.collectAutoMethods(setAuto, access);
+        m_constType2.collectAutoMethods(setAuto, access);
         }
 
 

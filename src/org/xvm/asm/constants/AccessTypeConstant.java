@@ -5,10 +5,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readIndex;
@@ -17,8 +19,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A TypeConstant that represents the type of a module, package, or class.
- *
- * @author cp 2017.04.25
  */
 public class AccessTypeConstant
         extends TypeConstant
@@ -142,6 +142,21 @@ public class AccessTypeConstant
         {
         return m_constType.unwrapForCongruence();
         }
+
+    @Override
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName,
+            String sOp,
+            int cParams)
+        {
+        m_constType.collectOpMethods(setOps, m_access, sName, sOp, cParams);
+        }
+
+    @Override
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+        {
+        m_constType.collectAutoMethods(setAuto, m_access);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

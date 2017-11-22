@@ -186,7 +186,7 @@ public class BiExpression
         // so let's talk about "+"
         // 1) any T1 that wants to support "+" has to have either:
         //    a) @Op T3 add(T2)
-        //    b) @Op("+") T3 add(T2)
+        //    b) @Op("+") T3 foo(T2)
         //    ... where T2 and/or T3 may or may not be the same as T1
         // 2) within this expression, T1 is represented by expr1, and T2 by expr2, and T3 is
         //    represented by this expression itself (or is specified by typeRequired, passed in)
@@ -194,18 +194,18 @@ public class BiExpression
         //    type
         // 4) having determined its type, the type is asked to enumerate the various potential
         //    matching ops -- i.e. any @Op-annotated method named "add", and any @Op-annotated
-        //    method whose annotation specifies the constant "+"
+        //    method whose annotation specifies the constant "+", and has one parameter and one
+        //    return value
         // 5) having determined the possible set of ops (methods), we need to reduce it by
         //    evaluating the typeRequired, if a typeRequired is specified:
-        //    a) for each possible method, it will have one parameter and one return value
-        //    b) if the return value type of the op "isA" typeRequired, then that op is a possible
-        //    c) if the return value type of the op "is assignable to" (i.e. there exists a to<>()
+        //    a) if the return value type of the op "isA" typeRequired, then that op is a possible
+        //    b) if the return value type of the op "is assignable to" (i.e. there exists a to<>()
         //       conversion) to the typeRequired, then that op is a possible
-        //    d) all other ops are eliminated
+        //    c) all other ops are eliminated
         // 6) if there is only one op left at this point, then validate expr2 using the type
         //    specified as the parameter for the op method
-        // 7) otherwise, if there's more than one possibility, then validate with null and determine
-        //    the implicit type
+        // 7) otherwise, if there's more than one possibility, then validate expr2 passing null for
+        //    the required-type to determine the implicit type
         //    a) for each remaining op, eliminate those that the implicit type of expr2 fails with
         //       both "isA" and "is assignable to"
         //    b) if more than one remains, then we have to find the "closest" using the method

@@ -4,6 +4,9 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.xvm.asm.ConstantPool;
 
 
@@ -104,6 +107,38 @@ public class IntersectionTypeConstant
             }
 
         return false;
+        }
+
+    @Override
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
+        {
+        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
+        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
+        if (set1.equals(set2))
+            {
+            setOps.addAll(set1);
+            return;
+            }
+
+        Set<MethodConstant> setIntersection = new HashSet<>(set1);
+        setIntersection.retainAll(set2);
+        setOps.addAll(setIntersection);
+        }
+
+    @Override
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+        {
+        Set set1 = m_constType1.getAutoMethods();
+        Set set2 = m_constType2.getAutoMethods();
+        if (set1.equals(set2))
+            {
+            setAuto.addAll(set1);
+            return;
+            }
+
+        Set<MethodConstant> setIntersection = new HashSet<>(set1);
+        setIntersection.retainAll(set2);
+        setAuto.addAll(setIntersection);
         }
 
 

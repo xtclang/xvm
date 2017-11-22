@@ -11,6 +11,10 @@ module Ecstasy.xtclang.org
         }
 
     class IntLiteral
+        {
+        @Auto Int to<Int>();
+        }
+
     class Int64
         {
         }
@@ -51,6 +55,8 @@ module Ecstasy.xtclang.org
 
     package annotations
         {
+        mixin AutoConversion {}
+
         mixin Operator(String? token = null) {}
 
         mixin Override {}

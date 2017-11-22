@@ -432,6 +432,94 @@ public class TerminalTypeConstant
         }
 
     @Override
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName,
+            String sOp,
+            int cParams)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Typedef:
+                getTypedefTypeConstant((TypedefConstant) constant)
+                        .collectOpMethods(setOps, access, sName, sOp, cParams);
+                break;
+
+            case Property:
+                getPropertyTypeConstant((PropertyConstant) constant)
+                        .collectOpMethods(setOps, access, sName, sOp, cParams);
+                break;
+
+            case Register:
+                getRegisterTypeConstant((RegisterConstant) constant)
+                        .collectOpMethods(setOps, access, sName, sOp, cParams);
+                break;
+
+            case Module:
+            case Package:
+            case Class:
+                setOps.addAll(((ClassStructure) ((IdentityConstant) constant)
+                        .getComponent()).getOpMethods(access, sName, sOp, cParams));
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                setOps.addAll(((ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent()).getOpMethods(access, sName, sOp, cParams));
+                break;
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Typedef:
+                getTypedefTypeConstant((TypedefConstant) constant)
+                        .collectAutoMethods(setAuto, access);
+                break;
+
+            case Property:
+                getPropertyTypeConstant((PropertyConstant) constant)
+                        .collectAutoMethods(setAuto, access);
+                break;
+
+            case Register:
+                getRegisterTypeConstant((RegisterConstant) constant)
+                        .collectAutoMethods(setAuto, access);
+                break;
+
+            case Module:
+            case Package:
+            case Class:
+                setAuto.addAll(((ClassStructure) ((IdentityConstant) constant)
+                        .getComponent()).getAutoMethods(access));
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                setAuto.addAll(((ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent()).getAutoMethods(access));
+                break;
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+    @Override
     public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
         {
         return clz == getClass() ? (T) this : null;

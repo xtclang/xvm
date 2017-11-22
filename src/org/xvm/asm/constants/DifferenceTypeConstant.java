@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -122,6 +123,36 @@ public class DifferenceTypeConstant
         // a difference type is just a duck-type, and has no equality definition of its own -- it
         // uses the equality definition of the root object class itself
         return getConstantPool().typeObject();
+        }
+
+    @Override
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
+        {
+        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
+        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
+        if (set1.equals(set2))
+            {
+            return;
+            }
+
+        Set<MethodConstant> setDifference = new HashSet<>(set1);
+        setDifference.removeAll(set2);
+        setOps.addAll(setDifference);
+        }
+
+    @Override
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+        {
+        Set set1 = m_constType1.getAutoMethods();
+        Set set2 = m_constType2.getAutoMethods();
+        if (set1.equals(set2))
+            {
+            return;
+            }
+
+        Set<MethodConstant> setDifference = new HashSet<>(set1);
+        setDifference.removeAll(set2);
+        setAuto.addAll(setDifference);
         }
 
 

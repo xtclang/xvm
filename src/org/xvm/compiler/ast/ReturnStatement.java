@@ -90,53 +90,59 @@ public class ReturnStatement
 
         MethodStructure  structMethod = ctx.getMethod();
         boolean          fConditional = structMethod.isConditionalReturn();
-        Parameter[]      aparamRets   = structMethod.getReturnArray();
-        int              cparamRets   = aparamRets.length;
+        Parameter[]      aReturn      = structMethod.getReturnArray();
+        int              cReturns     = aReturn.length;
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
         // Void methods are the simplest
-        if (cparamRets == 0 && cExprs > 0)
+        if (cExprs == 0 || cReturns == 0)
             {
-            // check the expressions anyhow (even though they can't be used)
-            for (int i = 0; i < cExprs; ++i)
+            if (cExprs > 0)
                 {
-                listExprs.get(i).validate(ctx, null, errs);
-                }
+                // check the expressions anyhow (even though they can't be used)
+                for (int i = 0; i < cExprs; ++i)
+                    {
+                    listExprs.get(i).validate(ctx, null, errs);
+                    }
 
-            // it was supposed to be a void return
-            log(errs, Severity.ERROR, Compiler.RETURN_VOID);
-            fValid = false;
-            }
-        else if (cExprs == 0)
-            {
-            // the expressions are missing; it was NOT supposed to be a void return
-            log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
-            fValid = false;
+                if (cExprs != 1 || (listExprs.get(0).isCompletable() && listExprs.get(0).getValueCount() > 0))
+                    {
+                    // it was supposed to be a void return
+                    log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                    fValid = false;
+                    }
+                }
+            else if (cReturns > 0)
+                {
+                // the expressions are missing; it was NOT supposed to be a void return
+                log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+                fValid = false;
+                }
             }
         else if (cExprs > 1)
             {
             // validate each expression, telling it what return type is expected
             for (int i = 0; i < cExprs; ++i)
                 {
-                TypeConstant typeRet = i < cparamRets
-                        ? aparamRets[i].getType()
+                TypeConstant typeRet = i < cReturns
+                        ? aReturn[i].getType()
                         : null;
                 fValid &= listExprs.get(i).validate(ctx, typeRet, errs);
                 }
 
             // make sure the arity is correct (the number of exprs has to match the number of rets)
-            if (cExprs != cparamRets)
+            if (cExprs != cReturns)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
                 }
             }
         else // cExprs == 1
             {
             Expression expr       = listExprs.get(0);
-            int        cArgs      = expr.getValueCount();
+            int        cValues    = expr.getValueCount();
             boolean    fCondFalse = false;
-            if (cArgs > 1 && cparamRets > 1)
+            if (cValues > 1 && cReturns > 1)
                 {
                 // there is exactly 1 expression, and it results in multiple values, so allow a
                 // tuple return that will generate a RETURN_T op
@@ -146,23 +152,25 @@ public class ReturnStatement
             else if (fConditional)
                 {
                 // it's allowed to have a single conditional return value, as long as it's False
-                assert aparamRets[0].getType().equals(pool().typeBoolean());
-                fValid    &= expr.validate(ctx, aparamRets[0].getType(), errs);
+                assert aReturn[0].getType().equals(pool().typeBoolean());
+
+                fValid &= expr.validate(ctx, pool().typeBoolean(), errs);
+
                 fCondFalse = fValid && expr.isConstant() && expr.toConstant().equals(pool().valFalse());
                 }
             else
                 {
                 // assume a simple 1:1 expression to return value mapping
-                fValid &= expr.validate(ctx, cparamRets > 0 ? aparamRets[0].getType() : null, errs);
+                fValid &= expr.validate(ctx, aReturn[0].getType(), errs);
                 }
 
             // verify that we had enough arguments from the expression to satisfy the # of returns
             // (we could treat extras as an error, but consider the example of the expression being
             // a method invocation returning 4 items, and we just want 3 of them, so we'll
             // black-hole them)
-            if (expr.isCompletable() && cArgs < cparamRets && !fCondFalse)
+            if (expr.isCompletable() && cValues < cReturns && !fCondFalse)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cparamRets, cExprs);
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
                 }
             }
 

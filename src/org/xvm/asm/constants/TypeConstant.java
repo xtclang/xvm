@@ -6,8 +6,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-
+import java.util.HashSet;
 import java.util.Set;
 
 import org.xvm.asm.Component;
@@ -465,7 +466,7 @@ public abstract class TypeConstant
     public Set<MethodConstant> getOpMethods(String sName, String sOp, int cParams)
         {
         Set<MethodConstant> setOps = new HashSet<>(7);
-        collectOpMethods(setOps, sName, sOp, cParams);
+        collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
         return setOps;
         }
 
@@ -474,13 +475,14 @@ public abstract class TypeConstant
      * the specified number of params.
      *
      * @param setOps   the set to contribute to
+     * @param access   the minimum accessibility that matching methods must have
      * @param sName    the default op name, such as "add"
      * @param sOp      the operator string, such as "+"
      * @param cParams  the number of parameters for the operator method, such as 1
      */
-    protected void collectOpMethods(Set<MethodConstant> setOps, String sName, String sOp, int cParams)
+    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
         {
-        getUnderlyingType().collectOpMethods(setOps, sName, sOp, cParams);
+        getUnderlyingType().collectOpMethods(setOps, access, sName, sOp, cParams);
         }
 
     /**
@@ -491,7 +493,7 @@ public abstract class TypeConstant
     public Set<MethodConstant> getAutoMethods()
         {
         Set<MethodConstant> setAuto = new HashSet<>(7);
-        collectAutoMethods(setAuto);
+        collectAutoMethods(setAuto, Access.PUBLIC);
         return setAuto;
         }
 
@@ -499,10 +501,55 @@ public abstract class TypeConstant
      * For this type, all of the auto conversion methods.
      *
      * @param setAuto  the set to contribute to
+     * @param access   the minimum accessibility that matching methods must have
      */
-    protected void collectAutoMethods(Set<MethodConstant> setAuto)
+    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
         {
-        getUnderlyingType().collectAutoMethods(setAuto);
+        getUnderlyingType().collectAutoMethods(setAuto, access);
+        }
+
+    /**
+     * Find a method on this type that converts an object of this type to a desired type.
+     *
+     * @param typeDesired  the type desired to convert to, or that the conversion result would be
+     *                     assignable to ("isA" would be true)
+     *
+     * @return a MethodConstant representing an {@code @Auto} conversion method resulting in an
+     *         object whose type is compatible with the specified (desired) type, or null if either
+     *         no method matches, or more than one method matches (ambiguous)
+     */
+    public MethodConstant findConversion(TypeConstant typeDesired)
+        {
+        Set<MethodConstant> setMethods = getAutoMethods();
+        if (setMethods.isEmpty())
+            {
+            return null;
+            }
+
+        MethodConstant methodMatch = null;
+        for (Iterator<MethodConstant> iter = setMethods.iterator(); iter.hasNext(); )
+            {
+            MethodConstant method     = iter.next();
+            TypeConstant   typeResult = method.getRawReturns()[0];
+            if (typeResult.equals(typeDesired))
+                {
+                // exact match -- it's not going to get any better than this
+                return method;
+                }
+
+            if (typeResult.isA(typeDesired))
+                {
+                if (methodMatch != null)
+                    {
+                    // ambiguous - there are at least two methods that match
+                    return null;
+                    }
+
+                methodMatch = method;
+                }
+            }
+
+        return methodMatch;
         }
 
 

@@ -32,8 +32,8 @@ public class TupleExpression
 
     public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos)
         {
-        this.m_type      = type;
-        this.m_exprs     = exprs;
+        this.type = type;
+        this.exprs = exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
         }
@@ -46,7 +46,7 @@ public class TupleExpression
      */
     public TypeExpression getTypeExpression()
         {
-        return m_type;
+        return type;
         }
 
     /**
@@ -54,7 +54,7 @@ public class TupleExpression
      */
     public List<Expression> getExpressions()
         {
-        return m_exprs;
+        return exprs;
         }
 
     @Override
@@ -86,19 +86,19 @@ public class TupleExpression
         TypeConstant[] atypeRequired  = null;   // the optional types passed in as a requirement
         TypeConstant[] atypeSpecified = null;   // tuple field types specified in the source code
 
-        if (typeRequired != null && typeRequired.isParamsSpecified())
+        if (typeRequired != null && typeRequired.isTuple() && typeRequired.isParamsSpecified())
             {
             atypeRequired = typeRequired.getParamTypesArray();
             }
 
         TypeConstant typeSpecified = null;
-        if (m_type != null)
+        if (type != null)
             {
-            fValid &= m_type.validate(ctx, null, errs);
+            fValid &= type.validate(ctx, null, errs);
 
             // validate that the type is a tuple, and if it specifies any field types, then grab
             // those so that we can subsequently validate the values of those fields
-            typeSpecified = m_type.ensureTypeConstant();
+            typeSpecified = type.ensureTypeConstant();
             if (typeSpecified.isTuple())
                 {
                 if (typeSpecified.isParamsSpecified())
@@ -114,7 +114,7 @@ public class TupleExpression
                 }
             }
 
-        List<Expression> listExprs    = m_exprs;
+        List<Expression> listExprs    = exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
         int              cTypeReqs    = atypeRequired  == null ? 0 : atypeRequired.length;
         int              cTypeSpecs   = atypeSpecified == null ? 0 : atypeSpecified.length;
@@ -153,7 +153,7 @@ public class TupleExpression
 
             if (fBuildType)
                 {
-                atypeImplied[i] = expr.getImplicitType();
+                atypeImplied[i] = type == null ? expr.getImplicitType() : type;
                 }
             }
 
@@ -187,7 +187,7 @@ public class TupleExpression
                 // ... and from the specified types to the required types
                 if (atypeRequired != null && cTypeSpecs != cTypeReqs)
                     {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, typeSpecified);
+                    type.log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, typeSpecified);
                     }
                 }
             else
@@ -226,7 +226,7 @@ public class TupleExpression
         {
         if (isConstant())
             {
-            List<Expression> listExprs    = m_exprs;
+            List<Expression> listExprs    = exprs;
             int              cFields      = listExprs == null ? 0 : listExprs.size();
             Constant[]       aconstFields = new Constant[cFields];
             TypeConstant[]   atypeFields  = new TypeConstant[cFields];
@@ -274,7 +274,7 @@ public class TupleExpression
                 : getImplicitType();
 
         // for each field, generate an argument representing the value of that field
-        List<Expression> listExprs = m_exprs;
+        List<Expression> listExprs = exprs;
         int              cExprs    = listExprs.size();
         Constant[]       aField    = new Constant[cExprs];
         for (int i = 0; i < cExprs; ++i)
@@ -307,7 +307,7 @@ public class TupleExpression
                 : getImplicitType();
 
         // for each field, generate an argument representing the value of that field
-        List<Expression> listExprs = m_exprs;
+        List<Expression> listExprs = exprs;
         int              cExprs    = listExprs.size();
         Argument[]       aField    = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
@@ -337,10 +337,10 @@ public class TupleExpression
 
         sb.append('(');
 
-        if (m_exprs != null)
+        if (exprs != null)
             {
             boolean first = true;
-            for (Expression expr : m_exprs)
+            for (Expression expr : exprs)
                 {
                 if (first)
                     {
@@ -368,8 +368,8 @@ public class TupleExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression   m_type;
-    protected List<Expression> m_exprs;
+    protected TypeExpression   type;
+    protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;
 
@@ -378,5 +378,6 @@ public class TupleExpression
      */
     private transient TypeConstant m_constType;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TupleExpression.class, "m_type", "m_exprs");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(TupleExpression.class, "type", "exprs");
     }

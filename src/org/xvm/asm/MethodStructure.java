@@ -11,11 +11,13 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Op.Prefix;
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -182,6 +184,34 @@ public class MethodStructure
     public List<Parameter> getParams()
         {
         return Arrays.asList(m_aParams);
+        }
+
+    /**
+     * @return a list of annotations on the method
+     */
+    public List<AnnotatedTypeConstant> getAnnotations()
+        {
+        // TODO this is a temporary (?) implementation that finds the annotations glued to the front
+        //      of the first return value
+
+        Parameter[] aReturns = m_aReturns;
+        if (aReturns.length == 0)
+            {
+            return Collections.EMPTY_LIST;
+            }
+
+        TypeConstant typeRet = aReturns[0].getType();
+        while (true)
+            {
+            if (typeRet instanceof AnnotatedTypeConstant)
+                {
+                // TODO see if it applies to method or to type
+                }
+            else
+                {
+
+                }
+            }
         }
 
     /**
