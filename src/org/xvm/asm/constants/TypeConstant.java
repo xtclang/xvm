@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -473,21 +473,19 @@ public abstract class TypeConstant
             return true;
             }
 
-        // TODO: should be a list of contributions
-        Contribution relTo = this.checkAssignableTo(that);
-        if (relTo == null)
+        // TODO: should be a collection of ContributionChains
+        ContributionChain chainTo = this.checkAssignableTo(that);
+        if (chainTo == null)
             {
             return false;
             }
 
-        Contribution relFrom = that.checkAssignableFrom(this);
-        if (relFrom == null)
+        if (!that.checkAssignableFrom(this, chainTo))
             {
-            return true; // TODO
+            return false;
             }
 
-        if (relFrom.getComposition() != Component.Composition.MaybeDuckType
-            && relTo.getComposition() != Component.Composition.MaybeDuckType)
+        if (chainTo.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
             {
             return true;
             }
@@ -496,14 +494,14 @@ public abstract class TypeConstant
         return false;
         }
 
-    protected Contribution checkAssignableTo(TypeConstant that)
+    protected ContributionChain checkAssignableTo(TypeConstant that)
         {
         return getUnderlyingType().checkAssignableTo(that);
         }
 
-    protected Contribution checkAssignableFrom(TypeConstant that)
+    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
         {
-        return getUnderlyingType().checkAssignableFrom(that);
+        return getUnderlyingType().checkAssignableFrom(that, chain);
         }
 
     /**
@@ -602,7 +600,7 @@ public abstract class TypeConstant
         {
         assert isClassType() && isSingleUnderlyingClass();
 
-       return getUnderlyingType().getSingleUnderlyingClass();
+        return getUnderlyingType().getSingleUnderlyingClass();
         }
 
     /**

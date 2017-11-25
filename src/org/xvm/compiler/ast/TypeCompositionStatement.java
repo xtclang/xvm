@@ -1059,20 +1059,10 @@ public class TypeCompositionStatement
                     ListMap<String, TypeConstant> mapConstraints = null;
                     if (incorp.isConditional())
                         {
-                        // first, fill the map with the canonical constraints
-                        mapConstraints = new ListMap<>(typeParams.size());
-                        for (Parameter param : typeParams)
-                            {
-                            TypeExpression type = param.getType();
-
-                            mapConstraints.put(param.getName(), type == null ?
-                                pool.typeObject() : type.getTypeConstant());
-                            }
-
-                        // now override the conditional constraints
+                        mapConstraints = new ListMap<>();
                         for (Parameter constraint : incorp.getConstraints())
                             {
-                            // type of null means no conditional constraint
+                            // type is null means no constraint
                             TypeExpression type = constraint.getType();
                             if (type != null)
                                 {

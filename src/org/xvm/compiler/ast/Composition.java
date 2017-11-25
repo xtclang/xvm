@@ -192,7 +192,7 @@ public abstract class Composition
             }
 
         /**
-         * Convertss an annotation to an "incorporate" clause.
+         * Converts an annotation to an "incorporate" clause.
          *
          * @param annotation  the Annotation to create an Incorporates for
          */

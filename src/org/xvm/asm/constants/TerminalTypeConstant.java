@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -366,7 +367,7 @@ public class TerminalTypeConstant
 
             case Class:
                 // must not be an interface
-                assert ((ClassStructure) ((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
+                assert (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
                 return (IdentityConstant) constant;
 
             case Typedef:
@@ -491,15 +492,15 @@ public class TerminalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected Contribution checkAssignableTo(TypeConstant that)
+    protected ContributionChain checkAssignableTo(TypeConstant that)
         {
         Constant constIdThis = this.getDefiningConstant();
         Constant constIdThat = that.getDefiningConstant();
 
         if (constIdThis.equals(constIdThat))
             {
-            return ((IdentityConstant) constIdThis).getComponent().
-                new Contribution(Component.Composition.Equal, null);
+            return new ContributionChain(
+                    new Contribution(Component.Composition.Equal, null));
             }
 
         switch (constIdThis.getFormat())
@@ -587,9 +588,10 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected Contribution checkAssignableFrom(TypeConstant that)
+    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
         {
-        return null;
+        // there is nothing that could change the result of "checkAssignableTo"
+        return true;
         }
 
     @Override
