@@ -202,17 +202,17 @@ public class Parameter
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constType    = (TypeConstant)       pool.getConstant(m_iType   );
+        m_constType    = (TypeConstant)   pool.getConstant(m_iType   );
         m_constName    = (StringConstant) pool.getConstant(m_iName   );
-        m_constDefault =                      pool.getConstant(m_iDefault);
+        m_constDefault =                  pool.getConstant(m_iDefault);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constType    = (TypeConstant)       pool.register(m_constType   );
+        m_constType    = (TypeConstant)   pool.register(m_constType   );
         m_constName    = (StringConstant) pool.register(m_constName   );
-        m_constDefault =                      pool.register(m_constDefault);
+        m_constDefault =                  pool.register(m_constDefault);
         }
 
     @Override

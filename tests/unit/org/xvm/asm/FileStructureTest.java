@@ -13,7 +13,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
@@ -33,8 +32,6 @@ import static org.xvm.util.Handy.byteArrayToHexDump;
 
 /**
  * Tests of XVM FileStructure.
- *
- * @author cp 2016.04.14
  */
 public class FileStructureTest
     {
@@ -117,7 +114,7 @@ public class FileStructureTest
         ModuleStructure  structmodule  = structfile.getModule();
         PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);
         ClassStructure   structclass   = structpackage.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Test", null);
-        MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC,
+        MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC, null,
                 new Parameter[]{},
                 "foo",
                 new Parameter[]{});

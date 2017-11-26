@@ -120,9 +120,11 @@ public class MethodDeclarationStatement
                 Access       access       = getDefaultAccess();
                 ConstantPool pool         = container.getConstantPool();
 
+                // build array of annotations
+                org.xvm.asm.Annotation[] aAnnotations = buildAnnotations(pool);
+
                 // build array of return types
                 org.xvm.asm.Parameter[] aReturns;
-
                 if (returns == null)
                     {
                     if (container instanceof PropertyStructure)
@@ -170,7 +172,7 @@ public class MethodDeclarationStatement
 
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
-                MethodStructure method = container.createMethod(fFunction, access, aReturns, sName, aParams);
+                MethodStructure method = container.createMethod(fFunction, access, aAnnotations, aReturns, sName, aParams);
                 setComponent(method);
 
                 // "finally" continuation for constructors
@@ -178,7 +180,8 @@ public class MethodDeclarationStatement
                     {
                     assert fConstructor;
 
-                    MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE, aReturns, "finally", aParams);
+                    MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE,
+                            null, aReturns, "finally", aParams);
                     this.methodFinally = methodFinally;
                     }
                 }
@@ -190,6 +193,36 @@ public class MethodDeclarationStatement
             }
 
         super.registerStructures(errs);
+        }
+
+    protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
+        {
+        org.xvm.asm.Annotation[] aAnnotations = org.xvm.asm.Annotation.NO_ANNOTATIONS;
+        if (annotations != null)
+            {
+            int cAnnotations = annotations.size();
+            aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
+            for (int i = 0; i < cAnnotations; ++i)
+                {
+                Annotation       annotation = annotations.get(i);
+                Constant         constClass = annotation.getType().getIdentityConstant();
+                List<Expression> args       = annotation.getArguments();
+                Constant[]       aconstArgs = null;
+                if (args != null && !args.isEmpty())
+                    {
+                    int cArgs = args.size();
+                    aconstArgs = new Constant[cArgs];
+                    for (int iArg = 0; iArg < cArgs; ++iArg)
+                        {
+                        // TODO this is wrong ... we're not ready at this stage to resolve all constants
+                        aconstArgs[iArg] = args.get(iArg).toConstant();
+                        }
+                    }
+                aAnnotations[i] = new org.xvm.asm.Annotation(pool, constClass, aconstArgs);
+                }
+            }
+
+        return aAnnotations;
         }
 
     protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool)
@@ -277,7 +310,7 @@ public class MethodDeclarationStatement
 
                     // the parameters were already matched; no need to re-check
                     MethodStructure method = container.createMethod(
-                        fFunction, access, aReturns, sName, aParams);
+                            fFunction, access, null, aReturns, sName, aParams);
                     setComponent(method);
                     }
                 }

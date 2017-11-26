@@ -11,13 +11,13 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Op.Prefix;
-import org.xvm.asm.constants.AnnotatedTypeConstant;
+
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -35,8 +35,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * An XVM Structure that represents a method.
- *
- * @author cp 2016.04.25
+ * TODO annotations - there might be method annotations that belong to the return type and not the method itself e.g. "@Unsafe Int foo()"
  */
 public class MethodStructure
         extends Component
@@ -60,20 +59,23 @@ public class MethodStructure
     /**
      * Construct a method structure.
      *
-     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
-     * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the Module
-     * @param condition  the optional condition for this ModuleStructure
-     * @param aReturns   an array of Parameters representing the "out" values
-     * @param aParams    an array of Parameters representing the "in" values
+     * @param xsParent     the XvmStructure (probably a FileStructure) that contains this structure
+     * @param nFlags       the Component bit flags
+     * @param constId      the constant that specifies the identity of the Module
+     * @param condition    the optional condition for this ModuleStructure
+     * @param annotations  an array of Annotations
+     * @param aReturns     an array of Parameters representing the "out" values
+     * @param aParams      an array of Parameters representing the "in" values
      */
-    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition,
-            Parameter[] aReturns, Parameter[] aParams)
+    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
+            ConditionalConstant condition,
+            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams)
         {
         this(xsParent, nFlags, constId, condition);
 
-        m_aReturns = aReturns;
-        m_aParams  = aParams;
+        m_aAnnotations = annotations;
+        m_aReturns     = aReturns;
+        m_aParams      = aParams;
 
         if (aReturns.length > 0 && aReturns[0].isConditionalReturn())
             {
@@ -97,6 +99,55 @@ public class MethodStructure
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the number of annotations
+     */
+    public int getAnnotationCount()
+        {
+        return m_aAnnotations == null ? 0 : m_aAnnotations.length;
+        }
+
+    /**
+     * Get the Annotation structure that represents the i-th annotation.
+     *
+     * @param i  an index
+     *
+     * @return the i-th annotation
+     */
+    public Annotation getAnnotation(int i)
+        {
+        return i < 0 || i >= getAnnotationCount() ? null : m_aAnnotations[i];
+        }
+
+    /**
+     * @return an array of Annotation structures that represent all annotations of the method, or
+     *         null during assembly before the annotations have been split out from the return types
+     */
+    public Annotation[] getAnnotations()
+        {
+        return m_aAnnotations;
+        }
+
+    /**
+     * Find an annotation with the specified annotation class.
+     *
+     * @param clzClass  the annotation class to search for
+     *
+     * @return the annotation of that annotation class, or null
+     */
+    public Annotation findAnnotation(ClassConstant clzClass)
+        {
+        for (Annotation annotation : m_aAnnotations)
+            {
+            if (annotation.getAnnotationClass().equals(clzClass))
+                {
+                return annotation;
+                }
+            }
+
+        return null;
+        }
 
     /**
      * @return the number of return values
@@ -184,34 +235,6 @@ public class MethodStructure
     public List<Parameter> getParams()
         {
         return Arrays.asList(m_aParams);
-        }
-
-    /**
-     * @return a list of annotations on the method
-     */
-    public List<AnnotatedTypeConstant> getAnnotations()
-        {
-        // TODO this is a temporary (?) implementation that finds the annotations glued to the front
-        //      of the first return value
-
-        Parameter[] aReturns = m_aReturns;
-        if (aReturns.length == 0)
-            {
-            return Collections.EMPTY_LIST;
-            }
-
-        TypeConstant typeRet = aReturns[0].getType();
-        while (true)
-            {
-            if (typeRet instanceof AnnotatedTypeConstant)
-                {
-                // TODO see if it applies to method or to type
-                }
-            else
-                {
-
-                }
-            }
         }
 
     /**
@@ -1220,6 +1243,11 @@ public class MethodStructure
      * Empty array of Ops.
      */
     public static final Op[] NO_OPS = new Op[0];
+
+    /**
+     * The method annotations.
+     */
+    private Annotation[] m_aAnnotations;
 
     /**
      * The return value types. (A zero-length array is "Void".)

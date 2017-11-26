@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
@@ -482,6 +483,28 @@ public abstract class TypeConstant
      */
     protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
         {
+        // TODO
+        // Set<MethodConstant> setOps = null;
+        // ConstantPool        pool   = getConstantPool();
+        // ClassConstant       clzOp  = pool.clzOp();
+        // for (MethodConstant constMethod : getMethods(access))
+        //     {
+        //     // method constant can quickly eliminate parameter count mismatches
+        //     if (constMethod.getRawParams().length == cParams)
+        //         {
+        //         constMethod.getName().equals(sName) &&
+        //                 MethodStructure structMethod = (MethodStructure) constMethod.getComponent();
+        //         Annotation annotation   = structMethod.findAnnotation(clzOp);
+        //         if (annotation != null)
+        //         }
+        //     // method must be decorated with @Op
+        //     constMethod.
+        //             // method name must match, OR the @Op parameter must match sOp
+        //                     method.getDecoration(pool.clAu))
+        //     //method.getRawParams().length == cParams
+        //     //method.getName().equals(sName))
+        //     }
+
         getUnderlyingType().collectOpMethods(setOps, access, sName, sOp, cParams);
         }
 
@@ -551,6 +574,18 @@ public abstract class TypeConstant
 
         return methodMatch;
         }
+
+    /**
+     * Collect all of the methods that would be available on this
+     * @param access
+     * @return
+     */
+    public Set<MethodConstant> getMethods(Access access)
+        {
+        // TODO
+        return Collections.EMPTY_SET;
+        }
+
 
 
     // ----- type comparison support ---------------------------------------------------------------

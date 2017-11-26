@@ -1226,7 +1226,7 @@ public abstract class ClassTemplate
                 }
 
             method = f_struct.createMethod(false,
-                    methodSuper.getAccess(),
+                    methodSuper.getAccess(), null,
                     methodSuper.getReturns().toArray(new Parameter[methodSuper.getReturnCount()]),
                     sName,
                     methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]));

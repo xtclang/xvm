@@ -43,18 +43,25 @@ public class MultiMethodStructure
     /**
      * Create the method with the specified attributes.
      *
-     * @param fFunction  true if the structure being created is a function; false means a method
-     * @param access     an access specifier
-     * @param aReturns   the return values (zero or more)
-     * @param aParams    the parameters (zero or more)
+     * @param fFunction    true if the structure being created is a function; false means a method
+     * @param access       an access specifier
+     * @param annotations  the annotations
+     * @param aReturns     the return values (zero or more)
+     * @param aParams      the parameters (zero or more)
      *
      * @return a method structure
      */
-    public MethodStructure createMethod(boolean fFunction, Access access, Parameter[] aReturns, Parameter[] aParams)
+    public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
+            Parameter[] aReturns, Parameter[] aParams)
         {
         int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
         int cReturns = aReturns.length;
         int cParams  = aParams.length;
+
+        if (annotations == null)
+            {
+            annotations = Annotation.NO_ANNOTATIONS;
+            }
 
         TypeConstant[] aconstReturns = new TypeConstant[cReturns];
         TypeConstant[] aconstParams  = new TypeConstant[cParams ];
@@ -96,7 +103,8 @@ public class MultiMethodStructure
 
         MethodConstant constId = getConstantPool().ensureMethodConstant(
                 getIdentityConstant(), getName(), access, aconstParams, aconstReturns);
-        MethodStructure struct = new MethodStructure(this, nFlags, constId, null, aReturns, aParams);
+        MethodStructure struct = new MethodStructure(this, nFlags, constId, null, annotations,
+                aReturns, aParams);
         addChild(struct);
         return struct;
         }

@@ -936,6 +936,7 @@ public abstract class Component
      *
      * @param fFunction    true if the method is actually a function (not a method)
      * @param access       the access flag for the method
+     * @param annotations  an array of annotations, or null
      * @param returnTypes  the return values of the method
      * @param sName        the method name, or null if the name is unknown
      * @param paramTypes   the parameters for the method
@@ -943,13 +944,13 @@ public abstract class Component
      * @return a new MethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
-            Parameter[] returnTypes, String sName, Parameter[] paramTypes)
+            Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes)
         {
         assert sName != null;
         assert access != null;
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
-        return multimethod.createMethod(fFunction, access, returnTypes, paramTypes);
+        return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes);
         }
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName)

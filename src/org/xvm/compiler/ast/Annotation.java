@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * An annotation is a type annotation and an optional argument list.
- *
- * @author cp 2017.03.31
  */
 public class Annotation
         extends AstNode

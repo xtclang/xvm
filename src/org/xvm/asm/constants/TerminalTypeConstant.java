@@ -457,15 +457,17 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case Class:
-                setOps.addAll(((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).getOpMethods(access, sName, sOp, cParams));
+                // TODO
+                // setOps.addAll(((ClassStructure) ((IdentityConstant) constant)
+                //         .getComponent()).getOpMethods(access, sName, sOp, cParams));
                 break;
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                setOps.addAll(((ClassStructure) ((PseudoConstant) constant)
-                        .getDeclarationLevelClass().getComponent()).getOpMethods(access, sName, sOp, cParams));
+                // TODO
+                // setOps.addAll(((ClassStructure) ((PseudoConstant) constant)
+                //         .getDeclarationLevelClass().getComponent()).getOpMethods(access, sName, sOp, cParams));
                 break;
 
             case UnresolvedName:
@@ -500,15 +502,17 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case Class:
-                setAuto.addAll(((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).getAutoMethods(access));
+                // TODO
+                // setAuto.addAll(((ClassStructure) ((IdentityConstant) constant)
+                //         .getComponent()).getAutoMethods(access));
                 break;
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                setAuto.addAll(((ClassStructure) ((PseudoConstant) constant)
-                        .getDeclarationLevelClass().getComponent()).getAutoMethods(access));
+                // TODO
+                // setAuto.addAll(((ClassStructure) ((PseudoConstant) constant)
+                //         .getDeclarationLevelClass().getComponent()).getAutoMethods(access));
                 break;
 
             case UnresolvedName:
