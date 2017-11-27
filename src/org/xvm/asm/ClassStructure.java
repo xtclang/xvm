@@ -22,8 +22,6 @@ import org.xvm.util.ListMap;
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
  * package structures.
- *
- * @author cp 2016.04.14
  */
 public class ClassStructure
         extends Component
@@ -350,6 +348,7 @@ public class ClassStructure
 
         return null;
         }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
