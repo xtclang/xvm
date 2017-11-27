@@ -135,3 +135,60 @@ class C<T1, T2>
 // was done for formal params in isA()
 
 
+
+interface I1<T extends Number> {T foo();}
+
+interface I2<T extends IntNumber> {T bar();}
+
+class C<T extends IntNumber>    // constraint is required (because at least one is "inherited")
+    implements I1<T>, I2<T>     // (constituent pieces cannot be more specific than the this)
+
+mixin M<T>  {...}
+
+class B<T>
+    incorporates conditional M<T extends IntNumber>
+
+class D<T extends IntNumber>
+    extends B<T>
+    implements I1<T>, I2<T>
+
+
+// so ...
+C<Int> c1; // type of C here is parameterized, T is Int, which "isA" IntNumber and "isA" Number
+C c2 = c1; // type of C here is not parameterized, but T is _implicitly_ "isA" IntNumber
+
+// for consumer-only type C:
+C<String> cs;
+C<Object> co;
+C c;
+
+c = co;     // ok
+c = cs;     // ok
+cs = co;    // ok
+co = cs;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+co = c;     // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+cs = c;     // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
+
+// for producer-consumer type PC:
+
+PC<Object> pco;
+PC<String> pcs;
+PC pc;
+
+c = pc;     // ok
+c = pco;    // ok
+c = pcs;    // ok
+
+co = pc;    // err; requires cast (fails at runtime if T is *not* Object, e.g. if T is String)
+co = pco;   // ok (fails at runtime if T is *not* Object, e.g. if T is String)
+co = pcs;   // err; will not compile, even with a cast
+
+cs = pc;    // err; requires cast (fails at runtime if String is not assignable to T, i.e. String or Object)
+cs = pco;   // ok (fails at runtime if String is not assignable to T, i.e. String or Object)
+cs = pcs;   // ok (fails at runtime if T is *not* String)
+
+pco = cs;   // err; requires cast to PC or PC<Object> (fails if cs is not an instance of PC)
+pco = co;   // err; requires cast to PC or PC<Object> (fails if co is not an instance of PC)
+
+pcs = cs;   // err; requires cast to PC<String> (fails if cs is not an instance of PC and T is not String)
+pcs = co;   // err; will not compile, even with a cast
