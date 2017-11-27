@@ -86,3 +86,52 @@ class Outer
             }
         }
     }
+
+// flattening class
+
+class Object
+    {
+    protected Meta<Object:public, Object:protected, Object:private> meta.get()
+    static Boolean equals(Object o1, Object o2)
+    String to<String>()
+    Object[] to<Object[]>()
+    Tuple<Object> to<Tuple<Object>>()
+    @Auto function Object() to<function Object()>()
+    }
+
+// how does a sub-class flatten?
+class Simple
+    {
+    // whatever methods it has
+    Void foo();
+    // on top of Object's
+    protected Meta<Simple:public, Simple:protected, Simple:private> meta.get()
+    static Boolean equals(Object o1, Object o2) // function is located on Object
+    String to<String>()
+    Simple[] to<Simple[]>()
+    Tuple<Simple> to<Tuple<Simple>>()
+    @Auto function Simple() to<function Simple()>()
+    }
+
+// maybe something like: collect(properties, methods, functions, constants, classes)
+
+1) go to super
+2)
+
+or ...
+
+1) go through compositions 1 by 1
+2)
+
+// weird things to think about
+
+class C<T1, T2>
+        implements I<T1>, I<T2>     // ... but this **can't** happen because they share the same property for the type !!!
+    {
+    // ...
+    }
+
+// need to keep track of all of the constituent pieces, and some sort of lineage, kind of like what
+// was done for formal params in isA()
+
+
