@@ -6,13 +6,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -24,6 +22,8 @@ import org.xvm.util.ListMap;
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
  * package structures.
+ *
+ * @author cp 2016.04.14
  */
 public class ClassStructure
         extends Component
@@ -252,22 +252,48 @@ public class ClassStructure
         }
 
     /**
+     * Find an index of a parameter with the specified name.
+     *
+     * @param sParamName  the parameter name
+     *
+     * @return the parameter index or -1 if not found
+     */
+    public int indexOfFormalParameter(String sParamName)
+        {
+        Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormalEntry =
+                getTypeParams().entrySet().iterator();
+        for (int i = 0; iterFormalEntry.hasNext(); i++)
+            {
+            Map.Entry<StringConstant, TypeConstant> entry = iterFormalEntry.next();
+
+            if (entry.getKey().getValue().equals(sParamName))
+                {
+                return i;
+                }
+            }
+        return -1;
+        }
+
+    /**
      * Recursively find a contribution by the specified id.
      *
      * @param constId  the identity to look for
-     * @return  the resulting contribution or null if none found
+     *
+     * @return the resulting contribution or null if none found
      */
-    public Contribution findContribution(IdentityConstant constId)
+    public ContributionChain findContribution(IdentityConstant constId)
         {
         if (constId.equals(getConstantPool().clzObject()))
             {
             // everything is considered to extend Object (even interfaces)
-            return new Contribution(Composition.Extends, getConstantPool().typeObject());
+            return new ContributionChain(
+                new Contribution(Composition.Extends, getConstantPool().typeObject()));
             }
 
         if (constId.equals(getIdentityConstant()))
             {
-            return new Contribution(Composition.Equal, (TypeConstant) null);
+            return new ContributionChain(
+                new Contribution(Composition.Equal, (TypeConstant) null));
             }
 
         ClassStructure structCur = this;
@@ -277,35 +303,37 @@ public class ClassStructure
             Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
             if (constContrib.equals(constId))
                 {
-                return contrib;
+                return new ContributionChain(contrib);
                 }
 
             switch (contrib.getComposition())
                 {
                 case Annotation:
                 case Delegates:
-                case Into:
                     // TODO:
                     break;
 
-                case Incorporates:
+                case Impersonates:
                 case Implements:
+                case Incorporates:
+                case Into:
                 case Extends:
                     // even though this class may be a ModuleConstant or PackageConstant,
                     // the super will always be a class (because a Module and a Package cannot be
                     // extended)
                     ClassConstant constSuper = (ClassConstant) constContrib;
-                    contrib = ((ClassStructure) constSuper.getComponent()).findContribution(constId);
-                    if (contrib != null)
+                    ContributionChain chain = ((ClassStructure) constSuper.getComponent()).
+                        findContribution(constId);
+                    if (chain != null)
                         {
                         // return as soon as a match is found
-                        // TODO: wrap it into a "DeepContribution" of this IdentityConstant,
-                        return contrib;
+                        chain.add(contrib);
+                        return chain;
                         }
                     break;
 
                 case Enumerates:
-                case Impersonates:
+                    // TODO:
                     break;
 
                 default:
@@ -313,9 +341,15 @@ public class ClassStructure
                 }
             }
 
+        ClassStructure clzThat = (ClassStructure) constId.getComponent();
+        if (clzThat.getFormat() == Format.INTERFACE)
+            {
+            return new ContributionChain(
+                new Contribution(Composition.MaybeDuckType, (TypeConstant) null));
+            }
+
         return null;
         }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

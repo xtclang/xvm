@@ -10,13 +10,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -160,151 +161,243 @@ public class ParameterizedTypeConstant
     // ----- type comparison support --------------------------------------------------------------
 
     @Override
-    protected Contribution checkAssignableTo(TypeConstant that)
+    protected ContributionChain checkAssignableTo(TypeConstant that)
         {
-        Contribution contrib = super.checkAssignableTo(that);
-        if (contrib == null)
+        ContributionChain chain = super.checkAssignableTo(that);
+        if (chain == null)
             {
             return null;
             }
 
-        ParameterizedTypeConstant typeContrib;
+        List<TypeConstant> listActual;
 
-        switch (contrib.getComposition())
+        switch (chain.getOrigin().getComposition())
             {
             case MaybeDuckType:
-                return contrib;
+                // will be resolved later via duck-typing
+                return chain;
 
             case Equal:
-                typeContrib = this;
+                assert chain.getList().size() == 1;
+                listActual = getParamTypes();
                 break;
 
-            case Incorporates:
-                {
-                Map<StringConstant, TypeConstant> mapConditional = contrib.getTypeParams();
-                if (mapConditional != null && !mapConditional.isEmpty())
-                    {
-                    List<TypeConstant> listParamTypes = getParamTypes();
-
-                    // conditional incorporation; check if the actual parameters apply
-                    assert listParamTypes.size() == mapConditional.size();
-
-                    Iterator<TypeConstant> iterParamType = listParamTypes.iterator();
-                    Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
-                    while (iterParamType.hasNext())
-                        {
-                        TypeConstant typeParam      = iterParamType.next();
-                        TypeConstant typeConstraint = iterConstraint.next();
-
-                        if (!typeParam.isA(typeConstraint))
-                            {
-                            // this contribution doesn't apply
-                            return null;
-                            }
-                        }
-                    }
-                }
-                // fall through
             case Extends:
+            case Incorporates:
+            case Into:
             case Impersonates:
             case Implements:
             case Delegates:
-                typeContrib = contrib.getTypeConstant().findFirst(ParameterizedTypeConstant.class);
+                ClassStructure clzParent = (ClassStructure)
+                    ((IdentityConstant) getDefiningConstant()).getComponent();
+                listActual = propagateActualTypes(chain, clzParent, getParamTypes());
                 break;
 
-            case Into:
-                // TODO: ???
             default:
                 throw new IllegalStateException();
             }
 
         // by now we know that the "contrib" and "that" have equivalent terminal types
-        if (typeContrib == null)
+        if (listActual == null)
             {
-            // the contribution type is not parameterized; nothing else to do here
-            return contrib;
+            // a conditional contribution didn't apply
+            return null;
             }
 
-        ParameterizedTypeConstant typeThat = that.findFirst(ParameterizedTypeConstant.class);
-        if (typeThat == null)
+        if (!that.isParamsSpecified())
             {
-            // "that" is not parameterized; nothing else to do here
-            return contrib;
+            // "that" type is not parameterized; nothing else to check
+            return chain;
             }
 
-        assert typeContrib.getParamTypes().size() == that.getParamTypes().size();
+        List<TypeConstant> listThat = that.getParamTypes();
 
-        Iterator<TypeConstant> iterContrib = typeContrib.getParamTypes().iterator();
-        Iterator<TypeConstant> iterThat    = typeThat.getParamTypes().iterator();
-        while (iterContrib.hasNext())
+        assert listActual.size() == listThat.size();
+
+        for (int i = 0, c = listThat.size(); i < c; i++)
             {
-            TypeConstant typeContribParam = iterContrib.next();
-            TypeConstant typeThatParam    = iterThat.next();
-
-            Constant consParamId = typeContribParam.getDefiningConstant();
-            if (consParamId.getFormat() == Format.Property)
+            if (!listActual.get(i).isA(listThat.get(i)))
                 {
-                PropertyConstant prop = (PropertyConstant) consParamId;
-                String sParamName = prop.getName();
-                ClassStructure clzContext = (ClassStructure) prop.getParentConstant().getComponent();
-
-                TypeConstant typeActualThis = findActualParamType(sParamName);
-
-                if (!typeActualThis.isA(typeThatParam))
-                    {
-                    // failed to match
-                    return null;
-                    }
-                }
-            else
-                {
-                if (!typeContribParam.isA(typeThatParam))
-                    {
-                    // failed to match
-                    return null;
-                    }
+                // failed to match
+                return null;
                 }
             }
 
-        return contrib;
-        }
-
-    /**
-     * Find the actual type in "this" ParamType list that corresponds the formal type in
-     * the specified class structure with matching formal name.
-
-     * @param sParamName  the parameter name
-     *
-     * @return the actual parameter type
-     */
-    protected TypeConstant findActualParamType(String sParamName)
-        {
-        ClassStructure clz = (ClassStructure) getSingleUnderlyingClass().getComponent();
-
-        assert clz.getTypeParams().size() == getParamTypes().size();
-
-        Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormalEntry =
-                clz.getTypeParams().entrySet().iterator();
-        Iterator<TypeConstant> iterActual = getParamTypes().iterator();
-
-        while (iterFormalEntry.hasNext())
-            {
-            Map.Entry<StringConstant, TypeConstant> entry = iterFormalEntry.next();
-            TypeConstant type = iterActual.next();
-
-            if (entry.getKey().getValue().equals(sParamName))
-                {
-                return type;
-                }
-            }
-
-        throw new IllegalStateException("Failed to find " + sParamName + " in " + clz);
+        return chain;
         }
 
     @Override
-    protected Component.Contribution checkAssignableFrom(TypeConstant that)
+    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
         {
-        return super.checkAssignableFrom(that);
+        // we know that from "that" perspective it's assignable to this
+        if (that.isParamsSpecified())
+            {
+            // the type correspondence have already been checked
+            return true;
+            }
+
+        List<TypeConstant> listActual;
+
+        // "that" is not parameterized, while "this" is
+        switch (chain.getOrigin().getComposition())
+            {
+            case MaybeDuckType:
+                // will be resolved later via duck-typing
+                return true;
+
+            case Equal:
+                assert chain.getList().size() == 1;
+                return false;
+
+            case Extends:
+            case Incorporates:
+            case Into:
+            case Impersonates:
+            case Implements:
+            case Delegates:
+                ClassStructure clzParent = (ClassStructure)
+                    ((IdentityConstant) that.getDefiningConstant()).getComponent();
+
+                int cParams = clzParent.getTypeParams().size();
+                List<TypeConstant> listParams;
+                if (cParams == 0)
+                    {
+                    listParams = Collections.EMPTY_LIST;
+                    }
+                else
+                    {
+                    // TODO: discuss with Cam; "that" should've been parameterized
+                    listParams = new ArrayList<>(cParams);
+                    for (int i = 0; i < cParams; i++)
+                        {
+                        listParams.add(getConstantPool().typeObject());
+                        }
+                    }
+                listActual = propagateActualTypes(chain, clzParent, listParams);
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        List<TypeConstant> listThis = getParamTypes();
+
+        assert listActual.size() == listThis.size();
+
+        for (int i = 0, c = listThis.size(); i < c; i++)
+            {
+            if (!listActual.get(i).isA(listThis.get(i)))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    /**
+     * Propagate the actual parameter types for this parameterized type through
+     * the contribution chain.
+     *
+     * @param chain  the contribution chain
+     *
+     * @return  the actual types for the top of the chain or null if
+     *          the contribution didn't apply (conditional incorporation)
+     */
+    protected static List<TypeConstant> propagateActualTypes(ContributionChain chain,
+                    ClassStructure clzParent, List<TypeConstant> listActualTypes)
+        {
+        List<Contribution> listContrib = chain.getList();
+
+        for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
+            {
+            assert clzParent.getTypeParams().size() == listActualTypes.size();
+
+            Contribution contrib = listContrib.get(i);
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            if (!typeContrib.isParamsSpecified())
+                {
+                // non-parameterized contribution
+                return Collections.emptyList();
+                }
+
+            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
+            List<TypeConstant> listActual = new ArrayList<>(listContribParams.size());
+
+            for (TypeConstant typeContribParam : listContribParams)
+                {
+                Constant constId = typeContribParam.getDefiningConstant();
+
+                if (constId.getFormat() == Constant.Format.Property)
+                    {
+                    PropertyConstant prop = (PropertyConstant) constId;
+
+                    int ix = clzParent.indexOfFormalParameter(prop.getName());
+                    if (ix < 0)
+                        {
+                        throw new IllegalStateException(
+                            "Failed to find " + prop.getName() + " in " + clzParent);
+                        }
+                    listActual.add(listActualTypes.get(ix));
+                    }
+                else
+                    {
+                    listActual.add(typeContribParam);
+                    }
+                }
+
+            if (contrib.getComposition() == Composition.Incorporates)
+                {
+                if (!checkConditionalIncorporate(contrib, listActual))
+                    {
+                    return null;
+                    }
+                }
+
+            if (i > 0)
+                {
+                clzParent = (ClassStructure)
+                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                }
+            listActualTypes = listActual;
+            }
+
+        return listActualTypes;
+        }
+
+    /**
+     * Check if the "incorporate contribution" is conditional and if so,
+     * whether or not it applies to this type
+     *
+     * @param contrib     the contribution to check
+     * @param listParams  actual parameter types
+     *
+     * @return true iff the contribution is unconditional or applies to this type
+     */
+    protected static boolean checkConditionalIncorporate(Contribution contrib,
+                                                  List<TypeConstant> listParams)
+        {
+        Map<StringConstant, TypeConstant> mapConditional = contrib.getTypeParams();
+        if (mapConditional != null && !mapConditional.isEmpty())
+            {
+            // conditional incorporation; check if the actual parameters apply
+            assert listParams.size() == mapConditional.size();
+
+            Iterator<TypeConstant> iterParamType = listParams.iterator();
+            Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
+            while (iterParamType.hasNext())
+                {
+                TypeConstant typeParam      = iterParamType.next();
+                TypeConstant typeConstraint = iterConstraint.next();
+
+                if (!typeParam.isA(typeConstraint))
+                    {
+                    // this contribution doesn't apply
+                    return false;
+                    }
+                }
+            }
+        return true;
         }
 
     @Override

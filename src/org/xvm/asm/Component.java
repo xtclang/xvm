@@ -14,12 +14,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -2201,7 +2203,7 @@ public abstract class Component
      * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be
      * composed of any number of contributing components.
      */
-    public class Contribution
+    public static class Contribution
         {
         /**
          * @see XvmStructure#disassemble(DataInput)
@@ -2479,15 +2481,15 @@ public abstract class Component
                 }
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
-            ListMap<StringConstant, TypeConstant> mapNew;
             if (mapOld != null)
                 {
-                m_mapParams = mapNew = new ListMap<>();
+                ListMap<StringConstant, TypeConstant> mapNew = new ListMap<>();
                 for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.asList())
                     {
                     mapNew.put((StringConstant) pool.register(entry.getKey()),
                                (TypeConstant  ) pool.register(entry.getValue()));
                     }
+                m_mapParams = mapNew;
                 }
             }
 
@@ -2678,6 +2680,34 @@ public abstract class Component
         private ListMap<StringConstant, TypeConstant> m_mapParams;
         }
 
+    /**
+     * A trivial data structure representing a chain of contributions.
+     */
+    public static class ContributionChain
+        {
+        private List<Contribution> m_list;
+
+        public ContributionChain(Contribution contrib)
+            {
+            m_list = new LinkedList<>();
+            m_list.add(contrib);
+            }
+
+        public void add(Contribution contrib)
+            {
+            m_list.add(contrib);
+            }
+
+        public Contribution getOrigin()
+            {
+            return m_list.get(0);
+            }
+
+        public List<Contribution> getList()
+            {
+            return m_list;
+            }
+        }
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
