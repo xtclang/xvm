@@ -347,7 +347,8 @@ public class ClassStructure
         if (clzThat.getFormat() == Format.INTERFACE)
             {
             return new ContributionChain(
-                new Contribution(Composition.MaybeDuckType, (TypeConstant) null));
+                new Contribution(Composition.MaybeDuckType,
+                    clzThat.getIdentityConstant().asTypeConstant()));
             }
 
         return null;

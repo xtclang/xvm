@@ -85,14 +85,14 @@ class TestCompiler
         MyConsumer<Int> finder8 = c8; // OK; "Incorporates"
         Consumer<Int> finder8a = c8; // OK; "Incorporates-Extends"
 
-//        MyClass9<String, String> c9;
+        MyClass9<String, String> c9;
 //        MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
 //        Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
 
         MyClass10<Number> c10;
         MyConsumer<Number> finder10 = c10; // OK; "Extends-Incorporates"
 
-//        MyClass10<String> c10a;
+        MyClass10<String> c10a;
 //        MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
         }
     }
