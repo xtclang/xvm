@@ -92,6 +92,20 @@ interface Service()
     @RO @Atomic StatusIndicator statusIndicator;
 
     /**
+     * Look up the named ContextToken. If this
+     *
+     * Normally, a developer would access a ContextToken using injection, such as this example which
+     * requires the injection of the token named "customerId":
+     *
+     *   @Inject ContextToken<String> customerId;
+     *
+     * If the token is not guaranteed to exist, then the injection should be made optional, instead:
+     *
+     *   @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
+     */
+    conditional ContextToken `ContextToken(String name);
+
+    /**
      * The current CriticalSection for the service, if any.
      */
     @RO @Atomic CriticalSection? criticalSection;
@@ -237,6 +251,22 @@ interface Service()
      * This method can be invoked from either inside or outside of the service.
      */
     Void kill();
+
+    /**
+     * Register a ContextToken, replacing any previously registered ContextToken with the same name.
+     * Until the ContextToken is closed, or until the context for that name is erased, the
+     * ContextToken will be available (by its name) from any point within this service. Furthermore,
+     * any calls from this service to another service will have the effect of automatically
+     * registering the same ContextToken with that service.
+     */
+    Void registerContextToken(ContextToken token);
+
+    /**
+     * If a ContextToken is registered under the specified name, erase that registration.
+     *
+     * @param name  the name of the context
+     */
+    Void eraseContext(String name);
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
