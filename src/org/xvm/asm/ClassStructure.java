@@ -16,6 +16,8 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Adapter;
+
 import org.xvm.util.ListMap;
 
 
@@ -350,6 +352,111 @@ public class ClassStructure
 
         return null;
         }
+
+    /**
+     * Determine if this template consumes a formal type with the specified name for the specified
+     * access policy.
+     */
+    public boolean consumesFormalType(String sName, Access access)
+        {
+        for (Component child : children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                    {
+                    if (method.isAccessible(access) &&
+                        method.consumesFormalType(sName))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) child;
+
+                if (property.isTypeParameter())
+                    {
+                    // type properties don't consume
+                    continue;
+                    }
+
+                TypeConstant constType = property.getType();
+
+                // TODO: add correct access check when added to the structure
+                // TODO: add @RO support
+
+                MethodStructure methodGet = Adapter.getGetter(property);
+                if ((methodGet == null || methodGet.isAccessible(access))
+                        && constType.consumesFormalType(sName, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+
+                MethodStructure methodSet = Adapter.getSetter(property);
+                if ((methodSet == null || methodSet.isAccessible(access))
+                        && constType.producesFormalType(sName, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
+     * Determine if this template produces a formal type with the specified name for the
+     * specified access policy.
+     */
+    public boolean producesFormalType(String sName, Access access)
+        {
+        for (Component child : children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                    {
+                    if (method.isAccessible(access) &&
+                        method.producesFormalType(sName))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                PropertyStructure property = (PropertyStructure) child;
+
+                if (property.isTypeParameter())
+                    {
+                    // type properties don't produce
+                    continue;
+                    }
+
+                TypeConstant constType = property.getType();
+
+                // TODO: add correct access check when added to the structure
+                // TODO: add @RO support
+
+                MethodStructure methodGet = Adapter.getGetter(property);
+                if ((methodGet == null || methodGet.isAccessible(access)
+                        && constType.producesFormalType(sName, Access.PUBLIC)))
+                    {
+                    return true;
+                    }
+
+                MethodStructure methodSet = Adapter.getSetter(property);
+                if ((methodSet == null || methodSet.isAccessible(access))
+                        && constType.consumesFormalType(sName, Access.PUBLIC))
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

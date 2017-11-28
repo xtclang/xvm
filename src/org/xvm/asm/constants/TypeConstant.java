@@ -508,6 +508,17 @@ public abstract class TypeConstant
      * Determine if this type consumes a formal type with the specified name in context
      * of the given TypeComposition and access policy.
      */
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().consumesFormalType(sTypeName, access);
+        }
+
+    /**
+     * Determine if this type consumes a formal type with the specified name in context
+     * of the given TypeComposition and access policy.
+     *
+     * @deprecated remove after switching to the above method
+     */
     public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
         {
         return getUnderlyingType().consumesFormalType(sTypeName, types, access);
@@ -515,7 +526,18 @@ public abstract class TypeConstant
 
     /**
      * Determine if this type produces a formal type with the specified name in context
-     * of the given TypeComposition and access policy..
+     * of the given TypeComposition and access policy.
+     */
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().producesFormalType(sTypeName, access);
+        }
+
+    /**
+     * Determine if this type produces a formal type with the specified name in context
+     * of the given TypeComposition and access policy.
+     *
+     * @deprecated remove after switching to the above method
      */
     public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
         {

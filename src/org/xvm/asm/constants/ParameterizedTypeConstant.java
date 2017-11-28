@@ -178,7 +178,7 @@ public class ParameterizedTypeConstant
                 return chain;
 
             case Equal:
-                assert chain.getList().size() == 1;
+                assert chain.getChain().size() == 1;
                 listActual = getParamTypes();
                 break;
 
@@ -188,10 +188,13 @@ public class ParameterizedTypeConstant
             case Impersonates:
             case Implements:
             case Delegates:
-                ClassStructure clzParent = (ClassStructure)
+                {
+                ClassStructure clzThis = (ClassStructure)
                     ((IdentityConstant) getDefiningConstant()).getComponent();
-                listActual = propagateActualTypes(chain, clzParent, getParamTypes());
+
+                listActual = propagateActualTypes(chain, clzThis, getParamTypes());
                 break;
+                }
 
             default:
                 throw new IllegalStateException();
@@ -211,16 +214,32 @@ public class ParameterizedTypeConstant
             }
 
         List<TypeConstant> listThat = that.getParamTypes();
+        ClassStructure    clzThat   = (ClassStructure)
+            ((IdentityConstant) that.getDefiningConstant()).getComponent();
 
         assert listActual.size() == listThat.size();
+        assert listThat.size() == clzThat.getTypeParams().size();
+
+        Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
 
         for (int i = 0, c = listThat.size(); i < c; i++)
             {
-            if (!listActual.get(i).isA(listThat.get(i)))
+            TypeConstant typeThis = listActual.get(i);
+            TypeConstant typeThat = listThat.get(i);
+            String       sName    = iterNames.next().getValue();
+
+            if (typeThat.isA(typeThis))                             // rule 1.2.1
                 {
-                // failed to match
-                return null;
+                continue;
                 }
+
+            if (typeThis.isA(typeThat) &&                           // rule 1.2.2.1
+                    that.producesFormalType(sName, Access.PUBLIC))  // rule 1.2.2.2
+                {
+                continue;
+                }
+
+            return null;
             }
 
         return chain;
@@ -246,8 +265,19 @@ public class ParameterizedTypeConstant
                 return true;
 
             case Equal:
-                assert chain.getList().size() == 1;
-                return false;
+                {
+                assert chain.getChain().size() == 1;
+
+                List<TypeConstant> listThis = getParamTypes();
+                for (int i = 0, c = listThis.size(); i < c; i++)
+                    {
+                    if (!getConstantPool().typeObject().isA(listThis.get(i)))
+                        {
+                        return false;
+                        }
+                    }
+                return true;
+                }
 
             case Extends:
             case Incorporates:
@@ -255,10 +285,13 @@ public class ParameterizedTypeConstant
             case Impersonates:
             case Implements:
             case Delegates:
-                ClassStructure clzParent = (ClassStructure)
+                {
+                ClassStructure clzThat = (ClassStructure)
                     ((IdentityConstant) that.getDefiningConstant()).getComponent();
 
-                int cParams = clzParent.getTypeParams().size();
+                Map<StringConstant, TypeConstant> mapParams = clzThat.getTypeParams();
+                int cParams = mapParams.size();
+
                 List<TypeConstant> listParams;
                 if (cParams == 0)
                     {
@@ -266,30 +299,46 @@ public class ParameterizedTypeConstant
                     }
                 else
                     {
-                    // TODO: discuss with Cam; "that" should've been parameterized
                     listParams = new ArrayList<>(cParams);
-                    for (int i = 0; i < cParams; i++)
+                    for (TypeConstant typeParam : mapParams.values())
                         {
-                        listParams.add(getConstantPool().typeObject());
+                        listParams.add(typeParam);
                         }
                     }
-                listActual = propagateActualTypes(chain, clzParent, listParams);
+                listActual = propagateActualTypes(chain, clzThat, listParams);
                 break;
+                }
 
             default:
                 throw new IllegalStateException();
             }
 
         List<TypeConstant> listThis = getParamTypes();
+        ClassStructure    clzThis   = (ClassStructure)
+            ((IdentityConstant) this.getDefiningConstant()).getComponent();
 
         assert listActual.size() == listThis.size();
 
+        Iterator<StringConstant> iterNames = clzThis.getTypeParams().keySet().iterator();
+
         for (int i = 0, c = listThis.size(); i < c; i++)
             {
-            if (!listActual.get(i).isA(listThis.get(i)))
+            TypeConstant typeThis = listActual.get(i);
+            TypeConstant typeThat = listThis.get(i);
+            String       sName    = iterNames.next().getValue();
+
+            if (typeThis.isA(typeThat))                             // rule 1.2.1
                 {
-                return false;
+                continue;
                 }
+
+            if (typeThat.isA(typeThis) &&                           // rule 1.2.2.1
+                    this.producesFormalType(sName, Access.PUBLIC))  // rule 1.2.2.2
+                {
+                continue;
+                }
+
+            return false;
             }
         return true;
         }
@@ -306,7 +355,7 @@ public class ParameterizedTypeConstant
     protected static List<TypeConstant> propagateActualTypes(ContributionChain chain,
                     ClassStructure clzParent, List<TypeConstant> listActualTypes)
         {
-        List<Contribution> listContrib = chain.getList();
+        List<Contribution> listContrib = chain.getChain();
 
         for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
             {
@@ -401,6 +450,26 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        ClassStructure clzThis = (ClassStructure)
+            ((IdentityConstant) this.getDefiningConstant()).getComponent();
+        assert clzThis.indexOfFormalParameter(sTypeName) >= 0;
+
+        return clzThis.consumesFormalType(sTypeName, access);
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        ClassStructure clzThis = (ClassStructure)
+            ((IdentityConstant) this.getDefiningConstant()).getComponent();
+        assert clzThis.indexOfFormalParameter(sTypeName) >= 0;
+
+        return clzThis.producesFormalType(sTypeName, access);
+        }
+
+    @Override // TODO: remove
     public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
         {
         // C<T> = A<B<T>> consumes T iff
@@ -434,7 +503,7 @@ public class ParameterizedTypeConstant
         return false;
         }
 
-    @Override
+    @Override // TODO: remove
     public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
         {
         // C<T> = A<B<T>> produces T iff

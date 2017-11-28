@@ -595,6 +595,21 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        Constant constId = getDefiningConstant();
+
+        return constId.getFormat() == Format.Property &&
+            ((PropertyConstant) constId).getName().equals(sTypeName);
+        }
+
+    @Override
     public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
         {
         return false;

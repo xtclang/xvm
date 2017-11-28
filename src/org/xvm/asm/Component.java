@@ -2702,7 +2702,7 @@ public abstract class Component
             return m_list.get(0);
             }
 
-        public List<Contribution> getList()
+        public List<Contribution> getChain()
             {
             return m_list;
             }
