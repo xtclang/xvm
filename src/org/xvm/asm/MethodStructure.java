@@ -440,6 +440,7 @@ public class MethodStructure
         return getAccess().ordinal() <= access.ordinal();
         }
 
+    // TODO: remove
     /**
      * Determine if this method consumes a formal type with the specified name.
      *
@@ -469,6 +470,7 @@ public class MethodStructure
         return false;
         }
 
+    // TODO: remove
     /**
      * Determine if this method produces a formal type with the specified name.
      *
@@ -490,6 +492,64 @@ public class MethodStructure
         for (Parameter param : getReturns())
             {
             if (param.getType().producesFormalType(sTypeName, types, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine if this method produces a formal type with the specified name.
+     *
+     * A method _m_ "produces" type _T_ if any of the following holds true:
+     * 1. _m_ has a return type declared as _T_;
+     * 2. _m_ has a return type that _"produces T"_;
+     * 3. _m_ has a parameter type that _"consumes T"_.
+     */
+    public boolean producesFormalType(String sTypeName)
+        {
+        for (Parameter param : getParams())
+            {
+            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        for (Parameter param : getReturns())
+            {
+            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine if this method consumes a formal type with the specified name.
+     *
+     * A method _m_ "consumes" type _T_ if any of the following holds true:
+     * 1. _m_ has a parameter type declared as _T_;
+     * 2. _m_ has a parameter type that _"produces T"_.
+     * 3. _m_ has a return type that _"consumes T"_;
+     */
+    public boolean consumesFormalType(String sTypeName)
+        {
+        for (Parameter param : getParams())
+            {
+            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
+                {
+                return true;
+                }
+            }
+
+        for (Parameter param : getReturns())
+            {
+            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
                 {
                 return true;
                 }

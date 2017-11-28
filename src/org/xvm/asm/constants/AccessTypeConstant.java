@@ -112,19 +112,25 @@ public class AccessTypeConstant
                 : getConstantPool().ensureAccessTypeConstant(constResolved, m_access);
         }
 
-    /**
-     * Determine if this type consumes a formal type with the specified name in context
-     * of the given TypeComposition and access policy.
-     */
+    @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().consumesFormalType(sTypeName, m_access);
+        }
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().producesFormalType(sTypeName, m_access);
+        }
+
+    @Override // TODO: remove
     public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
         {
         return getUnderlyingType().consumesFormalType(sTypeName, types, m_access);
         }
 
-    /**
-     * Determine if this type produces a formal type with the specified name in context
-     * of the given TypeComposition and access policy..
-     */
+    @Override // TODO: remove
     public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
         {
         return getUnderlyingType().producesFormalType(sTypeName, types, m_access);

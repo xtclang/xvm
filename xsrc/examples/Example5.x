@@ -703,3 +703,18 @@ Finder<Number> finder = c2; // OK; contribution by "Implements"
 
 MyClass3<String, Int> c3 = new MyClass3();
 Finder<Number> finder = c3; // OK; contribution by "Extends"
+
+mixin Marshaling
+    if (Avro.isPresent) { extends AvroMarshaler }
+    else if (Thrift.isPresent) { incorporates ThriftMarshaler }
+
+mixin Marshaling
+    extends
+        if (Avro.isPresent) { AvroMarshaler }
+    incorporates
+        if (Thrift.isPresent) {ThriftMarshaler}
+
+mixin Marshaling
+    extends conditional (Avro.isPresent) AvroMarshaler
+    extends conditional (Thrift.isPresent) ThriftMarshaler2
+    incorporates conditional (Thrift.isPresent) {ThriftMarshaler}

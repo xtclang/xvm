@@ -110,7 +110,8 @@ public class PropertyStructure
     private boolean isTypeParameterOf(Component component)
         {
         return component instanceof ClassStructure
-                && ((ClassStructure) component).getTypeParams().containsKey(getName());
+                && ((ClassStructure) component).getTypeParams().containsKey(
+                        getIdentityConstant().getNameConstant());
         }
 
     /**

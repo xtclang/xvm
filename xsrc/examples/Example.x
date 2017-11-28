@@ -2791,7 +2791,8 @@ class FakePCofString
     }
 
 C<String>      x = new C<Object>();  // ok
-C<Object>      x = new C<String>();  // ok according to 1.2.1, but should it be?
+C<String>      x = new PC<Object>();  // ok
+C<Object>      x = new C<String>();  // fails
 C<Object>      x = new PC<String>(); // fails
 P<Object>      x = new P<String>();  // ok
 P<String>      x = new P<Object>();  // fails
