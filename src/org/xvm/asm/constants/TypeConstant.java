@@ -16,6 +16,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.TypeSet;
@@ -455,6 +456,34 @@ public abstract class TypeConstant
         }
 
     /**
+     * During comilation and assembly, this method is used to collect detailed error information
+     * that can be determined by fully resolving (flattening) and analyzing the type's information.
+     * The resulting errors cannot be determined simply by analyzing the various ClassStructures
+     * etc., because it is possible that the error only appears when a class is parameterized with
+     * a specific type, for example.
+     *
+     * @param errs  the error list to log any errors to
+     */
+    public void validate(ErrorList errs)
+        {
+        // TODO
+        }
+
+    protected void resolve(ErrorList errs)
+
+    /**
+     * Obtain all of the methods -- including functions -- that would be available on this type.
+     *
+     * @return a Set of method constants representing all of the methods and functions callable
+     *         through a reference of this type
+     */
+    public Set<MethodConstant> getMethods()
+        {
+        // TODO
+        return Collections.EMPTY_SET;
+        }
+
+    /**
      * Obtain all of the matching op methods for the specified name and/or the operator string, that
      * take the specified number of params.
      *
@@ -574,18 +603,6 @@ public abstract class TypeConstant
 
         return methodMatch;
         }
-
-    /**
-     * Collect all of the methods that would be available on this
-     * @param access
-     * @return
-     */
-    public Set<MethodConstant> getMethods(Access access)
-        {
-        // TODO
-        return Collections.EMPTY_SET;
-        }
-
 
 
     // ----- type comparison support ---------------------------------------------------------------

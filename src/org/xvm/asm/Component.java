@@ -2086,7 +2086,7 @@ public abstract class Component
     /**
      * Types of composition.
      */
-    public enum Composition
+    public static enum Composition
         {
         /**
          * Represents an annotation.
