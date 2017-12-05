@@ -2128,12 +2128,6 @@ public abstract class Component
          */
         Incorporates,
         /**
-         * Represents that the class being composed is one of the enumeration of a specified type.
-         * <p/>
-         * The constant is a TypeConstant.
-         */
-        Enumerates,
-        /**
          * Represents class impersonation.
          * <p/>
          * The constant is a ClassConstant.
@@ -2264,7 +2258,6 @@ public abstract class Component
                 case Implements:
                 case Into:
                 case Incorporates:
-                case Enumerates:
                 case Impersonates:
                 case MaybeDuckType:
                     if (constType == null)
@@ -2319,7 +2312,6 @@ public abstract class Component
                 case Implements:
                 case Into:
                 case Incorporates:
-                case Enumerates:
                 case Impersonates:
                     throw new IllegalArgumentException(composition + " uses the constructor with a TypeConstant");
 

@@ -9,9 +9,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
@@ -456,20 +456,37 @@ public abstract class TypeConstant
         }
 
     /**
-     * During comilation and assembly, this method is used to collect detailed error information
-     * that can be determined by fully resolving (flattening) and analyzing the type's information.
-     * The resulting errors cannot be determined simply by analyzing the various ClassStructures
-     * etc., because it is possible that the error only appears when a class is parameterized with
-     * a specific type, for example.
+     * During compilation and assembly, this method is used to collect detailed error information
+     * that can be determined only by fully resolving (flattening) and analyzing the type's
+     * information. The resulting errors cannot be determined simply by analyzing the various
+     * ClassStructures, etc., because it is possible that the error only appears when a class is
+     * parameterized with a specific type, for example.
      *
-     * @param errs  the error list to log any errors to
+     * @param errs  the error list to log any errors to; null is acceptable, but will cause any
+     *              detected error in the type hierarchy to be thrown as a  runtime exception
      */
     public void validate(ErrorList errs)
         {
-        // TODO
+        // TODO this is stateful, i.e. should happen at most once
+        // TODO need to know the accessibility of "this" (pass to resolveStructure)
+        // TODO need a recursive function that drills down through the hierarchy    (resolveStructure)
+
+        // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
+        // TODO singleton? abstract?
         }
 
-    protected void resolve(ErrorList errs)
+    class ParamInfo {}
+    class PropertyInfo {}
+    class MethodInfo {}
+
+    protected void resolveStructure(TypeConstant typeResolving,
+            Map<String, ParamInfo> mapParams,
+            Map<String, PropertyInfo> mapProps,
+            Map<SignatureConstant, MethodInfo> mapMethods,
+            Access access, ErrorList errs)
+        {
+
+        }
 
     /**
      * Obtain all of the methods -- including functions -- that would be available on this type.
@@ -794,6 +811,7 @@ public abstract class TypeConstant
         {
         return clz == getClass() ? (T) this : getUnderlyingType().findFirst(clz);
         }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
