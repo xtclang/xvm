@@ -228,14 +228,18 @@ public class ParameterizedTypeConstant
             TypeConstant typeThat = listThat.get(i);
             String       sName    = iterNames.next().getValue();
 
-            if (typeThat.isA(typeThis))                             // rule 1.2.1
+            boolean fProduce = that.producesFormalType(sName, Access.PUBLIC);
+
+            if (typeThat.isA(typeThis) && !fProduce)
                 {
+                // consumer only methods; rule 1.2.1
                 continue;
                 }
 
-            if (typeThis.isA(typeThat) &&                           // rule 1.2.2.1
-                    that.producesFormalType(sName, Access.PUBLIC))  // rule 1.2.2.2
+            if (typeThis.isA(typeThat) && fProduce)
                 {
+                // there are some producing methods; rule 1.2.2.2
+                // consuming methods will need to be "wrapped"
                 continue;
                 }
 
@@ -327,14 +331,18 @@ public class ParameterizedTypeConstant
             TypeConstant typeThat = listThis.get(i);
             String       sName    = iterNames.next().getValue();
 
-            if (typeThis.isA(typeThat))                             // rule 1.2.1
+            boolean fProduce = this.producesFormalType(sName, Access.PUBLIC);
+
+            if (typeThis.isA(typeThat) && !fProduce)
                 {
+                // consumer only methods; rule 1.2.1
                 continue;
                 }
 
-            if (typeThat.isA(typeThis) &&                           // rule 1.2.2.1
-                    this.producesFormalType(sName, Access.PUBLIC))  // rule 1.2.2.2
+            if (typeThat.isA(typeThis) && fProduce)
                 {
+                // there are some producing methods; rule 1.2.2.2
+                // consuming methods will need to be "wrapped"
                 continue;
                 }
 
@@ -395,12 +403,10 @@ public class ParameterizedTypeConstant
                     }
                 }
 
-            if (contrib.getComposition() == Composition.Incorporates)
+            if (contrib.getComposition() == Composition.Incorporates &&
+                !contrib.checkConditionalIncorporate(listActual))
                 {
-                if (!checkConditionalIncorporate(contrib, listActual))
-                    {
-                    return null;
-                    }
+                return null;
                 }
 
             if (i > 0)
@@ -412,41 +418,6 @@ public class ParameterizedTypeConstant
             }
 
         return listActualTypes;
-        }
-
-    /**
-     * Check if the "incorporate contribution" is conditional and if so,
-     * whether or not it applies to this type
-     *
-     * @param contrib     the contribution to check
-     * @param listParams  actual parameter types
-     *
-     * @return true iff the contribution is unconditional or applies to this type
-     */
-    protected static boolean checkConditionalIncorporate(Contribution contrib,
-                                                  List<TypeConstant> listParams)
-        {
-        Map<StringConstant, TypeConstant> mapConditional = contrib.getTypeParams();
-        if (mapConditional != null && !mapConditional.isEmpty())
-            {
-            // conditional incorporation; check if the actual parameters apply
-            assert listParams.size() == mapConditional.size();
-
-            Iterator<TypeConstant> iterParamType = listParams.iterator();
-            Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
-            while (iterParamType.hasNext())
-                {
-                TypeConstant typeParam      = iterParamType.next();
-                TypeConstant typeConstraint = iterConstraint.next();
-
-                if (!typeParam.isA(typeConstraint))
-                    {
-                    // this contribution doesn't apply
-                    return false;
-                    }
-                }
-            }
-        return true;
         }
 
     @Override

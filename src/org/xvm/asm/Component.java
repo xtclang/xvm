@@ -2463,6 +2463,41 @@ public abstract class Component
             }
 
         /**
+         * Check if this "incorporate" contribution is conditional and if so,
+         * whether or not it applies to this type
+         *
+         * @param listParams  actual parameter types
+         *
+         * @return true iff the contribution is unconditional or applies to this type
+         */
+        public boolean checkConditionalIncorporate(List<TypeConstant> listParams)
+            {
+            assert getComposition() == Composition.Incorporates;
+
+            Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
+            if (mapConditional != null && !mapConditional.isEmpty())
+                {
+                // conditional incorporation; check if the actual parameters apply
+                assert listParams.size() == mapConditional.size();
+
+                Iterator<TypeConstant> iterParamType = listParams.iterator();
+                Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
+                while (iterParamType.hasNext())
+                    {
+                    TypeConstant typeParam      = iterParamType.next();
+                    TypeConstant typeConstraint = iterConstraint.next();
+
+                    if (!typeParam.isA(typeConstraint))
+                        {
+                        // this contribution doesn't apply
+                        return false;
+                        }
+                    }
+                }
+            return true;
+            }
+
+        /**
          * @see XvmStructure#registerConstants(ConstantPool)
          */
         protected void registerConstants(ConstantPool pool)

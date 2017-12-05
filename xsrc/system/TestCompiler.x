@@ -56,7 +56,7 @@ class TestCompiler
             extends MyClass9<String, V10> {}
 
 
-    static Void test()
+    static Void test1()
         {
 //        MyClass1<String, Int> c1;
 //        Consumer<Int> finder1 = c1; // OK; duck-typing
@@ -79,20 +79,110 @@ class TestCompiler
 
         MyClass7 c7;
         Consumer<String> finder7 = c7; // OK; "Extends-Extends-Implements"
-//        Consumer<Int> finder7a = c7; // fail; "Extends-Extends-Implements"
 
         MyClass8<String, Number> c8;
         MyConsumer<Int> finder8 = c8; // OK; "Incorporates"
         Consumer<Int> finder8a = c8; // OK; "Incorporates-Extends"
 
-        MyClass9<String, String> c9;
-//        MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
-//        Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
-
         MyClass10<Number> c10;
         MyConsumer<Number> finder10 = c10; // OK; "Extends-Incorporates"
+        }
 
+    static Void test1ExpectedFailure1()
+        {
+        MyClass7 c7ExpectedFailure;
+        Consumer<Int> finder7a = c7ExpectedFailure;
+        }
+
+    static Void test1ExpectedFailure2()
+        {
+        MyClass9<String, String> c9;
+        MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
+        }
+
+    static Void test1ExpectedFailure3()
+        {
+        MyClass9<String, String> c9;
+        Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
+        }
+
+    static Void test1ExpectedFailure4()
+        {
         MyClass10<String> c10a;
-//        MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
+        MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
+        }
+
+    class P<T>
+        {
+        private T value;
+
+        T produce() {return value;}
+        }
+
+    interface C<T>
+        {
+        Void consume(T value) {}
+        }
+
+    class PC<T> extends P<T> implements C<T>
+        {
+        }
+
+    class FakePCofObject
+        {
+        Object produce() {return "";}
+        Void consume(Object value) {}
+        }
+
+    class FakePCofString
+        {
+        String produce() {return "";}
+        Void consume(String value) {}
+        }
+
+    static Void testPC()
+        {
+//        C<Object>  y1;
+//        C<String>  x1 = y1;
+//
+//        PC<Object> y2;
+//        C<String>  x2 = y2;
+//
+//        P<String>  y5;
+//        P<Object>  x5 = y5;
+
+        PC<String> y6;
+        PC<Object> x6 = y6; // ok, but the RT needs to "safe-wrap" the consuming methods
+        }
+
+    static Void testPCExpectedFailure1(C<String> y3)
+        {
+        C<Object> x3 = y3;
+        }
+
+    static Void testPCExpectedFailure2(PC<String> y4)
+        {
+        C<Object> x4 = y4;
+        }
+
+    static Void testPCExpectedFailure3(P<Object> y5)
+        {
+        P<String> x5 = y5;
+        }
+
+    static Void testPCExpectedFailure4(PC<String> y7)
+        {
+        FakePCofObject x7 = y7;
+        }
+
+    static Void testPCExpectedFailure5(PC<Object> y8)
+        {
+        PC<String> x8 = y8;
+        }
+
+    static Int test2()
+        {
+        Int i = 0;
+        return i;
         }
     }

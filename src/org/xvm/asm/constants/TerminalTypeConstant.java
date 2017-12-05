@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.CompositeComponent;
@@ -500,7 +501,7 @@ public class TerminalTypeConstant
         if (constIdThis.equals(constIdThat))
             {
             return new ContributionChain(
-                    new Contribution(Component.Composition.Equal, null));
+                    new Contribution(Composition.Equal, null));
             }
 
         switch (constIdThis.getFormat())
@@ -524,8 +525,21 @@ public class TerminalTypeConstant
                         // 4. this or any of its contributions (recursively) delegates to that
                         // 5. this or any of its contributions (recursively) declares to implement that
                         {
-                        ClassStructure clzThis = (ClassStructure) ((IdentityConstant) constIdThis).getComponent();
-                        return clzThis.findContribution((IdentityConstant) constIdThat);
+                        IdentityConstant idThis  = (IdentityConstant) constIdThis;
+                        IdentityConstant idThat  = (IdentityConstant) constIdThat;
+                        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+
+                        ContributionChain chain = clzThis.findContribution(idThat);
+                        if (chain == null)
+                            {
+                            ClassStructure clzThat = (ClassStructure) idThat.getComponent();
+                            if (clzThat.getFormat() == Component.Format.INTERFACE)
+                                {
+                                chain = new ContributionChain(new Contribution(
+                                    Composition.MaybeDuckType, idThat.asTypeConstant()));
+                                }
+                            }
+                        return chain;
                         }
 
                     case Typedef:

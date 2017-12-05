@@ -285,11 +285,12 @@ public class ClassStructure
      */
     public ContributionChain findContribution(IdentityConstant constId)
         {
-        if (constId.equals(getConstantPool().clzObject()))
+        ConstantPool pool = getConstantPool();
+        if (constId.equals(pool.clzObject()))
             {
             // everything is considered to extend Object (even interfaces)
             return new ContributionChain(
-                new Contribution(Composition.Extends, getConstantPool().typeObject()));
+                new Contribution(Composition.Extends, pool.typeObject()));
             }
 
         if (constId.equals(getIdentityConstant()))
@@ -306,6 +307,12 @@ public class ClassStructure
             if (constContrib.equals(constId))
                 {
                 return new ContributionChain(contrib);
+                }
+
+            if (constContrib.equals(pool.clzObject()))
+                {
+                // trivial Object contribution
+                continue;
                 }
 
             switch (contrib.getComposition())
@@ -341,14 +348,6 @@ public class ClassStructure
                 default:
                     throw new IllegalStateException();
                 }
-            }
-
-        ClassStructure clzThat = (ClassStructure) constId.getComponent();
-        if (clzThat.getFormat() == Format.INTERFACE)
-            {
-            return new ContributionChain(
-                new Contribution(Composition.MaybeDuckType,
-                    clzThat.getIdentityConstant().asTypeConstant()));
             }
 
         return null;
@@ -403,6 +402,7 @@ public class ClassStructure
                     }
                 }
             }
+        // TODO: recurse for all contributions
         return false;
         }
 
@@ -455,6 +455,7 @@ public class ClassStructure
                     }
                 }
             }
+        // TODO: recurse for all contributions
         return false;
         }
 
