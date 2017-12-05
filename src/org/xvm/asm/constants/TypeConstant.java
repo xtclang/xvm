@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -16,7 +17,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.TypeSet;
@@ -456,37 +457,23 @@ public abstract class TypeConstant
         }
 
     /**
-     * During compilation and assembly, this method is used to collect detailed error information
-     * that can be determined only by fully resolving (flattening) and analyzing the type's
-     * information. The resulting errors cannot be determined simply by analyzing the various
-     * ClassStructures, etc., because it is possible that the error only appears when a class is
-     * parameterized with a specific type, for example.
+     * Accumulate any information for the type represented by this TypeConstant into the passed
+     * {@link TypeInfo}, logging
      *
-     * @param errs  the error list to log any errors to; null is acceptable, but will cause any
-     *              detected error in the type hierarchy to be thrown as a  runtime exception
+     * @param access
+     * @param typeinfo
+     * @param errs
+     *
+     * @return true if the resolution process was halted before it completed, for example if the
+     *         error list reached its size limit
      */
-    public void validate(ErrorList errs)
+    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
         {
-        // TODO this is stateful, i.e. should happen at most once
-        // TODO need to know the accessibility of "this" (pass to resolveStructure)
-        // TODO need a recursive function that drills down through the hierarchy    (resolveStructure)
-
-        // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
-        // TODO singleton? abstract?
+        return getUnderlyingType().resolveStructure(access, typeinfo, errs);
         }
 
-    class ParamInfo {}
-    class PropertyInfo {}
-    class MethodInfo {}
-
-    protected void resolveStructure(TypeConstant typeResolving,
-            Map<String, ParamInfo> mapParams,
-            Map<String, PropertyInfo> mapProps,
-            Map<SignatureConstant, MethodInfo> mapMethods,
-            Access access, ErrorList errs)
-        {
-
-        }
+    // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
+    // TODO singleton? abstract?
 
     /**
      * Obtain all of the methods -- including functions -- that would be available on this type.
@@ -838,6 +825,39 @@ public abstract class TypeConstant
     protected abstract void assemble(DataOutput out)
             throws IOException;
 
+    /**
+     * During compilation and assembly, this method is used to collect detailed error information
+     * that can be determined only by fully resolving (flattening) and analyzing the type's
+     * information. The resulting errors cannot be determined simply by analyzing the various
+     * ClassStructures, etc., because it is possible that the error only appears when a class is
+     * parameterized with a specific type, for example.
+     *
+     * @param errs  the error list to log any errors to; null is acceptable, but will cause any
+     *              detected error in the type hierarchy to be thrown as an IllegalStateException
+     *
+     * @return true if the validation process was halted before it completed, for example if the
+     *         error list reached its size limit
+     */
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        if (super.validate(errs))
+            {
+            return true;
+            }
+
+        if (m_typeinfo == null)
+            {
+            m_typeinfo = new TypeInfo(this);
+            if (resolveStructure(getAccess(), m_typeinfo, errs == null ? ErrorListener.RUNTIME : errs))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
     @Override
     public String getDescription()
         {
@@ -849,4 +869,172 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
+
+
+    // -----inner classes --------------------------------------------------------------------------
+
+    /**
+     * Represents the "flattened" information about the type.
+     */
+    public static class TypeInfo
+        {
+        public TypeInfo(TypeConstant type)
+            {
+            assert type != null;
+            this.type = type;
+            }
+
+        public final TypeConstant                        type;
+        public final Map<String, ParamInfo>              parameters = new HashMap<>(7);
+        public final Map<String, PropertyInfo>           properties = new HashMap<>(7);
+        public final Map<SignatureConstant, MethodInfo>  methods    = new HashMap<>(7);
+        }
+
+    /**
+     * Represents a single type parameter.
+     */
+    public static class ParamInfo
+        {
+        public ParamInfo(String sName)
+            {
+            name = sName;
+            }
+
+        public String getName()
+            {
+            return name;
+            }
+
+        public TypeConstant getActualType()
+            {
+            return typeActual;
+            }
+
+        void setTypeActual(TypeConstant type)
+            {
+            typeActual = type;
+            }
+
+        public TypeConstant getConstraintType()
+            {
+            return typeConstraint;
+            }
+
+        void setTypeConstraint(TypeConstant type)
+            {
+            typeConstraint = type;
+            }
+
+        private String       name;
+        private TypeConstant typeActual;
+        private TypeConstant typeConstraint;
+
+        // TODO - not sure if this is needed
+        // private Set<Constant> setUsedBy = new HashSet<>(7);
+        }
+
+
+    /**
+     * Represents a single property.
+     */
+    public static class PropertyInfo
+        {
+        public PropertyInfo(Constant constDeclares, TypeConstant typeProp, String sName)
+            {
+            constDeclLevel = constDeclares;
+            type           = typeProp;
+            name           = sName;
+            }
+
+        public String getName()
+            {
+            return name;
+            }
+
+        public TypeConstant getType()
+            {
+            return type;
+            }
+
+        public boolean isReadOnly()
+            {
+            return fRO;
+            }
+
+        void markReadOnly()
+            {
+            fRO = true;
+            }
+
+        public boolean isFieldRequired()
+            {
+            return fField;
+            }
+
+        void markFieldRequired()
+            {
+            fField = true;
+            }
+
+        public boolean isCustomLogic()
+            {
+            return fLogic;
+            }
+
+        void markCustomLogic()
+            {
+            fLogic = true;
+            }
+
+        public boolean isAnnotated()
+            {
+            return fAnnotated;
+            }
+
+        void markAnnotated()
+            {
+            fAnnotated = true;
+            }
+
+        public Constant getDeclarationLevel()
+            {
+            return constDeclLevel;
+            }
+
+        private String       name;
+        private TypeConstant type;
+        private boolean      fRO;
+        private boolean      fField;
+        private boolean      fLogic;
+        private boolean      fAnnotated;
+        private Constant     constDeclLevel;
+        private Map<SignatureConstant, MethodInfo> methods;
+        }
+
+
+    /**
+     * Represents a single method (or function).
+     */
+    public static class MethodInfo
+        {
+        public MethodInfo(SignatureConstant constSig)
+            {
+            signature = constSig;
+            }
+
+        public SignatureConstant getSignature()
+            {
+            return signature;
+            }
+
+        private SignatureConstant signature;
+        }
+
+
+    // -----fields ---------------------------------------------------------------------------------
+
+    /**
+     * The resolved information about the type, its properties, and its methods.
+     */
+    private TypeInfo m_typeinfo;
     }

@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 
 
 /**
@@ -126,33 +127,25 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
+    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
         {
-        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
-        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
-        if (set1.equals(set2))
-            {
-            return;
-            }
+        // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
+        // first resolve T1 and T2, and then add all the information from T1 that is not in T2 to
+        // the passed-in TypeInfo; the primary complication at this point is that we may have
+        // type parameter information that will be required to resolve either T1 and/or T2
+        // TODO
+        return false;
 
-        Set<MethodConstant> setDifference = new HashSet<>(set1);
-        setDifference.removeAll(set2);
-        setOps.addAll(setDifference);
-        }
-
-    @Override
-    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
-        {
-        Set set1 = m_constType1.getAutoMethods();
-        Set set2 = m_constType2.getAutoMethods();
-        if (set1.equals(set2))
-            {
-            return;
-            }
-
-        Set<MethodConstant> setDifference = new HashSet<>(set1);
-        setDifference.removeAll(set2);
-        setAuto.addAll(setDifference);
+//        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
+//        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
+//        if (set1.equals(set2))
+//            {
+//            return;
+//            }
+//
+//        Set<MethodConstant> setDifference = new HashSet<>(set1);
+//        setDifference.removeAll(set2);
+//        setOps.addAll(setDifference);
         }
 
 

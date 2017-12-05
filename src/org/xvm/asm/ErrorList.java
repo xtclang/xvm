@@ -95,7 +95,7 @@ public class ErrorList
     /**
      * Represents the information logged for a single error.
      */
-    public class ErrorInfo
+    public static class ErrorInfo
         {
         /**
          * Construct an ErrorInfo object.

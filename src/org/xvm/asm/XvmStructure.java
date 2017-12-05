@@ -15,6 +15,8 @@ import java.util.Map;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.util.Severity;
+
 
 /**
  * Represents any of the various XVM structures, which are hierarchical in nature, and include such
@@ -450,6 +452,19 @@ public abstract class XvmStructure
             }
 
         return false;
+        }
+
+    /**
+     * Log an error against this structure.
+     *
+     * @param errs     the error list to log to, or null to use the runtime ErrorListener
+     * @param sev      the severity of the error
+     * @param sCode    the error code
+     * @param aoParam  the parameters of the error
+     */
+    protected void log(ErrorList errs, Severity sev, String sCode, Object ... aoParam)
+        {
+        (errs == null ? ErrorListener.RUNTIME : errs).log(sev, sCode, aoParam, this);
         }
 
 

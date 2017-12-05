@@ -149,20 +149,6 @@ public class AccessTypeConstant
         return m_constType.unwrapForCongruence();
         }
 
-    @Override
-    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName,
-            String sOp,
-            int cParams)
-        {
-        m_constType.collectOpMethods(setOps, m_access, sName, sOp, cParams);
-        }
-
-    @Override
-    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
-        {
-        m_constType.collectAutoMethods(setAuto, m_access);
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

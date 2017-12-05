@@ -4,10 +4,8 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Set;
-
 import org.xvm.asm.ConstantPool;
-
+import org.xvm.asm.ErrorListener;
 
 
 /**
@@ -94,17 +92,10 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
+    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
         {
-        m_constType1.collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
-        m_constType2.collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
-        }
-
-    @Override
-    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
-        {
-        m_constType1.collectAutoMethods(setAuto, access);
-        m_constType2.collectAutoMethods(setAuto, access);
+        return getUnderlyingType() .resolveStructure(access, typeinfo, errs)
+            || getUnderlyingType2().resolveStructure(access, typeinfo, errs);
         }
 
 

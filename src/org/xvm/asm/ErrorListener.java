@@ -8,8 +8,6 @@ import org.xvm.util.Severity;
  * A listener for errors being reported about XVM structures, such as would
  * be reported by an assembler, a linker, or a runtime XVM verification
  * process.
- *
- * @author cp 2015.11.13
  */
 public interface ErrorListener
     {
@@ -28,4 +26,26 @@ public interface ErrorListener
      *         false to attempt continue the process
      */
     public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs);
+
+    /**
+     * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
+     * and non-errors will go to standard out.
+     */
+    public static final ErrorListener RUNTIME = new ErrorListener()
+        {
+        @Override
+        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
+            {
+            String s = new ErrorList.ErrorInfo(severity, sCode, aoParam, xs).toString();
+            if (severity.ordinal() >= Severity.ERROR.ordinal())
+                {
+                throw new IllegalStateException(s);
+                }
+            else
+                {
+                System.out.println(s);
+                return false;
+                }
+            }
+        };
     }
