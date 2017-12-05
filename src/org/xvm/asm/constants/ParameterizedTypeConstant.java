@@ -370,51 +370,20 @@ public class ParameterizedTypeConstant
             assert clzParent.getTypeParams().size() == listActualTypes.size();
 
             Contribution contrib = listContrib.get(i);
-            TypeConstant typeContrib = contrib.getTypeConstant();
 
-            if (!typeContrib.isParamsSpecified())
+            listActualTypes = contrib.transformActualTypes(clzParent, listActualTypes);
+
+            if (listActualTypes == null)
                 {
-                // non-parameterized contribution
-                return Collections.emptyList();
-                }
-
-            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
-            List<TypeConstant> listActual = new ArrayList<>(listContribParams.size());
-
-            for (TypeConstant typeContribParam : listContribParams)
-                {
-                Constant constId = typeContribParam.getDefiningConstant();
-
-                if (constId.getFormat() == Constant.Format.Property)
-                    {
-                    PropertyConstant prop = (PropertyConstant) constId;
-
-                    int ix = clzParent.indexOfFormalParameter(prop.getName());
-                    if (ix < 0)
-                        {
-                        throw new IllegalStateException(
-                            "Failed to find " + prop.getName() + " in " + clzParent);
-                        }
-                    listActual.add(listActualTypes.get(ix));
-                    }
-                else
-                    {
-                    listActual.add(typeContribParam);
-                    }
-                }
-
-            if (contrib.getComposition() == Composition.Incorporates &&
-                !contrib.checkConditionalIncorporate(listActual))
-                {
-                return null;
+                // conditional incorporation doesn't apply
+                break;
                 }
 
             if (i > 0)
                 {
                 clzParent = (ClassStructure)
-                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                    ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).getComponent();
                 }
-            listActualTypes = listActual;
             }
 
         return listActualTypes;
@@ -427,17 +396,17 @@ public class ParameterizedTypeConstant
             ((IdentityConstant) this.getDefiningConstant()).getComponent();
         assert clzThis.indexOfFormalParameter(sTypeName) >= 0;
 
-        return clzThis.consumesFormalType(sTypeName, access);
+        return clzThis.consumesFormalType(sTypeName, access, getParamTypes());
         }
 
     @Override
     public boolean producesFormalType(String sTypeName, Access access)
         {
         ClassStructure clzThis = (ClassStructure)
-            ((IdentityConstant) this.getDefiningConstant()).getComponent();
+            ((IdentityConstant) getDefiningConstant()).getComponent();
         assert clzThis.indexOfFormalParameter(sTypeName) >= 0;
 
-        return clzThis.producesFormalType(sTypeName, access);
+        return clzThis.producesFormalType(sTypeName, access, getParamTypes());
         }
 
     @Override // TODO: remove

@@ -357,7 +357,7 @@ public class ClassStructure
      * Determine if this template consumes a formal type with the specified name for the specified
      * access policy.
      */
-    public boolean consumesFormalType(String sName, Access access)
+    public boolean consumesFormalType(String sName, Access access, List<TypeConstant> listActual)
         {
         for (Component child : children())
             {
@@ -402,7 +402,52 @@ public class ClassStructure
                     }
                 }
             }
-        // TODO: recurse for all contributions
+
+        // check the contributions
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                    // TODO:
+                    break;
+
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Into:
+                case Extends:
+                    {
+                    String sGenericName = contrib.transformGenericName(this, sName);
+                    if (sGenericName != null)
+                        {
+                        List<TypeConstant> listContribActual =
+                            contrib.transformActualTypes(this, listActual);
+
+                        if (listContribActual != null)
+                            {
+                            ClassStructure clzSuper = (ClassStructure)
+                                ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                            if (clzSuper.consumesFormalType(sGenericName, access, listContribActual))
+                                {
+                                return true;
+                                }
+                            }
+                        }
+                    break;
+                    }
+
+                case Enumerates:
+                    // TODO:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
         return false;
         }
 
@@ -410,7 +455,7 @@ public class ClassStructure
      * Determine if this template produces a formal type with the specified name for the
      * specified access policy.
      */
-    public boolean producesFormalType(String sName, Access access)
+    public boolean producesFormalType(String sName, Access access, List<TypeConstant> listActual)
         {
         for (Component child : children())
             {
@@ -455,7 +500,52 @@ public class ClassStructure
                     }
                 }
             }
-        // TODO: recurse for all contributions
+
+        // check the contributions
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                    // TODO:
+                    break;
+
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Into:
+                case Extends:
+                    {
+                    String sGenericName = contrib.transformGenericName(this, sName);
+                    if (sGenericName != null)
+                        {
+                        List<TypeConstant> listContribActual =
+                            contrib.transformActualTypes(this, listActual);
+
+                        if (listContribActual != null)
+                            {
+                            ClassStructure clzSuper = (ClassStructure)
+                                ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                            if (clzSuper.producesFormalType(sGenericName, access, listContribActual))
+                                {
+                                return true;
+                                }
+                            }
+                        }
+                    break;
+                    }
+
+                case Enumerates:
+                    // TODO:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
         return false;
         }
 
