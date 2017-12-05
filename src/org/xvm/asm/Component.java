@@ -21,7 +21,6 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -2453,6 +2452,137 @@ public abstract class Component
                 }
             assert (map = Collections.unmodifiableMap(map)) != null;
             return map;
+            }
+
+        /**
+         * Transform the specified list of actual types for the specified class based on
+         * this contribution definition.
+         *
+         * @param clzParent   the parent class structure
+         * @param listActual  the actual type list
+         *
+         * @return the transformed list of types or null if the conditional incorporation
+         *         does not apply for the specified types
+         */
+        public List<TypeConstant> transformActualTypes(ClassStructure clzParent,
+                                                       List<TypeConstant> listActual)
+            {
+            TypeConstant typeContrib = getTypeConstant();
+
+            if (!typeContrib.isParamsSpecified())
+                {
+                // non-parameterized contribution
+                return Collections.emptyList();
+                }
+
+            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
+            List<TypeConstant> listContribActual = new ArrayList<>(listContribParams.size());
+
+            for (TypeConstant typeContribParam : listContribParams)
+                {
+                Constant constId = typeContribParam.getDefiningConstant();
+
+                if (constId.getFormat() == Constant.Format.Property)
+                    {
+                    PropertyConstant prop = (PropertyConstant) constId;
+
+                    int ix = clzParent.indexOfFormalParameter(prop.getName());
+                    if (ix < 0)
+                        {
+                        throw new IllegalStateException(
+                            "Failed to find " + prop.getName() + " in " + clzParent);
+                        }
+                    listContribActual.add(listActual.get(ix));
+                    }
+                else
+                    {
+                    listContribActual.add(typeContribParam);
+                    }
+                }
+
+            return getComposition() != Composition.Incorporates ||
+                    checkConditionalIncorporate(listContribActual) ?
+                listContribActual : null;
+            }
+
+        /**
+         * Transform the generic type name for the specified class based on
+         * this contribution definition.
+         *
+         * @param clzParent  the parent class structure
+         * @param sName      the generic type name
+         *
+         * @return the transformed generic type name or null if this contribution
+         *         doesn't use the specified generic type
+         */
+        public String transformGenericName(ClassStructure clzParent, String sName)
+            {
+            TypeConstant typeContrib = getTypeConstant();
+
+            if (!typeContrib.isParamsSpecified())
+                {
+                // non-parameterized contribution
+                return null;
+                }
+
+            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
+
+            for (TypeConstant typeContribParam : listContribParams)
+                {
+                Constant constId = typeContribParam.getDefiningConstant();
+
+                if (constId.getFormat() == Constant.Format.Property)
+                    {
+                    PropertyConstant prop = (PropertyConstant) constId;
+
+                    if (prop.getName().equals(sName))
+                        {
+                        int ix = clzParent.indexOfFormalParameter(prop.getName());
+                        if (ix < 0)
+                            {
+                            throw new IllegalStateException(
+                                "Failed to find " + prop.getName() + " in " + clzParent);
+                            }
+                        return clzParent.getTypeParamsAsList().get(ix).getKey().getValue();
+                        }
+                    }
+                }
+            return null;
+            }
+
+        /**
+         * Check if this "incorporate" contribution is conditional and if so,
+         * whether or not it applies to this type
+         *
+         * @param listParams  actual parameter types
+         *
+         * @return true iff the contribution is unconditional or applies to this type
+         */
+        protected boolean checkConditionalIncorporate(List<TypeConstant> listParams)
+            {
+            assert getComposition() == Composition.Incorporates;
+
+            Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
+            if (mapConditional != null && !mapConditional.isEmpty())
+                {
+                // conditional incorporation; check if the actual parameters apply
+                assert listParams.size() == mapConditional.size();
+
+                Iterator<TypeConstant> iterParamType = listParams.iterator();
+                Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
+                while (iterParamType.hasNext())
+                    {
+                    TypeConstant typeParam      = iterParamType.next();
+                    TypeConstant typeConstraint = iterConstraint.next();
+
+                    if (!typeParam.isA(typeConstraint))
+                        {
+                        // this contribution doesn't apply
+                        return false;
+                        }
+                    }
+                }
+            return true;
             }
 
         /**

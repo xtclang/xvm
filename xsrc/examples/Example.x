@@ -2790,15 +2790,15 @@ class FakePCofString
     Void c(String value) {...}
     }
 
-C<String>      x = new C<Object>();  // ok
-C<String>      x = new PC<Object>();  // ok
-C<Object>      x = new C<String>();  // fails
-C<Object>      x = new PC<String>(); // fails
-P<Object>      x = new P<String>();  // ok
-P<String>      x = new P<Object>();  // fails
-PC<Object>     x = new PC<String>(); // ok, but the RT needs to "safe-wrap" the consuming methods
-FakePCofObject x = new PC<String>(); // fails
-PC<String>     x = new PC<Object>(); // fails
+C<String>      x1 = new C<Object>();  // ok
+C<String>      x2 = new PC<Object>();  // ok
+C<Object>      x3 = new C<String>();  // fails
+C<Object>      x4 = new PC<String>(); // fails
+P<Object>      x5 = new P<String>();  // ok
+P<String>      x6 = new P<Object>();  // fails
+PC<Object>     x7 = new PC<String>(); // ok, but the RT needs to "safe-wrap" the consuming methods
+FakePCofObject x8 = new PC<String>(); // fails
+PC<String>     x9 = new PC<Object>(); // fails
 
 class C<T>
     {

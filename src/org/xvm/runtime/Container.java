@@ -112,7 +112,8 @@ public class Container
             MethodStructure mtRun = app.getDeclaredMethod("run", TypeSet.VOID, TypeSet.VOID);
             if (mtRun == null)
                 {
-                throw new IllegalArgumentException("Missing run() method for " + f_sAppName);
+                System.err.println("Missing run() method for " + f_sAppName);
+                return;
                 }
 
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);

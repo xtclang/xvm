@@ -425,6 +425,7 @@ public class MethodDeclarationStatement
         else
             {
             Code code = method.createCode();
+            String sPath = method.getIdentityConstant().getPathString();
             try
                 {
                 ErrorList errList = (ErrorList) errs; // TODO: temporary
@@ -435,27 +436,47 @@ public class MethodDeclarationStatement
                 // TODO: temporary
                 if (errList.getErrors().isEmpty())
                     {
-                    String sPath = method.getIdentityConstant().getPathString();
                     if (sPath.startsWith("Test"))
                         {
-                        System.out.println("Successfully compiled: " + sPath);
+                        if (sPath.contains("ExpectedFailure"))
+                            {
+                            System.err.println("Compilation should have failed: " + sPath);
+                            }
+                        else
+                            {
+                            System.out.println("Successfully compiled: " + sPath);
+                            }
                         }
                     }
                 else
                     {
-                    System.err.println("Compilation error: " +
-                        method.getIdentityConstant().getPathString());
-                    errList.getErrors().forEach(System.err::println);
+                    if (sPath.contains("TestCompiler"))
+                        {
+                        if (sPath.contains("ExpectedFailure"))
+                            {
+                            System.out.println("Successfully failed compilation: " + sPath);
+                            }
+                        else
+                            {
+                            System.err.println("Compilation error: " + sPath);
+                            errList.getErrors().forEach(System.err::println);
+                            }
+                        }
+
                     errList.clear();
                     method.setNative(true);
                     }
                 }
             catch (UnsupportedOperationException e) // TODO temporary
                 {
-                String s = e.getMessage();
+                String sMsg = e.getMessage();
                 log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                        + method.getIdentityConstant() + (s == null ? "" : ": " + s));
+                        + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
                 method.setNative(true);
+                if (sPath.startsWith("TestCompiler"))
+                    {
+                    System.err.println("Compilation error: " + sPath + " " + sMsg);
+                    }
                 }
             }
 
