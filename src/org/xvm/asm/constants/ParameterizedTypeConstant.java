@@ -221,7 +221,7 @@ public class ParameterizedTypeConstant
         assert listThat.size() == clzThat.getTypeParams().size();
 
         Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
-
+        boolean fWrap = false;
         for (int i = 0, c = listThat.size(); i < c; i++)
             {
             TypeConstant typeThis = listActual.get(i);
@@ -240,10 +240,16 @@ public class ParameterizedTypeConstant
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
+                fWrap = that.consumesFormalType(sName, Access.PUBLIC);
                 continue;
                 }
 
             return null;
+            }
+
+        if (fWrap) // TODO: stuff this information into the chain
+            {
+            System.out.println("Consuming methods should be wrapped: " + this + " -> " + that);
             }
 
         return chain;
