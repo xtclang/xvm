@@ -17,6 +17,7 @@ module Ecstasy.xtclang.org
 
     class Int64
         {
+        @Op Int64 add(Int64 n);
         }
 
     class String

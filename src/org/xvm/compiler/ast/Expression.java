@@ -1,27 +1,22 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.I_Set;
+import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
@@ -607,260 +602,9 @@ public abstract class Expression
      */
     public boolean isAssignableTo(TypeConstant typeThat)
         {
-        TypeConstant typeImplicit = null;
-
-        // first, layer-by-layer peel the "type onion" down to the terminal(s)
-        switch (typeThat.getFormat())
-            {
-            case UnionType:
-                {
-                TypeConstant typeThat1 = typeThat.getUnderlyingType();
-                TypeConstant typeThat2 = typeThat.getUnderlyingType2();
-                if (!(isAssignableTo(typeThat1) && isAssignableTo(typeThat2)))
-                    {
-                    break;
-                    }
-
-                // even though each of the two types was individually assignable to, there are rare
-                // examples that are NOT allowable, such as the literal 0 being assignable to two
-                // different Int classes
-                if (typeThat1.isClassType() && typeThat2.isClassType())
-                    {
-                    HashSet<IdentityConstant> setClasses = new HashSet<>(5);
-                    setClasses.addAll(typeThat1.underlyingClasses());
-                    setClasses.addAll(typeThat2.underlyingClasses());
-                    if (setClasses.size() > 1)
-                        {
-                        // first check if the implicit type is a sub-class and/or impersonator of
-                        // all of the classes implied by the union type
-                        typeImplicit = getImplicitType();
-                        if (typeImplicit.isA(typeThat))
-                            {
-                            return true;
-                            }
-
-                        // find a solution where there is one class that is a sub-class and/or
-                        // impersonator of all other classes
-                        int cClz = setClasses.size();
-                        ClassStructure[] aclz = new ClassStructure[cClz];
-                        int iClz = 0;
-                        for (IdentityConstant constClz : setClasses)
-                            {
-                            aclz[iClz++] = (ClassStructure) constClz.getComponent();
-                            }
-
-                        // TODO currently this checks "extendsClass", but it needs a broader check that includes mixins, impersonation, etc.
-                        ClassStructure clzSub = aclz[0];
-                        NextClass:
-                        for (iClz = 1; iClz < cClz; ++iClz)
-                            {
-                            ClassStructure clzCur = aclz[iClz];
-                            if (clzSub == null)
-                                {
-                                // no current solution; see if the current class can be a sub to all
-                                // the previous classes
-                                for (int iSuper = 0; iSuper < iClz; ++iSuper)
-                                    {
-                                    if (!clzSub.extendsClass(aclz[iSuper].getIdentityConstant()))
-                                        {
-                                        // the current one is not a sub of all the previous ones
-                                        continue NextClass;
-                                        }
-                                    }
-
-                                // the current one IS a sub of all the previous ones!
-                                clzSub = clzCur;
-                                }
-                            else if (clzSub.extendsClass(clzCur.getIdentityConstant()))
-                                {
-                                // the current solution is still a good solution
-                                continue NextClass;
-                                }
-                            else if (clzCur.extendsClass(clzSub.getIdentityConstant()))
-                                {
-                                // the current one appears to be a better solution than the previous
-                                clzSub = clzCur;
-                                }
-                            else
-                                {
-                                // neither is a sub of the other
-                                clzSub = null;
-                                }
-                            }
-
-                        if (clzSub == null)
-                            {
-                            // no solution found
-                            break;
-                            }
-                        }
-                    }
-
-                return true;
-                }
-
-            case IntersectionType:
-                {
-                if (isAssignableTo(typeThat.getUnderlyingType()) ||
-                        isAssignableTo(typeThat.getUnderlyingType2()))
-                    {
-                    return true;
-                    }
-
-                // even though neither of the two types was individually assignable to, it is
-                // possible that the intersection represents a duck-type-able interface, assuming
-                // that none of the underlying types is a class
-                // TODO - verify that none of the underlying types is a class type
-                // TODO - resolve the intersection type into an interface type, and test assignability to that
-
-                break;
-                }
-
-            case DifferenceType:
-                {
-                // TODO - resolve the difference type into an interface type, and test assignability to that
-
-                break;
-                }
-
-            case ImmutableType:
-                {
-                // it is assumed that the expression is assignable to an immutable type if the
-                // expression can be assigned to the specified type (without immutability specified),
-                // and the expression is constant (which implies that the expression must be smart
-                // enough to know how to compile itself as an immutable-type expression)
-                if (isConstant() && isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    return true;
-                    }
-
-                break;
-                }
-
-            case AccessType:
-                {
-                // regardless of the accessibility override, assignability to the non-overridden
-                // type is a pre-requisite
-                if (!isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    break;
-                    }
-
-                if (typeThat.getAccess() != Access.PUBLIC)
-                    {
-                    // the non-public type needs to be flattened to an interface and evaluated
-                    // TODO - resolve the non-public type into an interface type, and test assignability to that
-
-                    break;
-                    }
-
-                return true;
-                }
-
-            case ParameterizedType:
-                {
-                if (!isAssignableTo(typeThat.getUnderlyingType()))
-                    {
-                    break;
-                    }
-
-                // either this expression evaluates implicitly to the same parameterized type (or a  itself, or we
-
-                // the non-parameterized type was assignable to; flatten the parameterized type into an
-                // interface and evaluate
-                // TODO
-
-                return true;
-                }
-
-            case AnnotatedType:
-                {
-                // TODO
-                notImplemented();
-                break;
-                }
-
-            case TerminalType:
-                {
-                if (typeThat.isEcstasy("Object"))
-                    {
-                    // everything is assignable to Object
-                    return true;
-                    }
-
-                // an expression is assignable to a type, by default, if its implicit type is
-                // assignable to that type; this is over-ridden; this will probably need to be
-                // overwritten by various expressions
-                typeImplicit = getImplicitType();
-                if (typeImplicit.isA(typeThat))
-                    {
-                    return true;
-                    }
-
-                break;
-                }
-
-            default:
-                throw new IllegalStateException("format=" + typeThat.getFormat());
-            }
-
-        // obtain the implicit type if we have not already done so
-        if (typeImplicit == null)
-            {
-            typeImplicit = getImplicitType();
-            }
-
-        // find all of the possible @Auto conversion functions for the type of the current
-        // expression, and for each one, test whether the result of the conversion is assignable to
-        // the specified type:
-        // - if there are no solutions, then assignment is not possible
-        // - if there is one solution, then assignment is possible
-        // - if there is more than one solution, then assignment is only possible if all of the
-        //   solutions result in the same type
-        TypeConstant         typeSolution = null;
-        Set<TypeConstant>    setTested    = new HashSet<>();
-        List<MethodConstant> listPossible = new ArrayList<>(typeImplicit.autoConverts());
-        for (int i = 0; i < listPossible.size(); ++i)
-            {
-            MethodConstant constMethod = listPossible.get(i);
-            TypeConstant   typeReturn  = constMethod.getRawReturns()[0];
-
-            // make sure we don't try any more conversion methods that return the same type
-            if (!setTested.add(typeReturn))
-                {
-                // we already tested a conversion to this same type
-                continue;
-                }
-
-            // check to see if this conversion gets us where we want to go
-            // TODO this needs to be a full "is assignable to" test, not just an "isA" test
-            if (typeReturn.isA(typeThat))
-                {
-                if (typeSolution == null)
-                    {
-                    // when we actually implement this, we will need a chain of conversions that got
-                    // us here, but to answer this question, we just need to know that it is
-                    // possible to get here at all
-                    typeSolution = typeReturn;
-                    }
-                else if (typeSolution.equals(typeReturn))
-                    {
-                    // we already found this solution
-                    continue;
-                    }
-                else
-                    {
-                    // two different solutions means no solution, i.e. the result is ambiguous
-                    return false;
-                    }
-                }
-
-            // it is possible that the type that we got to can be further converted to get us where
-            // we want to ultimately get to
-            listPossible.addAll(typeReturn.autoConverts());
-            }
-
-        return typeSolution != null;
+        TypeConstant typeImplicit = getImplicitType();
+        return typeImplicit.isA(typeThat)
+                || typeImplicit.getTypeInfo().findConversion(typeThat) != null;
         }
 
     /**
@@ -955,14 +699,17 @@ public abstract class Expression
         Argument argOut = argIn;
 
         TypeConstant typeIn = argIn.getRefType();
-        if (!typeIn.equals(typeOut))
+        if (!typeIn.equals(typeOut) && !typeIn.isA(typeOut))
             {
-            // verify that a conversion is possible
-            if (!typeIn.isA(typeOut))
+            MethodConstant constConv = typeIn.getTypeInfo().findConversion(typeOut);
+            if (constConv == null)
                 {
-                // TODO isA() doesn't handle a lot of things that are actually assignable
-                // TODO for things provably not assignable, check for an @Auto method
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
+                }
+            else
+                {
+                argOut = new Register(typeOut);
+                code.add(new Invoke_01(argIn, constConv, argOut));
                 }
             }
 

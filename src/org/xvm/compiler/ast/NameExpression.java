@@ -196,7 +196,7 @@ public class NameExpression
         // validate that the expression can be of the required type
         if (typeRequired != null)
             {
-            if (arg != null && arg.getRefType().isA(typeRequired))  // TODO isConvertibleTo, not isA
+            if (arg != null && !arg.getRefType().isA(typeRequired))  // TODO isConvertibleTo, not isA
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
                 fValid = false;

@@ -19,6 +19,7 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -434,43 +435,37 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName,
-            String sOp,
-            int cParams)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
             case Typedef:
-                getTypedefTypeConstant((TypedefConstant) constant)
-                        .collectOpMethods(setOps, access, sName, sOp, cParams);
-                break;
+                return getTypedefTypeConstant((TypedefConstant) constant)
+                        .resolveStructure(typeinfo, access, params, errs);
 
             case Property:
-                getPropertyTypeConstant((PropertyConstant) constant)
-                        .collectOpMethods(setOps, access, sName, sOp, cParams);
-                break;
+                return getPropertyTypeConstant((PropertyConstant) constant)
+                        .resolveStructure(typeinfo, access, params, errs);
 
             case Register:
-                getRegisterTypeConstant((RegisterConstant) constant)
-                        .collectOpMethods(setOps, access, sName, sOp, cParams);
-                break;
+                return getRegisterTypeConstant((RegisterConstant) constant)
+                        .resolveStructure(typeinfo, access, params, errs);
 
             case Module:
             case Package:
             case Class:
-                // TODO
-                // setOps.addAll(((ClassStructure) ((IdentityConstant) constant)
-                //         .getComponent()).getOpMethods(access, sName, sOp, cParams));
-                break;
+                // load the structure
+                Component component = ((IdentityConstant) constant).getComponent();
+                return resolveClassStructure((ClassStructure) component, typeinfo, access, params, errs);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                // TODO
-                // setOps.addAll(((ClassStructure) ((PseudoConstant) constant)
-                //         .getDeclarationLevelClass().getComponent()).getOpMethods(access, sName, sOp, cParams));
-                break;
+                // currently this is a mindf**k just thinking about what it means, but theoretically
+                // it could be some type represented by a child of a parent of this or whatever ...
+                // TODO - find an example where this happens. particularly in a composition.
+                throw new IllegalStateException("TODO resolveStructures() for " + this + " (" + typeinfo.type + ")");
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -480,49 +475,25 @@ public class TerminalTypeConstant
             }
         }
 
-    @Override
-    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
+    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
         {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Typedef:
-                getTypedefTypeConstant((TypedefConstant) constant)
-                        .collectAutoMethods(setAuto, access);
-                break;
+        assert struct != null;
+        assert typeinfo != null;
+        assert access != null;
 
-            case Property:
-                getPropertyTypeConstant((PropertyConstant) constant)
-                        .collectAutoMethods(setAuto, access);
-                break;
+        // at this point, the typeinfo represents everything that has already been "built up"; our
+        // job is to contribute everything from the class struct to it
 
-            case Register:
-                getRegisterTypeConstant((RegisterConstant) constant)
-                        .collectAutoMethods(setAuto, access);
-                break;
+        // type parameters
+        // TODO
 
-            case Module:
-            case Package:
-            case Class:
-                // TODO
-                // setAuto.addAll(((ClassStructure) ((IdentityConstant) constant)
-                //         .getComponent()).getAutoMethods(access));
-                break;
+        // properties
+        // TODO
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                // TODO
-                // setAuto.addAll(((ClassStructure) ((PseudoConstant) constant)
-                //         .getDeclarationLevelClass().getComponent()).getAutoMethods(access));
-                break;
+        // methods
+        // TODO
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
+        return false;
         }
 
     @Override

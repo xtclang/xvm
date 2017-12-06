@@ -92,10 +92,11 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access,
+            TypeConstant[] params, ErrorListener errs)
         {
-        return getUnderlyingType() .resolveStructure(access, typeinfo, errs)
-            || getUnderlyingType2().resolveStructure(access, typeinfo, errs);
+        return getUnderlyingType() .resolveStructure(typeinfo, access, params, errs)
+            || getUnderlyingType2().resolveStructure(typeinfo, access, params, errs);
         }
 
 

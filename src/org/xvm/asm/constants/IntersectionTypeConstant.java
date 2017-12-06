@@ -4,9 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -111,11 +108,12 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access,
+            TypeConstant[] params, ErrorListener errs)
         {
         // each of the two sub-types needs to be resolved independently, and then only the parts
         // that match should be incorporated into the passed
-        return super.resolveStructure(access, typeinfo, errs);
+        return super.resolveStructure(typeinfo, access, params, errs);
 
 //        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
 //        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);

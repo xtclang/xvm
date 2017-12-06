@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -457,155 +456,36 @@ public abstract class TypeConstant
         }
 
     /**
+     * Obtain all of the information about this type, resolved from its recursive composition.
+     *
+     * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
+     */
+    public TypeInfo getTypeInfo()
+        {
+        if (m_typeinfo == null)
+            {
+            m_typeinfo = new TypeInfo(this);
+            resolveStructure(m_typeinfo, getAccess(), null, ErrorListener.RUNTIME);
+            }
+
+        return m_typeinfo;
+        }
+
+    /**
      * Accumulate any information for the type represented by this TypeConstant into the passed
      * {@link TypeInfo}, logging
      *
+     * @param typeinfo  TODO
      * @param access
-     * @param typeinfo
+     * @param params
      * @param errs
      *
-     * @return true if the resolution process was halted before it completed, for example if the
+     *  @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveStructure(Access access, TypeInfo typeinfo, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
         {
-        return getUnderlyingType().resolveStructure(access, typeinfo, errs);
-        }
-
-    // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
-    // TODO singleton? abstract?
-
-    /**
-     * Obtain all of the methods -- including functions -- that would be available on this type.
-     *
-     * @return a Set of method constants representing all of the methods and functions callable
-     *         through a reference of this type
-     */
-    public Set<MethodConstant> getMethods()
-        {
-        // TODO
-        return Collections.EMPTY_SET;
-        }
-
-    /**
-     * Obtain all of the matching op methods for the specified name and/or the operator string, that
-     * take the specified number of params.
-     *
-     * @param sName    the default op name, such as "add"
-     * @param sOp      the operator string, such as "+"
-     * @param cParams  the number of parameters for the operator method, such as 1
-     *
-     * @return a set of zero or more method constants
-     */
-    public Set<MethodConstant> getOpMethods(String sName, String sOp, int cParams)
-        {
-        Set<MethodConstant> setOps = new HashSet<>(7);
-        collectOpMethods(setOps, Access.PUBLIC, sName, sOp, cParams);
-        return setOps;
-        }
-
-    /**
-     * For this type, find all of the ops that match the name and/or the operator string that take
-     * the specified number of params.
-     *
-     * @param setOps   the set to contribute to
-     * @param access   the minimum accessibility that matching methods must have
-     * @param sName    the default op name, such as "add"
-     * @param sOp      the operator string, such as "+"
-     * @param cParams  the number of parameters for the operator method, such as 1
-     */
-    protected void collectOpMethods(Set<MethodConstant> setOps, Access access, String sName, String sOp, int cParams)
-        {
-        // TODO
-        // Set<MethodConstant> setOps = null;
-        // ConstantPool        pool   = getConstantPool();
-        // ClassConstant       clzOp  = pool.clzOp();
-        // for (MethodConstant constMethod : getMethods(access))
-        //     {
-        //     // method constant can quickly eliminate parameter count mismatches
-        //     if (constMethod.getRawParams().length == cParams)
-        //         {
-        //         constMethod.getName().equals(sName) &&
-        //                 MethodStructure structMethod = (MethodStructure) constMethod.getComponent();
-        //         Annotation annotation   = structMethod.findAnnotation(clzOp);
-        //         if (annotation != null)
-        //         }
-        //     // method must be decorated with @Op
-        //     constMethod.
-        //             // method name must match, OR the @Op parameter must match sOp
-        //                     method.getDecoration(pool.clAu))
-        //     //method.getRawParams().length == cParams
-        //     //method.getName().equals(sName))
-        //     }
-
-        getUnderlyingType().collectOpMethods(setOps, access, sName, sOp, cParams);
-        }
-
-    /**
-     * Obtain all of the auto conversion methods found on this type.
-     *
-     * @return a set of zero or more method constants
-     */
-    public Set<MethodConstant> getAutoMethods()
-        {
-        Set<MethodConstant> setAuto = new HashSet<>(7);
-        collectAutoMethods(setAuto, Access.PUBLIC);
-        return setAuto;
-        }
-
-    /**
-     * For this type, all of the auto conversion methods.
-     *
-     * @param setAuto  the set to contribute to
-     * @param access   the minimum accessibility that matching methods must have
-     */
-    protected void collectAutoMethods(Set<MethodConstant> setAuto, Access access)
-        {
-        getUnderlyingType().collectAutoMethods(setAuto, access);
-        }
-
-    /**
-     * Find a method on this type that converts an object of this type to a desired type.
-     *
-     * @param typeDesired  the type desired to convert to, or that the conversion result would be
-     *                     assignable to ("isA" would be true)
-     *
-     * @return a MethodConstant representing an {@code @Auto} conversion method resulting in an
-     *         object whose type is compatible with the specified (desired) type, or null if either
-     *         no method matches, or more than one method matches (ambiguous)
-     */
-    public MethodConstant findConversion(TypeConstant typeDesired)
-        {
-        Set<MethodConstant> setMethods = getAutoMethods();
-        if (setMethods.isEmpty())
-            {
-            return null;
-            }
-
-        MethodConstant methodMatch = null;
-        for (Iterator<MethodConstant> iter = setMethods.iterator(); iter.hasNext(); )
-            {
-            MethodConstant method     = iter.next();
-            TypeConstant   typeResult = method.getRawReturns()[0];
-            if (typeResult.equals(typeDesired))
-                {
-                // exact match -- it's not going to get any better than this
-                return method;
-                }
-
-            if (typeResult.isA(typeDesired))
-                {
-                if (methodMatch != null)
-                    {
-                    // ambiguous - there are at least two methods that match
-                    return null;
-                    }
-
-                methodMatch = method;
-                }
-            }
-
-        return methodMatch;
+        return getUnderlyingType().resolveStructure(typeinfo, access, params, errs);
         }
 
 
@@ -701,6 +581,23 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if this type can be converted to that type automatically.
+     *
+     * @param that  the type to convert to
+     *
+     * @return
+     */
+    public boolean isConvertibleTo(TypeConstant that)
+        {
+        return getConverterTo(that) != null;
+        }
+
+    public MethodConstant getConverterTo(TypeConstant that)
+        {
+        return this.getTypeInfo().findConversion(that);
+        }
+
+    /**
      * Test for sub-classing.
      *
      * @param constClass  the class to test if this type represents an extension of
@@ -734,21 +631,6 @@ public abstract class TypeConstant
     public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
         {
         return getUnderlyingType().extendsOrImpersonatesClass(constClass);
-        }
-
-    public Set<MethodConstant> autoConverts()
-        {
-        // TODO this is temporary (it just finds the one @Auto that exists on Object itself)
-        // TODO make sure that @Override without @Auto hides the underlying @Auto method!!! (see Function.x)
-        for (MethodStructure method : getConstantPool().clzObject()
-                .getComponent().ensureMultiMethodStructure("to").methods())
-            {
-            if (method.getReturn(0).getType().isEcstasy("Function"))
-                {
-                return Collections.singleton(method.getIdentityConstant());
-                }
-            }
-        throw new IllegalStateException("no method found: \"to<function Object()>()\"");
         }
 
     /**
@@ -849,7 +731,7 @@ public abstract class TypeConstant
         if (m_typeinfo == null)
             {
             m_typeinfo = new TypeInfo(this);
-            if (resolveStructure(getAccess(), m_typeinfo, errs == null ? ErrorListener.RUNTIME : errs))
+            if (resolveStructure(m_typeinfo, getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
                 {
                 return true;
                 }
@@ -884,10 +766,199 @@ public abstract class TypeConstant
             this.type = type;
             }
 
-        public final TypeConstant                        type;
-        public final Map<String, ParamInfo>              parameters = new HashMap<>(7);
-        public final Map<String, PropertyInfo>           properties = new HashMap<>(7);
-        public final Map<SignatureConstant, MethodInfo>  methods    = new HashMap<>(7);
+        public Format getFormat()
+            {
+            // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        public boolean isSingleton()
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
+            }
+
+        public boolean isAbstract()
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
+            }
+
+        /**
+         * Obtain all of the methods that are annotated with "@Op".
+         *
+         * @return a set of zero or more method constants
+         */
+        public Set<MethodInfo> getOpMethodInfos()
+            {
+            Set<MethodInfo> setOps = m_setOps;
+            if (setOps == null)
+                {
+                for (MethodInfo info : methods.values())
+                    {
+                    if (info.isOp())
+                        {
+                        if (setOps == null)
+                            {
+                            setOps = new HashSet<>(7);
+                            }
+                        setOps.add(info);
+                        }
+                    }
+
+                // cache the result
+                m_setOps = setOps = (setOps == null ? Collections.EMPTY_SET : setOps);
+                }
+
+            return setOps;
+            }
+
+        /**
+         * Obtain all of the matching op methods for the specified name and/or the operator string, that
+         * take the specified number of params.
+         *
+         * @param sName    the default op name, such as "add"
+         * @param sOp      the operator string, such as "+"
+         * @param cParams  the number of parameters for the operator method, such as 1
+         *
+         * @return a set of zero or more method constants
+         */
+        public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
+            {
+            Set<MethodConstant> setOps = null;
+
+            String sKey = sName + sOp + cParams;
+            if (m_sOp != null && sKey.equals(m_sOp))
+                {
+                setOps = m_setOp;
+                }
+            else
+                {
+                for (MethodInfo info : getOpMethodInfos())
+                    {
+                    if (info.isOp(sName, sOp, cParams))
+                        {
+                        if (setOps == null)
+                            {
+                            setOps = new HashSet<>(7);
+                            }
+                        setOps.add(info.getMethodConstant());
+                        }
+                    }
+
+                // cache the result
+                m_sOp   = sKey;
+                m_setOp = setOps = (setOps == null ? Collections.EMPTY_SET : setOps);
+                }
+
+            return setOps;
+            }
+
+        /**
+         * Obtain all of the auto conversion methods found on this type.
+         *
+         * @return a set of zero or more method constants
+         */
+        public Set<MethodInfo> getAutoMethodInfos()
+            {
+            Set<MethodInfo> setAuto = m_setAuto;
+            if (setAuto == null)
+                {
+                for (MethodInfo info : methods.values())
+                    {
+                    if (info.isAuto())
+                        {
+                        if (setAuto == null)
+                            {
+                            setAuto = new HashSet<>(7);
+                            }
+                        setAuto.add(info);
+                        }
+                    }
+
+                // cache the result
+                m_setAuto = setAuto = (setAuto == null ? Collections.EMPTY_SET : setAuto);
+                }
+
+            return setAuto;
+            }
+
+        /**
+         * Find a method on this type that converts an object of this type to a desired type.
+         *
+         * @param typeDesired  the type desired to convert to, or that the conversion result would be
+         *                     assignable to ("isA" would be true)
+         *
+         * @return a MethodConstant representing an {@code @Auto} conversion method resulting in an
+         *         object whose type is compatible with the specified (desired) type, or null if either
+         *         no method matches, or more than one method matches (ambiguous)
+         */
+        public MethodConstant findConversion(TypeConstant typeDesired)
+            {
+            MethodConstant methodMatch = null;
+
+            // check the cached result
+            if (m_typeAuto != null && typeDesired.equals(m_typeAuto))
+                {
+                methodMatch = m_methodAuto;
+                }
+            else
+                {
+                for (MethodInfo info : getAutoMethodInfos())
+                    {
+                    MethodConstant method = info.getMethodConstant();
+                    TypeConstant typeResult = method.getRawReturns()[0];
+                    if (typeResult.equals(typeDesired))
+                        {
+                        // exact match -- it's not going to get any better than this
+                        return method;
+                        }
+
+                    if (typeResult.isA(typeDesired))
+                        {
+                        if (methodMatch == null)
+                            {
+                            methodMatch = method;
+                            }
+                        else
+                            {
+                            TypeConstant typeResultMatch = methodMatch.getRawReturns()[0];
+                            boolean fSub = typeResult.isA(typeResultMatch);
+                            boolean fSup = typeResultMatch.isA(typeResult);
+                            if (fSub ^ fSup)
+                                {
+                                // use the obviously-more-specific type conversion
+                                methodMatch = fSub ? method : methodMatch;
+                                }
+                            else
+                                {
+                                // ambiguous - there are at least two methods that match
+                                methodMatch = null;
+                                break;
+                                }
+                            }
+                        }
+                    }
+
+                // cache the result
+                m_typeAuto   = typeDesired;
+                m_methodAuto = methodMatch;
+                }
+
+            return methodMatch;
+            }
+
+        // data members
+        public final TypeConstant type;
+        public final Map<String, ParamInfo>             parameters = new HashMap<>(7);
+        public final Map<String, PropertyInfo>          properties = new HashMap<>(7);
+        public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>(7);
+
+        // cached results
+        private transient Set<MethodInfo>     m_setAuto;
+        private transient Set<MethodInfo>     m_setOps;
+        private transient String              m_sOp;
+        private transient Set<MethodConstant> m_setOp;
+        private transient TypeConstant        m_typeAuto;
+        private transient MethodConstant      m_methodAuto;
         }
 
     /**
@@ -933,7 +1004,6 @@ public abstract class TypeConstant
         // private Set<Constant> setUsedBy = new HashSet<>(7);
         }
 
-
     /**
      * Represents a single property.
      */
@@ -942,8 +1012,8 @@ public abstract class TypeConstant
         public PropertyInfo(Constant constDeclares, TypeConstant typeProp, String sName)
             {
             constDeclLevel = constDeclares;
-            type           = typeProp;
-            name           = sName;
+            type = typeProp;
+            name = sName;
             }
 
         public String getName()
@@ -1001,16 +1071,15 @@ public abstract class TypeConstant
             return constDeclLevel;
             }
 
-        private String       name;
-        private TypeConstant type;
-        private boolean      fRO;
-        private boolean      fField;
-        private boolean      fLogic;
-        private boolean      fAnnotated;
-        private Constant     constDeclLevel;
+        private String                             name;
+        private TypeConstant                       type;
+        private boolean                            fRO;
+        private boolean                            fField;
+        private boolean                            fLogic;
+        private boolean                            fAnnotated;
+        private Constant                           constDeclLevel;
         private Map<SignatureConstant, MethodInfo> methods;
         }
-
 
     /**
      * Represents a single method (or function).
@@ -1025,6 +1094,49 @@ public abstract class TypeConstant
         public SignatureConstant getSignature()
             {
             return signature;
+            }
+
+        /**
+         * @return the constant to use to invoke the method
+         */
+        public MethodConstant getMethodConstant()
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
+            }
+
+        public boolean isOp()
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
+            }
+
+        public boolean isOp(String sName, String sOp, int cParams)
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
+            // Set<MethodConstant> setOps = null;
+            // ConstantPool        pool   = getConstantPool();
+            // ClassConstant       clzOp  = pool.clzOp();
+            // for (MethodConstant constMethod : getMethods(access))
+            //     {
+            //     // method constant can quickly eliminate parameter count mismatches
+            //     if (constMethod.getRawParams().length == cParams)
+            //         {
+            //         constMethod.getName().equals(sName) &&
+            //                 MethodStructure structMethod = (MethodStructure) constMethod.getComponent();
+            //         Annotation annotation   = structMethod.findAnnotation(clzOp);
+            //         if (annotation != null)
+            //         }
+            //     // method must be decorated with @Op
+            //     constMethod.
+            //             // method name must match, OR the @Op parameter must match sOp
+            //                     method.getDecoration(pool.clAu))
+            //     //method.getRawParams().length == cParams
+            //     //method.getName().equals(sName))
+            //     }
+            }
+
+        public boolean isAuto()
+            {
+            throw new UnsupportedOperationException("TODO"); // TODO
             }
 
         private SignatureConstant signature;

@@ -434,10 +434,6 @@ public class ClassStructure
                     break;
                     }
 
-                case Enumerates:
-                    // TODO:
-                    break;
-
                 default:
                     throw new IllegalStateException();
                 }
@@ -531,10 +527,6 @@ public class ClassStructure
                         }
                     break;
                     }
-
-                case Enumerates:
-                    // TODO:
-                    break;
 
                 default:
                     throw new IllegalStateException();

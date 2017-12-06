@@ -265,13 +265,23 @@ module Test
 //            }
 //        }
 
-    Int test(Int c)
+//    Int test(Int c)
+//        {
+//        Int i = 0;
+//        while (i < c)
+//            {
+//            i = i + 1;
+//            }
+//        return i;
+//        }
+
+    class MyMap<KeyType, ValueType>
+            implements Map<KeyType, ValueType>
         {
-        Int i = 0;
-        while (i < c)
-            {
-            i = i + 1;
-            }
-        return i;
+        }
+
+    Void foo( MyMap<String, Int> map)
+        {
+        Int i = map;
         }
     }
