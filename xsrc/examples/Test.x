@@ -275,13 +275,31 @@ module Test
 //        return i;
 //        }
 
-    class MyMap<KeyType, ValueType>
-            implements Map<KeyType, ValueType>
+    class Bob
+        {
+        @Auto Sam to<Sam>();
+        }
+    class Sam
         {
         }
 
-    Void foo( MyMap<String, Int> map)
+//    Sam foo(Bob bob)
+//        {
+//        // assignment test
+//        Sam sam = bob;
+//
+//        // conversion on return test
+//        return bob;
+//        }
+
+    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
         {
-        Int i = map;
+        @Auto Int size();
+        }
+
+    Int foo()
+        {
+        MyMap<String, Int> map;
+        return map;
         }
     }

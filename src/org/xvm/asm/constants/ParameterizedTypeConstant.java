@@ -21,6 +21,7 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeSet;
@@ -157,6 +158,20 @@ public class ParameterizedTypeConstant
                 : this;
         }
 
+    @Override
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
+        {
+        if (params != null)
+            {
+            // how is this possible? it should be an error
+            // TODO log error
+            throw new IllegalStateException("inexplicable dual occurrance of type params for " + typeinfo.type);
+            }
+
+        List<TypeConstant> list = m_listTypeParams;
+        params = list.toArray(new TypeConstant[list.size()]);
+        return super.resolveStructure(typeinfo, access, params, errs);
+        }
 
     // ----- type comparison support --------------------------------------------------------------
 

@@ -463,8 +463,11 @@ public class MethodDeclarationStatement
                             }
                         }
 
-                    errList.clear();
-                    method.setNative(true);
+                    if (System.getProperty("GG") != null)
+                        {
+                        errList.clear();
+                        method.setNative(true);
+                        }
                     }
                 }
             catch (UnsupportedOperationException e) // TODO temporary

@@ -141,6 +141,7 @@ public class CommandLine
 
         // dependency resolution
         generateCode();
+        checkCompilerErrors();
         checkTerminalFailure();
 
         // write out the results

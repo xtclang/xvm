@@ -1229,8 +1229,9 @@ public class MethodStructure
                 if (m_listOps == null)
                     {
                     MethodStructure method = MethodStructure.this;
-                    throw new UnsupportedOperationException("Method \"" +
-                        method.getIdentityConstant().getPathString() + "\" is neither native nor compiled");
+                    throw new UnsupportedOperationException("Method \""
+                            + method.getIdentityConstant().getPathString()
+                            + "\" is neither native nor compiled");
                     }
                 m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
                 }

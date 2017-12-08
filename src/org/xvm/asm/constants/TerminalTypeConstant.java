@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -20,6 +22,7 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -475,25 +478,258 @@ public class TerminalTypeConstant
             }
         }
 
-    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
+    /**
+     * Accumulate any information for the type represented by the specified structure into the
+     * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
+     *
+     * @param struct       TODO
+     * @param typeinfo
+     * @param access
+     * @param atypeParams
+     * @param errs
+     *
+     * @return true if the resolution process was halted before it completed, for example if the
+     *         error list reached its size limit
+     */
+    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
         assert access != null;
 
+        boolean fHalt = false;
+
         // at this point, the typeinfo represents everything that has already been "built up"; our
         // job is to contribute everything from the class struct to it
 
-        // type parameters
-        // TODO
+        // evaluate type parameters
+        int cTypeParams = atypeParams == null ? 0 : atypeParams.length;
+        Map<StringConstant, TypeConstant> mapClassParams = struct.getTypeParams();
+        if (mapClassParams.isEmpty())
+            {
+            if (cTypeParams  > 0)
+                {
+                // TODO log error: params were provided but the class doesn't take any params
+                throw new IllegalStateException("TODO error on " + struct.getName()
+                        + " - type param type count (" + cTypeParams
+                        + ") but class does not have type params");
+                }
+            }
+        else
+            {
+            List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
+            int cClassParams = listClassParams.size();
+            if (atypeParams != null && cTypeParams != cClassParams)
+                {
+                // TODO log error: either too few or too many type params
+                throw new IllegalStateException("TODO error on " + struct.getName()
+                        + " - type param type count (" + cTypeParams
+                        + ") does not match class (" + cClassParams+ ")");
+                }
 
-        // properties
-        // TODO
+            for (int i = 0; i < cClassParams; ++i)
+                {
+                Entry<StringConstant, TypeConstant> entry          = listClassParams.get(i);
+                String                              sName          = entry.getKey().getValue();
+                TypeConstant                        typeConstraint = entry.getValue();
 
-        // methods
-        // TODO
+                ParamInfo paraminfo = typeinfo.parameters.get(sName);
+                if (paraminfo == null)
+                    {
+                    paraminfo = new ParamInfo(sName);
+                    paraminfo.setConstraintType(typeConstraint);
+                    typeinfo.parameters.put(sName, paraminfo);
+                    }
+                else if (!paraminfo.getConstraintType().isA(typeConstraint))
+                    {
+                    // since we're accumulating type parameter information "on the way down" the
+                    // tree of structures that form the type, it is possible that our constraint is
+                    // "looser" than the constraint that came before us on the way down, e.g. our
+                    // sub-class narrowed our constraint, but any conflict is an error
+                    // TODO log error: actual type is not legal because it violates the constraint
+                    throw new IllegalStateException("TODO error on " + struct.getName()
+                            + " - sub's type param constraint (" + paraminfo.getConstraintType()
+                            + ") not isA(" + typeConstraint + ")");
+                    }
 
-        return false;
+                if (i < cTypeParams)
+                    {
+                    TypeConstant typeActual = atypeParams[i];
+                    assert typeActual != null;
+
+                    // quite often, the type parameter type is a reference to a type parameter
+                    if (typeActual instanceof TerminalTypeConstant)
+                        {
+                        Constant constant = typeActual.getDefiningConstant();
+                        if (constant instanceof PropertyConstant)
+                            {
+                            String sPropName = ((PropertyConstant) constant).getName();
+                            if (sPropName.equals(sName))
+                                {
+                                // no change; nothing to do for this parameter
+                                // e.g. LinkedList<ElementType> implements List<ElementType>
+                                continue;
+                                }
+
+                            ParamInfo paraminfoProp = typeinfo.parameters.get(sPropName);
+                            if (paraminfoProp == null || paraminfoProp.getActualType() == null)
+                                {
+                                // TODO log error: missing type for type parameter
+                                throw new IllegalStateException("TODO error on " + struct.getName()
+                                        + " - type param " + sPropName + " has no type");
+                                }
+
+                            typeActual = paraminfoProp.getActualType();
+                            }
+                        }
+
+                    if (!typeActual.isA(typeConstraint))
+                        {
+                        // TODO log error: actual type is not legal because it violates the constraint
+                        throw new IllegalStateException("TODO error on " + struct.getName()
+                                + " - type param type (" + typeActual
+                                + ") not isA(" + typeConstraint + ")");
+                        }
+
+                    TypeConstant typeOld = paraminfo.getActualType();
+                    if (typeOld != null && !typeOld.equals(typeActual))
+                        {
+                        // TODO log error: actual type conflicts with the actual type already spec'd
+                        throw new IllegalStateException("TODO error on " + struct.getName()
+                                + " - type param type (" + typeActual
+                                + ") for " + sName
+                                + " is different from the prev spec'd type  (" + typeOld + ")");
+                        }
+
+                    paraminfo.setActualType(typeActual);
+                    }
+                }
+            }
+
+        // recurse through compositions
+        boolean fAnyAnnotations = false;
+        for (Contribution contrib : struct.getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                    // skip annotations (we'll handle them at the end, since they wrap around this
+                    // class, i.e. they're the last to evaluate now because they're first in the
+                    // call chain
+                    fAnyAnnotations = true;
+                    continue;
+
+                case Delegates:
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Into:
+                case Extends:
+                    {
+                    TypeConstant typeContrib = contrib.getTypeConstant();
+                    // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
+                    typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+                    break;
+                    }
+
+                default:
+                    throw new IllegalStateException("struct=" + struct.getName() + ", contribution=" + contrib);
+                }
+            }
+
+        // properties & methods
+        for (Component child : struct.children())
+            {
+            switch (child.getFormat())
+                {
+                case PROPERTY:
+                    fHalt |= resolvePropertyStructure((PropertyStructure) child, typeinfo, access, errs);
+                    break;
+
+                case MULTIMETHOD:
+                    for (Component method : child.children())
+                        {
+                        if (method instanceof MethodStructure)
+                            {
+                            fHalt |= resolveMethodStructure((MethodStructure) method, typeinfo, null, access, errs);
+                            }
+                        else
+                            {
+                            throw new IllegalStateException("multi-method " + child.getName()
+                                    + " contains non-method: " + method);
+                            }
+                        }
+                    break;
+
+                case METHOD:
+                case FILE:
+                case RSVD_D:
+                    throw new IllegalStateException("class " + struct.getName()
+                            + " contains illegal child: " + child);
+                }
+            }
+
+        // process annotations
+        if (fAnyAnnotations)
+            {
+            // TODO
+            }
+
+        return fHalt;
+        }
+
+    /**
+     * Accumulate any information from the passed property structure into the passed
+     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
+     * any errors.
+     *
+     * @param struct       TODO
+     * @param typeinfo
+     * @param access
+     * @param errs
+     *
+     * @return true if the resolution process was halted before it completed, for example if the
+     *         error list reached its size limit
+     */
+    protected boolean resolvePropertyStructure(PropertyStructure struct, TypeInfo typeinfo, Access access, ErrorListener errs)
+        {
+        assert struct != null;
+        assert typeinfo != null;
+        assert access != null;
+
+        boolean fHalt = false;
+
+        // TODO
+        System.out.println("property: " + struct.getIdentityConstant().getValueString());
+
+        return fHalt;
+        }
+
+    /**
+     * Accumulate any information from the passed property structure into the passed
+     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
+     * any errors.
+     *
+     * @param struct       TODO
+     * @param typeinfo
+     * @param access
+     * @param errs
+     *
+     * @return true if the resolution process was halted before it completed, for example if the
+     *         error list reached its size limit
+     */
+    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo, Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
+        {
+        assert struct != null;
+        assert typeinfo != null;
+        assert access != null;
+
+        boolean fHalt = false;
+
+        // TODO
+        System.out.println("method: " + struct.getIdentityConstant().getValueString());
+
+        return fHalt;
         }
 
     @Override

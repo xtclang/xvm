@@ -7,7 +7,7 @@ module Ecstasy.xtclang.org
 
     class Object
         {
-        function Object() to<function Object()>();
+        @Auto function Object() to<function Object()>();
         }
 
     class IntLiteral

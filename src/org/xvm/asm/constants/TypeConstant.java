@@ -480,7 +480,7 @@ public abstract class TypeConstant
      * @param params
      * @param errs
      *
-     *  @return true if the resolution process was halted before it completed, for example if the
+     * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
     protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
@@ -581,15 +581,17 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this type can be converted to that type automatically.
+     * Determine if this type can be directly assigned to or automatically converted to a specified
+     * type automatically by the compiler.
      *
      * @param that  the type to convert to
      *
-     * @return
+     * @return true iff the compiler can either directly assign the one type to the other, or can
+     *         automatically convert the one type to something that is assignable to the other
      */
-    public boolean isConvertibleTo(TypeConstant that)
+    public boolean isAssignableTo(TypeConstant that)
         {
-        return getConverterTo(that) != null;
+        return isA(that) || getConverterTo(that) != null;
         }
 
     public MethodConstant getConverterTo(TypeConstant that)
@@ -981,7 +983,7 @@ public abstract class TypeConstant
             return typeActual;
             }
 
-        void setTypeActual(TypeConstant type)
+        void setActualType(TypeConstant type)
             {
             typeActual = type;
             }
@@ -991,7 +993,7 @@ public abstract class TypeConstant
             return typeConstraint;
             }
 
-        void setTypeConstraint(TypeConstant type)
+        void setConstraintType(TypeConstant type)
             {
             typeConstraint = type;
             }
