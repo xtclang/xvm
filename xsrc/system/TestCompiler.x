@@ -1,4 +1,3 @@
-
 class TestCompiler
     {
     interface MyMap<KM, VM>
@@ -13,8 +12,8 @@ class TestCompiler
         Boolean containsValue(VC value);
         }
 
-    class MyClass1<K1, V1>
-        implements MyMap<K1, V1> {}
+    class MyClass1<K1, VC>
+        implements MyMap<K1, VC> {}
 
     class MyClass2<K2, V2>
             implements Consumer<V2>
@@ -58,8 +57,8 @@ class TestCompiler
 
     static Void test1()
         {
-//        MyClass1<String, Int> c1;
-//        Consumer<Int> finder1 = c1; // OK; duck-typing
+        MyClass1<String, Number> c1;
+        Consumer<Int> finder1 = c1; // OK; duck-typing
 
         MyClass2<String, Number> c2;
         Consumer<Int> finder2 = c2; // OK; "Implements"
@@ -115,7 +114,11 @@ class TestCompiler
 
     class P<T>
         {
-        T produce() {return null;}
+        T produce()
+            {
+            T t;
+            return t;
+            }
         }
 
     interface C<T>

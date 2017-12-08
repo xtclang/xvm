@@ -258,7 +258,7 @@ public class ParameterizedTypeConstant
             }
 
         List<TypeConstant> listThat = that.getParamTypes();
-        ClassStructure    clzThat   = (ClassStructure)
+        ClassStructure     clzThat  = (ClassStructure)
             ((IdentityConstant) that.getDefiningConstant()).getComponent();
 
         assert listActual.size() == listThat.size();
@@ -266,11 +266,17 @@ public class ParameterizedTypeConstant
 
         Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
         boolean fWrap = false;
+
         for (int i = 0, c = listThat.size(); i < c; i++)
             {
             TypeConstant typeThis = listActual.get(i);
             TypeConstant typeThat = listThat.get(i);
             String       sName    = iterNames.next().getValue();
+
+            if (typeThat.equals(typeThis))
+                {
+                continue;
+                }
 
             boolean fProduce = that.producesFormalType(sName, Access.PUBLIC);
 
@@ -368,18 +374,24 @@ public class ParameterizedTypeConstant
             }
 
         List<TypeConstant> listThis = getParamTypes();
-        ClassStructure    clzThis   = (ClassStructure)
+        ClassStructure     clzThis  = (ClassStructure)
             ((IdentityConstant) this.getDefiningConstant()).getComponent();
 
         assert listActual.size() == listThis.size();
 
         Iterator<StringConstant> iterNames = clzThis.getTypeParams().keySet().iterator();
+        boolean fWrap = false;
 
         for (int i = 0, c = listThis.size(); i < c; i++)
             {
             TypeConstant typeThis = listActual.get(i);
             TypeConstant typeThat = listThis.get(i);
             String       sName    = iterNames.next().getValue();
+
+            if (typeThis.equals(typeThat))
+                {
+                continue;
+                }
 
             boolean fProduce = this.producesFormalType(sName, Access.PUBLIC);
 
@@ -393,10 +405,16 @@ public class ParameterizedTypeConstant
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
+                fWrap = true;
                 continue;
                 }
 
             return false;
+            }
+
+        if (fWrap) // TODO: stuff this information into the chain
+            {
+            System.out.println("Consuming methods should be wrapped: " + this + " <- " + that);
             }
         return true;
         }
@@ -463,6 +481,18 @@ public class ParameterizedTypeConstant
         assert clzThis.indexOfFormalParameter(sTypeName) >= 0;
 
         return clzThis.producesFormalType(sTypeName, access, getParamTypes());
+        }
+
+    @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+        {
+        return super.containsSubstitutableMethod(signature, access, getParamTypes());
+        }
+
+    @Override
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+        {
+        return super.containsSubstitutableProperty(signature, access, getParamTypes());
         }
 
     @Override // TODO: remove

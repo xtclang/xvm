@@ -732,7 +732,7 @@ public class TerminalTypeConstant
         boolean fHalt = false;
 
         // TODO
-        System.out.println("property: " + struct.getIdentityConstant().getValueString());
+        // System.out.println("property: " + struct.getIdentityConstant().getValueString());
 
         return fHalt;
         }
@@ -761,7 +761,7 @@ public class TerminalTypeConstant
         boolean fHalt = false;
 
         // TODO
-        System.out.println("method: " + struct.getIdentityConstant().getValueString());
+        // System.out.println("method: " + struct.getIdentityConstant().getValueString());
 
         return fHalt;
         }
@@ -972,10 +972,16 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableProperty(SignatureConstant signature, List<TypeConstant> listParams)
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access, List<TypeConstant> listParams)
         {
-        // TODO: implement
-        return false;
+        Constant constIdThis = getDefiningConstant();
+
+        assert (constIdThis.getFormat() == Format.Class);
+
+        IdentityConstant idThis  = (IdentityConstant) constIdThis;
+        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+
+        return clzThis.containsSubstitutableProperty(signature, access, listParams);
         }
 
     @Override

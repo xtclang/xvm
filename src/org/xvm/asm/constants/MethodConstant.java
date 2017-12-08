@@ -237,7 +237,8 @@ public class MethodConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        final ConstantPool pool = getConstantPool();
+        ConstantPool pool = getConstantPool();
+
         m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
         m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
         }

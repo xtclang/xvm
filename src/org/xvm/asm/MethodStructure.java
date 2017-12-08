@@ -561,30 +561,11 @@ public class MethodStructure
     /**
      * Check if this method could be called via the specified signature.
      *
-     * @param signature   the signature of the matching method
+     * @param sigThat     the signature of the matching method (resolved)
      * @param listActual  the actual generic types
      */
-    public boolean isSubstitutableFor(SignatureConstant signature, List<TypeConstant> listActual)
+    public boolean isSubstitutableFor(SignatureConstant sigThat, List<TypeConstant> listActual)
         {
-        int cParams  = getParamCount();
-        int cReturns = getReturnCount();
-
-        if (cParams != signature.getParams().size() ||
-            cReturns != signature.getReturns().size())
-            {
-            return false;
-            }
-
-        // the signature comes from the compiler/assembler pointing to the compile-time
-        // method structure that should be used in the invocation in its most generic representation;
-        // the rule 1.2.2.2 below (an exception clause) doesn't really apply in the case of the method
-        // callability. Its purpose to allow the following assignment:
-        //
-        //      List<Object> l = new ArrayList<String>();
-        //
-        // even though there is a method "Void add(ElementType el)" that violates the rule 1.2.1;
-        // however, our check would allow it (the type parameter is identical - ElementType property)
-
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
          *
@@ -602,24 +583,44 @@ public class MethodStructure
          *       _m1_ and _r2_ of _m2_, the following holds true:
          *      1. _r2_ is assignable to _r1_
          */
+
+        // Note, that rule 1.2.2 does not apply in our case (duck typing)
+
+        assert getName().equals(sigThat.getName());
+
+        int cParams  = getParamCount();
+        int cReturns = getReturnCount();
+
+        if (cParams != sigThat.getParams().size() ||
+            cReturns != sigThat.getReturns().size())
+            {
+            return false;
+            }
+
+        SignatureConstant sigThis = getIdentityConstant().getSignature();
+        if (!listActual.isEmpty())
+            {
+            ClassStructure clzThis = (ClassStructure) getParent().getParent();
+            sigThis = sigThis.resolveGenericTypes(clzThis.new SimpleTypeResolver(listActual));
+            }
+
         for (int i = 0; i < cReturns; i++)
             {
-            TypeConstant constR1 = getReturn(i).getType();
-            TypeConstant constR2 = signature.getRawReturns()[i];
+            TypeConstant typeR1 = sigThat.getRawReturns()[i];
+            TypeConstant typeR2 = sigThis.getRawReturns()[i];
 
-            if (!constR2.isA(constR1))
+            if (!typeR2.isA(typeR1))
                 {
                 return false;
                 }
-
             }
 
         for (int i = 0; i < cParams; i++)
             {
-            TypeConstant constP1 = getParam(i).getType();
-            TypeConstant constP2 = signature.getRawParams()[i];
+            TypeConstant typeP1 = sigThat.getRawParams()[i];
+            TypeConstant typeP2 = sigThis.getRawParams()[i];
 
-            if (!constP1.isA(constP2))
+            if (!typeP1.isA(typeP2))
                 {
                 return false;
                 }
@@ -633,6 +634,7 @@ public class MethodStructure
      * @param signature   the signature of the matching method
      * @param clazz       the TypeComposition in which context's the matching is evaluated
      */
+    // TODO: remove
     public boolean isCallableFor(SignatureConstant signature, TypeComposition clazz)
         {
         int cParams = getParamCount();
@@ -676,8 +678,8 @@ public class MethodStructure
          */
         for (int i = 0; i < cReturns; i++)
             {
-            TypeConstant constR1 = getReturn(i).getType();
-            TypeConstant constR2 = signature.getRawReturns()[i];
+            TypeConstant constR1 = signature.getRawReturns()[i];
+            TypeConstant constR2 = getReturn(i).getType();
 
             // perform a cheap comparison
             if (constR2.isA(constR1))
@@ -697,8 +699,8 @@ public class MethodStructure
 
         for (int i = 0; i < cParams; i++)
             {
-            TypeConstant constP1 = getParam(i).getType();
-            TypeConstant constP2 = signature.getRawParams()[i];
+            TypeConstant constP1 = signature.getRawParams()[i];
+            TypeConstant constP2 = getParam(i).getType();
 
             if (constP1.isA(constP2))
                 {

@@ -572,10 +572,17 @@ public class ClassStructure
             if (child instanceof PropertyStructure)
                 {
                 PropertyStructure prop = (PropertyStructure) child;
-                // TODO: check access
-                SignatureConstant sig = null; // TODO: signature constant for the property
 
-                if (!typeThat.containsSubstitutableProperty(sig, listParams))
+                // TODO: check access
+
+                SignatureConstant sig = prop.getIdentityConstant().getSignature();
+                if (!listParams.isEmpty())
+                    {
+                    sig = sig.resolveGenericTypes(new SimpleTypeResolver(listParams));
+                    }
+
+                if (!typeThat.containsSubstitutableProperty(sig,
+                        Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     return false;
                     }
@@ -633,7 +640,7 @@ public class ClassStructure
     /**
      * Check recursively if this class contains a matching (substitutable) method.
      *
-     * @param signature   the method signature to look for the match for
+     * @param signature   the method signature to look for the match for (resolved)
      * @param access      the access level to limit the check to
      * @param listParams  the actual generic parameters for this interface
      *
@@ -648,15 +655,15 @@ public class ClassStructure
             {
             MultiMethodStructure mms = (MultiMethodStructure) child;
 
-            for (MethodStructure ms : mms.methods())
+            for (MethodStructure method : mms.methods())
                 {
-                if (ms.isSubstitutableFor(signature, listParams))
+                if (method.isAccessible(access) &&
+                    method.isSubstitutableFor(signature, listParams))
                     {
                     return true;
                     }
                 }
             }
-
 
         for (Contribution contrib : getContributionsAsList())
             {
@@ -683,6 +690,68 @@ public class ClassStructure
                                 getComponent();
 
                         if (clzSuper.containsSubstitutableMethod(signature,
+                                access, listContribActual))
+                            {
+                            return true;
+                            }
+                        }
+                    }
+                }
+            }
+        return false;
+        }
+
+    /**
+     * Check recursively if this class contains a matching (substitutable) property.
+     *
+     * @param signature   the property signature to look for the match for (resolved)
+     * @param access      the access level to limit the check to
+     * @param listParams  the actual generic parameters for this interface
+     *
+     * @return true iff all properties and methods have matches
+     */
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
+                                               List<TypeConstant> listParams)
+        {
+        Component child = getChild(signature.getName());
+
+        if (child instanceof PropertyStructure)
+            {
+            PropertyStructure property = (PropertyStructure) child;
+
+            // TODO: check access
+
+            if (property.isSubstitutableFor(signature, listParams))
+                {
+                return true;
+                }
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                    // TODO:
+                    break;
+
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Into:
+                case Extends:
+                    {
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(this, listParams);
+
+                    if (listContribActual != null)
+                        {
+                        ClassStructure clzSuper = (ClassStructure)
+                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                                getComponent();
+
+                        if (clzSuper.containsSubstitutableProperty(signature,
                                 access, listContribActual))
                             {
                             return true;

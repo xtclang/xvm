@@ -450,7 +450,7 @@ public class MethodDeclarationStatement
                     }
                 else
                     {
-                    if (sPath.contains("TestCompiler"))
+                    if (sPath.startsWith("Test"))
                         {
                         if (sPath.contains("ExpectedFailure"))
                             {

@@ -530,7 +530,7 @@ public abstract class TypeConstant
             return true;
             }
 
-        return false; // that.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
+        return that.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
         }
 
     protected ContributionChain checkAssignableTo(TypeConstant that)
@@ -561,7 +561,7 @@ public abstract class TypeConstant
     /**
      * Check if this type contains a method substitutable for the specified one.
      *
-     * @param signature   the method to check the substitutability for
+     * @param signature   the method signature to check the substitutability for (resolved)
      * @param access      the access level to limit the check to
      * @param listParams  the list of actual generic parameters
      *
@@ -573,10 +573,19 @@ public abstract class TypeConstant
         return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams);
         }
 
+    /**
+     * Check if this type contains a property substitutable for the specified one.
+     *
+     * @param signature   the property signature to check the substitutability for (resolved)
+     * @param access      the access level to limit the check to
+     * @param listParams  the list of actual generic parameters
+     *
+     *  @return true iff the specified type could be assigned to this interface type
+     */
     public boolean containsSubstitutableProperty(SignatureConstant signature,
-                                                 List<TypeConstant> listParams)
+                                                 Access access, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().containsSubstitutableProperty(signature, listParams);
+        return getUnderlyingType().containsSubstitutableProperty(signature, access, listParams);
         }
 
     /**

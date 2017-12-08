@@ -144,7 +144,6 @@ public class SignatureConstant
         return Arrays.asList(m_aconstReturns);
         }
 
-
     /**
      * @return an equivalent signature without any generic types
      */
@@ -167,7 +166,7 @@ public class SignatureConstant
                 }
             }
 
-        TypeConstant[] aconstReturnOriginal = m_aconstParams;
+        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
         TypeConstant[] aconstReturnResolved = null;
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {

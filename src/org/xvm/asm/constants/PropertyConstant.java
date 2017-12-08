@@ -52,6 +52,21 @@ public class PropertyConstant
             }
         }
 
+    // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return a signature constant representing this property
+     */
+    public SignatureConstant getSignature()
+        {
+        SignatureConstant sig = m_constSig;
+        if (sig == null)
+            {
+            sig = m_constSig = getConstantPool().ensureSignatureConstant(getName(),
+                ConstantPool.NO_TYPES, new TypeConstant[] {getRefType()});
+            }
+        return sig;
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -126,4 +141,9 @@ public class PropertyConstant
      * Cached type.
      */
     private transient TypeConstant m_type;
+
+    /**
+     * Cached constant that represents the signature of this property.
+     */
+    private transient SignatureConstant m_constSig;
     }

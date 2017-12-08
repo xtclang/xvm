@@ -5,8 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -148,6 +151,28 @@ public class PropertyStructure
         m_info = info;
         }
 
+    /**
+     * Check if this property could be accessed via the specified signature.
+     *
+     * @param sigThat     the signature of the matching property (resolved)
+     * @param listActual  the actual generic types
+     */
+    public boolean isSubstitutableFor(SignatureConstant sigThat, List<TypeConstant> listActual)
+        {
+        assert getName().equals(sigThat.getName());
+        assert sigThat.getRawParams().length == 0;
+        assert sigThat.getRawReturns().length == 1;
+
+        SignatureConstant sigThis = getIdentityConstant().getSignature();
+        if (!listActual.isEmpty())
+            {
+            ClassStructure clzThis = (ClassStructure) getParent();
+            sigThis = sigThis.resolveGenericTypes(clzThis.new SimpleTypeResolver(listActual));
+            }
+
+        // TODO: if read-only then isA() would suffice
+        return sigThat.equals(sigThis);
+        }
 
     // ----- component methods ---------------------------------------------------------------------
 

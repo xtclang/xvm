@@ -24,7 +24,7 @@ class TestApp
 //            i = i + 2;
 //            }
 //        return i;
-        return 40 + 2;
+        return 42;
         }
 
     static String getStringValue()
