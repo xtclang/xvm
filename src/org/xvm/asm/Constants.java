@@ -106,11 +106,11 @@ public interface Constants
     /**
      * Unknown error.
      */
-    public static final String VE_UNKNOWN                           = "VERIFY-001";
+    public static final String VE_UNKNOWN                           = "VERIFY-01";
     /**
      * Type parameters were specified for {0}, but it does not declare any.
      */
-    public static final String VE_UNEXPECTED_TYPE_PARAMS            = "VERIFY-002";
+    public static final String VE_UNEXPECTED_TYPE_PARAMS            = "VERIFY-02";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

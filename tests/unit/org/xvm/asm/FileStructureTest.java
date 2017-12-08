@@ -12,13 +12,14 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.xvm.asm.ErrorList.ErrorInfo;
+
 import org.xvm.asm.constants.ClassConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.ErrorList;
-import org.xvm.compiler.ErrorList.ErrorInfo;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 

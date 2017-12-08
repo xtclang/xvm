@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.readFileChars;
 public class Source
         implements Constants
     {
-    // ----- constructors ------------------------------------------------------
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a Source directly from a String of XTC source code.
@@ -63,7 +63,7 @@ public class Source
         }
 
 
-    // ----- public API --------------------------------------------------------
+    // ----- public API ----------------------------------------------------------------------------
 
     /**
      * @return the file name, if one has been configured
@@ -479,7 +479,8 @@ public class Source
         return new String(m_ach);
         }
 
-    // ----- data members ------------------------------------------------------
+
+    // ----- data members --------------------------------------------------------------------------
 
     /**
      * The source code.

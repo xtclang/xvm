@@ -15,6 +15,7 @@ import java.util.Map;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.compiler.Source;
 import org.xvm.util.Severity;
 
 
@@ -642,10 +643,29 @@ public abstract class XvmStructure
         }
 
 
+    // ----- inner class: SourceInfo ---------------------------------------------------------------
+
+    static class SourceInfo
+        {
+        public SourceInfo(Source source, long start, long end)
+            {
+            this.source = source;
+            this.start  = start;
+            this.end    = end;
+            }
+
+        public final Source source;
+        public final long   start;
+        public final long   end;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The containing XVM structure.
      */
     private XvmStructure m_xsParent;
+
+    private transient SourceInfo m_sourceinfo;
     }
