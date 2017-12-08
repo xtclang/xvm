@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -154,7 +155,7 @@ public class ClassStructure
         }
 
 
-    // ----- XvmStructure methods ------------------------------------------------------------------
+    // ----- type comparison support ---------------------------------------------------------------
 
     /**
      * Test for sub-classing.
@@ -406,8 +407,6 @@ public class ClassStructure
         // check the contributions
         for (Contribution contrib : getContributionsAsList())
             {
-            TypeConstant typeContrib = contrib.getTypeConstant();
-
             switch (contrib.getComposition())
                 {
                 case Annotation:
@@ -430,7 +429,8 @@ public class ClassStructure
                         if (listContribActual != null)
                             {
                             ClassStructure clzSuper = (ClassStructure)
-                                ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                                ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                                    getComponent();
                             if (clzSuper.consumesFormalType(sGenericName, access, listContribActual))
                                 {
                                 return true;
@@ -504,8 +504,6 @@ public class ClassStructure
         // check the contributions
         for (Contribution contrib : getContributionsAsList())
             {
-            TypeConstant typeContrib = contrib.getTypeConstant();
-
             switch (contrib.getComposition())
                 {
                 case Annotation:
@@ -528,7 +526,8 @@ public class ClassStructure
                         if (listContribActual != null)
                             {
                             ClassStructure clzSuper = (ClassStructure)
-                                ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                                ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                                    getComponent();
                             if (clzSuper.producesFormalType(sGenericName, access, listContribActual))
                                 {
                                 return true;
@@ -544,6 +543,145 @@ public class ClassStructure
 
                 default:
                     throw new IllegalStateException();
+                }
+            }
+        return false;
+        }
+
+    /**
+     * Check recursively if all properties and methods on the interface represented by this class
+     * structure have a matching (substitutable) property or method on the specified type.
+     *
+     * @param typeThat    the type to look for the matching methods
+     * @param access      the access level to limit the check for
+     * @param listParams  the actual generic parameters for this interface
+     *
+     * @return true iff all properties and methods have matches
+     */
+    public boolean isInterfaceAssignableFrom(TypeConstant typeThat, Access access, List<TypeConstant> listParams)
+        {
+        for (Component child : children())
+            {
+            if (child instanceof PropertyStructure)
+                {
+                PropertyStructure prop = (PropertyStructure) child;
+                // TODO: check access
+                SignatureConstant sig = null; // TODO: signature constant for the property
+
+                if (!typeThat.containsSubstitutableProperty(sig, listParams))
+                    {
+                    return false;
+                    }
+                }
+            else if (child instanceof MultiMethodStructure)
+                {
+                MultiMethodStructure mms = (MultiMethodStructure) child;
+                for (MethodStructure method : mms.methods())
+                    {
+                    if (!method.isAccessible(access))
+                        {
+                        continue;
+                        }
+
+                    SignatureConstant sig = method.getIdentityConstant().getSignature();
+                    if (!listParams.isEmpty())
+                        {
+                        sig = sig.resolveGenericTypes(new SimpleTypeResolver(listParams));
+                        }
+
+                    if (!typeThat.containsSubstitutableMethod(sig,
+                            Access.PUBLIC, Collections.EMPTY_LIST))
+                        {
+                        return false;
+                        }
+                    }
+                }
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Extends)
+                {
+                List<TypeConstant> listContribActual =
+                    contrib.transformActualTypes(this, listParams);
+
+                if (listContribActual != null)
+                    {
+                    ClassStructure clzSuper = (ClassStructure)
+                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                            getComponent();
+
+                    assert (clzSuper.getFormat() == Component.Format.INTERFACE);
+
+                    if (!clzSuper.isInterfaceAssignableFrom(typeThat, access, listContribActual))
+                        {
+                        return false;
+                        }
+                    }
+                }
+            }
+        return true;
+        }
+
+    /**
+     * Check recursively if this class contains a matching (substitutable) method.
+     *
+     * @param signature   the method signature to look for the match for
+     * @param access      the access level to limit the check to
+     * @param listParams  the actual generic parameters for this interface
+     *
+     * @return true iff all properties and methods have matches
+     */
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               List<TypeConstant> listParams)
+        {
+        Component child = getChild(signature.getName());
+
+        if (child instanceof MultiMethodStructure)
+            {
+            MultiMethodStructure mms = (MultiMethodStructure) child;
+
+            for (MethodStructure ms : mms.methods())
+                {
+                if (ms.isSubstitutableFor(signature, listParams))
+                    {
+                    return true;
+                    }
+                }
+            }
+
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                    // TODO:
+                    break;
+
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Into:
+                case Extends:
+                    {
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(this, listParams);
+
+                    if (listContribActual != null)
+                        {
+                        ClassStructure clzSuper = (ClassStructure)
+                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                                getComponent();
+
+                        if (clzSuper.containsSubstitutableMethod(signature,
+                                access, listContribActual))
+                            {
+                            return true;
+                            }
+                        }
+                    }
                 }
             }
         return false;
@@ -662,4 +800,40 @@ public class ClassStructure
      * type constraint for the parameter.
      */
     private ListMap<StringConstant, TypeConstant> m_mapParams;
+
+    // ----- inner classes ------------------------------------------------------------------
+
+    /**
+     * Generic type resolver based on an actual parameter list.
+     */
+    public class SimpleTypeResolver
+            implements TypeConstant.GenericTypeResolver
+        {
+        /**
+         * Create a TypeResolver based on the actual type list.
+         *
+         * @param listActual  the actual type list
+         */
+        public SimpleTypeResolver(List<TypeConstant> listActual)
+            {
+            assert m_mapParams == null && listActual.isEmpty() ||
+                   m_mapParams.size() == listActual.size();
+
+            m_listActual = listActual;
+            }
+
+        @Override
+        public TypeConstant resolveGenericType(String sName)
+            {
+            int ix = indexOfFormalParameter(sName);
+            if (ix < 0)
+                {
+                throw new IllegalStateException(
+                    "Failed to find " + sName + " in " + this);
+                }
+            return m_listActual.get(ix);
+            }
+
+        private List<TypeConstant> m_listActual;
+        }
     }

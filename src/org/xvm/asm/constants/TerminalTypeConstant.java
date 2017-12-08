@@ -168,6 +168,15 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        Constant constId = getDefiningConstant();
+        return constId instanceof PropertyConstant
+            ? resolver.resolveGenericType(((PropertyConstant) constId).getName())
+            : this;
+        }
+
+    @Override
     public boolean isOnlyNullable()
         {
         TypeConstant typeResolved = resolveTypedefs();
@@ -496,7 +505,7 @@ public class TerminalTypeConstant
     protected ContributionChain checkAssignableTo(TypeConstant that)
         {
         Constant constIdThis = this.getDefiningConstant();
-        Constant constIdThat = that.getDefiningConstant();
+        Constant constIdThat = that.getDefiningConstant(); // TODO: what if relational
 
         if (constIdThis.equals(constIdThat))
             {
@@ -535,8 +544,8 @@ public class TerminalTypeConstant
                             ClassStructure clzThat = (ClassStructure) idThat.getComponent();
                             if (clzThat.getFormat() == Component.Format.INTERFACE)
                                 {
-                                chain = new ContributionChain(new Contribution(
-                                    Composition.MaybeDuckType, idThat.asTypeConstant()));
+                                chain = new ContributionChain(
+                                    new Contribution(Composition.MaybeDuckType, that));
                                 }
                             }
                         return chain;
@@ -606,6 +615,43 @@ public class TerminalTypeConstant
         {
         // there is nothing that could change the result of "checkAssignableTo"
         return true;
+        }
+
+    @Override
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                List<TypeConstant> listParams)
+        {
+        Constant constIdThis = getDefiningConstant();
+
+        assert (constIdThis.getFormat() == Format.Class);
+
+        IdentityConstant idThis  = (IdentityConstant) constIdThis;
+        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+
+        assert (clzThis.getFormat() == Component.Format.INTERFACE);
+
+        return clzThis.isInterfaceAssignableFrom(that, access, listParams);
+        }
+
+    @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               List<TypeConstant> listParams)
+        {
+        Constant constIdThis = getDefiningConstant();
+
+        assert (constIdThis.getFormat() == Format.Class);
+
+        IdentityConstant idThis  = (IdentityConstant) constIdThis;
+        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+
+        return clzThis.containsSubstitutableMethod(signature, access, listParams);
+        }
+
+    @Override
+    public boolean containsSubstitutableProperty(SignatureConstant signature, List<TypeConstant> listParams)
+        {
+        // TODO: implement
+        return false;
         }
 
     @Override

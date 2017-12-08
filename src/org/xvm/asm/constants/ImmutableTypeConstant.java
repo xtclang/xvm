@@ -90,6 +90,16 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureImmutableTypeConstant(constResolved);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();

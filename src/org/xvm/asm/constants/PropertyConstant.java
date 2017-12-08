@@ -62,6 +62,12 @@ public class PropertyConstant
         }
 
     @Override
+    public boolean isProperty()
+        {
+        return true;
+        }
+
+    @Override
     public TypeConstant getType()
         {
         // TODO return Property<> or Ref<>

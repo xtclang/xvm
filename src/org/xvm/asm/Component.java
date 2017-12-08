@@ -32,6 +32,7 @@ import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.GenericTypeResolver;
 import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.util.Handy;
@@ -2485,26 +2486,11 @@ public abstract class Component
             List<TypeConstant> listContribParams = typeContrib.getParamTypes();
             List<TypeConstant> listContribActual = new ArrayList<>(listContribParams.size());
 
+            GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(listActual);
+
             for (TypeConstant typeContribParam : listContribParams)
                 {
-                Constant constId = typeContribParam.getDefiningConstant();
-
-                if (constId.getFormat() == Constant.Format.Property)
-                    {
-                    PropertyConstant prop = (PropertyConstant) constId;
-
-                    int ix = clzParent.indexOfFormalParameter(prop.getName());
-                    if (ix < 0)
-                        {
-                        throw new IllegalStateException(
-                            "Failed to find " + prop.getName() + " in " + clzParent);
-                        }
-                    listContribActual.add(listActual.get(ix));
-                    }
-                else
-                    {
-                    listContribActual.add(typeContribParam);
-                    }
+                listContribActual.add(typeContribParam.resolveGenerics(resolver));
                 }
 
             return getComposition() != Composition.Incorporates ||
@@ -2536,6 +2522,7 @@ public abstract class Component
 
             for (TypeConstant typeContribParam : listContribParams)
                 {
+                // TODO: what if a relational or parameterized?
                 Constant constId = typeContribParam.getDefiningConstant();
 
                 if (constId.getFormat() == Constant.Format.Property)

@@ -145,6 +145,64 @@ public class SignatureConstant
         }
 
 
+    /**
+     * @return an equivalent signature without any generic types
+     */
+    public SignatureConstant resolveGenericTypes(TypeConstant.GenericTypeResolver resolver)
+        {
+        TypeConstant[] aconstParamOriginal = m_aconstParams;
+        TypeConstant[] aconstParamResolved = null;
+        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
+            {
+            TypeConstant constOriginal = aconstParamOriginal[i];
+            TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+            if (constOriginal != constResolved)
+                {
+                if (aconstParamResolved == null)
+                    {
+                    aconstParamResolved = new TypeConstant[c];
+                    System.arraycopy(aconstParamOriginal, 0, aconstParamResolved, 0, c);
+                    }
+                aconstParamResolved[i] = constResolved;
+                }
+            }
+
+        TypeConstant[] aconstReturnOriginal = m_aconstParams;
+        TypeConstant[] aconstReturnResolved = null;
+        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
+            {
+            TypeConstant constOriginal = aconstReturnOriginal[i];
+            TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+            if (constOriginal != constResolved)
+                {
+                if (aconstReturnResolved == null)
+                    {
+                    aconstReturnResolved = new TypeConstant[c];
+                    System.arraycopy(aconstReturnOriginal, 0, aconstReturnResolved, 0, c);
+                    }
+                aconstReturnResolved[i] = constResolved;
+                }
+            }
+
+        if (aconstParamResolved == null && aconstReturnResolved == null)
+            {
+            return this;
+            }
+
+        if (aconstParamResolved == null)
+            {
+            aconstParamResolved = aconstParamOriginal;
+            }
+        if (aconstReturnResolved == null)
+            {
+            aconstReturnResolved = aconstReturnOriginal;
+            }
+
+        return getConstantPool().
+            ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -200,11 +258,11 @@ public class SignatureConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);
-        for (Constant constant : m_aconstParams)
+        for (TypeConstant constant : m_aconstParams)
             {
             visitor.accept(constant);
             }
-        for (Constant constant : m_aconstReturns)
+        for (TypeConstant constant : m_aconstReturns)
             {
             visitor.accept(constant);
             }

@@ -486,6 +486,75 @@ public class MethodStructure
      * Check if this method could be called via the specified signature.
      *
      * @param signature   the signature of the matching method
+     * @param listActual  the actual generic types
+     */
+    public boolean isSubstitutableFor(SignatureConstant signature, List<TypeConstant> listActual)
+        {
+        int cParams  = getParamCount();
+        int cReturns = getReturnCount();
+
+        if (cParams != signature.getParams().size() ||
+            cReturns != signature.getReturns().size())
+            {
+            return false;
+            }
+
+        // the signature comes from the compiler/assembler pointing to the compile-time
+        // method structure that should be used in the invocation in its most generic representation;
+        // the rule 1.2.2.2 below (an exception clause) doesn't really apply in the case of the method
+        // callability. Its purpose to allow the following assignment:
+        //
+        //      List<Object> l = new ArrayList<String>();
+        //
+        // even though there is a method "Void add(ElementType el)" that violates the rule 1.2.1;
+        // however, our check would allow it (the type parameter is identical - ElementType property)
+
+        /*
+         * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
+         *
+         * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
+         *    true:
+         *    1. _m1_ and _m2_ have the same name
+         *    2. _m1_ and _m2_ have the same number of parameters, and for each parameter type _p1_ of
+         *       _m1_ and _p2_ of _m2_, at least one of the following holds true:
+         *       1. _p1_ is assignable to _p2_
+         *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
+         *          the following hold true:
+         *          1. _p2_ is assignable to _p1_
+         *          2. _T1_ produces _p1_
+         *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
+         *       _m1_ and _r2_ of _m2_, the following holds true:
+         *      1. _r2_ is assignable to _r1_
+         */
+        for (int i = 0; i < cReturns; i++)
+            {
+            TypeConstant constR1 = getReturn(i).getType();
+            TypeConstant constR2 = signature.getRawReturns()[i];
+
+            if (!constR2.isA(constR1))
+                {
+                return false;
+                }
+
+            }
+
+        for (int i = 0; i < cParams; i++)
+            {
+            TypeConstant constP1 = getParam(i).getType();
+            TypeConstant constP2 = signature.getRawParams()[i];
+
+            if (!constP1.isA(constP2))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
+    /**
+     * Check if this method could be called via the specified signature.
+     *
+     * @param signature   the signature of the matching method
      * @param clazz       the TypeComposition in which context's the matching is evaluated
      */
     public boolean isCallableFor(SignatureConstant signature, TypeComposition clazz)

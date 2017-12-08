@@ -358,6 +358,11 @@ public abstract class TypeConstant
     public abstract TypeConstant resolveTypedefs();
 
     /**
+     * @return this same type, but without any generic types in it
+     */
+    public abstract TypeConstant resolveGenerics(GenericTypeResolver resolver);
+
+    /**
      * Type parameters are compiled as the "Type" type; assuming that this type is the type
      * {@code Type<T>}, determine what {@code T} is.
      *
@@ -452,7 +457,6 @@ public abstract class TypeConstant
         return listParamTypes.get(i);
         }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
@@ -462,7 +466,7 @@ public abstract class TypeConstant
      * Note: a negative answer doesn't guarantee non-assignability; it's simply an indication
      *       that a "long-path" computation should be done to prove or disprove it.
      *
-     * @param that   the type to match
+     * @param that  the type to match
      *
      * See Type.x # isA()
      */
@@ -490,8 +494,7 @@ public abstract class TypeConstant
             return true;
             }
 
-        // TODO: there is a "Maybe"; need to do the "duck type" check
-        return false;
+        return false; // that.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
         }
 
     protected ContributionChain checkAssignableTo(TypeConstant that)
@@ -502,6 +505,42 @@ public abstract class TypeConstant
     protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
         {
         return getUnderlyingType().checkAssignableFrom(that, chain);
+        }
+
+    /**
+     * Check if this interface type is assignable from the specified type.
+     *
+     * @param that        the type to check the assignability from
+     * @param access      the access level to limit the checks to
+     * @param listParams  the list of actual generic parameters
+     *
+     * @return true iff the specified type could be assigned to this interface type
+     */
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                List<TypeConstant> listParams)
+        {
+        return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
+        }
+
+    /**
+     * Check if this type contains a method substitutable for the specified one.
+     *
+     * @param signature   the method to check the substitutability for
+     * @param access      the access level to limit the check to
+     * @param listParams  the list of actual generic parameters
+     *
+     *  @return true iff the specified type could be assigned to this interface type
+     */
+    public boolean containsSubstitutableMethod(SignatureConstant signature,
+                                               Access access, List<TypeConstant> listParams)
+        {
+        return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams);
+        }
+
+    public boolean containsSubstitutableProperty(SignatureConstant signature,
+                                                 List<TypeConstant> listParams)
+        {
+        return getUnderlyingType().containsSubstitutableProperty(signature, listParams);
         }
 
     /**
@@ -679,4 +718,15 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
+
+
+    // ----- inner classes ------------------------------------------------------------------
+
+    /**
+     * Resolves a generic type name into a type.
+     */
+    public interface GenericTypeResolver
+        {
+        TypeConstant resolveGenericType(String sName);
+        }
     }

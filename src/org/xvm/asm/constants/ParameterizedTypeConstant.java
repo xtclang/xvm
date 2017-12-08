@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
@@ -157,6 +156,34 @@ public class ParameterizedTypeConstant
                 : this;
         }
 
+    @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        boolean      fDiff         = constOriginal != constResolved;
+
+        List<TypeConstant> listOriginal   = m_listTypeParams;
+        TypeConstant[]     aconstResolved = null;
+        for (int i = 0, c = listOriginal.size(); i < c; ++i)
+            {
+            TypeConstant constParamOriginal = listOriginal.get(i);
+            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
+            if (fDiff || constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == null)
+                    {
+                    aconstResolved = listOriginal.toArray(new TypeConstant[c]);
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
+        }
 
     // ----- type comparison support --------------------------------------------------------------
 
@@ -393,6 +420,12 @@ public class ParameterizedTypeConstant
             }
 
         return listActualTypes;
+        }
+
+    @Override
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+        {
+        return super.isInterfaceAssignableFrom(that, access, getParamTypes());
         }
 
     @Override

@@ -58,6 +58,18 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
+        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : getConstantPool().ensureIntersectionTypeConstant(constResolved1, constResolved2);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return (m_constType1.isOnlyNullable() ^ m_constType2.isOnlyNullable())
