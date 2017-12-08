@@ -578,37 +578,37 @@ public abstract class Statement
                 {
                 case "this":
                 case "this:target":
-                    type  = pool.ensureTerminalTypeConstant(getThisIdentity());
+                    type  = getThisType();
                     nReg  = Op.A_TARGET;
                     fThis = true;
                     break;
 
                 case "this:private":
-                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PRIVATE);
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
                     nReg  = Op.A_PRIVATE;
                     fThis = true;
                     break;
 
                 case "this:protected":
-                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PROTECTED);
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
                     nReg  = Op.A_PROTECTED;
                     fThis = true;
                     break;
 
                 case "this:public":
-                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.PUBLIC);
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
                     nReg  = Op.A_PUBLIC;
                     fThis = true;
                     break;
 
                 case "this:struct":
-                    type  = pool.ensureClassTypeConstant(getThisIdentity(), Access.STRUCT);
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
                     nReg  = Op.A_STRUCT;
                     fThis = true;
                     break;
 
                 case "this:type":
-                    type  = pool().typeType(); // TODO need the actual Type<actualType>
+                    type  = pool.ensureParameterizedTypeConstant(pool.typeType(), getThisType());
                     nReg  = Op.A_TYPE;
                     fThis = true;
                     break;
@@ -619,7 +619,7 @@ public abstract class Statement
                     break;
 
                 case "this:module":
-                    type = pool.typeModule(); // TODO needs to actually be "this module", not Module
+                    type = getModuleType();
                     nReg = Op.A_MODULE;
                     break;
 
@@ -713,7 +713,7 @@ public abstract class Statement
                 }
             }
 
-        IdentityConstant getThisIdentity()
+        TypeConstant getThisType()
             {
             Component parent = m_method;
             while (true)
@@ -730,8 +730,40 @@ public abstract class Statement
                     case SERVICE:
                     case PACKAGE:
                     case MODULE:
-                        return parent.getIdentityConstant();
+                        return ((ClassStructure) parent).getFormalType();
 
+                    case METHOD:
+                    case PROPERTY:
+                    case MULTIMETHOD:
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                parent = parent.getParent();
+                }
+            }
+
+        TypeConstant getModuleType()
+            {
+            Component parent = m_method;
+            while (true)
+                {
+                switch (parent.getFormat())
+                    {
+                    case MODULE:
+                        return ((ClassStructure) parent).getFormalType();
+
+                    case INTERFACE:
+                    case CLASS:
+                    case CONST:
+                    case ENUM:
+                    case ENUMVALUE:
+                    case MIXIN:
+                    case TRAIT:
+                    case SERVICE:
+                    case PACKAGE:
                     case METHOD:
                     case PROPERTY:
                     case MULTIMETHOD:

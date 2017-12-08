@@ -532,10 +532,17 @@ public class TerminalTypeConstant
             int cClassParams = listClassParams.size();
             if (atypeParams != null && cTypeParams != cClassParams)
                 {
-                // TODO log error: either too few or too many type params
-                throw new IllegalStateException("TODO error on " + struct.getName()
-                        + " - type param type count (" + cTypeParams
-                        + ") does not match class (" + cClassParams+ ")");
+                if (struct.getIdentityConstant().equals(getConstantPool().clzTuple()))
+                    {
+                    // TODO lots of work to validate the tuple type here
+                    }
+                else
+                    {
+                    // TODO log error: either too few or too many type params
+                    throw new IllegalStateException("TODO error on " + struct.getName()
+                            + " - type param type count (" + cTypeParams
+                            + ") does not match class (" + cClassParams + ")");
+                    }
                 }
 
             for (int i = 0; i < cClassParams; ++i)
@@ -603,10 +610,17 @@ public class TerminalTypeConstant
 
                 if (!typeActual.isA(typeConstraint))
                     {
-                    // TODO log error: actual type is not legal because it violates the constraint
-                    throw new IllegalStateException("TODO error on " + struct.getName()
-                            + " - type param type (" + typeActual
-                            + ") not isA(" + typeConstraint + ")");
+                    if (typeConstraint.getDefiningConstant() != null && typeConstraint.getDefiningConstant().equals(getConstantPool().clzTuple()))
+                        {
+                        // TODO lots of work to validate the tuple type here
+                        }
+                    else
+                        {
+                        // TODO log error: actual type is not legal because it violates the constraint
+                        throw new IllegalStateException("TODO error on " + struct.getName()
+                                + " - type param type (" + typeActual
+                                + ") not isA(" + typeConstraint + ")");
+                        }
                     }
 
                 TypeConstant typeOld = paraminfo.getActualType();

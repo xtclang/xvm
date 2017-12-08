@@ -48,9 +48,9 @@ public class Ref
 
         // extends Referent
         markNativeGetter("ActualType");
-        markNativeGetter("isService");
-        markNativeGetter("isConst");
-        markNativeGetter("isImmutable");
+        markNativeGetter("service_");
+        markNativeGetter("const_");
+        markNativeGetter("immutable_");
         }
 
     @Override
@@ -86,7 +86,7 @@ public class Ref
             case "selfContained":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
 
-            case "isService":
+            case "service_":
                 try
                     {
                     ObjectHandle hReferent = hThis.get();
@@ -98,7 +98,7 @@ public class Ref
                     return frame.raiseException(e);
                     }
 
-            case "isConst":
+            case "const_":
                 try
                     {
                     ObjectHandle hReferent = hThis.get();
@@ -110,7 +110,7 @@ public class Ref
                     return frame.raiseException(e);
                     }
 
-            case "isImmutable":
+            case "immutable_":
                 try
                     {
                     ObjectHandle hReferent = hThis.get();

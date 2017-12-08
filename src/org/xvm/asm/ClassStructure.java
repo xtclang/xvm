@@ -137,6 +137,27 @@ public class ClassStructure
         markModified();
         }
 
+    public TypeConstant getFormalType()
+        {
+        IdentityConstant                      constantClz = getIdentityConstant();
+        ListMap<StringConstant, TypeConstant> mapParams   = m_mapParams;
+        if (mapParams == null)
+            {
+            return constantClz.asTypeConstant();
+            }
+
+        ConstantPool   pool    = getConstantPool();
+        TypeConstant[] aparams = new TypeConstant[mapParams.size()];
+        int i = 0;
+        for (StringConstant constantName : mapParams.keySet())
+            {
+            aparams[i++] = pool.ensureTerminalTypeConstant(
+                    pool.ensurePropertyConstant(constantClz, constantName.getValue()));
+            }
+
+        return pool.ensureClassTypeConstant(constantClz, null, aparams);
+        }
+
 
     // ----- component methods ---------------------------------------------------------------------
 

@@ -62,5 +62,11 @@ class Object
         {
         return () -> this;
         }
+
+    immutable Object to<immutable Object>()
+        {
+        meta.immutable_ = true;
+        return this.as(immutable Object);
+        }
     }
 

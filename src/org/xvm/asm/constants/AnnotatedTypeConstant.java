@@ -132,8 +132,8 @@ public class AnnotatedTypeConstant
         TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
         return constResolved == constOriginal
                 ? this
-                : getConstantPool().ensureAnnotatedTypeConstant(m_constClass,
-                        getAnnotationParamsAsArray(), constResolved);
+                : getConstantPool().ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
+                        m_annotation.getParams(), constResolved);
         }
 
     @Override

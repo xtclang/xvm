@@ -92,7 +92,7 @@ interface Service()
     @RO @Atomic StatusIndicator statusIndicator;
 
     /**
-     * Look up the named ContextToken. If this
+     * Obtain the named ContextToken using its name.
      *
      * Normally, a developer would access a ContextToken using injection, such as this example which
      * requires the injection of the token named "customerId":
@@ -103,7 +103,7 @@ interface Service()
      *
      *   @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
      */
-    conditional ContextToken `ContextToken(String name);
+    conditional ContextToken findContextToken(String name);
 
     /**
      * The current CriticalSection for the service, if any.
@@ -257,16 +257,9 @@ interface Service()
      * Until the ContextToken is closed, or until the context for that name is erased, the
      * ContextToken will be available (by its name) from any point within this service. Furthermore,
      * any calls from this service to another service will have the effect of automatically
-     * registering the same ContextToken with that service.
+     * registering the same ContextToken with that service for the duration of the call.
      */
-    Void registerContextToken(ContextToken token);
-
-    /**
-     * If a ContextToken is registered under the specified name, erase that registration.
-     *
-     * @param name  the name of the context
-     */
-    Void eraseContext(String name);
+    Void registerContextToken(ContextToken? token);
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
@@ -295,4 +288,10 @@ interface Service()
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
     Void registerUnhandledExceptionNotification(function Void notify(Exception));
+
+    @Override
+    immutable Service to<immutable Service>()
+        {
+        throw new UnsupportedOperationException();
+        }
     }

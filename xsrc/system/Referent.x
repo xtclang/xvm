@@ -68,15 +68,15 @@ interface Referent
     /**
      * Determine if the referent is a service.
      */
-    @RO Boolean isService;
+    @RO Boolean service_;
 
     /**
      * Determine if the referent is an immutable const.
      */
-    @RO Boolean isConst;
+    @RO Boolean const_;
 
     /**
      * Determine if the referent is immutable.
      */
-    @RO Boolean isImmutable;
+    @RO Boolean immutable_;
     }

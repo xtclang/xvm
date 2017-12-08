@@ -10,8 +10,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import java.util.Map;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -19,8 +19,8 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.ErrorListener;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeSet;
