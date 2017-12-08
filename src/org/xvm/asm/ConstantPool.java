@@ -37,8 +37,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
- *
- * @author cp  2015.12.04
  */
 public class ConstantPool
         extends XvmStructure

@@ -17,8 +17,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * An XVM Structure that represents an entire Package.
- *
- * @author cp 2016.04.14
  */
 public class PackageStructure
         extends ClassStructure

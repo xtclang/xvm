@@ -14,8 +14,6 @@ import java.util.TreeMap;
 
 /**
  * A simple ModuleRepository that manages its contents in a directory.
- *
- * @author cp 2017.04.20
  */
 public class DirRepository
         implements ModuleRepository

@@ -21,8 +21,6 @@ import org.xvm.asm.constants.VersionMatchesCondition;
  * scope of code.
  * <p/>
  * The challenge is to factor out redundancy
- *
- * @author cp 2016.09.28
  */
 public class AssemblerContext
     {

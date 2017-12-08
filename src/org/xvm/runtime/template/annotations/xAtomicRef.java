@@ -19,8 +19,6 @@ import org.xvm.runtime.template.Ref;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xAtomicRef
         extends Ref

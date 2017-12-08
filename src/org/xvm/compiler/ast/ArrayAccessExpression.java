@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * An array access expression is an expression followed by an array index expression.
- *
- * @author cp 2017.04.08
  */
 public class ArrayAccessExpression
         extends Expression

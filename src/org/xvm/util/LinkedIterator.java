@@ -8,8 +8,6 @@ import java.util.NoSuchElementException;
 
 /**
  * An Iterator over multiple Iterators.
- *
- * @author cp 2016.04.20
  */
 public class LinkedIterator<E>
         implements Iterator<E>

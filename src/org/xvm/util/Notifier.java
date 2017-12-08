@@ -2,8 +2,6 @@ package org.xvm.util;
 
 /**
  * A simplified version of {@link java.util.concurrent.locks.Condition} abstraction.
- *
- * @author gg 2017.03.31
  */
 public interface Notifier
     {

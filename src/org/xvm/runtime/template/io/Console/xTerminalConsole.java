@@ -21,8 +21,6 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xTerminalConsole
         extends ClassTemplate

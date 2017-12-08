@@ -1,7 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import com.sun.istack.internal.Nullable;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -20,8 +19,6 @@ import org.xvm.runtime.TypeSet;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xException
         extends Const

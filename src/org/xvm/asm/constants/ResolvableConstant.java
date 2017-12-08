@@ -6,8 +6,6 @@ import org.xvm.asm.Constant;
 
 /**
  * A constant that starts as an unresolved constant, but is eventually resolved.
- *
- * @author cp 2017.07.12
  */
 public interface ResolvableConstant
     {

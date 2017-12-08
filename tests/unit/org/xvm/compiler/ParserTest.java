@@ -10,8 +10,6 @@ import java.util.List;
 
 /**
  * Test of the Ecstasy parser
- *
- * @author cp 2017.03.28
  */
 public class ParserTest
     {

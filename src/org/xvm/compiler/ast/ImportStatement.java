@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Component;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
@@ -15,8 +16,6 @@ import org.xvm.util.Severity;
 
 /**
  * An import statement specifies a qualified name to alias as a simple name.
- *
- * @author cp 2017.03.28
  */
 public class ImportStatement
         extends Statement

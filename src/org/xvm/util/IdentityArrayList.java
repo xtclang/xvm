@@ -8,8 +8,6 @@ import java.util.ListIterator;
 
 /**
  * An ArrayList using identity for equality comparison.
- *
- * @author cp 2017.05.15
  */
 public class IdentityArrayList<E>
         extends ArrayList<E>

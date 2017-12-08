@@ -12,8 +12,6 @@ import org.xvm.compiler.Token;
 
 /**
  * Represents a statement that corresponds to a Component in an Ecstasy FileStructure.
- *
- * @author cp 2017.04.12
  */
 public abstract class ComponentStatement
         extends Statement

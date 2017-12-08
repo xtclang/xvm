@@ -25,8 +25,6 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 /**
  * A type expression specifies a named type with optional parameters.
- *
- * @author cp 2017.03.31
  */
 public class NamedTypeExpression
         extends TypeExpression

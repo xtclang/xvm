@@ -12,8 +12,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * An "Iterable"-based "for" statement.
- *
- * @author cp 2017.04.11
  */
 public class ForStatement2
         extends Statement

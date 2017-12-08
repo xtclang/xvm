@@ -15,8 +15,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * Common base for CALL_ ops.
- *
- * @author gg 2017.02.21
  */
 public abstract class OpCallable extends Op
     {

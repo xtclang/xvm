@@ -12,8 +12,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * "New object" expression.
- *
- * @author cp 2017.04.06
  */
 public class NewExpression
         extends PrefixExpression

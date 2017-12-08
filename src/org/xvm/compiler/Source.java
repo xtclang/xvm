@@ -18,8 +18,6 @@ import static org.xvm.util.Handy.readFileChars;
 /**
  * A representation of a XTC source code file, handling the first two phases of
  * lexical analysis (line termination, location and unicode escapes).
- *
- * @author cp 2015.11.08
  */
 public class Source
         implements Constants

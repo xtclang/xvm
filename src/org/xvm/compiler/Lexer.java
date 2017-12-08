@@ -27,8 +27,6 @@ import static org.xvm.util.Handy.quotedChar;
 /**
  * An XTC source code parser supporting both demand-based and stream-based
  * parsing.
- *
- * @author cp 2015.11.09
  */
 public class Lexer
         implements Iterator<Token>
@@ -547,7 +545,7 @@ public class Lexer
                 Id id = Id.valueByText(name);
                 return id == null
                         ? new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, name)
-                        : new Token(lInitPos, source.getPosition(), id); 
+                        : new Token(lInitPos, source.getPosition(), id);
                 }
             }
         }
@@ -612,7 +610,7 @@ public class Lexer
                         case '\'':
                         case '\"':
                             break;
-                        
+
                         case 'b':
                             ch = '\b';
                             break;

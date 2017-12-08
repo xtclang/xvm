@@ -20,8 +20,6 @@ import org.xvm.util.Severity;
  * The compiler is a multi-step state machine. This is the result of the compiler for one module
  * needing to be able to be coordinated with compilers for other modules that are co-dependent,
  * i.e. that have dependencies on each other that need to be jointly resolved.
- *
- * @author cp 2017.04.19
  */
 public class Compiler
     {

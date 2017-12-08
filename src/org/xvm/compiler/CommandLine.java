@@ -83,8 +83,6 @@ import static org.xvm.util.Handy.indentLines;
  * <li>{@code -nowarn} - suppress warnings</li>
  * <li>{@code -verbose} - provide information about the work being done by the compilation process</li>
  * </ul>
- *
- * @author cp 2017.03.23
  */
 public class CommandLine
     {

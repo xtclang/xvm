@@ -27,8 +27,6 @@ import org.xvm.runtime.template.types.xMethod.MethodHandle;
 
 /**
  * Type is simply a collection of properties and methods.
- *
- * @author gg 2017.02.16
  */
 public class Type
     {

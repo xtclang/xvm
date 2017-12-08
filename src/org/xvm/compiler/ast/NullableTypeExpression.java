@@ -13,8 +13,6 @@ import org.xvm.compiler.ErrorListener;
 
 /**
  * A nullable type expression is a type expression followed by a question mark.
- *
- * @author cp 2017.03.31
  */
 public class NullableTypeExpression
         extends TypeExpression

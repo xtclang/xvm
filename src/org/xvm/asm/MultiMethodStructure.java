@@ -15,8 +15,6 @@ import java.util.List;
  * declare or define a multi-method. Instead, it is a compile-time construction, used to collect
  * together methods that share a name into a group, within which they are identified by a more
  * exacting set of attributes, namely their accessibility and their parameter/return types.
- *
- * @author cp 2016.04.26
  */
 public class MultiMethodStructure
         extends Component

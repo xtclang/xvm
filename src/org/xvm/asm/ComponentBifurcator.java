@@ -10,8 +10,6 @@ import org.xvm.asm.constants.ConditionalConstant;
 /**
  * A ComponentBifurcator is a condition-aware and sibling-aware helper that splits a component as
  * necessary to respond to the request for various conditional views of the component.
- *
- * @author cp 2017.06.21
  */
 public class ComponentBifurcator
     {

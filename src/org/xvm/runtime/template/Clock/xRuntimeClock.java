@@ -21,8 +21,6 @@ import org.xvm.runtime.template.Function.NativeMethodHandle;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xRuntimeClock
         extends ClassTemplate

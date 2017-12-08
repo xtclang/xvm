@@ -33,8 +33,6 @@ import org.xvm.runtime.template.xObject;
 
 /**
  * The type registry.
- *
- * @author gg 2017.02.15
  */
 public class TypeSet
     {
@@ -53,7 +51,7 @@ public class TypeSet
     // cache - non-parameterized TypeCompositions ClassConstId
     final private Map<Integer, TypeComposition> f_mapConstCompositions = new HashMap<>();
 
-    public final static TypeConstant[] VOID = new TypeConstant[0];
+    public final static TypeConstant[] VOID = ConstantPool.NO_TYPES;
 
     TypeSet(Container container)
         {

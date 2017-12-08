@@ -12,8 +12,6 @@ import java.util.TreeMap;
 
 /**
  * An in-memory repository for the modules being built by the compiler.
- *
- * @author cp 2017.04.20
  */
 public class BuildRepository
         implements ModuleRepository

@@ -21,8 +21,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * An XVM Structure that represents an entire Module.
- *
- * @author cp 2016.04.14
  */
 public class ModuleStructure
         extends ClassStructure

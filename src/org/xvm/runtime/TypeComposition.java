@@ -33,8 +33,6 @@ import org.xvm.runtime.template.xOrdered;
  *
  * NOTE: methods that rely on the associated ClassTemplate must be overridden by
  *       the extended classes (UnionComposition, InterComposition and ConstComposition)
- *
- * @author gg 2017.02.23
  */
 public class TypeComposition
     {

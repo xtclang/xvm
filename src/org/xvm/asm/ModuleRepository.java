@@ -7,8 +7,6 @@ import java.util.TreeSet;
 
 /**
  * An interface representing the ability to find Modules by identity.
- *
- * @author cp 2016.10.10
  */
 public interface ModuleRepository
     {

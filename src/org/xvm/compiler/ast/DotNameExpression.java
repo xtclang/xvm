@@ -16,8 +16,6 @@ import java.util.List;
  * If you already have an expression "expr", this is for "expr.name".
  *
  * The DotName construct _may_ be a type expression.
- *
- * @author cp 2017.04.08
  */
 public class DotNameExpression
         extends TypeExpression

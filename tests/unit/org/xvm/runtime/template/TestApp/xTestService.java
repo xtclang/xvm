@@ -15,8 +15,6 @@ import org.xvm.runtime.template.Service;
 
 /**
  * A test service.
- *
- * @author gg 2017.03.15
  */
 public class xTestService extends Service
     {

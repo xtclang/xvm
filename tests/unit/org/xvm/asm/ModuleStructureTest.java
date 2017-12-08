@@ -13,8 +13,6 @@ import org.xvm.util.Severity;
 
 /**
  * Tests for the module structure and module-level rules and functionality.
- *
- * @author cp 2017.05.25
  */
 public class ModuleStructureTest
         extends FileStructureTest

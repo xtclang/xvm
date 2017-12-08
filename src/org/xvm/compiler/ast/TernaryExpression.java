@@ -6,8 +6,6 @@ import java.lang.reflect.Field;
 
 /**
  * A ternary expression is the "a ? b : c" expression.
- *
- * @author cp 2017.04.06
  */
 public class TernaryExpression
         extends Expression

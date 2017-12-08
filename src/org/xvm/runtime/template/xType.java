@@ -18,8 +18,6 @@ import org.xvm.runtime.template.collections.xArray;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xType
         extends ClassTemplate

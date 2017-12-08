@@ -11,8 +11,6 @@ import java.util.Set;
 /**
  * A simple ModuleRepository for a single file with a single module.
  * TODO add support for more than one module in the file (i.e. if any other modules are embedded)
- *
- * @author cp 2017.04.20
  */
 public class FileRepository
         implements ModuleRepository

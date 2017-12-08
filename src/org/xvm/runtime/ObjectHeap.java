@@ -24,8 +24,6 @@ import org.xvm.runtime.template.collections.xTuple;
 
 /**
  * Heap and constants.
- *
- * @author gg 2017.02.15
  */
 public class ObjectHeap
     {

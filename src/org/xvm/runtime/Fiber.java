@@ -6,8 +6,6 @@ import org.xvm.asm.MethodStructure;
 
 /**
  * TODO:
- *
- * @author gg 2017.06.14
  */
 public class Fiber
     {

@@ -31,8 +31,6 @@ import org.xvm.runtime.template.xString;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xTuple
         extends ClassTemplate

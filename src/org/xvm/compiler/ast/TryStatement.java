@@ -1,20 +1,18 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.List;
+
+import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
 
 
 /**
  * A "try" or "using" statement.
- *
- * @author cp 2017.04.10
  */
 public class TryStatement
         extends Statement

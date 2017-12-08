@@ -16,8 +16,6 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * An XVM Structure that represents a "typedef" statement, which acts as a way to name an arbitrary
  * type, by associating a named structure (this) with a type constant.
- *
- * @author cp 2016.06.27
  */
 public class TypedefStructure
         extends Component

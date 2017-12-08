@@ -13,8 +13,6 @@ import java.util.Set;
  * A simple implementation of a Map on top of an ArrayList to maintain order of
  * insertion. This map should work well for small numbers of entries, but will
  * degrade in performance as it grows in size.
- *
- * @author cp 2016.10.28
  */
 public class ListMap<K,V>
         extends AbstractMap<K,V>

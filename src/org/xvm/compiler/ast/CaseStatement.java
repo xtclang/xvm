@@ -9,8 +9,6 @@ import java.lang.reflect.Field;
 /**
  * A case statement. This can only occur within a switch statement. (It's not a "real" statement;
  * it's more like a label.)
- *
- * @author cp 2017.04.09
  */
 public class CaseStatement
         extends Statement

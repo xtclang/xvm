@@ -8,8 +8,6 @@ import java.lang.reflect.Field;
 
 /**
  * A parameter type and name, with an optional default value.
- *
- * @author cp 2017.03.28
  */
 public class Parameter
         extends AstNode

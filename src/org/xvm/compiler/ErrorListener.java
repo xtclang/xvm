@@ -6,8 +6,6 @@ import org.xvm.util.Severity;
 
 /**
  * A listener for errors being reported in the compilation process.
- *
- * @author cp 2015.11.13
  */
 public interface ErrorListener
     {

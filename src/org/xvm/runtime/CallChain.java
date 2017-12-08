@@ -7,13 +7,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
 
 /**
  * Represents a chain of invocation.
- *
- * @author gg 2017.08.22
  */
 public class CallChain
     {

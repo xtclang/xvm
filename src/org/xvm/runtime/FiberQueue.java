@@ -4,8 +4,6 @@ package org.xvm.runtime;
 /**
  * {@link FiberQueue} represents a queue-like data structure holding all pending Fibers and
  * facilitating a quick selection algorithm for the scheduler.
- *
- * @author gg 2017.06.13
  */
 public class FiberQueue
     {

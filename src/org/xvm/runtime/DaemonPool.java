@@ -11,8 +11,6 @@ import org.xvm.util.SimpleNotifier;
 
 /**
  * A simple daemon pool.
- *
- * @author gg 2017.03.31
  */
 public class DaemonPool
         implements Runnable

@@ -17,8 +17,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * An XVM Structure that represents a property.
- *
- * @author cp 2016.04.25
  */
 public class PropertyStructure
         extends Component

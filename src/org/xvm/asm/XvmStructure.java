@@ -83,8 +83,6 @@ import org.xvm.util.Severity;
  * accomplish conditional structure inclusion, each XVM structure in the hierarchy can have a
  * {@link ConditionalConstant ConditionalConstant} associated with it.</li>
  * </ul>
- *
- * @author cp  2015.12.04
  */
 public abstract class XvmStructure
         implements Constants
@@ -462,9 +460,10 @@ public abstract class XvmStructure
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    protected void log(ErrorList errs, Severity sev, String sCode, Object ... aoParam)
+    protected boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam)
         {
-        (errs == null ? ErrorListener.RUNTIME : errs).log(sev, sCode, aoParam, this);
+        // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
+        return (errs == null ? ErrorListener.RUNTIME : errs).log(sev, sCode, aoParam, this);
         }
 
 

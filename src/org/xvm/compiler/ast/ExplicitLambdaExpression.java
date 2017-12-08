@@ -12,8 +12,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * Lambda expression is an inlined function. This version uses parameters that are explicitly typed.
- *
- * @author cp 2017.04.07
  */
 public class ExplicitLambdaExpression
         extends Expression

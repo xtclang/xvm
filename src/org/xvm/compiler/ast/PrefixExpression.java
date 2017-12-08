@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.constants.ConditionalConstant;
+
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
@@ -10,8 +11,6 @@ import java.lang.reflect.Field;
 
 /**
  * Generic expression for something that follows the pattern "operator expression".
- *
- * @author cp 2017.04.06
  */
 public class PrefixExpression
         extends Expression

@@ -10,8 +10,6 @@ import org.xvm.util.Handy;
 
 /**
  * A data structure that holds values associated with versions.
- *
- * @author cp 2017.06.12
  */
 public class VersionTree<V>
         implements Iterable<Version>

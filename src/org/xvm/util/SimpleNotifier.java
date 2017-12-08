@@ -2,8 +2,6 @@ package org.xvm.util;
 
 /**
  * A trivial Notifier implementation.
- *
- * @author gg 2017.03.31
  */
 public class SimpleNotifier
         implements Notifier

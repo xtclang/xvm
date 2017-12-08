@@ -16,8 +16,6 @@ import org.xvm.compiler.Token;
 /**
  * An bi type expression is a type expression composed of two type expressions. For example, union
  * or intersection types.
- *
- * @author cp 2017.03.31
  */
 public class BiTypeExpression
         extends TypeExpression

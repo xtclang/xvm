@@ -8,8 +8,6 @@ import java.lang.reflect.Field;
 
 /**
  * An assert statement.
- *
- * @author cp 2017.04.09
  */
 public class AssertStatement
         extends Statement

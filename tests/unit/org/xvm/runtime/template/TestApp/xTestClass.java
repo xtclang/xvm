@@ -2,7 +2,6 @@ package org.xvm.runtime.template.TestApp;
 
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -15,8 +14,6 @@ import org.xvm.runtime.TypeSet;
 
 /**
  * A test class.
- *
- * @author gg 2017.03.15
  */
 public class xTestClass extends ClassTemplate
     {

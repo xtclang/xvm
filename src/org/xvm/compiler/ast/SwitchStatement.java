@@ -1,17 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
 
 
 /**
  * A "switch" statement.
- *
- * @author cp 2017.04.10
  */
 public class SwitchStatement
         extends Statement

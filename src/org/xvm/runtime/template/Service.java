@@ -28,8 +28,6 @@ import org.xvm.runtime.template.annotations.xFutureRef;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class Service
         extends ClassTemplate

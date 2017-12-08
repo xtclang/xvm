@@ -29,8 +29,6 @@ import org.xvm.util.Handy;
 /**
  * A temporary intermediary between the RT, the ConstantPool and ClassStructure;
  * FOR SIMULATION ONLY
- *
- * @author gg 2017.03.08
  */
 public class Adapter
     {

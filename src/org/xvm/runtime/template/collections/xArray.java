@@ -31,8 +31,6 @@ import org.xvm.runtime.template.xObject;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xArray
         extends ClassTemplate

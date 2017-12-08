@@ -29,8 +29,6 @@ import org.xvm.runtime.template.io.Console.xTerminalConsole;
 
 /**
  * TODO: for now Container == SecureContainer
- *
- * @author gg 2017.02.15
  */
 public class Container
     {

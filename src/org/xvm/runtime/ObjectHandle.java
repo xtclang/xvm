@@ -10,8 +10,6 @@ import org.xvm.util.ListMap;
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
  *  Bit, Boolean, Char, Int, UInt, Nullable.Null, and optionally for some Tuples
- *
- * @author gg 2017.02.15
  */
 public class ObjectHandle
         implements Cloneable

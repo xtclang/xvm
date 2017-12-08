@@ -48,8 +48,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A type declaration.
- *
- * @author cp 2017.03.28
  */
 public class TypeCompositionStatement
         extends ComponentStatement

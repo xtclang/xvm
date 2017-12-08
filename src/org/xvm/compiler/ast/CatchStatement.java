@@ -8,8 +8,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * A "catch" statement. (Not actually a statement. It only occurs within a try.)
- *
- * @author cp 2017.04.10
  */
 public class CatchStatement
         extends Statement

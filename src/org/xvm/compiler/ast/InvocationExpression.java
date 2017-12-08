@@ -16,8 +16,6 @@ import java.util.List;
  * Invocation expression represents calling a method or function.
  *
  * If you already have an expression "expr", this is for "expr(args)".
- *
- * @author cp 2017.04.08
  */
 public class InvocationExpression
         extends Expression

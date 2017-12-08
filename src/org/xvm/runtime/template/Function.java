@@ -27,8 +27,6 @@ import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class Function
         extends ClassTemplate

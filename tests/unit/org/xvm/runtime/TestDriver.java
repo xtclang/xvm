@@ -8,8 +8,6 @@ import org.xvm.compiler.CommandLine;
 
 /**
  * The test driver.
- *
- * @author gg 2017.03.27
  */
 public class TestDriver
     {

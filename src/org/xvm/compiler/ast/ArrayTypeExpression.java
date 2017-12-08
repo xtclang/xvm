@@ -17,8 +17,6 @@ import org.xvm.compiler.ErrorListener;
  * An array type expression is a type expression followed by an array indicator. Because an array
  * type can be used to (e.g.) "new" an array, it also has to support actual index extents, in
  * addition to just supporting the number of dimensions.
- *
- * @author cp 2017.03.31
  */
 public class ArrayTypeExpression
         extends TypeExpression

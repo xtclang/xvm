@@ -1,20 +1,18 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Version;
-
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.Map;
 
+import org.xvm.asm.Version;
+
+import org.xvm.compiler.Token;
+
 
 /**
  * A version override specifies allowable, avoided, and preferred version information.
- *
- * @author cp 2017.04.03
  */
 public class VersionOverride
         extends AstNode

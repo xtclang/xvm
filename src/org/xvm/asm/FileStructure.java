@@ -32,8 +32,6 @@ import static org.xvm.util.Handy.writePackedLong;
  * FileStructure is generally used as a container of one module, which may have dependencies on
  * other modules, some of which may be wholly embedded into the file structure. In other words, the
  * FileStructure is the "module container".
- *
- * @author cp 2015.12.04
  */
 public class FileStructure
         extends Component

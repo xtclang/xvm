@@ -16,8 +16,6 @@ import static org.xvm.util.HandyTest.dos;
 
 /**
  * Tests of the PackedIntegerTest class.
- *
- * @author cp 2015.12.16
  */
 public class PackedIntegerTest
     {

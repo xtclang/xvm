@@ -8,8 +8,6 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A type expression that can't figure out how to be a type exception. It pretends to be a type,
  * but it's going to end in misery and compiler errors.
- *
- * @author cp 2017.04.07
  */
 public class BadTypeExpression
         extends TypeExpression

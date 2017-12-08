@@ -25,8 +25,6 @@ import java.util.Arrays;
 
 /**
  * Handy static methods.
- *
- * @author cp  2015.12.09
  */
 public class Handy
     {
@@ -1460,9 +1458,9 @@ public class Handy
 
     /**
      * Perform a hash of the object. This performs a deep hash on arrays.
-     * 
+     *
      * @param o  any object, or null
-     * 
+     *
      * @return a hashcode
      */
     public static int hashCode(final Object o)
@@ -1520,14 +1518,14 @@ public class Handy
             {
             return false;
             }
-        
+
         final Class clz1 = o1.getClass();
         final Class clz2 = o1.getClass();
         if (clz1 != clz2)
             {
             return false;
             }
-        
+
         if (clz1.isArray())
             {
             switch (clz1.getName().charAt(1))

@@ -5,7 +5,6 @@ import java.util.Collections;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.Op;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -17,8 +16,6 @@ import org.xvm.runtime.template.Ref.IndexedRefHandle;
 
 /**
  * Support for index-based (array or tuple) op-codes.
- *
- * @author gg 2017.05.15
  */
 public interface IndexSupport
     {

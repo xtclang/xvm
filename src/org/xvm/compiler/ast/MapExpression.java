@@ -9,8 +9,6 @@ import java.util.List;
 /**
  * A map expression is an expression containing some number (0 or more) entries, each of which has
  * a key and a value.
- *
- * @author cp 2017.04.07
  */
 public class MapExpression
         extends Expression

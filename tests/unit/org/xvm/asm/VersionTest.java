@@ -9,8 +9,6 @@ import org.junit.Test;
 
 /**
  * Tests for Version and related functionality.
- *
- * @author cp 2017.06.12
  */
 public class VersionTest
     {

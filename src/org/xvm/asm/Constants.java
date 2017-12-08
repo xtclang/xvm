@@ -3,12 +3,10 @@ package org.xvm.asm;
 
 /**
  * Constant values used by the XVM for its various VM structures.
- *
- * @author cp  2015.12.04
  */
 public interface Constants
     {
-    // ----- file header -----------------------------------------------------
+    // ----- file header ---------------------------------------------------------------------------
 
     /**
      * The special sequence of bytes that identifies an XVM FileStructure.
@@ -28,10 +26,8 @@ public interface Constants
      */
     public static final int VERSION_MINOR_CUR = 0;
 
-    /**
-     * Compile-time debug flag.
-     */
-    public static final boolean DEBUG = true;
+
+    // ----- names ---------------------------------------------------------------------------------
 
     /**
      * The qualified name of the Ecstasy core module. This is the only module that has no external
@@ -44,51 +40,8 @@ public interface Constants
      */
     public static final String X_PKG_IMPORT = "ecstasy";
 
-    /**
-     * The name of the root Ecstasy class.
-     */
-    public static final String X_CLASS_OBJECT = "Object";
 
-    /**
-     * The name of the root Ecstasy class.
-     */
-    public static final String X_CLASS_TYPE = "Type";
-
-    /**
-     * The name of the Nullable enumeration.
-     */
-    public static final String X_CLASS_NULLABLE = "Nullable";
-
-    /**
-     * The name of the Function class.
-     */
-    public static final String X_CLASS_FUNCTION = "Function";
-
-    /**
-     * The name of the Array class.
-     */
-    public static final String X_CLASS_ARRAY = "collections.Array";
-
-    /**
-     * The name of the Tuple class.
-     */
-    public static final String X_CLASS_TUPLE = "collections.Tuple";
-
-    /**
-     * The name of the Set class.
-     */
-    public static final String X_CLASS_SET = "collections.Set";
-
-    /**
-     * The name of the Sequence interface.
-     */
-    public static final String X_CLASS_SEQUENCE = "collections.Sequence";
-
-    /**
-     * The name of the null value (a singleton), which is a child of {@link #X_CLASS_NULLABLE}.
-     */
-    public static final String X_CLASS_NULL = "Nullable.Null";
-
+    // ----- accessibility levels ------------------------------------------------------------------
 
     /**
      * The Access enumeration refers to the level of accessibility to a class that a reference will
@@ -146,4 +99,24 @@ public interface Constants
          */
         public final int FLAGS;
         }
+
+
+    // ----- error codes ---------------------------------------------------------------------------
+
+    /**
+     * Unknown error.
+     */
+    public static final String VE_UNKNOWN                           = "VERIFY-001";
+    /**
+     * Type parameters were specified for {0}, but it does not declare any.
+     */
+    public static final String VE_UNEXPECTED_TYPE_PARAMS            = "VERIFY-002";
+
+
+    // ----- miscellaneous -------------------------------------------------------------------------
+
+    /**
+     * Compile-time debug flag.
+     */
+    public static final boolean DEBUG = true;
     }

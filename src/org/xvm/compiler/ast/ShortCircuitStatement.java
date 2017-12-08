@@ -6,8 +6,6 @@ import org.xvm.compiler.Token;
 
 /**
  * A short-cirtuit statement represents "break" and "continue" statements.
- *
- * @author cp 2017.04.09
  */
 public class ShortCircuitStatement
         extends Statement

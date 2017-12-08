@@ -15,8 +15,6 @@ import org.xvm.compiler.Token;
 
 /**
  * A composition step. This defines one of the "building blocks" for a type composition.
- *
- * @author cp 2017.03.28
  */
 public abstract class Composition
         extends AstNode

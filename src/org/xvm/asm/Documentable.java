@@ -4,8 +4,6 @@ package org.xvm.asm;
 
 /**
  * Represents XVM structures that can contain their own documentation.
- *
- * @author cp 2017.05.25
  */
 public interface Documentable
     {

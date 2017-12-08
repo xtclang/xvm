@@ -12,7 +12,6 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Const;
-
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.xString.StringHandle;
 
@@ -21,8 +20,6 @@ import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
 /**
  * Various helpers.
- *
- * @author gg 2017.03.10
  */
 public abstract class Utils
     {
@@ -74,7 +71,7 @@ public abstract class Utils
         {
         TypeConstant tString = pool.getImplicitlyImportedComponent("String").getIdentityConstant().asTypeConstant();
 
-        TypeConstant[] atVoid = new TypeConstant[0];
+        TypeConstant[] atVoid = ConstantPool.NO_TYPES;
         TypeConstant[] atString = new TypeConstant[] {tString};
         SIG_DEFAULT = pool.ensureSignatureConstant("default", atVoid, atVoid);
         SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);

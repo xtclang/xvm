@@ -30,8 +30,6 @@ import org.xvm.runtime.template.Service.ServiceHandle;
 
 /**
  * The service context.
- *
- * @author gg 2017.02.15
  */
 public class ServiceContext
     {

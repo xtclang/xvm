@@ -65,7 +65,7 @@ public class FileStructureTest
             throws IOException
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
-        structfile.getModule().createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.X_CLASS_OBJECT, null);
+        structfile.getModule().createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Object", null);
         testFileStructure(structfile);
         }
 
@@ -75,7 +75,7 @@ public class FileStructureTest
         {
         FileStructure structfile = new FileStructure(Constants.ECSTASY_MODULE);
         ClassStructure structobj = structfile.getModule().createClass(Constants.Access.PUBLIC,
-                Component.Format.CLASS, Constants.X_CLASS_OBJECT, null);
+                Component.Format.CLASS, "Object", null);
         PackageStructure structpkg =structfile.getModule().createPackage(Constants.Access.PUBLIC,
                 "collections", null);
         ClassStructure structclz = structpkg.createClass(Constants.Access.PUBLIC,
@@ -90,7 +90,7 @@ public class FileStructureTest
         {
         FileStructure    file    = new FileStructure(Constants.ECSTASY_MODULE);
         ModuleStructure  module  = file.getModule();
-        ClassStructure   clzObj  = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, Constants.X_CLASS_OBJECT, null);
+        ClassStructure   clzObj  = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Object", null);
         PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections", null);
         ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable", null);
         ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map", null);

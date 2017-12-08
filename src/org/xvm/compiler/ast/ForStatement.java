@@ -12,8 +12,6 @@ import static org.xvm.util.Handy.indentLines;
 
 /**
  * The traditional "for" statement.
- *
- * @author cp 2017.04.10
  */
 public class ForStatement
         extends Statement
@@ -60,7 +58,7 @@ public class ForStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append("for (");
-        
+
         if (init != null)
             {
             boolean first = true;

@@ -9,15 +9,12 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
 /**
  * An sequence type expression is a type expression followed by an ellipsis.
- *
- * @author cp 2017.03.31
  */
 public class SequenceTypeExpression
         extends TypeExpression

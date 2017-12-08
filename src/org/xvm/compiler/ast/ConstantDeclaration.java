@@ -10,8 +10,6 @@ import static org.xvm.util.Handy.appendString;
 
 /**
  * A constant declaration statement specifies a constant value associated with a simple name.
- *
- * @author cp 2017.04.04
  */
 public class ConstantDeclaration
         extends VariableDeclarationStatement

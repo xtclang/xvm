@@ -14,8 +14,6 @@ import org.xvm.runtime.TypeSet;
 
 /**
  * A test class.
- *
- * @author gg 2017.03.15
  */
 public class xTestApp extends xModule
     {

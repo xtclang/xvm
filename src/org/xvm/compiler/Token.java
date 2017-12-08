@@ -12,8 +12,6 @@ import static org.xvm.util.Handy.appendString;
 
 /**
  * Representation of a language token.
- *
- * @author cp 2015.11.11
  */
 public class Token
     {
@@ -335,7 +333,7 @@ public class Token
     // ----- Token identities ----------------------------------------------------------------------
 
     /**
-     * Token Identity. 
+     * Token Identity.
      */
     public enum Id
         {
@@ -513,9 +511,9 @@ public class Token
 
         /**
          * Look up an Id enum by its {@link #TEXT}.
-         * 
+         *
          * @param sText  the textual representation of the Id
-         *               
+         *
          * @return an instance of Id, or null if there is no matching
          *         {@link #TEXT}
          */

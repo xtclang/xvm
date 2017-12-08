@@ -31,8 +31,6 @@ import org.xvm.util.Handy;
  * hierarchy implies a LinkerContext that returns true for {@link #isSpecified(String)
  * isSpecified("debug")} and true for {@link #isVersion(VersionConstant) isVersion(1)} -- and
  * returns true <b><i>only</i></b> for those two conditions!
- *
- * @author cp 2017.05.17
  */
 public class SimulatedLinkerContext
         implements LinkerContext
@@ -41,7 +39,7 @@ public class SimulatedLinkerContext
 
     /**
      * Construct a SimulatedLinkerContext using the specified condition.
-     * 
+     *
      * @param cond  a conditional constant, or null (meaning unconditional)
      */
     public SimulatedLinkerContext(ConditionalConstant cond)
@@ -56,7 +54,7 @@ public class SimulatedLinkerContext
 
     /**
      * Construct a SimulatedLinkerContext using the specified conditions.
-     * 
+     *
      * @param conds  any number of conditions, which will be treated as if they all need to be met
      */
     public SimulatedLinkerContext(ConditionalConstant... conds)

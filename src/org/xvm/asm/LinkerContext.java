@@ -12,8 +12,6 @@ import org.xvm.asm.constants.VersionConstant;
  * module's point of view -- including information (like version) about this module, what other
  * modules (and what versions of those modules) are available in the container, and what named
  * link-time options are specified.
- *
- * @author cp 2016.09.20
  */
 public interface LinkerContext
     {

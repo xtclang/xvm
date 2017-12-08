@@ -52,8 +52,6 @@ import static org.xvm.util.Handy.writeUtf8String;
 
 /**
  * Tests of the Handy class.
- *
- * @author cp 2015.12.12
  */
 public class HandyTest
     {
@@ -335,7 +333,7 @@ public class HandyTest
         Assert.assertFalse(isDigit('F'));
         Assert.assertFalse(isDigit('f'));
         }
-    
+
     @Test
     public void testDigitValue()
         {
@@ -544,7 +542,7 @@ public class HandyTest
         sb = new StringBuilder("0x");
         writePackedLong(dos(sb), 0x123456789ABCDEF0L);
         Assert.assertEquals("0x0C123456789ABCDEF0", sb.toString());
-        
+
         sb = new StringBuilder("0x");
         writePackedLong(dos(sb), 0x8000000000000000L);
         Assert.assertEquals("0x0C8000000000000000", sb.toString());

@@ -14,8 +14,6 @@ import org.xvm.compiler.Token;
 /**
  * A decorated type expression is a type expression preceded by a keyword that adjusts the meaning
  * of the type expression.
- *
- * @author cp 2017.04.04
  */
 public class DecoratedTypeExpression
         extends TypeExpression

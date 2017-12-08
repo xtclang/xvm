@@ -9,8 +9,6 @@ import org.junit.Test;
 
 /**
  * TODO
- *
- * @author cp 2015.11.13
  */
 public class LexerTest
     {

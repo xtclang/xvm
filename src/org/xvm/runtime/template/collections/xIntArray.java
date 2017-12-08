@@ -24,8 +24,6 @@ import org.xvm.runtime.template.xInt64;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xIntArray
         extends xArray

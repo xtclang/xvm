@@ -28,8 +28,6 @@ import org.xvm.runtime.template.collections.xTuple;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xMethod
         extends ClassTemplate

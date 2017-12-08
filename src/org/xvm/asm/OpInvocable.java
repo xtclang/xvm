@@ -17,8 +17,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * Common base for NVOK_ ops.
- *
- * @author gg 2017.02.21
  */
 public abstract class OpInvocable extends Op
     {

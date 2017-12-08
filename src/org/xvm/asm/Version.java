@@ -7,8 +7,6 @@ import static org.xvm.util.Handy.parseDelimitedString;
 
 /**
  * Represents an Ecstasy module version.
- *
- * @author cp 2017.04.20
  */
 public class Version
         implements Comparable<Version>

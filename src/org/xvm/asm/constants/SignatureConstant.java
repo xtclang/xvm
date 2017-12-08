@@ -247,7 +247,7 @@ public class SignatureConstant
             {
             if (m_aconstReturns[0].isVoid())
                 {
-                m_aconstReturns = NO_TYPES;
+                m_aconstReturns = ConstantPool.NO_TYPES;
                 }
             }
 
@@ -556,11 +556,6 @@ public class SignatureConstant
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * Empty array of types.
-     */
-    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * During disassembly, this holds the index of the constant that specifies the name of this

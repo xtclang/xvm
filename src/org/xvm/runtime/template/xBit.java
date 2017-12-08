@@ -15,8 +15,6 @@ import org.xvm.runtime.TypeSet;
 
 /**
  * TODO:
- *
- * @author gg 2017.02.27
  */
 public class xBit
         extends Const

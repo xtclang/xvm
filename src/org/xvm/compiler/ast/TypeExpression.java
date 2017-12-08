@@ -15,8 +15,6 @@ import org.xvm.asm.constants.TypeConstant;
  * these cases, the type expression can create a temporary place-holder, known as an unresolved
  * constant, which will later be replaced with the real ADT information once the type information
  * has been fully resolved.
- *
- * @author cp 2017.03.28
  */
 public abstract class TypeExpression
         extends Expression

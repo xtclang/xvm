@@ -10,8 +10,6 @@ import org.junit.Test;
 
 /**
  * Unit tests for the Source class.
- *
- * @author cp 2015.11.10
  */
 public class SourceTest
     {

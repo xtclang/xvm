@@ -1,8 +1,11 @@
 package org.xvm.asm;
 
 
+import java.text.MessageFormat;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import org.xvm.util.Severity;
 
@@ -11,8 +14,6 @@ import org.xvm.util.Severity;
  * Represents a list of errors collected from a compilation process, with an
  * option to abort the compilation should a maximum number of errors be
  * exceeded.
- *
- * @author cp 2015.11.13
  */
 public class ErrorList
         implements ErrorListener
@@ -147,39 +148,7 @@ public class ErrorList
          */
         public String getMessage()
             {
-            // TODO - need to look up and format message correctly; this is just temporary
-            StringBuilder sb = new StringBuilder(getCode());
-            Object[] aoParam = getParams();
-            if (aoParam != null)
-                {
-                sb.append(": ");
-                for (int i = 0, c = aoParam.length; i < c; ++i)
-                    {
-                    if (i > 0)
-                        {
-                        sb.append(", ");
-                        }
-
-                    sb.append('[')
-                      .append(i)
-                      .append("]=");
-
-                    Object o = aoParam[i];
-                    if (o instanceof String)
-                        {
-                        sb.append('\"')
-                          .append(o)
-                          .append('\"');
-
-                        }
-                    else
-                        {
-                        sb.append(o);
-                        }
-                    }
-                }
-
-            return null;
+            return MessageFormat.format(RESOURCES.getString(getCode()), getParams());
             }
 
         /**
@@ -220,6 +189,11 @@ public class ErrorList
 
 
     // ----- data members ------------------------------------------------------
+
+    /**
+     * Text of the error messages.
+     */
+    public static final ResourceBundle RESOURCES = ResourceBundle.getBundle("assembler");
 
     /**
      * Maximum number of serious errors to tolerate before abandoning the

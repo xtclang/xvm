@@ -20,8 +20,6 @@ import org.xvm.util.IdentityArrayList;
 
 /**
  * A Component representing more than one sibling by the same name or identity constant.
- *
- * @author cp 2017.05.12
  */
 public class CompositeComponent
         extends Component
@@ -32,7 +30,7 @@ public class CompositeComponent
      * Construct a composite component.
      *
      * @param parent    the parent (which may itself be a composite)
-     * @param siblings  the siblings 
+     * @param siblings  the siblings
      */
     protected CompositeComponent(Component parent, List<Component> siblings)
         {

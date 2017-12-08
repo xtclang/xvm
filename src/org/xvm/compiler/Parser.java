@@ -23,8 +23,6 @@ import static org.xvm.util.Handy.parseDelimitedString;
 
 /**
  * A recursive descent parser for Ecstasy source code.
- *
- * @author cp 2016.11.03
  */
 public class Parser
     {
@@ -154,7 +152,7 @@ public class Parser
         List[] twoLists = parseModifiers();
         if (twoLists != null)
             {
-            // note to self: this language needs multiple return values 
+            // note to self: this language needs multiple return values
             modifiers   = twoLists[0];
             annotations = twoLists[1];
             }
@@ -977,7 +975,7 @@ public class Parser
                         {
                         return stmt;
                         }
-                    
+
                     type = expr.toTypeExpression();
                     }
                 else
@@ -1021,9 +1019,9 @@ public class Parser
      * Given the specified expression and the current point in the parsing stream, generate a
      * statement if the expression is supposed to be an expression statement, or if we're in the
      * middle of an assignment statement.
-     * 
+     *
      * @param expr  an expression that was parsed at the beginning of a statement
-     *              
+     *
      * @return a expression statement, an assignment statement, or null
      */
     Statement parsePossibleExpressionOrAssignmentStatement(Expression expr)
@@ -1053,17 +1051,17 @@ public class Parser
                 return stmt;
                 }
             }
-        
+
         return null;
         }
 
     /**
      * Finish the parsing of a variable declaration statement, starting right after the name.
-     * 
+     *
      * @param annotations  list of annotations or null
      * @param type         the type of the variable
      * @param name         the name of the variable
-     * 
+     *
      * @return a VariableDeclarationStatement
      */
     Statement parseVariableDeclarationAfterName(List<Annotation> annotations, TypeExpression type, Token name)
@@ -1087,7 +1085,7 @@ public class Parser
 
         return new VariableDeclarationStatement(type, name, value);
         }
-    
+
     /**
      * <p/><code><pre>
      * ParameterList MethodDeclarationFinish
@@ -1481,7 +1479,7 @@ public class Parser
         {
         Token keyword = expect(Id.FOR);
         expect(Id.L_PAREN);
-        
+
         // figure out if we're parsing for the conditional declaration or the three-part "for"
         List<Statement> init;
         if (peek().getId() != Id.SEMICOLON)
@@ -1520,7 +1518,7 @@ public class Parser
             {
             init = Collections.EMPTY_LIST;
             }
-        
+
         // parse the second part
         expect(Id.SEMICOLON);
         Expression expr = (peek().getId() == Id.SEMICOLON) ? null : parseExpression();
@@ -1542,7 +1540,7 @@ public class Parser
                 case COMMA:
                     update.add(new ExpressionStatement(exprUpdate, false));
                     break;
-                
+
                 case COND_ASN:
                 case ADD_ASN:
                 case SUB_ASN:

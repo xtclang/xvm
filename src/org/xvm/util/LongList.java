@@ -3,8 +3,6 @@ package org.xvm.util;
 
 /**
  * Simple list-like data structure for collecting some longs.
- *
- * @author cp 2017.05.19
  */
 public class LongList
     {

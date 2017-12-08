@@ -8,15 +8,12 @@ import java.util.List;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 
 /**
  * A type expression for a function. This corresponds to the "function" keyword.
- *
- * @author cp 2017.03.31
  */
 public class FunctionTypeExpression
         extends TypeExpression

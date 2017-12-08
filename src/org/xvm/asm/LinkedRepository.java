@@ -11,8 +11,6 @@ import java.util.TreeSet;
 /**
  * A repository that delegates to a chain of repositories. Reads occur from the repositories in the
  * order that they were provided to the constructor. Writes occur to the first repository only.
- *
- * @author cp 2017.04.20
  */
 public class LinkedRepository
         implements ModuleRepository

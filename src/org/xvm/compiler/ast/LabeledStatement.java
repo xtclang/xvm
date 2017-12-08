@@ -8,8 +8,6 @@ import java.lang.reflect.Field;
 
 /**
  * A labeled statement represents a statement that has a label.
- *
- * @author cp 2017.04.09
  */
 public class LabeledStatement
         extends Statement

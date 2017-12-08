@@ -27,6 +27,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.runtime.TypeSet;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -520,10 +521,7 @@ public class TerminalTypeConstant
             {
             if (cTypeParams  > 0)
                 {
-                // TODO log error: params were provided but the class doesn't take any params
-                throw new IllegalStateException("TODO error on " + struct.getName()
-                        + " - type param type count (" + cTypeParams
-                        + ") but class does not have type params");
+                log(errs, Severity.ERROR, VE_UNEXPECTED_TYPE_PARAMS, struct.getIdentityConstant().getPathString());
                 }
             }
         else
