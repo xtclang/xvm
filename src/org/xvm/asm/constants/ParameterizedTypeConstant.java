@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
@@ -159,6 +158,35 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        boolean      fDiff         = constOriginal != constResolved;
+
+        List<TypeConstant> listOriginal   = m_listTypeParams;
+        TypeConstant[]     aconstResolved = null;
+        for (int i = 0, c = listOriginal.size(); i < c; ++i)
+            {
+            TypeConstant constParamOriginal = listOriginal.get(i);
+            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
+            if (fDiff || constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == null)
+                    {
+                    aconstResolved = listOriginal.toArray(new TypeConstant[c]);
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
+        }
+
+    @Override
     protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         if (atypeParams != null)
@@ -172,6 +200,7 @@ public class ParameterizedTypeConstant
         atypeParams = list.toArray(new TypeConstant[list.size()]);
         return super.resolveStructure(typeinfo, access, atypeParams, errs);
         }
+
 
     // ----- type comparison support --------------------------------------------------------------
 
@@ -236,7 +265,7 @@ public class ParameterizedTypeConstant
         assert listThat.size() == clzThat.getTypeParams().size();
 
         Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
-
+        boolean fWrap = false;
         for (int i = 0, c = listThat.size(); i < c; i++)
             {
             TypeConstant typeThis = listActual.get(i);
@@ -255,10 +284,16 @@ public class ParameterizedTypeConstant
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
+                fWrap = that.consumesFormalType(sName, Access.PUBLIC);
                 continue;
                 }
 
             return null;
+            }
+
+        if (fWrap) // TODO: stuff this information into the chain
+            {
+            System.out.println("Consuming methods should be wrapped: " + this + " -> " + that);
             }
 
         return chain;
@@ -402,6 +437,12 @@ public class ParameterizedTypeConstant
             }
 
         return listActualTypes;
+        }
+
+    @Override
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+        {
+        return super.isInterfaceAssignableFrom(that, access, getParamTypes());
         }
 
     @Override

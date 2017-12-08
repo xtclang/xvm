@@ -62,6 +62,18 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
+        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : getConstantPool().ensureDifferenceTypeConstant(constResolved1, constResolved2);
+        }
+
+    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type

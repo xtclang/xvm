@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -89,6 +90,16 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureImmutableTypeConstant(constResolved);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
@@ -106,6 +117,17 @@ public class ImmutableTypeConstant
     protected TypeConstant unwrapForCongruence()
         {
         return m_constType.unwrapForCongruence();
+        }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
+        {
+        // the l-value (this) is immutable; so should be the r-value (that)
+        return that.isImmutabilitySpecified()
+            && super.checkAssignableFrom(that, chain);
         }
 
 

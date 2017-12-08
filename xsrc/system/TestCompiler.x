@@ -88,35 +88,34 @@ class TestCompiler
         MyConsumer<Number> finder10 = c10; // OK; "Extends-Incorporates"
         }
 
-    static Void test1ExpectedFailure1()
+    static Void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)
         {
-        MyClass7 c7ExpectedFailure;
         Consumer<Int> finder7a = c7ExpectedFailure;
         }
 
-    static Void test1ExpectedFailure2()
+    static Void test1ExpectedFailure2(MyClass9<String, String> c9)
         {
-        MyClass9<String, String> c9;
         MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
         }
 
-    static Void test1ExpectedFailure3()
+    static Void test1ExpectedFailure3(MyClass9<String, String> c9)
         {
-        MyClass9<String, String> c9;
         Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
         }
 
-    static Void test1ExpectedFailure4()
+    static Void test1ExpectedFailure4(MyClass10<String> c10a)
         {
-        MyClass10<String> c10a;
         MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
         }
 
+//    static Void test1ExpectedFailure5(MyClass10<Int> c10)
+//        {
+//        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
+//        }
+
     class P<T>
         {
-        private T value;
-
-        T produce() {return value;}
+        T produce() {return null;}
         }
 
     interface C<T>
@@ -142,14 +141,14 @@ class TestCompiler
 
     static Void testPC()
         {
-//        C<Object>  y1;
-//        C<String>  x1 = y1;
-//
-//        PC<Object> y2;
-//        C<String>  x2 = y2;
-//
-//        P<String>  y5;
-//        P<Object>  x5 = y5;
+        C<Object>  y1;
+        C<String>  x1 = y1;
+
+        PC<Object> y2;
+        C<String>  x2 = y2;
+
+        P<String>  y5;
+        P<Object>  x5 = y5;
 
         PC<String> y6;
         PC<Object> x6 = y6; // ok, but the RT needs to "safe-wrap" the consuming methods

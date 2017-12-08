@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
+
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -113,15 +115,31 @@ public class AccessTypeConstant
         }
 
     @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        return constResolved == constOriginal
+                ? this
+                : getConstantPool().ensureAccessTypeConstant(constResolved, m_access);
+        }
+
+    @Override
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+        {
+        return super.isInterfaceAssignableFrom(that, m_access, listParams);
+        }
+
+    @Override
     public boolean consumesFormalType(String sTypeName, Access access)
         {
-        return getUnderlyingType().consumesFormalType(sTypeName, m_access);
+        return super.consumesFormalType(sTypeName, m_access);
         }
 
     @Override
     public boolean producesFormalType(String sTypeName, Access access)
         {
-        return getUnderlyingType().producesFormalType(sTypeName, m_access);
+        return super.producesFormalType(sTypeName, m_access);
         }
 
     @Override // TODO: remove
