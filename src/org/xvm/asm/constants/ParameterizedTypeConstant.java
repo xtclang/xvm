@@ -159,9 +159,9 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
-        if (params != null)
+        if (atypeParams != null)
             {
             // how is this possible? it should be an error
             // TODO log error
@@ -169,8 +169,8 @@ public class ParameterizedTypeConstant
             }
 
         List<TypeConstant> list = m_listTypeParams;
-        params = list.toArray(new TypeConstant[list.size()]);
-        return super.resolveStructure(typeinfo, access, params, errs);
+        atypeParams = list.toArray(new TypeConstant[list.size()]);
+        return super.resolveStructure(typeinfo, access, atypeParams, errs);
         }
 
     // ----- type comparison support --------------------------------------------------------------

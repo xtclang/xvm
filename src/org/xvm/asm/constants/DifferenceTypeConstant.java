@@ -127,7 +127,7 @@ public class DifferenceTypeConstant
 
     @Override
     protected boolean resolveStructure(TypeInfo typeinfo, Access access,
-            TypeConstant[] params, ErrorListener errs)
+            TypeConstant[] atypeParams, ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
         // first resolve T1 and T2, and then add all the information from T1 that is not in T2 to

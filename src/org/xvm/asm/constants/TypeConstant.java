@@ -473,19 +473,19 @@ public abstract class TypeConstant
 
     /**
      * Accumulate any information for the type represented by this TypeConstant into the passed
-     * {@link TypeInfo}, logging
+     * {@link TypeInfo}, logging any errors that are detected in the composition of the type.
      *
-     * @param typeinfo  TODO
-     * @param access
-     * @param params
-     * @param errs
+     * @param typeinfo     the type info to contribute to
+     * @param access       the desired accessibility into the current type
+     * @param atypeParams  the types for the type parameters of this class, if any (may be null)
+     * @param errs         the error list to log any errors to
      *
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
-        return getUnderlyingType().resolveStructure(typeinfo, access, params, errs);
+        return getUnderlyingType().resolveStructure(typeinfo, access, atypeParams, errs);
         }
 
 
@@ -1150,5 +1150,5 @@ public abstract class TypeConstant
     /**
      * The resolved information about the type, its properties, and its methods.
      */
-    private TypeInfo m_typeinfo;
+    private transient TypeInfo m_typeinfo;
     }

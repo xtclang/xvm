@@ -438,36 +438,38 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] params, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant)
-                        .resolveStructure(typeinfo, access, params, errs);
+                        .resolveStructure(typeinfo, access, atypeParams, errs);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant)
-                        .resolveStructure(typeinfo, access, params, errs);
+                        .resolveStructure(typeinfo, access, atypeParams, errs);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constant)
-                        .resolveStructure(typeinfo, access, params, errs);
+                        .resolveStructure(typeinfo, access, atypeParams, errs);
 
             case Module:
             case Package:
             case Class:
                 // load the structure
                 Component component = ((IdentityConstant) constant).getComponent();
-                return resolveClassStructure((ClassStructure) component, typeinfo, access, params, errs);
+                return resolveClassStructure((ClassStructure) component, typeinfo, access,
+                        atypeParams, errs);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
+                // TODO - find an example where this happens. particularly in a composition.
                 // currently this is a mindf**k just thinking about what it means, but theoretically
                 // it could be some type represented by a child of a parent of this or whatever ...
-                // TODO - find an example where this happens. particularly in a composition.
+                // for example, we could implement an inner interface .. would that use a "child of this" type?
                 throw new IllegalStateException("TODO resolveStructures() for " + this + " (" + typeinfo.type + ")");
 
             case UnresolvedName:
@@ -482,11 +484,11 @@ public class TerminalTypeConstant
      * Accumulate any information for the type represented by the specified structure into the
      * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
      *
-     * @param struct       TODO
-     * @param typeinfo
-     * @param access
-     * @param atypeParams
-     * @param errs
+     * @param struct       the class structure
+     * @param typeinfo     the type info to contribute to
+     * @param access       the desired accessibility into the current type
+     * @param atypeParams  the types for the type parameters of this class, if any (may be null)
+     * @param errs         the error list to log any errors to
      *
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
@@ -540,7 +542,7 @@ public class TerminalTypeConstant
                     paraminfo.setConstraintType(typeConstraint);
                     typeinfo.parameters.put(sName, paraminfo);
                     }
-                else if (!paraminfo.getConstraintType().isA(typeConstraint))
+                else if (!paraminfo.getConstraintType().isA(typeConstraint)) // TODO what if constraint is a (or refers to a) formal type (see note below etc.etc.etc.)
                     {
                     // since we're accumulating type parameter information "on the way down" the
                     // tree of structures that form the type, it is possible that our constraint is
@@ -552,56 +554,64 @@ public class TerminalTypeConstant
                             + ") not isA(" + typeConstraint + ")");
                     }
 
-                if (i < cTypeParams)
+                if (i >= cTypeParams)
                     {
-                    TypeConstant typeActual = atypeParams[i];
-                    assert typeActual != null;
+                    // this just means that we already detected a mismatch between the number of
+                    // class parameters and the number of actual type parameters passed in, and we
+                    // already logged that error, so ignore it here
+                    continue;
+                    }
 
-                    // quite often, the type parameter type is a reference to a type parameter
-                    if (typeActual instanceof TerminalTypeConstant)
+                TypeConstant typeActual = atypeParams[i];
+                assert typeActual != null;
+
+                // quite often, the type parameter type is a reference to a type parameter
+                // TODO need a helper to translate in case e.g. "KeyType | ValueType" etc. etc. etc. etc.
+                if (typeActual instanceof TerminalTypeConstant)
+                    {
+                    Constant constant = typeActual.getDefiningConstant();
+                    if (constant instanceof PropertyConstant)
                         {
-                        Constant constant = typeActual.getDefiningConstant();
-                        if (constant instanceof PropertyConstant)
+                        String sPropName = ((PropertyConstant) constant).getName();
+                        if (sPropName.equals(sName))
                             {
-                            String sPropName = ((PropertyConstant) constant).getName();
-                            if (sPropName.equals(sName))
-                                {
-                                // no change; nothing to do for this parameter
-                                // e.g. LinkedList<ElementType> implements List<ElementType>
-                                continue;
-                                }
-
-                            ParamInfo paraminfoProp = typeinfo.parameters.get(sPropName);
-                            if (paraminfoProp == null || paraminfoProp.getActualType() == null)
-                                {
-                                // TODO log error: missing type for type parameter
-                                throw new IllegalStateException("TODO error on " + struct.getName()
-                                        + " - type param " + sPropName + " has no type");
-                                }
-
-                            typeActual = paraminfoProp.getActualType();
+                            // no change; nothing to do for this parameter
+                            // e.g. LinkedList<ElementType> implements List<ElementType>
+                            continue;
                             }
-                        }
 
-                    if (!typeActual.isA(typeConstraint))
-                        {
-                        // TODO log error: actual type is not legal because it violates the constraint
-                        throw new IllegalStateException("TODO error on " + struct.getName()
-                                + " - type param type (" + typeActual
-                                + ") not isA(" + typeConstraint + ")");
-                        }
+                        ParamInfo paraminfoProp = typeinfo.parameters.get(sPropName);
+                        if (paraminfoProp == null || paraminfoProp.getActualType() == null)
+                            {
+                            // TODO log error: missing type for type parameter
+                            throw new IllegalStateException("TODO error on " + struct.getName()
+                                    + " - type param " + sPropName + " has no type");
+                            }
 
-                    TypeConstant typeOld = paraminfo.getActualType();
-                    if (typeOld != null && !typeOld.equals(typeActual))
-                        {
-                        // TODO log error: actual type conflicts with the actual type already spec'd
-                        throw new IllegalStateException("TODO error on " + struct.getName()
-                                + " - type param type (" + typeActual
-                                + ") for " + sName
-                                + " is different from the prev spec'd type  (" + typeOld + ")");
+                        typeActual = paraminfoProp.getActualType();
                         }
+                    }
 
+                if (!typeActual.isA(typeConstraint))
+                    {
+                    // TODO log error: actual type is not legal because it violates the constraint
+                    throw new IllegalStateException("TODO error on " + struct.getName()
+                            + " - type param type (" + typeActual
+                            + ") not isA(" + typeConstraint + ")");
+                    }
+
+                TypeConstant typeOld = paraminfo.getActualType();
+                if (typeOld == null)
+                    {
                     paraminfo.setActualType(typeActual);
+                    }
+                else if (!typeOld.equals(typeActual))
+                    {
+                    // TODO log error: actual type conflicts with the actual type already spec'd
+                    throw new IllegalStateException("TODO error on " + struct.getName()
+                            + " - type param type (" + typeActual
+                            + ") for " + sName
+                            + " is different from the prev spec'd type  (" + typeOld + ")");
                     }
                 }
             }
@@ -617,15 +627,16 @@ public class TerminalTypeConstant
                     // class, i.e. they're the last to evaluate now because they're first in the
                     // call chain
                     fAnyAnnotations = true;
-                    continue;
+                    break;
 
                 case Delegates:
                 case Impersonates:
                 case Implements:
-                case Incorporates:
+                case Incorporates:  // TODO conditional
                 case Into:
                 case Extends:
                     {
+                    // TODO use Contribution "transform" helper
                     TypeConstant typeContrib = contrib.getTypeConstant();
                     // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
                     typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
@@ -683,10 +694,10 @@ public class TerminalTypeConstant
      * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
      * any errors.
      *
-     * @param struct       TODO
-     * @param typeinfo
-     * @param access
-     * @param errs
+     * @param struct    the property structure
+     * @param typeinfo  the type info to contribute to
+     * @param access    the desired accessibility into the current type
+     * @param errs      the error list to log any errors to
      *
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
@@ -706,19 +717,21 @@ public class TerminalTypeConstant
         }
 
     /**
-     * Accumulate any information from the passed property structure into the passed
+     * Accumulate any information from the passed method structure into the passed
      * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
      * any errors.
      *
-     * @param struct       TODO
-     * @param typeinfo
-     * @param access
-     * @param errs
+     * @param struct      the method structure
+     * @param typeinfo    the type info that this method is somehow a part of
+     * @param mapMethods  the map of methods to contribute to
+     * @param access      the desired accessibility into the current type
+     * @param errs        the error list to log any errors to
      *
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo, Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
+    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
+            Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
