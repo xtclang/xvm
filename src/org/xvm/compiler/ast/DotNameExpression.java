@@ -1,10 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.compiler.ErrorListener;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;

@@ -5,10 +5,11 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
-
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -21,8 +22,8 @@ import org.xvm.asm.op.IsLt;
 import org.xvm.asm.op.IsLte;
 import org.xvm.asm.op.IsNotEq;
 import org.xvm.asm.op.Var;
+
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 

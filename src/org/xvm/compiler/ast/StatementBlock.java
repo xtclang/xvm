@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Enter;
@@ -14,7 +15,6 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 

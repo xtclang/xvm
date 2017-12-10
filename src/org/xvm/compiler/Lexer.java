@@ -11,6 +11,8 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.PackedInteger;

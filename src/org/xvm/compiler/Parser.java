@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
@@ -4494,85 +4496,85 @@ s     *
     /**
      * Unknown fatal error.
      */
-    public static final String FATAL_ERROR      = "PARSER-01";
+    public static final String FATAL_ERROR       = "PARSER-01";
     /**
      * Unexpected End-Of-File (token exhaustion).
      */
-    public static final String UNEXPECTED_EOF   = "PARSER-02";
+    public static final String UNEXPECTED_EOF    = "PARSER-02";
     /**
      * Expected a particular token.
      */
-    public static final String EXPECTED_TOKEN   = "PARSER-03";
+    public static final String EXPECTED_TOKEN    = "PARSER-03";
     /**
      * Bad version value.
      */
-    public static final String BAD_VERSION      = "PARSER-04";
+    public static final String BAD_VERSION       = "PARSER-04";
     /**
      * Bad hex value.
      */
-    public static final String BAD_HEX_LITERAL  = "PARSER-05";
+    public static final String BAD_HEX_LITERAL   = "PARSER-05";
     /**
      * Unsupported custom literal.
      */
-    public static final String BAD_CUSTOM       = "PARSER-06";
+    public static final String BAD_CUSTOM        = "PARSER-06";
     /**
      * Cannot have module or package in a method.
      */
-    public static final String NO_TOP_LEVEL     = "PARSER-07";
+    public static final String NO_TOP_LEVEL      = "PARSER-07";
     /**
      * Multiple assignment list required.
      */
-    public static final String NOT_MULTI_ASN    = "PARSER-08";
+    public static final String NOT_MULTI_ASN     = "PARSER-08";
     /**
      * Empty statement is illegal.
      */
-    public static final String NO_EMPTY_STMT    = "PARSER-09";
+    public static final String NO_EMPTY_STMT     = "PARSER-09";
     /**
      * Illegal assert designation.
      */
-    public static final String BAD_ASSERT       = "PARSER-10";
+    public static final String BAD_ASSERT        = "PARSER-10";
     /**
      * Conditional not allowed in a switch statement.
      */
-    public static final String NO_CONDITIONAL   = "PARSER-11";
+    public static final String NO_CONDITIONAL    = "PARSER-11";
     /**
      * Case statement required first in a switch.
      */
-    public static final String MISSING_CASE     = "PARSER-12";
+    public static final String MISSING_CASE      = "PARSER-12";
     /**
      * Assignment not allowed.
      */
-    public static final String NO_ASSIGNMENT    = "PARSER-13";
+    public static final String NO_ASSIGNMENT     = "PARSER-13";
     /**
      * Multi-conditional for loop requires all statements be conditional, otherwise no conditionals
      * are allowed.
      */
-    public static final String ALL_OR_NO_CONDS  = "PARSER-14";
+    public static final String ALL_OR_NO_CONDS   = "PARSER-14";
     /**
      * All array dimensions need to be blank or '?', or all need to be expressions; no mixing and
      * matching.
      */
-    public static final String ALL_OR_NO_DIMS   = "PARSER-15";
+    public static final String ALL_OR_NO_DIMS    = "PARSER-15";
     /**
      * Expected an End-Of-File (nothing else allowed to be here).
      */
-    public static final String EXPECTED_EOF     = "PARSER-16";
+    public static final String EXPECTED_EOF      = "PARSER-16";
     /**
      * Expected to find a type declaration.
      */
-    public static final String NO_TYPE_FOUND    = "PARSER-17";
+    public static final String NO_TYPE_FOUND     = "PARSER-17";
     /**
      * Statements not allowed outside of module declaration.
      */
-    public static final String MODULE_NOT_ROOT  = "PARSER-18";
+    public static final String MODULE_NOT_ROOT   = "PARSER-18";
     /**
      * Modifier (like "static" or "public") is repeated.
      */
-    public static final String REPEAT_MODIFIER  = "PARSER-19";
+    public static final String REPEAT_MODIFIER   = "PARSER-19";
     /**
      * Modifiers conflict (like "private" and "public").
      */
-    public static final String MODIFIER_CONFLICT= "PARSER-20";
+    public static final String MODIFIER_CONFLICT = "PARSER-20";
 
 
     // ----- data members ------------------------------------------------------

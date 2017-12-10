@@ -1,20 +1,6 @@
 package org.xvm.compiler;
 
 
-import org.xvm.asm.DirRepository;
-import org.xvm.asm.FileRepository;
-import org.xvm.asm.FileStructure;
-import org.xvm.asm.LinkedRepository;
-import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
-import org.xvm.compiler.ast.StatementBlock;
-import org.xvm.compiler.ast.Statement;
-import org.xvm.compiler.ast.TypeCompositionStatement;
-
-import org.xvm.util.Handy;
-import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -27,6 +13,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.FileRepository;
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 

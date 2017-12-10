@@ -18,12 +18,10 @@ import java.util.NoSuchElementException;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
-
-import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;

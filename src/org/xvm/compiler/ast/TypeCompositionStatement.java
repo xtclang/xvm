@@ -14,6 +14,7 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
@@ -27,7 +28,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 

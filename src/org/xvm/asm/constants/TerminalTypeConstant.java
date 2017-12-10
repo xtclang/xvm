@@ -731,8 +731,27 @@ public class TerminalTypeConstant
 
         boolean fHalt = false;
 
+        String       sName    = struct.getName();
+        PropertyInfo propinfo = typeinfo.properties.get(sName);
+        if (propinfo == null)
+            {
+            propinfo = new PropertyInfo(this, struct.getType(), sName);
+            if (struct.isSynthetic())
+                {
+                propinfo.markReadOnly();
+                }
+            }
+        else
+            {
+            // make sure there are no conflicts
+            // TODO
+
+            // update property remove annotations (some things get over-written; others merged)
+            // TODO
+            }
+
+        // go through children (methods)
         // TODO
-        // System.out.println("property: " + struct.getIdentityConstant().getValueString());
 
         return fHalt;
         }

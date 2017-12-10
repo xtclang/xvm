@@ -12,17 +12,17 @@ import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
+
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypedefConstant;
+
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 
 import org.xvm.util.Severity;
 

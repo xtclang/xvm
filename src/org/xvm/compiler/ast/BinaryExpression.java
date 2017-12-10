@@ -1,21 +1,14 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ErrorListener;
-
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.ListMap;

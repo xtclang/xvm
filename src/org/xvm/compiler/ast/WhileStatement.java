@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Enter;
@@ -10,7 +11,6 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.ConditionalStatement.Usage;

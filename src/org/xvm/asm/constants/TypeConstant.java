@@ -1132,6 +1132,22 @@ public abstract class TypeConstant
             return constDeclLevel;
             }
 
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            if (fRO)
+                {
+                sb.append("@RO ");
+                }
+
+            sb.append(type.getValueString())
+              .append(' ')
+              .append(name);
+
+            return sb.toString();
+            }
+
         private String                             name;
         private TypeConstant                       type;
         private boolean                            fRO;

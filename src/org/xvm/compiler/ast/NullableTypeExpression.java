@@ -5,10 +5,11 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 
 
 /**

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
@@ -25,7 +26,6 @@ import org.xvm.asm.op.Move;
 import org.xvm.asm.op.P_Set;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 
 import org.xvm.compiler.ast.Statement.Context;
 

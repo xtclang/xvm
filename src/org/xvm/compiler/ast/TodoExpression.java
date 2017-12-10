@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
@@ -17,7 +18,6 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.New_N;
 import org.xvm.asm.op.Throw;
 
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;

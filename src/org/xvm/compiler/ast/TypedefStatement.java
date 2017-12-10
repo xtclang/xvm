@@ -5,11 +5,11 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 

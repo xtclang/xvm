@@ -8,11 +8,12 @@ import java.util.List;
 
 import java.util.function.Function;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
-
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -25,7 +26,6 @@ import org.xvm.asm.op.Var_SN;
 import org.xvm.asm.op.Var_TN;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;

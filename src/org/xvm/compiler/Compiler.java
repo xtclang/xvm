@@ -4,6 +4,7 @@ package org.xvm.compiler;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;

@@ -4,6 +4,8 @@ package org.xvm.compiler;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendChar;

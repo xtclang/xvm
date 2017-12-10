@@ -8,13 +8,13 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.NameResolver.Result;

@@ -9,6 +9,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -23,7 +24,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 

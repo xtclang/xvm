@@ -1,11 +1,15 @@
 package org.xvm.compiler;
 
 
-import org.junit.Test;
-import org.xvm.compiler.ast.Statement;
-
 import java.io.File;
+
 import java.util.List;
+
+import org.junit.Test;
+
+import org.xvm.asm.ErrorList;
+
+import org.xvm.compiler.ast.Statement;
 
 
 /**

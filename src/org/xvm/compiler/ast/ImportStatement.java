@@ -6,9 +6,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.ErrorListener;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
