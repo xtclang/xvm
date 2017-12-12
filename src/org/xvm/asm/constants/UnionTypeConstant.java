@@ -4,12 +4,16 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.List;
+
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 
 /**
- * Represent a constant that specifies the union ("|") of two types.
+ * Represent a constant that specifies the union ("+") of two types.
  */
 public class UnionTypeConstant
         extends RelationalTypeConstant
@@ -109,6 +113,72 @@ public class UnionTypeConstant
         {
         return getUnderlyingType() .resolveStructure(typeinfo, access, atypeParams, errs)
             || getUnderlyingType2().resolveStructure(typeinfo, access, atypeParams, errs);
+        }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected ContributionChain checkAssignableTo(TypeConstant that)
+        {
+        ContributionChain chain1 = getUnderlyingType().checkAssignableTo(that);
+        ContributionChain chain2 = getUnderlyingType2().checkAssignableTo(that);
+
+        boolean fFrom1 = chain1 != null &&
+            that.checkAssignableFrom(getUnderlyingType(), chain1);
+        boolean fFrom2 = chain2 != null &&
+            that.checkAssignableFrom(getUnderlyingType(), chain2);
+
+        if (fFrom1 || fFrom2)
+            {
+            if (!fFrom1)
+                {
+                return chain2;
+                }
+
+            if (!fFrom2)
+                {
+                return chain1;
+                }
+
+            // TODO: if just one chain is a non-qualified "maybe", convert it into a qualifying one
+            // so the caller knows not to check what's already been proven;
+            // if both are qualified, merge the qualifiers into a union
+            throw new UnsupportedOperationException();
+            }
+
+        return null;
+        }
+
+    @Override
+    protected ContributionChain checkContribution(ClassStructure clzThat)
+        {
+        ContributionChain chain1 = getUnderlyingType().checkContribution(clzThat);
+        ContributionChain chain2 = getUnderlyingType2().checkContribution(clzThat);
+
+        if (chain1 != null && chain2 != null)
+            {
+            // TODO: merge chains
+            throw new UnsupportedOperationException();
+            }
+
+        return null;
+        }
+
+    @Override
+    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
+        {
+        // there is nothing that could change the result of "checkAssignableTo"
+        return true;
+        }
+
+    @Override
+    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+        {
+        // TODO: this is not right; parts of the interface could be implemented by
+        //       different legs
+        return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams)
+            || getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
         }
 
 

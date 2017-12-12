@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -193,7 +192,7 @@ public class ParameterizedTypeConstant
             {
             // how is this possible? it should be an error
             // TODO log error
-            throw new IllegalStateException("inexplicable dual occurrance of type params for " + typeinfo.type);
+            throw new IllegalStateException("inexplicable dual occurrence of type params for " + typeinfo.type);
             }
 
         List<TypeConstant> list = m_listTypeParams;
@@ -222,7 +221,7 @@ public class ParameterizedTypeConstant
                 return chain;
 
             case Equal:
-                assert chain.getChain().size() == 1;
+                assert chain.getDepth() == 1;
                 listActual = getParamTypes();
                 break;
 
@@ -236,7 +235,7 @@ public class ParameterizedTypeConstant
                 ClassStructure clzThis = (ClassStructure)
                     ((IdentityConstant) getDefiningConstant()).getComponent();
 
-                listActual = propagateActualTypes(chain, clzThis, getParamTypes());
+                listActual = chain.propagateActualTypes(clzThis, getParamTypes());
                 break;
                 }
 
@@ -326,12 +325,24 @@ public class ParameterizedTypeConstant
 
             case Equal:
                 {
-                assert chain.getChain().size() == 1;
+                assert chain.getDepth() == 1;
 
-                List<TypeConstant> listThis = getParamTypes();
-                for (int i = 0, c = listThis.size(); i < c; i++)
+                // the only way for a parameterized type to be assigned to
+                // a non-parameterized is to have all type parameters to be
+                // assignable from the generic constraint types
+                ClassStructure clzThis = (ClassStructure)
+                    ((IdentityConstant) that.getDefiningConstant()).getComponent();
+                Map<StringConstant, TypeConstant> mapConstraint = clzThis.getTypeParams();
+                List<TypeConstant> listTypes = getParamTypes();
+
+                assert mapConstraint.size() == listTypes.size();
+
+                Iterator<TypeConstant> iterConstraints = mapConstraint.values().iterator();
+                Iterator<TypeConstant> iterTypes = listTypes.iterator();
+
+                while (iterConstraints.hasNext())
                     {
-                    if (!getConstantPool().typeObject().isA(listThis.get(i)))
+                    if (!iterConstraints.next().isA(iterTypes.next()))
                         {
                         return false;
                         }
@@ -365,7 +376,7 @@ public class ParameterizedTypeConstant
                         listParams.add(typeParam);
                         }
                     }
-                listActual = propagateActualTypes(chain, clzThat, listParams);
+                listActual = chain.propagateActualTypes(clzThat, listParams);
                 break;
                 }
 
@@ -417,44 +428,6 @@ public class ParameterizedTypeConstant
             System.out.println("Consuming methods should be wrapped: " + this + " <- " + that);
             }
         return true;
-        }
-
-    /**
-     * Propagate the actual parameter types for this parameterized type through
-     * the contribution chain.
-     *
-     * @param chain  the contribution chain
-     *
-     * @return  the actual types for the top of the chain or null if
-     *          the contribution didn't apply (conditional incorporation)
-     */
-    protected static List<TypeConstant> propagateActualTypes(ContributionChain chain,
-                    ClassStructure clzParent, List<TypeConstant> listActualTypes)
-        {
-        List<Contribution> listContrib = chain.getChain();
-
-        for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
-            {
-            assert clzParent.getTypeParams().size() == listActualTypes.size();
-
-            Contribution contrib = listContrib.get(i);
-
-            listActualTypes = contrib.transformActualTypes(clzParent, listActualTypes);
-
-            if (listActualTypes == null)
-                {
-                // conditional incorporation doesn't apply
-                break;
-                }
-
-            if (i > 0)
-                {
-                clzParent = (ClassStructure)
-                    ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).getComponent();
-                }
-            }
-
-        return listActualTypes;
         }
 
     @Override

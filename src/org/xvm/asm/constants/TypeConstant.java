@@ -12,7 +12,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.xvm.asm.Component;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -496,13 +498,13 @@ public abstract class TypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * Determine if the specified TypeConstant represents a type that is assignable to values of
-     * the type represented by this TypeConstant.
+     * Determine if the specified TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by this TypeConstant (R-Value).
      * <p/>
      * Note: a negative answer doesn't guarantee non-assignability; it's simply an indication
      *       that a "long-path" computation should be done to prove or disprove it.
      *
-     * @param that  the type to match
+     * @param that  the type to match (L-value)
      *
      * See Type.x # isA()
      */
@@ -514,37 +516,69 @@ public abstract class TypeConstant
             }
 
         // TODO: should be a collection of ContributionChains
-        ContributionChain chainTo = this.checkAssignableTo(that);
-        if (chainTo == null)
+        ContributionChain chain = this.checkAssignableTo(that);
+        if (chain == null)
             {
             return false;
             }
 
-        if (!that.checkAssignableFrom(this, chainTo))
+        if (!that.checkAssignableFrom(this, chain))
             {
             return false;
             }
 
-        if (chainTo.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+        Contribution contrib = chain.getOrigin();
+        if (contrib.getComposition() == Composition.MaybeDuckType)
             {
-            return true;
+            TypeConstant typeIface = contrib.getTypeConstant();
+            if (typeIface == null)
+                {
+                typeIface = that;
+                }
+            return typeIface.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
             }
-
-        return that.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
+        return true;
         }
 
+    /**
+     * Check if the specified TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by this TypeConstant (R-Value).
+     *
+     * @param that  the type to match (L-value)
+     *
+     * @return a ContributionChain that describes how "that" type could be found in the
+     *         inheritance/contribution tree of "this" type or null if the types are incompatible
+     */
     protected ContributionChain checkAssignableTo(TypeConstant that)
         {
         return getUnderlyingType().checkAssignableTo(that);
         }
 
+    /**
+     * Check the specified class has a contribution that matches this type.
+     *
+     * @param clzThat  the class to check for a contribution
+     *
+     * @return a ContributionChain that describes how "this" type could be found in the
+     *         inheritance/contribution tree of the specified class or null if there is no match
+     */
+    protected ContributionChain checkContribution(ClassStructure clzThat)
+        {
+        return getUnderlyingType().checkContribution(clzThat);
+        }
+
+    /**
+     * Check if this TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by the specified TypeConstant (R-Value).
+     */
     protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
         {
         return getUnderlyingType().checkAssignableFrom(that, chain);
         }
 
     /**
-     * Check if this interface type is assignable from the specified type.
+     * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
+     * that is assignable to values of the type represented by the specified TypeConstant (R-Value).
      *
      * @param that        the type to check the assignability from
      * @param access      the access level to limit the checks to
