@@ -537,6 +537,11 @@ public abstract class TypeConstant
                 }
             return typeIface.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
             }
+
+        if (chain.isWeakMatch()) // TODO: convert to a different response
+            {
+            System.out.println("Consuming methods should be wrapped: " + this + " -> " + that);
+            }
         return true;
         }
 

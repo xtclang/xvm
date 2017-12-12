@@ -217,7 +217,7 @@ public class ParameterizedTypeConstant
         switch (chain.getOrigin().getComposition())
             {
             case MaybeDuckType:
-                // will be resolved later via duck-typing
+                // will be resolved later via interface method matching
                 return chain;
 
             case Equal:
@@ -264,7 +264,6 @@ public class ParameterizedTypeConstant
         assert listThat.size() == clzThat.getTypeParams().size();
 
         Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
-        boolean fWrap = false;
 
         for (int i = 0, c = listThat.size(); i < c; i++)
             {
@@ -289,16 +288,14 @@ public class ParameterizedTypeConstant
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
-                fWrap = that.consumesFormalType(sName, Access.PUBLIC);
+                if (that.consumesFormalType(sName, Access.PUBLIC))
+                    {
+                    chain.markWeakMatch();
+                    }
                 continue;
                 }
 
             return null;
-            }
-
-        if (fWrap) // TODO: stuff this information into the chain
-            {
-            System.out.println("Consuming methods should be wrapped: " + this + " -> " + that);
             }
 
         return chain;
@@ -320,7 +317,7 @@ public class ParameterizedTypeConstant
         switch (chain.getOrigin().getComposition())
             {
             case MaybeDuckType:
-                // will be resolved later via duck-typing
+                // will be resolved later via interface method matching
                 return true;
 
             case Equal:
@@ -391,7 +388,6 @@ public class ParameterizedTypeConstant
         assert listActual.size() == listThis.size();
 
         Iterator<StringConstant> iterNames = clzThis.getTypeParams().keySet().iterator();
-        boolean fWrap = false;
 
         for (int i = 0, c = listThis.size(); i < c; i++)
             {
@@ -416,17 +412,16 @@ public class ParameterizedTypeConstant
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
-                fWrap = true;
+                if (this.consumesFormalType(sName, Access.PUBLIC))
+                    {
+                    chain.markWeakMatch();
+                    }
                 continue;
                 }
 
             return false;
             }
 
-        if (fWrap) // TODO: stuff this information into the chain
-            {
-            System.out.println("Consuming methods should be wrapped: " + this + " <- " + that);
-            }
         return true;
         }
 

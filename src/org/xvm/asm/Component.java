@@ -2795,8 +2795,6 @@ public abstract class Component
      */
     public static class ContributionChain
         {
-        private List<Contribution> m_list;
-
         public ContributionChain(Contribution contrib)
             {
             m_list = new LinkedList<>();
@@ -2816,6 +2814,16 @@ public abstract class Component
         public int getDepth()
             {
             return m_list.size();
+            }
+
+        public boolean isWeakMatch()
+            {
+            return m_fWeakMatch;
+            }
+
+        public void markWeakMatch()
+            {
+            m_fWeakMatch = true;
             }
 
         /**
@@ -2854,6 +2862,9 @@ public abstract class Component
 
             return listActual;
             }
+
+        private List<Contribution> m_list;
+        private boolean m_fWeakMatch;
         }
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
