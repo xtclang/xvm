@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -430,6 +432,49 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isExplicitClassIdentity()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                // these always specify a class identity
+                return true;
+
+            case Class:
+                {
+                // examine the structure to determine if it represents a class identity
+                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                return clz.getFormat() != Component.Format.INTERFACE;
+                }
+
+            case Typedef:
+            case Property:
+            case Register:
+                return false;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                // follow the indirection to the class structure to determine if it represents a
+                // class identity
+                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent();
+                return clz.getFormat() != Component.Format.INTERFACE;
+                }
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
+
+
+    @Override
     public boolean isConstant()
         {
         Constant constant = getDefiningConstant();
@@ -513,6 +558,11 @@ public class TerminalTypeConstant
 
         // at this point, the typeinfo represents everything that has already been "built up"; our
         // job is to contribute everything from the class struct to it
+        if (typeinfo.getFormat() == null)
+            {
+            // this is the "top most" class structure, so remember its format
+            typeinfo.setFormat(struct.getFormat());
+            }
 
         // evaluate type parameters
         int cTypeParams = atypeParams == null ? 0 : atypeParams.length;
@@ -637,36 +687,305 @@ public class TerminalTypeConstant
                 }
             }
 
-        // recurse through compositions
-        boolean fAnyAnnotations = false;
-        for (Contribution contrib : struct.getContributionsAsList())
+        // first, determine which compositions need to be subsequently processed; any compositions
+        // that have not already (directly or indirectly) been processed by a "higher" (i.e. toward
+        // the topmost) class structure will be the responsibility of this class structure to
+        // compose. for example, consider mixin M2 extends mixin M1, and class B incorporates M1,
+        // and class D extends B incorporates M2; when processing D, it is responsible for M2
+        // which is responsible for M1, so B does not process the M1 composition. to achieve this
+        // behavior, we will ignore any compositions here that have already appeared in the typeinfo
+        List<Contribution> listRawContribs = struct.getContributionsAsList();
+        int                cContribs       = listRawContribs.size();
+        int                iContrib        = 0;
+
+        // peel off all of the annotations at the front of the contribution list
+        List<Contribution> listAnnotations = Collections.EMPTY_LIST;
+        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
+            // only process annotations
+            Contribution contrib = listRawContribs.get(iContrib);
+            if (contrib.getComposition() != Composition.Annotation)
+                {
+                break;
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (!typeContrib.isExplicitClassIdentity())
+                {
+                // TODO log error
+                throw new IllegalStateException("not a mixin class type: " + typeContrib);
+                }
+
+            // if any mix-ins already registered match or extend this mixin, then this
+            // mix-in gets ignored
+            if (typeinfo.incorporated.contains(typeContrib))
+                {
+                continue NextContrib;
+                }
+            IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
+            for (TypeConstant typeMixin : typeinfo.incorporated)
+                {
+                if (typeMixin.extendsClass(constClass))
+                    {
+                    continue NextContrib;
+                    }
+                }
+
+            // even though we haven't processed it yet, stake our claim to the
+            // responsibility of processing it by registering it in the typeinfo
+            typeinfo.incorporated.add(typeContrib);
+
+            // ... and add it to our list of things that we need to process
+            if (listAnnotations.isEmpty())
+                {
+                listAnnotations = new ArrayList<>();    // lazy list instantiation
+                }
+            listAnnotations.add(contrib);
+            }
+
+        // next up, for any class type (other than Object itself), there MUST be an "extends"
+        // contribution that specifies another class
+        List<Contribution> listContributions = new ArrayList<>();
+        boolean            fExtends          = false;
+        switch (struct.getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case CLASS:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+            case SERVICE:
+                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+
+                // Object does not (and must not) extend anything
+                if (struct.getIdentityConstant().equals(getConstantPool().clzObject()))
+                    {
+                    if (fExtends)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("Object must NOT extend anything");
+                        }
+                    break;
+                    }
+
+                // all other classes must extends something
+                if (!fExtends)
+                    {
+                    // TODO log error
+                    throw new IllegalStateException("missing extends on " + struct.getName());
+                    }
+
+                // the "extends" clause must specify a class identity
+                TypeConstant typeExtends = contrib.getTypeConstant();
+                if (!typeExtends.isExplicitClassIdentity())
+                    {
+                    // TODO log error
+                    throw new IllegalStateException("extends contribution is not a class identity: " + typeExtends);
+                    }
+
+                if (typeinfo.extended.contains(typeExtends))
+                    {
+                    // some sort
+                    // of circular loop
+                    // TODO log error
+                    throw new IllegalStateException("extends contribution infinite loop: " + typeExtends);
+                    }
+
+                // add the "extends" to the list of contributions to process, and register it so
+                // that no one else will do it
+                typeinfo.extended.add(typeExtends);
+                listContributions.add(contrib);
+                ++iContrib;
+                break;
+            }
+
+        // like "extends", only one "impersonates" clause and only one "into" clause is allowed
+        boolean fImpersonates = false;
+        boolean fInto         = false;
+
+        // go through the rest of the contributions, and add the ones that need to be processed to
+        // the list to do
+        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
+            {
+            // only process annotations
+            Contribution contrib     = listRawContribs.get(iContrib);
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    // skip annotations (we'll handle them at the end, since they wrap around this
-                    // class, i.e. they're the last to evaluate now because they're first in the
-                    // call chain
-                    fAnyAnnotations = true;
+                    // TODO log error
+                    throw new IllegalStateException("annotations must come first");
+
+                case Extends:
+                    if (fExtends)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("multiple extends: " + typeContrib);
+                        }
+
+                    if (struct.getFormat() != Component.Format.MIXIN)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("extends not allowed for : " + struct.getFormat());
+                        }
+
+                    // the "extends" clause must specify a class identity
+                    if (!typeContrib.isExplicitClassIdentity())
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("extends contribution is not a class identity: " + typeContrib);
+                        }
+
+                    if (typeinfo.incorporated.contains(typeContrib))
+                        {
+                        // some sort of circular loop or badly directed graph
+                        // TODO log error
+                        throw new IllegalStateException("mixin extends contribution infinite loop or bad graph: " + typeContrib);
+                        }
+
+                    // TODO - this mixin may have an "into" clause, and the mixin that it extends may also, and this "into" clause cannot violate the super's clause
+                    // test: this.getIntoType.isA(typeContrib.getIntoType)
+
+                    fExtends = true;
+
+                    // even though we haven't processed it yet, stake our claim to the
+                    // responsibility of processing it by registering it in the typeinfo
+                    typeinfo.incorporated.add(typeContrib);
+
+                    // ... and add it to our list of things that we need to process
+                    listContributions.add(contrib);
                     break;
 
-                case Delegates:
                 case Impersonates:
-                case Implements:
-                case Incorporates:  // TODO conditional
-                case Into:
-                case Extends:
-                    {
-                    // TODO use Contribution "transform" helper
-                    TypeConstant typeContrib = contrib.getTypeConstant();
-                    // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-                    typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+                    // TODO this is illegal, unless it's a class (not mixin or interface) AND there is no impersonates so far
+                    // typeinfo.getImpersonates()
+                    // typeinfo.setImpersonates()
+                    throw new UnsupportedOperationException("TODO");
+
+                case Incorporates:
+                    // TODO handle the conditional case (GG wrote a helper)
+                    if (!typeContrib.isExplicitClassIdentity())
+                        {
+                        // TODO log error
+                        throw new IllegalStateException();
+                        }
+
+                    // if any mix-ins already registered match or extend this mixin, then this
+                    // mix-in gets ignored
+                    if (typeinfo.incorporated.contains(typeContrib))
+                        {
+                        continue NextContrib;
+                        }
+                    IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
+                    for (TypeConstant typeMixin : typeinfo.incorporated)
+                        {
+                        if (typeMixin.extendsClass(constClass))
+                            {
+                            continue NextContrib;
+                            }
+                        }
+
+                    // TODO - the mixin being incorporated may have an "into" clause, so find it and test it against this
+                    // test: typeContrib.getIntoType.isA(this)
+
+                    // even though we haven't processed it yet, stake our claim to the
+                    // responsibility of processing it by registering it in the typeinfo
+                    typeinfo.incorporated.add(typeContrib);
+
+                    // ... and add it to our list of things that we need to process
+                    listContributions.add(contrib);
                     break;
-                    }
+
+
+                case Delegates:
+                    // not applicable on an interface
+                    if (struct.getFormat() == Component.Format.INTERFACE)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("interface cannot delegate");
+                        }
+
+                    // must be an "interface type"
+                    if (typeContrib.isExplicitClassIdentity())   // TODO need a method "is interface type"
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("cannot delegate class type: " + typeContrib);
+                        }
+
+                    // even though we haven't processed it yet, stake our claim to the
+                    // responsibility of processing it by registering it in the typeinfo
+                    typeinfo.implemented.add(typeContrib);
+
+                    // ... and add it to our list of things that we need to process
+                    listContributions.add(contrib);
+                    break;
+
+                case Implements:
+                    // must be an "interface type"
+                    if (typeContrib.isExplicitClassIdentity())    // TODO "is interface type"
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("cannot implement class type: " + typeContrib);
+                        }
+
+                    // check if it is already implemented
+                    if (typeinfo.implemented.contains(typeContrib))
+                        {
+                        continue NextContrib;
+                        }
+                    for (TypeConstant typeImplemented : typeinfo.implemented)
+                        {
+                        // TODO GG will be changing the API for this
+                        ContributionChain chain = typeImplemented.checkAssignableTo(typeContrib);
+                        if (chain != null && chain.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+                            {
+                            continue NextContrib;
+                            }
+                        }
+
+                    // even though we haven't processed it yet, stake our claim to the
+                    // responsibility of processing it by registering it in the typeinfo
+                    typeinfo.implemented.add(typeContrib);
+
+                    // ... and add it to our list of things that we need to process
+                    listContributions.add(contrib);
+                    break;
+
+                case Into:
+                    // only applicable on a mixin
+                    if (struct.getFormat() != Component.Format.MIXIN)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("not a mixin");
+                        }
+
+                    // only one "into" is allowed
+                    if (fInto)
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("multiple intos");
+                        }
+
+                    // nothing to check here, because it should be check from the class that does
+                    // the incorporates
+                    fInto = true;
+                    break;
 
                 default:
                     throw new IllegalStateException("struct=" + struct.getName() + ", contribution=" + contrib);
                 }
+            }
+
+        // recurse through compositions
+        for (Contribution contrib : listContributions)
+            {
+            // TODO use Contribution "transform" helper
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
+            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
             }
 
         // properties & methods
@@ -702,9 +1021,11 @@ public class TerminalTypeConstant
             }
 
         // process annotations
-        if (fAnyAnnotations)
+        for (Contribution contrib : listAnnotations)
             {
-            // TODO
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
+            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
             }
 
         return fHalt;
@@ -780,7 +1101,7 @@ public class TerminalTypeConstant
         boolean fHalt = false;
 
         // TODO
-        // System.out.println("method: " + struct.getIdentityConstant().getValueString());
+        System.out.println("method: " + struct.getIdentityConstant().getValueString());
 
         return fHalt;
         }

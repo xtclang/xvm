@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -484,6 +485,20 @@ public abstract class Component
         if (list == null)
             {
             m_listContribs = list = new ArrayList<>();
+            }
+        else if (!list.isEmpty() && contrib.getComposition() == Composition.Extends)
+            {
+            for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); )
+                {
+                Contribution contribNext = listIterator.next();
+                if (contribNext.getComposition() != Composition.Annotation)
+                    {
+                    assert contribNext.getComposition() != Composition.Extends;
+                    listIterator.previous();
+                    listIterator.add(contrib);
+                    return;
+                    }
+                }
             }
 
         list.add(contrib);

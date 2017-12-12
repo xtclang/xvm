@@ -93,10 +93,10 @@ public class ParameterizedTypeConstant
             throw new IllegalArgumentException("must refer to a terminal type");
             }
 
-        m_constType      = constType;
-        m_listTypeParams = constTypeParams == null || constTypeParams.length == 0
-                ? Collections.EMPTY_LIST
-                : Arrays.asList(constTypeParams);
+        m_constType   = constType;
+        m_atypeParams = constTypeParams == null || constTypeParams.length == 0
+                ? ConstantPool.NO_TYPES
+                : constTypeParams;
         }
 
 
@@ -123,9 +123,15 @@ public class ParameterizedTypeConstant
     @Override
     public List<TypeConstant> getParamTypes()
         {
-        List<TypeConstant> list = m_listTypeParams;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+        return m_atypeParams.length == 0
+                ? Collections.EMPTY_LIST
+                : Arrays.asList(m_atypeParams);
+        }
+
+    @Override
+    public TypeConstant[] getParamTypesArray()
+        {
+        return m_atypeParams;
         }
 
     @Override
@@ -135,17 +141,17 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         boolean      fDiff         = constOriginal != constResolved;
 
-        List<TypeConstant> listOriginal   = m_listTypeParams;
-        TypeConstant[]     aconstResolved = null;
-        for (int i = 0, c = listOriginal.size(); i < c; ++i)
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = null;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
-            TypeConstant constParamOriginal = listOriginal.get(i);
+            TypeConstant constParamOriginal = aconstOriginal[i];
             TypeConstant constParamResolved = constParamOriginal.resolveTypedefs();
-            if (fDiff || constParamOriginal != constParamResolved)
+            if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == null)
                     {
-                    aconstResolved = listOriginal.toArray(new TypeConstant[c]);
+                    aconstResolved = aconstOriginal.clone();
                     }
                 aconstResolved[i] = constParamResolved;
                 fDiff = true;
@@ -164,17 +170,17 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
         boolean      fDiff         = constOriginal != constResolved;
 
-        List<TypeConstant> listOriginal   = m_listTypeParams;
-        TypeConstant[]     aconstResolved = null;
-        for (int i = 0, c = listOriginal.size(); i < c; ++i)
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = null;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
-            TypeConstant constParamOriginal = listOriginal.get(i);
+            TypeConstant constParamOriginal = aconstOriginal[i];
             TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
-            if (fDiff || constParamOriginal != constParamResolved)
+            if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == null)
                     {
-                    aconstResolved = listOriginal.toArray(new TypeConstant[c]);
+                    aconstResolved = aconstOriginal.clone();
                     }
                 aconstResolved[i] = constParamResolved;
                 fDiff = true;
@@ -196,9 +202,7 @@ public class ParameterizedTypeConstant
             throw new IllegalStateException("inexplicable dual occurrance of type params for " + typeinfo.type);
             }
 
-        List<TypeConstant> list = m_listTypeParams;
-        atypeParams = list.toArray(new TypeConstant[list.size()]);
-        return super.resolveStructure(typeinfo, access, atypeParams, errs);
+        return super.resolveStructure(typeinfo, access, m_atypeParams, errs);
         }
 
 
@@ -502,19 +506,19 @@ public class ParameterizedTypeConstant
         //  1) A consumes A_Type && B produces B_Type, or
         //  2) A produces A_Type && B consumes B_Type
 
-        ClassConstant constClass = (ClassConstant) m_constType.getIdentityConstant();
-        ClassTemplate template = types.getTemplate(constClass);
-        ListMap<String, Type> mapFormal = template.f_mapGenericFormal;
+        ClassConstant         constClass = (ClassConstant) m_constType.getIdentityConstant();
+        ClassTemplate         template   = types.getTemplate(constClass);
+        ListMap<String, Type> mapFormal  = template.f_mapGenericFormal;
 
-        List<TypeConstant> list = m_listTypeParams;
-        assert  mapFormal.size() == list.size(); // what about Tuple?
+        TypeConstant[] atypeParams = m_atypeParams;
+        assert mapFormal.size() == atypeParams.length; // what about Tuple?
 
-        Iterator<TypeConstant> iterParams = list.iterator();
-        Iterator<String> iterNames = mapFormal.keySet().iterator();
+        Iterator<TypeConstant> iterParams = Arrays.asList(atypeParams).iterator();
+        Iterator<String>       iterNames  = mapFormal.keySet().iterator();
         while (iterParams.hasNext())
             {
             TypeConstant constParam = iterParams.next();
-            String sFormal = iterNames.next();
+            String       sFormal    = iterNames.next();
 
             if (template.consumesFormalType(sFormal, access)
                     && constParam.producesFormalType(sTypeName, types, access)
@@ -536,19 +540,19 @@ public class ParameterizedTypeConstant
         //  1) A produces A_Type && B produces B_Type, or
         //  2) A consumes A_Type && B consumes B_Type
 
-        ClassConstant constClass = (ClassConstant) m_constType.getIdentityConstant();
-        ClassTemplate template = types.getTemplate(constClass);
-        ListMap<String, Type> mapFormal = template.f_mapGenericFormal;
+        ClassConstant         constClass = (ClassConstant) m_constType.getIdentityConstant();
+        ClassTemplate         template   = types.getTemplate(constClass);
+        ListMap<String, Type> mapFormal  = template.f_mapGenericFormal;
 
-        List<TypeConstant> list = m_listTypeParams;
-        assert  mapFormal.size() == list.size(); // what about Tuple?
+        TypeConstant[] atypeParams = m_atypeParams;
+        assert  mapFormal.size() == atypeParams.length; // what about Tuple?
 
-        Iterator<TypeConstant> iterParams = list.iterator();
-        Iterator<String> iterNames = mapFormal.keySet().iterator();
+        Iterator<TypeConstant> iterParams = Arrays.asList(atypeParams).iterator();
+        Iterator<String>       iterNames  = mapFormal.keySet().iterator();
         while (iterParams.hasNext())
             {
             TypeConstant constParam = iterParams.next();
-            String sFormal = iterNames.next();
+            String       sFormal    = iterNames.next();
 
             if (template.producesFormalType(sFormal, access)
                     && constParam.producesFormalType(sTypeName, types, access)
@@ -566,7 +570,7 @@ public class ParameterizedTypeConstant
     @Override
     public boolean isConstant()
         {
-        for (TypeConstant type : m_listTypeParams)
+        for (TypeConstant type : m_atypeParams)
             {
             if (!type.isConstant())
                 {
@@ -593,14 +597,14 @@ public class ParameterizedTypeConstant
             ParameterizedTypeConstant thatP = (ParameterizedTypeConstant) that;
             if (this.m_constType.isCongruentWith(thatP.m_constType))
                 {
-                List<TypeConstant> listThis = this.m_listTypeParams;
-                List<TypeConstant> listThat = thatP.m_listTypeParams;
-                int cParams = listThis.size();
-                if (listThat.size() == cParams)
+                TypeConstant[] atypeThis = this.m_atypeParams;
+                TypeConstant[] atypeThat = thatP.m_atypeParams;
+                int cParams = atypeThis.length;
+                if (atypeThat.length == cParams)
                     {
-                    for (int i = 0, c = listThis.size(); i < c; ++i)
+                    for (int i = 0; i < cParams; ++i)
                         {
-                        if (!listThis.get(i).isCongruentWith(listThat.get(i)))
+                        if (!atypeThis[i].isCongruentWith(atypeThat[i]))
                             {
                             return false;
                             }
@@ -628,7 +632,7 @@ public class ParameterizedTypeConstant
             {
             return true;
             }
-        for (Constant param : m_listTypeParams)
+        for (Constant param : m_atypeParams)
             {
             if (param.containsUnresolved())
                 {
@@ -643,14 +647,14 @@ public class ParameterizedTypeConstant
         {
         m_constType = (TypeConstant) m_constType.simplify();
 
-        List<TypeConstant> listParams = m_listTypeParams;
-        for (int i = 0, c = listParams.size(); i < c; ++i)
+        TypeConstant[] atypeParams = m_atypeParams;
+        for (int i = 0, c = atypeParams.length; i < c; ++i)
             {
-            TypeConstant constOld = listParams.get(i);
+            TypeConstant constOld = atypeParams[i];
             TypeConstant constNew = (TypeConstant) constOld.simplify();
             if (constNew != constOld)
                 {
-                listParams.set(i, constNew);
+                atypeParams[i] = constNew;
                 }
             }
 
@@ -661,7 +665,7 @@ public class ParameterizedTypeConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
-        for (Constant param : m_listTypeParams)
+        for (Constant param : m_atypeParams)
             {
             visitor.accept(param);
             }
@@ -670,7 +674,7 @@ public class ParameterizedTypeConstant
     @Override
     protected Object getLocator()
         {
-        return m_listTypeParams.isEmpty()
+        return m_atypeParams.length == 0
                 ? m_constType
                 : null;
         }
@@ -682,17 +686,17 @@ public class ParameterizedTypeConstant
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)
             {
-            List<TypeConstant> listThis = this.m_listTypeParams;
-            List<TypeConstant> listThat = that.m_listTypeParams;
-            for (int i = 0, c = Math.min(listThis.size(), listThat.size()); i < c; ++i)
+            TypeConstant[] atypeThis = this.m_atypeParams;
+            TypeConstant[] atypeThat = that.m_atypeParams;
+            for (int i = 0, c = Math.min(atypeThis.length, atypeThat.length); i < c; ++i)
                 {
-                n = listThis.get(i).compareTo(listThat.get(i));
+                n = atypeThis[i].compareTo(atypeThat[i]);
                 if (n != 0)
                     {
                     return n;
                     }
                 }
-            n = listThis.size() - listThat.size();
+            n = atypeThis.length - atypeThat.length;
             }
         return n;
         }
@@ -701,28 +705,25 @@ public class ParameterizedTypeConstant
     public String getValueString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constType.getValueString());
 
-        if (!m_listTypeParams.isEmpty())
+        sb.append(m_constType.getValueString())
+          .append('<');
+
+        boolean first = true;
+        for (TypeConstant type : m_atypeParams)
             {
-            sb.append('<');
-
-            boolean first = true;
-            for (TypeConstant type : m_listTypeParams)
+            if (first)
                 {
-                if (first)
-                    {
-                    first = false;
-                    }
-                else
-                    {
-                    sb.append(", ");
-                    }
-                sb.append(type.getValueString());
+                first = false;
                 }
-
-            sb.append('>');
+            else
+                {
+                sb.append(", ");
+                }
+            sb.append(type.getValueString());
             }
+
+        sb.append('>');
 
         return sb.toString();
         }
@@ -740,18 +741,18 @@ public class ParameterizedTypeConstant
 
         if (m_aiTypeParams == null)
             {
-            m_listTypeParams = Collections.EMPTY_LIST;
+            m_atypeParams = ConstantPool.NO_TYPES;
             }
         else
             {
-            int c = m_aiTypeParams.length;
-            List<TypeConstant> listParams = new ArrayList<>(c);
-            for (int i = 0; i < c; ++i)
+            int            cParams     = m_aiTypeParams.length;
+            TypeConstant[] atypeParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
                 {
-                listParams.add((TypeConstant) pool.getConstant(m_aiTypeParams[i]));
+                atypeParams[i] = (TypeConstant) pool.getConstant(m_aiTypeParams[i]);
                 }
-            m_listTypeParams = listParams;
-            m_aiTypeParams   = null;
+            m_atypeParams  = atypeParams;
+            m_aiTypeParams = null;
             }
         }
 
@@ -760,14 +761,14 @@ public class ParameterizedTypeConstant
         {
         m_constType = (TypeConstant) pool.register(m_constType);
 
-        List<TypeConstant> listParams = m_listTypeParams;
-        for (int i = 0, c = listParams.size(); i < c; ++i)
+        TypeConstant[] atypeParams = m_atypeParams;
+        for (int i = 0, c = atypeParams.length; i < c; ++i)
             {
-            TypeConstant constOld = listParams.get(i);
+            TypeConstant constOld = atypeParams[i];
             TypeConstant constNew = (TypeConstant) pool.register(constOld);
             if (constNew != constOld)
                 {
-                listParams.set(i, constNew);
+                atypeParams[i] = constNew;
                 }
             }
         }
@@ -778,8 +779,8 @@ public class ParameterizedTypeConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
-        writePackedLong(out, m_listTypeParams.size());
-        for (TypeConstant constType : m_listTypeParams)
+        writePackedLong(out, m_atypeParams.length);
+        for (TypeConstant constType : m_atypeParams)
             {
             writePackedLong(out, constType.getPosition());
             }
@@ -791,7 +792,12 @@ public class ParameterizedTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constType.hashCode() + m_listTypeParams.hashCode();
+        int n = m_constType.hashCode() + m_atypeParams.length;
+        for (TypeConstant type : m_atypeParams)
+            {
+            n ^= type.hashCode();
+            }
+        return n;
         }
 
 
@@ -815,5 +821,5 @@ public class ParameterizedTypeConstant
     /**
      * The type parameters.
      */
-    private List<TypeConstant> m_listTypeParams;
+    private TypeConstant[] m_atypeParams;
     }

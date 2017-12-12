@@ -722,6 +722,18 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine if the type refers to a class that can be used in an annotation, and extends
+     * clause, an incorporates clause, or an impersonates clause.
+     *
+     * @return true iff this type is just a class identity, and the class identity refers to a
+     *         class structure that is not an interface
+     */
+    public boolean isExplicitClassIdentity()
+        {
+        return false;
+        }
+
+    /**
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null
@@ -827,10 +839,34 @@ public abstract class TypeConstant
             this.type = type;
             }
 
-        public Format getFormat()
+        /**
+         * @return the format of the topmost structure that the TypeConstant refers to
+         */
+        public Component.Format getFormat()
             {
-            // TODO which is this? INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, TRAIT, SERVICE, PACKAGE, MODULE
-            throw new UnsupportedOperationException("TODO");
+            return m_formatActual;
+            }
+
+        void setFormat(Component.Format format)
+            {
+            assert format != null;
+            assert m_formatActual == null;
+            this.m_formatActual = format;
+            }
+
+        /**
+         * @return the TypeConstant representing the impersonated class, or null
+         */
+        public TypeConstant getImpersonates()
+            {
+            return m_impersonates;
+            }
+
+        void setImpersonates(TypeConstant type)
+            {
+            assert type != null;
+            assert m_impersonates == null;
+            this.m_impersonates = type;
             }
 
         public boolean isSingleton()
@@ -1013,6 +1049,28 @@ public abstract class TypeConstant
         public final Map<String, PropertyInfo>          properties = new HashMap<>(7);
         public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>(7);
 
+        /**
+         * The Format of the topmost class structure. TODO what about relational types?         */
+        private Component.Format m_formatActual;
+
+        /**
+         * This is one of {@link Component.Format#CLASS}, {@link Component.Format#INTERFACE}, and
+         * {@link Component.Format#MIXIN}. It identifies how this type is actually used:
+         * <ul>
+         * <li>Class - this is a type that requires a specific class identity, either by being an
+         * instance of that class, or being a sub-class of that class, or by the use of an explicit
+         * {@code impersonates} clause;</li>
+         * <li>Interface - this is an interface type, and ;</li>
+         * <li>Mixin - this is an instantiable (or abstract or singleton) class type;</li>
+         * </ul>
+         */
+        private Component.Format m_formatUsage;
+        // TODO
+        public final Set<TypeConstant> extended     = new HashSet<>(7);
+        public final Set<TypeConstant> implemented  = new HashSet<>(7);
+        public final Set<TypeConstant> incorporated = new HashSet<>(7);
+        private TypeConstant m_impersonates;
+
         // cached results
         private transient Set<MethodInfo>     m_setAuto;
         private transient Set<MethodInfo>     m_setOps;
@@ -1021,6 +1079,7 @@ public abstract class TypeConstant
         private transient TypeConstant        m_typeAuto;
         private transient MethodConstant      m_methodAuto;
         }
+
 
     /**
      * Represents a single type parameter.
@@ -1064,6 +1123,7 @@ public abstract class TypeConstant
         // TODO - not sure if this is needed
         // private Set<Constant> setUsedBy = new HashSet<>(7);
         }
+
 
     /**
      * Represents a single property.
@@ -1142,8 +1202,8 @@ public abstract class TypeConstant
                 }
 
             sb.append(type.getValueString())
-              .append(' ')
-              .append(name);
+                    .append(' ')
+                    .append(name);
 
             return sb.toString();
             }
@@ -1157,6 +1217,7 @@ public abstract class TypeConstant
         private Constant                           constDeclLevel;
         private Map<SignatureConstant, MethodInfo> methods;
         }
+
 
     /**
      * Represents a single method (or function).
