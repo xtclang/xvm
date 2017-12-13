@@ -486,14 +486,15 @@ public abstract class Component
             {
             m_listContribs = list = new ArrayList<>();
             }
-        else if (!list.isEmpty() && contrib.getComposition() == Composition.Extends)
+        else if (!list.isEmpty() && (contrib.getComposition() == Composition.Into ||
+                                     contrib.getComposition() == Composition.Extends))
             {
+            // order is "into" and then "extends" and then everything else
             for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); )
                 {
                 Contribution contribNext = listIterator.next();
-                if (contribNext.getComposition() != Composition.Annotation)
+                if (contribNext.getComposition() != Composition.Annotation && contribNext.getComposition() != Composition.Into)
                     {
-                    assert contribNext.getComposition() != Composition.Extends;
                     listIterator.previous();
                     listIterator.add(contrib);
                     return;

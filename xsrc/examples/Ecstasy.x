@@ -7,6 +7,7 @@ module Ecstasy.xtclang.org
 
     class Object
         {
+        String to<String>();
         @Auto function Object() to<function Object()>();
         }
 

@@ -135,6 +135,12 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public boolean isExplicitClassIdentity(boolean fAllowParams)
+        {
+        return fAllowParams && getUnderlyingType().isExplicitClassIdentity(false);
+        }
+
+    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal = m_constType;

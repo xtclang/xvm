@@ -158,10 +158,10 @@ public class TypeComposition
     //
     // 2. The "default" chain that consists of:
     //   2.1 default methods on the interfaces that are declared by encapsulating
-    //          mixins and traits (recursively)
-    //   2.2 default methods on the interfaces implemented by the class (recursively)
-    //   2.3 default methods on the interfaces that are declared by mixins, traits and delegates (recursively)
-    //   2.4 followed by the "default" chain on the super class
+    //       mixins and traits (recursively)
+    //   2.2 default methods on the interfaces implemented by the class, or that are declared by
+    //       mixins, traits and delegates (recursively)
+    //   2.3 followed by the "default" chain on the super class
     //
     //  @param fTop  true if this composition is the "top of the chain"
     protected List<ClassTemplate> collectDeclaredCallChain(boolean fTop)
@@ -269,6 +269,7 @@ public class TypeComposition
                 {
                 case Incorporates:
                     // TODO: how to detect a conditional incorporation?
+                case Implements:
                 case Delegates:
                     TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
                     addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
@@ -277,18 +278,6 @@ public class TypeComposition
             }
 
         // 2.3
-        for (Component.Contribution contribution : struct.getContributionsAsList())
-            {
-            switch (contribution.getComposition())
-                {
-                case Implements:
-                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
-                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
-                    break;
-                }
-            }
-
-        // 2.4
         addNoDupes(clzSuper.collectDefaultCallChain(), list, set);
         return list;
         }

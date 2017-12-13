@@ -727,8 +727,9 @@ public abstract class TypeConstant
      *
      * @return true iff this type is just a class identity, and the class identity refers to a
      *         class structure that is not an interface
+     * @param fAllowParams
      */
-    public boolean isExplicitClassIdentity()
+    public boolean isExplicitClassIdentity(boolean fAllowParams)
         {
         return false;
         }
@@ -867,6 +868,22 @@ public abstract class TypeConstant
             assert type != null;
             assert m_impersonates == null;
             this.m_impersonates = type;
+            }
+
+        /**
+         * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
+         *         not a mixin
+         */
+        public TypeConstant getInto()
+            {
+            return m_typeInto;
+            }
+
+        void setInto(TypeConstant type)
+            {
+            assert type != null;
+            assert m_typeInto == null;
+            this.m_typeInto = type;
             }
 
         public boolean isSingleton()
@@ -1070,6 +1087,7 @@ public abstract class TypeConstant
         public final Set<TypeConstant> implemented  = new HashSet<>(7);
         public final Set<TypeConstant> incorporated = new HashSet<>(7);
         private TypeConstant m_impersonates;
+        private TypeConstant m_typeInto;
 
         // cached results
         private transient Set<MethodInfo>     m_setAuto;

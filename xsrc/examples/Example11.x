@@ -192,3 +192,22 @@ pco = co;   // err; requires cast to PC or PC<Object> (fails if co is not an ins
 
 pcs = cs;   // err; requires cast to PC<String> (fails if cs is not an instance of PC and T is not String)
 pcs = co;   // err; will not compile, even with a cast
+
+// --
+
+const Person(String name)
+    {
+    @Lazy Int nameCount.calc()
+        {
+        return name.count(' ') + 1;
+        }
+    }
+
+Void foo(String[] names)
+    {
+    @Inject Console console;
+    for (String name : names)
+        {
+        console.println(name);
+        }
+    }

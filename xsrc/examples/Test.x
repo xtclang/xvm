@@ -294,12 +294,27 @@ module Test
 
     class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
         {
+        Void foo();
         @Auto Int size();
         }
 
+    mixin M into MyMap {}
+
+    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
+        {
+        Void bar();
+        @Auto Int size();
+        }
+
+    mixin M2 into MyMap2 extends M {}
+
+    class B incorporates M {}
+
+    class D extends B incorporates M2 {}
+
     Int foo()
         {
-        MyMap<String, Int> map;
+        D map;
         return map;
         }
     }
