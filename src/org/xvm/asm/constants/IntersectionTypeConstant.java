@@ -4,12 +4,19 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.LinkedList;
+import java.util.List;
+
+import java.util.Set;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
 
 /**
- * Represent a constant that specifies the intersection ("+") of two types.
+ * Represent a constant that specifies the intersection ("|") of two types.
  */
 public class IntersectionTypeConstant
         extends RelationalTypeConstant
@@ -138,6 +145,78 @@ public class IntersectionTypeConstant
 //        Set<MethodConstant> setIntersection = new HashSet<>(set1);
 //        setIntersection.retainAll(set2);
 //        setOps.addAll(setIntersection);
+        }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+        {
+        TypeConstant type1 = getUnderlyingType();
+        TypeConstant type2 = getUnderlyingType2();
+
+        List<ContributionChain> list1 = type1.collectContributions(that, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectContributions(that, new LinkedList<>());
+
+        // both branches need to contribute
+        if (!list1.isEmpty() && !list2.isEmpty())
+            {
+            validate(type1, that, list1);
+            validate(type2, that, list2);
+
+            if (!list1.isEmpty() && !list2.isEmpty())
+                {
+                chains.addAll(list1);
+                chains.addAll(list2);
+                }
+            }
+
+        return chains;
+        }
+
+    @Override
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
+        {
+        TypeConstant type1 = getUnderlyingType();
+        TypeConstant type2 = getUnderlyingType2();
+
+        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, new LinkedList<>());
+
+        // any contribution would do
+        chains.addAll(list1);
+        chains.addAll(list2);
+
+        return chains;
+        }
+
+    @Override
+    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
+        {
+        // there is nothing that could change the result of "checkAssignableTo"
+        return true;
+        }
+
+    @Override
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+        {
+        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
+        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
+
+        if (setMiss1.isEmpty())
+            {
+            return setMiss1; // type1 is assignable from that
+            }
+        if (setMiss2.isEmpty())
+            {
+            return setMiss2; // type2 is assignable from that
+            }
+
+        // neither is assignable; merge the misses
+        setMiss1.addAll(setMiss2);
+
+        return setMiss1;
         }
 
 

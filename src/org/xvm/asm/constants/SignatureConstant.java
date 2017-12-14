@@ -101,6 +101,27 @@ public class SignatureConstant
         m_aconstReturns = validateTypes(returns);
         }
 
+    /**
+     * Construct a constant whose value is a property signature identifier.
+     *
+     * @param pool           the ConstantPool that will contain this Constant
+     * @param constProperty  the property
+     */
+    public SignatureConstant(ConstantPool pool, PropertyConstant constProperty)
+        {
+        super(pool);
+
+        if (constProperty == null)
+            {
+            throw new IllegalArgumentException("property required");
+            }
+
+        m_constName     = pool.ensureStringConstant(constProperty.getName());
+        m_aconstParams  = ConstantPool.NO_TYPES;
+        m_aconstReturns = new TypeConstant[] {constProperty.getRefType()};
+        m_fProperty     = true;
+        }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -142,6 +163,14 @@ public class SignatureConstant
     public List<TypeConstant> getReturns()
         {
         return Arrays.asList(m_aconstReturns);
+        }
+
+    /**
+     * @return whether this signature represents a property
+     */
+    public boolean isProperty()
+        {
+        return m_fProperty;
         }
 
     /**
@@ -580,10 +609,15 @@ public class SignatureConstant
     /**
      * The invocation parameters of the method.
      */
-    TypeConstant[] m_aconstParams;
+    private TypeConstant[] m_aconstParams;
 
     /**
      * The return values from the method.
      */
-    TypeConstant[] m_aconstReturns;
+    private TypeConstant[] m_aconstReturns;
+
+    /**
+     * An indicator that this signature refers to a property.
+     */
+    private transient boolean m_fProperty;
     }

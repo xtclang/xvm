@@ -121,9 +121,23 @@ class TestCompiler
             }
         }
 
+    class P2<T2>
+        {
+        P<T2> produce()
+            {
+            P<T2> p;
+            return p;
+            }
+        }
+
     interface C<T>
         {
-        Void consume(T value) {}
+        Void consume(T value);
+        }
+
+    interface C2<T2>
+        {
+        C<T2> consume();
         }
 
     class PC<T> extends P<T> implements C<T>
@@ -147,11 +161,17 @@ class TestCompiler
         C<Object>  y1;
         C<String>  x1 = y1;
 
+        C2<Object> y12;
+        C2<String> x12 = y12;
+
         PC<Object> y2;
         C<String>  x2 = y2;
 
         P<String>  y5;
         P<Object>  x5 = y5;
+
+        P2<String> y52;
+        P2<Object> x52 = y52;
 
         PC<String> y6;
         PC<Object> x6 = y6; // ok, but the RT needs to "safe-wrap" the consuming methods

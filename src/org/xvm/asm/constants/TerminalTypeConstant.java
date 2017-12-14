@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -1310,105 +1311,63 @@ public class TerminalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected ContributionChain checkAssignableTo(TypeConstant that)
+    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
         {
-        Constant constIdThis = this.getDefiningConstant();
-        Constant constIdThat = that.getDefiningConstant(); // TODO: what if relational
+        Constant constIdThis = getDefiningConstant();
 
-        if (constIdThis.equals(constIdThat))
+        if (that.isSingleDefiningConstant()
+                && constIdThis.equals(that.getDefiningConstant()))
             {
-            return new ContributionChain(
-                    new Contribution(Composition.Equal, null));
+            chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+            return chains;
             }
 
         switch (constIdThis.getFormat())
             {
             case Module:
             case Package:
-                return null;
+                break;
 
             case Class:
-                switch (constIdThat.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                        return null;
-
-                    case Class:
-                        // scenarios we can cover here are:
-                        // 1. this extends that (recursively)
-                        // 2. this or any of its contributions (recursively) impersonates that
-                        // 3. this or any of its contributions (recursively) incorporates that
-                        // 4. this or any of its contributions (recursively) delegates to that
-                        // 5. this or any of its contributions (recursively) declares to implement that
-                        {
-                        IdentityConstant idThis  = (IdentityConstant) constIdThis;
-                        IdentityConstant idThat  = (IdentityConstant) constIdThat;
-                        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
-
-                        ContributionChain chain = clzThis.findContribution(idThat);
-                        if (chain == null)
-                            {
-                            ClassStructure clzThat = (ClassStructure) idThat.getComponent();
-                            if (clzThat.getFormat() == Component.Format.INTERFACE)
-                                {
-                                chain = new ContributionChain(
-                                    new Contribution(Composition.MaybeDuckType, that));
-                                }
-                            }
-                        return chain;
-                        }
-
-                    case Typedef:
-                        return this.checkAssignableTo(getTypedefTypeConstant((TypedefConstant) constIdThat));
-
-                    case Property:
-                        PropertyConstant constProp = (PropertyConstant) constIdThat;
-                        TypeConstant typeConstraint = constProp.getRefType();
-                        return this.checkAssignableTo(typeConstraint);
-
-                    case Register:
-                        return this.checkAssignableTo(getRegisterTypeConstant((RegisterConstant) constIdThat));
-
-                    case ThisClass:
-                    case ParentClass:
-                    case ChildClass:
-                        ClassStructure clz = (ClassStructure)
-                            ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                        return clz.getIdentityConstant().asTypeConstant().checkAssignableTo(that);
-
-                    case UnresolvedName:
-                        throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
-
-                    default:
-                        throw new IllegalStateException("unexpected defining constant: " + constIdThis);
-                    }
+                {
+                ClassStructure clzThis = (ClassStructure)
+                    ((IdentityConstant) constIdThis).getComponent();
+                chains.addAll(that.collectClassContributions(clzThis, chains));
+                break;
+                }
 
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).checkAssignableTo(that);
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    collectContributions(that, chains);
 
             case Property:
-                // scenario we can handle here is:
-                // 1. this = T (formal parameter type), constrained by U (other formal type)
-                //    that = U (formal parameter type)
+                {
+                // scenarios we can handle here are:
+                // 1. r-value (this) = T (formal parameter type), constrained by U (other formal type)
+                //    l-value (that) = U (formal parameter type)
                 //
-                // 2. this = T (formal parameter type), constrained by U (real type)
-                //    that = V (real type), where U "is a" V
+                // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
+                //    l-value (that) = V (real type), where U "is a" V
 
                 PropertyConstant constProp = (PropertyConstant) constIdThis;
                 TypeConstant typeConstraint = constProp.getRefType();
 
-                return typeConstraint.checkAssignableTo(that);
+                return typeConstraint.collectContributions(that, chains);
+                }
 
             case Register:
-                return getRegisterTypeConstant((RegisterConstant) constIdThis).checkAssignableTo(that);
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    collectContributions(that, chains);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                ClassStructure clz = (ClassStructure)
+                {
+                ClassStructure clzThis = (ClassStructure)
                     ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                return clz.getIdentityConstant().asTypeConstant().checkAssignableTo(that);
+                chains.addAll(that.collectClassContributions(clzThis, chains));
+                break;
+                }
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
@@ -1416,18 +1375,88 @@ public class TerminalTypeConstant
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constIdThis);
             }
+        return chains;
         }
 
     @Override
-    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
+        {
+        Constant constIdThis = getDefiningConstant();
+
+        switch (constIdThis.getFormat())
+            {
+            case Module:
+            case Package:
+                break;
+
+            case Class:
+                {
+                IdentityConstant idThis = (IdentityConstant) constIdThis;
+                if (idThis.equals(getConstantPool().clzObject()))
+                    {
+                    // everything is considered to extend Object (even interfaces)
+                    chains.add(new ContributionChain(
+                        new Contribution(Composition.Extends, getConstantPool().typeObject())));
+                    break;
+                    }
+
+                List<ContributionChain> chainsClz =
+                    clzThat.collectContributions(idThis, new LinkedList<>());
+                if (chainsClz.isEmpty())
+                    {
+                    ClassStructure clzThis = (ClassStructure) idThis.getComponent();
+                    if (clzThis.getFormat() == Component.Format.INTERFACE)
+                        {
+                        chains.add(new ContributionChain(
+                            new Contribution(Composition.MaybeDuckType, null)));
+                        }
+                    }
+                else
+                    {
+                    chains.addAll(chainsClz);
+                    }
+                break;
+                }
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    collectClassContributions(clzThat, chains);
+
+            case Property:
+            case Register:
+                // r-value (that) is a real type; it cannot have a formal type contribution
+                // (assigned to a formal type)
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                ClassStructure clzThis = (ClassStructure)
+                    ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
+                return clzThis.getIdentityConstant().asTypeConstant().collectClassContributions(clzThat, chains);
+                }
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+            }
+
+        return chains;
+        }
+
+    @Override
+    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
         {
         // there is nothing that could change the result of "checkAssignableTo"
         return true;
         }
 
     @Override
-    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                               List<TypeConstant> listParams)
         {
         Constant constIdThis = getDefiningConstant();
 

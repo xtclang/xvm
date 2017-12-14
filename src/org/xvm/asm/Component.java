@@ -2275,11 +2275,12 @@ public abstract class Component
                 case Into:
                 case Incorporates:
                 case Impersonates:
-                case MaybeDuckType:
                     if (constType == null)
                         {
                         throw new IllegalArgumentException("type is required");
                         }
+
+                case MaybeDuckType:
                 case Equal:
                     break;
 
@@ -2684,21 +2685,24 @@ public abstract class Component
         @Override
         public String toString()
             {
-            if (m_composition == Composition.Equal)
-                {
-                return "Equal";
-                }
-
             StringBuilder sb = new StringBuilder();
 
-            if (m_composition == Composition.Annotation)
+            switch (m_composition)
                 {
-                sb.append('@');
-                }
-            else
-                {
-                sb.append(m_composition.toString().toLowerCase())
-                  .append(' ');
+                case Annotation:
+                    sb.append('@');
+                    break;
+
+                case Equal:
+                case MaybeDuckType:
+                    sb.append(m_composition.toString())
+                      .append(' ');
+                    break;
+
+                default:
+                    sb.append(m_composition.toString().toLowerCase())
+                      .append(' ');
+                    break;
                 }
 
             if (m_composition == Composition.Incorporates && m_mapParams != null)
@@ -2740,7 +2744,10 @@ public abstract class Component
                 }
             else
                 {
-                sb.append(m_constContrib.getDescription());
+                if (m_constContrib != null)
+                    {
+                    sb.append(m_constContrib.getDescription());
+                    }
 
                 if (m_composition == Composition.Annotation)
                     {
@@ -2810,8 +2817,6 @@ public abstract class Component
      */
     public static class ContributionChain
         {
-        private List<Contribution> m_list;
-
         public ContributionChain(Contribution contrib)
             {
             m_list = new LinkedList<>();
@@ -2828,10 +2833,60 @@ public abstract class Component
             return m_list.get(0);
             }
 
-        public List<Contribution> getChain()
+        public int getDepth()
             {
-            return m_list;
+            return m_list.size();
             }
+
+        public boolean isWeakMatch()
+            {
+            return m_fWeakMatch;
+            }
+
+        public void markWeakMatch()
+            {
+            m_fWeakMatch = true;
+            }
+
+        /**
+         * Propagate the actual parameter types through this contribution chain.
+         *
+         * @param clzParent   the class structure for the chain's top
+         * @param listActual  the actual generic types for the chain's top
+         *
+         * @return  the actual types for the chain's origin or null if
+         *          the contribution didn't apply (conditional incorporation)
+         */
+        public List<TypeConstant> propagateActualTypes(ClassStructure clzParent, List<TypeConstant> listActual)
+            {
+            List<Contribution> listContrib = m_list;
+
+            for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
+                {
+                assert clzParent.getTypeParams().size() == listActual.size();
+
+                Contribution contrib = listContrib.get(i);
+
+                listActual = contrib.transformActualTypes(clzParent, listActual);
+
+                if (listActual == null)
+                    {
+                    // conditional incorporation doesn't apply
+                    break;
+                    }
+
+                if (i > 0)
+                    {
+                    clzParent = (ClassStructure)
+                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).getComponent();
+                    }
+                }
+
+            return listActual;
+            }
+
+        private List<Contribution> m_list;
+        private boolean m_fWeakMatch;
         }
 
     // ----- interface: ResolutionCollector --------------------------------------------------------

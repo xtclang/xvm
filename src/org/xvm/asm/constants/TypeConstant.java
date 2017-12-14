@@ -6,13 +6,17 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.xvm.asm.Component;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -496,13 +500,13 @@ public abstract class TypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * Determine if the specified TypeConstant represents a type that is assignable to values of
-     * the type represented by this TypeConstant.
+     * Determine if the specified TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by this TypeConstant (R-Value).
      * <p/>
      * Note: a negative answer doesn't guarantee non-assignability; it's simply an indication
      *       that a "long-path" computation should be done to prove or disprove it.
      *
-     * @param that  the type to match
+     * @param that  the type to match (L-value)
      *
      * See Type.x # isA()
      */
@@ -513,47 +517,152 @@ public abstract class TypeConstant
             return true;
             }
 
-        // TODO: should be a collection of ContributionChains
-        ContributionChain chainTo = this.checkAssignableTo(that);
-        if (chainTo == null)
+        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
+        Relation relation;
+        if (mapRelations == null)
             {
-            return false;
+            // TODO: this is not thread safe
+            mapRelations = m_mapRelations = new HashMap<>();
+            relation = null;
+            }
+        else
+            {
+            relation = mapRelations.get(that);
             }
 
-        if (!that.checkAssignableFrom(this, chainTo))
+        if (relation == null)
             {
-            return false;
+            mapRelations.put(that, Relation.IN_PROGRESS);
+            }
+        else switch (relation)
+            {
+            case IN_PROGRESS:
+                // we are in recursion; the answer is "no"
+                mapRelations.put(that, Relation.INCOMPATIBLE);
+                return false;
+
+            case IS_A:
+            case IS_A_WEAK:
+                return true;
+
+            case INCOMPATIBLE:
+                return false;
             }
 
-        if (chainTo.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+        try
             {
-            return true;
-            }
+            List<ContributionChain> chains = this.collectContributions(that, new LinkedList<>());
+            if (chains.isEmpty())
+                {
+                mapRelations.put(that, Relation.INCOMPATIBLE);
+                return false;
+                }
 
-        return that.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
+            relation = validate(this, that, chains);
+            mapRelations.put(that, relation);
+
+            return relation != Relation.INCOMPATIBLE;
+            }
+        catch (RuntimeException | Error e)
+            {
+            mapRelations.remove(that);
+            throw e;
+            }
         }
 
-    protected ContributionChain checkAssignableTo(TypeConstant that)
+    protected static Relation validate(TypeConstant typeThis, TypeConstant typeThat,
+                                       List<ContributionChain> chains)
         {
-        return getUnderlyingType().checkAssignableTo(that);
-        }
+        for (Iterator<ContributionChain> iter = chains.iterator(); iter.hasNext();)
+            {
+            ContributionChain chain = iter.next();
 
-    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
-        {
-        return getUnderlyingType().checkAssignableFrom(that, chain);
+            if (!typeThat.validateContributionFrom(typeThis, Access.PUBLIC, chain))
+                {
+                // rejected
+                iter.remove();
+                continue;
+                }
+
+            Contribution contrib = chain.getOrigin();
+            if (contrib.getComposition() == Composition.MaybeDuckType)
+                {
+                TypeConstant typeIface = contrib.getTypeConstant();
+                if (typeIface == null)
+                    {
+                    typeIface = typeThat;
+                    }
+
+                if (!typeIface.isInterfaceAssignableFrom(
+                        typeThis, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                    {
+                    iter.remove();
+                    }
+                // TODO: how to mark the contribution as "duck type checked"
+                }
+            else
+                {
+                return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
+                }
+            }
+
+        return chains.isEmpty() ? Relation.INCOMPATIBLE : Relation.IS_A;
         }
 
     /**
-     * Check if this interface type is assignable from the specified type.
+     * Check if the specified TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by this TypeConstant (R-Value).
+     *
+     * @param that    the type to match (L-value)
+     * @param chains  the list of chains to modify
+     *
+     * @return a list of ContributionChain objects that describe how "that" type could be found in
+     *         the contribution tree of "this" type; empty if the types are incompatible
+     */
+    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+        {
+        return getUnderlyingType().collectContributions(that, chains);
+        }
+
+    /**
+     * Collect the contributions for the specified class that match this type.
+     *
+     * @param clzThat  the class to check for a contribution
+     * @param chains   the list of chains to modify
+     *
+     * @return a list of ContributionChain objects that describe how this type could be found in
+     *         the contribution tree of the specified class; empty if none is found
+     */
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat,
+                                                                List<ContributionChain> chains)
+        {
+        return getUnderlyingType().collectClassContributions(clzThat, chains);
+        }
+
+    /**
+     * Check if this TypeConstant (L-value) represents a type that is assignable to
+     * values of the type represented by the specified TypeConstant (R-Value) due to
+     * the specified contribution chain.
+     */
+    protected boolean validateContributionFrom(TypeConstant that, Access access,
+                                               ContributionChain chain)
+        {
+        return getUnderlyingType().validateContributionFrom(that, access, chain);
+        }
+
+    /**
+     * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
+     * that is assignable to values of the type represented by the specified TypeConstant (R-Value).
      *
      * @param that        the type to check the assignability from
      * @param access      the access level to limit the checks to
      * @param listParams  the list of actual generic parameters
      *
-     * @return true iff the specified type could be assigned to this interface type
+     * @return a set of method/property signatures from this type that don't have a match
+     *         in the specified type
      */
-    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                               List<TypeConstant> listParams)
         {
         return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
         }
@@ -1305,4 +1414,14 @@ public abstract class TypeConstant
      * The resolved information about the type, its properties, and its methods.
      */
     private transient TypeInfo m_typeinfo;
+
+    /**
+     * Relationship options.
+     */
+    private enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+
+    /**
+     * A cache of "isA" responses.
+     */
+    private Map<TypeConstant, Relation> m_mapRelations;
     }
