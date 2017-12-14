@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
@@ -23,6 +24,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.TypeSet;
+import org.xvm.util.Severity;
 
 
 /**
@@ -964,6 +966,37 @@ public abstract class TypeConstant
             this.m_formatActual = format;
             }
 
+        public GenericTypeResolver ensureTypeResolver(ErrorListener errs)
+            {
+            if (errs == m_errsResolver)
+                {
+                return m_typeresolver;
+                }
+
+            GenericTypeResolver resolver = new GenericTypeResolver()
+                {
+                @Override
+                public TypeConstant resolveGenericType(String sName)
+                    {
+                    ParamInfo info = parameters.get(sName);
+                    if (info == null)
+                        {
+                        m_errsResolver.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
+                                new Object[] {sName, type.getValueString()}, type);
+                        return type.getConstantPool().typeObject();
+                        }
+
+                    TypeConstant typeResolved = info.getActualType();
+                    return typeResolved == null ? type.getConstantPool().typeObject() : typeResolved;
+                    }
+                };
+
+            m_errsResolver = errs;
+            m_typeresolver = resolver;
+
+            return resolver;
+            }
+
         /**
          * @return the TypeConstant representing the impersonated class, or null
          */
@@ -1205,6 +1238,10 @@ public abstract class TypeConstant
         private transient Set<MethodConstant> m_setOp;
         private transient TypeConstant        m_typeAuto;
         private transient MethodConstant      m_methodAuto;
+
+        // cached resolver
+        private transient ErrorListener       m_errsResolver;
+        private transient GenericTypeResolver m_typeresolver;
         }
 
 

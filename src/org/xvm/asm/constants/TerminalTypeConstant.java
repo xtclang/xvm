@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ClassStructure.SimpleTypeResolver;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
@@ -589,7 +591,7 @@ public class TerminalTypeConstant
                     }
                 else
                     {
-                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
+                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_WRONG_NUMBER,
                             struct.getIdentityConstant().getPathString(), cClassParams, cTypeParams);
                     }
                 }
@@ -632,31 +634,7 @@ public class TerminalTypeConstant
                 assert typeActual != null;
 
                 // quite often, the type parameter type is a reference to a type parameter
-                // TODO plug in GG helper here
-                if (typeActual instanceof TerminalTypeConstant)
-                    {
-                    Constant constant = typeActual.getDefiningConstant();
-                    if (constant instanceof PropertyConstant)
-                        {
-                        String sPropName = ((PropertyConstant) constant).getName();
-                        if (sPropName.equals(sName))
-                            {
-                            // no change; nothing to do for this parameter
-                            // e.g. LinkedList<ElementType> implements List<ElementType>
-                            continue;
-                            }
-
-                        ParamInfo paraminfoProp = typeinfo.parameters.get(sPropName);
-                        if (paraminfoProp == null || paraminfoProp.getActualType() == null)
-                            {
-                            // TODO log error: missing type for type parameter
-                            throw new IllegalStateException("TODO error on " + struct.getName()
-                                    + " - type param " + sPropName + " has no type");
-                            }
-
-                        typeActual = paraminfoProp.getActualType();
-                        }
-                    }
+                typeActual = typeActual.resolveGenerics(typeinfo.ensureTypeResolver(errs));
 
                 if (!typeActual.isA(typeConstraint))
                     {
@@ -1083,11 +1061,17 @@ public class TerminalTypeConstant
                         }
                     for (TypeConstant typeImplemented : typeinfo.implemented)
                         {
-                        // TODO GG will be changing the API for this
-                        ContributionChain chain = typeImplemented.checkAssignableTo(typeContrib);
-                        if (chain != null && chain.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+                        List<ContributionChain> chains = typeImplemented.collectContributions(
+                                typeContrib, new ArrayList<>());
+                        if (!chains.isEmpty())
                             {
-                            continue NextContrib;
+                            for (ContributionChain chain : chains)
+                                {
+                                if (chain.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+                                    {
+                                    continue NextContrib;
+                                    }
+                                }
                             }
                         }
 
@@ -1246,7 +1230,7 @@ public class TerminalTypeConstant
 
         // first determine if this method should be registered
         // TODO
-        System.out.println("method: " + struct.getIdentityConstant().getValueString());
+        // System.out.println("method: " + struct.getIdentityConstant().getValueString());
 
         return fHalt;
         }

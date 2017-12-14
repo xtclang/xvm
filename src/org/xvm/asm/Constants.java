@@ -206,6 +206,10 @@ public interface Constants
      * interface.
      */
     public static final String VE_DELEGATES_UNEXPECTED              = "VERIFY-24";
+    /**
+     * Unexpected formal type name {0} encountered while resolving {1}.
+     */
+    public static final String VE_FORMAL_NAME_UNKNOWN               = "VERIFY-25";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------
