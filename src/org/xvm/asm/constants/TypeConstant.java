@@ -521,6 +521,7 @@ public abstract class TypeConstant
         Relation relation;
         if (mapRelations == null)
             {
+            // TODO: this is not thread safe
             mapRelations = m_mapRelations = new HashMap<>();
             relation = null;
             }
