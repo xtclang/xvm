@@ -2669,21 +2669,24 @@ public abstract class Component
         @Override
         public String toString()
             {
-            if (m_composition == Composition.Equal)
-                {
-                return "Equal";
-                }
-
             StringBuilder sb = new StringBuilder();
 
-            if (m_composition == Composition.Annotation)
+            switch (m_composition)
                 {
-                sb.append('@');
-                }
-            else
-                {
-                sb.append(m_composition.toString().toLowerCase())
-                  .append(' ');
+                case Annotation:
+                    sb.append('@');
+                    break;
+
+                case Equal:
+                case MaybeDuckType:
+                    sb.append(m_composition.toString())
+                      .append(' ');
+                    break;
+
+                default:
+                    sb.append(m_composition.toString().toLowerCase())
+                      .append(' ');
+                    break;
                 }
 
             if (m_composition == Composition.Incorporates && m_mapParams != null)
@@ -2725,7 +2728,10 @@ public abstract class Component
                 }
             else
                 {
-                sb.append(m_constContrib.getDescription());
+                if (m_constContrib != null)
+                    {
+                    sb.append(m_constContrib.getDescription());
+                    }
 
                 if (m_composition == Composition.Annotation)
                     {

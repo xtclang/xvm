@@ -6,10 +6,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Set;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -297,26 +299,32 @@ public class ClassStructure
         }
 
     /**
-     * Recursively find a contribution by the specified id.
+     * Recursively find a contribution by the specified id and add the corresponding
+     * ContributionChain objects to the list of chains.
      *
-     * @param constId  the identity to look for
+     * @param constId    the identity to look for
      *
-     * @return the resulting contribution or null if none found
+     * @return the resulting list of ContributionChain objects
      */
-    public ContributionChain findContribution(IdentityConstant constId)
+    public List<ContributionChain> collectContributions(IdentityConstant constId,
+                                                        List<ContributionChain> chains)
         {
-        ConstantPool pool = getConstantPool();
-        if (constId.equals(pool.clzObject()))
-            {
-            // everything is considered to extend Object (even interfaces)
-            return new ContributionChain(
-                new Contribution(Composition.Extends, pool.typeObject()));
-            }
+        return collectContributionsImpl(constId, chains, true);
+        }
 
+    /**
+     * Recursive implementation of collectContributions method.
+     *
+     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
+     */
+    protected List<ContributionChain> collectContributionsImpl(
+            IdentityConstant constId, List<ContributionChain> chains, boolean fAllowInto)
+        {
         if (constId.equals(getIdentityConstant()))
             {
-            return new ContributionChain(
-                new Contribution(Composition.Equal, (TypeConstant) null));
+            chains.add(new ContributionChain(
+                new Contribution(Composition.Equal, (TypeConstant) null)));
+            return chains;
             }
 
         ClassStructure structCur = this;
@@ -326,10 +334,11 @@ public class ClassStructure
             Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
             if (constContrib.equals(constId))
                 {
-                return new ContributionChain(contrib);
+                chains.add(new ContributionChain(contrib));
+                continue;
                 }
 
-            if (constContrib.equals(pool.clzObject()))
+            if (constContrib.equals(getConstantPool().clzObject()))
                 {
                 // trivial Object contribution
                 continue;
@@ -342,22 +351,26 @@ public class ClassStructure
                     // TODO:
                     break;
 
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
                 case Impersonates:
                 case Implements:
                 case Incorporates:
-                case Into:
                 case Extends:
-                    // even though this class may be a ModuleConstant or PackageConstant,
-                    // the super will always be a class (because a Module and a Package cannot be
-                    // extended)
+                    // the identity constant of the contribution is always a class
+                    // (Module and Package cannot be extended)
                     ClassConstant constSuper = (ClassConstant) constContrib;
-                    ContributionChain chain = ((ClassStructure) constSuper.getComponent()).
-                        findContribution(constId);
-                    if (chain != null)
+                    chains = ((ClassStructure) constSuper.getComponent()).
+                        collectContributionsImpl(constId, chains, false);
+                    if (!chains.isEmpty())
                         {
-                        // return as soon as a match is found
-                        chain.add(contrib);
-                        return chain;
+                        for (ContributionChain chain : chains)
+                            {
+                            chain.add(contrib);
+                            }
                         }
                     break;
 
@@ -366,7 +379,7 @@ public class ClassStructure
                 }
             }
 
-        return null;
+        return chains;
         }
 
     /**
@@ -375,14 +388,20 @@ public class ClassStructure
      */
     public boolean consumesFormalType(String sName, Access access, List<TypeConstant> listActual)
         {
+        return consumesFormalTypeImpl(sName, access, listActual, true);
+        }
+
+    protected boolean consumesFormalTypeImpl(String sName, Access access,
+                                             List<TypeConstant> listActual, boolean fAllowInto)
+        {
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
                 {
                 for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
-                    if (method.isAccessible(access) &&
-                        method.consumesFormalType(sName))
+                    if (!method.isStatic() && method.isAccessible(access)
+                            && method.consumesFormalType(sName))
                         {
                         return true;
                         }
@@ -429,10 +448,14 @@ public class ClassStructure
                     // TODO:
                     break;
 
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
                 case Impersonates:
                 case Implements:
                 case Incorporates:
-                case Into:
                 case Extends:
                     {
                     String sGenericName = contrib.transformGenericName(this, sName);
@@ -446,7 +469,8 @@ public class ClassStructure
                             ClassStructure clzSuper = (ClassStructure)
                                 ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                     getComponent();
-                            if (clzSuper.consumesFormalType(sGenericName, access, listContribActual))
+                            if (clzSuper.consumesFormalTypeImpl(
+                                    sGenericName, access, listContribActual, false))
                                 {
                                 return true;
                                 }
@@ -468,14 +492,20 @@ public class ClassStructure
      */
     public boolean producesFormalType(String sName, Access access, List<TypeConstant> listActual)
         {
+        return producesFormalTypeImpl(sName, access, listActual, true);
+        }
+
+    protected boolean producesFormalTypeImpl(String sName, Access access,
+                                             List<TypeConstant> listActual, boolean fAllowInto)
+        {
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
                 {
                 for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
-                    if (method.isAccessible(access) &&
-                        method.producesFormalType(sName))
+                    if (!method.isStatic() && method.isAccessible(access)
+                            && method.producesFormalType(sName))
                         {
                         return true;
                         }
@@ -526,6 +556,10 @@ public class ClassStructure
                 case Implements:
                 case Incorporates:
                 case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
                 case Extends:
                     {
                     String sGenericName = contrib.transformGenericName(this, sName);
@@ -539,7 +573,8 @@ public class ClassStructure
                             ClassStructure clzSuper = (ClassStructure)
                                 ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                     getComponent();
-                            if (clzSuper.producesFormalType(sGenericName, access, listContribActual))
+                            if (clzSuper.producesFormalTypeImpl(
+                                sGenericName, access, listContribActual, false))
                                 {
                                 return true;
                                 }
@@ -563,10 +598,13 @@ public class ClassStructure
      * @param access      the access level to limit the check for
      * @param listParams  the actual generic parameters for this interface
      *
-     * @return true iff all properties and methods have matches
+     * @return a set of method/property signatures that don't have a match
      */
-    public boolean isInterfaceAssignableFrom(TypeConstant typeThat, Access access, List<TypeConstant> listParams)
+    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeThat, Access access,
+                                                            List<TypeConstant> listParams)
         {
+        Set<SignatureConstant> setMiss = new HashSet<>();
+
         for (Component child : children())
             {
             if (child instanceof PropertyStructure)
@@ -584,7 +622,7 @@ public class ClassStructure
                 if (!typeThat.containsSubstitutableProperty(sig,
                         Access.PUBLIC, Collections.EMPTY_LIST))
                     {
-                    return false;
+                    setMiss.add(sig);
                     }
                 }
             else if (child instanceof MultiMethodStructure)
@@ -592,7 +630,7 @@ public class ClassStructure
                 MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isAccessible(access))
+                    if (method.isStatic() || !method.isAccessible(access))
                         {
                         continue;
                         }
@@ -606,7 +644,7 @@ public class ClassStructure
                     if (!typeThat.containsSubstitutableMethod(sig,
                             Access.PUBLIC, Collections.EMPTY_LIST))
                         {
-                        return false;
+                        setMiss.add(sig);
                         }
                     }
                 }
@@ -627,14 +665,12 @@ public class ClassStructure
 
                     assert (clzSuper.getFormat() == Component.Format.INTERFACE);
 
-                    if (!clzSuper.isInterfaceAssignableFrom(typeThat, access, listContribActual))
-                        {
-                        return false;
-                        }
+                    setMiss.addAll(
+                        clzSuper.isInterfaceAssignableFrom(typeThat, access, listContribActual));
                     }
                 }
             }
-        return true;
+        return setMiss;
         }
 
     /**
@@ -649,6 +685,12 @@ public class ClassStructure
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
         {
+        return containsSubstitutableMethodImpl(signature, access, listParams, true);
+        }
+
+    protected boolean containsSubstitutableMethodImpl(SignatureConstant signature, Access access,
+                                                   List<TypeConstant> listParams, boolean fAllowInto)
+        {
         Component child = getChild(signature.getName());
 
         if (child instanceof MultiMethodStructure)
@@ -657,7 +699,7 @@ public class ClassStructure
 
             for (MethodStructure method : mms.methods())
                 {
-                if (method.isAccessible(access) &&
+                if (!method.isStatic() && method.isAccessible(access) &&
                     method.isSubstitutableFor(signature, listParams))
                     {
                     return true;
@@ -674,10 +716,14 @@ public class ClassStructure
                     // TODO:
                     break;
 
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
                 case Impersonates:
                 case Implements:
                 case Incorporates:
-                case Into:
                 case Extends:
                     {
                     List<TypeConstant> listContribActual =
@@ -711,7 +757,13 @@ public class ClassStructure
      * @return true iff all properties and methods have matches
      */
     public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
-                                               List<TypeConstant> listParams)
+                                                 List<TypeConstant> listParams)
+        {
+        return containsSubstitutablePropertyImpl(signature, access, listParams, true);
+        }
+
+    protected boolean containsSubstitutablePropertyImpl(SignatureConstant signature, Access access,
+                                                       List<TypeConstant> listParams, boolean fAllowInto)
         {
         Component child = getChild(signature.getName());
 
@@ -736,10 +788,14 @@ public class ClassStructure
                     // TODO:
                     break;
 
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
                 case Impersonates:
                 case Implements:
                 case Incorporates:
-                case Into:
                 case Extends:
                     {
                     List<TypeConstant> listContribActual =
@@ -752,7 +808,7 @@ public class ClassStructure
                                 getComponent();
 
                         if (clzSuper.containsSubstitutableProperty(signature,
-                                access, listContribActual))
+                            access, listContribActual))
                             {
                             return true;
                             }
@@ -856,16 +912,13 @@ public class ClassStructure
         ClassStructure that = (ClassStructure) obj;
 
         // type parameters
-        final Map mapThisParams = this.m_mapParams;
-        final Map mapThatParams = that.m_mapParams;
-        final int cThisParams = mapThisParams == null ? 0 : mapThisParams.size();
-        final int cThatParams = mapThatParams == null ? 0 : mapThatParams.size();
-        if (cThisParams != cThatParams || (cThisParams > 0 && !mapThisParams.equals(mapThatParams)))
-            {
-            return  false;
-            }
+        Map mapThisParams = this.m_mapParams;
+        Map mapThatParams = that.m_mapParams;
+        int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
+        int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 
-        return true;
+        return cThisParams == cThatParams &&
+            (cThisParams == 0 || mapThisParams.equals(mapThatParams));
         }
 
 
@@ -892,9 +945,15 @@ public class ClassStructure
          */
         public SimpleTypeResolver(List<TypeConstant> listActual)
             {
-            assert m_mapParams == null && listActual.isEmpty() ||
+            if (getIdentityConstant().equals(getConstantPool().clzTuple()))
+                {
+                m_fTuple = true;
+                }
+            else
+                {
+                assert m_mapParams == null && listActual.isEmpty() ||
                    m_mapParams.size() == listActual.size();
-
+                }
             m_listActual = listActual;
             }
 
@@ -907,9 +966,17 @@ public class ClassStructure
                 throw new IllegalStateException(
                     "Failed to find " + sName + " in " + this);
                 }
+
+            if (m_fTuple)
+                {
+                ConstantPool pool = getConstantPool();
+                return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
+                    m_listActual.toArray(new TypeConstant[m_listActual.size()]));
+                }
             return m_listActual.get(ix);
             }
 
+        private boolean m_fTuple;
         private List<TypeConstant> m_listActual;
         }
     }

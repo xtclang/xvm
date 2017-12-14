@@ -7,8 +7,10 @@ import java.io.IOException;
 
 import java.util.List;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -124,9 +126,17 @@ public class AccessTypeConstant
         }
 
     @Override
-    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                               List<TypeConstant> listParams)
         {
         return super.isInterfaceAssignableFrom(that, m_access, listParams);
+        }
+
+    @Override
+    protected boolean validateContributionFrom(TypeConstant that, Access access,
+                                               ContributionChain chain)
+        {
+        return super.validateContributionFrom(that, m_access, chain);
         }
 
     @Override

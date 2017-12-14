@@ -214,6 +214,22 @@ public abstract class RelationalTypeConstant
         }
 
 
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().producesFormalType(sTypeName, access)
+            || getUnderlyingType2().producesFormalType(sTypeName, access);
+        }
+
+    @Override
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        return getUnderlyingType().consumesFormalType(sTypeName, access)
+            || getUnderlyingType2().consumesFormalType(sTypeName, access);
+        }
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

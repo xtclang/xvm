@@ -62,8 +62,8 @@ public class PropertyConstant
         SignatureConstant sig = m_constSig;
         if (sig == null)
             {
-            sig = m_constSig = getConstantPool().ensureSignatureConstant(getName(),
-                ConstantPool.NO_TYPES, new TypeConstant[] {getRefType()});
+            // transient synthetic constant; no need to register
+            sig = m_constSig = new SignatureConstant(getConstantPool(), this);
             }
         return sig;
         }

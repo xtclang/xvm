@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -515,70 +517,136 @@ public abstract class TypeConstant
             return true;
             }
 
-        // TODO: should be a collection of ContributionChains
-        ContributionChain chain = this.checkAssignableTo(that);
-        if (chain == null)
+        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
+        Relation relation;
+        if (mapRelations == null)
             {
-            return false;
+            mapRelations = m_mapRelations = new HashMap<>();
+            relation = null;
+            }
+        else
+            {
+            relation = mapRelations.get(that);
             }
 
-        if (!that.checkAssignableFrom(this, chain))
+        if (relation == null)
             {
-            return false;
+            mapRelations.put(that, Relation.IN_PROGRESS);
+            }
+        else switch (relation)
+            {
+            case IN_PROGRESS:
+                // we are in recursion; the answer is "no"
+                mapRelations.put(that, Relation.INCOMPATIBLE);
+                return false;
+
+            case IS_A:
+            case IS_A_WEAK:
+                return true;
+
+            case INCOMPATIBLE:
+                return false;
             }
 
-        Contribution contrib = chain.getOrigin();
-        if (contrib.getComposition() == Composition.MaybeDuckType)
+        try
             {
-            TypeConstant typeIface = contrib.getTypeConstant();
-            if (typeIface == null)
+            List<ContributionChain> chains = this.collectContributions(that, new LinkedList<>());
+            if (chains.isEmpty())
                 {
-                typeIface = that;
+                mapRelations.put(that, Relation.INCOMPATIBLE);
+                return false;
                 }
-            return typeIface.isInterfaceAssignableFrom(this, Access.PUBLIC, Collections.EMPTY_LIST);
+
+            relation = validate(this, that, chains);
+            mapRelations.put(that, relation);
+
+            return relation != Relation.INCOMPATIBLE;
+            }
+        catch (RuntimeException | Error e)
+            {
+            mapRelations.remove(that);
+            throw e;
+            }
+        }
+
+    protected static Relation validate(TypeConstant typeThis, TypeConstant typeThat,
+                                       List<ContributionChain> chains)
+        {
+        for (Iterator<ContributionChain> iter = chains.iterator(); iter.hasNext();)
+            {
+            ContributionChain chain = iter.next();
+
+            if (!typeThat.validateContributionFrom(typeThis, Access.PUBLIC, chain))
+                {
+                // rejected
+                iter.remove();
+                continue;
+                }
+
+            Contribution contrib = chain.getOrigin();
+            if (contrib.getComposition() == Composition.MaybeDuckType)
+                {
+                TypeConstant typeIface = contrib.getTypeConstant();
+                if (typeIface == null)
+                    {
+                    typeIface = typeThat;
+                    }
+
+                if (!typeIface.isInterfaceAssignableFrom(
+                        typeThis, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                    {
+                    iter.remove();
+                    }
+                // TODO: how to mark the contribution as "duck type checked"
+                }
+            else
+                {
+                return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
+                }
             }
 
-        if (chain.isWeakMatch()) // TODO: convert to a different response
-            {
-            System.out.println("Consuming methods should be wrapped: " + this + " -> " + that);
-            }
-        return true;
+        return chains.isEmpty() ? Relation.INCOMPATIBLE : Relation.IS_A;
         }
 
     /**
      * Check if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
      *
-     * @param that  the type to match (L-value)
+     * @param that    the type to match (L-value)
+     * @param chains  the list of chains to modify
      *
-     * @return a ContributionChain that describes how "that" type could be found in the
-     *         inheritance/contribution tree of "this" type or null if the types are incompatible
+     * @return a list of ContributionChain objects that describe how "that" type could be found in
+     *         the contribution tree of "this" type; empty if the types are incompatible
      */
-    protected ContributionChain checkAssignableTo(TypeConstant that)
+    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
         {
-        return getUnderlyingType().checkAssignableTo(that);
+        return getUnderlyingType().collectContributions(that, chains);
         }
 
     /**
-     * Check the specified class has a contribution that matches this type.
+     * Collect the contributions for the specified class that match this type.
      *
      * @param clzThat  the class to check for a contribution
+     * @param chains   the list of chains to modify
      *
-     * @return a ContributionChain that describes how "this" type could be found in the
-     *         inheritance/contribution tree of the specified class or null if there is no match
+     * @return a list of ContributionChain objects that describe how this type could be found in
+     *         the contribution tree of the specified class; empty if none is found
      */
-    protected ContributionChain checkContribution(ClassStructure clzThat)
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat,
+                                                                List<ContributionChain> chains)
         {
-        return getUnderlyingType().checkContribution(clzThat);
+        return getUnderlyingType().collectClassContributions(clzThat, chains);
         }
 
     /**
      * Check if this TypeConstant (L-value) represents a type that is assignable to
-     * values of the type represented by the specified TypeConstant (R-Value).
+     * values of the type represented by the specified TypeConstant (R-Value) due to
+     * the specified contribution chain.
      */
-    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
+    protected boolean validateContributionFrom(TypeConstant that, Access access,
+                                               ContributionChain chain)
         {
-        return getUnderlyingType().checkAssignableFrom(that, chain);
+        return getUnderlyingType().validateContributionFrom(that, access, chain);
         }
 
     /**
@@ -589,10 +657,11 @@ public abstract class TypeConstant
      * @param access      the access level to limit the checks to
      * @param listParams  the list of actual generic parameters
      *
-     * @return true iff the specified type could be assigned to this interface type
+     * @return a set of method/property signatures from this type that don't have a match
+     *         in the specified type
      */
-    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                               List<TypeConstant> listParams)
         {
         return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
         }
@@ -1265,4 +1334,14 @@ public abstract class TypeConstant
      * The resolved information about the type, its properties, and its methods.
      */
     private transient TypeInfo m_typeinfo;
+
+    /**
+     * Relationship options.
+     */
+    private enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+
+    /**
+     * A cache of "isA" responses.
+     */
+    private Map<TypeConstant, Relation> m_mapRelations;
     }

@@ -4,11 +4,14 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.util.LinkedList;
 import java.util.List;
 
+import java.util.Set;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
 
@@ -148,64 +151,72 @@ public class IntersectionTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected ContributionChain checkAssignableTo(TypeConstant that)
+    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
         {
-        ContributionChain chain1 = getUnderlyingType().checkAssignableTo(that);
-        ContributionChain chain2 = getUnderlyingType2().checkAssignableTo(that);
+        TypeConstant type1 = getUnderlyingType();
+        TypeConstant type2 = getUnderlyingType2();
 
-        boolean fFrom1 = chain1 != null &&
-            that.checkAssignableFrom(getUnderlyingType(), chain1);
-        boolean fFrom2 = chain2 != null &&
-            that.checkAssignableFrom(getUnderlyingType(), chain2);
+        List<ContributionChain> list1 = type1.collectContributions(that, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectContributions(that, new LinkedList<>());
 
-        if (fFrom1 && fFrom2)
+        // both branches need to contribute
+        if (!list1.isEmpty() && !list2.isEmpty())
             {
-            // TODO: if just one chain is a non-qualified "maybe", convert it into a qualifying one
-            // so the caller knows not to check what's already been proven;
-            // if both are qualified, merge the qualifiers into a union
-            throw new UnsupportedOperationException();
+            validate(type1, that, list1);
+            validate(type2, that, list2);
+
+            if (!list1.isEmpty() && !list2.isEmpty())
+                {
+                chains.addAll(list1);
+                chains.addAll(list2);
+                }
             }
 
-        return null;
+        return chains;
         }
 
     @Override
-    protected ContributionChain checkContribution(ClassStructure clzThat)
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
         {
-        ContributionChain chain1 = getUnderlyingType().checkContribution(clzThat);
-        ContributionChain chain2 = getUnderlyingType2().checkContribution(clzThat);
+        TypeConstant type1 = getUnderlyingType();
+        TypeConstant type2 = getUnderlyingType2();
 
-        if (chain1 != null || chain2 != null)
-            {
-            // TODO: merge chains
-            if (chain1 == null)
-                {
-                return chain2;
-                }
+        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, new LinkedList<>());
 
-            if (chain2 == null)
-                {
-                return chain1;
-                }
+        // any contribution would do
+        chains.addAll(list1);
+        chains.addAll(list2);
 
-            throw new UnsupportedOperationException();
-            }
-
-        return null;
+        return chains;
         }
 
     @Override
-    protected boolean checkAssignableFrom(TypeConstant that, ContributionChain chain)
+    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
         {
         // there is nothing that could change the result of "checkAssignableTo"
         return true;
         }
 
     @Override
-    protected boolean isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams)
-            && getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
+        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
+        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
+
+        if (setMiss1.isEmpty())
+            {
+            return setMiss1; // type1 is assignable from that
+            }
+        if (setMiss2.isEmpty())
+            {
+            return setMiss2; // type2 is assignable from that
+            }
+
+        // neither is assignable; merge the misses
+        setMiss1.addAll(setMiss2);
+
+        return setMiss1;
         }
 
 
