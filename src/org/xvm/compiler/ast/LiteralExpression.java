@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.math.BigDecimal;
 
-import java.util.List;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
@@ -163,7 +161,7 @@ public class LiteralExpression
 
             case "collections.Sequence":
                 if (typeThat.isParamsSpecified() && !(typeThat.isParamsSpecified(1)
-                        && typeThat.getParamTypes().get(0).isA(pool().typeChar())))
+                        && typeThat.getParamTypesArray()[0].isA(pool().typeChar())))
                     {
                     return false;
                     }
@@ -257,8 +255,8 @@ public class LiteralExpression
                         {
                         // it must be Sequence<Char> (or something that Sequence<Char> can be
                         // assigned to)
-                        List<TypeConstant> listParamTypes = type.getParamTypes();
-                        if (!(listParamTypes.size() == 1 && pool.typeChar().isA(listParamTypes.get(0))))
+                        TypeConstant[] atypeParam = type.getParamTypesArray();
+                        if (!(atypeParam.length == 1 && pool.typeChar().isA(atypeParam[0])))
                             {
                             break;
                             }

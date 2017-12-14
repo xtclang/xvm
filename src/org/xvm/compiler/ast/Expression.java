@@ -274,8 +274,7 @@ public abstract class Expression
             // it's reasonable to expect that classes will override this method as appropriate to
             // avoid this type of inefficiency
             assert type.isTuple() && type.isParamsSpecified();
-            List<TypeConstant> list = type.getParamTypes();
-            return list.toArray(new TypeConstant[list.size()]);
+            return type.getParamTypesArray();
             }
         }
 

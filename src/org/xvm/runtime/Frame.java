@@ -1467,7 +1467,7 @@ public class Frame
             TypeConstant typeArray = frame.getConstant(nTargetReg).getRefType();
             if (typeArray.isParamsSpecified())
                 {
-                TypeConstant constElType = typeArray.getParamTypes().get(0);
+                TypeConstant constElType = typeArray.getParamTypesArray()[0];
                 return frame.f_context.f_types.resolveType(constElType, frame.getActualTypes());
                 }
             return xObject.TYPE;

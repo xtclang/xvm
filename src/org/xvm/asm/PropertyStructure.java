@@ -127,7 +127,7 @@ public class PropertyStructure
             }
 
         return m_type.isParamsSpecified()
-                ? m_type.getParamTypes().get(0)
+                ? m_type.getParamTypesArray()[0]
                 : m_type.getConstantPool().typeObject();
         }
 

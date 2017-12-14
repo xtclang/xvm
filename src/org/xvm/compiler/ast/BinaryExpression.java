@@ -89,7 +89,7 @@ public class BinaryExpression
             case "collections.Sequence":
             case "Iterable":
                 return !typeThat.isParamsSpecified() || (typeThat.isParamsSpecified(1)
-                        && typeThat.getParamTypes().get(0).isA(pool().typeByte()));
+                        && typeThat.getParamTypesArray()[0].isA(pool().typeByte()));
 
             default:
                 return super.isAssignableTo(typeThat);

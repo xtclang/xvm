@@ -2493,12 +2493,12 @@ public abstract class Component
                 return Collections.emptyList();
                 }
 
-            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
-            List<TypeConstant> listContribActual = new ArrayList<>(listContribParams.size());
+            TypeConstant[] aContribParam = typeContrib.getParamTypesArray();
+            List<TypeConstant> listContribActual = new ArrayList<>(aContribParam.length);
 
             GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(listActual);
 
-            for (TypeConstant typeContribParam : listContribParams)
+            for (TypeConstant typeContribParam : aContribParam)
                 {
                 listContribActual.add(typeContribParam.resolveGenerics(resolver));
                 }
@@ -2528,9 +2528,7 @@ public abstract class Component
                 return null;
                 }
 
-            List<TypeConstant> listContribParams = typeContrib.getParamTypes();
-
-            for (TypeConstant typeContribParam : listContribParams)
+            for (TypeConstant typeContribParam : typeContrib.getParamTypesArray())
                 {
                 // TODO: what if a relational or parameterized?
                 Constant constId = typeContribParam.getDefiningConstant();
@@ -2713,7 +2711,7 @@ public abstract class Component
                   .append('<');
 
                 boolean fFirst = true;
-                for (TypeConstant constParam : constMixin.getParamTypes())
+                for (TypeConstant constParam : constMixin.getParamTypesArray())
                     {
                     if (fFirst)
                         {

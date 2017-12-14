@@ -204,15 +204,15 @@ public class VariableDeclarationStatement
                 // VAR_TN TYPE, STRING, #values:(rvalue)
                 nOp    = Op.OP_VAR_TN;
                 vals   = ((TupleExpression) value).getExpressions();
-                List<TypeConstant> types = typeV.getParamTypes();
-                typeOf = types::get;
+                TypeConstant[] atype = typeV.getParamTypesArray();
+                typeOf = i -> atype[i];
                 }
             else if (value instanceof ListExpression && typeV.isA(pool().typeSequence()))
                 {
                 // VAR_SN TYPE, STRING, #values:(rvalue)
                 nOp    = Op.OP_VAR_SN;
                 vals   = ((ListExpression) value).getExpressions();
-                TypeConstant typeElement = typeV.getParamTypes().get(0);
+                TypeConstant typeElement = typeV.getParamTypesArray()[0];
                 typeOf = i -> typeElement;
                 }
 

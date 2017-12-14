@@ -13,7 +13,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -1348,13 +1347,13 @@ public class ConstantPool
         {
         if (constType.isParamsSpecified())
             {
-            List<TypeConstant> listTypes = constType.getParamTypes();
-            int c = listTypes.size();
+            TypeConstant[] atypeParam = constType.getParamTypesArray();
+            int c = atypeParam.length;
             CheckTypes: if (c == constTypes.length)
                 {
                 for (int i = 0; i < c; ++i)
                     {
-                    if (!constTypes[i].equals(listTypes.get(i)))
+                    if (!constTypes[i].equals(atypeParam[i]))
                         {
                         break CheckTypes;
                         }

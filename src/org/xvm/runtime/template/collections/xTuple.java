@@ -4,7 +4,6 @@ package org.xvm.runtime.template.collections;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -69,19 +68,19 @@ public class xTuple
     @Override
     public TypeComposition resolveClass(TypeConstant constClassType, Map<String, Type> mapActual)
         {
-        List<TypeConstant> listParams = constClassType.getParamTypes();
+        TypeConstant[] atypeParam = constClassType.getParamTypesArray();
 
-        int cParams = listParams.size();
+        int cParams = atypeParam.length;
         if (cParams == 0)
             {
             return f_clazzCanonical;
             }
 
         Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0, c = listParams.size(); i < c; i++)
+        for (int i = 0; i < cParams; i++)
             {
             mapParams.put("ElementTypes[" + i + ']',
-                    f_types.resolveType(listParams.get(i), mapActual));
+                    f_types.resolveType(atypeParam[i], mapActual));
             }
         return ensureClass(mapParams);
         }
@@ -96,7 +95,7 @@ public class xTuple
         ObjectHeap heap = f_types.f_container.f_heapGlobal;
 
         TypeConstant constType = constTuple.getType();
-        List<TypeConstant> listElemTypes = constType.getParamTypes();
+        TypeConstant[] atypeElem = constType.getParamTypesArray();
         Map<String, Type> mapActual = frame.getActualTypes();
 
         Constant[] aconst = constTuple.getValue();
@@ -113,7 +112,7 @@ public class xTuple
             {
             Constant constValue = aconst[i];
 
-            TypeConstant constElemType = listElemTypes.get(i);
+            TypeConstant constElemType = atypeElem[i];
 
             ahValue[i] = heap.ensureConstHandle(frame, constValue.getPosition());
             aType[i] = f_types.resolveClass(constElemType, mapActual).ensurePublicType();
@@ -132,7 +131,7 @@ public class xTuple
 
         ObjectHeap heap = f_types.f_container.f_heapGlobal;
 
-        for (TypeConstant constElemType : constType.getParamTypes())
+        for (TypeConstant constElemType : constType.getParamTypesArray())
             {
             ClassTemplate template = heap.getConstTemplate(constElemType);
             if (!template.isConstantCacheable(constElemType))

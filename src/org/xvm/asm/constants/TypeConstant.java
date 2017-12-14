@@ -173,7 +173,7 @@ public abstract class TypeConstant
      */
     public boolean isParamsSpecified(int n)
         {
-        return isParamsSpecified() && getParamTypes().size() == n;
+        return isParamsSpecified() && getParamTypesArray().length == n;
         }
 
     /**
@@ -310,7 +310,7 @@ public abstract class TypeConstant
         return !constThis.containsUnresolved()
                 && constThis.isEcstasy("Tuple")
                 && constThis.isParamsSpecified()
-                && constThis.getParamTypes().isEmpty();
+                && constThis.getParamTypesArray().length == 0;
         }
 
     /**
@@ -384,7 +384,7 @@ public abstract class TypeConstant
             }
 
         return isParamsSpecified()
-                ? getParamTypes().get(0)
+                ? getParamTypesArray()[0]
                 : getConstantPool().typeObject();
         }
 
@@ -435,7 +435,7 @@ public abstract class TypeConstant
             }
 
         return constThis.isParamsSpecified()
-                ? constThis.getParamTypes().size()
+                ? constThis.getParamTypesArray().length
                 : 0;
         }
 
@@ -456,13 +456,13 @@ public abstract class TypeConstant
             throw new IllegalStateException();
             }
 
-        List<TypeConstant> listParamTypes = constThis.getParamTypes();
-        if (i < 0 || i >= listParamTypes.size())
+        TypeConstant[] atypeParam = constThis.getParamTypesArray();
+        if (i < 0 || i >= atypeParam.length)
             {
-            throw new IllegalArgumentException("i=" + i + ", size=" + listParamTypes.size());
+            throw new IllegalArgumentException("i=" + i + ", size=" + atypeParam.length);
             }
 
-        return listParamTypes.get(i);
+        return atypeParam[i];
         }
 
     /**

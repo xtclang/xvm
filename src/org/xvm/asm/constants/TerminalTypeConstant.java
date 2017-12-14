@@ -1267,7 +1267,7 @@ public class TerminalTypeConstant
         // the type of the property will be "Type<X>", so return X
         TypeConstant typeProp = ((PropertyStructure) constProp.getComponent()).getType();
         assert typeProp.isEcstasy("Type") && typeProp.isParamsSpecified();
-        return typeProp.getParamTypes().get(0);
+        return typeProp.getParamTypesArray()[0];
         }
 
     /**
@@ -1288,7 +1288,7 @@ public class TerminalTypeConstant
         assert atypeParams.length > nReg;
         TypeConstant     typeParam   = atypeParams[nReg];
         assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
-        return typeParam.getParamTypes().get(0);
+        return typeParam.getParamTypesArray()[0];
         }
 
 
