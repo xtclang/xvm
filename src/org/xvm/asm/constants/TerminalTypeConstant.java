@@ -565,14 +565,6 @@ public class TerminalTypeConstant
             typeinfo.setFormat(struct.getFormat());
             }
 
-        // TODO this will be moved to error handling parameters, but for now, set it up for exception string
-        String sPrefix = "while resolving " + struct.getName();
-        if (!fTopmost)
-            {
-            sPrefix += " as part of " + typeinfo.type + ": ";
-            }
-        System.out.println(sPrefix);
-
         // evaluate type parameters
         int cTypeParams = atypeParams == null ? 0 : atypeParams.length;
         Map<StringConstant, TypeConstant> mapClassParams = struct.getTypeParams();
@@ -580,7 +572,8 @@ public class TerminalTypeConstant
             {
             if (cTypeParams  > 0)
                 {
-                log(errs, Severity.ERROR, VE_UNEXPECTED_TYPE_PARAMS, struct.getIdentityConstant().getPathString());
+                fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
+                        struct.getIdentityConstant().getPathString());
                 }
             }
         else
@@ -595,10 +588,8 @@ public class TerminalTypeConstant
                     }
                 else
                     {
-                    // TODO log error: either too few or too many type params
-                    throw new IllegalStateException(sPrefix + "TODO error on " + struct.getName()
-                            + " - type param type count (" + cTypeParams
-                            + ") does not match class (" + cClassParams + ")");
+                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
+                            struct.getIdentityConstant().getPathString(), cClassParams, cTypeParams);
                     }
                 }
 
@@ -621,10 +612,11 @@ public class TerminalTypeConstant
                     // tree of structures that form the type, it is possible that our constraint is
                     // "looser" than the constraint that came before us on the way down, e.g. our
                     // sub-class narrowed our constraint, but any conflict is an error
-                    // TODO log error: actual type is not legal because it violates the constraint
-                    throw new IllegalStateException(sPrefix + "TODO error on " + struct.getName()
-                            + " - sub's type param constraint (" + paraminfo.getConstraintType()
-                            + ") not isA(" + typeConstraint + ")");
+                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONSTRAINT,
+                            struct.getIdentityConstant().getPathString(), sName,
+                            typeConstraint.getValueString(),
+                            paraminfo.getConstraintType().getValueString(),
+                            typeinfo.type.getValueString());
                     }
 
                 if (i >= cTypeParams)
@@ -639,7 +631,7 @@ public class TerminalTypeConstant
                 assert typeActual != null;
 
                 // quite often, the type parameter type is a reference to a type parameter
-                // TODO need a helper to translate in case e.g. "KeyType | ValueType" etc. etc. etc. etc.
+                // TODO plug in GG helper here
                 if (typeActual instanceof TerminalTypeConstant)
                     {
                     Constant constant = typeActual.getDefiningConstant();
@@ -657,7 +649,7 @@ public class TerminalTypeConstant
                         if (paraminfoProp == null || paraminfoProp.getActualType() == null)
                             {
                             // TODO log error: missing type for type parameter
-                            throw new IllegalStateException(sPrefix + "TODO error on " + struct.getName()
+                            throw new IllegalStateException("TODO error on " + struct.getName()
                                     + " - type param " + sPropName + " has no type");
                             }
 
@@ -673,10 +665,10 @@ public class TerminalTypeConstant
                         }
                     else
                         {
-                        // TODO log error: actual type is not legal because it violates the constraint
-                        throw new IllegalStateException(sPrefix + "TODO error on " + struct.getName()
-                                + " - type param type (" + typeActual
-                                + ") not isA(" + typeConstraint + ")");
+                        fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                                struct.getIdentityConstant().getPathString(), sName,
+                                typeConstraint.getValueString(),
+                                typeActual.getValueString(), typeinfo.type.getValueString());
                         }
                     }
 
@@ -687,13 +679,16 @@ public class TerminalTypeConstant
                     }
                 else if (!typeOld.equals(typeActual))
                     {
-                    // TODO log error: actual type conflicts with the actual type already spec'd
-                    throw new IllegalStateException(sPrefix + "TODO error on " + struct.getName()
-                            + " - type param type (" + typeActual
-                            + ") for " + sName
-                            + " is different from the prev spec'd type  (" + typeOld + ")");
+                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_CONFLICTING_TYPES,
+                            struct.getIdentityConstant().getPathString(), sName,
+                            typeOld.getValueString(), typeActual.getValueString(),
+                            typeinfo.type.getValueString());
                     }
                 }
+            }
+        if (fHalt)
+            {
+            return fHalt;
             }
 
         // first, determine which compositions need to be subsequently processed; any compositions
@@ -721,8 +716,9 @@ public class TerminalTypeConstant
             TypeConstant typeContrib = contrib.getTypeConstant();
             if (!typeContrib.isExplicitClassIdentity(false))
                 {
-                // TODO log error
-                throw new IllegalStateException(sPrefix + "not a mixin class type: " + typeContrib);
+                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                        struct.getIdentityConstant().getPathString(), typeContrib.getValueString());
+                continue NextContrib;
                 }
 
             // if any mix-ins already registered match or extend this mixin, then this
@@ -751,6 +747,10 @@ public class TerminalTypeConstant
                 }
             listAnnotations.add(contrib);
             }
+        if (fHalt)
+            {
+            return fHalt;
+            }
 
         // next up, for any class type (other than Object itself), there MUST be an "extends"
         // contribution that specifies another class
@@ -775,8 +775,9 @@ public class TerminalTypeConstant
                     {
                     if (fExtends)
                         {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "Object must NOT extend anything");
+                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
                         }
                     break;
                     }
@@ -784,24 +785,27 @@ public class TerminalTypeConstant
                 // all other classes must extends something
                 if (!fExtends)
                     {
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "missing extends on " + struct.getName());
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED,
+                            struct.getIdentityConstant().getPathString());
+                    break;
                     }
 
                 // the "extends" clause must specify a class identity
                 TypeConstant typeExtends = contrib.getTypeConstant();
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "extends contribution is not a class identity: " + typeExtends);
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
+                            struct.getIdentityConstant().getPathString(),
+                            typeExtends.getValueString());
+                    break;
                     }
 
                 if (typeinfo.extended.contains(typeExtends))
                     {
-                    // some sort
-                    // of circular loop
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "extends contribution infinite loop: " + typeExtends);
+                    // some sor of circular loop
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
+                            struct.getIdentityConstant().getPathString());
+                    break;
                     }
 
                 // add the "extends" to the list of contributions to process, and register it so
@@ -836,10 +840,11 @@ public class TerminalTypeConstant
                         {
                         // subsequent "into" clauses in the inheritance chain must be compatible
                         // with any previous one
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "sub-class mixin into (" + typeinfo.getInto()
-                                + ") not isa(" + contrib.getTypeConstant()
-                                + ") from super-class mixin into clause");
+                        // TODO note that this test will is wrong for a mixin into a mixin
+                        fHalt |= log(errs, Severity.ERROR, VE_INTO_INCOMPATIBLE,
+                                struct.getIdentityConstant().getPathString(),
+                                contrib.getTypeConstant().getValueString(),
+                                typeinfo.type.getValueString(), typeinfo.getInto().getValueString());
                         }
 
                     // load the next contribution
@@ -855,15 +860,18 @@ public class TerminalTypeConstant
                     TypeConstant typeExtends = contrib.getTypeConstant();
                     if (!typeExtends.isExplicitClassIdentity(true))
                         {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "extends contribution is not a class identity: " + typeExtends);
+                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
+                                struct.getIdentityConstant().getPathString(),
+                                typeExtends.getValueString());
+                        break;
                         }
 
                     if (typeinfo.incorporated.contains(typeExtends))
                         {
                         // some sort of circular loop or badly directed graph
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "mixin extends contribution infinite loop or bad graph: " + typeExtends);
+                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
+                                struct.getIdentityConstant().getPathString());
+                        break;
                         }
 
                     typeinfo.incorporated.add(typeExtends);
@@ -887,6 +895,10 @@ public class TerminalTypeConstant
                     }
                 break;
             }
+        if (fHalt)
+            {
+            return fHalt;
+            }
 
         // like "extends" and "into", only one "impersonates" clause is allowed
         boolean fImpersonates = false;
@@ -902,56 +914,83 @@ public class TerminalTypeConstant
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "annotations must come first");
+                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
+                            contrib.getTypeConstant().getValueString(),
+                            struct.getIdentityConstant().getPathString());
+                    break;
 
                 case Into:
-                    // only applicable on a mixin
-                    if (struct.getFormat() != Component.Format.MIXIN)
-                        {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "not a mixin");
-                        }
-
-                    if (fInto)
-                        {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "multiple intos: " + typeContrib);
-                        }
-                    fInto = true;
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "into clause needs to come before other compositions");
+                    // only applicable on a mixin, only one allowed, and it should have been earlier
+                    // in the list of contributions
+                    fHalt |= log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
+                            contrib.getTypeConstant().getValueString(),
+                            struct.getIdentityConstant().getPathString());
+                    fInto |= struct.getFormat() == Component.Format.MIXIN;
+                    break;
 
                 case Extends:
-                    // not applicable on an interface
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "interfaces cannot extend");
-                        }
-
-                    if (fExtends)
-                        {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "multiple extends: " + typeContrib);
-                        }
-                    fExtends = true;
-                    // TODO log error
-                    throw new IllegalStateException(sPrefix + "extends clause needs to come before other compositions");
+                    // not applicable on an interface, only one allowed, and it should have been
+                    // earlier in the list of contributions
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
+                            contrib.getTypeConstant().getValueString(),
+                            struct.getIdentityConstant().getPathString());
+                    fExtends |= struct.getFormat() != Component.Format.INTERFACE;
+                    break;
 
                 case Impersonates:
-                    // TODO this is illegal, unless it's a class (not mixin or interface) AND there is no impersonates so far
-                    // typeinfo.getImpersonates()
-                    // typeinfo.setImpersonates()
-                    throw new UnsupportedOperationException(sPrefix + "TODO");
+                    if (fImpersonates
+                            || struct.getFormat() == Component.Format.MIXIN
+                            || struct.getFormat() == Component.Format.INTERFACE)
+                        {
+                        // only one allowed, and it must be a class type (not mixin or interface)
+                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_UNEXPECTED,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
+                        }
+
+                    fImpersonates = true;
+
+                    if (contrib.getTypeConstant().isExplicitClassIdentity(true))
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_NOT_CLASS,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
+                        }
+
+                    if (typeinfo.getImpersonates() == null)
+                        {
+                        typeinfo.setImpersonates(contrib.getTypeConstant());
+                        }
+                    else if (!typeinfo.getImpersonates().isA(contrib.getTypeConstant()))
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_INCOMPATIBLE,
+                                struct.getIdentityConstant().getPathString(),
+                                contrib.getTypeConstant().getValueString(),
+                                typeinfo.type.getValueString(),
+                                typeinfo.getImpersonates().getValueString());
+                        }
+                    break;
 
                 case Incorporates:
-                    // TODO handle the conditional case (GG wrote a helper)
+                    if (struct.getFormat() == Component.Format.INTERFACE)
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
+                        }
+
                     if (!typeContrib.isExplicitClassIdentity(true))
                         {
-                        // TODO log error
-                        throw new IllegalStateException();
+                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
                         }
+
+                    // TODO handle the conditional case (GG wrote a helper)
 
                     // if any mix-ins already registered match or extend this mixin, then this
                     // mix-in gets ignored
@@ -969,31 +1008,32 @@ public class TerminalTypeConstant
                         }
 
                     // the mixin must be compatible with this type, as specified by its "into"
-                    // clause
-                    if (!typeContrib.validate(errs))
+                    // clause; note: have to validate the type before asking it for a typeinfo
+                    fHalt |= typeContrib.validate(errs);
+                    TypeConstant typeInto = typeContrib.getTypeInfo().getInto();
+                    if (typeInto == null)
                         {
-                        TypeConstant typeInto = typeContrib.getTypeInfo().getInto();
-                        if (typeInto == null)
-                            {
-                            assert typeContrib.getTypeInfo().getFormat() != Component.Format.MIXIN;
-                            // TODO log error
-                            throw new IllegalStateException(sPrefix + "not a mixin: " + typeContrib);
-                            }
-                        else if (!typeinfo.type.isA(typeInto))
-                            {
-                            // TODO log error
-                            throw new IllegalStateException(sPrefix + "mixin " + typeContrib
-                                    + " cannot apply into this type (into=" + typeInto + ")");
-                            }
-                        else
-                            {
-                            // even though we haven't processed it yet, stake our claim to the
-                            // responsibility of processing it by registering it in the typeinfo
-                            typeinfo.incorporated.add(typeContrib);
+                        assert typeContrib.getTypeInfo().getFormat() != Component.Format.MIXIN;
+                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        }
+                    else if (!typeinfo.type.isA(typeInto))
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
+                                struct.getIdentityConstant().getPathString(),
+                                contrib.getTypeConstant().getValueString(),
+                                typeinfo.type.getValueString(),
+                                typeInto.getValueString());
+                        }
+                    else
+                        {
+                        // even though we haven't processed it yet, stake our claim to the
+                        // responsibility of processing it by registering it in the typeinfo
+                        typeinfo.incorporated.add(typeContrib);
 
-                            // ... and add it to our list of things that we need to process
-                            listContributions.add(contrib);
-                            }
+                        // ... and add it to our list of things that we need to process
+                        listContributions.add(contrib);
                         }
                     break;
 
@@ -1002,15 +1042,19 @@ public class TerminalTypeConstant
                     // not applicable on an interface
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "interface cannot delegate");
+                        fHalt |= log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
                         }
 
                     // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true))   // TODO need a method "is interface type"
+                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
                         {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "cannot delegate class type: " + typeContrib);
+                        fHalt |= log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
                         }
 
                     // even though we haven't processed it yet, stake our claim to the
@@ -1023,10 +1067,12 @@ public class TerminalTypeConstant
 
                 case Implements:
                     // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true))    // TODO "is interface type"
+                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
                         {
-                        // TODO log error
-                        throw new IllegalStateException(sPrefix + "cannot implement class type: " + typeContrib);
+                        fHalt |= log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
+                                contrib.getTypeConstant().getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
                         }
 
                     // check if it is already implemented
@@ -1053,8 +1099,13 @@ public class TerminalTypeConstant
                     break;
 
                 default:
-                    throw new IllegalStateException(sPrefix + "struct=" + struct.getName() + ", contribution=" + contrib);
+                    throw new IllegalStateException(struct.getIdentityConstant().getPathString()
+                            + ", contribution=" + contrib);
                 }
+            }
+        if (fHalt)
+            {
+            return fHalt;
             }
 
         // recurse through compositions
@@ -1064,6 +1115,10 @@ public class TerminalTypeConstant
             TypeConstant typeContrib = contrib.getTypeConstant();
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
             fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+            }
+        if (fHalt)
+            {
+            return fHalt;
             }
 
         // properties & methods
@@ -1097,6 +1152,10 @@ public class TerminalTypeConstant
                             + " contains illegal child: " + child);
                 }
             }
+        if (fHalt)
+            {
+            return fHalt;
+            }
 
         // process annotations
         for (Contribution contrib : listAnnotations)
@@ -1105,6 +1164,12 @@ public class TerminalTypeConstant
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
             fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
             }
+        if (fHalt)
+            {
+            return fHalt;
+            }
+
+        // TODO trim out everything that doesn't meet our accessibility requirements
 
         return fHalt;
         }
