@@ -24,7 +24,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.TypeSet;
-import org.xvm.util.Severity;
 
 
 /**
@@ -934,7 +933,14 @@ public abstract class TypeConstant
      */
     public interface GenericTypeResolver
         {
-        TypeConstant resolveGenericType(String sName);
+        /**
+         * Resolve the generic type based on the PropertyConstant representing a formal parameter.
+         *
+         * @param constProperty  the PropertyConstant for the formal parameter
+         *
+         * @return a resolved type
+         */
+        TypeConstant resolveGenericType(PropertyConstant constProperty);
         }
 
 
@@ -976,14 +982,15 @@ public abstract class TypeConstant
             GenericTypeResolver resolver = new GenericTypeResolver()
                 {
                 @Override
-                public TypeConstant resolveGenericType(String sName)
+                public TypeConstant resolveGenericType(PropertyConstant constProperty)
                     {
-                    ParamInfo info = parameters.get(sName);
+                    ParamInfo info = parameters.get(constProperty.getName());
                     if (info == null)
                         {
-                        m_errsResolver.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
-                                new Object[] {sName, type.getValueString()}, type);
-                        return type.getConstantPool().typeObject();
+                        return constProperty.asTypeConstant();
+//                        m_errsResolver.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
+//                                new Object[] {sName, type.getValueString()}, type);
+//                        return type.getConstantPool().typeObject();
                         }
 
                     TypeConstant typeResolved = info.getActualType();

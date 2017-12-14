@@ -27,6 +27,12 @@ class TestCompiler
         Boolean containsValue(VMC value) {return true;}
         }
 
+    mixin MyConsumer2<VMC>
+            implements Consumer<VMC>
+        {
+        Boolean containsValue(VMC value) {return true;}
+        }
+
     class MyClass3<K3, V3>
         extends MyConsumer<V3> {}
 
@@ -46,13 +52,13 @@ class TestCompiler
         extends MyClass3<String, String> {}
 
     class MyClass8<K8, V8>
-            incorporates MyConsumer<V8> {}
+        incorporates MyConsumer2<V8> {}
 
     class MyClass9<K9, V9>
-            incorporates conditional MyConsumer<V9 extends Number> {}
+        incorporates conditional MyConsumer2<V9 extends Number> {}
 
     class MyClass10<V10>
-            extends MyClass9<String, V10> {}
+        extends MyClass9<String, V10> {}
 
 
     static Void test1()
@@ -80,11 +86,11 @@ class TestCompiler
         Consumer<String> finder7 = c7; // OK; "Extends-Extends-Implements"
 
         MyClass8<String, Number> c8;
-        MyConsumer<Int> finder8 = c8; // OK; "Incorporates"
+        Consumer<Int> finder8 = c8; // OK; "Incorporates-Implements"
         Consumer<Int> finder8a = c8; // OK; "Incorporates-Extends"
 
         MyClass10<Number> c10;
-        MyConsumer<Number> finder10 = c10; // OK; "Extends-Incorporates"
+        Consumer<Number> finder10 = c10; // OK; "Extends-Incorporates-Implements"
         }
 
     static Void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)

@@ -1571,7 +1571,7 @@ public class ConstantPool
 
         TypeConstant constType = null;
 
-        Object locator  = constId.getLocator();
+        Object locator = constId.getLocator();
         if (locator != null)
             {
             constType = (TerminalTypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);

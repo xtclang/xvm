@@ -123,6 +123,7 @@ public abstract class IdentityConstant
             case Package:
             case Class:
             case Typedef:
+            case Property:
                 return getConstantPool().ensureTerminalTypeConstant(this);
 
             default:

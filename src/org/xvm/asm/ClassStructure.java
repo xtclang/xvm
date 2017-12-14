@@ -13,6 +13,7 @@ import java.util.Map;
 
 import java.util.Set;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -958,13 +959,13 @@ public class ClassStructure
             }
 
         @Override
-        public TypeConstant resolveGenericType(String sName)
+        public TypeConstant resolveGenericType(PropertyConstant constProperty)
             {
-            int ix = indexOfFormalParameter(sName);
+            int ix = indexOfFormalParameter(constProperty.getName());
             if (ix < 0)
                 {
                 throw new IllegalStateException(
-                    "Failed to find " + sName + " in " + this);
+                    "Failed to find " + constProperty.getName() + " in " + this);
                 }
 
             if (m_fTuple)

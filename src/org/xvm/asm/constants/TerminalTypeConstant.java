@@ -182,7 +182,7 @@ public class TerminalTypeConstant
         {
         Constant constId = getDefiningConstant();
         return constId instanceof PropertyConstant
-            ? resolver.resolveGenericType(((PropertyConstant) constId).getName())
+            ? resolver.resolveGenericType((PropertyConstant) constId)
             : this;
         }
 
