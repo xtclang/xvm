@@ -899,19 +899,6 @@ public abstract class TypeConstant
         }
 
 
-    // ----- run-time support ----------------------------------------------------------------------
-
-    public TypeHandle getHandle()
-        {
-        TypeHandle hType = m_handle;
-        if (hType == null)
-            {
-            hType = m_handle = xType.makeHandle(this);
-            }
-        return hType;
-        }
-
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
