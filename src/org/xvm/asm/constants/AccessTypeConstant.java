@@ -14,6 +14,7 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.Constants;
 import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readIndex;
@@ -106,24 +107,21 @@ public class AccessTypeConstant
         }
 
     @Override
-    public TypeConstant resolveTypedefs()
+    protected TypeConstant cloneSingle(TypeConstant type)
         {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveTypedefs();
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureAccessTypeConstant(constResolved, m_access);
+        return getConstantPool().ensureAccessTypeConstant(type, m_access);
         }
 
     @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant modifyAccess(Access access)
         {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureAccessTypeConstant(constResolved, m_access);
+        return access == m_access
+            ? this
+            : getConstantPool().ensureAccessTypeConstant(m_constType, access);
         }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,

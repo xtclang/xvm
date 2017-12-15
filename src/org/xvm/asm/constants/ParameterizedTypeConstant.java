@@ -21,12 +21,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.Type;
-import org.xvm.runtime.TypeSet;
-
-import org.xvm.util.ListMap;
-
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -196,6 +190,12 @@ public class ParameterizedTypeConstant
         return fDiff
                 ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
+        }
+
+    @Override
+    protected TypeConstant cloneSingle(TypeConstant type)
+        {
+        return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
     @Override
@@ -526,74 +526,6 @@ public class ParameterizedTypeConstant
     public boolean containsSubstitutableProperty(SignatureConstant signature, Access access, List<TypeConstant> listParams)
         {
         return super.containsSubstitutableProperty(signature, access, getParamTypes());
-        }
-
-    @Override // TODO: remove
-    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        // C<T> = A<B<T>> consumes T iff
-        //  1) A consumes A_Type && B produces B_Type, or
-        //  2) A produces A_Type && B consumes B_Type
-
-        ClassConstant         constClass = (ClassConstant) m_constType.getIdentityConstant();
-        ClassTemplate         template   = types.getTemplate(constClass);
-        ListMap<String, Type> mapFormal  = template.f_mapGenericFormal;
-
-        TypeConstant[] atypeParams = m_atypeParams;
-        assert mapFormal.size() == atypeParams.length; // what about Tuple?
-
-        Iterator<TypeConstant> iterParams = Arrays.asList(atypeParams).iterator();
-        Iterator<String>       iterNames  = mapFormal.keySet().iterator();
-        while (iterParams.hasNext())
-            {
-            TypeConstant constParam = iterParams.next();
-            String       sFormal    = iterNames.next();
-
-            if (template.consumesFormalType(sFormal, access)
-                    && constParam.producesFormalType(sTypeName, types, access)
-                ||
-                template.producesFormalType(sFormal, access)
-                    && constParam.consumesFormalType(sTypeName, types, access))
-                {
-                return true;
-                }
-            }
-
-        return false;
-        }
-
-    @Override // TODO: remove
-    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        // C<T> = A<B<T>> produces T iff
-        //  1) A produces A_Type && B produces B_Type, or
-        //  2) A consumes A_Type && B consumes B_Type
-
-        ClassConstant         constClass = (ClassConstant) m_constType.getIdentityConstant();
-        ClassTemplate         template   = types.getTemplate(constClass);
-        ListMap<String, Type> mapFormal  = template.f_mapGenericFormal;
-
-        TypeConstant[] atypeParams = m_atypeParams;
-        assert  mapFormal.size() == atypeParams.length; // what about Tuple?
-
-        Iterator<TypeConstant> iterParams = Arrays.asList(atypeParams).iterator();
-        Iterator<String>       iterNames  = mapFormal.keySet().iterator();
-        while (iterParams.hasNext())
-            {
-            TypeConstant constParam = iterParams.next();
-            String       sFormal    = iterNames.next();
-
-            if (template.producesFormalType(sFormal, access)
-                    && constParam.producesFormalType(sTypeName, types, access)
-                ||
-                template.consumesFormalType(sFormal, access)
-                    && constParam.consumesFormalType(sTypeName, types, access))
-                {
-                return true;
-                }
-            }
-
-        return false;
         }
 
     @Override

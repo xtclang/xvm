@@ -196,6 +196,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    protected TypeConstant cloneSingle(TypeConstant type)
+        {
+        return this;
+        }
+
+    @Override
     protected TypeConstant unwrapForCongruence()
         {
         TypeConstant typeResolved = resolveTypedefs();

@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -62,6 +63,11 @@ public abstract class RelationalTypeConstant
         m_constType1 = constType1;
         m_constType2 = constType2;
         }
+
+    /**
+     * @return clone this relational type based on the underlying types
+     */
+    protected abstract TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2);
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
@@ -211,6 +217,45 @@ public abstract class RelationalTypeConstant
             return (T) this;
             }
         throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal1 = getUnderlyingType();
+        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constResolved1 = constOriginal1.resolveTypedefs();
+        TypeConstant constResolved2 = constOriginal2.resolveTypedefs();
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal1 = getUnderlyingType();
+        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
+        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant modifyAccess(Access access)
+        {
+        TypeConstant constOriginal1 = getUnderlyingType();
+        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constResolved1 = constOriginal1.modifyAccess(access);
+        TypeConstant constResolved2 = constOriginal2.modifyAccess(access);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
         }
 
 

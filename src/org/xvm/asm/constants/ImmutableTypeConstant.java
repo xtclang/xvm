@@ -80,26 +80,6 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveTypedefs();
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureImmutableTypeConstant(constResolved);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
-        {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureImmutableTypeConstant(constResolved);
-        }
-
-    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
@@ -111,6 +91,12 @@ public class ImmutableTypeConstant
         return isNullable()
                 ? getConstantPool().ensureImmutableTypeConstant(m_constType.nonNullable())
                 : this;
+        }
+
+    @Override
+    protected TypeConstant cloneSingle(TypeConstant type)
+        {
+        return getConstantPool().ensureImmutableTypeConstant(type);
         }
 
     @Override

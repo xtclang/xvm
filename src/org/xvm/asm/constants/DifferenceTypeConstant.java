@@ -46,32 +46,14 @@ public class DifferenceTypeConstant
         super(pool, constType1, constType2);
         }
 
+    @Override
+    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+        {
+        return getConstantPool().ensureDifferenceTypeConstant(type1, type2);
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
-
-    @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveTypedefs();
-        TypeConstant constResolved2 = constOriginal2.resolveTypedefs();
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : getConstantPool().ensureDifferenceTypeConstant(constResolved1, constResolved2);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
-        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : getConstantPool().ensureDifferenceTypeConstant(constResolved1, constResolved2);
-        }
 
     @Override
     public boolean extendsClass(IdentityConstant constClass)

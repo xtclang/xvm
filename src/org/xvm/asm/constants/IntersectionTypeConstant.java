@@ -6,12 +6,11 @@ import java.io.IOException;
 
 import java.util.LinkedList;
 import java.util.List;
-
 import java.util.Set;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
 
@@ -50,32 +49,14 @@ public class IntersectionTypeConstant
         super(pool, constType1, constType2);
         }
 
+    @Override
+    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+        {
+        return getConstantPool().ensureIntersectionTypeConstant(type1, type2);
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
-
-    @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveTypedefs();
-        TypeConstant constResolved2 = constOriginal2.resolveTypedefs();
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : getConstantPool().ensureIntersectionTypeConstant(constResolved1, constResolved2);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
-        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : getConstantPool().ensureIntersectionTypeConstant(constResolved1, constResolved2);
-        }
 
     @Override
     public boolean isNullable()

@@ -115,28 +115,6 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveTypedefs()
-        {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveTypedefs();
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
-                        getAnnotationParams(), constResolved);
-        }
-
-    @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
-        {
-        TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
-        return constResolved == constOriginal
-                ? this
-                : getConstantPool().ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
-                        m_annotation.getParams(), constResolved);
-        }
-
-    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();
@@ -149,6 +127,13 @@ public class AnnotatedTypeConstant
                 ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
                         getAnnotationParams(), m_constType.nonNullable())
                 : this;
+        }
+
+    @Override
+    protected TypeConstant cloneSingle(TypeConstant type)
+        {
+        return getConstantPool().ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
+            m_annotation.getParams(), type);
         }
 
     @Override

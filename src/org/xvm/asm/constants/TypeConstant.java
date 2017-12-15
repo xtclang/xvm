@@ -25,6 +25,9 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.TypeSet;
 
+import org.xvm.runtime.template.xType;
+import org.xvm.runtime.template.xType.TypeHandle;
+
 
 /**
  * A base class for the various forms of Constants that will represent data types.
@@ -344,11 +347,6 @@ public abstract class TypeConstant
         return this == that || this.unwrapForCongruence().equals(that.unwrapForCongruence());
         }
 
-    protected TypeConstant unwrapForCongruence()
-        {
-        return this;
-        }
-
     /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
@@ -359,15 +357,56 @@ public abstract class TypeConstant
         return this;
         }
 
+    protected TypeConstant unwrapForCongruence()
+        {
+        return this;
+        }
+
+    /**
+     * @return clone this single defining type based on the underlying type
+     */
+    protected TypeConstant cloneSingle(TypeConstant type)
+        {
+        throw new UnsupportedOperationException();
+        }
+
     /**
      * @return this same type, but without any typedefs in it
      */
-    public abstract TypeConstant resolveTypedefs();
+    public TypeConstant resolveTypedefs()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveTypedefs();
+        return constResolved == constOriginal
+            ? this
+            : cloneSingle(constResolved);
+        }
 
     /**
      * @return this same type, but without any generic types in it
      */
-    public abstract TypeConstant resolveGenerics(GenericTypeResolver resolver);
+    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(constResolved);
+        }
+
+    /**
+     * @return this same type, but with a specified access
+     */
+    public TypeConstant modifyAccess(Access access)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.modifyAccess(access);
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(constResolved);
+        }
 
     /**
      * Type parameters are compiled as the "Type" type; assuming that this type is the type
@@ -503,9 +542,6 @@ public abstract class TypeConstant
     /**
      * Determine if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
-     * <p/>
-     * Note: a negative answer doesn't guarantee non-assignability; it's simply an indication
-     *       that a "long-path" computation should be done to prove or disprove it.
      *
      * @param that  the type to match (L-value)
      *
@@ -513,9 +549,22 @@ public abstract class TypeConstant
      */
     public boolean isA(TypeConstant that)
         {
+        return calculateRelation(that) != Relation.INCOMPATIBLE;
+        }
+
+    /**
+     * Calculate the type relationship between the specified TypeConstant (L-value) and the type
+     * this TypeConstant (R-Value).
+     *
+     * @param that  the type to match (L-value)
+     *
+     * See Type.x # isA()
+     */
+    public Relation calculateRelation(TypeConstant that)
+        {
         if (this.equals(that) || that.equals(getConstantPool().typeObject()))
             {
-            return true;
+            return Relation.IS_A;
             }
 
         Map<TypeConstant, Relation> mapRelations = m_mapRelations;
@@ -535,19 +584,14 @@ public abstract class TypeConstant
             {
             mapRelations.put(that, Relation.IN_PROGRESS);
             }
-        else switch (relation)
+        else
             {
-            case IN_PROGRESS:
+            if (relation == Relation.IN_PROGRESS)
+                {
                 // we are in recursion; the answer is "no"
                 mapRelations.put(that, Relation.INCOMPATIBLE);
-                return false;
-
-            case IS_A:
-            case IS_A_WEAK:
-                return true;
-
-            case INCOMPATIBLE:
-                return false;
+                }
+            return relation;
             }
 
         try
@@ -555,14 +599,14 @@ public abstract class TypeConstant
             List<ContributionChain> chains = this.collectContributions(that, new LinkedList<>());
             if (chains.isEmpty())
                 {
-                mapRelations.put(that, Relation.INCOMPATIBLE);
-                return false;
+                mapRelations.put(that, relation = Relation.INCOMPATIBLE);
                 }
-
-            relation = validate(this, that, chains);
-            mapRelations.put(that, relation);
-
-            return relation != Relation.INCOMPATIBLE;
+            else
+                {
+                relation = validate(this, that, chains);
+                mapRelations.put(that, relation);
+                }
+            return relation;
             }
         catch (RuntimeException | Error e)
             {
@@ -852,6 +896,19 @@ public abstract class TypeConstant
     public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
         {
         return clz == getClass() ? (T) this : getUnderlyingType().findFirst(clz);
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    public TypeHandle getHandle()
+        {
+        TypeHandle hType = m_handle;
+        if (hType == null)
+            {
+            hType = m_handle = xType.makeHandle(this);
+            }
+        return hType;
         }
 
 
@@ -1455,17 +1512,22 @@ public abstract class TypeConstant
     // -----fields ---------------------------------------------------------------------------------
 
     /**
+     * Relationship options.
+     */
+    public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+
+    /**
      * The resolved information about the type, its properties, and its methods.
      */
     private transient TypeInfo m_typeinfo;
 
     /**
-     * Relationship options.
-     */
-    private enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
-
-    /**
      * A cache of "isA" responses.
      */
     private Map<TypeConstant, Relation> m_mapRelations;
+
+    /**
+     * Cached TypeHandle.
+     */
+    private xType.TypeHandle m_handle;
     }
