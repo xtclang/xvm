@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -122,12 +121,13 @@ public class NewG_0
                 }
 
             MethodStructure constructor = getMethodStructure(frame);
-            IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
-            ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
+            ClassTemplate template = clzTarget.f_template;
+
+            assert constructor.getParent().getParent() == template.f_struct;
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(clzTarget.ensurePublicType());
+                frame.introduceResolvedVar(clzTarget.ensurePublicType());
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];

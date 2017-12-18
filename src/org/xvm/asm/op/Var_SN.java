@@ -15,7 +15,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -129,7 +128,7 @@ public class Var_SN
     public int process(Frame frame, int iPC)
         {
         TypeComposition clzSequence = frame.resolveClass(m_nType);
-        Type typeEl = clzSequence.getActualParamType("ElementType");
+        TypeConstant typeEl = clzSequence.getActualParamType("ElementType");
 
         try
             {

@@ -1,8 +1,6 @@
 package org.xvm.runtime.template.collections;
 
 
-import java.util.Collections;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -17,7 +15,6 @@ import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHeap;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TypeSet;
@@ -65,11 +62,11 @@ public class xArray
 
         assert constArray.getFormat() == Constant.Format.Array;
 
-        TypeConstant constTypeArray = constArray.getType();
-        TypeComposition clzArray = f_types.resolveClass(constTypeArray, frame.getActualTypes());
+        TypeConstant typeArray = constArray.getType();
+        TypeComposition clzArray = f_types.resolveClass(typeArray);
 
-        Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
-        TypeComposition clzEl = typeEl == null ? xObject.CLASS : typeEl.f_clazz;
+        TypeConstant typeEl = clzArray.getActualParamType("ElementType");
+        TypeComposition clzEl = typeEl == null ? xObject.CLASS :  f_types.resolveClass(typeEl);
         ClassTemplate templateEl = clzEl.f_template;
 
         Constant[] aconst = constArray.getValue();
@@ -109,8 +106,8 @@ public class xArray
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
-        Type typeEl = clzArray.f_mapGenericActual.get("ElementType");
-        TypeComposition clzEl = typeEl == null ? xObject.CLASS : typeEl.f_clazz;
+        TypeConstant typeEl = clzArray.getActualParamType("ElementType");
+        TypeComposition clzEl = typeEl == null ? xObject.CLASS :  f_types.resolveClass(typeEl);
         ClassTemplate templateEl = clzEl.f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
@@ -156,11 +153,11 @@ public class xArray
             }
 
         // then compare the element types
-        Type type1 = getElementType(hArray1, 0);
-        Type type2 = getElementType(hArray2, 0);
+        TypeConstant type1 = getElementType(hArray1, 0);
+        TypeConstant type2 = getElementType(hArray2, 0);
 
-        TypeComposition clazzEl = type1.f_clazz;
-        if (clazzEl == null || clazzEl != type2.f_clazz)
+        TypeComposition clazzEl = f_types.resolveClass(type1);
+        if (clazzEl == null || clazzEl != f_types.resolveClass(type2))
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
@@ -225,7 +222,7 @@ public class xArray
         }
 
     @Override
-    public Type getElementType(ObjectHandle hTarget, long lIndex)
+    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
@@ -379,10 +376,9 @@ public class xArray
         return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
         }
 
-    public static GenericArrayHandle makeHandle(Type typeEl, ObjectHandle[] ahValue)
+    public static GenericArrayHandle makeHandle(TypeConstant typeEl, ObjectHandle[] ahValue)
         {
-        return new GenericArrayHandle(INSTANCE.ensureClass(
-                Collections.singletonMap("ElementType", typeEl)), ahValue);
+        return new GenericArrayHandle(INSTANCE.ensureClass(typeEl), ahValue); // ElementType
         }
 
     public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)

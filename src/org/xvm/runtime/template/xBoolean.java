@@ -10,7 +10,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -23,7 +22,7 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    public static Type TYPE;
+    public static TypeConstant TYPE;
     public static TypeConstant[] PARAMETERS;
 
     public xBoolean(TypeSet types, ClassStructure structure, boolean fInstance)

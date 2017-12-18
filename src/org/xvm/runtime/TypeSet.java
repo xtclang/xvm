@@ -8,19 +8,13 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Const;
@@ -36,9 +30,6 @@ import org.xvm.runtime.template.xObject;
  */
 public class TypeSet
     {
-    private int m_nMaxTypeId = 0;
-    private Map<Integer, Type> m_mapTypes = new ConcurrentHashMap<>();
-
     public final Container f_container;
     final public Adapter f_adapter;
 
@@ -48,8 +39,8 @@ public class TypeSet
     // cache - ClassTemplates by name
     final private Map<String, ClassTemplate> f_mapTemplatesByName = new HashMap<>();
 
-    // cache - non-parameterized TypeCompositions ClassConstId
-    final private Map<Integer, TypeComposition> f_mapConstCompositions = new HashMap<>();
+    // cache - ClassTemplates by type
+    final private Map<TypeConstant, ClassTemplate> f_mapTemplateByType = new HashMap<>();
 
     public final static TypeConstant[] VOID = ConstantPool.NO_TYPES;
 
@@ -234,146 +225,34 @@ public class TypeSet
     // ----- TypeCompositions -----
 
     // ensure a TypeComposition for a type referred by a TypeConstant in the ConstantPool
-    public TypeComposition resolveClass(int nTypeConstId, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(int nTypeConstId, TypeConstant.GenericTypeResolver resolver)
         {
-        if (mapActual.isEmpty())
-            {
-            // cache non-parameterized classes
-            TypeComposition typeComposition = f_mapConstCompositions.get(nTypeConstId);
-            if (typeComposition == null)
-                {
-                TypeConstant constType = (TypeConstant)
-                        f_container.f_pool.getConstant(nTypeConstId); // must exist
+        TypeConstant typeClz = (TypeConstant)
+                f_container.f_pool.getConstant(nTypeConstId); // must exist
 
-                typeComposition = resolveClass(constType, mapActual);
-
-                f_mapConstCompositions.put(nTypeConstId, typeComposition);
-                }
-            return typeComposition;
-            }
-
-        TypeConstant constType = (TypeConstant) f_container.f_pool.getConstant(nTypeConstId);
-        return resolveClass(constType, mapActual);
+        return resolveClass(typeClz.resolveGenerics(resolver));
         }
 
     // produce a TypeComposition based on the specified TypeConstant
     // using the specified actual type parameters
-    public TypeComposition resolveClass(TypeConstant constType, Map<String, Type> mapActual)
+    public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        Type type = resolveType(constType, mapActual);
-        return type.f_clazz == null ? xObject.CLASS : type.f_clazz;
-        }
-
-    // produce a Type based on the specified TypeConstant
-    // using the specified actual type parameters
-    public Type resolveType(TypeConstant constType, Map<String, Type> mapActual)
-        {
-        switch (constType.getFormat())
+        ClassTemplate template = f_mapTemplateByType.get(typeActual);
+        if (template == null)
             {
-            case TerminalType:
-            case ParameterizedType:
+            if (typeActual.isSingleDefiningConstant())
                 {
-                Constant constId = constType.getDefiningConstant();
-                String   sParam;
-                switch (constId.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                        ClassTemplate template = getTemplate((IdentityConstant) constId);
-                        return template.resolveClass(constType, mapActual).ensurePublicType();
-
-                    case Register:
-                        RegisterConstant constReg = (RegisterConstant) constId;
-                        MethodStructure  method = (MethodStructure) constReg.getMethod().getComponent();
-                        sParam = method.getParam(constReg.getRegister()).getName();
-                        break;
-
-                    case Property:
-                        sParam  = ((PropertyConstant) constId).getName();
-                        break;
-
-                    default:
-                        throw new IllegalStateException("unsupported type: " + constId);
-                    }
-
-                Type type = mapActual.get(sParam);
-                return type == null ? xObject.TYPE : type;
+                ClassConstant constClz = (ClassConstant) typeActual.getDefiningConstant();
+                template = getTemplate(constClz);
                 }
-
-            case ImmutableType:
+            else
                 {
-                Type type = resolveType(constType.getUnderlyingType(), mapActual);
-                type.markImmutable();
-                return type;
+                // TODO we may need to move this logic to the TypeConstant classes
+                throw new UnsupportedOperationException();
                 }
-
-            case AccessType:
-                {
-                Type type = resolveType(constType.getUnderlyingType(), mapActual);
-                switch (constType.getAccess())
-                    {
-                    case PUBLIC:
-                        return type;
-
-                    case PROTECTED:
-                        return type.f_clazz.ensureProtectedType();
-
-                    case PRIVATE:
-                        return type.f_clazz.ensurePrivateType();
-
-                    default:
-                        throw new IllegalStateException("unsupported access: " + constType);
-                    }
-                }
-
-            case AnnotatedType:
-                // example: &myObject.revealAs<@MyMixin MyClass>()
-            case UnionType:
-                // example: (String | Nullable) ns = ...;
-            case IntersectionType:
-                // example: (String + Runnable) rs = ...;
-            case DifferenceType:
-                // example: class C delegates (Iface2 - Iface1);
-                throw new UnsupportedOperationException(); // TODO
-
-            default:
-                throw new IllegalStateException("unsupported type: " + constType);
-            }
-        }
-
-    // ----- Types -----
-
-    public Type getType(int nTypeId)
-        {
-        return m_mapTypes.get(nTypeId);
-        }
-
-    public int addType(Type type)
-        {
-        int nTypeId = type.getId();
-        if (nTypeId == 0)
-            {
-            type.setId(nTypeId = ++m_nMaxTypeId);
-            }
-        else
-            {
-            m_nMaxTypeId = Math.max(m_nMaxTypeId, nTypeId);
+            f_mapTemplateByType.put(typeActual, template);
             }
 
-        if (m_mapTypes.putIfAbsent(nTypeId, type) != null)
-            {
-            throw new IllegalArgumentException("TypeId is already used:" + type);
-            }
-
-        return nTypeId;
-        }
-
-    public Type createType(TypeComposition clazz, Constant.Access access)
-        {
-        Type type = new Type(clazz, access);
-
-        addType(type);
-        return type;
+        return template.ensureClass(typeActual);
         }
     }

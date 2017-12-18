@@ -4,16 +4,20 @@ package org.xvm.runtime.template;
 import java.util.Collections;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.collections.xArray;
+
+import org.xvm.runtime.template.types.xMethod;
 
 
 /**
@@ -49,16 +53,25 @@ public class xType
         switch (property.getName())
             {
             case "allMethods":
-                Type type = hThis.getType();
-                xArray.GenericArrayHandle methods = type.getAllMethods();
-                return frame.assignValue(iReturn, methods);
+                return frame.assignValue(iReturn, getAllMethods(hThis));
             }
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
-    public static TypeHandle makeHandle(Type type)
+    public xArray.GenericArrayHandle getAllMethods(TypeHandle hType)
         {
-        return new TypeHandle(INSTANCE.ensureClass(Collections.singletonMap("DataType", type)));
+        MethodStructure[] aMethods = null;
+        xMethod.MethodHandle[] ahMethods = new xMethod.MethodHandle[aMethods.length];
+        for (int i = 0, c = aMethods.length; i < c; i++)
+            {
+            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.f_clazz, hType.m_type);
+            }
+        return xArray.makeHandle(xMethod.TYPE, ahMethods);
+        }
+
+    public static TypeHandle makeHandle(TypeConstant type)
+        {
+        return new TypeHandle(INSTANCE.ensureClass(type)); // DataType
         }
 
     // most of the time the TypeHandle is based on the underlying DataType (Type);
@@ -71,9 +84,9 @@ public class xType
             super(clazz);
             }
 
-        protected Type getType()
+        protected TypeConstant getType()
             {
-            return f_clazz.getActualType("DataType");
+            return f_clazz.getActualParamType("DataType");
             }
         }
     }

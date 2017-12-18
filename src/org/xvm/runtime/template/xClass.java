@@ -1,19 +1,15 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -44,18 +40,21 @@ public class xClass
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof ParameterizedTypeConstant)
+        if (constant instanceof TypeConstant)
             {
-            ParameterizedTypeConstant constClass = (ParameterizedTypeConstant) constant;
-            TypeComposition clzTarget = f_types.resolveClass(constClass.getPosition(), Collections.emptyMap());
+            TypeConstant typeTarget = (TypeConstant) constant;
+            TypeComposition clzTarget = f_types.resolveClass(
+                typeTarget.getPosition(), frame.getGenericsResolver());
 
-            Map<String, Type> mapParams = new HashMap<>();
-            mapParams.put("PublicType", clzTarget.ensurePublicType());
-            mapParams.put("ProtectedType", clzTarget.ensureProtectedType());
-            mapParams.put("PrivateType", clzTarget.ensurePrivateType());
-            mapParams.put("StructType", clzTarget.ensureStructType());
+            TypeConstant typeClass = frame.f_context.f_pool.ensureParameterizedTypeConstant(
+                INSTANCE.getTypeConstant(),
+                clzTarget.ensurePublicType(),
+                clzTarget.ensureProtectedType(),
+                clzTarget.ensurePrivateType(),
+                clzTarget.ensureStructType()
+                );
+            TypeComposition clzClass = f_types.resolveClass(typeClass);
 
-            TypeComposition clzClass = ensureClass(mapParams);
             return new ClassHandle(clzClass, clzTarget);
             }
         return null;

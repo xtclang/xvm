@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.Op.Prefix;
 
@@ -25,8 +24,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
 
-import org.xvm.runtime.Type;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -561,10 +558,11 @@ public class MethodStructure
     /**
      * Check if this method could be called via the specified signature.
      *
-     * @param sigThat     the signature of the matching method (resolved)
-     * @param listActual  the actual generic types
+     * @param sigThat   the signature of the matching method (resolved)
+     * @param resolver  the generic type resolver
      */
-    public boolean isSubstitutableFor(SignatureConstant sigThat, List<TypeConstant> listActual)
+    public boolean isSubstitutableFor(SignatureConstant sigThat,
+                                      TypeConstant.GenericTypeResolver resolver)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -598,10 +596,9 @@ public class MethodStructure
             }
 
         SignatureConstant sigThis = getIdentityConstant().getSignature();
-        if (!listActual.isEmpty())
+        if (resolver != null)
             {
-            ClassStructure clzThis = (ClassStructure) getParent().getParent();
-            sigThis = sigThis.resolveGenericTypes(clzThis.new SimpleTypeResolver(listActual));
+            sigThis = sigThis.resolveGenericTypes(resolver);
             }
 
         for (int i = 0; i < cReturns; i++)
@@ -619,96 +616,6 @@ public class MethodStructure
             {
             TypeConstant typeP1 = sigThat.getRawParams()[i];
             TypeConstant typeP2 = sigThis.getRawParams()[i];
-
-            if (!typeP1.isA(typeP2))
-                {
-                return false;
-                }
-            }
-        return true;
-        }
-
-    /**
-     * Check if this method could be called via the specified signature.
-     *
-     * @param signature   the signature of the matching method
-     * @param clazz       the TypeComposition in which context's the matching is evaluated
-     */
-    // TODO: remove
-    public boolean isCallableFor(SignatureConstant signature, TypeComposition clazz)
-        {
-        int cParams = getParamCount();
-        int cReturns = getReturnCount();
-
-        if (cParams != signature.getParams().size() ||
-            cReturns != signature.getReturns().size())
-            {
-            return false;
-            }
-
-        TypeSet types = clazz.f_template.f_types;
-        Map<String, Type> mapActual = clazz.f_mapGenericActual;
-
-        // the signature comes from the compiler/assembler pointing to the compile-time
-        // method structure that should be used in the invocation in its most generic representation;
-        // the rule 1.2.2.2 below (an exception clause) doesn't really apply in the case of the method
-        // callability. Its purpose to allow the following assignment:
-        //
-        //      List<Object> l = new ArrayList<String>();
-        //
-        // even though there is a method "Void add(ElementType el)" that violates the rule 1.2.1;
-        // however, our check would allow it (the type parameter is identical - ElementType property)
-
-        /*
-         * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
-         *
-         * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
-         *    true:
-         *    1. _m1_ and _m2_ have the same name
-         *    2. _m1_ and _m2_ have the same number of parameters, and for each parameter type _p1_ of
-         *       _m1_ and _p2_ of _m2_, at least one of the following holds true:
-         *       1. _p1_ is assignable to _p2_
-         *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
-         *          the following hold true:
-         *          1. _p2_ is assignable to _p1_
-         *          2. _T1_ produces _p1_
-         *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
-         *       _m1_ and _r2_ of _m2_, the following holds true:
-         *      1. _r2_ is assignable to _r1_
-         */
-        for (int i = 0; i < cReturns; i++)
-            {
-            TypeConstant constR1 = signature.getRawReturns()[i];
-            TypeConstant constR2 = getReturn(i).getType();
-
-            // perform a cheap comparison
-            if (constR2.isA(constR1))
-                {
-                continue;
-                }
-
-            // go the expensive way
-            Type typeR1 = types.resolveType(constR1, mapActual);
-            Type typeR2 = types.resolveType(constR2, mapActual);
-
-            if (!typeR2.isA(typeR1))
-                {
-                return false;
-                }
-            }
-
-        for (int i = 0; i < cParams; i++)
-            {
-            TypeConstant constP1 = signature.getRawParams()[i];
-            TypeConstant constP2 = getParam(i).getType();
-
-            if (constP1.isA(constP2))
-                {
-                continue;
-                }
-
-            Type typeP1 = types.resolveType(constP1, mapActual);
-            Type typeP2 = types.resolveType(constP2, mapActual);
 
             if (!typeP1.isA(typeP2))
                 {

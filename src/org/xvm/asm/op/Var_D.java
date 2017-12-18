@@ -81,7 +81,7 @@ public class Var_D
 
         RefHandle hRef = clz.f_template.createRefHandle(clz, null);
 
-        frame.introduceVar(clz.ensurePublicType(), null, Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceResolvedVar(clz.ensurePublicType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

@@ -76,7 +76,7 @@ public class xAtomicRef
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        TypeComposition clz = f_types.resolveClass(hThis.f_clazz.getActualParamType("RefType"));
 
                         return new Replace(clz, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
@@ -127,7 +127,8 @@ public class xAtomicRef
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        TypeComposition clz = f_types.resolveClass(
+                            hThis.f_clazz.getActualParamType("RefType"));
 
                         return new ReplaceFailed(clz, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }

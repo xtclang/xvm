@@ -12,11 +12,11 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -33,7 +33,7 @@ public class xMethod
         extends ClassTemplate
     {
     public static xMethod INSTANCE;
-    public static Type TYPE;
+    public static TypeConstant TYPE;
 
     public static Enum ACCESS;
 
@@ -91,36 +91,11 @@ public class xMethod
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
-    public static MethodHandle makeHandle(MethodStructure method, TypeComposition clz, Type typeTarget)
+    public static MethodHandle makeHandle(MethodStructure method, TypeComposition clz, TypeConstant typeTarget)
         {
-        TypeSet types = INSTANCE.f_types;
+        TypeConstant typeActual = clz.f_typeActual;
 
-        Map<String, Type> mapActualClass = clz.f_mapGenericActual;
-
-        Map<String, Type> mapActualMethod = new HashMap<>();
-        mapActualMethod.put("TargetType", typeTarget);
-
-        Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0; i < method.getParamCount(); i++)
-            {
-            Parameter parameter = method.getParam(i);
-
-            mapParams.put("ElementTypes[" + i + ']',
-                    types.resolveType(parameter.getType(), mapActualClass));
-            }
-        mapActualMethod.put("ParamTypes", xTuple.INSTANCE.ensureClass(mapParams).ensurePublicType());
-
-        Map<String, Type> mapReturns = new HashMap<>();
-        for (int i = 0; i < method.getReturnCount(); i++)
-            {
-            Parameter parameter = method.getReturn(i);
-
-            mapReturns.put("ElementTypes[" + i + ']',
-                    types.resolveType(parameter.getType(), mapActualClass));
-            }
-        mapActualMethod.put("ReturnTypes", xTuple.INSTANCE.ensureClass(mapReturns).ensurePublicType());
-
-        return new MethodHandle(INSTANCE.ensureClass(mapActualMethod), method);
+        return new MethodHandle(INSTANCE.ensureClass(typeActual), method);
         }
 
     public static class MethodHandle

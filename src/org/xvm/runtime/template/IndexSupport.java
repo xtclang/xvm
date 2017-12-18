@@ -5,10 +5,11 @@ import java.util.Collections;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.IndexedRefHandle;
@@ -27,7 +28,7 @@ public interface IndexSupport
     ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue);
 
     // obtain the [declared] element type
-    Type getElementType(ObjectHandle hTarget, long lIndex)
+    TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
 
     // get the element count
@@ -38,10 +39,9 @@ public interface IndexSupport
         {
         try
             {
-            Type typeReferent = getElementType(hTarget, lIndex);
+            TypeConstant typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
-                    Collections.singletonMap("RefType", typeReferent));
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(typeReferent); // RefType
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

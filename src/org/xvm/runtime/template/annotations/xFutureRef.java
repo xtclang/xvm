@@ -8,10 +8,11 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
@@ -32,7 +33,7 @@ public class xFutureRef
         extends Ref
     {
     public static xFutureRef INSTANCE;
-    public static Type TYPE;
+    public static TypeConstant TYPE;
     public static EnumHandle Pending;
     public static EnumHandle Result;
     public static EnumHandle Error;

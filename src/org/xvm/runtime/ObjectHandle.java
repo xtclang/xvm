@@ -3,6 +3,8 @@ package org.xvm.runtime;
 
 import java.util.Map;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.util.ListMap;
 
 
@@ -15,7 +17,7 @@ public class ObjectHandle
         implements Cloneable
     {
     final public TypeComposition f_clazz;
-    public Type m_type;
+    public TypeConstant m_type;
     protected boolean m_fMutable = false;
 
     protected ObjectHandle(TypeComposition clazz)
@@ -23,7 +25,7 @@ public class ObjectHandle
         this(clazz, clazz.ensurePublicType());
         }
 
-    protected ObjectHandle(TypeComposition clazz, Type type)
+    protected ObjectHandle(TypeComposition clazz, TypeConstant type)
         {
         f_clazz = clazz;
         m_type = type;
@@ -73,7 +75,7 @@ public class ObjectHandle
             this(clazz, clazz.ensurePublicType());
             }
 
-        public GenericHandle(TypeComposition clazz, Type type)
+        public GenericHandle(TypeComposition clazz, TypeConstant type)
             {
             super(clazz, type);
 

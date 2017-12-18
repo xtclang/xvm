@@ -8,10 +8,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Type;
 
 
 /**
@@ -85,17 +86,16 @@ public class Move
                 }
             else
                 {
-                Type typeFrom = hValue.m_type;
-                Type typeTo   = frame.getArgumentType(nTo);
+                TypeConstant typeFrom = hValue.m_type;
+                TypeConstant typeTo   = frame.getArgumentType(nTo);
 
                 switch (typeFrom.calculateRelation(typeTo))
                     {
-                    case EQUAL:
-                    case SUB:
+                    case IS_A:
                         // no need to do anything
                         break;
 
-                    case SUB_WEAK:
+                    case IS_A_WEAK:
                         // the types are assignable, but we need to inject a "safe-wrapper" proxy;
                         // for example, in the case of:
                         //      List<Object> lo;

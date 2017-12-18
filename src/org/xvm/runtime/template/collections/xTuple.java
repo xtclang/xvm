@@ -2,9 +2,6 @@ package org.xvm.runtime.template.collections;
 
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -18,7 +15,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHeap;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
@@ -59,33 +55,6 @@ public class xTuple
         }
 
     @Override
-    protected TypeComposition createCanonicalClass()
-        {
-        // this is Void.class
-        return new TypeComposition(this, Collections.EMPTY_MAP, true);
-        }
-
-    @Override
-    public TypeComposition resolveClass(TypeConstant constClassType, Map<String, Type> mapActual)
-        {
-        TypeConstant[] atypeParam = constClassType.getParamTypesArray();
-
-        int cParams = atypeParam.length;
-        if (cParams == 0)
-            {
-            return f_clazzCanonical;
-            }
-
-        Map<String, Type> mapParams = new HashMap<>();
-        for (int i = 0; i < cParams; i++)
-            {
-            mapParams.put("ElementTypes[" + i + ']',
-                    f_types.resolveType(atypeParam[i], mapActual));
-            }
-        return ensureClass(mapParams);
-        }
-
-    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constTuple = (ArrayConstant) constant;
@@ -93,10 +62,6 @@ public class xTuple
         assert constTuple.getFormat() == Constant.Format.Tuple;
 
         ObjectHeap heap = f_types.f_container.f_heapGlobal;
-
-        TypeConstant constType = constTuple.getType();
-        TypeConstant[] atypeElem = constType.getParamTypesArray();
-        Map<String, Type> mapActual = frame.getActualTypes();
 
         Constant[] aconst = constTuple.getValue();
         int c = aconst.length;
@@ -106,19 +71,15 @@ public class xTuple
             return H_VOID;
             }
 
+        TypeConstant typeTuple = constTuple.getType().resolveGenerics(frame.getGenericsResolver());
+
         ObjectHandle[] ahValue = new ObjectHandle[c];
-        Type[] aType = new Type[c];
         for (int i = 0; i < c; i++)
             {
-            Constant constValue = aconst[i];
-
-            TypeConstant constElemType = atypeElem[i];
-
-            ahValue[i] = heap.ensureConstHandle(frame, constValue.getPosition());
-            aType[i] = f_types.resolveClass(constElemType, mapActual).ensurePublicType();
+            ahValue[i] = heap.ensureConstHandle(frame, aconst[i].getPosition());
             }
 
-        TupleHandle hTuple = makeHandle(aType, ahValue);
+        TupleHandle hTuple = makeHandle(typeTuple, ahValue);
         hTuple.makeImmutable();
         return hTuple;
         }
@@ -131,7 +92,7 @@ public class xTuple
 
         ObjectHeap heap = f_types.f_container.f_heapGlobal;
 
-        for (TypeConstant constElemType : constType.getParamTypesArray())
+        for (TypeConstant constElemType : constType.getParamTypes())
             {
             ClassTemplate template = heap.getConstTemplate(constElemType);
             if (!template.isConstantCacheable(constElemType))
@@ -205,7 +166,7 @@ public class xTuple
         }
 
     @Override
-    public Type getElementType(ObjectHandle hTarget, long lIndex)
+    public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
                 throws ExceptionHandle.WrapperException
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
@@ -255,23 +216,9 @@ public class xTuple
 
     // ----- ObjectHandle helpers -----
 
-    public static TupleHandle makeHandle(Type[] aType, ObjectHandle[] ahValue)
+    public static TupleHandle makeHandle(TypeConstant typeTuple, ObjectHandle[] ahValue)
         {
-        Map<String, Type> mapParams;
-        if (aType.length == 0)
-            {
-            mapParams = Collections.EMPTY_MAP;
-            }
-        else
-            {
-            mapParams = new HashMap<>();
-            for (int i = 0, c = aType.length; i < c; i++)
-                {
-                // TODO: how to name them?
-                mapParams.put("ElementTypes[" + i + ']', aType[i]);
-                }
-            }
-        return new TupleHandle(INSTANCE.ensureClass(mapParams), ahValue);
+        return new TupleHandle(INSTANCE.ensureClass(typeTuple), ahValue);
         }
 
     public static TupleHandle makeHandle(TypeComposition clazz, ObjectHandle[] ahValue)
@@ -282,7 +229,7 @@ public class xTuple
     public static class TupleHandle
             extends ObjectHandle
         {
-        public Type[] m_aType;
+        public TypeConstant[] m_aType;
         public ObjectHandle[] m_ahValue;
         public boolean m_fFixedSize;
         public boolean m_fPersistent;

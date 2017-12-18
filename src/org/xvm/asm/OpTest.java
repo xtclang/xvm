@@ -108,7 +108,7 @@ public abstract class OpTest
         {
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(xBoolean.TYPE);
+            frame.introduceResolvedVar(xBoolean.TYPE);
             }
         return isBinaryOp() ? processBinaryOp(frame) : processUnaryOp(frame);
         }
@@ -157,7 +157,7 @@ public abstract class OpTest
 
             if (isProperty(hValue1))
                 {
-                clz1 = frame.getLocalPropertyType(m_nValue1).f_clazz;
+                clz1 = frame.getLocalClass(m_nValue1);
                 fAnyProp = true;
                 }
             else
@@ -167,7 +167,7 @@ public abstract class OpTest
 
             if (isProperty(hValue2))
                 {
-                clz2 = frame.getLocalPropertyType(m_nValue2).f_clazz;
+                clz2 = frame.getLocalClass(m_nValue2);
                 fAnyProp = true;
                 }
             else

@@ -4,9 +4,10 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TypeSet;
@@ -20,7 +21,7 @@ public class xObject
     {
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
-    public static Type TYPE;
+    public static TypeConstant TYPE;
 
     public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
         {

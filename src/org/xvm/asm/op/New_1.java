@@ -16,6 +16,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -112,24 +113,24 @@ public class New_1
                 return R_REPEAT;
                 }
 
-            IdentityConstant constClass = constructor.getParent().getParent().getIdentityConstant();
-            ClassTemplate template = frame.f_context.f_types.getTemplate(constClass);
+            IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
+            ClassTemplate template = frame.f_context.f_types.getTemplate(constClz);
+            TypeComposition clzTarget = template.f_clazzCanonical;
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(constClass.asTypeConstant());
+                frame.introduceResolvedVar(clzTarget.ensurePublicType());
                 }
 
             if (isProperty(ahVar[0]))
                 {
-                Frame.Continuation stepNext = frameCaller -> template.construct(frame, constructor,
-                        template.f_clazzCanonical, ahVar, m_nRetValue);
+                Frame.Continuation stepNext = frameCaller ->
+                    template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
                 return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
                 }
 
-            return template.construct(frame, constructor,
-                    template.f_clazzCanonical, ahVar, m_nRetValue);
+            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

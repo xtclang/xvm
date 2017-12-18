@@ -159,7 +159,7 @@ public abstract class OpCondJump
 
             if (isProperty(hValue1))
                 {
-                clz1 = frame.getLocalPropertyType(m_nArg).f_clazz;
+                clz1 = frame.getLocalClass(m_nArg);
                 fAnyProp = true;
                 }
             else
@@ -169,7 +169,7 @@ public abstract class OpCondJump
 
             if (isProperty(hValue2))
                 {
-                clz2 = frame.getLocalPropertyType(m_nArg2).f_clazz;
+                clz2 = frame.getLocalClass(m_nArg2);
                 fAnyProp = true;
                 }
             else

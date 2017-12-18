@@ -377,13 +377,4 @@ public class Adapter
         // TODO: use the type
         return mms == null ? null : mms.methods().get(0);
         }
-
-    // TODO: move this to ClassStructure
-    public static TypeConstant getContribution(ClassStructure structClass, Component.Composition composition)
-        {
-        Optional<ClassStructure.Contribution> opt = structClass.getContributionsAsList().stream().
-                filter(contribution -> contribution.getComposition().equals(composition)).findFirst();
-
-        return opt.isPresent() ? opt.get().getTypeConstant() : null;
-        }
     }

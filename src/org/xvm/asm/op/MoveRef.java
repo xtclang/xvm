@@ -3,8 +3,6 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Collections;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
@@ -79,30 +77,25 @@ public class MoveRef
 
             if (frame.isNextRegister(m_nToValue))
                 {
-                frame.introduceVar(infoSrc.getType(), null, Frame.VAR_STANDARD, hRef);
+                frame.introduceResolvedVar(infoSrc.getType());
                 }
-            else
-                {
-                // the destination type must be the same as the source
-                frame.f_ahVar[m_nToValue] = hRef;
-                }
+
+            // the destination type must be the same as the source
+            frame.f_ahVar[m_nToValue] = hRef;
             }
         else
             {
-            TypeComposition clzRef = Ref.INSTANCE.ensureClass(
-                    Collections.singletonMap("RefType", infoSrc.getType()));
+            TypeComposition clzRef = Ref.INSTANCE.ensureClass(infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 
             if (frame.isNextRegister(m_nToValue))
                 {
-                frame.introduceVar(clzRef.ensurePublicType(), null, Frame.VAR_STANDARD, hRef);
+                frame.introduceResolvedVar(clzRef.ensurePublicType());
                 }
-            else
-                {
-                // the destination type must be the same as the source
-                frame.f_ahVar[m_nToValue] = hRef;
-                }
+
+            // the destination type must be the same as the source
+            frame.f_ahVar[m_nToValue] = hRef;
             }
 
         return iPC + 1;

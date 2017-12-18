@@ -26,6 +26,7 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
@@ -184,6 +185,12 @@ public class TerminalTypeConstant
         return constId instanceof PropertyConstant
             ? resolver.resolveGenericType((PropertyConstant) constId)
             : this;
+        }
+
+    @Override
+    public TypeConstant modifyAccess(Access access)
+        {
+        return this;
         }
 
     @Override

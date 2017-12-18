@@ -8,6 +8,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -16,7 +18,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
@@ -250,7 +251,7 @@ public class Service
 
     // ----- ObjectHandle -----
 
-    public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, Type type)
+    public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, TypeConstant type)
         {
         ServiceHandle hService = new ServiceHandle(clz, type, context);
         context.setService(hService);
@@ -262,7 +263,7 @@ public class Service
         {
         public ServiceContext m_context;
 
-        public ServiceHandle(TypeComposition clazz, Type type, ServiceContext context)
+        public ServiceHandle(TypeComposition clazz, TypeConstant type, ServiceContext context)
             {
             super(clazz, type);
 

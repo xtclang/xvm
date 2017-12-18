@@ -5,8 +5,10 @@ import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -65,9 +67,10 @@ public class xInjectedRef
             ObjectHandle hValue = m_hDelegate;
             if (hValue == null)
                 {
-                Type typeEl = f_clazz.getActualType("RefType");
+                TypeConstant typeEl = f_clazz.getActualParamType("RefType");
+                TypeComposition clzEl = f_clazz.f_template.f_types.resolveClass(typeEl);
                 hValue = m_hDelegate =
-                        f_clazz.f_template.f_types.f_container.getInjectable(m_sName, typeEl.f_clazz);
+                        f_clazz.f_template.f_types.f_container.getInjectable(m_sName, clzEl);
                 if (hValue == null)
                     {
                     throw xException.makeHandle("Unknown injectable property " + m_sName).getException();

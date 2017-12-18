@@ -20,6 +20,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.StringConstant;
@@ -405,6 +406,30 @@ public abstract class Component
             }
         assert (list = Collections.unmodifiableList(m_listContribs)) != null;
         return list;
+        }
+
+    /**
+     * Find a contribution of a specified type.
+     *
+     * @param composition  the contribution category
+     *
+     * @return a first (if more than one) contribution matching the specified category
+     *         or null if none found
+     */
+    public Contribution findContribution(Composition composition)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list != null)
+            {
+            for (Contribution contrib : list)
+                {
+                if (contrib.getComposition() == composition)
+                    {
+                    return contrib;
+                    }
+                }
+            }
+        return null;
         }
 
     /**
@@ -2473,6 +2498,31 @@ public abstract class Component
             }
 
         /**
+         * Resolve this contribution type based on the specified resolver.
+         *
+         * @param resolver  the resolver
+         *
+         * @return the transformed type or null if the conditional incorporation
+         *         does not apply for the resulting type
+         */
+        public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+            {
+            TypeConstant typeContrib = getTypeConstant();
+
+            if (!typeContrib.isParamsSpecified())
+                {
+                // non-parameterized contribution
+                return typeContrib;
+                }
+
+            typeContrib = typeContrib.resolveGenerics(resolver);
+
+            return getComposition() != Composition.Incorporates ||
+                    checkConditionalIncorporate(typeContrib.getParamTypes()) ?
+                typeContrib : null;
+            }
+
+        /**
          * Transform the specified list of actual types for the specified class based on
          * this contribution definition.
          *
@@ -2944,8 +2994,8 @@ public abstract class Component
      * This is the next youngest sibling that shares a conceptual parent and a name. Components have
      * siblings only when conditions kick in; consider a module that contains a class named "util"
      * in version 1 that is replaced with a package in version 2 and version 3. Some arbitrary first
-     * sibling would have the identity of Class:(moduleconstant, "util") and a format of CLASS, with
-     * a sibling with the identify of Package:(moduleconstant, "util") and a format of PACKAGE (and
+     * sibling would have the identity of Class:(ModuleConstant, "util") and a format of CLASS, with
+     * a sibling with the identify of Package:(ModuleConstant, "util") and a format of PACKAGE (and
      * possibly one further sibling if there were changes to the package structure between version
      * 2 and 3.)
      */

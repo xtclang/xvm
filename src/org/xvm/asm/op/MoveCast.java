@@ -8,10 +8,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Type;
 
 
 /**
@@ -61,8 +62,8 @@ public class MoveCast
                 }
 
             // TODO: cast implementation
-            Type typeFrom = hValue.m_type;
-            Type typeTo   = frame.getArgumentType(m_nToValue);
+            TypeConstant typeFrom = hValue.m_type;
+            TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
 
             return frame.assignValue(m_nToValue, hValue);
             }

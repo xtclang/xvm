@@ -11,14 +11,16 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xBoolean;
@@ -35,26 +37,26 @@ import org.xvm.runtime.template.xOrdered;
  *       the extended classes (UnionComposition, InterComposition and ConstComposition)
  */
 public class TypeComposition
+        implements TypeConstant.GenericTypeResolver
     {
     public final ClassTemplate f_template;
 
-    public final Map<String, Type> f_mapGenericActual; // corresponding to the template's GenericTypeName
-    private final boolean f_fCanonical;
+    public final TypeConstant f_typeActual;
 
     private TypeComposition m_clzSuper;
-    private Type m_typePublic;
-    private Type m_typeProtected;
-    private Type m_typePrivate;
-    private Type m_typeStruct;
+    private TypeConstant m_typePublic;
+    private TypeConstant m_typeProtected;
+    private TypeConstant m_typePrivate;
+    private TypeConstant m_typeStruct;
 
     // cached "declared" call chain
-    private List<ClassTemplate> m_listDeclaredChain;
+    private List<TypeComposition> m_listDeclaredChain;
 
     // cached "default" call chain
-    private List<ClassTemplate> m_listDefaultChain;
+    private List<TypeComposition> m_listDefaultChain;
 
     // cached "full" call chain
-    private List<ClassTemplate> m_listCallChain;
+    private List<TypeComposition> m_listCallChain;
 
     // cached method call chain (the top-most method first)
     private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
@@ -68,11 +70,38 @@ public class TypeComposition
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
 
-    public TypeComposition(ClassTemplate template, Map<String, Type> mapParamsActual, boolean fCanonical)
+    public TypeComposition(ClassTemplate template, TypeConstant typeActual)
         {
+        if (typeActual.isParamsSpecified())
+            {
+            ClassStructure struct = template.f_struct;
+            assert typeActual.getParamTypesArray().length ==
+                        struct.getTypeParams().size() ||
+                   struct.getIdentityConstant().equals(
+                        struct.getConstantPool().clzTuple());
+            }
+
+        switch (typeActual.getAccess())
+            {
+            case STRUCT:
+                m_typeStruct = typeActual;
+                break;
+
+            case PUBLIC:
+                m_typePublic = typeActual;
+                break;
+
+            case PROTECTED:
+                m_typeProtected = typeActual;
+                break;
+
+            case PRIVATE:
+                m_typePrivate = typeActual;
+                break;
+            }
+
         f_template = template;
-        f_mapGenericActual = mapParamsActual;
-        f_fCanonical = fCanonical;
+        f_typeActual = typeActual;
         }
 
     public TypeComposition getSuper()
@@ -83,35 +112,48 @@ public class TypeComposition
             }
 
         ClassTemplate templateSuper = f_template.getSuper();
-        if (templateSuper != null)
+        if (templateSuper == null)
             {
-            Map<StringConstant, TypeConstant> mapFormalTypes =
-                    templateSuper.f_struct.getTypeParams();
-
-            if (mapFormalTypes.isEmpty())
-                {
-                return templateSuper.f_clazzCanonical;
-                }
-
-            Map<String, Type> mapParams = new HashMap<>();
-            for (Map.Entry<StringConstant, TypeConstant> entryFormal : mapFormalTypes.entrySet())
-                {
-                String sParamName = entryFormal.getKey().getValue();
-                if (templateSuper.f_mapGenericFormal.containsKey(sParamName))
-                    {
-                    mapParams.put(sParamName, f_mapGenericActual.get(sParamName));
-                    }
-                }
-
-            return m_clzSuper = templateSuper.ensureClass(mapParams);
+            return null;
             }
 
-        return null;
+        ClassStructure structClz      = f_template.f_struct;
+        Contribution   contribExtends = structClz.findContribution(Composition.Extends);
+        if (contribExtends != null)
+            {
+            TypeConstant typeActual = f_typeActual;
+            if (typeActual.isParamsSpecified())
+                {
+                List<TypeConstant> listActual =
+                    contribExtends.transformActualTypes(structClz, typeActual.getParamTypes());
+
+                TypeConstant typeSuper = templateSuper.f_struct.resolveType(listActual);
+
+                return m_clzSuper = templateSuper.ensureClass(typeSuper);
+                }
+            }
+
+        return m_clzSuper = templateSuper.f_clazzCanonical;
         }
 
-    public Type getActualParamType(String sName)
+
+    public TypeConstant getActualParamType(String sName)
         {
-        return f_mapGenericActual.get(sName);
+        TypeConstant type = f_template.f_struct.
+            getActualParamTypeImpl(sName, f_typeActual.getParamTypes());
+
+        if (type == null)
+            {
+            throw new IllegalArgumentException(
+                "Invalid formal name: " + sName + " for " + this);
+            }
+        return type;
+        }
+
+    @Override
+    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+        {
+        return getActualParamType(constProperty.getName());
         }
 
     public boolean isRoot()
@@ -119,14 +161,14 @@ public class TypeComposition
         return this == xObject.CLASS;
         }
 
-    public List<ClassTemplate> getCallChain()
+    public List<TypeComposition> getCallChain()
         {
         if (m_listCallChain != null)
             {
             return m_listCallChain;
             }
 
-        List<ClassTemplate> listDeclared = collectDeclaredCallChain(true);
+        List<TypeComposition> listDeclared = collectDeclaredCallChain(true);
 
         TypeComposition clzSuper = getSuper();
         if (clzSuper == null)
@@ -135,13 +177,13 @@ public class TypeComposition
             return m_listCallChain = listDeclared;
             }
 
-        List<ClassTemplate> listDefault = collectDefaultCallChain();
+        List<TypeComposition> listDefault = collectDefaultCallChain();
         if (listDefault.isEmpty())
             {
             return m_listCallChain = listDeclared;
             }
 
-        List<ClassTemplate> listMerge = new LinkedList<>(listDeclared);
+        List<TypeComposition> listMerge = new LinkedList<>(listDeclared);
         addNoDupes(listDefault, listMerge, new HashSet<>(listDeclared));
         return m_listCallChain = listMerge;
         }
@@ -164,7 +206,7 @@ public class TypeComposition
     //   2.3 followed by the "default" chain on the super class
     //
     //  @param fTop  true if this composition is the "top of the chain"
-    protected List<ClassTemplate> collectDeclaredCallChain(boolean fTop)
+    protected List<TypeComposition> collectDeclaredCallChain(boolean fTop)
         {
         if (m_listDeclaredChain != null)
             {
@@ -175,41 +217,45 @@ public class TypeComposition
         if (clzSuper == null)
             {
             // this is "Object"; it has no contribution
-            return m_listDeclaredChain = Collections.singletonList(f_template);
+            return m_listDeclaredChain = Collections.singletonList(this);
             }
 
-        ClassStructure struct = f_template.f_struct;
-        List<ClassTemplate> list = m_listDeclaredChain = new LinkedList<>();
-        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
+        ClassStructure structThis = f_template.f_struct;
+        List<TypeComposition> list = new LinkedList<>();
+        Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
         // TODO: 1.1
 
         // 1.2
-        list.add(f_template);
+        list.add(this);
 
-        Component.Format format = struct.getFormat();
+        Component.Format format = structThis.getFormat();
         if (fTop && format == Component.Format.MIXIN)
             {
             // native mix-in (e.g. FutureRef)
-            TypeConstant constInto =
-                    Adapter.getContribution(struct, Component.Composition.Into);
+            Contribution contribInto = structThis.findContribution(Composition.Into);
 
-            assert constInto != null;
+            assert contribInto != null;
 
-            TypeComposition clzInto = f_template.f_types.resolveClass(constInto, f_mapGenericActual);
+            TypeConstant typeInto = contribInto.resolveGenerics(this);
+
+            TypeComposition clzInto = f_template.f_types.resolveClass(typeInto);
 
             addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
             }
 
         // 1.3
-        for (Component.Contribution contribution : struct.getContributionsAsList())
+        for (Contribution contrib : structThis.getContributionsAsList())
             {
-            switch (contribution.getComposition())
+            switch (contrib.getComposition())
                 {
                 case Incorporates:
-                    // TODO: how to detect a conditional incorporation?
-                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
-                    addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
+                    TypeConstant typeInto = contrib.resolveGenerics(this);
+                    if (typeInto != null)
+                        {
+                        TypeComposition clzContribution = resolveClass(typeInto);
+                        addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
+                        }
                     break;
 
                 case Delegates:
@@ -223,7 +269,7 @@ public class TypeComposition
         if (templateCategory != null)
             {
             // all categories are non-generic
-            list.add(templateCategory);
+            list.add(templateCategory.f_clazzCanonical);
             }
 
         // 1.5
@@ -233,10 +279,11 @@ public class TypeComposition
             {
             addNoDupes(clzSuper.collectDeclaredCallChain(false), list, set);
             }
-        return list;
+
+        return m_listDeclaredChain = list;
         }
 
-    protected List<ClassTemplate> collectDefaultCallChain()
+    protected List<TypeComposition> collectDefaultCallChain()
         {
         if (m_listDefaultChain != null)
             {
@@ -251,45 +298,48 @@ public class TypeComposition
             }
 
         ClassStructure struct = f_template.f_struct;
-        List<ClassTemplate> list = m_listDefaultChain = new LinkedList<>();
-        Set<ClassTemplate> set = new HashSet<>(); // to avoid duplicates
+        List<TypeComposition> list = new LinkedList<>();
+        Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
         // TODO: 2.1
 
         // 2.2
         if (f_template.f_struct.getFormat() == Component.Format.INTERFACE)
             {
-            list.add(f_template);
-            set.add(f_template);
+            list.add(this);
+            set.add(this);
             }
 
-        for (Component.Contribution contribution : struct.getContributionsAsList())
+        for (Contribution contrib : struct.getContributionsAsList())
             {
-            switch (contribution.getComposition())
+            switch (contrib.getComposition())
                 {
                 case Incorporates:
-                    // TODO: how to detect a conditional incorporation?
                 case Implements:
                 case Delegates:
-                    TypeComposition clzContribution = resolveClass(contribution.getTypeConstant());
-                    addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                    TypeConstant typeInto = contrib.resolveGenerics(this);
+                    if (typeInto != null)
+                        {
+                        TypeComposition clzContribution = resolveClass(typeInto);
+                        addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
+                        }
                     break;
                 }
             }
 
         // 2.3
         addNoDupes(clzSuper.collectDefaultCallChain(), list, set);
-        return list;
+        return m_listDefaultChain = list;
         }
 
-    private void addNoDupes(List<ClassTemplate> listFrom, List<ClassTemplate> listTo,
-                            Set<ClassTemplate> setDupes)
+    private void addNoDupes(List<TypeComposition> listFrom, List<TypeComposition> listTo,
+                            Set<TypeComposition> setDupes)
         {
-        for (ClassTemplate template : listFrom)
+        for (TypeComposition clz : listFrom)
             {
-            if (setDupes.add(template))
+            if (setDupes.add(clz))
                 {
-                listTo.add(template);
+                listTo.add(clz);
                 }
             }
         }
@@ -298,8 +348,8 @@ public class TypeComposition
         {
         assert handle.f_clazz == this;
 
-        Type typeCurrent = handle.m_type;
-        Type typeTarget;
+        TypeConstant typeCurrent = handle.m_type;
+        TypeConstant typeTarget;
 
         switch (access)
             {
@@ -344,46 +394,46 @@ public class TypeComposition
         return handle;
         }
 
-    public synchronized Type ensurePublicType()
+    public synchronized TypeConstant ensurePublicType()
         {
-        Type type = m_typePublic;
+        TypeConstant type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_template.f_types.createType(this, Access.PUBLIC);
+            m_typePublic = type = f_typeActual.modifyAccess(Access.PUBLIC);
             }
         return type;
         }
-    public synchronized Type ensureProtectedType()
+    public synchronized TypeConstant ensureProtectedType()
         {
-        Type type = m_typeProtected;
+        TypeConstant type = m_typeProtected;
         if (type == null)
             {
-            m_typeProtected = type = f_template.f_types.createType(this, Access.PROTECTED);
-            }
-        return type;
-        }
-
-    public synchronized Type ensurePrivateType()
-        {
-        Type type = m_typePrivate;
-        if (type == null)
-            {
-            m_typePrivate = type = f_template.f_types.createType(this, Access.PRIVATE);
+            m_typeProtected = type = f_typeActual.modifyAccess(Access.PROTECTED);
             }
         return type;
         }
 
-    public synchronized Type ensureStructType()
+    public synchronized TypeConstant ensurePrivateType()
         {
-        Type type = m_typeStruct;
+        TypeConstant type = m_typePrivate;
         if (type == null)
             {
-            m_typeStruct = type = f_template.f_types.createType(this, Access.STRUCT);
+            m_typePrivate = type = f_typeActual.modifyAccess(Access.PRIVATE);
             }
         return type;
         }
 
-    public boolean isStruct(Type type)
+    public synchronized TypeConstant ensureStructType()
+        {
+        TypeConstant type = m_typeStruct;
+        if (type == null)
+            {
+            m_typeStruct = type = f_typeActual.modifyAccess(Access.STRUCT);
+            }
+        return type;
+        }
+
+    public boolean isStruct(TypeConstant type)
         {
         return type == m_typeStruct;
         }
@@ -391,14 +441,6 @@ public class TypeComposition
     // is this public interface of this class assignable to the specified class
     public boolean isA(TypeComposition that)
         {
-        // check the most common (and cheap) case
-        if (f_mapGenericActual.isEmpty() &&
-                this.f_template.extends_(that.f_template))
-            {
-            return true;
-            }
-
-        // go the long way
         return this.ensurePublicType().isA(that.ensurePublicType());
         }
 
@@ -409,23 +451,15 @@ public class TypeComposition
     //
     // Note: this impl is almost identical to TypeSet.resolveParameterType()
     //       but returns TypeComposition rather than Type and is more tolerant
-    public TypeComposition resolveClass(TypeConstant constType)
+    public TypeComposition resolveClass(TypeConstant type)
         {
-        return f_template.f_types.resolveClass(constType, f_mapGenericActual);
-        }
-
-    // retrieve the actual type for the specified formal parameter name
-    public Type getActualType(String sFormalName)
-        {
-        Type type = f_mapGenericActual.get(sFormalName);
-        if (type == null)
+        TypeConstant typeActual = f_typeActual;
+        if (typeActual.isParamsSpecified())
             {
-            // TODO: check the super class?
-
-            throw new IllegalArgumentException(
-                    "Invalid formal name: " + sFormalName + " for " + this);
+            type = type.resolveGenerics(f_template.f_struct.
+                new SimpleTypeResolver(typeActual.getParamTypes()));
             }
-        return type;
+        return f_template.f_types.resolveClass(type);
         }
 
     // create a sequence of frames to be called in the inverse order (the base super first)
@@ -486,17 +520,22 @@ public class TypeComposition
         {
         List<MethodStructure> list = new LinkedList<>();
 
+        if (f_typeActual.isParamsSpecified())
+            {
+            constSignature = constSignature.resolveGenericTypes(this);
+            }
+
         nextInChain:
-        for (ClassTemplate template : getCallChain())
+        for (TypeComposition clz : getCallChain())
             {
             MultiMethodStructure mms = (MultiMethodStructure)
-                template.f_struct.getChild(constSignature.getName());
+                clz.f_template.f_struct.getChild(constSignature.getName());
             if (mms != null)
                 {
                 for (MethodStructure method : mms.methods())
                     {
                     if (method.getAccess().compareTo(access) <= 0 &&
-                        method.isCallableFor(constSignature, this))
+                        method.isSubstitutableFor(constSignature, this))
                         {
                         list.add(method);
 
@@ -536,8 +575,9 @@ public class TypeComposition
         PropertyStructure propertyBase = null;
         List<MethodStructure> list = new LinkedList<>();
 
-        for (ClassTemplate template : getCallChain())
+        for (TypeComposition clz : getCallChain())
             {
+            ClassTemplate template = clz.f_template;
             PropertyStructure property = template.getProperty(sPropName);
             if (property != null)
                 {
@@ -615,8 +655,10 @@ public class TypeComposition
 
         m_mapFields = mapCached = new HashMap<>();
 
-        for (ClassTemplate template : collectDeclaredCallChain(true))
+        for (TypeComposition clz : collectDeclaredCallChain(true))
             {
+            ClassTemplate template = clz.f_template;
+
             for (Component child : template.f_struct.children())
                 {
                 if (child instanceof PropertyStructure)
@@ -645,36 +687,6 @@ public class TypeComposition
             }
 
         mapFields.putAll(mapCached);
-        }
-
-    /**
-     * Determine if this class consumes a formal type with the specified name.
-     */
-    public boolean consumesFormalType(String sName, Access access)
-        {
-        for (ClassTemplate template : getCallChain())
-            {
-            if (!template.consumesFormalType(sName, access))
-                {
-                return false;
-                }
-            }
-        return true;
-        }
-
-    /**
-     * Determine if this class produces a formal type with the specified name.
-     */
-    public boolean producesFormalType(String sName, Access access)
-        {
-        for (ClassTemplate template : getCallChain())
-            {
-            if (!template.producesFormalType(sName, access))
-                {
-                return false;
-                }
-            }
-        return true;
         }
 
     // ---- support for op-codes that require class specific information -----
@@ -717,7 +729,6 @@ public class TypeComposition
     @Override
     public String toString()
         {
-        return f_template.f_struct.getIdentityConstant().getPathString() +
-                Utils.formatArray(f_mapGenericActual.values().toArray(), "<", ">", ", ");
+        return f_typeActual.toString();
         }
     }

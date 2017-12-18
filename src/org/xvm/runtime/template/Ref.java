@@ -6,11 +6,12 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.Type;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TypeSet;
 
@@ -22,7 +23,7 @@ public class Ref
         extends ClassTemplate
     {
     public static Ref INSTANCE;
-    public static Type TYPE;
+    public static TypeConstant TYPE;
 
     public Ref(TypeSet types, ClassStructure structure, boolean fInstance)
         {

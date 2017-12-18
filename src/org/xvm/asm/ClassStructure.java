@@ -140,27 +140,92 @@ public class ClassStructure
         markModified();
         }
 
-    public TypeConstant getFormalType()
+    /**
+     * @return true if this class is parameterized (generic)
+     */
+    public boolean isParameterized()
         {
-        IdentityConstant                      constantClz = getIdentityConstant();
-        ListMap<StringConstant, TypeConstant> mapParams   = m_mapParams;
-        if (mapParams == null)
-            {
-            return constantClz.asTypeConstant();
-            }
-
-        ConstantPool   pool    = getConstantPool();
-        TypeConstant[] aparams = new TypeConstant[mapParams.size()];
-        int i = 0;
-        for (StringConstant constantName : mapParams.keySet())
-            {
-            aparams[i++] = pool.ensureTerminalTypeConstant(
-                    pool.ensurePropertyConstant(constantClz, constantName.getValue()));
-            }
-
-        return pool.ensureClassTypeConstant(constantClz, null, aparams);
+        return m_mapParams != null;
         }
 
+    /**
+     * @return the formal type (e.g. Map<KeyType, ValueType>)
+     */
+    public TypeConstant getFormalType()
+        {
+        TypeConstant typeFormal = m_typeFormal;
+        if (typeFormal == null)
+            {
+            IdentityConstant constantClz = getIdentityConstant();
+
+            ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
+            if (mapParams == null)
+                {
+                typeFormal = constantClz.asTypeConstant();
+                }
+            else
+                {
+                ConstantPool   pool   = getConstantPool();
+                TypeConstant[] aParam = new TypeConstant[mapParams.size()];
+                int i = 0;
+                for (StringConstant constName : mapParams.keySet())
+                    {
+                    aParam[i++] = pool.ensureTerminalTypeConstant(
+                            pool.ensurePropertyConstant(constantClz, constName.getValue()));
+                    }
+
+                typeFormal = pool.ensureClassTypeConstant(constantClz, null, aParam);
+                }
+            m_typeFormal = typeFormal;
+            }
+        return typeFormal;
+        }
+
+    /**
+     * @return the canonical type (e.g. Map<Object, Object>)
+     */
+    public TypeConstant getCanonicalType()
+        {
+        TypeConstant typeCanonical = m_typeCanonical;
+        if (typeCanonical == null)
+            {
+            IdentityConstant constClz = getIdentityConstant();
+
+            ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
+            if (mapParams == null)
+                {
+                typeCanonical = constClz.asTypeConstant();
+                }
+            else
+                {
+                typeCanonical = getConstantPool().ensureClassTypeConstant(
+                    constClz, null, mapParams.values().toArray(new TypeConstant[mapParams.size()]));
+                }
+            m_typeCanonical = typeCanonical;
+            }
+        return typeCanonical;
+        }
+
+    /**
+     * Resolve the formal type for this class based on the specified list of actual types.
+     *
+     * @param  listActual  the list of actual types
+     *
+     * @return
+     */
+    public TypeConstant resolveType(List<TypeConstant> listActual)
+        {
+        int cParams = m_mapParams == null ? 0 : m_mapParams.size();
+        if (listActual.size() != cParams)
+            {
+            throw new IllegalArgumentException("Invalid actual type list size: " +
+                listActual.size() + " expected: " + cParams);
+            }
+
+        return cParams > 0
+            ? getFormalType().resolveGenerics(new SimpleTypeResolver(listActual))
+            : getCanonicalType();
+        }
 
     // ----- component methods ---------------------------------------------------------------------
 
@@ -300,6 +365,70 @@ public class ClassStructure
         }
 
     /**
+     * Recursively find the type for the specified formal name.
+     */
+    public TypeConstant getActualParamTypeImpl(String sName, List<TypeConstant> listActual)
+        {
+        // TODO: use the type info when done
+        return getActualParamTypeImpl(sName, listActual, true);
+        }
+
+    /**
+     * Recursive implementation of collectContributions method.
+     *
+     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
+     */
+    protected TypeConstant getActualParamTypeImpl(String sName, List<TypeConstant> listActual,
+                                                  boolean fAllowInto)
+        {
+        int ix = indexOfFormalParameter(sName);
+        if (ix >= 0)
+            {
+            return listActual.get(ix);
+            }
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Delegates:
+                    // TODO:
+                    break;
+
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        break;
+                        }
+                case Impersonates:
+                case Implements:
+                case Incorporates:
+                case Extends:
+                    TypeConstant typeContrib = contrib.getTypeConstant();
+                    if (typeContrib.isParamsSpecified())
+                        {
+                        ClassStructure clzContrib = (ClassStructure)
+                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                                getComponent();
+                        TypeConstant type = clzContrib.getActualParamTypeImpl(sName,
+                            typeContrib.getParamTypes(), false);
+                        if (type != null)
+                            {
+                            return type;
+                            }
+                        }
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return null;
+        }
+
+    /**
      * Recursively find a contribution by the specified id and add the corresponding
      * ContributionChain objects to the list of chains.
      *
@@ -328,9 +457,7 @@ public class ClassStructure
             return chains;
             }
 
-        ClassStructure structCur = this;
-
-        for (Contribution contrib : structCur.getContributionsAsList())
+        for (Contribution contrib : getContributionsAsList())
             {
             Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
             if (constContrib.equals(constId))
@@ -467,10 +594,11 @@ public class ClassStructure
 
                         if (listContribActual != null)
                             {
-                            ClassStructure clzSuper = (ClassStructure)
+                            ClassStructure clzContrib = (ClassStructure)
                                 ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                     getComponent();
-                            if (clzSuper.consumesFormalTypeImpl(
+
+                            if (clzContrib.consumesFormalTypeImpl(
                                     sGenericName, access, listContribActual, false))
                                 {
                                 return true;
@@ -571,10 +699,11 @@ public class ClassStructure
 
                         if (listContribActual != null)
                             {
-                            ClassStructure clzSuper = (ClassStructure)
+                            ClassStructure clzContrib = (ClassStructure)
                                 ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                     getComponent();
-                            if (clzSuper.producesFormalTypeImpl(
+
+                            if (clzContrib.producesFormalTypeImpl(
                                 sGenericName, access, listContribActual, false))
                                 {
                                 return true;
@@ -698,10 +827,13 @@ public class ClassStructure
             {
             MultiMethodStructure mms = (MultiMethodStructure) child;
 
+            TypeConstant.GenericTypeResolver resolver = listParams.isEmpty() ? null :
+                new SimpleTypeResolver(listParams);
+
             for (MethodStructure method : mms.methods())
                 {
                 if (!method.isStatic() && method.isAccessible(access) &&
-                    method.isSubstitutableFor(signature, listParams))
+                    method.isSubstitutableFor(signature, resolver))
                     {
                     return true;
                     }
@@ -732,11 +864,11 @@ public class ClassStructure
 
                     if (listContribActual != null)
                         {
-                        ClassStructure clzSuper = (ClassStructure)
+                        ClassStructure clzContrib = (ClassStructure)
                             ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                 getComponent();
 
-                        if (clzSuper.containsSubstitutableMethod(signature,
+                        if (clzContrib.containsSubstitutableMethod(signature,
                                 access, listContribActual))
                             {
                             return true;
@@ -804,12 +936,12 @@ public class ClassStructure
 
                     if (listContribActual != null)
                         {
-                        ClassStructure clzSuper = (ClassStructure)
+                        ClassStructure clzContrib = (ClassStructure)
                             ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                 getComponent();
 
-                        if (clzSuper.containsSubstitutableProperty(signature,
-                            access, listContribActual))
+                        if (clzContrib.containsSubstitutableProperty(signature,
+                                access, listContribActual))
                             {
                             return true;
                             }
@@ -931,10 +1063,21 @@ public class ClassStructure
      */
     private ListMap<StringConstant, TypeConstant> m_mapParams;
 
+    /**
+     * Cached formal type.
+     */
+    private transient TypeConstant m_typeFormal;
+
+    /**
+     * Cached canonical type.
+     */
+    private transient TypeConstant m_typeCanonical;
+
+
     // ----- inner classes ------------------------------------------------------------------
 
     /**
-     * Generic type resolver based on an actual parameter list.
+     * Generic type resolver based on the actual parameter list.
      */
     public class SimpleTypeResolver
             implements TypeConstant.GenericTypeResolver
