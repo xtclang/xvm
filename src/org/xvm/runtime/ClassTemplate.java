@@ -64,9 +64,6 @@ public abstract class ClassTemplate
     // cache of TypeCompositions
     protected Map<TypeConstant, TypeComposition> m_mapCompositions = new HashMap<>();
 
-    // cache of relationships
-    protected enum Relation {EXTENDS, IMPLEMENTS, INCOMPATIBLE}
-
     // construct the template
     public ClassTemplate(TypeSet types, ClassStructure structClass)
         {

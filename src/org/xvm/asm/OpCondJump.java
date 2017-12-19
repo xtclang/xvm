@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.xvm.asm.op.JumpEq;
 import org.xvm.asm.op.Label;
 
 import org.xvm.runtime.Frame;

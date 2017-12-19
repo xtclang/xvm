@@ -664,7 +664,8 @@ public abstract class TypeConstant
      * @return a list of ContributionChain objects that describe how "that" type could be found in
      *         the contribution tree of "this" type; empty if the types are incompatible
      */
-    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+    protected List<ContributionChain> collectContributions(TypeConstant that,
+                                                           List<ContributionChain> chains)
         {
         return getUnderlyingType().collectContributions(that, chains);
         }
@@ -736,8 +737,8 @@ public abstract class TypeConstant
      *
      *  @return true iff the specified type could be assigned to this interface type
      */
-    public boolean containsSubstitutableProperty(SignatureConstant signature,
-                                                 Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
+                                                 List<TypeConstant> listParams)
         {
         return getUnderlyingType().containsSubstitutableProperty(signature, access, listParams);
         }
@@ -752,34 +753,12 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this type consumes a formal type with the specified name in context
-     * of the given TypeComposition and access policy.
-     *
-     * @deprecated remove after switching to the above method
-     */
-    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        return getUnderlyingType().consumesFormalType(sTypeName, types, access);
-        }
-
-    /**
      * Determine if this type produces a formal type with the specified name in context
      * of the given TypeComposition and access policy.
      */
     public boolean producesFormalType(String sTypeName, Access access)
         {
         return getUnderlyingType().producesFormalType(sTypeName, access);
-        }
-
-    /**
-     * Determine if this type produces a formal type with the specified name in context
-     * of the given TypeComposition and access policy.
-     *
-     * @deprecated remove after switching to the above method
-     */
-    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        return getUnderlyingType().producesFormalType(sTypeName, types, access);
         }
 
     /**
@@ -901,6 +880,9 @@ public abstract class TypeConstant
 
     // ----- run-time support ----------------------------------------------------------------------
 
+    /**
+     * @return a handle for the Type object represented by this TypeConstant
+     */
     public TypeHandle getHandle()
         {
         TypeHandle hType = m_handle;

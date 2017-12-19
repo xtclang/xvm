@@ -423,8 +423,7 @@ public class ServiceContext
     // create a "proto"-frame
     protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative)
         {
-        // create a pseudo frame that has variables to collect
-        // the return values
+        // create a pseudo frame that has variables to collect the return values
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
         Fiber fiber = new Fiber(this, msg);
@@ -432,7 +431,7 @@ public class ServiceContext
 
         for (int nVar = 0; nVar < cReturns; nVar++)
             {
-            frame.f_aInfo[nVar] = frame.new VarInfo(xObject.TYPE, Frame.VAR_STANDARD);
+            frame.f_aInfo[nVar] = frame.new VarInfo(f_pool.typeObject(), Frame.VAR_STANDARD);
             }
         return frame;
         }

@@ -4,8 +4,6 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -21,7 +19,6 @@ public class xObject
     {
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
-    public static TypeConstant TYPE;
 
     public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
         {
@@ -31,7 +28,6 @@ public class xObject
             {
             INSTANCE = this;
             CLASS = f_clazzCanonical;
-            TYPE = CLASS.ensurePublicType();
             }
         }
 

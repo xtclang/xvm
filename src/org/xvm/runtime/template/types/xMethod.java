@@ -1,14 +1,10 @@
 package org.xvm.runtime.template.types;
 
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -22,8 +18,6 @@ import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.Enum;
 import org.xvm.runtime.template.xString;
-
-import org.xvm.runtime.template.collections.xTuple;
 
 
 /**

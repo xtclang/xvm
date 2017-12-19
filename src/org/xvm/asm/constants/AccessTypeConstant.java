@@ -149,18 +149,6 @@ public class AccessTypeConstant
         return super.producesFormalType(sTypeName, m_access);
         }
 
-    @Override // TODO: remove
-    public boolean consumesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        return getUnderlyingType().consumesFormalType(sTypeName, types, m_access);
-        }
-
-    @Override // TODO: remove
-    public boolean producesFormalType(String sTypeName, TypeSet types, Access access)
-        {
-        return getUnderlyingType().producesFormalType(sTypeName, types, m_access);
-        }
-
     @Override
     public boolean isNullable()
         {

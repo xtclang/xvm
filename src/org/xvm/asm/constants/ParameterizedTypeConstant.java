@@ -447,7 +447,8 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
+                                                               List<TypeConstant> listParams)
         {
         return super.isInterfaceAssignableFrom(that, access, getParamTypes());
         }
@@ -517,13 +518,15 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
+                                               List<TypeConstant> listParams)
         {
         return super.containsSubstitutableMethod(signature, access, getParamTypes());
         }
 
     @Override
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
+                                                 List<TypeConstant> listParams)
         {
         return super.containsSubstitutableProperty(signature, access, getParamTypes());
         }

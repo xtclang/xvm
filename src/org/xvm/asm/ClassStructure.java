@@ -365,18 +365,19 @@ public class ClassStructure
         }
 
     /**
-     * Recursively find the type for the specified formal name.
+     * Recursively find the type for the specified formal name. Note that the formal name could
+     * be introduced by some contributions, rather than this class itself.
      */
-    public TypeConstant getActualParamTypeImpl(String sName, List<TypeConstant> listActual)
+    public TypeConstant getActualParamType(String sName, List<TypeConstant> listActual)
         {
         // TODO: use the type info when done
         return getActualParamTypeImpl(sName, listActual, true);
         }
 
     /**
-     * Recursive implementation of collectContributions method.
+     * Recursive implementation of getActualParamType method.
      *
-     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
+     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      */
     protected TypeConstant getActualParamTypeImpl(String sName, List<TypeConstant> listActual,
                                                   boolean fAllowInto)

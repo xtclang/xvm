@@ -66,7 +66,7 @@ public class xArray
         TypeComposition clzArray = f_types.resolveClass(typeArray);
 
         TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        TypeComposition clzEl = typeEl == null ? xObject.CLASS :  f_types.resolveClass(typeEl);
+        TypeComposition clzEl = f_types.resolveClass(typeEl);
         ClassTemplate templateEl = clzEl.f_template;
 
         Constant[] aconst = constArray.getValue();
@@ -107,7 +107,7 @@ public class xArray
         {
         // this is a native constructor
         TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        TypeComposition clzEl = typeEl == null ? xObject.CLASS :  f_types.resolveClass(typeEl);
+        TypeComposition clzEl = f_types.resolveClass(typeEl);
         ClassTemplate templateEl = clzEl.f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
@@ -157,7 +157,7 @@ public class xArray
         TypeConstant type2 = getElementType(hArray2, 0);
 
         TypeComposition clazzEl = f_types.resolveClass(type1);
-        if (clazzEl == null || clazzEl != f_types.resolveClass(type2))
+        if (clazzEl != f_types.resolveClass(type2))
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }

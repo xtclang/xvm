@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -101,11 +100,9 @@ public class Adapter
             String sSimpleName = sName.substring(0, ofTypeParam);
 
             // TODO: auto-narrowing (ThisTypeConstant)
-            boolean fAutoNarrow = true;
             if (sSimpleName.endsWith("!"))
                 {
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
-                fAutoNarrow = false;
                 }
 
             ClassConstant constClass = f_container.f_types.getClassConstant(sSimpleName);

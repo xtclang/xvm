@@ -858,7 +858,7 @@ public class Frame
 
         ObjectHandle[] ahArg = new ObjectHandle[cVars];
 
-        for (int i = 0, c = cArgs; i < c; i++)
+        for (int i = 0; i < cArgs; i++)
             {
             ObjectHandle hArg = getArgument(aiArg[i]);
             if (hArg == null)

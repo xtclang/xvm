@@ -76,7 +76,8 @@ public class xAtomicRef
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeComposition clz = f_types.resolveClass(hThis.f_clazz.getActualParamType("RefType"));
+                        TypeComposition clz = f_types.resolveClass(
+                            hThis.f_clazz.getActualParamType("RefType"));
 
                         return new Replace(clz, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }

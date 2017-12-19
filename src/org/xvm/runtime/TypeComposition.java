@@ -78,7 +78,7 @@ public class TypeComposition
             assert typeActual.getParamTypesArray().length ==
                         struct.getTypeParams().size() ||
                    struct.getIdentityConstant().equals(
-                        struct.getConstantPool().clzTuple());
+                       struct.getConstantPool().clzTuple());
             }
 
         switch (typeActual.getAccess())
@@ -136,11 +136,18 @@ public class TypeComposition
         return m_clzSuper = templateSuper.f_clazzCanonical;
         }
 
-
+    /**
+     * Find the type for the specified formal parameter. Note that the formal name could be declared
+     * by some contributions, rather than this class itself.
+     *
+     * @param sName  the formal parameter name
+     *
+     * @return the corresponding actual type
+     */
     public TypeConstant getActualParamType(String sName)
         {
         TypeConstant type = f_template.f_struct.
-            getActualParamTypeImpl(sName, f_typeActual.getParamTypes());
+            getActualParamType(sName, f_typeActual.getParamTypes());
 
         if (type == null)
             {
