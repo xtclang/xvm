@@ -229,7 +229,7 @@ public class ParameterizedTypeConstant
             {
             ContributionChain chain = iter.next();
 
-            List<TypeConstant> listActual;
+            List<TypeConstant> listParams;
 
             switch (chain.getOrigin().getComposition())
                 {
@@ -239,20 +239,21 @@ public class ParameterizedTypeConstant
 
                 case Equal:
                     assert chain.getDepth() == 1;
-                    listActual = getParamTypes();
+                    listParams = getParamTypes();
                     break;
 
+                case Delegates:
+                case Implements:
+                    // TODO: what if the contribution is a relational type
                 case Extends:
                 case Incorporates:
                 case Into:
                 case Impersonates:
-                case Implements:
-                case Delegates:
                     {
                     ClassStructure clzThis = (ClassStructure)
                         ((IdentityConstant) getDefiningConstant()).getComponent();
 
-                    listActual = chain.propagateActualTypes(clzThis, getParamTypes());
+                    listParams = chain.propagateActualTypes(clzThis, getParamTypes());
                     break;
                     }
 
@@ -261,7 +262,7 @@ public class ParameterizedTypeConstant
                 }
 
             // by now we know that the "contrib" and "that" have equivalent terminal types
-            if (listActual == null)
+            if (listParams == null)
                 {
                 // a conditional contribution didn't apply
                 iter.remove();
@@ -274,18 +275,19 @@ public class ParameterizedTypeConstant
                 continue;
                 }
 
-            List<TypeConstant> listThat = that.getParamTypes();
-            ClassStructure     clzThat  = (ClassStructure)
+            Access             accessThat = that.getAccess();
+            List<TypeConstant> listThat   = that.getParamTypes();
+            ClassStructure     clzThat    = (ClassStructure)
                 ((IdentityConstant) that.getDefiningConstant()).getComponent();
 
-            assert listActual.size() == listThat.size();
+            assert listParams.size() == listThat.size();
             assert listThat.size() == clzThat.getTypeParams().size();
 
             Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
 
             for (int i = 0, c = listThat.size(); i < c; i++)
                 {
-                TypeConstant typeThis = listActual.get(i);
+                TypeConstant typeThis = listParams.get(i);
                 TypeConstant typeThat = listThat.get(i);
                 String       sName    = iterNames.next().getValue();
 
@@ -294,7 +296,7 @@ public class ParameterizedTypeConstant
                     continue;
                     }
 
-                boolean fProduce = clzThat.producesFormalType(sName, that.getAccess(), listThat);
+                boolean fProduce = clzThat.producesFormalType(sName, accessThat, listThat);
 
                 if (typeThat.isA(typeThis) && !fProduce)
                     {
@@ -306,7 +308,7 @@ public class ParameterizedTypeConstant
                     {
                     // there are some producing methods; rule 1.2.2.2
                     // consuming methods will need to be "wrapped"
-                    if (clzThat.consumesFormalType(sName, that.getAccess(), listActual))
+                    if (clzThat.consumesFormalType(sName, accessThat, listParams))
                         {
                         chain.markWeakMatch();
                         }

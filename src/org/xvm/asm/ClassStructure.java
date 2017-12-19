@@ -211,7 +211,7 @@ public class ClassStructure
      *
      * @param  listActual  the list of actual types
      *
-     * @return
+     * @return the resolved type
      */
     public TypeConstant resolveType(List<TypeConstant> listActual)
         {
