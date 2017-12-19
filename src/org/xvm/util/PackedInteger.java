@@ -257,9 +257,9 @@ public class PackedInteger
     /**
      * Add the value of a specified PackedInteger to this PackedInteger, resulting in a new
      * PackedInteger.
-     * 
+     *
      * @param that  a second PackedInteger to add to this
-     * 
+     *
      * @return the resulting PackedInteger
      */
     public PackedInteger add(PackedInteger that)
@@ -279,7 +279,7 @@ public class PackedInteger
         {
         return new PackedInteger(this.getBigInteger().subtract(that.getBigInteger()));
         }
-    
+
     /**
      * Multiply the value of a specified PackedInteger by this PackedInteger, resulting in a new
      * PackedInteger.
@@ -292,7 +292,7 @@ public class PackedInteger
         {
         return new PackedInteger(this.getBigInteger().multiply(that.getBigInteger()));
         }
-    
+
     /**
      * Divide the value of this PackedInteger by the specified PackedInteger, resulting in a new
      * PackedInteger.
@@ -305,7 +305,7 @@ public class PackedInteger
         {
         return new PackedInteger(this.getBigInteger().divide(that.getBigInteger()));
         }
-    
+
     /**
      * Calculate the modulo of the value of this PackedInteger and the value of a specified
      * PackedInteger, resulting in a new PackedInteger.
@@ -370,7 +370,7 @@ public class PackedInteger
         {
         return new PackedInteger(this.getBigInteger().shiftLeft(that.getInt()));
         }
-    
+
     /**
      * Logical shift right the bits in the value of this PackedInteger by the value of a specified
      * PackedInteger, resulting in a new PackedInteger.
@@ -385,7 +385,7 @@ public class PackedInteger
                 ? this
                 : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
         }
-    
+
     /**
      * Arithmetic (aka "unsigned") shift right the bits in the value of this PackedInteger by the
      * value of a specified PackedInteger, resulting in a new PackedInteger.
@@ -400,7 +400,7 @@ public class PackedInteger
                 ? this
                 : new PackedInteger(this.getBigInteger().shiftRight(that.getInt()));
         }
-    
+
     /**
      * Compare the value of a specified PackedInteger with the value of this PackedInteger.
      *
@@ -412,7 +412,7 @@ public class PackedInteger
         {
         return this.getBigInteger().compareTo(that.getBigInteger());
         }
-    
+
     /**
      * Format the PackedInteger as a String of the specified radix, including a radix prefix for
      * any non-decimal radix.
@@ -656,7 +656,7 @@ public class PackedInteger
      *
      * @throws IllegalArgumentException if the BigInteger is out of range
      */
-    private static int calculateUnignedByteCount(BigInteger bigint)
+    private static int calculateUnsignedByteCount(BigInteger bigint)
         {
         // TODO this is from the signed version
         // return (bigint.bitLength() + 7) / 8;

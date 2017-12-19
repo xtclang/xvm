@@ -14,9 +14,6 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.Constants;
-import org.xvm.runtime.TypeSet;
-
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -138,15 +135,17 @@ public class AccessTypeConstant
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access)
+    public boolean consumesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return super.consumesFormalType(sTypeName, m_access);
+        return super.consumesFormalType(sTypeName, m_access, listParams);
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access)
+    public boolean producesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return super.producesFormalType(sTypeName, m_access);
+        return super.producesFormalType(sTypeName, m_access, listParams);
         }
 
     @Override

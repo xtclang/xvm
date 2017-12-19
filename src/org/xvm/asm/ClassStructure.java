@@ -10,8 +10,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Set;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -402,8 +402,9 @@ public class ClassStructure
                         {
                         break;
                         }
-                case Impersonates:
                 case Implements:
+                    // TODO: what if the underlying type is relational
+                case Impersonates:
                 case Incorporates:
                 case Extends:
                     TypeConstant typeContrib = contrib.getTypeConstant();
@@ -460,19 +461,6 @@ public class ClassStructure
 
         for (Contribution contrib : getContributionsAsList())
             {
-            Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
-            if (constContrib.equals(constId))
-                {
-                chains.add(new ContributionChain(contrib));
-                continue;
-                }
-
-            if (constContrib.equals(getConstantPool().clzObject()))
-                {
-                // trivial Object contribution
-                continue;
-                }
-
             switch (contrib.getComposition())
                 {
                 case Annotation:
@@ -485,12 +473,27 @@ public class ClassStructure
                         {
                         break;
                         }
-                case Impersonates:
                 case Implements:
+                    // TODO: what if the underlying type is relational
+                case Impersonates:
                 case Incorporates:
                 case Extends:
+                    {
                     // the identity constant of the contribution is always a class
                     // (Module and Package cannot be extended)
+                    Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
+                    if (constContrib.equals(constId))
+                        {
+                        chains.add(new ContributionChain(contrib));
+                        continue;
+                        }
+
+                    if (constContrib.equals(getConstantPool().clzObject()))
+                        {
+                        // trivial Object contribution
+                        continue;
+                        }
+
                     ClassConstant constSuper = (ClassConstant) constContrib;
                     chains = ((ClassStructure) constSuper.getComponent()).
                         collectContributionsImpl(constId, chains, false);
@@ -502,6 +505,7 @@ public class ClassStructure
                             }
                         }
                     break;
+                    }
 
                 default:
                     throw new IllegalStateException();
@@ -547,20 +551,26 @@ public class ClassStructure
                     }
 
                 TypeConstant constType = property.getType();
+                if (!listActual.isEmpty())
+                    {
+                    constType = constType.resolveGenerics(new SimpleTypeResolver(listActual));
+                    }
 
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if ((methodGet == null || methodGet.isAccessible(access))
-                        && constType.consumesFormalType(sName, Access.PUBLIC))
+                        && constType.consumesFormalType(sName,
+                                Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getSetter(property);
                 if ((methodSet == null || methodSet.isAccessible(access))
-                        && constType.producesFormalType(sName, Access.PUBLIC))
+                        && constType.producesFormalType(sName,
+                                Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     return true;
                     }
@@ -582,10 +592,11 @@ public class ClassStructure
                         {
                         break;
                         }
-                case Impersonates:
                 case Implements:
-                case Incorporates:
+                    // TODO: what if the underlying type is relational
                 case Extends:
+                case Impersonates:
+                case Incorporates:
                     {
                     String sGenericName = contrib.transformGenericName(this, sName);
                     if (sGenericName != null)
@@ -652,20 +663,26 @@ public class ClassStructure
                     }
 
                 TypeConstant constType = property.getType();
+                if (!listActual.isEmpty())
+                    {
+                    constType = constType.resolveGenerics(new SimpleTypeResolver(listActual));
+                    }
 
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if ((methodGet == null || methodGet.isAccessible(access)
-                        && constType.producesFormalType(sName, Access.PUBLIC)))
+                        && constType.producesFormalType(sName,
+                                Access.PUBLIC, Collections.EMPTY_LIST)))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getSetter(property);
                 if ((methodSet == null || methodSet.isAccessible(access))
-                        && constType.consumesFormalType(sName, Access.PUBLIC))
+                        && constType.consumesFormalType(sName,
+                                Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     return true;
                     }
@@ -682,15 +699,16 @@ public class ClassStructure
                     // TODO:
                     break;
 
-                case Impersonates:
-                case Implements:
-                case Incorporates:
                 case Into:
                     if (!fAllowInto)
                         {
                         break;
                         }
+                case Implements:
+                    // TODO: what if the underlying type is relational
                 case Extends:
+                case Impersonates:
+                case Incorporates:
                     {
                     String sGenericName = contrib.transformGenericName(this, sName);
                     if (sGenericName != null)
@@ -855,8 +873,9 @@ public class ClassStructure
                         {
                         break;
                         }
-                case Impersonates:
                 case Implements:
+                    // TODO: what if the underlying type is relational
+                case Impersonates:
                 case Incorporates:
                 case Extends:
                     {
@@ -927,8 +946,9 @@ public class ClassStructure
                         {
                         break;
                         }
-                case Impersonates:
                 case Implements:
+                    // TODO: what if the underlying type is relational
+                case Impersonates:
                 case Incorporates:
                 case Extends:
                     {

@@ -736,6 +736,6 @@ public class TypeComposition
     @Override
     public String toString()
         {
-        return f_typeActual.toString();
+        return f_typeActual.getValueString();
         }
     }

@@ -11,6 +11,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -23,8 +24,6 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
-
-import org.xvm.runtime.TypeSet;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -449,7 +448,8 @@ public class MethodStructure
         {
         for (Parameter param : getParams())
             {
-            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
+            if (param.getType().consumesFormalType(sTypeName,
+                    Access.PUBLIC, Collections.EMPTY_LIST))
                 {
                 return true;
                 }
@@ -457,7 +457,8 @@ public class MethodStructure
 
         for (Parameter param : getReturns())
             {
-            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
+            if (param.getType().producesFormalType(sTypeName,
+                    Access.PUBLIC, Collections.EMPTY_LIST))
                 {
                 return true;
                 }
@@ -478,7 +479,8 @@ public class MethodStructure
         {
         for (Parameter param : getParams())
             {
-            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
+            if (param.getType().producesFormalType(sTypeName,
+                    Access.PUBLIC, Collections.EMPTY_LIST))
                 {
                 return true;
                 }
@@ -486,7 +488,8 @@ public class MethodStructure
 
         for (Parameter param : getReturns())
             {
-            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
+            if (param.getType().consumesFormalType(sTypeName,
+                    Access.PUBLIC, Collections.EMPTY_LIST))
                 {
                 return true;
                 }

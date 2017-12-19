@@ -6,13 +6,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -262,17 +262,19 @@ public abstract class RelationalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access)
+    public boolean producesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return getUnderlyingType().producesFormalType(sTypeName, access)
-            || getUnderlyingType2().producesFormalType(sTypeName, access);
+        return getUnderlyingType().producesFormalType(sTypeName, access, listParams)
+            || getUnderlyingType2().producesFormalType(sTypeName, access, listParams);
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access)
+    public boolean consumesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return getUnderlyingType().consumesFormalType(sTypeName, access)
-            || getUnderlyingType2().consumesFormalType(sTypeName, access);
+        return getUnderlyingType().consumesFormalType(sTypeName, access, listParams)
+            || getUnderlyingType2().consumesFormalType(sTypeName, access, listParams);
         }
 
     // ----- Constant methods ----------------------------------------------------------------------

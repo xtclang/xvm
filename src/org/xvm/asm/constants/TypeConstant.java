@@ -23,8 +23,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.runtime.TypeSet;
-
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
@@ -746,19 +744,33 @@ public abstract class TypeConstant
     /**
      * Determine if this type consumes a formal type with the specified name in context
      * of the given TypeComposition and access policy.
+     *
+     * @param sTypeName   the formal type name
+     * @param access      the access level to limit the check to
+     * @param listParams  the list of actual generic parameters
+     *
+     * @return true iff this type is a consumer of the specified formal type
      */
-    public boolean consumesFormalType(String sTypeName, Access access)
+    public boolean consumesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return getUnderlyingType().consumesFormalType(sTypeName, access);
+        return getUnderlyingType().consumesFormalType(sTypeName, access, listParams);
         }
 
     /**
      * Determine if this type produces a formal type with the specified name in context
      * of the given TypeComposition and access policy.
+     *
+     * @param sTypeName   the formal type name
+     * @param access      the access level to limit the check to
+     * @param listParams  the list of actual generic parameters
+     *
+     * @return true iff this type is a producer of the specified formal type
      */
-    public boolean producesFormalType(String sTypeName, Access access)
+    public boolean producesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return getUnderlyingType().producesFormalType(sTypeName, access);
+        return getUnderlyingType().producesFormalType(sTypeName, access, listParams);
         }
 
     /**

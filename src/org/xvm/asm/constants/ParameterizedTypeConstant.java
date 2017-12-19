@@ -215,7 +215,8 @@ public class ParameterizedTypeConstant
     // ----- type comparison support --------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+    protected List<ContributionChain> collectContributions(TypeConstant that,
+                                                           List<ContributionChain> chains)
         {
         chains = super.collectContributions(that, chains);
         if (chains.isEmpty())
@@ -450,77 +451,31 @@ public class ParameterizedTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
                                                                List<TypeConstant> listParams)
         {
+        assert listParams.isEmpty();
         return super.isInterfaceAssignableFrom(that, access, getParamTypes());
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access)
+    public boolean consumesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        ClassStructure clzThis = (ClassStructure)
-            ((IdentityConstant) getDefiningConstant()).getComponent();
-
-        List<TypeConstant> listActual = getParamTypes();
-        Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
-
-        assert listActual.size() == mapFormal.size();
-
-        Iterator<TypeConstant> iterParams = listActual.iterator();
-        Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-        while (iterParams.hasNext())
-            {
-            TypeConstant constParam = iterParams.next();
-            String sFormal = iterNames.next().getValue();
-
-            if (constParam.consumesFormalType(sTypeName, access)
-                    && clzThis.producesFormalType(sFormal, access, listActual)
-                ||
-                constParam.producesFormalType(sTypeName, access)
-                    && clzThis.consumesFormalType(sFormal, access, listActual))
-                {
-                return true;
-                }
-            }
-
-        return false;
+        assert listParams.isEmpty();
+        return super.consumesFormalType(sTypeName, access, getParamTypes());
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access)
+    public boolean producesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        ClassStructure clzThis = (ClassStructure)
-            ((IdentityConstant) getDefiningConstant()).getComponent();
-
-        List<TypeConstant> listActual = getParamTypes();
-        Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
-
-        assert listActual.size() == mapFormal.size();
-
-        Iterator<TypeConstant> iterParams = listActual.iterator();
-        Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-        while (iterParams.hasNext())
-            {
-            TypeConstant constParam = iterParams.next();
-            String sFormal = iterNames.next().getValue();
-
-            if (constParam.producesFormalType(sTypeName, access)
-                    && clzThis.producesFormalType(sFormal, access, listActual)
-                ||
-                constParam.consumesFormalType(sTypeName, access)
-                    && clzThis.consumesFormalType(sFormal, access, listActual))
-                {
-                return true;
-                }
-            }
-
-        return false;
+        assert listParams.isEmpty();
+        return super.producesFormalType(sTypeName, access, getParamTypes());
         }
 
     @Override
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
         {
+        assert listParams.isEmpty();
         return super.containsSubstitutableMethod(signature, access, getParamTypes());
         }
 
@@ -528,6 +483,7 @@ public class ParameterizedTypeConstant
     public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
                                                  List<TypeConstant> listParams)
         {
+        assert listParams.isEmpty();
         return super.containsSubstitutableProperty(signature, access, getParamTypes());
         }
 

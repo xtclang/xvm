@@ -6,8 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -17,22 +17,18 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ClassStructure.SimpleTypeResolver;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
-import org.xvm.runtime.TypeSet;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
@@ -1457,12 +1453,12 @@ public class TerminalTypeConstant
         {
         Constant constIdThis = getDefiningConstant();
 
-        assert (constIdThis.getFormat() == Format.Class);
+        assert constIdThis.getFormat() == Format.Class;
 
         IdentityConstant idThis  = (IdentityConstant) constIdThis;
         ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
 
-        assert (clzThis.getFormat() == Component.Format.INTERFACE);
+        assert clzThis.getFormat() == Component.Format.INTERFACE;
 
         return clzThis.isInterfaceAssignableFrom(that, access, listParams);
         }
@@ -1473,7 +1469,7 @@ public class TerminalTypeConstant
         {
         Constant constIdThis = getDefiningConstant();
 
-        assert (constIdThis.getFormat() == Format.Class);
+        assert constIdThis.getFormat() == Format.Class;
 
         IdentityConstant idThis  = (IdentityConstant) constIdThis;
         ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
@@ -1482,11 +1478,12 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
+                                                 List<TypeConstant> listParams)
         {
         Constant constIdThis = getDefiningConstant();
 
-        assert (constIdThis.getFormat() == Format.Class);
+        assert constIdThis.getFormat() == Format.Class;
 
         IdentityConstant idThis  = (IdentityConstant) constIdThis;
         ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
@@ -1495,18 +1492,134 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access)
+    public boolean consumesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        return false;
+        Constant constIdThis = getDefiningConstant();
+        switch (constIdThis.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+                return false;
+
+            case Class:
+                {
+                ClassStructure clzThis = (ClassStructure)
+                    ((IdentityConstant) getDefiningConstant()).getComponent();
+
+                Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+
+                assert listParams.size() == mapFormal.size();
+
+                Iterator<TypeConstant> iterParams = listParams.iterator();
+                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                while (iterParams.hasNext())
+                    {
+                    TypeConstant constParam = iterParams.next();
+                    String sFormal = iterNames.next().getValue();
+
+                    if (constParam.consumesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                            && clzThis.producesFormalType(sFormal, access, listParams)
+                        ||
+                        constParam.producesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                            && clzThis.consumesFormalType(sFormal, access, listParams))
+                        {
+                        return true;
+                        }
+                    }
+                return false;
+                }
+
+            case Typedef:
+                assert listParams.isEmpty();
+
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    consumesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+
+            case Register:
+                assert listParams.isEmpty();
+
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    consumesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                // TODO: is that right?
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access)
+    public boolean producesFormalType(String sTypeName, Access access,
+                                      List<TypeConstant> listParams)
         {
-        Constant constId = getDefiningConstant();
+        Constant constIdThis = getDefiningConstant();
+        switch (constIdThis.getFormat())
+            {
+            case Module:
+            case Package:
+                return false;
 
-        return constId.getFormat() == Format.Property &&
-            ((PropertyConstant) constId).getName().equals(sTypeName);
+            case Property:
+                return ((PropertyConstant) constIdThis).getName().equals(sTypeName);
+
+            case Class:
+                {
+                ClassStructure clzThis = (ClassStructure)
+                    ((IdentityConstant) getDefiningConstant()).getComponent();
+
+                Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+
+                assert listParams.size() == mapFormal.size();
+
+                Iterator<TypeConstant> iterParams = listParams.iterator();
+                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                while (iterParams.hasNext())
+                    {
+                    TypeConstant constParam = iterParams.next();
+                    String sFormal = iterNames.next().getValue();
+
+                    if (constParam.producesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                            && clzThis.producesFormalType(sFormal, access, listParams)
+                        ||
+                        constParam.consumesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                            && clzThis.consumesFormalType(sFormal, access, listParams))
+                        {
+                        return true;
+                        }
+                    }
+
+                return false;
+                }
+
+            case Typedef:
+                assert listParams.isEmpty();
+
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    producesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+
+            case Register:
+                assert listParams.isEmpty();
+
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    producesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                // TODO: is that right?
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
 
