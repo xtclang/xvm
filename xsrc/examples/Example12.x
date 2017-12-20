@@ -138,6 +138,42 @@ mixin LazyRef<RefType>
         assert !assigned && assignable;
         super(value);                               // _WHICH_ super?
         }
-
+                                                                                       s
     protected RefType calc();
     }
+
+// -- example for splitting out set() into a separate interface
+
+interface Ref<RefType> // basically the old Ref interface, minus set()
+    {
+    RefType get();
+    @RO Boolean assigned;
+    @RO Type ActualTypes;
+    }
+
+interface Var<RefType>
+        extends Ref<RefType>
+    {
+    Void set(RefType value);
+    }
+
+class B
+    {
+    @Lazy public/private Int Hashcode.calc()
+        {
+        return ...;
+        }
+
+    Void bar()
+        {
+        Ref<Int> r = &Hashcode;
+        }
+    }
+
+Void foo(B b)
+    {
+    Ref<Int> r = &b.Hashcode;   // does NOT compile because Hashcode in the public interface is a CRef
+    }
+
+// So all properties/variables/constants/etc. are Ref's (@RO), and some (those with an accessible
+// setter) are Var's, although a Var can still reject a set() (e.g. an immutable object)
