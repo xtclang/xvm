@@ -1333,23 +1333,14 @@ public class TerminalTypeConstant
                     collectContributions(that, chains);
 
             case Property:
-                {
                 // scenarios we can handle here are:
                 // 1. r-value (this) = T (formal parameter type), constrained by U (other formal type)
                 //    l-value (that) = U (formal parameter type)
                 //
                 // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
-
-                PropertyConstant constProp = (PropertyConstant) constIdThis;
-                TypeConstant typeConstraint = constProp.getRefType();  // Type<DataType>
-
-                assert typeConstraint.isParamsSpecified();
-                assert typeConstraint.getUnderlyingType().equals(getConstantPool().typeType());
-
-                typeConstraint = typeConstraint.getParamTypesArray()[0]; // DataType
-                return typeConstraint.collectContributions(that, chains);
-                }
+                return getPropertyTypeConstant((PropertyConstant) constIdThis).
+                    collectContributions(that, chains);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
@@ -1503,7 +1494,7 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-            case Property:
+            case Property: // Property does not consume
                 return false;
 
             case Class:

@@ -146,17 +146,17 @@ class TestCompiler<TestType1 extends Number,
         C<T2> consume();
         }
 
-    class PC<T> extends P<T> implements C<T>
+    static class PC<T> extends P<T> implements C<T>
         {
         }
 
-    class FakePCofObject
+    static class FakePCofObject
         {
         Object produce() {return "";}
         Void consume(Object value) {}
         }
 
-    class FakePCofString
+    static class FakePCofString
         {
         String produce() {return "";}
         Void consume(String value) {}
@@ -220,13 +220,9 @@ class TestCompiler<TestType1 extends Number,
                TestType2 t2,
                TestType3 t3,
                C<TestType1> ct1,
-               P<TestType1> pt1,
                C<TestType2> ct2,
-               P<TestType2> pt2,
-               C<TestType3> ct3,
-               P<TestType3> pt3,
-               C<Number> cn,
-               P<Number> pn)
+               PC<TestType3> pct3,
+               C<Number> cn)
         {
         Number n1 = t1;
         Number n3 = t3;
@@ -234,14 +230,39 @@ class TestCompiler<TestType1 extends Number,
         TestType1 t11 = t2;
         TestType1 t13 = t3;
 
-        C<TestType3> ct31 = ct1;
-        P<TestType1> pt11 = pt3;
+        C<TestType3> ct3 = ct1;
+        P<TestType1> pt1 = pct3;
 
-        C<TestType1> ct2 = ct1;
+        C<TestType3> ct31 = cn;
+        P<Number> pn = pct3;
+        PC<TestType1> pct1 = pct3;
         }
 
     Void test3ExpectedFailure1(TestType3 t3)
         {
         Int n = t3;
+        }
+
+    static <Type1 extends Number, Type2 extends Type1>
+        Void test4(Type1 t1,
+                   Type2 t2,
+                   C<Type1> ct1,
+                   PC<Type2> pct2)
+        {
+        Number n1 = t1;
+        Number n2 = t2;
+
+        Type1 t11 = t2;
+
+        C<Type2> ct2 = ct1;
+        P<Number> pn = pct2;
+        PC<Number> pcn = pct2;
+        }
+
+    static <Type1 extends Number, Type2 extends Type1>
+        Void test4ExpectedFailure1(Type2 t2)
+
+        {
+        Int n = t2;
         }
     }
