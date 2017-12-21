@@ -1075,7 +1075,7 @@ public class TerminalTypeConstant
                             {
                             for (ContributionChain chain : chains)
                                 {
-                                if (chain.getOrigin().getComposition() != Component.Composition.MaybeDuckType)
+                                if (chain.first().getComposition() != Component.Composition.MaybeDuckType)
                                     {
                                     continue NextContrib;
                                     }

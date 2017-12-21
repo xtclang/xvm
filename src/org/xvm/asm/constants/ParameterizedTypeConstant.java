@@ -231,14 +231,14 @@ public class ParameterizedTypeConstant
 
             List<TypeConstant> listActual;
 
-            switch (chain.getOrigin().getComposition())
+            switch (chain.first().getComposition())
                 {
                 case MaybeDuckType:
                     // will be resolved later via interface method matching
                     continue nextChain;
 
                 case Equal:
-                    assert chain.getDepth() == 1;
+                    assert chain.getLength() == 1;
                     listActual = getParamTypes();
                     break;
 
@@ -336,7 +336,7 @@ public class ParameterizedTypeConstant
         List<TypeConstant> listActual;
 
         // "that" is not parameterized, while "this" is
-        switch (chain.getOrigin().getComposition())
+        switch (chain.first().getComposition())
             {
             case MaybeDuckType:
                 // will be resolved later via interface method matching
@@ -344,7 +344,7 @@ public class ParameterizedTypeConstant
 
             case Equal:
                 {
-                assert chain.getDepth() == 1;
+                assert chain.getLength() == 1;
 
                 // the only way for a parameterized type to be assigned to
                 // a non-parameterized is to have all type parameters to be

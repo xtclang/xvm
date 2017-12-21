@@ -627,7 +627,7 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            Contribution contrib = chain.getOrigin();
+            Contribution contrib = chain.first();
             if (contrib.getComposition() == Composition.MaybeDuckType)
                 {
                 TypeConstant typeIface = contrib.getTypeConstant();

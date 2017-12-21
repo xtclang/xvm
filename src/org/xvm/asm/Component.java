@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -2864,21 +2863,45 @@ public abstract class Component
         {
         public ContributionChain(Contribution contrib)
             {
-            m_list = new LinkedList<>();
-            m_list.add(contrib);
+            add(contrib);
             }
 
+        /**
+         * Add a link to the chain.
+         *
+         * @param contrib  the Contribution that will become the new link at the end of the chain
+         */
         public void add(Contribution contrib)
             {
             m_list.add(contrib);
             }
 
-        public Contribution getOrigin()
+        /**
+         * Snip the last "link" off of the "chain". The first link in the chain cannot be snipped.
+         *
+         * @return the Contribution represented by the last link in the chain
+         */
+        public Contribution snip()
+            {
+            int c = m_list.size();
+            if (c <= 1)
+                {
+                throw new IllegalStateException("chain contains " + c + " element(s)");
+                }
+            return m_list.remove(c-1);
+            }
+
+        public Contribution first()
             {
             return m_list.get(0);
             }
 
-        public int getDepth()
+        public Contribution last()
+            {
+            return m_list.get(m_list.size()-1);
+            }
+
+        public int getLength()
             {
             return m_list.size();
             }
@@ -2930,7 +2953,7 @@ public abstract class Component
             return listActual;
             }
 
-        private List<Contribution> m_list;
+        private ArrayList<Contribution> m_list = new ArrayList<>(5);
         private boolean m_fWeakMatch;
         }
 
