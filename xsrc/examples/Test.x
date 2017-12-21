@@ -308,13 +308,13 @@ module Test
 
     mixin M2 into MyMap2 extends M {}
 
-    class B incorporates M {}
+//    class B incorporates M {}
 
-    class D extends B incorporates M2 {}
+//    class D extends B incorporates M2 {}
 
     Int foo()
         {
-        D map;
+        MyMap map;
         return map;
         }
     }

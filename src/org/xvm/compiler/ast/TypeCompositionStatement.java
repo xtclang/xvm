@@ -721,7 +721,7 @@ public class TypeCompositionStatement
         // 1. register imported modules, so that we can create the necessary module fingerprint
         //    structures to track dependencies;
         // 2. verify that only legitimate compositions are present for the type of this component;
-        // 3. verify that nore more than one "extends", "import*", or "into" clause is used (subject
+        // 3. verify that no more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
         boolean       fAlreadyExtends   = false;
@@ -1037,27 +1037,37 @@ public class TypeCompositionStatement
                     break;
 
                 case INCORPORATES:
-                    // these are all OK; other checks will be done after the types are resolvable
-                    Composition.Incorporates      incorp         = (Composition.Incorporates) composition;
-                    ListMap<String, TypeConstant> mapConstraints = null;
-                    if (incorp.isConditional())
+                    if (format == Format.INTERFACE)
                         {
-                        mapConstraints = new ListMap<>();
-                        for (Parameter constraint : incorp.getConstraints())
+                        // interface can't incorporate
+                        composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
+                        }
+                    else
+                        {
+                        // these are all OK; other checks will be done after the types are resolvable
+                        Composition.Incorporates incorp = (Composition.Incorporates) composition;
+                        ListMap<String, TypeConstant> mapConstraints = null;
+                        if (incorp.isConditional())
                             {
-                            // type is null means no constraint
-                            TypeExpression type = constraint.getType();
-                            if (type != null)
+                            mapConstraints = new ListMap<>();
+                            for (Parameter constraint : incorp.getConstraints())
                                 {
-                                mapConstraints.put(constraint.getName(), type.ensureTypeConstant());
+                                // type is null means no constraint
+                                TypeExpression type = constraint.getType();
+                                if (type != null)
+                                    {
+                                    mapConstraints.put(constraint.getName(),
+                                            type.ensureTypeConstant());
+                                    }
                                 }
                             }
-                        }
 
-                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
-                        {
-                        // register the mixin that the component incorporates
-                        struct.addIncorporates(composition.getType().ensureTypeConstant(), mapConstraints);
+                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            {
+                            // register the mixin that the component incorporates
+                            struct.addIncorporates(composition.getType().ensureTypeConstant(),
+                                    mapConstraints);
+                            }
                         }
                     break;
 
