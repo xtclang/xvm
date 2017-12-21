@@ -805,7 +805,6 @@ public class TerminalTypeConstant
                 break;
 
             case MIXIN:
-            case TRAIT:
                 {
                 // a mixin can extend another mixin, and it can specify an "into" that defines a
                 // base type that defines the environment that it will be working within. if neither

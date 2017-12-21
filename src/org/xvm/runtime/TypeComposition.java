@@ -197,19 +197,19 @@ public class TypeComposition
 
     // There are two parts on the call chain:
     //  1. The "declared" chain that consists of:
-    //   1.1 declared methods on the encapsulating mixins and traits (recursively)
+    //   1.1 declared methods on the encapsulating mixins (recursively)
     //   1.2 methods implemented by the class
-    //   1.3 declared methods on the incorporated mixins, traits and delegates (recursively)
+    //   1.3 declared methods on the incorporated mixins and delegates (recursively)
     //   1.4 if the class belongs to a "built-in category" (e.g. Enum, Service, Const)
     //       declared methods for the category itself
     //   1.5 followed by the "declared" chain on the super class,
-    //       unless the super is the root Object and "this" class is a mixin or a trait
+    //       unless the super is the root Object and "this" class is a mixin
     //
     // 2. The "default" chain that consists of:
     //   2.1 default methods on the interfaces that are declared by encapsulating
-    //       mixins and traits (recursively)
+    //       mixins (recursively)
     //   2.2 default methods on the interfaces implemented by the class, or that are declared by
-    //       mixins, traits and delegates (recursively)
+    //       mixins and delegates (recursively)
     //   2.3 followed by the "default" chain on the super class
     //
     //  @param fTop  true if this composition is the "top of the chain"
@@ -280,9 +280,7 @@ public class TypeComposition
             }
 
         // 1.5
-        if (!clzSuper.isRoot() ||
-                !(format == Component.Format.MIXIN ||
-                  format == Component.Format.TRAIT))
+        if (!clzSuper.isRoot() || format != Component.Format.MIXIN)
             {
             addNoDupes(clzSuper.collectDeclaredCallChain(false), list, set);
             }
@@ -638,7 +636,7 @@ public class TypeComposition
                 }
             }
 
-        // TODO: check the interfaces, traits and mix-ins
+        // TODO: check the interfaces and mix-ins
 
         TypeComposition clzSuper = getSuper();
         return clzSuper == null ? null : clzSuper.getProperty(sPropName);

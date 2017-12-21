@@ -185,6 +185,7 @@ public class MethodConstant
         return sb;
         }
 
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

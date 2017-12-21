@@ -105,7 +105,6 @@ Category
     "service"
     "const"
     "enum"
-    "trait"
     "mixin"
 
 Compositions
@@ -150,11 +149,11 @@ ImportClause
 
 VersionRequirement
     Version VersionOverrides-opt
-    
+
 VersionOverrides
     VersionOverride
     VersionOverrides "," VersionOverride
-    
+
 VersionOverride
     VersionOverrideVerb Versions
 

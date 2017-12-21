@@ -457,7 +457,6 @@ public class Token
         THIS_TYPE   ("this:type"      , true, true),
         THROW       ("throw"          ),
         TODO        ("TODO"           ),
-        TRAIT       ("trait"          ),
         TRY         ("try"            ),
         TYPEDEF     ("typedef"        ),
         USING       ("using"          ),

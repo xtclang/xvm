@@ -7,13 +7,12 @@ import types.TypeParameter;
 /**
  * A Class represents the following information about an Ecstasy type composition:
  * * Every class is of a specific {@link Category}, one of Module, Package, Class, Const, Enum,
- *   Service, Mixin, Trait, or Interface.
+ *   Service, Mixin, or Interface.
  * * Every class has an identity that begins with a module, identifies the location of the class
  *   within the module hierarchical structure, and provides the class with a name that is unique
  *   within its localized namespace in that hierarchy.
  * * A class can be a _parameterized type_.
- * * If the class is a {@code mixin} or {@code trait}, a class is defined to which the {@code mixin}
- *   or {@code trait} can apply.
+ * * If the class is a {@code mixin}, a class is defined to which the {@code mixin} can apply.
  * * A class is composed through a series of steps, each of which identifies another class that is
  *   _extended by_, _implemented by_, or _mixed into_ this class.
  * * A class is further defined by the inclusion of child classes, properties, methods, functions,
@@ -23,7 +22,7 @@ import types.TypeParameter;
  *
  * A number of operations can be used to obtain a new class from an existing class:
  * * A class with type parameters can _narrow_ those type parameters to form a new class.
- * * A class can incorporate an applicable {@code mixin} or {@code trait} to form a new class.
+ * * A class can incorporate an applicable {@code mixin} to form a new class.
  *
  * The class is also the source of instances (objects) of the class:
  * * A class can be used to create a new instance (an object) of a non-singleton class.
@@ -49,7 +48,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * A class is of a given category of Ecstasy language structures. These categories are not
      * entirely discrete; an Enum, for example, is a Const.
      */
-    enum Category {Module, Package, Class, Const, Enum, Service, Mixin, Trait, Interface}
+    enum Category {Module, Package, Class, Const, Enum, Service, Mixin, Interface}
 
     /**
      * A class contains other named child structures.
@@ -82,7 +81,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * * Extends - a class _extends_ (inherits from) another class.
      * * Implements - a class _implements_ an interface; this verb is also used when one interface
      *   "extends" another interface.
-     * * Incorporates - a class _incorporates_ a trait or mixin.
+     * * Incorporates - a class _incorporates_ a mixin.
      */
     enum Action {Extends, Implements, Incorporates}
 
@@ -124,7 +123,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     TypeParameter[] typeParams;
 
     /**
-     * If the class is a mixin or trait, this is the class to which it can be applied.
+     * If the class is a mixin, this is the class to which it can be applied.
      */
     Class? appliesTo;
 
@@ -232,7 +231,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      *   a super-class.
      * * A Class whose category is Module, Package, Const, Enum, or Service will *always* have a
      *   super-class.
-     * * A Mixin or Trait _may_ have a super-class, which would be a {@code mixin} or {@code trait}.
+     * * A Mixin _may_ have a super-class, which must be a {@code mixin}.
      * * An Interface will *never* have a super-class.
      */
     @Lazy Class? superClass.calc()
@@ -256,7 +255,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     /**
      * Determine if this class "derives from" another class. A class derives from another class if
      * it (or something it derives from) extends the specified class, incorporates the specified
-     * mixin or trait, or implements the specified interface.
+     * mixin, or implements the specified interface.
      */
     Boolean derivesFrom(Class that)
         {
@@ -325,11 +324,11 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         }
 
     /**
-     * Determine if the class incorporates the specified trait or mixin.
+     * Determine if the class incorporates the specified mixin.
      */
     Boolean incorporates_(Class that)
         {
-        assert that.category == Mixin || that.category == Trait;
+        assert that.category == Mixin;
 
         if (this == that)
             {
@@ -491,8 +490,8 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
         }
 
     /**
-     * Incorporate a trait or mixin, producing a new Class if the specified trait or mixin is not
-     * already incorporated.
+     * Incorporate a mixin, producing a new Class if the specified mixin is not already
+     * incorporated.
      *
      * If the compile-time types of both _this_ class and _that_ class are known, then the
      * compile-time type of the returned class is known; otherwise, an explicit cast to a

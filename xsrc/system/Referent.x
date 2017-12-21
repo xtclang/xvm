@@ -61,9 +61,9 @@ interface Referent
     Boolean extends_(Class class_);
 
     /**
-     * Determine if the class of the referent incorporates the specified trait or mixin.
+     * Determine if the class of the referent incorporates the specified mixin.
      */
-    Boolean incorporates_(Class traitOrMixin);
+    Boolean incorporates_(Class mixin_);
 
     /**
      * Determine if the referent is a service.

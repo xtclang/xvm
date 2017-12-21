@@ -348,9 +348,9 @@ public abstract class Component
      * Obtain the name of the component. All components have a name, although the purpose of the
      * name varies slightly for several components:
      * <ul>
-     * <li>The Package, various Class types (Interface, Class, Const, Enum, Mixin, Trait, and
-     *     Service), Property, and MultiMethod all are identified within their parent component by
-     *     their name, using a NamedConstant;</li>
+     * <li>The Package, various Class types (Interface, Class, Const, Enum, Mixin, and Service),
+     *     Property, and MultiMethod all are identified within their parent component by their name,
+     *     using a NamedConstant;</li>
      * <li>The Method has a name, but it is identified by its signature, because it is a child of a
      *     MultiMethod component;</li>
      * <li>The Module has a name, but it is a full qualified name (composed of a simple name and a
@@ -1878,13 +1878,13 @@ public abstract class Component
         ENUM,
         ENUMVALUE,
         MIXIN,
-        TRAIT,
         SERVICE,
         PACKAGE,
         MODULE,
         TYPEDEF,
         PROPERTY,
         METHOD,
+        RSVD_C,
         RSVD_D,
         MULTIMETHOD,
         FILE;
@@ -1938,7 +1938,6 @@ public abstract class Component
                 case ENUM:
                 case ENUMVALUE:
                 case MIXIN:
-                case TRAIT:
                 case SERVICE:
                     return new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
@@ -1973,7 +1972,6 @@ public abstract class Component
                 case CLASS:
                 case CONST:
                 case MIXIN:
-                case TRAIT:
                 case SERVICE:
                 case PROPERTY:
                 case MULTIMETHOD:
@@ -2162,7 +2160,7 @@ public abstract class Component
          */
         Into,
         /**
-         * Represents the combining-in of a trait or mix-in.
+         * Represents the combining-in of a mix-in.
          * <p/>
          * The constant is a TypeConstant.
          */
@@ -2234,8 +2232,8 @@ public abstract class Component
 
     /**
      * Represents one contribution to the definition of a class. A class (with the term used in the
-     * abstract sense, meaning any class, interface, mixin, trait, value, enum, or service) can be
-     * composed of any number of contributing components.
+     * abstract sense, meaning any class, interface, mixin, const, enum, or service) can be composed
+     * of any number of contributing components.
      */
     public static class Contribution
         {
