@@ -551,6 +551,8 @@ public class TerminalTypeConstant
      * Accumulate any information for the type represented by the specified structure into the
      * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
      *
+     * TODO need a "how did we get here" ContributionChain
+     *
      * @param struct       the class structure
      * @param typeinfo     the type info to contribute to
      * @param access       the desired accessibility into the current type
@@ -740,8 +742,6 @@ public class TerminalTypeConstant
             return fHalt;
             }
 
-        // next up, for any class type (other than Object itself), there MUST be an "extends"
-        // contribution that specifies another class
         List<Contribution> listContributions = new ArrayList<>();
         boolean            fInto             = false;
         boolean            fExtends          = false;
@@ -749,12 +749,17 @@ public class TerminalTypeConstant
             {
             case MODULE:
             case PACKAGE:
+            case ENUMVALUE:
+                // TODO has to be top-most (nothing can extend, impersonate)
+            case ENUM:
+                // TODO only its enum values can extend it
+
             case CLASS:
             case CONST:
-            case ENUM:
-            case ENUMVALUE:
             case SERVICE:
                 {
+                // next up, for any class type (other than Object itself), there MUST be an "extends"
+                // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
                 fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
 
@@ -790,11 +795,13 @@ public class TerminalTypeConstant
 
                 if (typeinfo.extended.contains(typeExtends))
                     {
-                    // some sor of circular loop
+                    // some sort of circular loop
                     fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
                             struct.getIdentityConstant().getPathString());
                     break;
                     }
+
+                // TODO check for re-basing
 
                 // add the "extends" to the list of contributions to process, and register it so
                 // that no one else will do it
@@ -875,10 +882,12 @@ public class TerminalTypeConstant
                 break;
 
             case INTERFACE:
-                // first, lay down the set of methods present in Object
+                // first, lay down the set of methods present in Object (use the "Into" composition
+                // to make the Object methods implicit-only, as opposed to explicitly being present
+                // in this interface)
                 if (fTopmost)
                     {
-                    listContributions.add(new Contribution(Composition.Implements, getConstantPool().typeObject()));
+                    listContributions.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
                     }
                 break;
             }

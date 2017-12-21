@@ -521,6 +521,8 @@ public abstract class TypeConstant
      * Accumulate any information for the type represented by this TypeConstant into the passed
      * {@link TypeInfo}, logging any errors that are detected in the composition of the type.
      *
+     * TODO need a "how did we get here" ContributionChain
+     *
      * @param typeinfo     the type info to contribute to
      * @param access       the desired accessibility into the current type
      * @param atypeParams  the types for the type parameters of this class, if any (may be null)
@@ -1282,10 +1284,12 @@ public abstract class TypeConstant
          * </ul>
          */
         private Component.Format m_formatUsage;
-        // TODO
-        public final Set<TypeConstant> extended     = new HashSet<>(7);
-        public final Set<TypeConstant> implemented  = new HashSet<>(7);
-        public final Set<TypeConstant> incorporated = new HashSet<>(7);
+
+        public final Set<TypeConstant> extended     = new HashSet<>();
+        public final Set<TypeConstant> implemented  = new HashSet<>();
+        public final Set<TypeConstant> incorporated = new HashSet<>();
+        public final Set<TypeConstant> implicit     = new HashSet<>();
+
         private TypeConstant m_impersonates;
         private TypeConstant m_typeInto;
 

@@ -2171,6 +2171,11 @@ public abstract class Component
          */
         Impersonates,
         /**
+         * Synthetic (transient) rebasing of a class onto a new category.
+         *
+         */
+        RebasesOnto,
+        /**
          * Represents that the package being composed represents an optional module.
          * <p/>
          * The constant is a ModuleConstant.
