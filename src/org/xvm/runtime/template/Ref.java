@@ -41,7 +41,6 @@ public class Ref
         {
         markNativeGetter("assigned");
         markNativeMethod("get", VOID, new String[]{"RefType"});
-        markNativeMethod("set", new String[]{"RefType"}, VOID);
         markNativeGetter("name");
         markNativeGetter("selfContained");
 
@@ -148,21 +147,6 @@ public class Ref
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
-        }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        RefHandle hThis = (RefHandle) hTarget;
-
-        switch (method.getName())
-            {
-            case "set":
-                ExceptionHandle hException = hThis.set(hArg);
-                return hException == null ? Op.R_NEXT : frame.raiseException(hException);
-            }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override

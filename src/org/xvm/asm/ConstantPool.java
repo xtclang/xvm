@@ -1011,7 +1011,7 @@ public class ConstantPool
 
             case "Atomic":
                 sPkg = "annotations";
-                sClz = "AtomicRef";
+                sClz = "AtomicVar";
                 break;
 
             case "Auto":
@@ -1019,10 +1019,10 @@ public class ConstantPool
                 sClz = "AutoConversion";
                 break;
 
-            case "FutureRef":
+            case "FutureVar":
             case "Future":
                 sPkg = "annotations";
-                sClz = "FutureRef";
+                sClz = "FutureVar";
                 break;
 
             case "Inject":

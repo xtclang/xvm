@@ -23,7 +23,7 @@ import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -435,7 +435,7 @@ public class Frame
         }
 
     // assign a specified register on this frame
-    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureRef)
+    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureVar)
     public int assignValue(int nVar, ObjectHandle hValue)
         {
         if (nVar >= 0)
@@ -530,7 +530,7 @@ public class Frame
         }
 
     // specialization of assignValue() that takes two return values
-    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureRef)
+    // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if any of the values is a FutureVar)
     public int assignValues(int[] anVar, ObjectHandle hValue1, ObjectHandle hValue2)
         {
         int c = anVar.length;
@@ -836,7 +836,7 @@ public class Frame
                 : getPredefinedArgument(iArg);
         }
 
-    // unlike getArgument(), this could return a non-completed FutureRef
+    // unlike getArgument(), this could return a non-completed FutureVar
     // and it never throws
     public ObjectHandle getReturnValue(int iArg)
         {

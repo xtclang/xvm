@@ -50,7 +50,7 @@ public abstract class ClassTemplate
     public final TypeSet f_types;
     public final ClassStructure f_struct;
 
-    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.AtomicRef)
+    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyRef)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
 
@@ -995,7 +995,7 @@ public abstract class ClassTemplate
         ensurePropertyInfo(sPropName).m_fCalculated = true;
         }
 
-    public void markAtomicRef(String sPropName)
+    public void markAtomic(String sPropName)
         {
         ensurePropertyInfo(sPropName).markAtomic();
         }
@@ -1086,7 +1086,7 @@ public abstract class ClassTemplate
                 }
             else
                 {
-                markAsRef("annotations.AtomicRef");
+                markAsRef("annotations.AtomicVar");
                 }
             }
 

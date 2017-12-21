@@ -1,4 +1,6 @@
-class TestCompiler
+class TestCompiler<TestType1 extends Number,
+                   TestType2 extends TestType1,
+                   TestType3 extends TestType2>
     {
     interface MyMap<KM, VM>
         {
@@ -60,36 +62,34 @@ class TestCompiler
     class MyClass10<V10>
         extends MyClass9<String, V10> {}
 
-
-    static Void test1()
+    static Void test1(MyClass1<String, Number> c1,
+                      MyClass2<String, Number> c2,
+                      MyClass3<String, Number> c3,
+                      MyClass4<String> c4,
+                      MyClass5<String> c5,
+                      MyClass6<String, Int> c6,
+                      MyClass7 c7,
+                      MyClass8<String, Number> c8,
+                      MyClass10<Number> c10)
         {
-        MyClass1<String, Number> c1;
         Consumer<Int> finder1 = c1; // OK; duck-typing
 
-        MyClass2<String, Number> c2;
         Consumer<Int> finder2 = c2; // OK; "Implements"
 
-        MyClass3<String, Number> c3;
         Consumer<Int> finder3 = c3; // OK; "Extends-Implements"
 
-        MyClass4<String> c4;
         Consumer<Int> finder4 = c4; // OK; "Implements"
 
-        MyClass5<String> c5;
         Consumer<Int> finder5 = c5; // OK; "Extends"
 
-        MyClass6<String, Int> c6;
         Consumer<Int> finder6 = c6; // OK; "Extends-Extends-Implements"
         MyConsumer<Int> finder6a = c6; // OK; "Extends-Extend"
 
-        MyClass7 c7;
         Consumer<String> finder7 = c7; // OK; "Extends-Extends-Implements"
 
-        MyClass8<String, Number> c8;
         Consumer<Int> finder8 = c8; // OK; "Incorporates-Implements"
         Consumer<Int> finder8a = c8; // OK; "Incorporates-Extends"
 
-        MyClass10<Number> c10;
         Consumer<Number> finder10 = c10; // OK; "Extends-Incorporates-Implements"
         }
 
@@ -162,25 +162,24 @@ class TestCompiler
         Void consume(String value) {}
         }
 
-    static Void testPC()
+    static Void testPC(C<Object>  co,
+                       C2<Object> c2o,
+                       PC<Object> pco,
+                       P<String>  ps,
+                       P2<String> p2s,
+                       PC<String> pcs)
         {
-        C<Object>  y1;
-        C<String>  x1 = y1;
+        C<String> cs = co;
 
-        C2<Object> y12;
-        C2<String> x12 = y12;
+        C2<String> c2s = c2o;
 
-        PC<Object> y2;
-        C<String>  x2 = y2;
+        C<String> cs1 = pco;
 
-        P<String>  y5;
-        P<Object>  x5 = y5;
+        P<Object> po = ps;
 
-        P2<String> y52;
-        P2<Object> x52 = y52;
+        P2<Object> p20 = p2s;
 
-        PC<String> y6;
-        PC<Object> x6 = y6; // ok, but the RT needs to "safe-wrap" the consuming methods
+        PC<Object> pco = pcs; // ok, but the RT needs to "safe-wrap" the consuming methods
         }
 
     static Void testPCExpectedFailure1(C<String> y3)
@@ -212,5 +211,37 @@ class TestCompiler
         {
         Int i = 0;
         return i;
+        }
+
+//    TestType1 extends Number,
+//    TestType2 extends TestType1,
+//    TestType3 extends TestType2
+    Void test3(TestType1 t1,
+               TestType2 t2,
+               TestType3 t3,
+               C<TestType1> ct1,
+               P<TestType1> pt1,
+               C<TestType2> ct2,
+               P<TestType2> pt2,
+               C<TestType3> ct3,
+               P<TestType3> pt3,
+               C<Number> cn,
+               P<Number> pn)
+        {
+        Number n1 = t1;
+        Number n3 = t3;
+
+        TestType1 t11 = t2;
+        TestType1 t13 = t3;
+
+        C<TestType3> ct31 = ct1;
+        P<TestType1> pt11 = pt3;
+
+        C<TestType1> ct2 = ct1;
+        }
+
+    Void test3ExpectedFailure1(TestType3 t3)
+        {
+        Int n = t3;
         }
     }

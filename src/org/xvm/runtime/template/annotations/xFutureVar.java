@@ -23,22 +23,22 @@ import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.Ref;
+import org.xvm.runtime.template.xVar;
 
 
 /**
  * TODO:
  */
-public class xFutureRef
-        extends Ref
+public class xFutureVar
+        extends xVar
     {
-    public static xFutureRef INSTANCE;
+    public static xFutureVar INSTANCE;
     public static TypeConstant TYPE;
     public static EnumHandle Pending;
     public static EnumHandle Result;
     public static EnumHandle Error;
 
-    public xFutureRef(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xFutureVar(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
 
@@ -52,15 +52,12 @@ public class xFutureRef
     @Override
     public void initDeclared()
         {
-        // FutureRef!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
-        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
-        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
-        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureRef!<RefType>"});
+        // FutureVar!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+        markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
+        markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
+        markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
 
-        markNativeMethod("get", VOID, new String[]{"RefType"});
-        markNativeMethod("set", new String[]{"RefType"}, VOID);
-
-        Enum enumCompletion = (Enum) f_types.getTemplate("annotations.FutureRef.Completion");
+        Enum enumCompletion = (Enum) f_types.getTemplate("annotations.FutureVar.Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");
@@ -248,7 +245,7 @@ public class xFutureRef
                 // "handle" is a synthetic or dynamic one (see Frame.assignValue)
                 if (m_future != null)
                     {
-                    return xException.makeHandle("FutureRef has already been assigned");
+                    return xException.makeHandle("FutureVar has already been assigned");
                     }
 
                 FutureHandle that = (FutureHandle) handle;
@@ -264,7 +261,7 @@ public class xFutureRef
 
             if (m_future.isDone())
                 {
-                return xException.makeHandle("FutureRef has already been set");
+                return xException.makeHandle("FutureVar has already been set");
                 }
 
             m_future.complete(handle);

@@ -9,15 +9,14 @@ import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
-
-import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xVar;
 
 
 /**
- * MOV_REF rvalue-src, lvalue-dest ; move Ref-to-source to destination (read-only)
+ * MOV_VAR rvalue-src, lvalue-dest ; move Var-to-source to destination
  */
-public class MoveRef
+public class MoveVar
         extends OpMove
     {
     /**
@@ -28,7 +27,7 @@ public class MoveRef
      *
      * @deprecated
      */
-    public MoveRef(int nSource, int nDest)
+    public MoveVar(int nSource, int nDest)
         {
         super((Argument) null, null);
 
@@ -42,7 +41,7 @@ public class MoveRef
      * @param regSrc   the source Register
      * @param regDest  the destination Register
      */
-    public MoveRef(Register regSrc, Register regDest)
+    public MoveVar(Register regSrc, Register regDest)
         {
         super(regSrc, regDest);
         }
@@ -53,7 +52,7 @@ public class MoveRef
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public MoveRef(DataInput in, Constant[] aconst)
+    public MoveVar(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -62,7 +61,7 @@ public class MoveRef
     @Override
     public int getOpCode()
         {
-        return OP_MOV_REF;
+        return OP_MOV_VAR;
         }
 
     @Override
@@ -85,7 +84,7 @@ public class MoveRef
             }
         else
             {
-            TypeComposition clzRef = Ref.INSTANCE.ensureClass(infoSrc.getType());
+            TypeComposition clzRef = xVar.INSTANCE.ensureClass(infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 

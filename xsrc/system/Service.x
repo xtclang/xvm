@@ -197,7 +197,7 @@ interface Service()
      * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.
      *
      * A caller should generally *not* yield in a loop or for an extended period of time in order to
-     * wait for some event to occur; instead, the caller should use a {@link FutureRef} to request
+     * wait for some event to occur; instead, the caller should use a {@link FutureVar} to request
      * a continuation on completion of a call to another service, or a {@link Timer} to request a
      * continuation at some specified later time.
      *

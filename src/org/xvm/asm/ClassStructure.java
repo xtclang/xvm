@@ -210,7 +210,7 @@ public class ClassStructure
      *
      * @param  listActual  the list of actual types
      *
-     * @return
+     * @return the resolved type
      */
     public TypeConstant resolveType(List<TypeConstant> listActual)
         {
@@ -722,7 +722,7 @@ public class ClassStructure
                                     getComponent();
 
                             if (clzContrib.producesFormalTypeImpl(
-                                sGenericName, access, listContribActual, false))
+                                    sGenericName, access, listContribActual, false))
                                 {
                                 return true;
                                 }

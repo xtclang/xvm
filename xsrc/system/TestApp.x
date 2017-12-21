@@ -1,4 +1,4 @@
-import annotations.AtomicRef;
+import annotations.AtomicVar;
 
 class TestApp
     {
@@ -157,12 +157,12 @@ class TestApp
         print(c);
 
         @Future Int fc = svc.increment();
-        FutureRef<Int> rfc = &fc;
+        FutureVar<Int> rfc = &fc;
         print(rfc);
         print(fc);
         print(rfc);
 
-        FutureRef<Int> rfc2 = &svc.increment();
+        FutureVar<Int> rfc2 = &svc.increment();
         @Future Int rfc3 = rfc2;
         rfc2.whenComplete((r, x) ->
             {
@@ -276,7 +276,7 @@ class TestApp
             return ++counter;
             }
 
-        static Void lambda_1(Ref<Int> iRet, Int cDelay)
+        static Void lambda_1(Var<Int> iRet, Int cDelay)
             {
             TODO // TODO remove
             }
@@ -304,15 +304,15 @@ class TestApp
 
     static Void testRef(String arg)
         {
-        Ref<String> ra = &arg;
+        Var<String> ra = &arg;
         print(ra.get());
         ra.set("bye");
         print(arg);
 
-        Ref<Int> ri;
+        Var<Int> ri;
             {
             Int i = 1;
-            Ref<Int> ri2 = &i;
+            Var<Int> ri2 = &i;
             ri = &i;
 
             print(ri.get());
@@ -326,7 +326,7 @@ class TestApp
         print(ri.get());
 
         TestClass t = new TestClass("before");
-        Ref<String> rp = &t.prop1;
+        Var<String> rp = &t.prop1;
         print(rp);
         rp.set("after");
         print(t);
@@ -335,7 +335,7 @@ class TestApp
         ri = &svc.counter;
         print(ri.get());
 
-        AtomicRef<Int> ari = &svc.counter2;
+        AtomicVar<Int> ari = &svc.counter2;
         print(ari.replace(1, 2));
         }
 

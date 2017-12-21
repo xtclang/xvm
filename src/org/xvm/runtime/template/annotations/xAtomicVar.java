@@ -14,16 +14,16 @@ import org.xvm.runtime.TypeSet;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.Ref;
+import org.xvm.runtime.template.xVar;
 
 
 /**
  * TODO:
  */
-public class xAtomicRef
-        extends Ref
+public class xAtomicVar
+        extends xVar
     {
-    public xAtomicRef(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xAtomicVar(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure, false);
         }
