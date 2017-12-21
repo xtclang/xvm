@@ -173,7 +173,6 @@ public class TypeCompositionStatement
             case SERVICE:
             case CONST:
             case ENUM:
-            case TRAIT:
             case MIXIN:
                 Component structParent = structThis.getParent();
                 switch (structParent.getFormat())
@@ -188,7 +187,6 @@ public class TypeCompositionStatement
                     case CONST:
                     case ENUM:
                     case ENUMVALUE:
-                    case TRAIT:
                     case MIXIN:
                         return Zone.InClass;
 
@@ -353,7 +351,6 @@ public class TypeCompositionStatement
             case CONST:
             case ENUM:
             case ENUM_VAL:
-            case TRAIT:
             case MIXIN:
                 if (container.isClassContainer())
                     {
@@ -382,10 +379,6 @@ public class TypeCompositionStatement
 
                         case ENUM_VAL:
                             format = Format.ENUMVALUE;
-                            break;
-
-                        case TRAIT:
-                            format = Format.TRAIT;
                             break;
 
                         case MIXIN:
@@ -440,13 +433,12 @@ public class TypeCompositionStatement
         // service      x           x           x           x
         // const        x           x           x           x
         // enum         x           x           x           (implicit)
-        // trait        x           x           x
         // mixin        x           x           x
         //
         // modifiers for "inner" namespace structures:
         // - "inner" means nested within a class
         // - static means "no ref to parent, no virtual new"; it only applies to something that can be new'd
-        //   or init'd from a constant, so it does not apply to interface, trait, or mixin
+        //   or init'd from a constant, so it does not apply to interface, or mixin
         //
         //              public      protected   private     static
         //              ----------  ----------  ----------  ----------
@@ -456,7 +448,6 @@ public class TypeCompositionStatement
         // const        x           x           x           x - required if parent is not const
         // enum         x           x           x           (implicit)
         // - enum val                                       (implicit)
-        // trait        x           x           x
         // mixin        x           x           x
         //
         // modifiers for "local" namespace structures:
@@ -472,7 +463,6 @@ public class TypeCompositionStatement
         // service                                          x
         // const                                            x
         // enum                                             (implicit)
-        // trait
         // mixin
         int nAllowed = 0;
         switch (component.getFormat())
@@ -490,7 +480,6 @@ public class TypeCompositionStatement
             case PACKAGE:
             case ENUM:
             case INTERFACE:
-            case TRAIT:
             case MIXIN:
                 {
                 // these are all allowed to be declared public/private/protected, except when they
@@ -646,7 +635,6 @@ public class TypeCompositionStatement
                 // must each be explicitly defined by each enum value; the same goes for constructor
                 // params
             case INTERFACE:
-            case TRAIT:
             case MIXIN:
                 // register the type parameters
                 if (typeParams != null && !typeParams.isEmpty())
@@ -711,9 +699,8 @@ public class TypeCompositionStatement
         // const        0/1 [1]     n           n           n
         // enum         0/1 [1]     n           n           n
         // enum-value       [5]     n           n           n
-        // trait        0/1 [6]     n           n           n [9]                     0/1 [10]
-        // mixin        0/1 [7]     n           n           n                         0/1 [10]
-        // interface    n   [8]     n [8]       n           n [9]
+        // mixin        0/1 [6]     n           n           n                         0/1 [7]
+        // interface    n   [8]     n [8]       n [9]
         //
         // [1] module/package/const/enum may explicitly extend a class or a const; otherwise extends
         //     Object
@@ -722,13 +709,12 @@ public class TypeCompositionStatement
         //     Object itself, which does NOT extend itself)
         // [4] service may explicitly extend a class or service; otherwise extends Object
         // [5] enum values always implicitly extend the enum to which they belong
-        // [6] trait may explicitly extend a trait
-        // [7] mixin may explicitly extend a trait or mixin
+        // [6] mixin may explicitly extend a mixin
+        // [7] mixins may specify a type that they can be mixed into; otherwise implicitly Object
         // [8] in the source code, an interface "extends" any number of interfaces, but the compiler
         //     produces those relationships using the "implements" composition
-        // [9] traits and interfaces can only incorporate traits
-        // [10] traits and mixins may specify a type that they can be mixed into; otherwise any type
-        //      (i.e. implicitly Object)
+        // [9] a delegates clause on an interface simply implies default implementations for those
+        //     methods
         //
         // at this point, the class names are not yet resolvable, so defer most of these checks
         // until the next phase. what must be done at this point:
@@ -764,9 +750,8 @@ public class TypeCompositionStatement
                 constDefaultSuper = (ClassConstant) container.getIdentityConstant();
                 break;
 
-            case TRAIT:
             case MIXIN:
-                // traits and mixins apply to ("mix into") any Object by default
+                // mixins apply to ("mix into") any Object by default
                 constDefaultInto = OBJECT_CLASS;
                 break;
             }
@@ -993,7 +978,7 @@ public class TypeCompositionStatement
                     break;
 
                 case INTO:
-                    if (format == Format.TRAIT || format == Format.MIXIN)
+                    if (format == Format.MIXIN)
                         {
                         // only one "into" clause is allowed
                         if (fAlreadyIntos)
@@ -1016,7 +1001,7 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        // "into" not allowed (only used by traits & mixins)
+                        // "into" not allowed (only used by mixins)
                         composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
@@ -1071,7 +1056,7 @@ public class TypeCompositionStatement
 
                     for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
                         {
-                        // register the mixin/trait that the component incorporates
+                        // register the mixin that the component incorporates
                         struct.addIncorporates(composition.getType().ensureTypeConstant(), mapConstraints);
                         }
                     break;

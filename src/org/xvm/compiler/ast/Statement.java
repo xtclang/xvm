@@ -688,7 +688,6 @@ public abstract class Statement
                     case ENUM:
                     case ENUMVALUE:
                     case MIXIN:
-                    case TRAIT:
                     case SERVICE:
                     case PACKAGE:
                     case MODULE:
@@ -726,7 +725,6 @@ public abstract class Statement
                     case ENUM:
                     case ENUMVALUE:
                     case MIXIN:
-                    case TRAIT:
                     case SERVICE:
                     case PACKAGE:
                     case MODULE:
@@ -761,7 +759,6 @@ public abstract class Statement
                     case ENUM:
                     case ENUMVALUE:
                     case MIXIN:
-                    case TRAIT:
                     case SERVICE:
                     case PACKAGE:
                     case METHOD:

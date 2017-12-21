@@ -55,6 +55,9 @@ import static org.xvm.util.Handy.writePackedLong;
  * While the class does not explicitly implement the interface I, and while the methods on the class
  * are explicit (not auto-narrowing), the class C does implicitly implement interface I, and thus an
  * instance of C can be passed to (or returned from) any method that accepts (or returns) an "I".
+ * <p/>
+ * A SignatureConstant can also be used to represent a property, but such a use is never serialized;
+ * i.e. it is a transient use case.
  */
 public class SignatureConstant
         extends PseudoConstant
@@ -103,6 +106,9 @@ public class SignatureConstant
 
     /**
      * Construct a constant whose value is a property signature identifier.
+     * <p/>
+     * This use case allows methods and properties to both be represented in a transient data
+     * structure as SignatureConstants; this form of a SignatureConstant cannot be serialized.
      *
      * @param pool           the ConstantPool that will contain this Constant
      * @param constProperty  the property
@@ -307,6 +313,10 @@ public class SignatureConstant
             if (n == 0)
                 {
                 n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
+                if (n == 0)
+                    {
+                    n = (this.m_fProperty ? 1 : 0) - (that.m_fProperty ? 1 : 0);
+                    }
                 }
             }
         return n;
@@ -347,24 +357,29 @@ public class SignatureConstant
             }
 
         sb.append(' ')
-          .append(m_constName.getValue())
-          .append('(');
+          .append(m_constName.getValue());
 
-        boolean first = true;
-        for (TypeConstant type : m_aconstParams)
+        if (!m_fProperty)
             {
-            if (first)
+            sb.append('(');
+
+            boolean first = true;
+            for (TypeConstant type : m_aconstParams)
                 {
-                first = false;
+                if (first)
+                    {
+                    first = false;
+                    }
+                else
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(type.getValueString());
                 }
-            else
-                {
-                sb.append(", ");
-                }
-            sb.append(type.getValueString());
+
+            sb.append(')');
             }
 
-        sb.append(')');
         return sb.toString();
         }
 
@@ -396,6 +411,11 @@ public class SignatureConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
+        if (m_fProperty)
+            {
+            throw new IllegalStateException("Signature refers to a property");
+            }
+
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constName.getPosition());
         writeTypes(out, m_aconstParams);

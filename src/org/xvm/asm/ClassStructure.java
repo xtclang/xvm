@@ -68,7 +68,6 @@ public class ClassStructure
             case CLASS:
             case ENUM:
             case MIXIN:
-            case TRAIT:
                 // these types are never singletons
                 return false;
 

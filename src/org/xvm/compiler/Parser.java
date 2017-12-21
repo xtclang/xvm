@@ -121,7 +121,6 @@ public class Parser
      *     "service"
      *     "const"
      *     "enum"
-     *     "trait"
      *     "mixin"
      *
      * Compositions
@@ -180,7 +179,6 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
-            case TRAIT:
             case MIXIN:
                 category = current();
                 name = expect(Id.IDENTIFIER);
@@ -704,7 +702,6 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
-            case TRAIT:
             case MIXIN:
                 // it's definitely a type composition
                 return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
@@ -1367,7 +1364,6 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
-            case TRAIT:
             case MIXIN:
                 // this is obviously a TypeComposition
                 return parseTypeCompositionStatement();
@@ -4140,7 +4136,6 @@ s     *
                 case SWITCH:
                 case THROW:
                 case TODO:
-                case TRAIT:
                 case TRY:
                 case TYPEDEF:
                 case USING:
