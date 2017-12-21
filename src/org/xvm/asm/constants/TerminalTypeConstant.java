@@ -1343,8 +1343,12 @@ public class TerminalTypeConstant
                 //    l-value (that) = V (real type), where U "is a" V
 
                 PropertyConstant constProp = (PropertyConstant) constIdThis;
-                TypeConstant typeConstraint = constProp.getRefType();
+                TypeConstant typeConstraint = constProp.getRefType();  // Type<DataType>
 
+                assert typeConstraint.isParamsSpecified();
+                assert typeConstraint.getUnderlyingType().equals(getConstantPool().typeType());
+
+                typeConstraint = typeConstraint.getParamTypesArray()[0]; // DataType
                 return typeConstraint.collectContributions(that, chains);
                 }
 

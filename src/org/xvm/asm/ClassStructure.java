@@ -723,7 +723,7 @@ public class ClassStructure
                                     getComponent();
 
                             if (clzContrib.producesFormalTypeImpl(
-                                sGenericName, access, listContribActual, false))
+                                    sGenericName, access, listContribActual, false))
                                 {
                                 return true;
                                 }
