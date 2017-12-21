@@ -239,7 +239,7 @@ public class TypeComposition
         Component.Format format = structThis.getFormat();
         if (fTop && format == Component.Format.MIXIN)
             {
-            // native mix-in (e.g. FutureRef)
+            // native mix-in (e.g. FutureVar)
             Contribution contribInto = structThis.findContribution(Composition.Into);
 
             assert contribInto != null;

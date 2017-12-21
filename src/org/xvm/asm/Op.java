@@ -1,7 +1,6 @@
 package org.xvm.asm;
 
 
-import com.sun.org.apache.xpath.internal.Arg;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -730,7 +729,8 @@ public abstract class Op
             case OP_VAR_TN:      return new Var_TN      (in, aconst);
 
             case OP_MOV:         return new Move        (in, aconst);
-            case OP_REF:         return new MoveRef     (in, aconst);
+            case OP_MOV_VAR:     return new MoveVar     (in, aconst);
+            case OP_MOV_REF:     return new MoveRef     (in, aconst);
             case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
@@ -877,7 +877,8 @@ public abstract class Op
             case OP_VAR_T:       return "VAR_T";
             case OP_VAR_TN:      return "VAR_TN";
             case OP_MOV:         return "MOV";
-            case OP_REF:         return "REF";
+            case OP_MOV_VAR:     return "MOV_VAR";
+            case OP_MOV_REF:     return "MOV_REF";
             case OP_CAST:        return "CAST";
             case OP_GP_ADD:      return "GP_ADD";
             case OP_GP_SUB:      return "GP_SUB";
@@ -1069,8 +1070,9 @@ public abstract class Op
     public static final int OP_VAR_T        = 0x48;
     public static final int OP_VAR_TN       = 0x49;
     public static final int OP_MOV          = 0x4A;
-    public static final int OP_REF          = 0x4B;
-    public static final int OP_CAST         = 0x4C;
+    public static final int OP_MOV_VAR      = 0x4B;
+    public static final int OP_MOV_REF      = 0x4C;
+    public static final int OP_CAST         = 0x4D;
 
     public static final int OP_GP_ADD       = 0x50;
     public static final int OP_GP_SUB       = 0x51;

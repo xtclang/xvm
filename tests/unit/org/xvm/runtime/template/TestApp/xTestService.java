@@ -34,7 +34,7 @@ public class xTestService extends Service
         adapter.addMethod(f_struct, "default", VOID, VOID);
 
         markInjectable("runtimeClock");
-        markAtomicRef("counter2");
+        markAtomic("counter2");
 
         MethodStructure mtGetCounter = ensureGetter("counter");
         mtGetCounter.setOps(new Op[]
@@ -79,10 +79,10 @@ public class xTestService extends Service
             });
 
         MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",
-                new String[] {"Ref<Int64>", "Int64"});
+                new String[] {"Var<Int64>", "Int64"});
         ftLambda$1.setOps(new Op[]
             { // #0 = &iRet, #1 = cDelay
-            new Invoke_10(0, adapter.getMethodConstId("Ref", "set"), 1),
+            new Invoke_10(0, adapter.getMethodConstId("Var", "set"), 1),
             new Return_0()
             });
 
@@ -102,7 +102,7 @@ public class xTestService extends Service
             new Exit(), // optimize out; unreachable
 
             new Enter(),
-            new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                      adapter.ensureValueConstantId("iRet")), // #2 (iRet)
 
             new Var_I(adapter.getClassTypeConstId("Function"),

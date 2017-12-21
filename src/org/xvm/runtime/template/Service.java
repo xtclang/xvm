@@ -24,7 +24,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 
-import org.xvm.runtime.template.annotations.xFutureRef;
+import org.xvm.runtime.template.annotations.xFutureVar;
 
 
 /**
@@ -143,7 +143,7 @@ public class Service
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePreInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
         }
 
     @Override
@@ -159,7 +159,7 @@ public class Service
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePostInc);
 
-        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
         }
 
     @Override
@@ -175,7 +175,7 @@ public class Service
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::getPropertyValue);
 
-        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
         }
 
     @Override
@@ -230,7 +230,7 @@ public class Service
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 
-        return frame.assignValue(iReturn, xFutureRef.makeHandle(cfService));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfService));
         }
 
     @Override

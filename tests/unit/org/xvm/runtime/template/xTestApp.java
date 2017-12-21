@@ -176,20 +176,20 @@ public class xTestApp extends xModule
             .add(new Call_01(2, 1))
             .add(new X_Print(1))
 
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("fc"))) // #3 (fc)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 3))
-            .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("rfc"))) // #4 (rfc)
             .add(new MoveRef(3, 4))
             .add(new X_Print(4))
             .add(new X_Print(3))
             .add(new X_Print(4))
 
-            .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("rfc"))) // #5 (rfc2)
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("rfc3"))) // #6 (rfc3)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 6))
@@ -199,7 +199,7 @@ public class xTestApp extends xModule
                 adapter.getMethodConstId("TestApp", "lambda_1"))) // #7
             .add(new FBind(7, new int[]{0}, new int[]{1}, 7))
             .add(new Invoke_10(5,
-                adapter.getMethodConstId("annotations.FutureRef", "whenComplete"),
+                adapter.getMethodConstId("annotations.FutureVar", "whenComplete"),
                 7))
 
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
@@ -214,7 +214,7 @@ public class xTestApp extends xModule
 
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
                 adapter.ensureValueConstantId("e"), +3))
-            .add(new Invoke_10(4, adapter.getMethodConstId("annotations.FutureRef", "set"),
+            .add(new Invoke_10(4, adapter.getMethodConstId("annotations.FutureVar", "set"),
                     adapter.ensureValueConstantId(99)))
             .add(new GuardEnd(+4))
             .add(new CatchStart()) // #8 (e)
@@ -272,7 +272,7 @@ public class xTestApp extends xModule
             .add(new Call_01(1, 2))
             .add(new X_Print(2))
 
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureRef<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                      adapter.ensureValueConstantId("fc"))) // #3 (fc)
             .add(new Invoke_01(0,
                     adapter.getMethodConstId("TestApp.TestService", "increment"), 3))
@@ -328,32 +328,32 @@ public class xTestApp extends xModule
             // #0 = arg
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testRef() #")))
 
-            .add(new Var_N(adapter.getClassTypeConstId("Ref<String>"),
+            .add(new Var_N(adapter.getClassTypeConstId("Var<String>"),
                 adapter.ensureValueConstantId("ra"))) // #1 (ra)
-            .add(new MoveRef(0, 1))
+            .add(new MoveVar(0, 1))
 
             .add(new Invoke_01(1, adapter.getMethodConstId("Ref", "get"), 2)) // next register #2
             .add(new X_Print(2))
-            .add(new Invoke_10(1, adapter.getMethodConstId("Ref", "set"),
+            .add(new Invoke_10(1, adapter.getMethodConstId("Var", "set"),
                     adapter.ensureValueConstantId("bye")))
             .add(new X_Print(0))
 
-            .add(new Var_N(adapter.getClassTypeConstId("Ref<Int64>"),
+            .add(new Var_N(adapter.getClassTypeConstId("Var<Int64>"),
                 adapter.ensureValueConstantId("ri"))) // #3 (ri)
             .add(new Enter())
             .add(new Var_IN(adapter.getClassTypeConstId("Int64"),
                 adapter.ensureValueConstantId("i"),
                 adapter.ensureValueConstantId(1))) // #4 (i)
-            .add(new Var_N(adapter.getClassTypeConstId("Ref<Int64>"),
+            .add(new Var_N(adapter.getClassTypeConstId("Var<Int64>"),
                 adapter.ensureValueConstantId("ri2"))) // #5 (ri2)
-            .add(new MoveRef(4, 5))
-            .add(new MoveRef(4, 3))
+            .add(new MoveVar(4, 5))
+            .add(new MoveVar(4, 3))
 
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"),
                 6)) // next register #6
             .add(new X_Print(6))
 
-            .add(new Invoke_10(3, adapter.getMethodConstId("Ref", "set"),
+            .add(new Invoke_10(3, adapter.getMethodConstId("Var", "set"),
                 adapter.ensureValueConstantId(2)))
             .add(new X_Print(4))
 
@@ -370,7 +370,7 @@ public class xTestApp extends xModule
         // --- testArray()
 
         MethodStructure ftLambda$2 = ensureMethodStructure("lambda_2",
-                new String[] {"Ref<Int64>"}, STRING);
+                new String[] {"Var<Int64>"}, STRING);
         ftLambda$2.createCode()
             // #0 = i
             .add(new Var_I(adapter.getClassTypeConstId("String"),
@@ -417,7 +417,7 @@ public class xTestApp extends xModule
             .add(new I_Ref(2, adapter.ensureValueConstantId(0), 4)) // next register #4
             .add(new Invoke_01(4, adapter.getMethodConstId("Ref", "get"), 3))
             .add(new X_Print(3))
-            .add(new Invoke_10(4, adapter.getMethodConstId("Ref", "set"),
+            .add(new Invoke_10(4, adapter.getMethodConstId("Var", "set"),
                 adapter.ensureValueConstantId("zero")))
             .add(new I_Get(2, adapter.ensureValueConstantId(0), 3))
             .add(new X_Print(3))

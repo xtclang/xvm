@@ -1,5 +1,5 @@
 /**
- * A FutureRef represents a result that may be asynchronously provided, allowing the caller to
+ * A FutureVar represents a result that may be asynchronously provided, allowing the caller to
  * indicate a response to the result.
  *
  *   service Pi
@@ -31,8 +31,8 @@
  *          .passTo(s -> console.print(s));
  *       }
  *
- * The FutureRef does override the behavior of the Ref interface in a few specific ways:
- * * The {@link assigned} property on a FutureRef indicates whether the future has completed, either
+ * The FutureVar does override the behavior of the Ref interface in a few specific ways:
+ * * The {@link assigned} property on a FutureVar indicates whether the future has completed, either
  *   successfully or exceptionally.
  * * The {@link peek} method performs a non-blocking examination of the future:
  * * * {@code peek} returns negatively iff the future has not completed.
@@ -45,8 +45,8 @@
  * * The {@link set} method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
  */
-mixin FutureRef<RefType>
-        into Ref<RefType>
+mixin FutureVar<RefType>
+        into Var<RefType>
     {
     /**
      * Future completion status:
@@ -143,7 +143,7 @@ mixin FutureRef<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureRef!<RefType> thenDo(function Void () run)
+    FutureVar!<RefType> thenDo(function Void () run)
         {
         return chain(new ThenDoStep<RefType>(run));
         }
@@ -163,7 +163,7 @@ mixin FutureRef<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureRef!<RefType> passTo(function Void (RefType) consume)
+    FutureVar!<RefType> passTo(function Void (RefType) consume)
         {
         return chain(new PassToStep<RefType>(consume));
         }
@@ -185,7 +185,7 @@ mixin FutureRef<RefType>
      *   returned from the function.
      */
 // TODO: CP
-//    <NewType> FutureRef!<NewType> transform(function NewType (RefType) convert)
+//    <NewType> FutureVar!<NewType> transform(function NewType (RefType) convert)
 //        {
 //        return chain(new TransformStep<NewType, RefType>(convert));
 //        }
@@ -206,7 +206,7 @@ mixin FutureRef<RefType>
      * * If that function returns, then the new future will complete successfully with the value
      *   returned from the function.
      */
-    FutureRef!<RefType> handle(function RefType (Exception) convert)
+    FutureVar!<RefType> handle(function RefType (Exception) convert)
         {
         return chain(new HandleStep<RefType>(convert));
         }
@@ -228,7 +228,7 @@ mixin FutureRef<RefType>
      *   returned from the function.
      */
 // TODO: CP
-//    <NewType> FutureRef!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
+//    <NewType> FutureVar!<NewType> transformOrHandle(function NewType (RefType?, Exception?) convert)
 //        {
 //        return chain(new Transform2Step<NewType, RefType>(convert));
 //        }
@@ -246,7 +246,7 @@ mixin FutureRef<RefType>
      * * If this future or the other future completes exceptionally, and the new future has not
      *   already completed, then the new future will complete exceptionally with the same exception.
      */
-    FutureRef!<RefType> or(FutureRef!<RefType> other)
+    FutureVar!<RefType> or(FutureVar!<RefType> other)
         {
         return chain(new OrStep<RefType>(other));
         }
@@ -265,9 +265,9 @@ mixin FutureRef<RefType>
      *   not already completed, then the new future will complete exceptionally with the same
      *   exception.
      */
-    FutureRef!<RefType> orAny(FutureRef!<RefType> ... others)
+    FutureVar!<RefType> orAny(FutureVar!<RefType> ... others)
         {
-        FutureRef!<RefType> result = this;
+        FutureVar!<RefType> result = this;
         others.forEach(other -> {result = result.or(other);});
         return result;
         }
@@ -291,8 +291,8 @@ mixin FutureRef<RefType>
      *   returned from the function.
      */
 // TODO: CP
-//    <NewType> FutureRef!<NewType> and(FutureRef! other,
-//            function FutureRef!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
+//    <NewType> FutureVar!<NewType> and(FutureVar! other,
+//            function FutureVar!<NewType> (RefType, other.RefType) combine = (v1, v2) -> (v1, v2))
 //        {
 //        return chain(new AndStep<NewType, RefType, other.RefType>(other, combine));
 //        }
@@ -309,7 +309,7 @@ mixin FutureRef<RefType>
      *   (successfully or exceptionally) and with the same result (value or exception) as this
      *   future.
      */
-    FutureRef!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+    FutureVar!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
         {
         return chain(new WhenCompleteStep<RefType>(notify));
         }
@@ -332,7 +332,7 @@ mixin FutureRef<RefType>
      *   returned from the function.
      */
 // TODO: CP
-//    <NewType> FutureRef!<NewType> createContinuation(function NewType (RefType) async)
+//    <NewType> FutureVar!<NewType> createContinuation(function NewType (RefType) async)
 //        {
 //        return chain(new ContinuationStep<NewType, RefType>(async));
 //        }
@@ -342,7 +342,7 @@ mixin FutureRef<RefType>
     /**
      * Wait for the completion of the future.
      */
-    FutureRef<RefType> waitForCompletion()
+    FutureVar<RefType> waitForCompletion()
         {
         while (completion == Pending)
             {
@@ -422,11 +422,11 @@ mixin FutureRef<RefType>
     /**
      * Add a DependentFuture to the list of things that this future must notify when it completes.
      * The DependentFuture contains a {@link DependentFuture.parentCompleted} method that is used as
-     * a {@link NotifyDependent} function, allowing one or more FutureRef instances to notify it of
-     * their completion. The FutureRef can chain to any number of DependentFuture instances.
+     * a {@link NotifyDependent} function, allowing one or more FutureVar instances to notify it of
+     * their completion. The FutureVar can chain to any number of DependentFuture instances.
      */
 // TODO: CP
-//    FutureRef!<nextFuture.RefType> chain(DependentFuture nextFuture)
+//    FutureVar!<nextFuture.RefType> chain(DependentFuture nextFuture)
 //        {
 //        chain(nextFuture.parentCompleted);
 //        return nextFuture;
@@ -434,7 +434,7 @@ mixin FutureRef<RefType>
 
     /**
      * Add a NotifyDependent function to the list of things that this future must notify when it
-     * completes. The FutureRef can chain to any number of NotifyDependent functions.
+     * completes. The FutureVar can chain to any number of NotifyDependent functions.
      */
     Void chain(NotifyDependent notify)
         {
@@ -473,7 +473,7 @@ mixin FutureRef<RefType>
      */
     static class DependentFuture<RefType, InputType>
             implements Ref<RefType>
-            incorporates FutureRef<RefType>
+            incorporates FutureVar<RefType>
             delegates Ref<RefType>(resultRef)
         {
         Void parentCompleted(Completion completion, InputType? input, Exception? e)
@@ -519,7 +519,7 @@ mixin FutureRef<RefType>
             }
 
         /**
-         * The "multi" completer is actually a "bi" completer, and the FutureRef's implementation
+         * The "multi" completer is actually a "bi" completer, and the FutureVar's implementation
          * of the chain method will link multiple of them together in a left-legged-only binary tree
          * in order to emulate a linked list of notifications (i.e. notifications are always
          * appended to the end of the list).
@@ -691,7 +691,7 @@ mixin FutureRef<RefType>
     static class OrStep<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct OrStep(FutureRef!<RefType> other)
+        construct OrStep(FutureVar!<RefType> other)
             {
             }
         finally
@@ -709,7 +709,7 @@ mixin FutureRef<RefType>
     static class AndStep<RefType, InputType, Input2Type>
             extends DependentFuture<RefType, InputType>
         {
-        construct AndStep(FutureRef!<Input2Type> other, function RefType (InputType, Input2Type) combine)
+        construct AndStep(FutureVar!<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
             }
         finally
@@ -718,7 +718,7 @@ mixin FutureRef<RefType>
             }
 
 // TODO: CP
-//        public/private function FutureRef!<NewType> (RefType, other.RefType) combine;
+//        public/private function FutureVar!<NewType> (RefType, other.RefType) combine;
 
         private /* TODO property cannot be conditional */ InputType  input1 = false;      // REVIEW
         private /* TODO property cannot be conditional */ Input2Type input2 = false;
@@ -862,7 +862,7 @@ mixin FutureRef<RefType>
     static class ContinuationStep<RefType, InputType>(function RefType (InputType) invokeAsync)
             extends DependentFuture<RefType, InputType>
         {
-        protected FutureRef<RefType>? asyncResult;
+        protected FutureVar<RefType>? asyncResult;
 
         @Override
         Void parentCompleted(Completion completion, InputType? input, Exception? e)

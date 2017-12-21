@@ -59,8 +59,8 @@
  *       ++Statistics.misses;
  *       }
  */
-mixin AtomicRef<RefType>
-        into Ref<RefType>
+mixin AtomicVar<RefType>
+        into Var<RefType>
         incorporates conditional AtomicIntNumber<RefType extends IntNumber>  // see TODO
     {
     Boolean replace(RefType oldValue, RefType newValue)

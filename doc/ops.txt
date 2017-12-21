@@ -96,7 +96,8 @@
 // - does NOT support "local property" mode;
 // - for MOV and REF the lvalue-dest can be a next unallocated register
 +MOV        rvalue-src, lvalue-dest                 ; copy source to destination ("protection" proxy may be generated)
-+REF        rvalue-src, lvalue-dest                 ; move ("R"=) reference-to-source to destination
++MOV_VAR    rvalue-src, lvalue-dest                 ; move ("R"=) Var-to-source to destination
++MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
 -CAST       rvalue-src, lvalue-dest                 ; copy source to destination with cast
 
 // ("GP"=) general purpose register/local-property operations:

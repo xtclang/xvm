@@ -21,8 +21,8 @@ import org.xvm.runtime.TypeSet;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Service.ServiceHandle;
-import org.xvm.runtime.template.annotations.xFutureRef;
-import org.xvm.runtime.template.annotations.xFutureRef.FutureHandle;
+import org.xvm.runtime.template.annotations.xFutureVar;
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 
 /**
@@ -512,7 +512,7 @@ public class Function
 
         private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
             {
-            FutureHandle hFuture = xFutureRef.makeHandle(cfResult);
+            FutureHandle hFuture = xFutureVar.makeHandle(cfResult);
             if (iReturn >= 0)
                 {
                 return frame.assignValue(iReturn, hFuture);
@@ -526,7 +526,7 @@ public class Function
             ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
             Frame frameNext = frame.createNativeFrame(aop, ahFuture, iReturn, null);
 
-            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureRef.TYPE, Frame.VAR_DYNAMIC_REF);
+            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
 
             frame.m_frameNext = frameNext;
             return Op.R_CALL;
@@ -576,8 +576,8 @@ public class Function
                 CompletableFuture<ObjectHandle> cfReturn =
                         cfResult.thenApply(ahResult -> ahResult[iResult]);
 
-                ahFuture[i] = xFutureRef.makeHandle(cfReturn);
-                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureRef.TYPE, Frame.VAR_DYNAMIC_REF);
+                ahFuture[i] = xFutureVar.makeHandle(cfReturn);
+                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
                 }
 
             frame.m_frameNext = frameNext;

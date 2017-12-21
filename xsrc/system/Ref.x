@@ -64,7 +64,7 @@ interface Ref<RefType>
      * exception:
      * * {@code @Lazy} references ({@link annotations.LazyRef}) are allowed to be unassigned,
      *   because they will lazily assign themselves on the first dereference attempt.
-     * * {@code @Future} references ({@link annotations.FutureRef}) are allowed to be unassigned,
+     * * {@code @Future} references ({@link annotations.FutureVar}) are allowed to be unassigned,
      *   because they assigned only on completion of the future, and an attempt to dereference
      *   before that point in time will block until that completion occurs.
      * * {@code @Soft} and {@code @Weak} references ({@link annotations.SoftRef} and {@link
@@ -73,15 +73,12 @@ interface Ref<RefType>
      */
     conditional RefType peek()
         {
-        using (new CriticalSection())
+        if (assigned)
             {
-            if (assigned)
-                {
-                return True, get();
-                }
-
-            return False;
+            return True, get();
             }
+
+        return False;
         }
 
     /**
