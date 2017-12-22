@@ -314,7 +314,7 @@ module Test
 
     Int foo()
         {
-        MyMap map;
+        MyMap<Object, Object> map;
         return map;
         }
     }

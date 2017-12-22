@@ -1161,7 +1161,8 @@ public class TerminalTypeConstant
                         {
                         if (method instanceof MethodStructure)
                             {
-                            fHalt |= resolveMethodStructure((MethodStructure) method, typeinfo, null, access, errs);
+                            // TODO
+                            MethodInfo methodinfo = resolveMethodStructure((MethodStructure) method, typeinfo, null, access, errs);
                             }
                         else
                             {
@@ -1197,7 +1198,10 @@ public class TerminalTypeConstant
             return fHalt;
             }
 
-        // TODO trim out everything that doesn't meet our accessibility requirements
+        if (fTopmost)
+            {
+            // TODO trim out everything that doesn't meet our accessibility requirements
+            }
 
         return fHalt;
         }
@@ -1259,23 +1263,20 @@ public class TerminalTypeConstant
      * @param access      the desired accessibility into the current type
      * @param errs        the error list to log any errors to
      *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
+     * @return a MethodInfo representing what the MethodStructure resolved to
      */
-    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
+    protected MethodInfo resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
             Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
         assert access != null;
 
-        boolean fHalt = false;
-
         // first determine if this method should be registered
         // TODO
         // System.out.println("method: " + struct.getIdentityConstant().getValueString());
 
-        return fHalt;
+        return null;
         }
 
     @Override

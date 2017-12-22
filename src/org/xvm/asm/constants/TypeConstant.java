@@ -1278,7 +1278,9 @@ public abstract class TypeConstant
         public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>(7);
 
         /**
-         * The Format of the topmost class structure. TODO what about relational types?         */
+         * The Format of the topmost class structure.
+         * TODO what about relational types?
+         */
         private Component.Format m_formatActual;
 
         /**
