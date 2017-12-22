@@ -433,22 +433,13 @@ public class ClassStructure
      * Recursively find a contribution by the specified id and add the corresponding
      * ContributionChain objects to the list of chains.
      *
-     * @param constId    the identity to look for
+     * @param constId     the identity to look for
+     * @param chains      the list of chains to add to
+     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
      *
      * @return the resulting list of ContributionChain objects
      */
-    public List<ContributionChain> collectContributions(IdentityConstant constId,
-                                                        List<ContributionChain> chains)
-        {
-        return collectContributionsImpl(constId, chains, true);
-        }
-
-    /**
-     * Recursive implementation of collectContributions method.
-     *
-     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
-     */
-    protected List<ContributionChain> collectContributionsImpl(
+    public List<ContributionChain> collectContributions(
             IdentityConstant constId, List<ContributionChain> chains, boolean fAllowInto)
         {
         if (constId.equals(getIdentityConstant()))
@@ -495,7 +486,7 @@ public class ClassStructure
 
                     ClassConstant constSuper = (ClassConstant) constContrib;
                     chains = ((ClassStructure) constSuper.getComponent()).
-                        collectContributionsImpl(constId, chains, false);
+                        collectContributions(constId, chains, false);
                     if (!chains.isEmpty())
                         {
                         for (ContributionChain chain : chains)

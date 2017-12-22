@@ -1303,7 +1303,8 @@ public class TerminalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+    protected List<ContributionChain> collectContributions(TypeConstant that,
+                                                           List<ContributionChain> chains)
         {
         Constant constIdThis = getDefiningConstant();
 
@@ -1366,7 +1367,8 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
+    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat,
+                                                                List<ContributionChain> chains)
         {
         Constant constIdThis = getDefiningConstant();
 
@@ -1388,7 +1390,7 @@ public class TerminalTypeConstant
                     }
 
                 List<ContributionChain> chainsClz =
-                    clzThat.collectContributions(idThis, new LinkedList<>());
+                    clzThat.collectContributions(idThis, new LinkedList<>(), true);
                 if (chainsClz.isEmpty())
                     {
                     ClassStructure clzThis = (ClassStructure) idThis.getComponent();
