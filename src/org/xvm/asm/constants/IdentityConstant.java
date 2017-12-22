@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -102,6 +103,19 @@ public abstract class IdentityConstant
     public Component getComponent()
         {
         return getParentConstant().getComponent().getChild(this);
+        }
+
+    /**
+     * Determine if this is a class that is or that extends the specified super class.
+     *
+     * @param clzSuper  the class to test if this class extends
+     *
+     * @return true iff this constant refers to a class, and the class is or extends the specified
+     *         super class
+     */
+    public boolean extendsClass(ClassConstant clzSuper)
+        {
+        return this.isClass() && ((ClassStructure) this.getComponent()).extendsClass(clzSuper);
         }
 
     /**

@@ -199,7 +199,8 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         if (atypeParams != null)
             {
@@ -208,7 +209,7 @@ public class ParameterizedTypeConstant
             throw new IllegalStateException("inexplicable dual occurrence of type params for " + typeinfo.type);
             }
 
-        return super.resolveStructure(typeinfo, access, m_atypeParams, errs);
+        return super.resolveStructure(typeinfo, chain, access, m_atypeParams, errs);
         }
 
 

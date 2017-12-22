@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
@@ -23,6 +24,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.MethodStructure;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
@@ -511,7 +513,7 @@ public abstract class TypeConstant
         if (m_typeinfo == null)
             {
             m_typeinfo = new TypeInfo(this);
-            resolveStructure(m_typeinfo, getAccess(), null, ErrorListener.RUNTIME);
+            resolveStructure(m_typeinfo, new ContributionChain(), getAccess(), null, ErrorListener.RUNTIME);
             }
 
         return m_typeinfo;
@@ -522,6 +524,8 @@ public abstract class TypeConstant
      * {@link TypeInfo}, logging any errors that are detected in the composition of the type.
      *
      * @param typeinfo     the type info to contribute to
+     * @param chain        the chain of contributions that led here from the type specified in the
+     *                     TypeInfo
      * @param access       the desired accessibility into the current type
      * @param atypeParams  the types for the type parameters of this class, if any (may be null)
      * @param errs         the error list to log any errors to
@@ -529,9 +533,10 @@ public abstract class TypeConstant
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
-        return getUnderlyingType().resolveStructure(typeinfo, access, atypeParams, errs);
+        return getUnderlyingType().resolveStructure(typeinfo, chain, access, atypeParams, errs);
         }
 
 
@@ -960,7 +965,8 @@ public abstract class TypeConstant
         if (m_typeinfo == null)
             {
             m_typeinfo = new TypeInfo(this);
-            if (resolveStructure(m_typeinfo, getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
+            if (resolveStructure(m_typeinfo, new ContributionChain(),
+                    getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
                 {
                 return true;
                 }
@@ -1287,10 +1293,12 @@ public abstract class TypeConstant
          * </ul>
          */
         private Component.Format m_formatUsage;
-        // TODO
-        public final Set<TypeConstant> extended     = new HashSet<>(7);
-        public final Set<TypeConstant> implemented  = new HashSet<>(7);
-        public final Set<TypeConstant> incorporated = new HashSet<>(7);
+
+        public final Set<TypeConstant> extended     = new HashSet<>();
+        public final Set<TypeConstant> implemented  = new HashSet<>();
+        public final Set<TypeConstant> incorporated = new HashSet<>();
+        public final Set<TypeConstant> implicit     = new HashSet<>();
+
         private TypeConstant m_impersonates;
         private TypeConstant m_typeInto;
 
@@ -1451,14 +1459,78 @@ public abstract class TypeConstant
      */
     public static class MethodInfo
         {
+        /**
+         * Construct a MethodInfo.
+         *
+         * @param constSig  the signature for the new MethodInfo
+         */
         public MethodInfo(SignatureConstant constSig)
             {
-            signature = constSig;
+            m_constSig = constSig;
+            }
+
+        /**
+         * Construct a MethodInfo that is a copy of another MethodInfo, but with a different
+         * signature.
+         *
+         * @param constSig  the signature for the new MethodInfo
+         * @param that      the old MethodInfo to copy state from
+         */
+        public MethodInfo(SignatureConstant constSig, MethodInfo that)
+            {
+            this(constSig);
+            this.m_bodyPrimary = that.m_bodyPrimary;
+            this.m_bodyDefault = that.m_bodyDefault;
             }
 
         public SignatureConstant getSignature()
             {
-            return signature;
+            return m_constSig;
+            }
+
+        /**
+         * @return the first method body in the chain to call
+         */
+        public MethodBody[] ensureChain()
+            {
+            // check if we've already cached the chain
+            MethodBody[] abody = m_abodyChain;
+            if (abody == null)
+                {
+                ArrayList<MethodBody> list = new ArrayList<>();
+                MethodBody body = m_bodyPrimary;
+                while (body != null)
+                    {
+                    list.add(body);
+                    body = body.getSuper();
+                    }
+                if (m_bodyDefault != null)
+                    {
+                    list.add(m_bodyDefault);
+                    }
+                assert !list.isEmpty();
+                m_abodyChain = abody = list.toArray(new MethodBody[list.size()]);
+                }
+
+            return abody;
+            }
+
+        public MethodBody getFirstMethodBody()
+            {
+            return ensureChain()[0];
+            }
+
+        void prependBody(MethodBody body)
+            {
+            body.setSuper(m_bodyPrimary);
+            m_bodyPrimary = body;
+            m_abodyChain  = null;
+            }
+
+        void setDefault(MethodBody body)
+            {
+            m_bodyDefault = body;
+            m_abodyChain  = null;
             }
 
         /**
@@ -1469,42 +1541,181 @@ public abstract class TypeConstant
             throw new UnsupportedOperationException("TODO"); // TODO
             }
 
-        public boolean isOp()
-            {
-            throw new UnsupportedOperationException("TODO"); // TODO
-            }
-
-        public boolean isOp(String sName, String sOp, int cParams)
-            {
-            throw new UnsupportedOperationException("TODO"); // TODO
-            // Set<MethodConstant> setOps = null;
-            // ConstantPool        pool   = getConstantPool();
-            // ClassConstant       clzOp  = pool.clzOp();
-            // for (MethodConstant constMethod : getMethods(access))
-            //     {
-            //     // method constant can quickly eliminate parameter count mismatches
-            //     if (constMethod.getRawParams().length == cParams)
-            //         {
-            //         constMethod.getName().equals(sName) &&
-            //                 MethodStructure structMethod = (MethodStructure) constMethod.getComponent();
-            //         Annotation annotation   = structMethod.findAnnotation(clzOp);
-            //         if (annotation != null)
-            //         }
-            //     // method must be decorated with @Op
-            //     constMethod.
-            //             // method name must match, OR the @Op parameter must match sOp
-            //                     method.getDecoration(pool.clAu))
-            //     //method.getRawParams().length == cParams
-            //     //method.getName().equals(sName))
-            //     }
-            }
-
+        /**
+         * @return true iff this MethodInfo represents an "@Auto" auto-conversion method
+         */
         public boolean isAuto()
             {
-            throw new UnsupportedOperationException("TODO"); // TODO
+            return getFirstMethodBody().isAuto();
             }
 
-        private SignatureConstant signature;
+        /**
+         * @return true iff this MethodInfo represents an "@Op" operator method
+         */
+        public boolean isOp()
+            {
+            return getFirstMethodBody().findAnnotation(m_constSig.getConstantPool().clzOp()) != null;
+            }
+
+        /**
+         * @return true iff this MethodInfo represents the specified "@Op" operator method
+         */
+        public boolean isOp(String sName, String sOp, int cParams)
+            {
+            return getFirstMethodBody().isOp(sName, sOp, cParams);
+            }
+
+        private SignatureConstant m_constSig;
+        private MethodBody        m_bodyPrimary;
+        private MethodBody        m_bodyDefault;
+        private MethodBody[]      m_abodyChain;
+        }
+
+
+    /**
+     * Represents a single method (or function) implementation body.
+     */
+    public static class MethodBody
+        {
+        public MethodBody(MethodConstant constMethod)
+            {
+            m_constMethod = constMethod;
+            }
+
+        /**
+         * @return the MethodConstant that this MethodBody represents
+         */
+        public MethodConstant getMethodConstant()
+            {
+            return m_constMethod;
+            }
+
+        /**
+         * @return the MethodStructure that this MethodBody represents
+         */
+        public MethodStructure getMethodStructure()
+            {
+            return (MethodStructure) m_constMethod.getComponent();
+            }
+
+        /**
+         * Determine if this method is annotated with the specified annotation.
+         *
+         * @param clzAnno  the annotation class to look for
+         *
+         * @return the annotation, or null
+         */
+        public Annotation findAnnotation(ClassConstant clzAnno)
+            {
+            MethodStructure struct = getMethodStructure();
+            if (struct.getAnnotationCount() > 0)
+                {
+                for (Annotation annotation : struct.getAnnotations())
+                    {
+                    if (((ClassConstant) annotation.getAnnotationClass()).extendsClass(clzAnno))
+                        {
+                        return annotation;
+                        }
+                    }
+                }
+
+            return null;
+            }
+
+        /**
+         * @return true iff this is an auto converting method
+         */
+        public boolean isAuto()
+            {
+            // all @Auto methods must have no params and a single return value
+            return  m_constMethod.getRawParams().length == 0 &&
+                    m_constMethod.getRawReturns().length == 1 &&
+                    findAnnotation(m_constMethod.getConstantPool().clzAuto()) != null;
+            }
+
+        /**
+         * Determine if this is a matching "@Op" method.
+         *
+         * @param sName    the default name of the method
+         * @param sOp      the operator text
+         * @param cParams  the number of required method parameters
+         *
+         * @return true iff this is an "@Op" method that matches the specified attributes
+         */
+        public boolean isOp(String sName, String sOp, int cParams)
+            {
+            // the number of parameters must match
+            if (m_constMethod.getRawParams().length != cParams)
+                {
+                return false;
+                }
+
+            // there has to be an @Op annotation
+            // if the method name matches the default method name for the op, then we're ok;
+            // otherwise we need to get the operator text from the operator annotation
+            // (it's the first of the @Op annotation parameters)
+            Annotation annotation = findAnnotation(m_constMethod.getConstantPool().clzOp());
+            return annotation != null &&
+                    (m_constMethod.getName().equals(sName) ||
+                     annotation.getParams().length >= 1 && sOp.equals(annotation.getParams()[0]));
+            }
+
+        /**
+         * @return the signature of the MethodConstant associated with this MethodBody
+         */
+        public SignatureConstant getSignature()
+            {
+            return getMethodConstant().getSignature();
+            }
+
+        /**
+         * @return the Implementation form of this MethodBody
+         */
+        public Implementation getImplementationForm()
+            {
+            return m_impl;
+            }
+
+        void setImplementationForm(Implementation impl)
+            {
+            assert impl != null;
+            m_impl = impl;
+            }
+
+        /**
+         * @return the PropertyConstant of the property that provides the reference to delegate this
+         *         method to
+         */
+        public PropertyConstant getDelegationProperty()
+            {
+            return m_constDelegProp;
+            }
+
+        void setDelegationProperty(PropertyConstant constProp)
+            {
+            m_impl           = Implementation.Delegating;
+            m_constDelegProp = constProp;
+            }
+
+        /**
+         * @return the MethodBody that represents the "super" of this MethodBody
+         */
+        public MethodBody getSuper()
+            {
+            return m_super;
+            }
+
+        void setSuper(MethodBody bodySuper)
+            {
+            m_super = bodySuper;
+            }
+
+        public enum Implementation {Implicit, Abstract, Delegating, Native, ActualCode}
+
+        private MethodConstant   m_constMethod;
+        private Implementation   m_impl = Implementation.ActualCode;
+        private PropertyConstant m_constDelegProp;
+        private MethodBody       m_super;
         }
 
 

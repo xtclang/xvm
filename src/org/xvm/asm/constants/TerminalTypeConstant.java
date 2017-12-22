@@ -505,30 +505,31 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Module:
             case Package:
             case Class:
                 // load the structure
                 Component component = ((IdentityConstant) constant).getComponent();
-                return resolveClassStructure((ClassStructure) component, typeinfo, access,
-                        atypeParams, errs);
+                return resolveClassStructure((ClassStructure) component, typeinfo, chain,
+                        access, atypeParams, errs);
 
             case ThisClass:
             case ParentClass:
@@ -553,6 +554,8 @@ public class TerminalTypeConstant
      *
      * @param struct       the class structure
      * @param typeinfo     the type info to contribute to
+     * @param chain        the chain of contributions that led here from the type specified in the
+     *                     TypeInfo
      * @param access       the desired accessibility into the current type
      * @param atypeParams  the types for the type parameters of this class, if any (may be null)
      * @param errs         the error list to log any errors to
@@ -560,10 +563,12 @@ public class TerminalTypeConstant
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
+        assert chain != null;
         assert access != null;
 
         boolean fHalt = false;
@@ -740,8 +745,6 @@ public class TerminalTypeConstant
             return fHalt;
             }
 
-        // next up, for any class type (other than Object itself), there MUST be an "extends"
-        // contribution that specifies another class
         List<Contribution> listContributions = new ArrayList<>();
         boolean            fInto             = false;
         boolean            fExtends          = false;
@@ -749,14 +752,20 @@ public class TerminalTypeConstant
             {
             case MODULE:
             case PACKAGE:
+            case ENUMVALUE:
+            case ENUM:
             case CLASS:
             case CONST:
-            case ENUM:
-            case ENUMVALUE:
             case SERVICE:
                 {
+                // next up, for any class type (other than Object itself), there MUST be an "extends"
+                // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
                 fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+                if (fExtends)
+                    {
+                    ++iContrib;
+                    }
 
                 // Object does not (and must not) extend anything
                 if (struct.getIdentityConstant().equals(getConstantPool().clzObject()))
@@ -790,17 +799,37 @@ public class TerminalTypeConstant
 
                 if (typeinfo.extended.contains(typeExtends))
                     {
-                    // some sor of circular loop
+                    // some sort of circular loop
                     fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
                             struct.getIdentityConstant().getPathString());
                     break;
+                    }
+
+                // the class structure will have to verify its "extends" clause in more detail, for
+                // example verifying ClassStructure.isExtendsLegal(); what we need to determine is
+                // we
+                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
+                ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
+                if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
+                    {
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                            struct.getIdentityConstant().getPathString(), struct.getFormat(),
+                            constExtends.getPathString(), structExtends.getFormat());
+                    break;
+                    }
+
+                // check for re-basing
+                TypeConstant typeRebase = struct.getRebaseType();
+                if (typeRebase != null)
+                    {
+                    typeinfo.extended.add(typeRebase);
+                    listContributions.add(new Contribution(Composition.RebasesOnto, typeRebase));
                     }
 
                 // add the "extends" to the list of contributions to process, and register it so
                 // that no one else will do it
                 typeinfo.extended.add(typeExtends);
                 listContributions.add(contrib);
-                ++iContrib;
                 }
                 break;
 
@@ -875,10 +904,12 @@ public class TerminalTypeConstant
                 break;
 
             case INTERFACE:
-                // first, lay down the set of methods present in Object
+                // first, lay down the set of methods present in Object (use the "Into" composition
+                // to make the Object methods implicit-only, as opposed to explicitly being present
+                // in this interface)
                 if (fTopmost)
                     {
-                    listContributions.add(new Contribution(Composition.Implements, getConstantPool().typeObject()));
+                    listContributions.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
                     }
                 break;
             }
@@ -1069,13 +1100,13 @@ public class TerminalTypeConstant
                         }
                     for (TypeConstant typeImplemented : typeinfo.implemented)
                         {
-                        List<ContributionChain> chains = typeImplemented.collectContributions(
+                        List<ContributionChain> listChains = typeImplemented.collectContributions(
                                 typeContrib, new ArrayList<>(), new ArrayList<>());
-                        if (!chains.isEmpty())
+                        if (!listChains.isEmpty())
                             {
-                            for (ContributionChain chain : chains)
+                            for (ContributionChain chainEach : listChains)
                                 {
-                                if (chain.first().getComposition() != Component.Composition.MaybeDuckType)
+                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
                                     {
                                     continue NextContrib;
                                     }
@@ -1107,7 +1138,9 @@ public class TerminalTypeConstant
             // TODO use Contribution "transform" helper
             TypeConstant typeContrib = contrib.getTypeConstant();
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+            chain.add(contrib);
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            chain.snip();
             }
         if (fHalt)
             {
@@ -1155,7 +1188,9 @@ public class TerminalTypeConstant
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+            chain.add(contrib);
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            chain.snip();
             }
         if (fHalt)
             {
