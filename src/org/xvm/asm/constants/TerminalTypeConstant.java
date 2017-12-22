@@ -568,6 +568,7 @@ public class TerminalTypeConstant
         {
         assert struct != null;
         assert typeinfo != null;
+        assert chain != null;
         assert access != null;
 
         boolean fHalt = false;
@@ -752,10 +753,7 @@ public class TerminalTypeConstant
             case MODULE:
             case PACKAGE:
             case ENUMVALUE:
-                // TODO has to be top-most (nothing can extend, impersonate)
             case ENUM:
-                // TODO only its enum values can extend it
-
             case CLASS:
             case CONST:
             case SERVICE:
@@ -764,6 +762,10 @@ public class TerminalTypeConstant
                 // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
                 fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+                if (fExtends)
+                    {
+                    ++iContrib;
+                    }
 
                 // Object does not (and must not) extend anything
                 if (struct.getIdentityConstant().equals(getConstantPool().clzObject()))
@@ -803,13 +805,31 @@ public class TerminalTypeConstant
                     break;
                     }
 
-                // TODO check for re-basing
+                // the class structure will have to verify its "extends" clause in more detail, for
+                // example verifying ClassStructure.isExtendsLegal(); what we need to determine is
+                // we
+                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
+                ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
+                if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
+                    {
+                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                            struct.getIdentityConstant().getPathString(), struct.getFormat(),
+                            constExtends.getPathString(), structExtends.getFormat());
+                    break;
+                    }
+
+                // check for re-basing
+                TypeConstant typeRebase = struct.getRebaseType();
+                if (typeRebase != null)
+                    {
+                    typeinfo.extended.add(typeRebase);
+                    listContributions.add(new Contribution(Composition.RebasesOnto, typeRebase));
+                    }
 
                 // add the "extends" to the list of contributions to process, and register it so
                 // that no one else will do it
                 typeinfo.extended.add(typeExtends);
                 listContributions.add(contrib);
-                ++iContrib;
                 }
                 break;
 

@@ -210,6 +210,10 @@ public interface Constants
      * Unexpected formal type name {0} encountered while resolving {1}.
      */
     public static final String VE_FORMAL_NAME_UNKNOWN               = "VERIFY-25";
+    /**
+     * {0}, which is a {1}, illegally extends {2}, which is a {3}.
+     */
+    public static final String VE_EXTENDS_INCOMPATIBLE              = "VERIFY-26";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

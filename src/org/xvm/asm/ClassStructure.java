@@ -295,24 +295,98 @@ public class ClassStructure
             }
         }
 
-// TODO need a more generic test that checks class assignability in general
-//            switch (contrib.getComposition())
-//                {
-//                case Extends:
-//                    // even though this class may be id'd using a ModuleConstant or PackageConstant, the
-//                    // super will always be a class (because a Module and a Package cannot be extended)
-//                    ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
-//                    if (constClass.equals(constSuper))
-//
-//                case Enumerates:
-//
-//                case Annotation:
-//                case Incorporates:
-//
-//                case Into:
-//                    // this is a mixin; if the type that this mixin mixes into is a class, then any
-//                    // instance of this mixin will extend the specified class
-//                }
+    /**
+     * Validate that a format can legally extend another format.
+     *
+     * @param fmtSub    the format of the extending class (the "sub" class)
+     * @param fmtSuper  the format of the class being extended (the "super" class)
+     *
+     * @return true if legal; otherwise false
+     */
+    public static boolean isExtendsLegal(Format fmtSub, Format fmtSuper)
+        {
+        switch (fmtSub)
+            {
+            case CLASS:
+                return fmtSuper == Format.CLASS;
+
+            case CONST:
+            case ENUM:
+            case PACKAGE:
+            case MODULE:
+                return fmtSuper == Format.CONST || fmtSuper == Format.CLASS;
+
+            case ENUMVALUE:
+                return fmtSuper == Format.ENUM;
+
+            case MIXIN:
+                return fmtSuper == Format.MIXIN;
+
+            case SERVICE:
+                return fmtSuper == Format.SERVICE || fmtSuper == Format.CLASS;
+
+            default:
+                return false;
+            }
+        }
+
+    /**
+     * @return a type to rebase onto, if rebasing is required by this class; otherwise null
+     */
+    public TypeConstant getRebaseType()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+                return getConstantPool().typeModule();
+
+            case PACKAGE:
+                return getConstantPool().typePackage();
+
+            case ENUM:
+                return getConstantPool().typeEnum();
+
+            case CONST:
+            case SERVICE:
+                // only if the format differs from the format of the super
+                ClassStructure structSuper = (ClassStructure)
+                        getExtendsType().getSingleUnderlyingClass().getComponent();
+                return getFormat() == structSuper.getFormat()
+                        ? null
+                        : getFormat() == Format.CONST
+                                ? getConstantPool().typeConst()
+                                : getConstantPool().typeService();
+
+            default:
+                return null;
+            }
+        }
+
+    /**
+     * @return the type that this ClassStructure extends, or null if this ClassStructure does not
+     *         contain an Extends contribution.
+     */
+    public TypeConstant getExtendsType()    // TODO helper to return a structure
+        {
+        // mixin contributions are: optional annotations followed by optional into followed by
+        // optional extends
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Into:
+                    break;
+
+                case Extends:
+                    return contrib.getTypeConstant();
+
+                default:
+                    return null;
+                }
+            }
+        return null;
+        }
 
     /**
      * Test for fake sub-classing (impersonation).
@@ -323,7 +397,7 @@ public class ClassStructure
      */
     public boolean impersonatesClass(IdentityConstant constClass)
         {
-        // TODO - in progress
+        // TODO
         return false;
         }
 
@@ -336,8 +410,8 @@ public class ClassStructure
      */
     public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
         {
-        // TODO - in progress
-        return false;
+        // TODO - this should be done in a single pass
+        return extendsClass(constClass) || impersonatesClass(constClass);
         }
 
     /**

@@ -2929,6 +2929,14 @@ public abstract class Component
             return m_list.size();
             }
 
+        /**
+         * @return the chain as a list
+         */
+        public List<Contribution> asList()
+            {
+            return m_list;
+            }
+
         public boolean isWeakMatch()
             {
             return m_fWeakMatch;
