@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -131,6 +132,12 @@ public class AccessTypeConstant
     protected boolean validateContributionFrom(TypeConstant that, Access access,
                                                ContributionChain chain)
         {
+        if (chain.first().getComposition() != Component.Composition.MaybeDuckType &&
+                that.getAccess().compareTo(m_access) < 0)
+            {
+            // the l-value (this) should have access no greater that the r-value (that)
+            return false;
+            }
         return super.validateContributionFrom(that, m_access, chain);
         }
 

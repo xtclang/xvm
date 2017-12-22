@@ -1070,7 +1070,7 @@ public class TerminalTypeConstant
                     for (TypeConstant typeImplemented : typeinfo.implemented)
                         {
                         List<ContributionChain> chains = typeImplemented.collectContributions(
-                                typeContrib, new ArrayList<>());
+                                typeContrib, new ArrayList<>(), new ArrayList<>());
                         if (!chains.isEmpty())
                             {
                             for (ContributionChain chain : chains)
@@ -1303,8 +1303,8 @@ public class TerminalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that,
-                                                           List<ContributionChain> chains)
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
         Constant constIdThis = getDefiningConstant();
 
@@ -1325,13 +1325,13 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clzThis = (ClassStructure)
                     ((IdentityConstant) constIdThis).getComponent();
-                chains.addAll(that.collectClassContributions(clzThis, chains));
+                chains.addAll(that.collectClassContributions(clzThis, listParams, chains));
                 break;
                 }
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    collectContributions(that, chains);
+                    collectContributions(that, listParams, chains);
 
             case Property:
                 // scenarios we can handle here are:
@@ -1341,11 +1341,11 @@ public class TerminalTypeConstant
                 // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 return getPropertyTypeConstant((PropertyConstant) constIdThis).
-                    collectContributions(that, chains);
+                    collectContributions(that, listParams, chains);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    collectContributions(that, chains);
+                    collectContributions(that, listParams, chains);
 
             case ThisClass:
             case ParentClass:
@@ -1353,7 +1353,7 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clzThis = (ClassStructure)
                     ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                chains.addAll(that.collectClassContributions(clzThis, chains));
+                chains.addAll(that.collectClassContributions(clzThis, listParams, chains));
                 break;
                 }
 
@@ -1367,8 +1367,8 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat,
-                                                                List<ContributionChain> chains)
+    protected List<ContributionChain> collectClassContributions(
+            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
         Constant constIdThis = getDefiningConstant();
 
@@ -1380,7 +1380,7 @@ public class TerminalTypeConstant
 
             case Class:
                 {
-                IdentityConstant idThis = (IdentityConstant) constIdThis;
+                ClassConstant idThis = (ClassConstant) constIdThis;
                 if (idThis.equals(getConstantPool().clzObject()))
                     {
                     // everything is considered to extend Object (even interfaces)
@@ -1390,7 +1390,7 @@ public class TerminalTypeConstant
                     }
 
                 List<ContributionChain> chainsClz =
-                    clzThat.collectContributions(idThis, new LinkedList<>(), true);
+                    clzThat.collectContributions(idThis, listParams, new LinkedList<>(), true);
                 if (chainsClz.isEmpty())
                     {
                     ClassStructure clzThis = (ClassStructure) idThis.getComponent();
@@ -1409,7 +1409,7 @@ public class TerminalTypeConstant
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    collectClassContributions(clzThat, chains);
+                    collectClassContributions(clzThat, listParams, chains);
 
             case Property:
             case Register:
@@ -1423,7 +1423,8 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clzThis = (ClassStructure)
                     ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                return clzThis.getIdentityConstant().asTypeConstant().collectClassContributions(clzThat, chains);
+                return clzThis.getIdentityConstant().asTypeConstant().
+                    collectClassContributions(clzThat, listParams, chains);
                 }
 
             case UnresolvedName:

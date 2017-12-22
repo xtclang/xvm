@@ -103,39 +103,14 @@ public class UnionTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
-//        ContributionChain chain1 = getUnderlyingType().checkAssignableTo(that, chains);
-//        ContributionChain chain2 = getUnderlyingType2().checkAssignableTo(that, chains);
-//
-//        boolean fFrom1 = chain1 != null &&
-//            that.checkAssignableFrom(getUnderlyingType(), chain1);
-//        boolean fFrom2 = chain2 != null &&
-//            that.checkAssignableFrom(getUnderlyingType(), chain2);
-//
-//        if (fFrom1 || fFrom2)
-//            {
-//            if (!fFrom1)
-//                {
-//                return chain2;
-//                }
-//
-//            if (!fFrom2)
-//                {
-//                return chain1;
-//                }
-//
-//            // TODO: if just one chain is a non-qualified "maybe", convert it into a qualifying one
-//            // so the caller knows not to check what's already been proven;
-//            // if both are qualified, merge the qualifiers into a union
-//            throw new UnsupportedOperationException();
-//            }
-
         TypeConstant type1 = getUnderlyingType();
         TypeConstant type2 = getUnderlyingType2();
 
-        List<ContributionChain> list1 = type1.collectContributions(that, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectContributions(that, new LinkedList<>());
+        List<ContributionChain> list1 = type1.collectContributions(that, listParams, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectContributions(that, listParams, new LinkedList<>());
 
         // any contribution would do
         if (!list1.isEmpty())
@@ -155,13 +130,14 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
+    protected List<ContributionChain> collectClassContributions(
+            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
         TypeConstant type1 = getUnderlyingType();
         TypeConstant type2 = getUnderlyingType2();
 
-        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, new LinkedList<>());
+        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, listParams, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, listParams, new LinkedList<>());
 
         // both branches have to have contributions
         if (!list1.isEmpty() && !list2.isEmpty())
@@ -171,13 +147,6 @@ public class UnionTypeConstant
             }
 
         return chains;
-        }
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
-        {
-        // there is nothing that could change the result of "checkAssignableTo"
-        return true;
         }
 
     @Override

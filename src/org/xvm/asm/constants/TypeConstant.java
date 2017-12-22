@@ -5,9 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -594,7 +594,8 @@ public abstract class TypeConstant
 
         try
             {
-            List<ContributionChain> chains = this.collectContributions(that, new LinkedList<>());
+            List<ContributionChain> chains = this.collectContributions(that,
+                new ArrayList<>(), new ArrayList<>());
             if (chains.isEmpty())
                 {
                 mapRelations.put(that, relation = Relation.INCOMPATIBLE);
@@ -656,31 +657,34 @@ public abstract class TypeConstant
      * Check if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
      *
-     * @param that    the type to match (L-value)
-     * @param chains  the list of chains to modify
+     * @param that        the type to match (L-value)
+     * @param listParams  the list of actual generic parameters
+     * @param chains      the list of chains to modify
      *
      * @return a list of ContributionChain objects that describe how "that" type could be found in
      *         the contribution tree of "this" type; empty if the types are incompatible
      */
-    protected List<ContributionChain> collectContributions(TypeConstant that,
-                                                           List<ContributionChain> chains)
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
-        return getUnderlyingType().collectContributions(that, chains);
+        return getUnderlyingType().collectContributions(that, listParams, chains);
         }
 
     /**
      * Collect the contributions for the specified class that match this type.
+     * Note that the parameter list is for the passed in class rather than this type.
      *
-     * @param clzThat  the class to check for a contribution
-     * @param chains   the list of chains to modify
+     * @param clzThat     the class to check for a contribution
+     * @param listParams  the list of actual generic parameters applicable to clzThat
+     * @param chains      the list of chains to modify
      *
      * @return a list of ContributionChain objects that describe how this type could be found in
      *         the contribution tree of the specified class; empty if none is found
      */
-    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat,
-                                                                List<ContributionChain> chains)
+    protected List<ContributionChain> collectClassContributions(
+            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
-        return getUnderlyingType().collectClassContributions(clzThat, chains);
+        return getUnderlyingType().collectClassContributions(clzThat, listParams, chains);
         }
 
     /**
@@ -867,12 +871,13 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if the type refers to a class that can be used in an annotation, and extends
+     * Determine if this type refers to a class that can be used in an annotation, an extends
      * clause, an incorporates clause, or an impersonates clause.
+     *
+     * @param fAllowParams TODO: replace with "isParamsSpecified"
      *
      * @return true iff this type is just a class identity, and the class identity refers to a
      *         class structure that is not an interface
-     * @param fAllowParams
      */
     public boolean isExplicitClassIdentity(boolean fAllowParams)
         {

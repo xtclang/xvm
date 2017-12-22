@@ -215,10 +215,14 @@ public class ParameterizedTypeConstant
     // ----- type comparison support --------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that,
-                                                           List<ContributionChain> chains)
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
-        chains = super.collectContributions(that, chains);
+        assert listParams.isEmpty();
+
+        listParams = getParamTypes();
+
+        chains = super.collectContributions(that, listParams, chains);
         if (chains.isEmpty())
             {
             return chains;
@@ -229,8 +233,6 @@ public class ParameterizedTypeConstant
             {
             ContributionChain chain = iter.next();
 
-            List<TypeConstant> listParams;
-
             switch (chain.first().getComposition())
                 {
                 case MaybeDuckType:
@@ -239,7 +241,6 @@ public class ParameterizedTypeConstant
 
                 case Equal:
                     assert chain.getLength() == 1;
-                    listParams = getParamTypes();
                     break;
 
                 case Delegates:

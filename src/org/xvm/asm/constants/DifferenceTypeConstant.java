@@ -5,8 +5,13 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -142,6 +147,36 @@ public class DifferenceTypeConstant
 //        setOps.addAll(setDifference);
         }
 
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+        {
+        // the difference type is always an interface, so it can only
+        // "duck type" to another interface
+
+        if (!that.isClassType())
+            {
+            chains.add(new ContributionChain(
+                new Contribution(Composition.MaybeDuckType, null)));
+            }
+        return chains;
+        }
+
+    @Override
+    protected List<ContributionChain> collectClassContributions(
+            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
+        {
+        // the difference type is always an interface, so it can only
+        // "duck type" to another interface
+
+        chains.add(new ContributionChain(
+            new Contribution(Composition.MaybeDuckType, null)));
+        return chains;
+
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

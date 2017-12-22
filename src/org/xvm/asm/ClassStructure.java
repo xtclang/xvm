@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -430,75 +431,95 @@ public class ClassStructure
         }
 
     /**
-     * Recursively find a contribution by the specified id and add the corresponding
+     * Recursively find a contribution by the specified class id and add the corresponding
      * ContributionChain objects to the list of chains.
      *
-     * @param constId     the identity to look for
+     * @param idClz       the identity of the class to look for
+     * @param listParams  the list of actual generic parameters
      * @param chains      the list of chains to add to
-     * @param fAllowInto  specifies whether it not the "Into" contribution is to be skipped
+     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
      * @return the resulting list of ContributionChain objects
      */
     public List<ContributionChain> collectContributions(
-            IdentityConstant constId, List<ContributionChain> chains, boolean fAllowInto)
+            ClassConstant idClz, List<TypeConstant> listParams,
+            List<ContributionChain> chains, boolean fAllowInto)
         {
-        if (constId.equals(getIdentityConstant()))
+        if (idClz.equals(getIdentityConstant()))
             {
             chains.add(new ContributionChain(
                 new Contribution(Composition.Equal, (TypeConstant) null)));
             return chains;
             }
 
+    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Annotation:
-                case Delegates:
-                    // TODO:
-                    break;
-
                 case Into:
                     if (!fAllowInto)
                         {
-                        break;
+                        continue nextContribution;
                         }
+                case Delegates:
                 case Implements:
-                    // TODO: what if the underlying type is relational
+                    break;
+
+                case Annotation:
                 case Impersonates:
                 case Incorporates:
                 case Extends:
-                    {
-                    // the identity constant of the contribution is always a class
-                    // (Module and Package cannot be extended)
-                    Constant constContrib = contrib.getTypeConstant().getDefiningConstant();
-                    if (constContrib.equals(constId))
-                        {
-                        chains.add(new ContributionChain(contrib));
-                        continue;
-                        }
-
-                    if (constContrib.equals(getConstantPool().clzObject()))
-                        {
-                        // trivial Object contribution
-                        continue;
-                        }
-
-                    ClassConstant constSuper = (ClassConstant) constContrib;
-                    chains = ((ClassStructure) constSuper.getComponent()).
-                        collectContributions(constId, chains, false);
-                    if (!chains.isEmpty())
-                        {
-                        for (ContributionChain chain : chains)
-                            {
-                            chain.add(contrib);
-                            }
-                        }
+                    // the identity constant for those contribution is always a class
+                    assert typeContrib.isSingleDefiningConstant();
                     break;
-                    }
 
                 default:
                     throw new IllegalStateException();
+                }
+
+            List<ContributionChain> chainsContrib = null;
+            if (typeContrib.isSingleDefiningConstant())
+                {
+                ClassConstant constContrib = (ClassConstant) typeContrib.getDefiningConstant();
+                if (constContrib.equals(idClz))
+                    {
+                    chains.add(new ContributionChain(contrib));
+                    continue;
+                    }
+
+                if (constContrib.equals(getConstantPool().clzObject()))
+                    {
+                    // trivial Object contribution
+                    continue;
+                    }
+
+                List<TypeConstant> listContribActual =
+                    contrib.transformActualTypes(this, listParams);
+
+                if (listContribActual != null)
+                    {
+                    chainsContrib = ((ClassStructure) constContrib.getComponent()).
+                        collectContributions(idClz, listContribActual, new LinkedList<>(), false);
+                    }
+                }
+            else
+                {
+                typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
+
+                chainsContrib = typeContrib.collectContributions(
+                    idClz.asTypeConstant(), new LinkedList<>(), new LinkedList<>());
+                }
+
+            if (chainsContrib != null && !chainsContrib.isEmpty())
+                {
+                for (ContributionChain chain : chainsContrib)
+                    {
+                    chain.add(contrib);
+                    }
+
+                chains.addAll(chainsContrib);
                 }
             }
 

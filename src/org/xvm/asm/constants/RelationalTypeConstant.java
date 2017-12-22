@@ -11,6 +11,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -260,6 +261,14 @@ public abstract class RelationalTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected boolean validateContributionFrom(TypeConstant that, Access access,
+                                               ContributionChain chain)
+        {
+        // there is nothing that could change the result of "collectContributions"
+        return true;
+        }
 
     @Override
     public boolean producesFormalType(String sTypeName, Access access,

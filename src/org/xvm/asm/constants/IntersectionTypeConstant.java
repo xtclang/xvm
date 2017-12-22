@@ -132,13 +132,14 @@ public class IntersectionTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected List<ContributionChain> collectContributions(TypeConstant that, List<ContributionChain> chains)
+    public List<ContributionChain> collectContributions(
+            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
         TypeConstant type1 = getUnderlyingType();
         TypeConstant type2 = getUnderlyingType2();
 
-        List<ContributionChain> list1 = type1.collectContributions(that, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectContributions(that, new LinkedList<>());
+        List<ContributionChain> list1 = type1.collectContributions(that, listParams, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectContributions(that, listParams, new LinkedList<>());
 
         // both branches need to contribute
         if (!list1.isEmpty() && !list2.isEmpty())
@@ -157,13 +158,14 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(ClassStructure clzThat, List<ContributionChain> chains)
+    protected List<ContributionChain> collectClassContributions(
+            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
         TypeConstant type1 = getUnderlyingType();
         TypeConstant type2 = getUnderlyingType2();
 
-        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, new LinkedList<>());
+        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, listParams, new LinkedList<>());
+        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, listParams, new LinkedList<>());
 
         // any contribution would do
         chains.addAll(list1);
@@ -173,14 +175,8 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
-        {
-        // there is nothing that could change the result of "checkAssignableTo"
-        return true;
-        }
-
-    @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access, List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(
+            TypeConstant that, Access access, List<TypeConstant> listParams)
         {
         Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
         Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
