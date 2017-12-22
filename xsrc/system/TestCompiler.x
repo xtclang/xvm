@@ -162,9 +162,11 @@ class TestCompiler<TestType1 extends Number,
         Void consume(String value) {}
         }
 
-    static Void testPC(C<Object>  co,
+    static Void testPC(C          c,
+                       C<Object>  co,
                        C2<Object> c2o,
                        PC<Object> pco,
+                       PC         pc,
                        P<String>  ps,
                        P2<String> p2s,
                        PC<String> pcs)
@@ -174,37 +176,49 @@ class TestCompiler<TestType1 extends Number,
         C2<String> c2s = c2o;
 
         C<String> cs1 = pco;
+        C c1 = co;
+        C c2 = cs;
+        C c3 = pc;
+        C c4 = pco;
+        C c5 = pcs;
 
         P<Object> po = ps;
+        P p = ps;
+        P p1 = pc;
 
         P2<Object> p20 = p2s;
 
         PC<Object> pco = pcs; // ok, but the RT needs to "safe-wrap" the consuming methods
         }
 
-    static Void testPCExpectedFailure1(C<String> y3)
+    static Void testPCExpectedFailure1(C<String> cs)
         {
-        C<Object> x3 = y3;
+        C<Object> co = cs;
         }
 
-    static Void testPCExpectedFailure2(PC<String> y4)
+    static Void testPCExpectedFailure2(PC<String> pcs)
         {
         C<Object> x4 = y4;
         }
 
-    static Void testPCExpectedFailure3(P<Object> y5)
+    static Void testPCExpectedFailure3(P<Object> po)
         {
-        P<String> x5 = y5;
+        P<String> ps = po;
         }
 
-    static Void testPCExpectedFailure4(PC<String> y7)
+    static Void testPCExpectedFailure4(PC<String> pcs)
         {
-        FakePCofObject x7 = y7;
+        FakePCofObject fpco = pcs;
         }
 
-    static Void testPCExpectedFailure5(PC<Object> y8)
+    static Void testPCExpectedFailure5(PC<Object> pco)
         {
-        PC<String> x8 = y8;
+        PC<String> pcs = pco;
+        }
+
+    static Void testPCExpectedFailure6(C<String> cs)
+        {
+        C<Object> co = cs;
         }
 
     static Int test2()

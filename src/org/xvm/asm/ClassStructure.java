@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -612,6 +613,8 @@ public class ClassStructure
     protected boolean consumesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
+        assert indexOfFormalParameter(sName) >= 0;
+
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -724,6 +727,8 @@ public class ClassStructure
     protected boolean producesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
+        assert indexOfFormalParameter(sName) >= 0;
+
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -1201,8 +1206,25 @@ public class ClassStructure
                 }
             else
                 {
-                assert m_mapParams == null && listActual.isEmpty() ||
-                   m_mapParams.size() == listActual.size();
+                int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+                int cActual = listActual.size();
+                if (cFormal < cActual)
+                    {
+                    throw new IllegalArgumentException(
+                        "Too many parameters: " + listActual +
+                        " passed to " + ClassStructure.this);
+                    }
+                else if (cFormal > cActual)
+                    {
+                    listActual = new ArrayList<>(listActual); // clone
+                    List<Map.Entry<StringConstant, TypeConstant>> entries = m_mapParams.asList();
+
+                    // fill the missing actual parameters with the canonical types
+                    for (int i = cActual; i < cFormal; i++)
+                        {
+                        listActual.add(entries.get(i).getValue());
+                        }
+                    }
                 }
             m_listActual = listActual;
             }
