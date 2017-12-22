@@ -108,12 +108,12 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access,
-            TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         // each of the two sub-types needs to be resolved independently, and then only the parts
         // that match should be incorporated into the passed
-        return super.resolveStructure(typeinfo, access, atypeParams, errs);
+        return super.resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
 //        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
 //        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);

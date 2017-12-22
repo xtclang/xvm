@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
+import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -120,8 +121,8 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access,
-            TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
         // first resolve T1 and T2, and then add all the information from T1 that is not in T2 to

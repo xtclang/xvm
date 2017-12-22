@@ -2866,6 +2866,10 @@ public abstract class Component
      */
     public static class ContributionChain
         {
+        public ContributionChain()
+            {
+            }
+
         public ContributionChain(Contribution contrib)
             {
             add(contrib);
@@ -2884,28 +2888,42 @@ public abstract class Component
         /**
          * Snip the last "link" off of the "chain". The first link in the chain cannot be snipped.
          *
-         * @return the Contribution represented by the last link in the chain
+         * @return the Contribution represented by the last link in the chain, or null if the chain
+         *         contains no Contributions
          */
         public Contribution snip()
             {
             int c = m_list.size();
-            if (c <= 1)
-                {
-                throw new IllegalStateException("chain contains " + c + " element(s)");
-                }
-            return m_list.remove(c-1);
+            return m_list.isEmpty()
+                    ? null
+                    : m_list.remove(c-1);
             }
 
+        /**
+         * @return the first Contribution in the chain (the "origin" link), or null if the chain
+         *         contains no Contributions
+         */
         public Contribution first()
             {
-            return m_list.get(0);
+            return m_list.isEmpty()
+                    ? null
+                    : m_list.get(0);
             }
 
+        /**
+         * @return the last Contribution added to the chain, or null if the chain contains no
+         *         Contributions
+         */
         public Contribution last()
             {
-            return m_list.get(m_list.size()-1);
+            return m_list.isEmpty()
+                    ? null
+                    : m_list.get(m_list.size()-1);
             }
 
+        /**
+         * @return the length of the chain; the number of Contributions in the chain
+         */
         public int getLength()
             {
             return m_list.size();
@@ -2933,6 +2951,7 @@ public abstract class Component
         public List<TypeConstant> propagateActualTypes(ClassStructure clzParent, List<TypeConstant> listActual)
             {
             List<Contribution> listContrib = m_list;
+            assert !listContrib.isEmpty();
 
             for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
                 {

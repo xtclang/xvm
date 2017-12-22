@@ -511,7 +511,7 @@ public abstract class TypeConstant
         if (m_typeinfo == null)
             {
             m_typeinfo = new TypeInfo(this);
-            resolveStructure(m_typeinfo, getAccess(), null, ErrorListener.RUNTIME);
+            resolveStructure(m_typeinfo, new ContributionChain(), getAccess(), null, ErrorListener.RUNTIME);
             }
 
         return m_typeinfo;
@@ -521,9 +521,9 @@ public abstract class TypeConstant
      * Accumulate any information for the type represented by this TypeConstant into the passed
      * {@link TypeInfo}, logging any errors that are detected in the composition of the type.
      *
-     * TODO need a "how did we get here" ContributionChain
-     *
      * @param typeinfo     the type info to contribute to
+     * @param chain        the chain of contributions that led here from the type specified in the
+     *                     TypeInfo
      * @param access       the desired accessibility into the current type
      * @param atypeParams  the types for the type parameters of this class, if any (may be null)
      * @param errs         the error list to log any errors to
@@ -531,9 +531,10 @@ public abstract class TypeConstant
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
-        return getUnderlyingType().resolveStructure(typeinfo, access, atypeParams, errs);
+        return getUnderlyingType().resolveStructure(typeinfo, chain, access, atypeParams, errs);
         }
 
 
@@ -957,7 +958,8 @@ public abstract class TypeConstant
         if (m_typeinfo == null)
             {
             m_typeinfo = new TypeInfo(this);
-            if (resolveStructure(m_typeinfo, getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
+            if (resolveStructure(m_typeinfo, new ContributionChain(),
+                    getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
                 {
                 return true;
                 }

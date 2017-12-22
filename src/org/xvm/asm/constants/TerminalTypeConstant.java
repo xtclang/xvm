@@ -505,30 +505,31 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constant)
-                        .resolveStructure(typeinfo, access, atypeParams, errs);
+                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
 
             case Module:
             case Package:
             case Class:
                 // load the structure
                 Component component = ((IdentityConstant) constant).getComponent();
-                return resolveClassStructure((ClassStructure) component, typeinfo, access,
-                        atypeParams, errs);
+                return resolveClassStructure((ClassStructure) component, typeinfo, chain,
+                        access, atypeParams, errs);
 
             case ThisClass:
             case ParentClass:
@@ -551,10 +552,10 @@ public class TerminalTypeConstant
      * Accumulate any information for the type represented by the specified structure into the
      * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
      *
-     * TODO need a "how did we get here" ContributionChain
-     *
      * @param struct       the class structure
      * @param typeinfo     the type info to contribute to
+     * @param chain        the chain of contributions that led here from the type specified in the
+     *                     TypeInfo
      * @param access       the desired accessibility into the current type
      * @param atypeParams  the types for the type parameters of this class, if any (may be null)
      * @param errs         the error list to log any errors to
@@ -562,7 +563,8 @@ public class TerminalTypeConstant
      * @return true if the resolution process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, ContributionChain chain,
+            Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
@@ -1078,13 +1080,13 @@ public class TerminalTypeConstant
                         }
                     for (TypeConstant typeImplemented : typeinfo.implemented)
                         {
-                        List<ContributionChain> chains = typeImplemented.collectContributions(
+                        List<ContributionChain> listChains = typeImplemented.collectContributions(
                                 typeContrib, new ArrayList<>());
-                        if (!chains.isEmpty())
+                        if (!listChains.isEmpty())
                             {
-                            for (ContributionChain chain : chains)
+                            for (ContributionChain chainEach : listChains)
                                 {
-                                if (chain.first().getComposition() != Component.Composition.MaybeDuckType)
+                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
                                     {
                                     continue NextContrib;
                                     }
@@ -1116,7 +1118,9 @@ public class TerminalTypeConstant
             // TODO use Contribution "transform" helper
             TypeConstant typeContrib = contrib.getTypeConstant();
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+            chain.add(contrib);
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            chain.snip();
             }
         if (fHalt)
             {
@@ -1164,7 +1168,9 @@ public class TerminalTypeConstant
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
             // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            fHalt |= typeContrib.resolveStructure(typeinfo, Access.PUBLIC, null, errs);
+            chain.add(contrib);
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            chain.snip();
             }
         if (fHalt)
             {
