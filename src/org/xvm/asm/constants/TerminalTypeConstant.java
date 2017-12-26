@@ -1148,6 +1148,20 @@ public class TerminalTypeConstant
             }
 
         // properties & methods
+        // the challenge with this process is immense:
+        // 1) each child member has to be analyzed to determine if it represents a new member of the
+        //    flattened (resolved) class, or whether it augments an existing member of the flattened
+        //    class, or whether it conflicts with an existing member of the flattened class
+        // 2) each child member that augments an existing member of the flattened class has the
+        //    effect of _hiding_ the existing member. in the case of a property, this simply means
+        //    overlaying or augmenting the existing information, but in the case of a method, there
+        //    can be more than one method that augments the same existing method, i.e. more than one
+        //    method that could "super to" that existing method. the result must be that the
+        //    existing member is no longer visible, but that the augmenting members are
+        // 3) because visibility can be expanded (but never reduced), all protected members have to
+        //    be included in the resolution, although at the end of the resolution, any remaining
+        //    protected members are removed if the access specified is public. similarly, at the
+        //    topmost level, private members are included if the access specified is private.
         for (Component child : struct.children())
             {
             switch (child.getFormat())
