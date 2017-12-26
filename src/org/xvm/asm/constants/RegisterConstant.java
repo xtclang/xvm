@@ -162,20 +162,24 @@ public class RegisterConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (fReEntry)
+        RegisterConstant regThat = (RegisterConstant) that;
+        if (!fReEntry)
             {
-            return this.m_iReg - ((RegisterConstant) that).m_iReg;
+            fReEntry = true;
+            try
+                {
+                int n = m_constMethod.compareTo(regThat.m_constMethod);
+                if (n != 0)
+                    {
+                    return n;
+                    }
+                }
+            finally
+                {
+                fReEntry = false;
+                }
             }
-
-        fReEntry = true;
-        try
-            {
-            return m_constMethod.compareTo(((RegisterConstant) that).m_constMethod);
-            }
-        finally
-            {
-            fReEntry = false;
-            }
+        return this.m_iReg - regThat.m_iReg;
         }
 
     @Override

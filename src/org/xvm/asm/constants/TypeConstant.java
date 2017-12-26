@@ -721,9 +721,9 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type contains a method substitutable for the specified one.
+     * Check if this type contains a method or a property substitutable for the specified one.
      *
-     * @param signature   the method signature to check the substitutability for (resolved)
+     * @param signature   the signature to check the substitutability for (resolved formal types)
      * @param access      the access level to limit the check to
      * @param listParams  the list of actual generic parameters
      *
@@ -733,21 +733,6 @@ public abstract class TypeConstant
                                                Access access, List<TypeConstant> listParams)
         {
         return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams);
-        }
-
-    /**
-     * Check if this type contains a property substitutable for the specified one.
-     *
-     * @param signature   the property signature to check the substitutability for (resolved)
-     * @param access      the access level to limit the check to
-     * @param listParams  the list of actual generic parameters
-     *
-     *  @return true iff the specified type could be assigned to this interface type
-     */
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
-                                                 List<TypeConstant> listParams)
-        {
-        return getUnderlyingType().containsSubstitutableProperty(signature, access, listParams);
         }
 
     /**

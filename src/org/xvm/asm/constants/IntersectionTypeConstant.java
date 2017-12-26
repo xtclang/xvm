@@ -196,6 +196,13 @@ public class IntersectionTypeConstant
         return setMiss1;
         }
 
+    @Override
+    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+        {
+        return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams)
+            && getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

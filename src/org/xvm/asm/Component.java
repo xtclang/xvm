@@ -2510,7 +2510,7 @@ public abstract class Component
             {
             TypeConstant typeContrib = getTypeConstant();
 
-            if (!typeContrib.isParamsSpecified())
+            if (!typeContrib.isParamsSpecified() && !typeContrib.isRelationalType())
                 {
                 // non-parameterized contribution
                 return typeContrib;
@@ -2538,6 +2538,8 @@ public abstract class Component
             {
             TypeConstant typeContrib = getTypeConstant();
 
+            assert typeContrib.isSingleDefiningConstant();
+
             if (!typeContrib.isParamsSpecified())
                 {
                 // non-parameterized contribution
@@ -2557,50 +2559,6 @@ public abstract class Component
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(listContribActual) ?
                 listContribActual : null;
-            }
-
-        /**
-         * Transform the generic type name for the specified class based on
-         * this contribution definition.
-         *
-         * @param clzParent  the parent class structure
-         * @param sName      the generic type name
-         *
-         * @return the transformed generic type name or null if this contribution
-         *         doesn't use the specified generic type
-         */
-        public String transformGenericName(ClassStructure clzParent, String sName)
-            {
-            TypeConstant typeContrib = getTypeConstant();
-
-            if (!typeContrib.isParamsSpecified())
-                {
-                // non-parameterized contribution
-                return null;
-                }
-
-            for (TypeConstant typeContribParam : typeContrib.getParamTypesArray())
-                {
-                // TODO: what if a relational or parameterized?
-                Constant constId = typeContribParam.getDefiningConstant();
-
-                if (constId.getFormat() == Constant.Format.Property)
-                    {
-                    PropertyConstant prop = (PropertyConstant) constId;
-
-                    if (prop.getName().equals(sName))
-                        {
-                        int ix = clzParent.indexOfFormalParameter(prop.getName());
-                        if (ix < 0)
-                            {
-                            throw new IllegalStateException(
-                                "Failed to find " + prop.getName() + " in " + clzParent);
-                            }
-                        return clzParent.getTypeParamsAsList().get(ix).getKey().getValue();
-                        }
-                    }
-                }
-            return null;
             }
 
         /**
