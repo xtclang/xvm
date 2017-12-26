@@ -1525,20 +1525,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
-                                                 List<TypeConstant> listParams)
-        {
-        Constant constIdThis = getDefiningConstant();
-
-        assert constIdThis.getFormat() == Format.Class;
-
-        IdentityConstant idThis  = (IdentityConstant) constIdThis;
-        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
-
-        return clzThis.containsSubstitutableProperty(signature, access, listParams);
-        }
-
-    @Override
     public boolean consumesFormalType(String sTypeName, Access access,
                                       List<TypeConstant> listParams)
         {

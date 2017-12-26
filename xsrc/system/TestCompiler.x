@@ -274,9 +274,17 @@ class TestCompiler<TestType1 extends Number,
         }
 
     static <Type1 extends Number, Type2 extends Type1>
-        Void test4ExpectedFailure1(Type2 t2)
-
+        Void test5(Type1 | Type2 t12,
+                   C<Type1> | C<Type2> c12,
+                   PC<Type1> + PC<Type2> pct12)
         {
-        Int n = t2;
+        Number n = t12;
+        PC<Number> pcn = pct12;
+        }
+
+    static <Type1 extends Number, Type2 extends Type1>
+            Void test5ExpectedFailure1(C<Type1> | C<Type2> ct12)
+        {
+        C<Number> cn = ct12;
         }
     }

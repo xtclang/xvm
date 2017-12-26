@@ -484,14 +484,6 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
-                                                 List<TypeConstant> listParams)
-        {
-        assert listParams.isEmpty();
-        return super.containsSubstitutableProperty(signature, access, getParamTypes());
-        }
-
-    @Override
     public boolean isConstant()
         {
         for (TypeConstant type : m_atypeParams)

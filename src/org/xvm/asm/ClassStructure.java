@@ -467,16 +467,13 @@ public class ClassStructure
             {
             switch (contrib.getComposition())
                 {
-                case Annotation:
-                case Delegates:
-                    // TODO:
-                    break;
-
                 case Into:
                     if (!fAllowInto)
                         {
                         break;
                         }
+                case Annotation:
+                case Delegates:
                 case Implements:
                     // TODO: what if the underlying type is relational
                 case Impersonates:
@@ -533,15 +530,15 @@ public class ClassStructure
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
+                case Delegates:
+                case Implements:
+                    break;
+
                 case Into:
                     if (!fAllowInto)
                         {
                         continue nextContribution;
                         }
-                case Delegates:
-                case Implements:
-                    break;
-
                 case Annotation:
                 case Impersonates:
                 case Incorporates:
@@ -581,8 +578,13 @@ public class ClassStructure
                 }
             else
                 {
-                typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
-
+                // while we could trivially resolve the actual types:
+                //
+                //   typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
+                //
+                // the only contributions of relation type could be delegations and implementations
+                // and since they cannot be conditional at any level, the actual types won't matter
+                // for further recursion
                 chainsContrib = typeContrib.collectContributions(
                     idClz.asTypeConstant(), new LinkedList<>(), new LinkedList<>());
                 }
@@ -666,50 +668,80 @@ public class ClassStructure
             }
 
         // check the contributions
+    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Annotation:
                 case Delegates:
-                    // TODO:
+                case Implements:
                     break;
 
                 case Into:
                     if (!fAllowInto)
                         {
-                        break;
+                        continue nextContribution;
                         }
-                case Implements:
-                    // TODO: what if the underlying type is relational
-                case Extends:
+                case Annotation:
                 case Impersonates:
                 case Incorporates:
-                    {
-                    String sGenericName = contrib.transformGenericName(this, sName);
-                    if (sGenericName != null)
-                        {
-                        List<TypeConstant> listContribActual =
-                            contrib.transformActualTypes(this, listActual);
-
-                        if (listContribActual != null)
-                            {
-                            ClassStructure clzContrib = (ClassStructure)
-                                ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                                    getComponent();
-
-                            if (clzContrib.consumesFormalTypeImpl(
-                                    sGenericName, access, listContribActual, false))
-                                {
-                                return true;
-                                }
-                            }
-                        }
+                case Extends:
+                    // the identity constant for those contribution is always a class
+                    assert typeContrib.isSingleDefiningConstant();
                     break;
-                    }
 
                 default:
                     throw new IllegalStateException();
+                }
+
+            if (typeContrib.isSingleDefiningConstant())
+                {
+                List<TypeConstant> listContribActual =
+                    contrib.transformActualTypes(this, listActual);
+
+                if (listContribActual == null || listContribActual.isEmpty())
+                    {
+                    // conditional incorporation didn't apply to the actual type
+                    // or the contribution is not parameterized
+                    continue;
+                    }
+
+                ClassStructure clzContrib = (ClassStructure)
+                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+
+                Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
+                List<TypeConstant> listContribParams = typeContrib.getParamTypes();
+
+                assert listContribParams.size() == mapFormal.size();
+
+                Iterator<TypeConstant> iterParams = listContribParams.iterator();
+                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                while (iterParams.hasNext())
+                    {
+                    TypeConstant constParam = iterParams.next();
+                    String sFormal = iterNames.next().getValue();
+
+                    if (constParam.producesFormalType(sName, access, Collections.EMPTY_LIST)
+                        && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false)
+                        ||
+                        constParam.consumesFormalType(sName, access, Collections.EMPTY_LIST)
+                            && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else
+                {
+                // the only contributions of relation type could be delegations and implementations
+                // and since they cannot be conditional at any level, the actual types won't matter
+                // for further recursion
+                if (typeContrib.consumesFormalType(sName, access, new ArrayList<>()))
+                    {
+                    return true;
+                    }
                 }
             }
         return false;
@@ -780,50 +812,80 @@ public class ClassStructure
             }
 
         // check the contributions
+    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Annotation:
                 case Delegates:
-                    // TODO:
+                case Implements:
                     break;
 
                 case Into:
                     if (!fAllowInto)
                         {
-                        break;
+                        continue nextContribution;
                         }
-                case Implements:
-                    // TODO: what if the underlying type is relational
-                case Extends:
+                case Annotation:
                 case Impersonates:
                 case Incorporates:
-                    {
-                    String sGenericName = contrib.transformGenericName(this, sName);
-                    if (sGenericName != null)
-                        {
-                        List<TypeConstant> listContribActual =
-                            contrib.transformActualTypes(this, listActual);
-
-                        if (listContribActual != null)
-                            {
-                            ClassStructure clzContrib = (ClassStructure)
-                                ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                                    getComponent();
-
-                            if (clzContrib.producesFormalTypeImpl(
-                                    sGenericName, access, listContribActual, false))
-                                {
-                                return true;
-                                }
-                            }
-                        }
+                case Extends:
+                    // the identity constant for those contribution is always a class
+                    assert typeContrib.isSingleDefiningConstant();
                     break;
-                    }
 
                 default:
                     throw new IllegalStateException();
+                }
+
+            if (typeContrib.isSingleDefiningConstant())
+                {
+                List<TypeConstant> listContribActual =
+                    contrib.transformActualTypes(this, listActual);
+
+                if (listContribActual == null || listContribActual.isEmpty())
+                    {
+                    // conditional incorporation didn't apply to the actual type
+                    // or the contribution is not parameterized
+                    continue;
+                    }
+
+                ClassStructure clzContrib = (ClassStructure)
+                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+
+                Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
+                List<TypeConstant> listContribParams = typeContrib.getParamTypes();
+
+                assert listContribParams.size() == mapFormal.size();
+
+                Iterator<TypeConstant> iterParams = listContribParams.iterator();
+                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                while (iterParams.hasNext())
+                    {
+                    TypeConstant constParam = iterParams.next();
+                    String sFormal = iterNames.next().getValue();
+
+                    if (constParam.producesFormalType(sName, access, Collections.EMPTY_LIST)
+                            && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false)
+                        ||
+                        constParam.consumesFormalType(sName, access, Collections.EMPTY_LIST)
+                            && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false))
+                        {
+                        return true;
+                        }
+                    }
+                }
+            else
+                {
+                // the only contributions of relation type could be delegations and implementations
+                // and since they cannot be conditional at any level, the actual types won't matter
+                // for further recursion
+                if (typeContrib.producesFormalType(sName, access, new ArrayList<>()))
+                    {
+                    return true;
+                    }
                 }
             }
         return false;
@@ -858,7 +920,7 @@ public class ClassStructure
                     sig = sig.resolveGenericTypes(new SimpleTypeResolver(listParams));
                     }
 
-                if (!typeThat.containsSubstitutableProperty(sig,
+                if (!typeThat.containsSubstitutableMethod(sig,
                         Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     setMiss.add(sig);
@@ -913,13 +975,13 @@ public class ClassStructure
         }
 
     /**
-     * Check recursively if this class contains a matching (substitutable) method.
+     * Check recursively if this class contains a matching (substitutable) method or property.
      *
-     * @param signature   the method signature to look for the match for (resolved)
+     * @param signature   the signature to look for the match for (formal parameters resolved)
      * @param access      the access level to limit the check to
      * @param listParams  the actual generic parameters for this interface
      *
-     * @return true iff all properties and methods have matches
+     * @return true iff there is a matching method or property
      */
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
@@ -932,131 +994,93 @@ public class ClassStructure
         {
         Component child = getChild(signature.getName());
 
-        if (child instanceof MultiMethodStructure)
+        if (signature.isProperty())
             {
-            MultiMethodStructure mms = (MultiMethodStructure) child;
-
-            TypeConstant.GenericTypeResolver resolver = listParams.isEmpty() ? null :
-                new SimpleTypeResolver(listParams);
-
-            for (MethodStructure method : mms.methods())
+            if (child instanceof PropertyStructure)
                 {
-                if (!method.isStatic() && method.isAccessible(access) &&
-                    method.isSubstitutableFor(signature, resolver))
+                PropertyStructure property = (PropertyStructure) child;
+
+                // TODO: check access
+
+                if (property.isSubstitutableFor(signature, listParams))
                     {
                     return true;
                     }
                 }
             }
-
-        for (Contribution contrib : getContributionsAsList())
+        else
             {
-            switch (contrib.getComposition())
+            if (child instanceof MultiMethodStructure)
                 {
-                case Annotation:
-                case Delegates:
-                    // TODO:
-                    break;
+                MultiMethodStructure mms = (MultiMethodStructure) child;
 
-                case Into:
-                    if (!fAllowInto)
-                        {
-                        break;
-                        }
-                case Implements:
-                    // TODO: what if the underlying type is relational
-                case Impersonates:
-                case Incorporates:
-                case Extends:
+                TypeConstant.GenericTypeResolver resolver = listParams.isEmpty() ? null :
+                    new SimpleTypeResolver(listParams);
+
+                for (MethodStructure method : mms.methods())
                     {
-                    List<TypeConstant> listContribActual =
-                        contrib.transformActualTypes(this, listParams);
-
-                    if (listContribActual != null)
+                    if (!method.isStatic() && method.isAccessible(access) &&
+                            method.isSubstitutableFor(signature, resolver))
                         {
-                        ClassStructure clzContrib = (ClassStructure)
-                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                                getComponent();
-
-                        if (clzContrib.containsSubstitutableMethod(signature,
-                                access, listContribActual))
-                            {
-                            return true;
-                            }
+                        return true;
                         }
                     }
                 }
             }
-        return false;
-        }
 
-    /**
-     * Check recursively if this class contains a matching (substitutable) property.
-     *
-     * @param signature   the property signature to look for the match for (resolved)
-     * @param access      the access level to limit the check to
-     * @param listParams  the actual generic parameters for this interface
-     *
-     * @return true iff all properties and methods have matches
-     */
-    public boolean containsSubstitutableProperty(SignatureConstant signature, Access access,
-                                                 List<TypeConstant> listParams)
-        {
-        return containsSubstitutablePropertyImpl(signature, access, listParams, true);
-        }
-
-    protected boolean containsSubstitutablePropertyImpl(SignatureConstant signature, Access access,
-                                                       List<TypeConstant> listParams, boolean fAllowInto)
-        {
-        Component child = getChild(signature.getName());
-
-        if (child instanceof PropertyStructure)
-            {
-            PropertyStructure property = (PropertyStructure) child;
-
-            // TODO: check access
-
-            if (property.isSubstitutableFor(signature, listParams))
-                {
-                return true;
-                }
-            }
-
+        // check the contributions
+    nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Annotation:
                 case Delegates:
-                    // TODO:
+                case Implements:
                     break;
 
                 case Into:
                     if (!fAllowInto)
                         {
-                        break;
+                        continue nextContribution;
                         }
-                case Implements:
-                    // TODO: what if the underlying type is relational
+                case Annotation:
                 case Impersonates:
                 case Incorporates:
                 case Extends:
+                    // the identity constant for those contribution is always a class
+                    assert typeContrib.isSingleDefiningConstant();
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            if (typeContrib.isSingleDefiningConstant())
+                {
+                List<TypeConstant> listContribActual =
+                    contrib.transformActualTypes(this, listParams);
+
+                if (listContribActual != null)
                     {
-                    List<TypeConstant> listContribActual =
-                        contrib.transformActualTypes(this, listParams);
+                    ClassStructure clzContrib = (ClassStructure)
+                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                            getComponent();
 
-                    if (listContribActual != null)
+                    if (clzContrib.containsSubstitutableMethodImpl(signature,
+                            access, listContribActual, false))
                         {
-                        ClassStructure clzContrib = (ClassStructure)
-                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                                getComponent();
-
-                        if (clzContrib.containsSubstitutableProperty(signature,
-                                access, listContribActual))
-                            {
-                            return true;
-                            }
+                        return true;
                         }
+                    }
+                }
+            else
+                {
+                typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
+
+                if (typeContrib.containsSubstitutableMethod(signature, access, new ArrayList<>()))
+                    {
+                    return true;
                     }
                 }
             }
