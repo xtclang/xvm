@@ -276,9 +276,11 @@ class TestCompiler<TestType1 extends Number,
     static <Type1 extends Number, Type2 extends Type1>
         Void test5(Type1 | Type2 t12,
                    C<Type1> | C<Type2> c12,
+                   C<Number> cn,
                    PC<Type1> + PC<Type2> pct12)
         {
         Number n = t12;
+        c12 = cn;
         PC<Number> pcn = pct12;
         }
 

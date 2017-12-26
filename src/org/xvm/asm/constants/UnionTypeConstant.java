@@ -178,7 +178,7 @@ public class UnionTypeConstant
     @Override
     public String getValueString()
         {
-        return m_constType1.getValueString() + " | " + m_constType2.getValueString();
+        return m_constType1.getValueString() + " + " + m_constType2.getValueString();
         }
 
 
