@@ -216,16 +216,9 @@ public class ClassStructure
      */
     public TypeConstant resolveType(List<TypeConstant> listActual)
         {
-        int cParams = m_mapParams == null ? 0 : m_mapParams.size();
-        if (listActual.size() != cParams)
-            {
-            throw new IllegalArgumentException("Invalid actual type list size: " +
-                listActual.size() + " expected: " + cParams);
-            }
-
-        return cParams > 0
-            ? getFormalType().resolveGenerics(new SimpleTypeResolver(listActual))
-            : getCanonicalType();
+        return listActual.isEmpty()
+            ? getCanonicalType()
+            : getFormalType().resolveGenerics(new SimpleTypeResolver(listActual));
         }
 
     // ----- component methods ---------------------------------------------------------------------
@@ -1246,7 +1239,10 @@ public class ClassStructure
                     // fill the missing actual parameters with the canonical types
                     for (int i = cActual; i < cFormal; i++)
                         {
-                        listActual.add(entries.get(i).getValue());
+                        TypeConstant typeCanonical = entries.get(i).getValue();
+
+                        // the canonical type itself could be formal, depending on another parameter
+                        listActual.add(typeCanonical.resolveGenerics(this));
                         }
                     }
                 }
