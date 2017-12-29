@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -551,6 +552,8 @@ public class TerminalTypeConstant
     /**
      * Accumulate any information for the type represented by the specified structure into the
      * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
+     *
+     * TODO Struct resolution (i.e. what fields are necessary for a class)
      *
      * @param struct       the class structure
      * @param typeinfo     the type info to contribute to
@@ -1135,11 +1138,12 @@ public class TerminalTypeConstant
         // recurse through compositions
         for (Contribution contrib : listContributions)
             {
-            // TODO use Contribution "transform" helper
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
             chain.add(contrib);
-            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            TypeConstant typeContrib = contrib.getTypeConstant(); // TODO use Contribution "transform" helper
+            // we need to contributions to disclose their "protected" members, even if all we're
+            // interested in are public members; the topmost type will lop off anything that isn't
+            // supposed to be accessible
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PROTECTED, null, errs);
             chain.snip();
             }
         if (fHalt)
@@ -1162,6 +1166,13 @@ public class TerminalTypeConstant
         //    be included in the resolution, although at the end of the resolution, any remaining
         //    protected members are removed if the access specified is public. similarly, at the
         //    topmost level, private members are included if the access specified is private.
+        // 4) properties can be annotated and can contain methods
+        // 5) methods can contain properties, but these properties are "invisible" outside of the
+        //    declaring method, including to other methods and even to the same method in a
+        //    sub-class
+        List<PropertyInfo>      listUpdateProperties = new ArrayList<>();
+        List<SignatureConstant> listRemoveMethods    = new ArrayList<>();
+        List<MethodInfo>        listUpdateMethods    = new ArrayList<>();
         for (Component child : struct.children())
             {
             switch (child.getFormat())
@@ -1173,16 +1184,18 @@ public class TerminalTypeConstant
                 case MULTIMETHOD:
                     for (Component method : child.children())
                         {
-                        if (method instanceof MethodStructure)
-                            {
-                            // TODO
-                            MethodInfo methodinfo = resolveMethodStructure((MethodStructure) method, typeinfo, null, access, errs);
-                            }
-                        else
+                        if (!(method instanceof MethodStructure))
                             {
                             throw new IllegalStateException("multi-method " + child.getName()
                                     + " contains non-method: " + method);
                             }
+
+                        // for now, all of the method-info objects resolved at this level are
+                        // accumulated into a separate data structure, so that the resolution is not
+                        // affected by the order that the methods are resolved in (i.e. each
+                        // resolution is indepdent of the other resolutions)
+                        fHalt |= resolveMethodStructure((MethodStructure) method, typeinfo,
+                                listRemoveMethods, listUpdateMethods, access, errs);
                         }
                     break;
 
@@ -1193,6 +1206,25 @@ public class TerminalTypeConstant
                             + " contains illegal child: " + child);
                 }
             }
+
+        // now that all of the properties and methods have been accumulated, update the typeinfo
+        // accordingly
+        for (PropertyInfo propertyinfo : listUpdateProperties)
+            {
+            // this may replace a previously existing property
+            typeinfo.properties.put(propertyinfo.getName(), propertyinfo);
+            }
+        for (SignatureConstant constSig : listRemoveMethods)
+            {
+            // this should always delete a method
+            assert typeinfo.methods.containsKey(constSig);
+            typeinfo.methods.remove(constSig);
+            }
+        for (MethodInfo methodinfo : listUpdateMethods)
+            {
+            typeinfo.methods.put(methodinfo.getSignature(), methodinfo);
+            }
+
         if (fHalt)
             {
             return fHalt;
@@ -1202,9 +1234,11 @@ public class TerminalTypeConstant
         for (Contribution contrib : listAnnotations)
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
-            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
+            // we need the annotations to disclose their "protected" members, even if all we're
+            // interested in are public members; the topmost type will lop off anything that isn't
+            // supposed to be accessible
             chain.add(contrib);
-            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
+            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PROTECTED, null, errs);
             chain.snip();
             }
         if (fHalt)
@@ -1212,9 +1246,23 @@ public class TerminalTypeConstant
             return fHalt;
             }
 
-        if (fTopmost)
+        if (fTopmost && access == Access.PUBLIC)
             {
-            // TODO trim out everything that doesn't meet our accessibility requirements
+            // remove any remaining protected members
+            for (Iterator<MethodInfo> iter = typeinfo.methods.values().iterator(); iter.hasNext(); )
+                {
+                if (iter.next().getAccess() == Access.PROTECTED)
+                    {
+                    iter.remove();
+                    }
+                }
+            for (Iterator<PropertyInfo> iter = typeinfo.properties.values().iterator(); iter.hasNext(); )
+                {
+                if (iter.next().getAccess() == Access.PROTECTED)
+                    {
+                    iter.remove();
+                    }
+                }
             }
 
         return fHalt;
@@ -1245,7 +1293,7 @@ public class TerminalTypeConstant
         PropertyInfo propinfo = typeinfo.properties.get(sName);
         if (propinfo == null)
             {
-            propinfo = new PropertyInfo(this, struct.getType(), sName);
+            propinfo = new PropertyInfo(this, struct);
             if (struct.isSynthetic())
                 {
                 propinfo.markReadOnly();
@@ -1273,24 +1321,48 @@ public class TerminalTypeConstant
      *
      * @param struct      the method structure
      * @param typeinfo    the type info that this method is somehow a part of
-     * @param mapMethods  the map of methods to contribute to
-     * @param access      the desired accessibility into the current type
-     * @param errs        the error list to log any errors to
+     * @param listRemoveMethods  a list to add a method signature to in order to remove the
+     *                           corresponding MethodInfo from the resulting TypeInfo
+     * @param listUpdateMethods  a list to add a MethodInfo to in order to add information to the
+     *                           resulting TypeInfo
+     * @param access             the desired accessibility into the current type
+     * @param errs               the error list to log any errors to
      *
-     * @return a MethodInfo representing what the MethodStructure resolved to
+     * @return true if the resolution process was halted before it completed, for example if the
+     *         error list reached its size limit
      */
-    protected MethodInfo resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
-            Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
+    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
+            List<SignatureConstant> listRemoveMethods, List<MethodInfo> listUpdateMethods,
+            Access access, ErrorListener errs)
         {
         assert struct != null;
         assert typeinfo != null;
         assert access != null;
 
-        // first determine if this method should be registered
-        // TODO
-        // System.out.println("method: " + struct.getIdentityConstant().getValueString());
+        // find the super method
+        // TODO need to "resolve" the signature, e.g. against "this type", params, etc.?
+        MethodInfo methodinfoSuper = typeinfo.findMethod(struct.getIdentityConstant().getSignature(), errs);
 
-        return null;
+        // if there is a super method, then this method must not decrease the accessibility of the
+        // super method
+        if (methodinfoSuper != null && struct.getAccess().ordinal() > methodinfoSuper.getAccess().ordinal())
+            {
+            // TODO log error
+            throw new IllegalStateException("decreasing accessibility on "
+                    + struct.getIdentityConstant().getValueString());
+            }
+
+        // TODO at some point, we have to handle a "struct" access request, i.e. only collect info on fields
+        // access levels are in order of "security": struct, public, protected, private
+        if (struct.getAccess().ordinal() > access.ordinal())
+            {
+            // this method should not be included
+            return false;
+            }
+
+        // TODO
+
+        return false;
         }
 
     @Override

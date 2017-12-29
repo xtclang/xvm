@@ -25,6 +25,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
@@ -1122,6 +1123,25 @@ public abstract class TypeConstant
             }
 
         /**
+         * Given the specified method signature, find the most appropriate method that matches that
+         * signature, and return that method. If there is no matching method, then return null. If
+         * there are multiple methods that match, but it is ambiguous which method is "the best"
+         * match, then log an error to the error list, and return null.
+         *
+         * @param constSig  the method signature to search for
+         * @param errs      the error list to log errors to
+         *
+         * @return the MethodInfo for the method that is the "best match" for the signature, or null
+         *         if no method is a best match (including the case in which more than one method
+         *         matches, but no one of those methods is a provable unambiguous "best match")
+         */
+        public MethodInfo findMethod(SignatureConstant constSig, ErrorListener errs)
+            {
+            // TODO
+            return null;
+            }
+
+        /**
          * Obtain all of the matching op methods for the specified name and/or the operator string, that
          * take the specified number of params.
          *
@@ -1258,9 +1278,9 @@ public abstract class TypeConstant
 
         // data members
         public final TypeConstant type;
-        public final Map<String, ParamInfo>             parameters = new HashMap<>(7);
-        public final Map<String, PropertyInfo>          properties = new HashMap<>(7);
-        public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>(7);
+        public final Map<String, ParamInfo>             parameters = new HashMap<>();
+        public final Map<String, PropertyInfo>          properties = new HashMap<>();
+        public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>();
 
         /**
          * The Format of the topmost class structure.
@@ -1352,11 +1372,13 @@ public abstract class TypeConstant
      */
     public static class PropertyInfo
         {
-        public PropertyInfo(Constant constDeclares, TypeConstant typeProp, String sName)
+        public PropertyInfo(Constant constDeclares, PropertyStructure struct)
             {
+            // TypeConstant typeProp, String sName
             constDeclLevel = constDeclares;
-            type = typeProp;
-            name = sName;
+            type           = struct.getType();
+            name           = struct.getName();
+            access         = struct.getAccess();
             }
 
         public String getName()
@@ -1368,6 +1390,13 @@ public abstract class TypeConstant
             {
             return type;
             }
+
+        public Access getAccess()
+            {
+            return access;
+            }
+
+        // TODO need a way to widen access from protected to public
 
         public boolean isReadOnly()
             {
@@ -1432,6 +1461,7 @@ public abstract class TypeConstant
 
         private String                             name;
         private TypeConstant                       type;
+        private Access                             access;
         private boolean                            fRO;
         private boolean                            fField;
         private boolean                            fLogic;
@@ -1525,7 +1555,16 @@ public abstract class TypeConstant
          */
         public MethodConstant getMethodConstant()
             {
-            throw new UnsupportedOperationException("TODO"); // TODO
+            // TODO is this correct (GG: review)
+            return getFirstMethodBody().getMethodConstant();
+            }
+
+        /**
+         * @return the access of the first method in the chain
+         */
+        public Access getAccess()
+            {
+            return getFirstMethodBody().getMethodStructure().getAccess();
             }
 
         /**
