@@ -396,6 +396,20 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return this same type, but with the number of parameters equal to the number of
+     *         formal parameters for every parameterized type
+     */
+    public TypeConstant normalizeParameters()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.normalizeParameters();
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(constResolved);
+        }
+
+    /**
      * @return this same type, but with a specified access
      */
     public TypeConstant modifyAccess(Access access)
@@ -910,7 +924,9 @@ public abstract class TypeConstant
     public TypeConstant getType()
         {
         ConstantPool pool = getConstantPool();
-        return pool.ensureParameterizedTypeConstant(pool.typeType(), this);
+        return isExplicitClassIdentity(true)
+            ? pool.ensureParameterizedTypeConstant(pool.typeClass(), this)
+            : pool.ensureParameterizedTypeConstant(pool.typeType(), this);
         }
 
     @Override

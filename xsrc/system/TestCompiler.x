@@ -289,4 +289,9 @@ class TestCompiler<TestType1 extends Number,
         {
         C<Number> cn = ct12;
         }
+
+    static Void testClassConst()
+        {
+        Class<PC> clz = PC;
+        }
     }

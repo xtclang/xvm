@@ -85,7 +85,7 @@ public class MoveRef
             }
         else
             {
-            TypeComposition clzRef = Ref.INSTANCE.ensureClass(infoSrc.getType());
+            TypeComposition clzRef = Ref.INSTANCE.ensureParameterizedClass(infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 

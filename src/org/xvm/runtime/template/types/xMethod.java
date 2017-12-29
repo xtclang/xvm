@@ -62,7 +62,7 @@ public class xMethod
             MethodStructure method = (MethodStructure) constMethod.getComponent();
 
             // TODO: assert if a function
-            return new MethodHandle(f_clazzCanonical, method);
+            return new MethodHandle(f_clazzCanonical, method, frame.getThis().m_type);
             }
         return null;
         }
@@ -85,11 +85,9 @@ public class xMethod
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }
 
-    public static MethodHandle makeHandle(MethodStructure method, TypeComposition clz, TypeConstant typeTarget)
+    public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)
         {
-        TypeConstant typeActual = clz.f_typeActual;
-
-        return new MethodHandle(INSTANCE.ensureClass(typeActual), method);
+        return new MethodHandle(INSTANCE.f_clazzCanonical, method, typeTarget);
         }
 
     public static class MethodHandle
@@ -97,21 +95,24 @@ public class xMethod
         {
         public final MethodStructure f_method;
         public final PropertyStructure f_property;
+        public final TypeConstant f_typeTarget;
 
-        protected MethodHandle(TypeComposition clazz, MethodStructure method)
+        protected MethodHandle(TypeComposition clazz, MethodStructure method, TypeConstant typeTarget)
             {
             super(clazz);
 
             f_method = method;
             f_property = null;
+            f_typeTarget = typeTarget;
             }
 
-        protected MethodHandle(TypeComposition clazz, PropertyStructure property)
+        protected MethodHandle(TypeComposition clazz, PropertyStructure property, TypeConstant typeTarget)
             {
             super(clazz);
 
             f_method = null;
             f_property = property;
+            f_typeTarget = typeTarget;
             }
 
         @Override

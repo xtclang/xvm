@@ -210,6 +210,9 @@ public class ClassStructure
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
      *
+     * Note: the specified list is allowed to skip some number of actual parameters (at the tail);
+     *       they will be replaced by the corresponding resolved canonical types
+     *
      * @param  listActual  the list of actual types
      *
      * @return the resolved type
@@ -219,6 +222,24 @@ public class ClassStructure
         return listActual.isEmpty()
             ? getCanonicalType()
             : getFormalType().resolveGenerics(new SimpleTypeResolver(listActual));
+        }
+
+    /**
+     * If the specified list of actual parameters is missing some number of actual parameters,
+     * add the corresponding resolved canonical types to the end of the list.
+     *
+     * @param  listActual  the list of actual types
+     *
+     * @return the list of types that has exact size as the map of formal parameters for this class
+     */
+    public List<TypeConstant> normalizeParameters(List<TypeConstant> listActual)
+        {
+        int cActual = listActual.size();
+        int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+
+        return cActual == cFormal
+            ? listActual
+            : resolveType(listActual).getParamTypes();
         }
 
     // ----- component methods ---------------------------------------------------------------------
@@ -704,9 +725,8 @@ public class ClassStructure
                     ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
-                List<TypeConstant> listContribParams = typeContrib.getParamTypes();
-
-                assert listContribParams.size() == mapFormal.size();
+                List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
+                    typeContrib.getParamTypes());
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -717,7 +737,7 @@ public class ClassStructure
                     String sFormal = iterNames.next().getValue();
 
                     if (constParam.producesFormalType(sName, access, Collections.EMPTY_LIST)
-                        && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false)
+                            && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false)
                         ||
                         constParam.consumesFormalType(sName, access, Collections.EMPTY_LIST)
                             && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false))
@@ -848,9 +868,8 @@ public class ClassStructure
                     ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
-                List<TypeConstant> listContribParams = typeContrib.getParamTypes();
-
-                assert listContribParams.size() == mapFormal.size();
+                List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
+                    typeContrib.getParamTypes());
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1217,6 +1236,8 @@ public class ClassStructure
          */
         public SimpleTypeResolver(List<TypeConstant> listActual)
             {
+            m_listActual = listActual;
+
             if (getIdentityConstant().equals(getConstantPool().clzTuple()))
                 {
                 m_fTuple = true;
@@ -1233,7 +1254,7 @@ public class ClassStructure
                     }
                 else if (cFormal > cActual)
                     {
-                    listActual = new ArrayList<>(listActual); // clone
+                    m_listActual = listActual = new ArrayList<>(listActual); // clone
                     List<Map.Entry<StringConstant, TypeConstant>> entries = m_mapParams.asList();
 
                     // fill the missing actual parameters with the canonical types
@@ -1246,7 +1267,6 @@ public class ClassStructure
                         }
                     }
                 }
-            m_listActual = listActual;
             }
 
         @Override

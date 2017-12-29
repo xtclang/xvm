@@ -131,18 +131,41 @@ public abstract class ClassTemplate
     /**
      * Produce a TypeComposition for this template using the actual types for formal parameters.
      *
-     * Note: the passed in actual type should be fully resolved (no formal parameters)
+     * Note: all passed actual types should be fully resolved (no formal parameters)
+     */
+    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
+        {
+        ClassStructure struct = f_struct;
+        TypeConstant type = struct.getConstantPool().ensureParameterizedTypeConstant(
+            struct.getIdentityConstant().asTypeConstant(), typeParams);
+        return ensureClass(type);
+        }
+
+    /**
+     * Produce a TypeComposition for this template using the specified actual type.
+     *
+     * Note: the passed actual type should be fully resolved (no formal parameters)
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        if (!typeActual.isParamsSpecified())
+        assert typeActual.isSingleDefiningConstant() &&
+            ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
+
+        if (!typeActual.isModifyingType())
             {
             return f_clazzCanonical;
             }
 
-        // use the list of sorted actual types as a key
+        int cParams = typeActual.getParamTypes().size();
+        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
+
+        if (cParams != cFormal)
+            {
+            typeActual = typeActual.normalizeParameters();
+            }
+
         return m_mapCompositions.computeIfAbsent(typeActual,
-                (x) -> new TypeComposition(this, typeActual));
+                (type) -> new TypeComposition(this, type));
         }
 
     public ClassTemplate getSuper()
@@ -490,8 +513,11 @@ public abstract class ClassTemplate
             case 0:
                 if (method.getName().equals("to"))
                     {
-                    // how to differentiate; check the method's return type?
-                    return buildStringValue(frame, hTarget, iReturn);
+                    if (method.getReturnCount() == 1 &&
+                        method.getReturn(0).getType() == f_struct.getConstantPool().typeString())
+                        {
+                        return buildStringValue(frame, hTarget, iReturn);
+                        }
                     }
             }
 

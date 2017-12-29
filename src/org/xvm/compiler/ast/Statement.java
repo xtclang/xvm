@@ -539,6 +539,7 @@ public abstract class Statement
                             case Class:
                                 if (!((ClassStructure) ((IdentityConstant) constant).getComponent()).isSingleton())
                                     {
+                                    arg = pool().ensureClassTypeConstant(constant, Access.PUBLIC);
                                     break;
                                     }
                                 // fall through

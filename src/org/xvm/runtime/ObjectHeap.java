@@ -137,6 +137,9 @@ public class ObjectHeap
             case Package:
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
+            case Class:
+                return xClass.INSTANCE;
+
             case Property:
                 return xProperty.INSTANCE;
 
@@ -166,7 +169,6 @@ public class ObjectHeap
             case Register:
             case Signature:
             case Typedef:
-            case Class:
             case ThisClass:
             case ParentClass:
             case ChildClass:

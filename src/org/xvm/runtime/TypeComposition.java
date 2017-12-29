@@ -19,6 +19,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -74,6 +75,12 @@ public class TypeComposition
 
     public TypeComposition(ClassTemplate template, TypeConstant typeActual)
         {
+        f_template = template;
+        f_typeActual = typeActual;
+
+        assert typeActual.isSingleDefiningConstant() &&
+            ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == template.f_struct;
+
         if (typeActual.isParamsSpecified())
             {
             ClassStructure struct = template.f_struct;
@@ -101,9 +108,6 @@ public class TypeComposition
                 m_typePrivate = typeActual;
                 break;
             }
-
-        f_template = template;
-        f_typeActual = typeActual;
         }
 
     protected TypeComposition getSuper()

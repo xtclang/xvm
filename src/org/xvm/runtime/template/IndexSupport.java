@@ -41,7 +41,7 @@ public interface IndexSupport
             {
             TypeConstant typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xVar.INSTANCE.ensureClass(typeReferent); // RefType
+            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(typeReferent); // RefType
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

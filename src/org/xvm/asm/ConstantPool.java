@@ -1280,7 +1280,7 @@ public class ConstantPool
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constClass));
             }
 
-        if (access != null)
+        if (access != null && !access.equals(Access.PUBLIC))
             {
             constType = ensureAccessTypeConstant(constType, access);
             }
