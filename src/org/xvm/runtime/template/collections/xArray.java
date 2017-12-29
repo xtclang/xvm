@@ -23,7 +23,6 @@ import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xObject;
 
 
 /**
@@ -378,7 +377,7 @@ public class xArray
 
     public static GenericArrayHandle makeHandle(TypeConstant typeEl, ObjectHandle[] ahValue)
         {
-        return new GenericArrayHandle(INSTANCE.ensureClass(typeEl), ahValue); // ElementType
+        return new GenericArrayHandle(INSTANCE.ensureParameterizedClass(typeEl), ahValue); // ElementType
         }
 
     public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)

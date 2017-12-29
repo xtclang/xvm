@@ -19,9 +19,12 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xObject;
@@ -62,16 +65,22 @@ public class TypeComposition
     private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
 
     // cached property getter call chain (the top-most method first)
-    private Map<String, CallChain.PropertyCallChain> m_mapGetters = new HashMap<>();
+    private Map<String, PropertyCallChain> m_mapGetters = new HashMap<>();
 
     // cached property setter call chain (the top-most method first)
-    private Map<String, CallChain.PropertyCallChain> m_mapSetters = new HashMap<>();
+    private Map<String, PropertyCallChain> m_mapSetters = new HashMap<>();
 
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
 
     public TypeComposition(ClassTemplate template, TypeConstant typeActual)
         {
+        f_template = template;
+        f_typeActual = typeActual;
+
+        assert typeActual.isSingleDefiningConstant() &&
+            ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == template.f_struct;
+
         if (typeActual.isParamsSpecified())
             {
             ClassStructure struct = template.f_struct;
@@ -99,12 +108,9 @@ public class TypeComposition
                 m_typePrivate = typeActual;
                 break;
             }
-
-        f_template = template;
-        f_typeActual = typeActual;
         }
 
-    public TypeComposition getSuper()
+    protected TypeComposition getSuper()
         {
         if (m_clzSuper != null)
             {
@@ -443,7 +449,7 @@ public class TypeComposition
         return type == m_typeStruct;
         }
 
-    // is this public interface of this class assignable to the specified class
+    // is the public interface of this class assignable to the specified class
     public boolean isA(TypeComposition that)
         {
         return this.ensurePublicType().isA(that.ensurePublicType());
@@ -458,13 +464,7 @@ public class TypeComposition
     //       but returns TypeComposition rather than Type and is more tolerant
     public TypeComposition resolveClass(TypeConstant type)
         {
-        TypeConstant typeActual = f_typeActual;
-        if (typeActual.isParamsSpecified())
-            {
-            type = type.resolveGenerics(f_template.f_struct.
-                new SimpleTypeResolver(typeActual.getParamTypes()));
-            }
-        return f_template.f_types.resolveClass(type);
+        return f_template.f_types.resolveClass(type.resolveGenerics(this));
         }
 
     // create a sequence of frames to be called in the inverse order (the base super first)
@@ -563,19 +563,19 @@ public class TypeComposition
         return new CallChain(list);
         }
 
-    public CallChain.PropertyCallChain getPropertyGetterChain(String sProperty)
+    public PropertyCallChain getPropertyGetterChain(String sProperty)
         {
         return m_mapGetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, true));
         }
 
-    public CallChain.PropertyCallChain getPropertySetterChain(String sProperty)
+    public PropertyCallChain getPropertySetterChain(String sProperty)
         {
         return m_mapSetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, false));
         }
 
-    protected CallChain.PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
+    protected PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
         PropertyStructure propertyBase = null;
         List<MethodStructure> list = new LinkedList<>();
@@ -613,7 +613,7 @@ public class TypeComposition
             throw new IllegalStateException("Class " + this + " missing property " + sPropName);
             }
 
-        return new CallChain.PropertyCallChain(list, propertyBase, fGetter);
+        return new PropertyCallChain(list, propertyBase, fGetter);
         }
 
     // retrieve the property structure for the specified property

@@ -185,6 +185,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant normalizeParameters()
+        {
+        return this;
+        }
+
+    @Override
     public TypeConstant modifyAccess(Access access)
         {
         return this;
@@ -1428,6 +1434,12 @@ public class TerminalTypeConstant
     public List<ContributionChain> collectContributions(
             TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
         {
+        if (this.equals(getConstantPool().typeObject()))
+            {
+            // Object doesn't have any contributions
+            return chains;
+            }
+
         Constant constIdThis = getDefiningConstant();
 
         if (that.isSingleDefiningConstant()
@@ -1611,11 +1623,11 @@ public class TerminalTypeConstant
             case Class:
                 {
                 ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) getDefiningConstant()).getComponent();
+                    ((IdentityConstant) constIdThis).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
 
-                assert listParams.size() == mapFormal.size();
+                listParams = clzThis.normalizeParameters(listParams);
 
                 Iterator<TypeConstant> iterParams = listParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1677,11 +1689,11 @@ public class TerminalTypeConstant
             case Class:
                 {
                 ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) getDefiningConstant()).getComponent();
+                    ((IdentityConstant) constIdThis).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
 
-                assert listParams.size() == mapFormal.size();
+                listParams = clzThis.normalizeParameters(listParams);
 
                 Iterator<TypeConstant> iterParams = listParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();

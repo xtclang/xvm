@@ -339,7 +339,7 @@ class TestApp
         print(ari.replace(1, 2));
         }
 
-    static String lambda_2(Ref<Int> i)
+    static String lambda_2(Var<Int> i)
         {
         TODO // TODO remove
         }
@@ -495,11 +495,15 @@ class TestApp
 
     static Void testReal1()
         {
-        // @Inject io.Console console;
+//        @Inject io.Console console;
 
         Int i;
         Int j = 1;
 
         i = j;
+
+        Class<Point> clzP = Point;
+
+//        Class<Array<Point>> clzAP = Array<Point>;
         }
     }

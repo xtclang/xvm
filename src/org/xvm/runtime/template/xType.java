@@ -62,14 +62,14 @@ public class xType
         xMethod.MethodHandle[] ahMethods = new xMethod.MethodHandle[aMethods.length];
         for (int i = 0, c = aMethods.length; i < c; i++)
             {
-            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.f_clazz, hType.m_type);
+            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.getType());
             }
         return xArray.makeHandle(xMethod.TYPE, ahMethods);
         }
 
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return new TypeHandle(INSTANCE.ensureClass(type)); // DataType
+        return new TypeHandle(INSTANCE.f_clazzCanonical, type);
         }
 
     // most of the time the TypeHandle is based on the underlying DataType (Type);
@@ -77,14 +77,18 @@ public class xType
     public static class TypeHandle
             extends ObjectHandle
         {
-        protected TypeHandle(TypeComposition clazz)
+        protected TypeConstant m_type;
+
+        protected TypeHandle(TypeComposition clazz, TypeConstant type)
             {
             super(clazz);
+
+            m_type = type;
             }
 
         protected TypeConstant getType()
             {
-            return f_clazz.getActualParamType("DataType");
+            return m_type;
             }
         }
     }

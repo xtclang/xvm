@@ -247,6 +247,19 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant normalizeParameters()
+        {
+        TypeConstant constOriginal1 = getUnderlyingType();
+        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constResolved1 = constOriginal1.normalizeParameters();
+        TypeConstant constResolved2 = constOriginal2.normalizeParameters();
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
     public TypeConstant modifyAccess(Access access)
         {
         TypeConstant constOriginal1 = getUnderlyingType();

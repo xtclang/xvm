@@ -201,7 +201,7 @@ public abstract class Constant
      *
      * @param type  the desired type
      *
-     * @return a Constant of the specfied type, if possible, otherwise the constant for False
+     * @return a Constant of the specified type, if possible, otherwise the constant for False
      */
     public static Constant defaultValue(TypeConstant type)
         {

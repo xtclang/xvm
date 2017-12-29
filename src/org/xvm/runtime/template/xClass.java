@@ -1,10 +1,16 @@
 package org.xvm.runtime.template;
 
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -38,42 +44,75 @@ public class xClass
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
+        if (constant instanceof ClassConstant)
+            {
+            constant = constant.getType();
+            }
         if (constant instanceof TypeConstant)
             {
             TypeConstant typeTarget = (TypeConstant) constant;
-            TypeComposition clzTarget = f_types.resolveClass(
-                typeTarget.getPosition(), frame.getGenericsResolver());
 
-            TypeConstant typeClass = frame.f_context.f_pool.ensureParameterizedTypeConstant(
-                INSTANCE.getTypeConstant(),
-                clzTarget.ensurePublicType(),
-                clzTarget.ensureProtectedType(),
-                clzTarget.ensurePrivateType(),
-                clzTarget.ensureStructType()
-                );
-            TypeComposition clzClass = f_types.resolveClass(typeClass);
-
-            return new ClassHandle(clzClass, clzTarget);
+            return m_mapHandles.computeIfAbsent(typeTarget, type ->
+                new ClassHandle(f_types.resolveClass(
+                    type.getPosition(), frame.getGenericsResolver())));
             }
         return null;
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property,
+                               ObjectHandle hTarget, int iReturn)
+        {
+        ClassHandle hThis = (ClassHandle) hTarget;
+
+        switch (property.getName())
+            {
+            case "hash":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_type.hashCode()));
+            }
+
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ClassHandle hThis = (ClassHandle) hValue1;
+        ClassHandle hThat = (ClassHandle) hValue2;
+
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hThis == hThat));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ClassHandle hThis = (ClassHandle) hValue1;
+        ClassHandle hThat = (ClassHandle) hValue2;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_type.compareTo(hThat.m_type)));
         }
 
     public static class ClassHandle
             extends ObjectHandle
         {
-        protected TypeComposition m_clzTarget;
-
-        protected ClassHandle(TypeComposition clazz, TypeComposition clzTarget)
+        protected ClassHandle(TypeComposition clazzTarget)
             {
-            super(clazz);
-
-            m_clzTarget = clzTarget;
+            super(clazzTarget);
             }
 
         @Override
         public String toString()
             {
-            return super.toString() + m_clzTarget;
+            return super.toString();
             }
         }
+
+    // ----- data fields -----
+
+    /**
+     * Cached ClassHandle instances.
+     */
+    private Map<TypeConstant, ClassHandle> m_mapHandles = new ConcurrentHashMap<>();
     }

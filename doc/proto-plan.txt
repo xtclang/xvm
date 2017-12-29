@@ -121,5 +121,3 @@ $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
 - ParameterizedTC.getDefiningConstant().getIdentityConstant() can only be a ClassConstant
 
-- the order:
-    [Immutable] [Access]

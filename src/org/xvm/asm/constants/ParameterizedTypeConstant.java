@@ -193,6 +193,39 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant normalizeParameters()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.normalizeParameters();
+        boolean      fDiff         = constOriginal != constResolved;
+
+        ClassStructure clzThis = (ClassStructure)
+            ((IdentityConstant) getDefiningConstant()).getComponent();
+        TypeConstant[] aconstParams = m_atypeParams;
+
+        int cParams = aconstParams.length;
+        int cFormal = clzThis.isParameterized() ? clzThis.getTypeParams().size() : 0;
+        if (cParams != cFormal)
+            {
+            if (cParams < cFormal)
+                {
+                List<TypeConstant> listTypes = clzThis.normalizeParameters(Arrays.asList(aconstParams));
+                aconstParams = listTypes.toArray(new TypeConstant[listTypes.size()]);
+                fDiff = true;
+                }
+            else if (!clzThis.getIdentityConstant().equals(getConstantPool().clzTuple()))
+                {
+                throw new IllegalArgumentException(
+                    "Too many parameters specified: " + this + " for " + clzThis);
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstParams)
+                : this;
+        }
+
+    @Override
     protected TypeConstant cloneSingle(TypeConstant type)
         {
         return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
