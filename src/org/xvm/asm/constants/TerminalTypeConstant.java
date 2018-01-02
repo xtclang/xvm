@@ -1032,12 +1032,6 @@ public class TerminalTypeConstant
                             {
                             continue NextContrib;
                             }
-
-                        if (constClass.extendsClass((ClassConstant) typeMixin.getSingleUnderlyingClass()))
-                            {
-                            // TODO log error
-                            throw new IllegalStateException("")
-                            }
                         }
 
                     // the mixin must be compatible with this type, as specified by its "into"

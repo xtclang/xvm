@@ -5,11 +5,53 @@ module Ecstasy.xtclang.org
 
     typedef Tuple<> Void;
 
-    class Object
-        {
-        String to<String>();
-        @Auto function Object() to<function Object()>();
-        }
+//    class Object
+//        {
+//        String to<String>();
+//        @Auto function Object() to<function Object()>();
+//        }
+
+    interface Meta<PublicType, ProtectedType, PrivateType, StructType> {}
+    class Object
+        {
+        protected Meta<Object:public, Object:protected, Object:private> meta.get()
+            {
+            // the Meta object is provided by the runtime
+            return super();
+            }
+
+        static Boolean equals(Object o1, Object o2)
+            {
+            return &o1 == &o2;
+            }
+
+        String to<String>()
+            {
+            // the Object's rudimentary to<String> shows class information only
+            return meta.class_.to<String>();
+            }
+
+        Object[] to<Object[]>()
+            {
+            return {this};
+            }
+
+        Tuple<Object> to<Tuple<Object>>()
+            {
+            return Tuple:(this);
+            }
+
+        @Auto function Object() to<function Object()>()
+            {
+            return () -> this;
+            }
+
+        immutable Object to<immutable Object>()
+            {
+            meta.immutable_ = true;
+            return this.as(immutable Object);
+            }
+        }
 
     class IntLiteral
         {

@@ -312,6 +312,11 @@ module Test
 
 //    class D extends B incorporates M2 {}
 
+//    function Object() foo(Object o)
+//        {
+//        return o;
+//        }
+
     Int foo()
         {
         MyMap<Object, Object> map;
