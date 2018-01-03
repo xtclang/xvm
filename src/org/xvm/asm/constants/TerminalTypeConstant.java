@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -133,6 +132,42 @@ public class TerminalTypeConstant
     public boolean isParamsSpecified()
         {
         return false;
+        }
+
+    @Override
+    public int getMaxParamsCount()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case Register:
+                return 0;
+
+            case Class:
+                {
+                // examine the structure to determine if it represents a class or interface
+                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                return clz.getTypeParams().size();
+                }
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).getMaxParamsCount();
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent();
+                return clz.getTypeParams().size();
+                }
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
         }
 
     @Override
@@ -1345,7 +1380,7 @@ public class TerminalTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         if (this.equals(getConstantPool().typeObject()))
             {
@@ -1353,16 +1388,16 @@ public class TerminalTypeConstant
             return chains;
             }
 
-        Constant constIdThis = getDefiningConstant();
+        Constant constIdRight = getDefiningConstant();
 
-        if (that.isSingleDefiningConstant()
-                && constIdThis.equals(that.getDefiningConstant()))
+        if (thatLeft.isSingleDefiningConstant()
+                && constIdRight.equals(thatLeft.getDefiningConstant()))
             {
             chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
             return chains;
             }
 
-        switch (constIdThis.getFormat())
+        switch (constIdRight.getFormat())
             {
             case Module:
             case Package:
@@ -1370,15 +1405,15 @@ public class TerminalTypeConstant
 
             case Class:
                 {
-                ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) constIdThis).getComponent();
-                chains.addAll(that.collectClassContributions(clzThis, listParams, chains));
+                ClassStructure clzRight = (ClassStructure)
+                    ((IdentityConstant) constIdRight).getComponent();
+                chains.addAll(thatLeft.collectClassContributions(clzRight, listRight, chains));
                 break;
                 }
 
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    collectContributions(that, listParams, chains);
+                return getTypedefTypeConstant((TypedefConstant) constIdRight).
+                    collectContributions(thatLeft, listRight, chains);
 
             case Property:
                 // scenarios we can handle here are:
@@ -1387,39 +1422,39 @@ public class TerminalTypeConstant
                 //
                 // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
-                return getPropertyTypeConstant((PropertyConstant) constIdThis).
-                    collectContributions(that, listParams, chains);
+                return getPropertyTypeConstant((PropertyConstant) constIdRight).
+                    collectContributions(thatLeft, listRight, chains);
 
             case Register:
-                return getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    collectContributions(that, listParams, chains);
+                return getRegisterTypeConstant((RegisterConstant) constIdRight).
+                    collectContributions(thatLeft, listRight, chains);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 {
-                ClassStructure clzThis = (ClassStructure)
-                    ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                chains.addAll(that.collectClassContributions(clzThis, listParams, chains));
+                ClassStructure clzRight = (ClassStructure)
+                    ((PseudoConstant) constIdRight).getDeclarationLevelClass().getComponent();
+                chains.addAll(thatLeft.collectClassContributions(clzRight, listRight, chains));
                 break;
                 }
 
             case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdRight);
 
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+                throw new IllegalStateException("unexpected defining constant: " + constIdRight);
             }
         return chains;
         }
 
     @Override
     protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
+            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        Constant constIdThis = getDefiningConstant();
+        Constant constIdLeft = getDefiningConstant();
 
-        switch (constIdThis.getFormat())
+        switch (constIdLeft.getFormat())
             {
             case Module:
             case Package:
@@ -1427,8 +1462,8 @@ public class TerminalTypeConstant
 
             case Class:
                 {
-                ClassConstant idThis = (ClassConstant) constIdThis;
-                if (idThis.equals(getConstantPool().clzObject()))
+                ClassConstant constClzLeft = (ClassConstant) constIdLeft;
+                if (constClzLeft.equals(getConstantPool().clzObject()))
                     {
                     // everything is considered to extend Object (even interfaces)
                     chains.add(new ContributionChain(
@@ -1437,11 +1472,11 @@ public class TerminalTypeConstant
                     }
 
                 List<ContributionChain> chainsClz =
-                    clzThat.collectContributions(idThis, listParams, new LinkedList<>(), true);
+                    clzRight.collectContributions(constClzLeft, listRight, new ArrayList<>(), true);
                 if (chainsClz.isEmpty())
                     {
-                    ClassStructure clzThis = (ClassStructure) idThis.getComponent();
-                    if (clzThis.getFormat() == Component.Format.INTERFACE)
+                    ClassStructure clzLeft = (ClassStructure) constClzLeft.getComponent();
+                    if (clzLeft.getFormat() == Component.Format.INTERFACE)
                         {
                         chains.add(new ContributionChain(
                             new Contribution(Composition.MaybeDuckType, null)));
@@ -1455,8 +1490,8 @@ public class TerminalTypeConstant
                 }
 
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    collectClassContributions(clzThat, listParams, chains);
+                return getTypedefTypeConstant((TypedefConstant) constIdLeft).
+                    collectClassContributions(clzRight, listRight, chains);
 
             case Property:
             case Register:
@@ -1468,43 +1503,44 @@ public class TerminalTypeConstant
             case ParentClass:
             case ChildClass:
                 {
-                ClassStructure clzThis = (ClassStructure)
-                    ((PseudoConstant) constIdThis).getDeclarationLevelClass().getComponent();
-                return clzThis.getIdentityConstant().asTypeConstant().
-                    collectClassContributions(clzThat, listParams, chains);
+                ClassStructure clzLeft = (ClassStructure)
+                    ((PseudoConstant) constIdLeft).getDeclarationLevelClass().getComponent();
+                return clzLeft.getIdentityConstant().asTypeConstant().
+                    collectClassContributions(clzRight, listRight, chains);
                 }
 
             case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdThis);
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdLeft);
 
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constIdThis);
+                throw new IllegalStateException("unexpected defining constant: " + constIdLeft);
             }
 
         return chains;
         }
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant that, Access access, ContributionChain chain)
+    protected boolean validateContributionFrom(
+            TypeConstant thatRight, Access accessLeft, ContributionChain chain)
         {
         // there is nothing that could change the result of "checkAssignableTo"
         return true;
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                               List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(
+            TypeConstant thatRight, Access accessLeft, List<TypeConstant> listLeft)
         {
-        Constant constIdThis = getDefiningConstant();
+        Constant constIdLeft = getDefiningConstant();
 
-        assert constIdThis.getFormat() == Format.Class;
+        assert constIdLeft.getFormat() == Format.Class;
 
-        IdentityConstant idThis  = (IdentityConstant) constIdThis;
-        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+        IdentityConstant idLeft = (IdentityConstant) constIdLeft;
+        ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
 
-        assert clzThis.getFormat() == Component.Format.INTERFACE;
+        assert clzLeft.getFormat() == Component.Format.INTERFACE;
 
-        return clzThis.isInterfaceAssignableFrom(that, access, listParams);
+        return clzLeft.isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
         }
 
     @Override

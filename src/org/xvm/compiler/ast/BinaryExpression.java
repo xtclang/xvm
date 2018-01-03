@@ -88,7 +88,7 @@ public class BinaryExpression
             case "collections.Collection":
             case "collections.Sequence":
             case "Iterable":
-                return !typeThat.isParamsSpecified() || (typeThat.isParamsSpecified(1)
+                return !typeThat.isParamsSpecified() || (typeThat.getParamsCount() == 1
                         && typeThat.getParamTypesArray()[0].isA(pool().typeByte()));
 
             default:

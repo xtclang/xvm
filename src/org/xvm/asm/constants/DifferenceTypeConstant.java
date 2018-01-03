@@ -152,12 +152,12 @@ public class DifferenceTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        // the difference type is always an interface, so it can only
+        // this R-value is a difference type, which is a "dynamic" interface, so it can only
         // "duck type" to another interface
 
-        if (!that.isClassType())
+        if (!thatLeft.isClassType())
             {
             chains.add(new ContributionChain(
                 new Contribution(Composition.MaybeDuckType, null)));
@@ -167,7 +167,7 @@ public class DifferenceTypeConstant
 
     @Override
     protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
+            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         // the difference type is always an interface, so it can only
         // "duck type" to another interface
@@ -175,11 +175,11 @@ public class DifferenceTypeConstant
         chains.add(new ContributionChain(
             new Contribution(Composition.MaybeDuckType, null)));
         return chains;
-
         }
 
     @Override
-    public boolean containsSubstitutableMethod(SignatureConstant signature, Access access, List<TypeConstant> listParams)
+    public boolean containsSubstitutableMethod(
+            SignatureConstant signature, Access access, List<TypeConstant> listParams)
         {
         return getUnderlyingType().containsSubstitutableMethod(signature, access, listParams)
             && !getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);

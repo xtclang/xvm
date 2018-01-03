@@ -122,23 +122,23 @@ public class AccessTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                               List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant thatRight, Access accessLeft,
+                                                               List<TypeConstant> listLeft)
         {
-        return super.isInterfaceAssignableFrom(that, m_access, listParams);
+        return super.isInterfaceAssignableFrom(thatRight, m_access, listLeft);
         }
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant that, Access access,
+    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft,
                                                ContributionChain chain)
         {
         if (chain.first().getComposition() != Component.Composition.MaybeDuckType &&
-                that.getAccess().compareTo(m_access) < 0)
+                thatRight.getAccess().compareTo(m_access) < 0)
             {
             // the l-value (this) should have access no greater that the r-value (that)
             return false;
             }
-        return super.validateContributionFrom(that, m_access, chain);
+        return super.validateContributionFrom(thatRight, m_access, chain);
         }
 
     @Override

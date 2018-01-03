@@ -171,11 +171,19 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff exactly the number of specified params are specified
+     * @return the number of parameters specified
      */
-    public boolean isParamsSpecified(int n)
+    public int getParamsCount()
         {
-        return isParamsSpecified() && getParamTypesArray().length == n;
+        return getParamTypesArray().length;
+        }
+
+    /**
+     * @return the actual number of type parameters declared by the underlying defining class
+     */
+    public int getMaxParamsCount()
+        {
+        return isModifyingType() ? getUnderlyingType().getMaxParamsCount() : 0;
         }
 
     /**
@@ -560,26 +568,26 @@ public abstract class TypeConstant
      * Determine if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
      *
-     * @param that  the type to match (L-value)
+     * @param thatLeft  the type to match (L-value)
      *
      * See Type.x # isA()
      */
-    public boolean isA(TypeConstant that)
+    public boolean isA(TypeConstant thatLeft)
         {
-        return calculateRelation(that) != Relation.INCOMPATIBLE;
+        return calculateRelation(thatLeft) != Relation.INCOMPATIBLE;
         }
 
     /**
      * Calculate the type relationship between the specified TypeConstant (L-value) and the type
      * this TypeConstant (R-Value).
      *
-     * @param that  the type to match (L-value)
+     * @param thatLeft  the type to match (L-value)
      *
      * See Type.x # isA()
      */
-    public Relation calculateRelation(TypeConstant that)
+    public Relation calculateRelation(TypeConstant thatLeft)
         {
-        if (this.equals(that) || that.equals(getConstantPool().typeObject()))
+        if (this.equals(thatLeft) || thatLeft.equals(getConstantPool().typeObject()))
             {
             return Relation.IS_A;
             }
@@ -594,53 +602,58 @@ public abstract class TypeConstant
             }
         else
             {
-            relation = mapRelations.get(that);
+            relation = mapRelations.get(thatLeft);
             }
 
         if (relation == null)
             {
-            mapRelations.put(that, Relation.IN_PROGRESS);
+            mapRelations.put(thatLeft, Relation.IN_PROGRESS);
             }
         else
             {
             if (relation == Relation.IN_PROGRESS)
                 {
                 // we are in recursion; the answer is "no"
-                mapRelations.put(that, Relation.INCOMPATIBLE);
+                mapRelations.put(thatLeft, Relation.INCOMPATIBLE);
                 }
             return relation;
             }
 
         try
             {
-            List<ContributionChain> chains = this.collectContributions(that,
+            List<ContributionChain> chains = this.collectContributions(thatLeft,
                 new ArrayList<>(), new ArrayList<>());
             if (chains.isEmpty())
                 {
-                mapRelations.put(that, relation = Relation.INCOMPATIBLE);
+                mapRelations.put(thatLeft, relation = Relation.INCOMPATIBLE);
                 }
             else
                 {
-                relation = validate(this, that, chains);
-                mapRelations.put(that, relation);
+                relation = validate(this, thatLeft, chains);
+                mapRelations.put(thatLeft, relation);
                 }
             return relation;
             }
         catch (RuntimeException | Error e)
             {
-            mapRelations.remove(that);
+            mapRelations.remove(thatLeft);
             throw e;
             }
         }
 
-    protected static Relation validate(TypeConstant typeThis, TypeConstant typeThat,
+    /**
+     * Validate the list of chains that were collected by the collectContribution() method, but
+     * now from the L-value's perspective. The chains that deemed to be non-fitting will be
+     * deleted from the chain list.
+     */
+    protected static Relation validate(TypeConstant typeRight, TypeConstant typeLeft,
                                        List<ContributionChain> chains)
         {
         for (Iterator<ContributionChain> iter = chains.iterator(); iter.hasNext();)
             {
             ContributionChain chain = iter.next();
 
-            if (!typeThat.validateContributionFrom(typeThis, Access.PUBLIC, chain))
+            if (!typeLeft.validateContributionFrom(typeRight, Access.PUBLIC, chain))
                 {
                 // rejected
                 iter.remove();
@@ -653,11 +666,11 @@ public abstract class TypeConstant
                 TypeConstant typeIface = contrib.getTypeConstant();
                 if (typeIface == null)
                     {
-                    typeIface = typeThat;
+                    typeIface = typeLeft;
                     }
 
                 if (!typeIface.isInterfaceAssignableFrom(
-                        typeThis, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                        typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
                     {
                     iter.remove();
                     }
@@ -676,34 +689,34 @@ public abstract class TypeConstant
      * Check if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
      *
-     * @param that        the type to match (L-value)
-     * @param listParams  the list of actual generic parameters
-     * @param chains      the list of chains to modify
+     * @param thatLeft   the type to match (L-value)
+     * @param listRight  the list of actual generic parameters for this type
+     * @param chains     the list of chains to modify
      *
      * @return a list of ContributionChain objects that describe how "that" type could be found in
      *         the contribution tree of "this" type; empty if the types are incompatible
      */
     public List<ContributionChain> collectContributions(
-            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        return getUnderlyingType().collectContributions(that, listParams, chains);
+        return getUnderlyingType().collectContributions(thatLeft, listRight, chains);
         }
 
     /**
-     * Collect the contributions for the specified class that match this type.
-     * Note that the parameter list is for the passed in class rather than this type.
+     * Collect the contributions for the specified class that match this type (L-value).
+     * Note that the parameter list is for the passed-in class rather than this type.
      *
-     * @param clzThat     the class to check for a contribution
-     * @param listParams  the list of actual generic parameters applicable to clzThat
-     * @param chains      the list of chains to modify
+     * @param clzRight   the class to check for a contribution
+     * @param listRight  the list of actual generic parameters applicable to clzThat
+     * @param chains     the list of chains to modify
      *
      * @return a list of ContributionChain objects that describe how this type could be found in
      *         the contribution tree of the specified class; empty if none is found
      */
     protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
+            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        return getUnderlyingType().collectClassContributions(clzThat, listParams, chains);
+        return getUnderlyingType().collectClassContributions(clzRight, listRight, chains);
         }
 
     /**
@@ -711,27 +724,27 @@ public abstract class TypeConstant
      * values of the type represented by the specified TypeConstant (R-Value) due to
      * the specified contribution chain.
      */
-    protected boolean validateContributionFrom(TypeConstant that, Access access,
+    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft,
                                                ContributionChain chain)
         {
-        return getUnderlyingType().validateContributionFrom(that, access, chain);
+        return getUnderlyingType().validateContributionFrom(thatRight, accessLeft, chain);
         }
 
     /**
      * Check if this TypeConstant (L-value), which is know to be an interface, represents a type
      * that is assignable to values of the type represented by the specified TypeConstant (R-Value).
      *
-     * @param that        the type to check the assignability from
-     * @param access      the access level to limit the checks to
-     * @param listParams  the list of actual generic parameters
+     * @param thatRight   the type to check the assignability from (R-value)
+     * @param accessLeft  the access level to limit the checks to
+     * @param listLeft    the list of actual generic parameters
      *
      * @return a set of method/property signatures from this type that don't have a match
      *         in the specified type
      */
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                               List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant thatRight,
+                                                               Access accessLeft, List<TypeConstant> listLeft)
         {
-        return getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
+        return getUnderlyingType().isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
         }
 
     /**

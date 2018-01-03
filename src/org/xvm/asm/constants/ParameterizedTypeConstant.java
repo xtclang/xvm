@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -250,13 +249,13 @@ public class ParameterizedTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        assert listParams.isEmpty();
+        assert listRight.isEmpty();
 
-        listParams = getParamTypes();
+        listRight = getParamTypes();
 
-        chains = super.collectContributions(that, listParams, chains);
+        chains = super.collectContributions(thatLeft, listRight, chains);
         if (chains.isEmpty())
             {
             return chains;
@@ -279,16 +278,18 @@ public class ParameterizedTypeConstant
 
                 case Delegates:
                 case Implements:
-                    // TODO: what if the contribution is a relational type
+                    // Note: relational types split the contributions into multiple chains,
+                    //       so the chain can only be represented by a single defining constant
+                    assert chain.first().getTypeConstant().isSingleDefiningConstant();
                 case Extends:
                 case Incorporates:
                 case Into:
                 case Impersonates:
                     {
-                    ClassStructure clzThis = (ClassStructure)
+                    ClassStructure clzRight = (ClassStructure)
                         ((IdentityConstant) getDefiningConstant()).getComponent();
 
-                    listParams = chain.propagateActualTypes(clzThis, getParamTypes());
+                    listRight = chain.propagateActualTypes(clzRight, listRight);
                     break;
                     }
 
@@ -297,62 +298,27 @@ public class ParameterizedTypeConstant
                 }
 
             // by now we know that the "contrib" and "that" have equivalent terminal types
-            if (listParams == null)
+            if (listRight == null)
                 {
                 // a conditional contribution didn't apply
                 iter.remove();
                 continue;
                 }
 
-            if (!that.isParamsSpecified())
+            if (!thatLeft.isParamsSpecified())
                 {
-                // "that" type is not parameterized; nothing else to check
+                // "that" type is not parameterized, nothing else to check here;
+                // assignment C = C<T> is always allowed
                 continue;
                 }
 
-            Access             accessThat = that.getAccess();
-            List<TypeConstant> listThat   = that.getParamTypes();
-            ClassStructure     clzThat    = (ClassStructure)
-                ((IdentityConstant) that.getDefiningConstant()).getComponent();
+            ClassStructure clzLeft = (ClassStructure)
+                ((IdentityConstant) thatLeft.getDefiningConstant()).getComponent();
 
-            assert listParams.size() == listThat.size();
-            assert listThat.size() == clzThat.getTypeParams().size();
-
-            Iterator<StringConstant> iterNames = clzThat.getTypeParams().keySet().iterator();
-
-            for (int i = 0, c = listThat.size(); i < c; i++)
+            if (!validateAssignability(clzLeft, thatLeft.getParamTypes(), thatLeft.getAccess(), listRight, chain
+            ))
                 {
-                TypeConstant typeThis = listParams.get(i);
-                TypeConstant typeThat = listThat.get(i);
-                String       sName    = iterNames.next().getValue();
-
-                if (typeThat.equals(typeThis))
-                    {
-                    continue;
-                    }
-
-                boolean fProduce = clzThat.producesFormalType(sName, accessThat, listThat);
-
-                if (typeThat.isA(typeThis) && !fProduce)
-                    {
-                    // consumer only methods; rule 1.2.1
-                    continue;
-                    }
-
-                if (typeThis.isA(typeThat) && fProduce)
-                    {
-                    // there are some producing methods; rule 1.2.2.2
-                    // consuming methods will need to be "wrapped"
-                    if (clzThat.consumesFormalType(sName, accessThat, listParams))
-                        {
-                        chain.markWeakMatch();
-                        }
-                    continue;
-                    }
-
-                // didn't match; remove
                 iter.remove();
-                continue nextChain;
                 }
             }
 
@@ -360,19 +326,24 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant that, Access access,
+    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft,
                                                ContributionChain chain)
         {
         // we know that from "that" perspective "that" is assignable to "this"
-        if (that.isParamsSpecified() || that.isRelationalType())
+        if (thatRight.isParamsSpecified() || thatRight.isRelationalType())
             {
             // the type correspondence have already been checked
             return true;
             }
 
-        List<TypeConstant> listActual;
+        List<TypeConstant> listLeft  = getParamTypes();
+        List<TypeConstant> listRight = Collections.EMPTY_LIST;
 
-        // "that" is not parameterized, while "this" is
+        // r-value is not parameterized, while l-value is; e.g.
+        //      C<T> = C
+        // which is only allowed for producing types
+        // and then all consuming methods (if any) must be "wrapped"
+
         switch (chain.first().getComposition())
             {
             case MaybeDuckType:
@@ -380,59 +351,22 @@ public class ParameterizedTypeConstant
                 return true;
 
             case Equal:
-                {
                 assert chain.getLength() == 1;
+                break;
 
-                // the only way for a parameterized type to be assigned to
-                // a non-parameterized is to have all type parameters to be
-                // assignable from the generic constraint types
-                ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) that.getDefiningConstant()).getComponent();
-                Map<StringConstant, TypeConstant> mapConstraint = clzThis.getTypeParams();
-                List<TypeConstant> listTypes = getParamTypes();
-
-                assert mapConstraint.size() == listTypes.size();
-
-                Iterator<TypeConstant> iterConstraints = mapConstraint.values().iterator();
-                Iterator<TypeConstant> iterTypes = listTypes.iterator();
-
-                while (iterConstraints.hasNext())
-                    {
-                    if (!iterConstraints.next().isA(iterTypes.next()))
-                        {
-                        return false;
-                        }
-                    }
-                return true;
-                }
+            case Delegates:
+            case Implements:
+                assert chain.first().getTypeConstant().isSingleDefiningConstant();
 
             case Extends:
             case Incorporates:
             case Into:
             case Impersonates:
-            case Implements:
-            case Delegates:
                 {
-                ClassStructure clzThat = (ClassStructure)
-                    ((IdentityConstant) that.getDefiningConstant()).getComponent();
+                ClassStructure clzRight = (ClassStructure)
+                    ((IdentityConstant) thatRight.getDefiningConstant()).getComponent();
 
-                Map<StringConstant, TypeConstant> mapParams = clzThat.getTypeParams();
-                int cParams = mapParams.size();
-
-                List<TypeConstant> listParams;
-                if (cParams == 0)
-                    {
-                    listParams = Collections.EMPTY_LIST;
-                    }
-                else
-                    {
-                    listParams = new ArrayList<>(cParams);
-                    for (TypeConstant typeParam : mapParams.values())
-                        {
-                        listParams.add(typeParam);
-                        }
-                    }
-                listActual = chain.propagateActualTypes(clzThat, listParams);
+                listRight = chain.propagateActualTypes(clzRight, listRight);
                 break;
                 }
 
@@ -440,56 +374,93 @@ public class ParameterizedTypeConstant
                 throw new IllegalStateException();
             }
 
-        List<TypeConstant> listThis = getParamTypes();
-        ClassStructure     clzThis  = (ClassStructure)
+        ClassStructure clzLeft = (ClassStructure)
             ((IdentityConstant) this.getDefiningConstant()).getComponent();
 
-        assert listActual.size() == listThis.size();
+        return validateAssignability(clzLeft, listLeft, accessLeft, listRight, chain);
+        }
 
-        Iterator<StringConstant> iterNames = clzThis.getTypeParams().keySet().iterator();
+    /**
+     * Check if the specified class is assignable for the specified parameters.
+     *
+     *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
+     */
+    protected boolean validateAssignability(
+            ClassStructure clz, List<TypeConstant> listLeft, Access accessLeft,
+            List<TypeConstant> listRight, ContributionChain chain)
+        {
+        int cParamsLeft  = listLeft.size();
+        int cParamsRight = listRight.size();
+        int cParamsAll   = clz.getTypeParams().size();
 
-        for (int i = 0, c = listThis.size(); i < c; i++)
+        assert Math.max(cParamsRight, cParamsLeft) <= cParamsAll;
+
+        // we only have to check all the parameters on the left side,
+        // since if an assignment C<L1> = C<R1> is allowed, then
+        // an assignment C<L1> = C<R1, R2> is allowed for any R2
+
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries =
+            clz.getTypeParamsAsList();
+
+        for (int i = 0; i < cParamsLeft; i++)
             {
-            TypeConstant typeThis = listActual.get(i);
-            TypeConstant typeThat = listThis.get(i);
-            String       sName    = iterNames.next().getValue();
+            Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
+            String       sName    = entryFormal.getKey().getValue();
+            TypeConstant typeLeft = listLeft.get(i);
+            TypeConstant typeRight;
+            boolean fProduce;
 
-            if (typeThis.equals(typeThat))
+            if (i < cParamsRight)
                 {
-                continue;
+                typeRight = listRight.get(i);
+
+                if (typeLeft.equals(typeRight))
+                    {
+                    continue;
+                    }
+
+                fProduce = clz.producesFormalType(sName, accessLeft, listLeft);
+
+                if (typeLeft.isA(typeRight) && !fProduce)
+                    {
+                    // consumer only methods; rule 1.2.1
+                    continue;
+                    }
+                }
+            else
+                {
+                // assignment  C<L1, L2> = C<R1> is not the same as
+                //             C<L1, L2> = C<R1, [canonical type for R2]>;
+                // it's only allowed for producing types
+                // and then all consuming methods (if any) must be "wrapped"
+
+                typeRight = entryFormal.getValue();
+                fProduce = clz.producesFormalType(sName, accessLeft, listLeft);
                 }
 
-            boolean fProduce = clzThis.producesFormalType(sName, access, listThis);
-
-            if (typeThis.isA(typeThat) && !fProduce)
-                {
-                // consumer only methods; rule 1.2.1
-                continue;
-                }
-
-            if (typeThat.isA(typeThis) && fProduce)
+            if (typeRight.isA(typeLeft) && fProduce)
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
-                if (clzThis.consumesFormalType(sName, access, listThis))
+                if (clz.consumesFormalType(sName, accessLeft, listLeft))
                     {
                     chain.markWeakMatch();
                     }
                 continue;
                 }
 
+            // didn't match; remove
             return false;
             }
-
         return true;
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant that, Access access,
-                                                               List<TypeConstant> listParams)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant thatRight, Access accessLeft,
+                                                               List<TypeConstant> listLeft)
         {
-        assert listParams.isEmpty();
-        return super.isInterfaceAssignableFrom(that, access, getParamTypes());
+        assert listLeft.isEmpty();
+        return super.isInterfaceAssignableFrom(thatRight, accessLeft, getParamTypes());
         }
 
     @Override

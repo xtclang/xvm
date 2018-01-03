@@ -160,7 +160,7 @@ public class LiteralExpression
                 return id == Id.LIT_CHAR;
 
             case "collections.Sequence":
-                if (typeThat.isParamsSpecified() && !(typeThat.isParamsSpecified(1)
+                if (typeThat.isParamsSpecified() && !(typeThat.getParamsCount() == 1
                         && typeThat.getParamTypesArray()[0].isA(pool().typeChar())))
                     {
                     return false;

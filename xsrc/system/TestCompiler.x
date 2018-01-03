@@ -91,6 +91,10 @@ class TestCompiler<TestType1 extends Number,
         Consumer<Int> finder8a = c8; // OK; "Incorporates-Extends"
 
         Consumer<Number> finder10 = c10; // OK; "Extends-Incorporates-Implements"
+
+        // partial formal types
+        MyClass6 mc6 = c6;
+        MyClass6<String> mc6s = c6;
         }
 
     static Void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)
@@ -216,9 +220,9 @@ class TestCompiler<TestType1 extends Number,
         PC<String> pcs = pco;
         }
 
-    static Void testPCExpectedFailure6(C<String> cs)
+    static Void testPCExpectedFailure6(C c)
         {
-        C<Object> co = cs;
+        C<Object> co = c;
         }
 
     static Int test2()
@@ -292,6 +296,9 @@ class TestCompiler<TestType1 extends Number,
 
     static Void testClassConst()
         {
-        Class<PC> clz = PC;
+        Class<PC> clzPC = PC;
+        // Type<PC> typePC = PC;
+
+        // Class<Array<PC>> clcAPC = Array<PC>;
         }
     }

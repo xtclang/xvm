@@ -4,7 +4,7 @@ package org.xvm.runtime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -196,7 +196,7 @@ public class TypeComposition
             return m_listCallChain = listDeclared;
             }
 
-        List<TypeComposition> listMerge = new LinkedList<>(listDeclared);
+        List<TypeComposition> listMerge = new ArrayList<>(listDeclared);
         addNoDupes(listDefault, listMerge, new HashSet<>(listDeclared));
         return m_listCallChain = listMerge;
         }
@@ -234,7 +234,7 @@ public class TypeComposition
             }
 
         ClassStructure structThis = f_template.f_struct;
-        List<TypeComposition> list = new LinkedList<>();
+        List<TypeComposition> list = new ArrayList<>();
         Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
         // TODO: 1.1
@@ -309,7 +309,7 @@ public class TypeComposition
             }
 
         ClassStructure struct = f_template.f_struct;
-        List<TypeComposition> list = new LinkedList<>();
+        List<TypeComposition> list = new ArrayList<>();
         Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
         // TODO: 2.1
@@ -523,7 +523,7 @@ public class TypeComposition
     // find a matching method and add to the list
     protected CallChain collectMethodCallChain(SignatureConstant constSignature, Access access)
         {
-        List<MethodStructure> list = new LinkedList<>();
+        List<MethodStructure> list = new ArrayList<>();
 
         if (f_typeActual.isParamsSpecified())
             {
@@ -578,7 +578,7 @@ public class TypeComposition
     protected PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
         PropertyStructure propertyBase = null;
-        List<MethodStructure> list = new LinkedList<>();
+        List<MethodStructure> list = new ArrayList<>();
 
         for (TypeComposition clz : getCallChain())
             {

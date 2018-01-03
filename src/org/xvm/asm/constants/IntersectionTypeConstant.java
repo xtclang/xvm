@@ -4,7 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -133,24 +133,26 @@ public class IntersectionTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant that, List<TypeConstant> listParams, List<ContributionChain> chains)
+            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        TypeConstant type1 = getUnderlyingType();
-        TypeConstant type2 = getUnderlyingType2();
+        assert listRight.isEmpty();
 
-        List<ContributionChain> list1 = type1.collectContributions(that, listParams, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectContributions(that, listParams, new LinkedList<>());
+        TypeConstant thisRight1 = getUnderlyingType();
+        TypeConstant thisRight2 = getUnderlyingType2();
+
+        List<ContributionChain> chains1 = thisRight1.collectContributions(thatLeft, listRight, new ArrayList<>());
+        List<ContributionChain> chains2 = thisRight2.collectContributions(thatLeft, new ArrayList<>(), new ArrayList<>());
 
         // both branches need to contribute
-        if (!list1.isEmpty() && !list2.isEmpty())
+        if (!chains1.isEmpty() && !chains2.isEmpty())
             {
-            validate(type1, that, list1);
-            validate(type2, that, list2);
+            validate(thisRight1, thatLeft, chains1);
+            validate(thisRight2, thatLeft, chains2);
 
-            if (!list1.isEmpty() && !list2.isEmpty())
+            if (!chains1.isEmpty() && !chains2.isEmpty())
                 {
-                chains.addAll(list1);
-                chains.addAll(list2);
+                chains.addAll(chains1);
+                chains.addAll(chains2);
                 }
             }
 
@@ -159,27 +161,27 @@ public class IntersectionTypeConstant
 
     @Override
     protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzThat, List<TypeConstant> listParams, List<ContributionChain> chains)
+            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        TypeConstant type1 = getUnderlyingType();
-        TypeConstant type2 = getUnderlyingType2();
+        TypeConstant thisLeft1 = getUnderlyingType();
+        TypeConstant thisLeft2 = getUnderlyingType2();
 
-        List<ContributionChain> list1 = type1.collectClassContributions(clzThat, listParams, new LinkedList<>());
-        List<ContributionChain> list2 = type2.collectClassContributions(clzThat, listParams, new LinkedList<>());
+        List<ContributionChain> chains1 = thisLeft1.collectClassContributions(clzRight, listRight, new ArrayList<>());
+        List<ContributionChain> chains2 = thisLeft2.collectClassContributions(clzRight, listRight, new ArrayList<>());
 
         // any contribution would do
-        chains.addAll(list1);
-        chains.addAll(list2);
+        chains.addAll(chains1);
+        chains.addAll(chains2);
 
         return chains;
         }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
-            TypeConstant that, Access access, List<TypeConstant> listParams)
+            TypeConstant thatRight, Access accessLeft, List<TypeConstant> listLeft)
         {
-        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(that, access, listParams);
-        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(that, access, listParams);
+        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
+        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
 
         if (setMiss1.isEmpty())
             {

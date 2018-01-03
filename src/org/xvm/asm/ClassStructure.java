@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -517,21 +516,22 @@ public class ClassStructure
         }
 
     /**
-     * Recursively find a contribution by the specified class id and add the corresponding
-     * ContributionChain objects to the list of chains.
+     * For this class structure representing the R-Value recursively find a contribution by the
+     * specified class id (representing an L-Value) and add the corresponding ContributionChain
+     * objects to the list of chains.
      *
-     * @param idClz       the identity of the class to look for
-     * @param listParams  the list of actual generic parameters
+     * @param idClzLeft   the identity of the class to look for
+     * @param listRight  the list of actual generic parameters for this class
      * @param chains      the list of chains to add to
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
      * @return the resulting list of ContributionChain objects
      */
     public List<ContributionChain> collectContributions(
-            ClassConstant idClz, List<TypeConstant> listParams,
+            ClassConstant idClzLeft, List<TypeConstant> listRight,
             List<ContributionChain> chains, boolean fAllowInto)
         {
-        if (idClz.equals(getIdentityConstant()))
+        if (idClzLeft.equals(getIdentityConstant()))
             {
             chains.add(new ContributionChain(
                 new Contribution(Composition.Equal, (TypeConstant) null)));
@@ -569,7 +569,7 @@ public class ClassStructure
             if (typeContrib.isSingleDefiningConstant())
                 {
                 ClassConstant constContrib = (ClassConstant) typeContrib.getDefiningConstant();
-                if (constContrib.equals(idClz))
+                if (constContrib.equals(idClzLeft))
                     {
                     chains.add(new ContributionChain(contrib));
                     continue;
@@ -582,12 +582,12 @@ public class ClassStructure
                     }
 
                 List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listParams);
+                    contrib.transformActualTypes(this, listRight);
 
                 if (listContribActual != null)
                     {
                     chainsContrib = ((ClassStructure) constContrib.getComponent()).
-                        collectContributions(idClz, listContribActual, new LinkedList<>(), false);
+                        collectContributions(idClzLeft, listContribActual, new ArrayList<>(), false);
                     }
                 }
             else
@@ -600,7 +600,7 @@ public class ClassStructure
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
                 chainsContrib = typeContrib.collectContributions(
-                    idClz.asTypeConstant(), new LinkedList<>(), new LinkedList<>());
+                    idClzLeft.asTypeConstant(), new ArrayList<>(), new ArrayList<>());
                 }
 
             if (chainsContrib != null && !chainsContrib.isEmpty())
@@ -904,17 +904,17 @@ public class ClassStructure
         }
 
     /**
-     * Check recursively if all properties and methods on the interface represented by this class
-     * structure have a matching (substitutable) property or method on the specified type.
+     * For this class structure representing an L-Value interface, check recursively if all properties
+     * and methods have a matching (substitutable) property or method on the specified R-value type.
      *
-     * @param typeThat    the type to look for the matching methods
-     * @param access      the access level to limit the check for
-     * @param listParams  the actual generic parameters for this interface
+     * @param typeRight   the type to look for the matching methods
+     * @param accessLeft  the access level to limit the check for
+     * @param listLeft    the actual generic parameters for this interface
      *
      * @return a set of method/property signatures that don't have a match
      */
-    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeThat, Access access,
-                                                            List<TypeConstant> listParams)
+    public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
+                                                            List<TypeConstant> listLeft)
         {
         Set<SignatureConstant> setMiss = new HashSet<>();
 
@@ -927,12 +927,12 @@ public class ClassStructure
                 // TODO: check access
 
                 SignatureConstant sig = prop.getIdentityConstant().getSignature();
-                if (!listParams.isEmpty())
+                if (!listLeft.isEmpty())
                     {
-                    sig = sig.resolveGenericTypes(new SimpleTypeResolver(listParams));
+                    sig = sig.resolveGenericTypes(new SimpleTypeResolver(listLeft));
                     }
 
-                if (!typeThat.containsSubstitutableMethod(sig,
+                if (!typeRight.containsSubstitutableMethod(sig,
                         Access.PUBLIC, Collections.EMPTY_LIST))
                     {
                     setMiss.add(sig);
@@ -943,18 +943,18 @@ public class ClassStructure
                 MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
-                    if (method.isStatic() || !method.isAccessible(access))
+                    if (method.isStatic() || !method.isAccessible(accessLeft))
                         {
                         continue;
                         }
 
                     SignatureConstant sig = method.getIdentityConstant().getSignature();
-                    if (!listParams.isEmpty())
+                    if (!listLeft.isEmpty())
                         {
-                        sig = sig.resolveGenericTypes(new SimpleTypeResolver(listParams));
+                        sig = sig.resolveGenericTypes(new SimpleTypeResolver(listLeft));
                         }
 
-                    if (!typeThat.containsSubstitutableMethod(sig,
+                    if (!typeRight.containsSubstitutableMethod(sig,
                             Access.PUBLIC, Collections.EMPTY_LIST))
                         {
                         setMiss.add(sig);
@@ -967,20 +967,17 @@ public class ClassStructure
             {
             if (contrib.getComposition() == Composition.Extends)
                 {
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listParams);
+                List<TypeConstant> listSuperActual =
+                    contrib.transformActualTypes(this, listLeft);
 
-                if (listContribActual != null)
-                    {
-                    ClassStructure clzSuper = (ClassStructure)
-                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                            getComponent();
+                ClassStructure clzSuper = (ClassStructure)
+                    ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
+                        getComponent();
 
-                    assert (clzSuper.getFormat() == Component.Format.INTERFACE);
+                assert (clzSuper.getFormat() == Component.Format.INTERFACE);
 
-                    setMiss.addAll(
-                        clzSuper.isInterfaceAssignableFrom(typeThat, access, listContribActual));
-                    }
+                setMiss.addAll(
+                    clzSuper.isInterfaceAssignableFrom(typeRight, accessLeft, listSuperActual));
                 }
             }
         return setMiss;
