@@ -2846,6 +2846,11 @@ pco = co;   // err; requires cast to PC or PC<Object> (fails if co is not an 
 pcs = cs;   // err; requires cast to PC<String> (fails if cs is not an instance of PC and T is not String)
 pcs = co;   // err; will not compile, even with a cast
 
+pc = pco;   // ok
+pc = pcs;   // ok
+po = p;     // ok
+pco = pc;   // ok; requires "wrapping" of consumption methods
+
 // how does auto-mixin work with class -> formal type -> resolved type if the mixin mixes in
 // because of the information in the resolved type?
 

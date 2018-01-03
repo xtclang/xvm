@@ -901,6 +901,7 @@ public class ConstantPool
      * @return the IdentityConstant for the specified name, or null if the name is not implicitly
      *         imported
      */
+    // TODO: optimize using clzXYZ() constants
     public IdentityConstant getImplicitlyImportedIdentity(String sName)
         {
         String  sPkg = null;

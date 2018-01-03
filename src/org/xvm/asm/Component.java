@@ -2921,7 +2921,10 @@ public abstract class Component
 
             for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
                 {
-                assert clzParent.getTypeParams().size() == listActual.size();
+                if (clzParent.getTypeParams().size() != listActual.size())
+                    {
+                    listActual = clzParent.normalizeParameters(listActual);
+                    }
 
                 Contribution contrib = listContrib.get(i);
 
