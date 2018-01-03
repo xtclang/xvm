@@ -814,9 +814,8 @@ public class TerminalTypeConstant
                     break;
                     }
 
-                // the class structure will have to verify its "extends" clause in more detail, for
-                // example verifying ClassStructure.isExtendsLegal(); what we need to determine is
-                // we
+                // the class structure will have to verify its "extends" clause in more detail, but
+                // for now perform a quick sanity check
                 IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
                 ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
                 if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))

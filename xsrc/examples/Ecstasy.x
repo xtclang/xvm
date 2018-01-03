@@ -2,6 +2,8 @@ module Ecstasy.xtclang.org
     {
     const Module {}
     const Package {}
+    const Class {}
+    interface Const {}
 
     typedef Tuple<> Void;
 
@@ -14,43 +16,46 @@ module Ecstasy.xtclang.org
     interface Meta<PublicType, ProtectedType, PrivateType, StructType> {}
     class Object
         {
-        protected Meta<Object:public, Object:protected, Object:private> meta.get()
-            {
-            // the Meta object is provided by the runtime
-            return super();
-            }
+        protected Meta<Object:public, Object:protected, Object:private> meta;
 
-        static Boolean equals(Object o1, Object o2)
-            {
-            return &o1 == &o2;
-            }
+        static Boolean equals(Object o1, Object o2);
 
-        String to<String>()
-            {
-            // the Object's rudimentary to<String> shows class information only
-            return meta.class_.to<String>();
-            }
+        String to<String>();
 
-        Object[] to<Object[]>()
-            {
-            return {this};
-            }
+        Object[] to<Object[]>();
 
-        Tuple<Object> to<Tuple<Object>>()
-            {
-            return Tuple:(this);
-            }
+        Tuple<Object> to<Tuple<Object>>();
 
-        @Auto function Object() to<function Object()>()
-            {
-            return () -> this;
-            }
+        @Auto function Object() to<function Object()>();
 
-        immutable Object to<immutable Object>()
-            {
-            meta.immutable_ = true;
-            return this.as(immutable Object);
-            }
+        immutable Object to<immutable Object>();
+        }
+
+    interface Enum
+        {
+        @RO Enumeration<Enum> enumeration;
+        @RO Int ordinal;
+        @RO String name;
+        conditional Enum next();
+        conditional Enum prev();
+        }
+
+    mixin Enumeration<EnumType extends Enum>
+            into Class
+        {
+        @Override
+        String name;
+
+        @Lazy Int count;
+        @Lazy String[] names;
+        @Lazy EnumType[] values;
+        @Lazy Map<String, EnumType> byName;
+        }
+
+    interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+        {
+        @Override
+        function Function() to<function Function()>();
         }
 
     class IntLiteral
@@ -79,6 +84,9 @@ module Ecstasy.xtclang.org
 
     package collections
         {
+        interface Sequence<ElementType> {}
+        class Array<ElementType> {}
+
         interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
             {
             }
@@ -100,11 +108,10 @@ module Ecstasy.xtclang.org
     package annotations
         {
         mixin AutoConversion {}
-
+        mixin ReadOnly {}
         mixin Operator(String? token = null) {}
-
         mixin Override {}
-
         mixin InjectedRef<RefType> into Ref<RefType> {}
+        mixin LazyRef<RefType> into Ref<RefType> {}
         }
     }

@@ -317,9 +317,9 @@ module Test
 //        return o;
 //        }
 
-    Int foo()
-        {
-        MyMap<Object, Object> map;
-        return map;
-        }
+//    Int foo()
+//        {
+//        MyMap<Object, Object> map;
+//        return map;
+//        }
     }

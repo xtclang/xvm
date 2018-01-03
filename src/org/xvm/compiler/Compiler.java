@@ -211,6 +211,7 @@ public class Compiler
             }
 
         m_module.generateCode(m_errs);
+        m_struct.validate(m_errs);
         }
 
 

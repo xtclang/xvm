@@ -2172,7 +2172,6 @@ public abstract class Component
         Impersonates,
         /**
          * Synthetic (transient) rebasing of a class onto a new category.
-         *
          */
         RebasesOnto,
         /**
@@ -2301,6 +2300,7 @@ public abstract class Component
                 case Into:
                 case Incorporates:
                 case Impersonates:
+                case RebasesOnto:
                     if (constType == null)
                         {
                         throw new IllegalArgumentException("type is required");
