@@ -52,10 +52,10 @@ module Ecstasy.xtclang.org
         @Lazy Map<String, EnumType> byName;
         }
 
-    interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+    interface Function // <ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
         {
-        @Override
-        function Function() to<function Function()>();
+//         @Override
+//         function Function() to<function Function()>();
         }
 
     class IntLiteral

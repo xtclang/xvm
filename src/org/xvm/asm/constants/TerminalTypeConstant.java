@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +20,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -291,77 +291,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                return ((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).impersonatesClass(constClass);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).impersonatesClass(constClass);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).impersonatesClass(constClass);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).impersonatesClass(constClass);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
-                        .getComponent()).impersonatesClass(constClass);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                return ((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).extendsOrImpersonatesClass(constClass);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).extendsOrImpersonatesClass(
-                    constClass);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).extendsOrImpersonatesClass(constClass);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).extendsOrImpersonatesClass(constClass);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
-                        .getComponent()).extendsOrImpersonatesClass(constClass);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
     public boolean isClassType()
         {
         Constant constant = getDefiningConstant();
@@ -493,31 +422,16 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-                // these always specify a class identity
-                return true;
-
             case Class:
-                {
-                // examine the structure to determine if it represents a class identity
-                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
-                }
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return true;
 
             case Typedef:
             case Property:
             case Register:
                 return false;
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                // follow the indirection to the class structure to determine if it represents a
-                // class identity
-                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                        .getDeclarationLevelClass().getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
-                }
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -527,6 +441,36 @@ public class TerminalTypeConstant
             }
         }
 
+    @Override
+    public Component.Format getExplicitClassFormat()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+                return Component.Format.MODULE;
+
+            case Package:
+                return Component.Format.PACKAGE;
+
+            case Class:
+                // get the class referred to and return its format
+                return ((ClassConstant) constant).getComponent().getFormat();
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                // follow the indirection to the class structure
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
+
+            case Typedef:
+            case Property:
+            case Register:
+            case UnresolvedName:
+            default:
+                throw new IllegalStateException("no class format for: " + constant);
+            }
+        }
 
     @Override
     public boolean isConstant()
@@ -750,10 +694,19 @@ public class TerminalTypeConstant
                 break;
                 }
 
+            // has to be an explicit class identity
             TypeConstant typeContrib = contrib.getTypeConstant();
             if (!typeContrib.isExplicitClassIdentity(false))
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                        struct.getIdentityConstant().getPathString(), typeContrib.getValueString());
+                continue NextContrib;
+                }
+
+            // has to be a mixin
+            if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
+                {
+                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                         struct.getIdentityConstant().getPathString(), typeContrib.getValueString());
                 continue NextContrib;
                 }
@@ -925,6 +878,15 @@ public class TerminalTypeConstant
                         break;
                         }
 
+                    // verify that it is a mixin
+                    if (typeExtends.getExplicitClassFormat() != Component.Format.MIXIN)
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
+                                typeExtends.getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
+                        }
+
                     if (typeinfo.incorporated.contains(typeExtends))
                         {
                         // some sort of circular loop or badly directed graph
@@ -961,9 +923,6 @@ public class TerminalTypeConstant
             return fHalt;
             }
 
-        // like "extends" and "into", only one "impersonates" clause is allowed
-        boolean fImpersonates = false;
-
         // go through the rest of the contributions, and add the ones that need to be processed to
         // the list to do
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
@@ -975,7 +934,7 @@ public class TerminalTypeConstant
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
+                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL,
                             contrib.getTypeConstant().getValueString(),
                             struct.getIdentityConstant().getPathString());
                     break;
@@ -998,42 +957,6 @@ public class TerminalTypeConstant
                     fExtends |= struct.getFormat() != Component.Format.INTERFACE;
                     break;
 
-                case Impersonates:
-                    if (fImpersonates
-                            || struct.getFormat() == Component.Format.MIXIN
-                            || struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        // only one allowed, and it must be a class type (not mixin or interface)
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    fImpersonates = true;
-
-                    if (contrib.getTypeConstant().isExplicitClassIdentity(true))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_NOT_CLASS,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    if (typeinfo.getImpersonates() == null)
-                        {
-                        typeinfo.setImpersonates(contrib.getTypeConstant());
-                        }
-                    else if (!typeinfo.getImpersonates().isA(contrib.getTypeConstant()))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_INCOMPATIBLE,
-                                struct.getIdentityConstant().getPathString(),
-                                contrib.getTypeConstant().getValueString(),
-                                typeinfo.type.getValueString(),
-                                typeinfo.getImpersonates().getValueString());
-                        }
-                    break;
-
                 case Incorporates:
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
@@ -1051,7 +974,19 @@ public class TerminalTypeConstant
                         break;
                         }
 
+                    // validate that the class is a mixin
+                    if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
+                        {
+                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
+                                typeContrib.getValueString(),
+                                struct.getIdentityConstant().getPathString());
+                        break;
+                        }
+
                     // TODO handle the conditional case (GG wrote a helper)
+
+                    // validate that the "into" matches this type
+                    // TODO
 
                     // if any mix-ins already registered match or extend this mixin, then this
                     // mix-in gets ignored
@@ -1109,10 +1044,12 @@ public class TerminalTypeConstant
                         }
 
                     // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
+                    // TODO this is not a complete check because it does not check non-classes
+                    if (typeContrib.isExplicitClassIdentity(true)
+                            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
                         {
                         fHalt |= log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 struct.getIdentityConstant().getPathString());
                         break;
                         }
@@ -1127,10 +1064,12 @@ public class TerminalTypeConstant
 
                 case Implements:
                     // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
+                    // TODO this is not a complete check because it does not check non-classes
+                    if (typeContrib.isExplicitClassIdentity(true)
+                            && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
                         {
                         fHalt |= log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 struct.getIdentityConstant().getPathString());
                         break;
                         }
@@ -1884,6 +1823,41 @@ public class TerminalTypeConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constId.getPosition());
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            Constant constant = getDefiningConstant();
+            switch (constant.getFormat())
+                {
+                case Module:
+                case Package:
+                case Class:
+                case Typedef:
+                case Property:
+                case Register:
+                case ThisClass:
+                case ParentClass:
+                case ChildClass:
+                    break;
+
+                case UnresolvedName:
+                default:
+                    // this is basically an illegal state exception
+                    fHalt |= log(errs, Severity.ERROR, VE_UNKNOWN, constant.getValueString()
+                            + " (" + constant.getFormat() + ')');
+                    break;
+                }
+            }
+
+        return fHalt;
         }
 
 

@@ -2165,12 +2165,6 @@ public abstract class Component
          */
         Incorporates,
         /**
-         * Represents class impersonation.
-         * <p/>
-         * The constant is a ClassConstant.
-         */
-        Impersonates,
-        /**
          * Synthetic (transient) rebasing of a class onto a new category.
          */
         RebasesOnto,
@@ -2299,7 +2293,6 @@ public abstract class Component
                 case Implements:
                 case Into:
                 case Incorporates:
-                case Impersonates:
                 case RebasesOnto:
                     if (constType == null)
                         {
@@ -2355,7 +2348,7 @@ public abstract class Component
                 case Implements:
                 case Into:
                 case Incorporates:
-                case Impersonates:
+                case RebasesOnto:
                     throw new IllegalArgumentException(composition + " uses the constructor with a TypeConstant");
 
                 case Delegates:

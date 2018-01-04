@@ -535,8 +535,7 @@ public abstract class TypeConstant
         {
         if (m_typeinfo == null)
             {
-            m_typeinfo = new TypeInfo(this);
-            resolveStructure(m_typeinfo, new ContributionChain(), getAccess(), null, ErrorListener.RUNTIME);
+            validate(ErrorListener.RUNTIME);
             }
 
         return m_typeinfo;
@@ -827,30 +826,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Test for fake sub-classing (impersonation).
-     *
-     * @param constClass  the class to test if this type represents an impersonation of
-     *
-     * @return true if this type represents a fake sub-classing of the specified class
-     */
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().impersonatesClass(constClass);
-        }
-
-    /**
-     * Test for real (extends) or fake (impersonation) sub-classing.
-     *
-     * @param constClass  the class to test if this type represents a sub-class of
-     *
-     * @return true if this type represents either real or fake sub-classing of the specified class
-     */
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().extendsOrImpersonatesClass(constClass);
-        }
-
-    /**
      * @return true iff the TypeConstant represents a "class type", which is any type that is not an
      *         "interface type"
      */
@@ -890,16 +865,26 @@ public abstract class TypeConstant
 
     /**
      * Determine if this type refers to a class that can be used in an annotation, an extends
-     * clause, an incorporates clause, or an impersonates clause.
+     * clause, an incorporates clause, or an implements clause.
      *
-     * @param fAllowParams TODO: replace with "isParamsSpecified"
+     * @param fAllowParams     true if type parameters are acceptable
      *
      * @return true iff this type is just a class identity, and the class identity refers to a
-     *         class structure that is not an interface
+     *         class structure
      */
     public boolean isExplicitClassIdentity(boolean fAllowParams)
         {
         return false;
+        }
+
+    /**
+     * Determine the format of the explicit class, iff the type is an explicit class identity.
+     *
+     * @return a {@link Component.Format Component Format} value
+     */
+    public Component.Format getExplicitClassFormat()
+        {
+        throw new IllegalStateException();
         }
 
     /**
@@ -972,13 +957,13 @@ public abstract class TypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
-        if (super.validate(errs))
+        if (!isValidated())
             {
-            return true;
-            }
+            if (super.validate(errs))
+                {
+                return true;
+                }
 
-        if (m_typeinfo == null)
-            {
             m_typeinfo = new TypeInfo(this);
             if (resolveStructure(m_typeinfo, new ContributionChain(),
                     getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
@@ -988,6 +973,11 @@ public abstract class TypeConstant
             }
 
         return false;
+        }
+
+    protected boolean isValidated()
+        {
+        return m_typeinfo != null;
         }
 
     @Override
@@ -1082,21 +1072,6 @@ public abstract class TypeConstant
             }
 
         /**
-         * @return the TypeConstant representing the impersonated class, or null
-         */
-        public TypeConstant getImpersonates()
-            {
-            return m_impersonates;
-            }
-
-        void setImpersonates(TypeConstant type)
-            {
-            assert type != null;
-            assert m_impersonates == null;
-            this.m_impersonates = type;
-            }
-
-        /**
          * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
          *         not a mixin
          */
@@ -1114,12 +1089,26 @@ public abstract class TypeConstant
 
         public boolean isSingleton()
             {
-            throw new UnsupportedOperationException("TODO"); // TODO
+            // TODO
+            return false;
             }
 
         public boolean isAbstract()
             {
-            throw new UnsupportedOperationException("TODO"); // TODO
+            // TODO
+            return false;
+            }
+
+        public boolean isImmutable()
+            {
+            // TODO
+            return false;
+            }
+
+        public boolean isService()
+            {
+            // TODO
+            return false;
             }
 
         /**
@@ -1322,8 +1311,7 @@ public abstract class TypeConstant
          * {@link Component.Format#MIXIN}. It identifies how this type is actually used:
          * <ul>
          * <li>Class - this is a type that requires a specific class identity, either by being an
-         * instance of that class, or being a sub-class of that class, or by the use of an explicit
-         * {@code impersonates} clause;</li>
+         * instance of that class, or by being a sub-class of that class;</li>
          * <li>Interface - this is an interface type, and ;</li>
          * <li>Mixin - this is an instantiable (or abstract or singleton) class type;</li>
          * </ul>
@@ -1335,7 +1323,6 @@ public abstract class TypeConstant
         public final Set<TypeConstant> incorporated = new HashSet<>();
         public final Set<TypeConstant> implicit     = new HashSet<>();
 
-        private TypeConstant m_impersonates;
         private TypeConstant m_typeInto;
 
         // cached results

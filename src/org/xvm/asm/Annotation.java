@@ -8,7 +8,9 @@ import java.io.PrintWriter;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
@@ -211,16 +213,34 @@ public class Annotation
         }
 
     @Override
+    public boolean validate(ErrorListener errlist)
+        {
+        boolean fHalt = super.validate(errlist);
+
+        // it must be a mixin type
+        Constant constClass = m_constClass;
+        if (!(constClass instanceof ClassConstant
+                && ((ClassConstant) constClass).getComponent().getFormat() == Format.MIXIN))
+            {
+            fHalt |= log(errlist, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN, constClass.getValueString());
+            }
+
+        // TODO validate the parameters against the mixin definition
+
+        return fHalt;
+        }
+
+    @Override
     public String getDescription()
         {
         StringBuilder sb = new StringBuilder();
         int cParams = m_aParams.length;
-        
+
         sb.append("class=")
           .append(m_constClass.getValueString())
           .append(", params=")
           .append(cParams);
-        
+
         if (cParams > 0)
             {
             sb.append(", values=(");
@@ -245,7 +265,7 @@ public class Annotation
         out.println(toString());
         }
 
-    
+
     // ----- Comparable interface ------------------------------------------------------------------
 
     @Override
@@ -307,7 +327,7 @@ public class Annotation
                 return true;
                 }
             }
-            
+
         return false;
         }
 

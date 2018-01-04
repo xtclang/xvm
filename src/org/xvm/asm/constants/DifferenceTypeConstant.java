@@ -68,20 +68,6 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return false;
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return false;
-        }
-
-    @Override
     public boolean isClassType()
         {
         // a difference type is NEVER a class type; it always resolves to an interface type

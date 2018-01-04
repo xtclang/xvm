@@ -127,20 +127,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().impersonatesClass(constClass)
-            || getUnderlyingType2().impersonatesClass(constClass);
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().extendsOrImpersonatesClass(constClass)
-            || getUnderlyingType2().extendsOrImpersonatesClass(constClass);
-        }
-
-    @Override
     public boolean isClassType()
         {
         return getUnderlyingType().isClassType()

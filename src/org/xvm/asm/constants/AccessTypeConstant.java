@@ -14,6 +14,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -249,6 +251,27 @@ public class AccessTypeConstant
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
         writePackedLong(out, m_access.ordinal());
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            // an access type constant can modify an annotated, a parameterized, or a terminal type
+            // constant that refers to a class/interface
+            TypeConstant type = (TypeConstant) m_constType.simplify();
+            if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
+                {
+                fHalt |= log(errs, Severity.ERROR, VE_ACCESS_TYPE_ILLEGAL, type.getValueString());
+                }
+            }
+
+        return fHalt;
         }
 
 
