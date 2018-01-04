@@ -778,8 +778,7 @@ public class Frame
         {
         return iArg >= 0
                 ? getVarInfo(iArg).getType()
-                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg)
-                    .f_clazzCanonical.ensurePublicType();
+                : getConstant(iArg).getType();
         }
 
     // return the class of the specified argument
@@ -790,7 +789,7 @@ public class Frame
                 : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
         }
 
-    // same as getArgumentClass, but treats the negative ids as "local-property" reference
+    // same as getArgumentClass, but treats the negative ids as "local-property" references
     public TypeComposition getLocalClass(int iArg)
         {
         if (iArg >= 0)

@@ -8,6 +8,8 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -37,10 +39,10 @@ public class TypeSet
     final private Map<String, Class> f_mapTemplateClasses = new HashMap<>();
 
     // cache - ClassTemplates by name
-    final private Map<String, ClassTemplate> f_mapTemplatesByName = new HashMap<>();
+    final private Map<String, ClassTemplate> f_mapTemplatesByName = new ConcurrentHashMap<>();
 
     // cache - ClassTemplates by type
-    final private Map<TypeConstant, ClassTemplate> f_mapTemplateByType = new HashMap<>();
+    final private Map<TypeConstant, ClassTemplate> f_mapTemplateByType = new ConcurrentHashMap<>();
 
     public final static TypeConstant[] VOID = ConstantPool.NO_TYPES;
 
@@ -129,16 +131,12 @@ public class TypeSet
         {
         // for core classes only
         ClassTemplate template = f_mapTemplatesByName.get(sName);
-        if (template == null)
-            {
-            template = getTemplate(getClassConstant(sName));
-            f_mapTemplatesByName.put(sName, template);
-            }
-        return template;
+        return template == null ? getTemplate(getClassConstant(sName)) : template;
         }
 
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
+        // TODO: thread safety
         String sName = constClass.getPathString();
         ClassTemplate template = f_mapTemplatesByName.get(sName);
         if (template == null)
