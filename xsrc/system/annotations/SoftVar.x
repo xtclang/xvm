@@ -1,23 +1,23 @@
 /**
- * A SoftRef is used to make a reference into a soft reference. A soft reference is a reference
+ * A SoftVar is used to make a reference into a soft reference. A soft reference is a reference
  * whose reference can be cleared by the garbage collector if the garbage collector decides that it
  * wants to reclaim the memory represented by the referent. Generally, it is expected that the
  * runtime will attempt to prioritize the retention of soft references that represent some
  * combination of smaller memory usage, more frequent usage, more recent usage, and (in the case of
- * the combination of SoftRef and LazyRef) more expensive-to-calculate values.
+ * the combination of SoftVar and LazyVar) more expensive-to-calculate values.
  *
- * In order to avoid the possibility of an unassigned reference becoming visible, the SoftRef must
+ * In order to avoid the possibility of an unassigned reference becoming visible, the SoftVar must
  * be of a {@link RefType} that has a default value (such as {@link Nullable}, with its default
- * value of {@code null}), or it must be combined with {@link LazyRef} so that the value is
+ * value of {@code null}), or it must be combined with {@link LazyVar} so that the value is
  * calculable on-demand.
  *
- * A SoftRef can have a {@link notify} notification function provided in its construction that is
+ * A SoftVar can have a {@link notify} notification function provided in its construction that is
  * enqueued into the service's runtime event queue each time that the soft reference is cleared by
  * the garbage collector; see {@link Service.pendingRuntimeEvents} and
  * {@link Service.dispatchRuntimeEvents}.
  */
-mixin SoftRef<RefType>(function Void ()? notify)
-        into Ref<RefType>
+mixin SoftVar<RefType>(function Void ()? notify)
+        into Var<RefType>
     {
     /**
      * The runtime's clock that this reference will stamp itself with on every access. The runtime
@@ -64,7 +64,7 @@ mixin SoftRef<RefType>(function Void ()? notify)
         // soft+lazy references are unassigned after being cleared by the garbage collector
         if (!assigned)
             {
-            assert (&this).ActualType.incorporates_(LazyRef);
+            assert (&this).ActualType.incorporates_(LazyVar);
 
             Time    start = runtimeClock.time;
             RefType value = super();

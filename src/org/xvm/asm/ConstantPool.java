@@ -1033,7 +1033,7 @@ public class ConstantPool
 
             case "Lazy":
                 sPkg = "annotations";
-                sClz = "LazyRef";
+                sClz = "LazyVar";
                 break;
 
             case "Obscure":
