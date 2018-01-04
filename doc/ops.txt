@@ -125,7 +125,8 @@
 +L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
 +P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
 +P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
- P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move reference-to-property to destination
+ P_VAR       PROPERTY, rvalue-target, lvalue-dest    ; move Var-to-property to destination
+ P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move Ref-to-property to destination
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
@@ -186,6 +187,7 @@
 // - lvalue return values can specify the "next register" to allocate
 +I_GET       rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
 +I_SET       rvalue-target, rvalue-ix, rvalue        ; T[ix] = T
++I_VAR       rvalue-target, rvalue-ix, lvalue        ; Var<T> = &T[ix]
 +I_REF       rvalue-target, rvalue-ix, lvalue        ; Ref<T> = &T[ix]
 
 // ("I"=) index-based ("IP"=) in-place ops:
@@ -210,6 +212,7 @@
 // ("M"=) multi-dimensioned array ops
  M_GET       rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
  M_SET       rvalue-target, #:(rvalue-ix), rvalue    ; T[ix*] = T
+ M_VAR       rvalue-target, #:(rvalue-ix), lvalue    ; Var<T> = &T[ix*]
  M_REF       rvalue-target, #:(rvalue-ix), lvalue    ; Ref<T> = &T[ix*]
 
 // ("M"=) multi-dimensioned array ("IP"=) in-place ops:

@@ -34,14 +34,16 @@ public interface IndexSupport
     // get the element count
     long size(ObjectHandle hTarget);
 
-    // @Op "elementAt" support - place a Var to the element value into the specified register
-    default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    // @Op "elementAt" support - place a Var/Ref to the element value into the specified register
+    default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, boolean fReadOnly, int iReturn)
         {
         try
             {
             TypeConstant typeReferent = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(typeReferent); // RefType
+            TypeComposition clzRef = fReadOnly
+                ? Ref.INSTANCE.ensureParameterizedClass(typeReferent)
+                : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

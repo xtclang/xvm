@@ -457,7 +457,7 @@ public class Frame
                             }
 
                         FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.isDone())
+                        if (hFuture.isAssigned())
                             {
                             try
                                 {
@@ -743,7 +743,7 @@ public class Frame
             if (info != null && info.m_nStyle == VAR_WAITING)
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isDone())
+                if (hFuture.isAssigned())
                     {
                     try
                         {

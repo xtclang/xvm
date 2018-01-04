@@ -193,7 +193,8 @@ public class xFutureVar
             m_future = future;
             }
 
-        public boolean isDone()
+        @Override
+        public boolean isAssigned()
             {
             return m_future != null && m_future.isDone();
             }

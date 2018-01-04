@@ -671,11 +671,13 @@ public class TypeComposition
                     PropertyStructure prop = (PropertyStructure) child;
 
                     RefHandle hRef = null;
-                    if (template.isRef(prop))
+                    if (template.isAnnotated(prop))
                         {
-                        Ref referent = (Ref) template.getRefTemplate(prop);
+                        TypeComposition clzAnno = template.getAnnotation(prop);
+                        Ref templateRef = (Ref) clzAnno.f_template;
+                        TypeComposition clzRef = templateRef.ensureParameterizedClass(prop.getType());
 
-                        hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
+                        hRef = templateRef.createRefHandle(clzRef, prop.getName());
                         }
 
                     if (template.isCalculated(prop))
