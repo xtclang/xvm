@@ -395,11 +395,16 @@ public class ParameterizedTypeConstant
             ClassStructure clz, List<TypeConstant> listLeft, Access accessLeft,
             List<TypeConstant> listRight, ContributionChain chain)
         {
+        ConstantPool pool = getConstantPool();
+
         int cParamsLeft  = listLeft.size();
         int cParamsRight = listRight.size();
-        int cParamsAll   = clz.getTypeParams().size();
+        boolean fTuple   = clz.getIdentityConstant().equals(pool.clzTuple());
 
-        assert Math.max(cParamsRight, cParamsLeft) <= cParamsAll;
+        if (!fTuple)
+            {
+            assert Math.max(cParamsRight, cParamsLeft) <= clz.getTypeParams().size();
+            }
 
         // we only have to check all the parameters on the left side,
         // since if an assignment C<L1> = C<R1> is allowed, then
@@ -410,8 +415,22 @@ public class ParameterizedTypeConstant
 
         for (int i = 0; i < cParamsLeft; i++)
             {
-            Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
-            String       sName    = entryFormal.getKey().getValue();
+            String sName;
+            TypeConstant typeCanonical;
+
+            if (fTuple)
+                {
+                sName         = null;
+                typeCanonical = pool.typeObject();
+                }
+            else
+                {
+                Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
+
+                sName         = entryFormal.getKey().getValue();
+                typeCanonical = entryFormal.getValue();
+                }
+
             TypeConstant typeLeft = listLeft.get(i);
             TypeConstant typeRight;
             boolean fProduce;
@@ -425,7 +444,7 @@ public class ParameterizedTypeConstant
                     continue;
                     }
 
-                fProduce = clz.producesFormalType(sName, accessLeft, listLeft);
+                fProduce = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
 
                 if (typeLeft.isA(typeRight) && !fProduce)
                     {
@@ -439,16 +458,15 @@ public class ParameterizedTypeConstant
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
                 // it's only allowed for producing types
                 // and then all consuming methods (if any) must be "wrapped"
-
-                typeRight = entryFormal.getValue();
-                fProduce = clz.producesFormalType(sName, accessLeft, listLeft);
+                typeRight = typeCanonical;
+                fProduce  = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
                 }
 
             if (typeRight.isA(typeLeft) && fProduce)
                 {
                 // there are some producing methods; rule 1.2.2.2
                 // consuming methods will need to be "wrapped"
-                if (clz.consumesFormalType(sName, accessLeft, listLeft))
+                if (fTuple || clz.consumesFormalType(sName, accessLeft, listLeft))
                     {
                     chain.markWeakMatch();
                     }

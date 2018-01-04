@@ -294,6 +294,25 @@ class TestCompiler<TestType1 extends Number,
         C<Number> cn = ct12;
         }
 
+    static Void testTuple(Tuple t,
+                          Tuple<Int, String> tns)
+        {
+        Tuple t1 = t;
+        Tuple t2 = tns;
+        Tuple<Object, Object> to = tns; // wrapped
+        Tuple<Number> tn = tns;
+        }
+
+    static Void testTupleExpectedFailure1(Tuple<Number, String> tns)
+        {
+        Tuple<Int, String> tn = tns;
+        }
+
+    static Void testTupleExpectedFailure2(Tuple t)
+        {
+        Tuple<Int> ti = t;
+        }
+
     static Void testClassConst()
         {
         Class<PC> clzPC = PC;
