@@ -781,19 +781,11 @@ public class Frame
                 : getConstant(iArg).getType();
         }
 
-    // return the class of the specified argument
-    public TypeComposition getArgumentClass(int iArg)
-        {
-        return iArg >= 0
-                ? f_context.f_types.resolveClass(getVarInfo(iArg).getType())
-                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
-        }
-
     // same as getArgumentType, but treats the negative ids as "local-property" references
     public TypeConstant getLocalType(int iArg)
         {
         return iArg >= 0
-            ? getVarInfo(iArg).getType()
+            ? getVarInfo(iArg).getType().resolveGenerics(getGenericsResolver())
             : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
         }
 
