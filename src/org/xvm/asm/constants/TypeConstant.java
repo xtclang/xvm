@@ -23,8 +23,11 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-
 import org.xvm.asm.MethodStructure;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
@@ -925,6 +928,36 @@ public abstract class TypeConstant
             hType = m_handle = xType.makeHandle(this);
             }
         return hType;
+        }
+
+    /**
+     * Compare for equality (==) two object handles that both belong to this type.
+     *
+     * @param frame    the frame
+     * @param hValue1  the first handle
+     * @param hValue2  the second handle
+     * @param iReturn  the return register
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getUnderlyingType().callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Compare for order (<=>) two object handles that both belong to this type.
+     *
+     * @param frame    the frame
+     * @param hValue1  the first handle
+     * @param hValue2  the second handle
+     * @param iReturn  the return register
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getUnderlyingType().callCompare(frame, hValue1, hValue2, iReturn);
         }
 
 

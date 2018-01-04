@@ -789,6 +789,14 @@ public class Frame
                 : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
         }
 
+    // same as getArgumentType, but treats the negative ids as "local-property" references
+    public TypeConstant getLocalType(int iArg)
+        {
+        return iArg >= 0
+            ? getVarInfo(iArg).getType()
+            : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
+        }
+
     // same as getArgumentClass, but treats the negative ids as "local-property" references
     public TypeComposition getLocalClass(int iArg)
         {

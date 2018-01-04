@@ -7,6 +7,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -76,10 +78,9 @@ public class xAtomicVar
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeComposition clz = f_types.resolveClass(
-                            hThis.f_clazz.getActualParamType("RefType"));
+                        TypeConstant type = hThis.f_clazz.getActualParamType("RefType");
 
-                        return new Replace(clz, atomic, hExpect, hNew, iReturn).doNext(frame);
+                        return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
                     }
             }
@@ -128,10 +129,9 @@ public class xAtomicVar
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeComposition clz = f_types.resolveClass(
-                            hThis.f_clazz.getActualParamType("RefType"));
+                        TypeConstant type = hThis.f_clazz.getActualParamType("RefType");
 
-                        return new ReplaceFailed(clz, atomic, hExpect, hNew, aiReturn).doNext(frame);
+                        return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }
                     }
             }
@@ -197,16 +197,16 @@ public class xAtomicVar
     protected static class Replace
             implements Frame.Continuation
         {
-        private final TypeComposition clz;
+        private final TypeConstant type;
         private final AtomicReference<ObjectHandle> atomic;
         private ObjectHandle hExpect;
         private final ObjectHandle hNew;
         private final int iReturn;
 
-        public Replace(TypeComposition clz, AtomicReference<ObjectHandle> atomic,
+        public Replace(TypeConstant type, AtomicReference<ObjectHandle> atomic,
                        ObjectHandle hExpect, ObjectHandle hNew, int iReturn)
             {
-            this.clz = clz;
+            this.type = type;
             this.atomic = atomic;
             this.hExpect = hExpect;
             this.hNew = hNew;
@@ -219,7 +219,7 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (clz.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -271,16 +271,16 @@ public class xAtomicVar
     protected static class ReplaceFailed
             implements Frame.Continuation
         {
-        private final TypeComposition clz;
+        private final TypeConstant type;
         private final AtomicReference<ObjectHandle> atomic;
         private ObjectHandle hExpect;
         private final ObjectHandle hNew;
         private final int[] aiReturn;
 
-        public ReplaceFailed(TypeComposition clz, AtomicReference<ObjectHandle> atomic,
+        public ReplaceFailed(TypeConstant type, AtomicReference<ObjectHandle> atomic,
                              ObjectHandle hExpect, ObjectHandle hNew, int[] aiReturn)
             {
-            this.clz = clz;
+            this.type = type;
             this.atomic = atomic;
             this.hExpect = hExpect;
             this.hNew = hNew;
@@ -309,7 +309,7 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (clz.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;

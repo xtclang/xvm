@@ -155,15 +155,14 @@ public class xArray
         TypeConstant type1 = getElementType(hArray1, 0);
         TypeConstant type2 = getElementType(hArray2, 0);
 
-        TypeComposition clazzEl = f_types.resolveClass(type1);
-        if (clazzEl != f_types.resolveClass(type2))
+        if (type1.equals(type2))
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
         // now compare arrays elements one-by-one
         int[] holder = new int[] {0}; // the index holder
-        return new Equals(ah1, ah2, clazzEl, cElements, holder, iReturn).doNext(frame);
+        return new Equals(ah1, ah2, type1, cElements, holder, iReturn).doNext(frame);
         }
 
     // ----- IndexSupport methods -----
@@ -311,17 +310,17 @@ public class xArray
         {
         final private ObjectHandle[] ah1;
         final private ObjectHandle[] ah2;
-        final private TypeComposition clazzEl;
+        final private TypeConstant typeEl;
         final private int cElements;
         final private int[] holder;
         final private int iReturn;
 
-        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeComposition clazzEl,
+        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeConstant typeEl,
                       int cElements, int[] holder, int iReturn)
             {
             this.ah1 = ah1;
             this.ah2 = ah2;
-            this.clazzEl = clazzEl;
+            this.typeEl = typeEl;
             this.cElements = cElements;
             this.holder = holder;
             this.iReturn = iReturn;
@@ -343,7 +342,7 @@ public class xArray
             int iEl;
             while ((iEl = holder[0]++) < cElements)
                 {
-                switch (clazzEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
+                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;

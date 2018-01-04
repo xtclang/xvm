@@ -1,8 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Collections;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.TypeConstant;

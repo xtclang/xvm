@@ -26,11 +26,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
-import org.xvm.runtime.template.xOrdered;
 
 
 /**
@@ -694,30 +692,6 @@ public class TypeComposition
             }
 
         mapFields.putAll(mapCached);
-        }
-
-    // ---- support for op-codes that require class specific information -----
-
-    // compare for equality (==) two object handles that both belong to this class
-    // return R_NEXT, R_CALL or R_EXCEPTION
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
-            }
-        return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
-        }
-
-    // compare for order (<=>) two object handles that both belong to this class
-    // return R_NEXT, R_CALL or R_EXCEPTION
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
-            }
-        return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }
 
     @Override

@@ -6,9 +6,10 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpTest;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 
 
 /**
@@ -61,7 +62,7 @@ public class IsType
         }
 
     @Override
-    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+    protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
         // TODO: Note that hValue2 represents the type

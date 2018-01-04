@@ -3,7 +3,6 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
