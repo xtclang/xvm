@@ -1325,7 +1325,7 @@ public class Frame
         private String m_sVarName;
         private int m_nStyle; // one of the VAR_* values
         private RefHandle m_ref; // an "active" reference to this register
-        private TypeResolver m_resolver;
+        private VarTypeResolver m_resolver;
         private int m_nTargetId; // an id of the target used to resolve this VarInfo's type
 
         /**
@@ -1350,7 +1350,7 @@ public class Frame
         /**
          * Construct an unresolved VarIfo based on a custom resolver.
          */
-        public VarInfo(int nTargetId, int nAuxId, TypeResolver resolver)
+        public VarInfo(int nTargetId, int nAuxId, VarTypeResolver resolver)
             {
             m_nTargetId = nTargetId;
             m_nTypeId = nAuxId;
@@ -1430,14 +1430,14 @@ public class Frame
         }
 
     /**
-     * An internal type resolver.
+     * An internal VarInfo type resolver.
      */
-    interface TypeResolver
+    interface VarTypeResolver
         {
         TypeConstant resolve(Frame frame, int nTargetReg, int iTypeId);
         }
 
-    protected static final TypeResolver ARRAY_ELEMENT_RESOLVER = new TypeResolver()
+    protected static final VarTypeResolver ARRAY_ELEMENT_RESOLVER = new VarTypeResolver()
         {
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int nTypeId)
@@ -1459,7 +1459,7 @@ public class Frame
             }
         };
 
-    protected static final TypeResolver ARRAY_ELEMENT_REF_RESOLVER = new TypeResolver()
+    protected static final VarTypeResolver ARRAY_ELEMENT_REF_RESOLVER = new VarTypeResolver()
         {
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int nTypeId)
@@ -1469,7 +1469,7 @@ public class Frame
             }
         };
 
-    protected static final TypeResolver RETURN_RESOLVER = new TypeResolver()
+    protected static final VarTypeResolver RETURN_RESOLVER = new VarTypeResolver()
         {
         // nTargetReg - the target register (or property)
         // nMethodId  - the MethodConstant id
@@ -1479,19 +1479,17 @@ public class Frame
             ConstantPool pool = frame.f_context.f_pool;
 
             MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
-            TypeConstant constRetType = constMethod.getRawReturns()[0];
+            TypeConstant typeRet = constMethod.getRawReturns()[0];
 
-            if (nTargetReg == Op.A_FRAME)
-                {
+            return nTargetReg == Op.A_FRAME
                 // a static method (function) resolution
-                return constRetType.resolveGenerics(frame.getGenericsResolver());
-                }
-            TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
-            return constRetType.resolveGenerics(clzTarget);
+                ? typeRet.resolveGenerics(frame.getGenericsResolver())
+                // a target type-based resolution
+                : typeRet.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
 
-    protected static final TypeResolver TUPLE_RESOLVER = new TypeResolver()
+    protected static final VarTypeResolver TUPLE_RESOLVER = new VarTypeResolver()
         {
         // nTargetReg - the target register (or property)
         // nMethodId  - the MethodConstant id
@@ -1501,14 +1499,14 @@ public class Frame
             ConstantPool pool = frame.f_context.f_pool;
 
             MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
-            TypeConstant constRetType = pool.ensureParameterizedTypeConstant(
+            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
             return nTargetReg == Op.A_FRAME
                 // a static method (function) resolution
-                ? constRetType.resolveGenerics(frame.getGenericsResolver())
+                ? typeTuple.resolveGenerics(frame.getGenericsResolver())
                 // a target type-based resolution
-                : constRetType.resolveGenerics(frame.getLocalType(nTargetReg));
+                : typeTuple.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
     }
