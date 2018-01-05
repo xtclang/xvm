@@ -150,15 +150,7 @@ public class TypeComposition
      */
     public TypeConstant getActualParamType(String sName)
         {
-        TypeConstant type = f_template.f_struct.
-            getActualParamType(sName, f_typeActual.getParamTypes());
-
-        if (type == null)
-            {
-            throw new IllegalArgumentException(
-                "Invalid formal name: " + sName + " for " + this);
-            }
-        return type;
+        return f_typeActual.getActualParamType(sName);
         }
 
     @Override

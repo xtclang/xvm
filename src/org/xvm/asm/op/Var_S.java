@@ -14,7 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -114,8 +114,8 @@ public class Var_S
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeComposition clzSequence = frame.resolveClass(m_nType);
-        TypeConstant typeEl = clzSequence.getActualParamType("ElementType");
+        TypeConstant typeSequence = frame.getArgumentType(m_nType);
+        TypeConstant typeEl = typeSequence.getActualParamType("ElementType");
 
         try
             {
@@ -128,11 +128,11 @@ public class Var_S
             ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
             hArray.makeImmutable();
 
-            frame.introduceResolvedVar(clzSequence.ensurePublicType(), null, Frame.VAR_STANDARD, hArray);
+            frame.introduceResolvedVar(typeSequence, null, Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

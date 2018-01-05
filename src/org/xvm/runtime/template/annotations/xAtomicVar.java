@@ -60,10 +60,10 @@ public class xAtomicVar
                         //       {
                         //       return true;
                         //       }
-                        //    TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        //    TypeConstant type = hThis.f_clazz.getActualType("RefType");
                         //
                         //    ObjectHandle hCurrent;
-                        //    while (clz.callEquals(hCurrent = atomic.get(), hExpect))
+                        //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
                         //       {
                         //       if (atomic.compareAndSet(hCurrent, hNew))
                         //           {
@@ -78,7 +78,7 @@ public class xAtomicVar
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeConstant type = hThis.f_clazz.getActualParamType("RefType");
+                        TypeConstant type = hThis.m_type.getActualParamType("RefType");
 
                         return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
@@ -111,10 +111,10 @@ public class xAtomicVar
                         //       {
                         //       return false;
                         //       }
-                        //    TypeComposition clz = hThis.f_clazz.getActualType("RefType").f_clazz;
+                        //    TypeConstant type = hThis.f_clazz.getActualType("RefType");
                         //
                         //    ObjectHandle hCurrent;
-                        //    while (clz.callEquals(hCurrent = atomic.get(), hExpect))
+                        //    while (type.callEquals(hCurrent = atomic.get(), hExpect))
                         //       {
                         //       if (atomic.compareAndSet(hCurrent, hNew))
                         //           {
@@ -129,7 +129,7 @@ public class xAtomicVar
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeConstant type = hThis.f_clazz.getActualParamType("RefType");
+                        TypeConstant type = hThis.m_type.getActualParamType("RefType");
 
                         return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }

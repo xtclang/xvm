@@ -726,7 +726,7 @@ public abstract class ClassTemplate
 
         if (isGenericType(sName))
             {
-            TypeConstant type = hTarget.f_clazz.getActualParamType(sName);
+            TypeConstant type = hTarget.m_type.getActualParamType(sName);
 
             return frame.assignValue(iReturn, type.getHandle());
             }
@@ -904,7 +904,7 @@ public abstract class ClassTemplate
 
     // get a handle to an array for the specified class
     // returns R_NEXT or R_EXCEPTION
-    public int createArrayStruct(Frame frame, TypeComposition clzArray,
+    public int createArrayStruct(Frame frame, TypeConstant typeEl,
                                  long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
@@ -913,7 +913,7 @@ public abstract class ClassTemplate
                     xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
-        return frame.assignValue(iReturn, xArray.makeHandle(clzArray, cCapacity));
+        return frame.assignValue(iReturn, xArray.makeHandle(typeEl, cCapacity));
         }
 
     // ----- to be replaced when the structure support is added

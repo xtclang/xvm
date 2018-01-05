@@ -217,6 +217,32 @@ public abstract class TypeConstant
         }
 
     /**
+     * Find the type of the specified formal parameter for this actual type.
+     *
+     * @param sName  the formal parameter name
+     *
+     * @return the corresponding actual type
+     */
+    public TypeConstant getActualParamType(String sName)
+        {
+        // TODO: use the type info when done
+        if (isSingleDefiningConstant())
+            {
+            ClassStructure clz = (ClassStructure)
+                ((ClassConstant) getDefiningConstant()).getComponent();
+            TypeConstant type = clz.getActualParamType(sName, getParamTypes());
+            if (type == null)
+                {
+                throw new IllegalArgumentException(
+                    "Invalid formal name: " + sName + " for " + this);
+                }
+            return type;
+            }
+
+        throw new UnsupportedOperationException();
+        }
+
+    /**
      * @return true iff annotations of the type are specified
      */
     public boolean isAnnotated()
@@ -677,7 +703,6 @@ public abstract class TypeConstant
                     {
                     iter.remove();
                     }
-                // TODO: how to mark the contribution as "duck type checked"
                 }
             else
                 {

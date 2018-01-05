@@ -473,7 +473,9 @@ public class ClassStructure
         int ix = indexOfFormalParameter(sName);
         if (ix >= 0)
             {
-            return listActual.get(ix);
+            return ix < listActual.size()
+                ? listActual.get(ix)
+                : getTypeParamsAsList().get(ix).getValue();
             }
 
         for (Contribution contrib : getContributionsAsList())

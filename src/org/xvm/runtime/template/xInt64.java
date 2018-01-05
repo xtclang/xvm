@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -50,8 +51,7 @@ public class xInt64
         }
 
     @Override
-    public int createArrayStruct(Frame frame, TypeComposition clzArray,
-                                 long cCapacity, int iReturn)
+    public int createArrayStruct(Frame frame, TypeConstant typeEl, long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {

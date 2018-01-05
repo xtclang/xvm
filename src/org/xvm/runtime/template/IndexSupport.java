@@ -37,11 +37,11 @@ public interface IndexSupport
         {
         try
             {
-            TypeConstant typeReferent = getElementType(hTarget, lIndex);
+            TypeConstant typeEl = getElementType(hTarget, lIndex);
 
             TypeComposition clzRef = fReadOnly
-                ? Ref.INSTANCE.ensureParameterizedClass(typeReferent)
-                : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
+                ? Ref.INSTANCE.ensureParameterizedClass(typeEl)
+                : xVar.INSTANCE.ensureParameterizedClass(typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 
