@@ -533,12 +533,28 @@ public abstract class TypeConstant
      */
     public TypeInfo getTypeInfo()
         {
+        return ensureTypeInfo(ErrorListener.RUNTIME);
+        }
+
+    /**
+     * Obtain all of the information about this type, resolved from its recursive composition.
+     *
+     * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
+     */
+    public TypeInfo ensureTypeInfo(ErrorListener errs)
+        {
         if (m_typeinfo == null)
             {
-            validate(ErrorListener.RUNTIME);
+            validate(errs);
+            m_typeinfo = buildTypeInfo(errs);
             }
 
         return m_typeinfo;
+        }
+
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // TODO
         }
 
     /**
@@ -558,6 +574,7 @@ public abstract class TypeConstant
     protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
             Access access, TypeConstant[] atypeParams, ErrorListener errs)
         {
+        assert isModifyingType();
         return getUnderlyingType().resolveStructure(typeinfo, chain, access, atypeParams, errs);
         }
 
@@ -941,43 +958,23 @@ public abstract class TypeConstant
     protected abstract void assemble(DataOutput out)
             throws IOException;
 
-    /**
-     * During compilation and assembly, this method is used to collect detailed error information
-     * that can be determined only by fully resolving (flattening) and analyzing the type's
-     * information. The resulting errors cannot be determined simply by analyzing the various
-     * ClassStructures, etc., because it is possible that the error only appears when a class is
-     * parameterized with a specific type, for example.
-     *
-     * @param errs  the error list to log any errors to; null is acceptable, but will cause any
-     *              detected error in the type hierarchy to be thrown as an IllegalStateException
-     *
-     * @return true if the validation process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
     @Override
-    public boolean validate(ErrorListener errs)
+    public boolean validate(ErrorListener errlist)
         {
-        if (!isValidated())
-            {
-            if (super.validate(errs))
-                {
-                return true;
-                }
+        boolean fHalt = false;
 
-            m_typeinfo = new TypeInfo(this);
-            if (resolveStructure(m_typeinfo, new ContributionChain(),
-                    getAccess(), null, errs == null ? ErrorListener.RUNTIME : errs))
-                {
-                return true;
-                }
+        if (!m_fValidated)
+            {
+            fHalt       |= super.validate(errlist);
+            m_fValidated = true;
             }
 
-        return false;
+        return fHalt;
         }
 
     protected boolean isValidated()
         {
-        return m_typeinfo != null;
+        return m_fValidated;
         }
 
     @Override
@@ -1767,6 +1764,11 @@ public abstract class TypeConstant
      * Relationship options.
      */
     public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+
+    /**
+     * Keeps track of whether the TypeConstant has been validated.
+     */
+    private boolean m_fValidated;
 
     /**
      * The resolved information about the type, its properties, and its methods.
