@@ -1025,7 +1025,7 @@ public class ClassStructure
                 {
                 MultiMethodStructure mms = (MultiMethodStructure) child;
 
-                TypeConstant.GenericTypeResolver resolver = listParams.isEmpty() ? null :
+                GenericTypeResolver resolver = listParams.isEmpty() ? null :
                     new SimpleTypeResolver(listParams);
 
                 for (MethodStructure method : mms.methods())
@@ -1226,7 +1226,7 @@ public class ClassStructure
      * Generic type resolver based on the actual parameter list.
      */
     public class SimpleTypeResolver
-            implements TypeConstant.GenericTypeResolver
+            implements GenericTypeResolver
         {
         /**
          * Create a TypeResolver based on the actual type list.

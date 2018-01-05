@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
@@ -400,11 +401,11 @@ public class Frame
         return f_hTarget;
         }
 
-    public TypeConstant.GenericTypeResolver getGenericsResolver()
+    public GenericTypeResolver getGenericsResolver()
         {
         if (f_hTarget == null)
             {
-            return new TypeConstant.GenericTypeResolver()
+            return new GenericTypeResolver()
                 {
                 @Override
                 public TypeConstant resolveGenericType(PropertyConstant constProperty)
@@ -1503,13 +1504,11 @@ public class Frame
             TypeConstant constRetType = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
-            if (nTargetReg == Op.A_FRAME)
-                {
+            return nTargetReg == Op.A_FRAME
                 // a static method (function) resolution
-                return constRetType.resolveGenerics(frame.getGenericsResolver());
-                }
-            TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
-            return constRetType.resolveGenerics(clzTarget);
+                ? constRetType.resolveGenerics(frame.getGenericsResolver())
+                // a target type-based resolution
+                : constRetType.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
     }

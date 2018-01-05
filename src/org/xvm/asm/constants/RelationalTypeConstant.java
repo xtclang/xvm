@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
@@ -217,7 +218,7 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         if (clz == getClass())
             {

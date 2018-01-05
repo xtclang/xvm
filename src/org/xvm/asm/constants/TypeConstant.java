@@ -23,6 +23,7 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.runtime.Frame;
@@ -47,6 +48,7 @@ import org.xvm.runtime.template.xType.TypeHandle;
  */
 public abstract class TypeConstant
         extends Constant
+        implements GenericTypeResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -73,6 +75,15 @@ public abstract class TypeConstant
     protected TypeConstant(ConstantPool pool)
         {
         super(pool);
+        }
+
+
+    // ----- GenericTypeResolver -------------------------------------------------------------------
+
+    @Override
+    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+        {
+        return getActualParamType(constProperty.getName());
         }
 
 
@@ -933,8 +944,9 @@ public abstract class TypeConstant
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null
+     * @param clz
      */
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : getUnderlyingType().findFirst(clz);
         }
@@ -1058,24 +1070,6 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
-
-
-    // ----- inner classes ------------------------------------------------------------------
-
-    /**
-     * Resolves a generic type name into a type.
-     */
-    public interface GenericTypeResolver
-        {
-        /**
-         * Resolve the generic type based on the PropertyConstant representing a formal parameter.
-         *
-         * @param constProperty  the PropertyConstant for the formal parameter
-         *
-         * @return a resolved type
-         */
-        TypeConstant resolveGenericType(PropertyConstant constProperty);
-        }
 
 
     // -----inner classes --------------------------------------------------------------------------

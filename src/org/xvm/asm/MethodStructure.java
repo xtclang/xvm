@@ -505,7 +505,7 @@ public class MethodStructure
      * @param resolver  the generic type resolver
      */
     public boolean isSubstitutableFor(SignatureConstant sigThat,
-                                      TypeConstant.GenericTypeResolver resolver)
+                                      GenericTypeResolver resolver)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)

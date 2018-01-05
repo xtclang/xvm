@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -223,12 +224,12 @@ public class TypeSet
     // ----- TypeCompositions -----
 
     // ensure a TypeComposition for a type referred by a TypeConstant in the ConstantPool
-    public TypeComposition resolveClass(int nTypeConstId, TypeConstant.GenericTypeResolver resolver)
+    public TypeComposition resolveClass(int nTypeConstId, GenericTypeResolver resolver)
         {
-        TypeConstant typeClz = (TypeConstant)
+        TypeConstant type = (TypeConstant)
                 f_container.f_pool.getConstant(nTypeConstId); // must exist
 
-        return resolveClass(typeClz.resolveGenerics(resolver));
+        return resolveClass(type.resolveGenerics(resolver));
         }
 
     // produce a TypeComposition based on the specified TypeConstant

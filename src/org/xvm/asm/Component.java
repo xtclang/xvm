@@ -32,7 +32,6 @@ import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeConstant.GenericTypeResolver;
 import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.util.Handy;

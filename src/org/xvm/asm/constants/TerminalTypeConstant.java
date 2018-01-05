@@ -24,6 +24,7 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
@@ -1326,7 +1327,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : null;
         }
