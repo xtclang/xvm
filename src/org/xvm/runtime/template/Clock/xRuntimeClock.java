@@ -25,17 +25,11 @@ import org.xvm.runtime.template.Function.NativeMethodHandle;
 public class xRuntimeClock
         extends ClassTemplate
     {
-    public static xRuntimeClock INSTANCE;
     public static Timer TIMER = new Timer("RuntimeClock", true);
 
     public xRuntimeClock(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override

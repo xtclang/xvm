@@ -739,9 +739,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                TypeComposition clz = hThis.f_clazz.resolveClass(property.getType());
-
-                hValue = frame.f_context.f_container.getInjectable(sName, clz);
+                hValue = frame.f_context.f_container.getInjectable(sName, property.getType());
                 if (hValue != null)
                     {
                     hThis.m_mapFields.put(sName, hValue);
