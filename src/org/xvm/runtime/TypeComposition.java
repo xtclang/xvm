@@ -14,6 +14,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
@@ -26,11 +27,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
-import org.xvm.runtime.template.xOrdered;
 
 
 /**
@@ -40,7 +39,7 @@ import org.xvm.runtime.template.xOrdered;
  *       the extended classes (UnionComposition, InterComposition and ConstComposition)
  */
 public class TypeComposition
-        implements TypeConstant.GenericTypeResolver
+        implements GenericTypeResolver
     {
     public final ClassTemplate f_template;
 
@@ -152,15 +151,7 @@ public class TypeComposition
      */
     public TypeConstant getActualParamType(String sName)
         {
-        TypeConstant type = f_template.f_struct.
-            getActualParamType(sName, f_typeActual.getParamTypes());
-
-        if (type == null)
-            {
-            throw new IllegalArgumentException(
-                "Invalid formal name: " + sName + " for " + this);
-            }
-        return type;
+        return f_typeActual.getActualParamType(sName);
         }
 
     @Override
@@ -266,7 +257,7 @@ public class TypeComposition
                     TypeConstant typeInto = contrib.resolveGenerics(this);
                     if (typeInto != null)
                         {
-                        TypeComposition clzContribution = resolveClass(typeInto);
+                        TypeComposition clzContribution = f_template.f_types.resolveClass(typeInto);
                         addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
                         }
                     break;
@@ -331,7 +322,7 @@ public class TypeComposition
                     TypeConstant typeInto = contrib.resolveGenerics(this);
                     if (typeInto != null)
                         {
-                        TypeComposition clzContribution = resolveClass(typeInto);
+                        TypeComposition clzContribution = f_template.f_types.resolveClass(typeInto);
                         addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
                         }
                     break;
@@ -453,18 +444,6 @@ public class TypeComposition
     public boolean isA(TypeComposition that)
         {
         return this.ensurePublicType().isA(that.ensurePublicType());
-        }
-
-    // given a TypeConstant, return a corresponding TypeComposition within this class's context
-    // or Object.class if the type cannot be resolved;
-    //
-    // for example, List<KeyType> in the context of Map<String, Int> will resolve in List<String>
-    //
-    // Note: this impl is almost identical to TypeSet.resolveParameterType()
-    //       but returns TypeComposition rather than Type and is more tolerant
-    public TypeComposition resolveClass(TypeConstant type)
-        {
-        return f_template.f_types.resolveClass(type.resolveGenerics(this));
         }
 
     // create a sequence of frames to be called in the inverse order (the base super first)
@@ -671,11 +650,13 @@ public class TypeComposition
                     PropertyStructure prop = (PropertyStructure) child;
 
                     RefHandle hRef = null;
-                    if (template.isRef(prop))
+                    if (template.isAnnotated(prop))
                         {
-                        Ref referent = (Ref) template.getRefTemplate(prop);
+                        TypeComposition clzAnno = template.getAnnotation(prop);
+                        Ref templateRef = (Ref) clzAnno.f_template;
+                        TypeComposition clzRef = templateRef.ensureParameterizedClass(prop.getType());
 
-                        hRef = referent.createRefHandle(referent.f_clazzCanonical, null);
+                        hRef = templateRef.createRefHandle(clzRef, prop.getName());
                         }
 
                     if (template.isCalculated(prop))
@@ -692,30 +673,6 @@ public class TypeComposition
             }
 
         mapFields.putAll(mapCached);
-        }
-
-    // ---- support for op-codes that require class specific information -----
-
-    // compare for equality (==) two object handles that both belong to this class
-    // return R_NEXT, R_CALL or R_EXCEPTION
-    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
-            }
-        return f_template.callEquals(frame, this, hValue1, hValue2, iReturn);
-        }
-
-    // compare for order (<=>) two object handles that both belong to this class
-    // return R_NEXT, R_CALL or R_EXCEPTION
-    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
-            }
-        return f_template.callCompare(frame, this, hValue1, hValue2, iReturn);
         }
 
     @Override

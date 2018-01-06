@@ -448,7 +448,9 @@ public class ClassStructure
         int ix = indexOfFormalParameter(sName);
         if (ix >= 0)
             {
-            return listActual.get(ix);
+            return ix < listActual.size()
+                ? listActual.get(ix)
+                : getTypeParamsAsList().get(ix).getValue();
             }
 
         for (Contribution contrib : getContributionsAsList())
@@ -994,7 +996,7 @@ public class ClassStructure
                 {
                 MultiMethodStructure mms = (MultiMethodStructure) child;
 
-                TypeConstant.GenericTypeResolver resolver = listParams.isEmpty() ? null :
+                GenericTypeResolver resolver = listParams.isEmpty() ? null :
                     new SimpleTypeResolver(listParams);
 
                 for (MethodStructure method : mms.methods())
@@ -1194,7 +1196,7 @@ public class ClassStructure
      * Generic type resolver based on the actual parameter list.
      */
     public class SimpleTypeResolver
-            implements TypeConstant.GenericTypeResolver
+            implements GenericTypeResolver
         {
         /**
          * Create a TypeResolver based on the actual type list.

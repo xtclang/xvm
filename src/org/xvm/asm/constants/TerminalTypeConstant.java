@@ -23,9 +23,16 @@ import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.Severity;
 
@@ -526,7 +533,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : null;
         }
@@ -892,6 +899,32 @@ public class TerminalTypeConstant
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
+        TypeComposition clz = frame.f_context.f_types.resolveClass(this);
+        return clz.f_template.callEquals(frame, clz, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            }
+
+        TypeComposition clz = frame.f_context.f_types.resolveClass(this);
+        return clz.f_template.callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
 

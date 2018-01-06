@@ -18,13 +18,11 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.Clock.xRuntimeClock;
 import org.xvm.runtime.template.Service;
 import org.xvm.runtime.template.Function;
 import org.xvm.runtime.template.xModule.ModuleHandle;
-
-import org.xvm.runtime.template.io.Console.xTerminalConsole;
 
 
 /**
@@ -131,36 +129,30 @@ public class Container
         ClassTemplate templateClock = f_types.getTemplate("Clock");
         if (templateClock != null)
             {
-            f_types.getTemplate("Clock.RuntimeClock"); // to init xRuntimeClock.INSTANCE
+            TypeConstant typeClock = templateClock.f_clazzCanonical.ensurePublicType();
+
+            ClassTemplate templateRTClock = f_types.getTemplate("Clock.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
-                {
-                ServiceContext ctxClock = createServiceContext("RuntimeClock");
-                return Service.makeHandle(ctxClock,
-                        xRuntimeClock.INSTANCE.f_clazzCanonical,
-                        templateClock.f_clazzCanonical.ensurePublicType());
-                };
+                Service.makeHandle(createServiceContext("RuntimeClock"),
+                    templateRTClock.f_clazzCanonical, typeClock);
 
-            f_mapResources.put(
-                    new InjectionKey("runtimeClock", templateClock.f_clazzCanonical), supplierClock);
+            f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
             }
 
         // +++ Console
         ClassTemplate templateConsole = f_types.getTemplate("io.Console");
         if (templateConsole != null)
             {
-            f_types.getTemplate("io.Console.TerminalConsole"); // to init xTerminalConsole.INSTANCE
+            TypeConstant typeConsole = templateConsole.f_clazzCanonical.ensurePublicType();
+
+            ClassTemplate templateRTConsole = f_types.getTemplate("io.Console.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
-                {
-                ServiceContext ctxConsole = createServiceContext("Console");
-                return Service.makeHandle(ctxConsole,
-                        xTerminalConsole.INSTANCE.f_clazzCanonical,
-                        templateConsole.f_clazzCanonical.ensurePublicType());
-                };
+                Service.makeHandle(createServiceContext("Console"),
+                    templateRTConsole.f_clazzCanonical, typeConsole);
 
-            f_mapResources.put(
-                    new InjectionKey("console", templateConsole.f_clazzCanonical), supplierConsole);
+            f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
         }
 
@@ -182,9 +174,9 @@ public class Container
 
     // return the injectable handle or null, if not resolvable
     // TODO: need an "override" name or better yet "injectionAttributes"
-    public ObjectHandle getInjectable(String sName, TypeComposition clz)
+    public ObjectHandle getInjectable(String sName, TypeConstant type)
         {
-        InjectionKey key = new InjectionKey(sName, clz);
+        InjectionKey key = new InjectionKey(sName, type);
         Object oResource = f_mapResources.get(key);
 
         if (oResource instanceof ObjectHandle)
@@ -230,12 +222,12 @@ public class Container
     public static class InjectionKey
         {
         public final String f_sName;
-        public final TypeComposition f_clazz;
+        public final TypeConstant f_type;
 
-        public InjectionKey(String sName, TypeComposition clazz)
+        public InjectionKey(String sName, TypeConstant type)
             {
             f_sName = sName;
-            f_clazz = clazz;
+            f_type = type;
             }
 
         @Override
@@ -254,19 +246,19 @@ public class Container
             InjectionKey that = (InjectionKey) o;
 
             return Objects.equals(this.f_sName, that.f_sName) &&
-                   Objects.equals(this.f_clazz, that.f_clazz);
+                   Objects.equals(this.f_type, that.f_type);
             }
 
         @Override
         public int hashCode()
             {
-            return f_sName.hashCode() + f_clazz.hashCode();
+            return f_sName.hashCode() + f_type.hashCode();
             }
 
         @Override
         public String toString()
             {
-            return "Key: " + f_sName + ", " + f_clazz;
+            return "Key: " + f_sName + ", " + f_type;
             }
         }
     }

@@ -62,19 +62,17 @@ public class xArray
         assert constArray.getFormat() == Constant.Format.Array;
 
         TypeConstant typeArray = constArray.getType();
-        TypeComposition clzArray = f_types.resolveClass(typeArray);
 
-        TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        TypeComposition clzEl = f_types.resolveClass(typeEl);
-        ClassTemplate templateEl = clzEl.f_template;
+        TypeConstant typeEl = typeArray.getActualParamType("ElementType");
+        ClassTemplate templateEl = f_types.resolveClass(typeEl).f_template;
 
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
 
-        int nR = templateEl.createArrayStruct(frame, clzArray, cSize, Frame.RET_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Frame.RET_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
-            throw new IllegalStateException("Failed to create an array " + clzArray);
+            throw new IllegalStateException("Failed to create an array " + typeArray);
             }
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
@@ -106,12 +104,11 @@ public class xArray
         {
         // this is a native constructor
         TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        TypeComposition clzEl = f_types.resolveClass(typeEl);
-        ClassTemplate templateEl = clzEl.f_template;
+        ClassTemplate templateEl = f_types.resolveClass(typeEl).f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, clzArray, cCapacity, Frame.RET_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Frame.RET_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
@@ -155,15 +152,14 @@ public class xArray
         TypeConstant type1 = getElementType(hArray1, 0);
         TypeConstant type2 = getElementType(hArray2, 0);
 
-        TypeComposition clazzEl = f_types.resolveClass(type1);
-        if (clazzEl != f_types.resolveClass(type2))
+        if (type1.equals(type2))
             {
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
         // now compare arrays elements one-by-one
         int[] holder = new int[] {0}; // the index holder
-        return new Equals(ah1, ah2, clazzEl, cElements, holder, iReturn).doNext(frame);
+        return new Equals(ah1, ah2, type1, cElements, holder, iReturn).doNext(frame);
         }
 
     // ----- IndexSupport methods -----
@@ -311,17 +307,17 @@ public class xArray
         {
         final private ObjectHandle[] ah1;
         final private ObjectHandle[] ah2;
-        final private TypeComposition clazzEl;
+        final private TypeConstant typeEl;
         final private int cElements;
         final private int[] holder;
         final private int iReturn;
 
-        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeComposition clazzEl,
+        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeConstant typeEl,
                       int cElements, int[] holder, int iReturn)
             {
             this.ah1 = ah1;
             this.ah2 = ah2;
-            this.clazzEl = clazzEl;
+            this.typeEl = typeEl;
             this.cElements = cElements;
             this.holder = holder;
             this.iReturn = iReturn;
@@ -343,7 +339,7 @@ public class xArray
             int iEl;
             while ((iEl = holder[0]++) < cElements)
                 {
-                switch (clazzEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
+                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -380,9 +376,9 @@ public class xArray
         return new GenericArrayHandle(INSTANCE.ensureParameterizedClass(typeEl), ahValue); // ElementType
         }
 
-    public static GenericArrayHandle makeHandle(TypeComposition clzArray, long cCapacity)
+    public static GenericArrayHandle makeHandle(TypeConstant typeEl, long cCapacity)
         {
-        return new GenericArrayHandle(clzArray, cCapacity);
+        return new GenericArrayHandle(INSTANCE.ensureParameterizedClass(typeEl), cCapacity);
         }
 
     // generic array handle

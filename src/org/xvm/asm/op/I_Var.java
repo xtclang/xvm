@@ -15,9 +15,9 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * I_REF rvalue-target, rvalue-ix, lvalue ; Ref<T> = &T[ix]
+ * I_VAR rvalue-target, rvalue-ix, lvalue ; Var<T> = &T[ix]
  */
-public class I_Ref
+public class I_Var
         extends OpIndex
     {
     /**
@@ -29,7 +29,7 @@ public class I_Ref
      *
      * @deprecated
      */
-    public I_Ref(int nTarget, int nIndex, int nRet)
+    public I_Var(int nTarget, int nIndex, int nRet)
         {
         super(null, null, null);
 
@@ -39,13 +39,13 @@ public class I_Ref
         }
 
     /**
-     * Construct an I_REF op for the passed arguments.
+     * Construct an I_VAR op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      * @param argReturn  the Argument to store the result into
      */
-    public I_Ref(Argument argTarget, Argument argIndex, Argument argReturn)
+    public I_Var(Argument argTarget, Argument argIndex, Argument argReturn)
         {
         super(argTarget, argIndex, argReturn);
         }
@@ -56,7 +56,7 @@ public class I_Ref
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public I_Ref(DataInput in, Constant[] aconst)
+    public I_Var(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -82,6 +82,6 @@ public class I_Ref
         {
         IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
 
-        return template.makeRef(frame, hTarget, hIndex.getValue(), true, m_nRetValue);
+        return template.makeRef(frame, hTarget, hIndex.getValue(), false, m_nRetValue);
         }
     }

@@ -25,18 +25,12 @@ import org.xvm.runtime.template.xString.StringHandle;
 public class xTerminalConsole
         extends ClassTemplate
     {
-    public static xTerminalConsole INSTANCE;
     public static BufferedReader CONSOLE_IN = new BufferedReader(new InputStreamReader(System.in));
     public static PrintWriter CONSOLE_OUT = new PrintWriter(System.out, true);
 
     public xTerminalConsole(TypeSet types, ClassStructure structure, boolean fInstance)
         {
         super(types, structure);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override

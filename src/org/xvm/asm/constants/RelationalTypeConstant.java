@@ -15,6 +15,13 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.Op;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -198,7 +205,7 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         if (clz == getClass())
             {
@@ -285,6 +292,83 @@ public abstract class RelationalTypeConstant
         return getUnderlyingType().consumesFormalType(sTypeName, access, listParams)
             || getUnderlyingType2().consumesFormalType(sTypeName, access, listParams);
         }
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
+        switch (getUnderlyingType().callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
+            {
+            case Op.R_NEXT:
+                return completeEquals(frame, hValue1, hValue2, iReturn);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    completeEquals(frameCaller, hValue1, hValue2, iReturn));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Completion of the callEquals implementation.
+     */
+    protected int completeEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ObjectHandle hResult = frame.getFrameLocal();
+        return hResult == xBoolean.FALSE
+            ? frame.assignValue(iReturn, hResult)
+            : getUnderlyingType2().callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            }
+
+        switch (getUnderlyingType().callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
+            {
+            case Op.R_NEXT:
+                return completeEquals(frame, hValue1, hValue2, iReturn);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    completeCompare(frameCaller, hValue1, hValue2, iReturn));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Completion of the callCompare implementation.
+     */
+    protected int completeCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ObjectHandle hResult = frame.getFrameLocal();
+        return hResult != xOrdered.EQUAL
+            ? frame.assignValue(iReturn, hResult)
+            : getUnderlyingType2().callCompare(frame, hValue1, hValue2, iReturn);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

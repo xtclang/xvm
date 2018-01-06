@@ -24,8 +24,12 @@ import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
@@ -49,6 +53,7 @@ import org.xvm.util.Severity;
  */
 public abstract class TypeConstant
         extends Constant
+        implements GenericTypeResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -75,6 +80,15 @@ public abstract class TypeConstant
     protected TypeConstant(ConstantPool pool)
         {
         super(pool);
+        }
+
+
+    // ----- GenericTypeResolver -------------------------------------------------------------------
+
+    @Override
+    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+        {
+        return getActualParamType(constProperty.getName());
         }
 
 
@@ -216,6 +230,32 @@ public abstract class TypeConstant
         return list == null || list.isEmpty()
                 ? ConstantPool.NO_TYPES
                 : list.toArray(new TypeConstant[list.size()]);
+        }
+
+    /**
+     * Find the type of the specified formal parameter for this actual type.
+     *
+     * @param sName  the formal parameter name
+     *
+     * @return the corresponding actual type
+     */
+    public TypeConstant getActualParamType(String sName)
+        {
+        // TODO: use the type info when done
+        if (isSingleDefiningConstant())
+            {
+            ClassStructure clz = (ClassStructure)
+                ((ClassConstant) getDefiningConstant()).getComponent();
+            TypeConstant type = clz.getActualParamType(sName, getParamTypes());
+            if (type == null)
+                {
+                throw new IllegalArgumentException(
+                    "Invalid formal name: " + sName + " for " + this);
+                }
+            return type;
+            }
+
+        throw new UnsupportedOperationException();
         }
 
     /**
@@ -1461,7 +1501,6 @@ public abstract class TypeConstant
                     {
                     iter.remove();
                     }
-                // TODO: how to mark the contribution as "duck type checked"
                 }
             else
                 {
@@ -1678,8 +1717,9 @@ public abstract class TypeConstant
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null
+     * @param clz
      */
-    public <T extends TypeConstant> T findFirst(Class<? extends TypeConstant> clz)
+    public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : getUnderlyingType().findFirst(clz);
         }
@@ -1698,6 +1738,36 @@ public abstract class TypeConstant
             hType = m_handle = xType.makeHandle(this);
             }
         return hType;
+        }
+
+    /**
+     * Compare for equality (==) two object handles that both belong to this type.
+     *
+     * @param frame    the frame
+     * @param hValue1  the first handle
+     * @param hValue2  the second handle
+     * @param iReturn  the return register
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getUnderlyingType().callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    /**
+     * Compare for order (<=>) two object handles that both belong to this type.
+     *
+     * @param frame    the frame
+     * @param hValue1  the first handle
+     * @param hValue2  the second handle
+     * @param iReturn  the return register
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getUnderlyingType().callCompare(frame, hValue1, hValue2, iReturn);
         }
 
 
@@ -1758,24 +1828,6 @@ public abstract class TypeConstant
 
     @Override
     public abstract int hashCode();
-
-
-    // ----- inner classes ------------------------------------------------------------------
-
-    /**
-     * Resolves a generic type name into a type.
-     */
-    public interface GenericTypeResolver
-        {
-        /**
-         * Resolve the generic type based on the PropertyConstant representing a formal parameter.
-         *
-         * @param constProperty  the PropertyConstant for the formal parameter
-         *
-         * @return a resolved type
-         */
-        TypeConstant resolveGenericType(PropertyConstant constProperty);
-        }
 
 
     // -----inner classes --------------------------------------------------------------------------

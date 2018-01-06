@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
@@ -400,11 +401,11 @@ public class Frame
         return f_hTarget;
         }
 
-    public TypeConstant.GenericTypeResolver getGenericsResolver()
+    public GenericTypeResolver getGenericsResolver()
         {
         if (f_hTarget == null)
             {
-            return new TypeConstant.GenericTypeResolver()
+            return new GenericTypeResolver()
                 {
                 @Override
                 public TypeConstant resolveGenericType(PropertyConstant constProperty)
@@ -457,7 +458,7 @@ public class Frame
                             }
 
                         FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.isDone())
+                        if (hFuture.isAssigned())
                             {
                             try
                                 {
@@ -725,12 +726,6 @@ public class Frame
         return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
-    public TypeComposition resolveClass(int iArg)
-        {
-        assert iArg < Op.CONSTANT_OFFSET;
-        return f_context.f_types.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
-        }
-
     public int checkWaitingRegisters()
         {
         ExceptionHandle hException = null;
@@ -743,7 +738,7 @@ public class Frame
             if (info != null && info.m_nStyle == VAR_WAITING)
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isDone())
+                if (hFuture.isAssigned())
                     {
                     try
                         {
@@ -773,24 +768,24 @@ public class Frame
         return constText.getValue();
         }
 
-    // return the type of the specified argument
+    // return the type (resolved) of the specified argument
     public TypeConstant getArgumentType(int iArg)
         {
         return iArg >= 0
                 ? getVarInfo(iArg).getType()
-                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg)
-                    .f_clazzCanonical.ensurePublicType();
+                : getConstant(iArg).getType();
         }
 
-    // return the class of the specified argument
-    public TypeComposition getArgumentClass(int iArg)
+    // same as getArgumentType, but treats the negative ids as "local-property" references
+    public TypeConstant getLocalType(int iArg)
         {
         return iArg >= 0
-                ? f_context.f_types.resolveClass(getVarInfo(iArg).getType())
-                : f_context.f_heapGlobal.getConstTemplate(Op.CONSTANT_OFFSET - iArg).f_clazzCanonical;
+            ? getVarInfo(iArg).getType().resolveGenerics(getGenericsResolver())
+            // "local property"
+            : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
         }
 
-    // same as getArgumentClass, but treats the negative ids as "local-property" reference
+    // same as getArgumentClass, but treats the negative ids as "local-property" references
     public TypeComposition getLocalClass(int iArg)
         {
         if (iArg >= 0)
@@ -801,6 +796,12 @@ public class Frame
         // "local property"
         TypeConstant typeProp = getConstant(iArg).getRefType();
         return f_context.f_types.resolveClass(typeProp.resolveGenerics(getGenericsResolver()));
+        }
+
+    public TypeComposition resolveClass(int iArg)
+        {
+        assert iArg < Op.CONSTANT_OFFSET;
+        return f_context.f_types.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or
@@ -1444,8 +1445,7 @@ public class Frame
             if (nTargetReg >= 0)
                 {
                 VarInfo infoArray = frame.f_aInfo[nTargetReg];
-                TypeComposition clzArray = frame.f_context.f_types.resolveClass(infoArray.getType());
-                return clzArray.getActualParamType("ElementType");
+                return infoArray.getType().getActualParamType("ElementType");
                 }
 
             // "local property" or a literal constant
@@ -1504,13 +1504,11 @@ public class Frame
             TypeConstant constRetType = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
-            if (nTargetReg == Op.A_FRAME)
-                {
+            return nTargetReg == Op.A_FRAME
                 // a static method (function) resolution
-                return constRetType.resolveGenerics(frame.getGenericsResolver());
-                }
-            TypeComposition clzTarget = frame.getLocalClass(nTargetReg);
-            return constRetType.resolveGenerics(clzTarget);
+                ? constRetType.resolveGenerics(frame.getGenericsResolver())
+                // a target type-based resolution
+                : constRetType.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
     }

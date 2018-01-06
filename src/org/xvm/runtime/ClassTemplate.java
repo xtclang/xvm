@@ -10,6 +10,7 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -50,7 +51,7 @@ public abstract class ClassTemplate
     public final TypeSet f_types;
     public final ClassStructure f_struct;
 
-    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyRef)
+    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
 
     public final TypeComposition f_clazzCanonical; // public non-parameterized class
 
@@ -377,9 +378,8 @@ public abstract class ClassTemplate
         {
         }
 
-    // create a RefHandle for the specified class
+    // create an unassigned RefHandle for the specified class
     // sName is an optional ref name
-    // TODO: consider moving this method up to xRef
     public RefHandle createRefHandle(TypeComposition clazz, String sName)
         {
         throw new IllegalStateException("Invalid op for " + f_sName);
@@ -726,7 +726,7 @@ public abstract class ClassTemplate
 
         if (isGenericType(sName))
             {
-            TypeConstant type = hTarget.f_clazz.getActualParamType(sName);
+            TypeConstant type = hTarget.m_type.getActualParamType(sName);
 
             return frame.assignValue(iReturn, type.getHandle());
             }
@@ -739,9 +739,7 @@ public abstract class ClassTemplate
             String sErr;
             if (isInjectable(property))
                 {
-                TypeComposition clz = hThis.f_clazz.resolveClass(property.getType());
-
-                hValue = frame.f_context.f_container.getInjectable(sName, clz);
+                hValue = frame.f_context.f_container.getInjectable(sName, property.getType());
                 if (hValue != null)
                     {
                     hThis.m_mapFields.put(sName, hValue);
@@ -758,7 +756,7 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
-        if (isRef(property))
+        if (isAnnotated(property))
             {
             try
                 {
@@ -830,7 +828,7 @@ public abstract class ClassTemplate
 
         assert hThis.m_mapFields.containsKey(property.getName());
 
-        if (isRef(property))
+        if (isAnnotated(property))
             {
             return ((RefHandle) hThis.m_mapFields.get(property.getName())).set(hValue);
             }
@@ -904,7 +902,7 @@ public abstract class ClassTemplate
 
     // get a handle to an array for the specified class
     // returns R_NEXT or R_EXCEPTION
-    public int createArrayStruct(Frame frame, TypeComposition clzArray,
+    public int createArrayStruct(Frame frame, TypeConstant typeEl,
                                  long cCapacity, int iReturn)
         {
         if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
@@ -913,7 +911,7 @@ public abstract class ClassTemplate
                     xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
-        return frame.assignValue(iReturn, xArray.makeHandle(clzArray, cCapacity));
+        return frame.assignValue(iReturn, xArray.makeHandle(typeEl, cCapacity));
         }
 
     // ----- to be replaced when the structure support is added
@@ -948,16 +946,17 @@ public abstract class ClassTemplate
         return info != null && info.m_fNativeSetter;
         }
 
-    protected boolean isRef(PropertyStructure property)
+    protected boolean isAnnotated(PropertyStructure property)
         {
         PropertyInfo info = property.getInfo();
-        return info != null && info.m_templateRef != null;
+        return info != null && info.m_typeAnnotation != null;
         }
 
-    protected ClassTemplate getRefTemplate(PropertyStructure property)
+    protected TypeComposition getAnnotation(PropertyStructure property)
         {
         PropertyInfo info = property.getInfo();
-        return info == null ? null : info.m_templateRef;
+        TypeConstant type = info == null ? null : info.m_typeAnnotation;
+        return type == null ? null : f_types.resolveClass(type);
         }
 
     protected boolean isGenericType(String sProperty)
@@ -1079,25 +1078,25 @@ public abstract class ClassTemplate
         PropertyInfo info = property.getInfo();
         if (info == null)
             {
-            property.setInfo(info = new PropertyInfo(f_types, property));
+            property.setInfo(info = new PropertyInfo(f_types.f_container.f_pool, property));
             }
         return info;
         }
 
     public static class PropertyInfo
         {
-        protected final TypeSet           f_types;
+        protected final ConstantPool      f_pool;
         protected final PropertyStructure f_property;
         protected       boolean           m_fAtomic;
         protected       boolean           m_fInjectable;
         protected       boolean           m_fCalculated;
         protected       boolean           m_fNativeGetter;
         protected       boolean           m_fNativeSetter;
-        protected       ClassTemplate     m_templateRef;
+        protected       TypeConstant      m_typeAnnotation;
 
-        public PropertyInfo(TypeSet types, PropertyStructure property)
+        public PropertyInfo(ConstantPool pool, PropertyStructure property)
             {
-            f_types = types;
+            f_pool = pool;
             f_property = property;
             }
 
@@ -1105,20 +1104,18 @@ public abstract class ClassTemplate
             {
             m_fAtomic = true;
 
-            TypeConstant constType = f_property.getType();
-            if (constType.isEcstasy("Int"))
-                {
-                markAsRef("annotations.AtomicIntNumber");
-                }
-            else
-                {
-                markAsRef("annotations.AtomicVar");
-                }
+            TypeConstant typeProp = f_property.getType();
+
+            TypeConstant typeAnno = typeProp.isEcstasy("Int")
+                ? f_pool.ensureEcstasyClassConstant("annotations.AtomicIntNumber").asTypeConstant()
+                : f_pool.ensureEcstasyClassConstant("annotations.AtomicVar").asTypeConstant();
+
+            setAnnotation(f_pool.ensureParameterizedTypeConstant(typeAnno, typeProp));
             }
 
-        public void markAsRef(String sRefClassName)
+        public void setAnnotation(TypeConstant typeAnno)
             {
-            m_templateRef = f_types.getTemplate(sRefClassName);
+            m_typeAnnotation = typeAnno;
             }
         }
 

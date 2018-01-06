@@ -66,10 +66,9 @@ public class xInjectedRef
             ObjectHandle hValue = m_hDelegate;
             if (hValue == null)
                 {
-                TypeConstant typeEl = f_clazz.getActualParamType("RefType");
-                TypeComposition clzEl = f_clazz.f_template.f_types.resolveClass(typeEl);
-                hValue = m_hDelegate =
-                        f_clazz.f_template.f_types.f_container.getInjectable(m_sName, clzEl);
+                TypeConstant typeEl = m_type.getActualParamType("RefType");
+
+                hValue = m_hDelegate = INSTANCE.f_types.f_container.getInjectable(m_sName, typeEl);
                 if (hValue == null)
                     {
                     throw xException.makeHandle("Unknown injectable property " + m_sName).getException();

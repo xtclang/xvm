@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -182,7 +183,7 @@ public class SignatureConstant
     /**
      * @return an equivalent signature without any generic types
      */
-    public SignatureConstant resolveGenericTypes(TypeConstant.GenericTypeResolver resolver)
+    public SignatureConstant resolveGenericTypes(GenericTypeResolver resolver)
         {
         TypeConstant[] aconstParamOriginal = m_aconstParams;
         TypeConstant[] aconstParamResolved = null;

@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -182,9 +183,9 @@ public class Const
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
+                TypeConstant typeProp = getProperty(sProp).getType();
 
-                switch (classProp.callEquals(frameCaller, h1, h2, Frame.RET_LOCAL))
+                switch (typeProp.callEquals(frameCaller, h1, h2, Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -257,9 +258,9 @@ public class Const
                             xException.makeHandle("Unassigned property \"" + sProp +'"'));
                     }
 
-                TypeComposition classProp = clazz.resolveClass(getProperty(sProp).getType());
+                TypeConstant typeProp = getProperty(sProp).getType();
 
-                switch (classProp.callCompare(frameCaller, h1, h2, Frame.RET_LOCAL))
+                switch (typeProp.callCompare(frameCaller, h1, h2, Frame.RET_LOCAL))
                     {
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;

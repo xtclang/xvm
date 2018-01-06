@@ -1,8 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import java.util.Collections;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -34,14 +32,16 @@ public interface IndexSupport
     // get the element count
     long size(ObjectHandle hTarget);
 
-    // @Op "elementAt" support - place a Var to the element value into the specified register
-    default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+    // @Op "elementAt" support - place a Var/Ref to the element value into the specified register
+    default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, boolean fReadOnly, int iReturn)
         {
         try
             {
-            TypeConstant typeReferent = getElementType(hTarget, lIndex);
+            TypeConstant typeEl = getElementType(hTarget, lIndex);
 
-            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(typeReferent); // RefType
+            TypeComposition clzRef = fReadOnly
+                ? Ref.INSTANCE.ensureParameterizedClass(typeEl)
+                : xVar.INSTANCE.ensureParameterizedClass(typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

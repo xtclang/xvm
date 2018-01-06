@@ -62,12 +62,12 @@ interface Ref<RefType>
      *
      * A small number of references cannot be blindly dereferenced without risking a runtime
      * exception:
-     * * {@code @Lazy} references ({@link annotations.LazyRef}) are allowed to be unassigned,
+     * * {@code @Lazy} references ({@link annotations.LazyVar}) are allowed to be unassigned,
      *   because they will lazily assign themselves on the first dereference attempt.
      * * {@code @Future} references ({@link annotations.FutureVar}) are allowed to be unassigned,
      *   because they assigned only on completion of the future, and an attempt to dereference
      *   before that point in time will block until that completion occurs.
-     * * {@code @Soft} and {@code @Weak} references ({@link annotations.SoftRef} and {@link
+     * * {@code @Soft} and {@code @Weak} references ({@link annotations.SoftVar} and {@link
      *   annotations.WeakRef}) are allowed to be unassigned, because the garbage collector is
      *   allowed under specific conditions to clear the reference.
      */

@@ -5,10 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -151,31 +152,31 @@ public abstract class OpTest
                 return R_REPEAT;
                 }
 
-            TypeComposition clz1;
-            TypeComposition clz2;
+            TypeConstant type1;
+            TypeConstant type2;
             boolean fAnyProp = false;
 
             if (isProperty(hValue1))
                 {
-                clz1 = frame.getLocalClass(m_nValue1);
+                type1 = frame.getLocalType(m_nValue1);
                 fAnyProp = true;
                 }
             else
                 {
-                clz1 = frame.getArgumentClass(m_nValue1);
+                type1 = frame.getArgumentType(m_nValue1);
                 }
 
             if (isProperty(hValue2))
                 {
-                clz2 = frame.getLocalClass(m_nValue2);
+                type2 = frame.getLocalType(m_nValue2);
                 fAnyProp = true;
                 }
             else
                 {
-                clz2 = frame.getArgumentClass(m_nValue2);
+                type2 = frame.getArgumentType(m_nValue2);
                 }
 
-            if (clz1 != clz2)
+            if (type1 != type2)
                 {
                 // this shouldn't have compiled
                 throw new IllegalStateException();
@@ -185,12 +186,12 @@ public abstract class OpTest
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue1, hValue2};
                 Frame.Continuation stepNext = frameCaller ->
-                    completeBinaryOp(frame, clz1, ahValue[0], ahValue[1]);
+                    completeBinaryOp(frame, type1, ahValue[0], ahValue[1]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return completeBinaryOp(frame, clz1, hValue1, hValue2);
+            return completeBinaryOp(frame, type1, hValue1, hValue2);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -209,7 +210,7 @@ public abstract class OpTest
     /**
      * A completion of a binary op; must me overridden by all binary ops.
      */
-    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+    protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
         throw new UnsupportedOperationException();

@@ -7,9 +7,10 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpTest;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
@@ -76,10 +77,10 @@ public class IsLt
         }
 
     @Override
-    protected int completeBinaryOp(Frame frame, TypeComposition clz,
+    protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (clz.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
+        switch (type.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 return frame.assignValue(m_nRetValue, xBoolean.makeHandle(

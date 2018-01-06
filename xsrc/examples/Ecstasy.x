@@ -102,6 +102,11 @@ module Ecstasy.xtclang.org
     interface Ref<RefType>
         {
         RefType get();
+        }
+
+    interface Var<RefType>
+            extends Ref<RefType>
+        {
         Void set(RefType value);
         }
 
@@ -112,6 +117,6 @@ module Ecstasy.xtclang.org
         mixin Operator(String? token = null) {}
         mixin Override {}
         mixin InjectedRef<RefType> into Ref<RefType> {}
-        mixin LazyRef<RefType> into Ref<RefType> {}
+        mixin LazyVar<RefType> into Var<RefType> {}
         }
     }

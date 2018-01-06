@@ -414,7 +414,7 @@ public class xTestApp extends xModule
             .add(new I_Get(2, adapter.ensureValueConstantId(4), 3)) // next register #3
             .add(new X_Print(3))
 
-            .add(new I_Ref(2, adapter.ensureValueConstantId(0), 4)) // next register #4
+            .add(new I_Var(2, adapter.ensureValueConstantId(0), 4)) // next register #4
             .add(new Invoke_01(4, adapter.getMethodConstId("Ref", "get"), 3))
             .add(new X_Print(3))
             .add(new Invoke_10(4, adapter.getMethodConstId("Var", "set"),
