@@ -405,22 +405,6 @@ public class ClassStructure
         }
 
     /**
-     * Given the specified TypeConstant that refers to this ClassStructure, create a TypeInfo for
-     * that type.
-     *
-     * @param type  the TypeConstant that refers to this ClassStructure, including potentially a
-     *              rich combination of: ImmutableTypeConstant, AccessTypeConstant,
-     *              AnnotationedTypeConstant, ParameterizedTypeConstant, and TerminalTypeConstant
-     *
-     * @return
-     */
-    public TypeInfo createTypeInfo(TypeConstant type)
-        {
-        // TODO
-        return null;
-        }
-
-    /**
      * Find an index of a parameter with the specified name.
      *
      * @param sParamName  the parameter name

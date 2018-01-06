@@ -238,20 +238,6 @@ public class ParameterizedTypeConstant
         return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
-    @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
-        {
-        if (atypeParams != null)
-            {
-            // how is this possible? it should be an error
-            // TODO log error
-            throw new IllegalStateException("inexplicable dual occurrence of type params for " + typeinfo.type);
-            }
-
-        return super.resolveStructure(typeinfo, chain, access, m_atypeParams, errs);
-        }
-
 
     // ----- type comparison support --------------------------------------------------------------
 

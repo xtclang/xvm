@@ -107,6 +107,13 @@ public class ImmutableTypeConstant
         return m_constType.unwrapForCongruence();
         }
 
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
+        // slightly different
+        return m_constType.buildTypeInfo(errs);
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 

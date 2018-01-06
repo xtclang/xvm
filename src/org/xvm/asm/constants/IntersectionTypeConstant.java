@@ -108,24 +108,13 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        // each of the two sub-types needs to be resolved independently, and then only the parts
-        // that match should be incorporated into the passed
-        return super.resolveStructure(typeinfo, chain, access, atypeParams, errs);
-
-//        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
-//        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
-//        if (set1.equals(set2))
-//            {
-//            setOps.addAll(set1);
-//            return;
-//            }
-//
-//        Set<MethodConstant> setIntersection = new HashSet<>(set1);
-//        setIntersection.retainAll(set2);
-//        setOps.addAll(setIntersection);
+        // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
+        TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
+        TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
+        // TODO
+        throw new UnsupportedOperationException("TODO");
         }
 
 
