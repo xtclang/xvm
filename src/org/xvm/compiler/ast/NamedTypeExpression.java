@@ -258,11 +258,15 @@ public class NamedTypeExpression
                 }
             assert resolver.getResult() == Result.RESOLVED;
 
+            // now that we have the resolved constId, update the unresolved m_constId to point to
+            // the resolved one (just in case anyone is holding the wrong one
             Constant constId = resolver.getConstant();
             if (m_constId instanceof ResolvableConstant)
                 {
                 ((ResolvableConstant) m_constId).resolve(constId);
                 }
+
+            // store the resolved id
             m_constId = constId;
 
             ensureTypeConstant();

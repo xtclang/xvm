@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.xvm.asm.Constant.Format;
@@ -1792,7 +1793,28 @@ public class ConstantPool
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        return m_listConst.iterator();
+        return new Iterator<XvmStructure>()
+            {
+            private final ArrayList<Constant> listConst = m_listConst;
+            private int iNext = 0;
+
+            @Override
+            public boolean hasNext()
+                {
+                return iNext < listConst.size();
+                }
+
+            @Override
+            public XvmStructure next()
+                {
+                if (iNext >= listConst.size())
+                    {
+                    throw new NoSuchElementException();
+                    }
+
+                return listConst.get(iNext++);
+                }
+            };
         }
 
     @Override

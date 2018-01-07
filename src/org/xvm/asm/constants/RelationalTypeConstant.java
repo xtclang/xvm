@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Op;
 
@@ -131,20 +132,6 @@ public abstract class RelationalTypeConstant
         {
         return getUnderlyingType().extendsClass(constClass)
             || getUnderlyingType2().extendsClass(constClass);
-        }
-
-    @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().impersonatesClass(constClass)
-            || getUnderlyingType2().impersonatesClass(constClass);
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        return getUnderlyingType().extendsOrImpersonatesClass(constClass)
-            || getUnderlyingType2().extendsOrImpersonatesClass(constClass);
         }
 
     @Override

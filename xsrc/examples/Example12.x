@@ -177,3 +177,56 @@ Void foo(B b)
 
 // So all properties/variables/constants/etc. are Ref's (@RO), and some (those with an accessible
 // setter) are Var's, although a Var can still reject a set() (e.g. an immutable object)
+
+--
+
+interface Fooish
+    {
+    String foo()
+        {
+        return "Fooish";
+        }
+    }
+
+mixin M1
+        into Fooish
+    {
+    String foo()
+        {
+        return "M1, " + super.foo();
+        }
+    }
+
+mixin M2
+        extends M1
+    {
+    String foo()
+        {
+        return "M2," + super.foo();
+        }
+    }
+
+class B
+        implements Fooish
+        incorporates M1
+    {
+    String foo()
+        {
+        return "B," + super.foo();
+        }
+    }
+
+class D
+        extends B
+        incorporates M2
+    {
+    String foo()
+        {
+        return "D," + super.foo();
+        }
+    }
+
+console.print(new B().foo());
+console.print(new D().foo());
+console.print(new @M2 B().foo());
+console.print(new @M2 D().foo());

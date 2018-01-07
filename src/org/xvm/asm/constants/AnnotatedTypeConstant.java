@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
@@ -70,12 +72,20 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
-        m_annotation = new Annotation(pool, constClass, aconstParam);
+        m_annotation = new Annotation(constClass, aconstParam);
         m_constType  = constType;
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return the annotation
+     */
+    public Annotation getAnnotation()
+        {
+        return m_annotation;
+        }
 
     /**
      * @return the class of the annotation
@@ -224,6 +234,41 @@ public class AnnotatedTypeConstant
         out.writeByte(getFormat().ordinal());
         m_annotation.assemble(out);
         writePackedLong(out, indexOf(m_constType));
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            // an annotated type constant can modify a parameterized or a terminal type constant
+            // that refers to a class/interface
+            TypeConstant type = (TypeConstant) m_constType.simplify();
+            if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
+                {
+                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, type.getValueString());
+                }
+
+            // validate the annotation itself
+            fHalt |= m_annotation.validate(errs);
+
+            // make sure that this annotation is not repeated
+            Constant constClass = m_annotation.getAnnotationClass();
+            while (type instanceof AnnotatedTypeConstant)
+                {
+                if (((AnnotatedTypeConstant) type).m_annotation.getAnnotationClass().equals(constClass))
+                    {
+                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, constClass.getValueString());
+                    }
+                type = ((AnnotatedTypeConstant) type).m_constType;
+                }
+            }
+
+        return fHalt;
         }
 
 

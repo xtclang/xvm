@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -105,6 +107,13 @@ public class ImmutableTypeConstant
         return m_constType.unwrapForCongruence();
         }
 
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
+        // slightly different
+        return m_constType.buildTypeInfo(errs);
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -184,6 +193,33 @@ public class ImmutableTypeConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            // the immutable type constant can modify any type constant other than an immutable
+            // type constant
+            TypeConstant type = (TypeConstant) m_constType.simplify();
+            if (type instanceof ImmutableTypeConstant)
+                {
+                fHalt |= log(errs, Severity.WARNING, VE_IMMUTABLE_REDUNDANT);
+                }
+
+            // a service type cannot be immutable
+            if (type.getTypeInfo().isService())
+                {
+                fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, m_constType.getValueString());
+                }
+            }
+
+        return fHalt;
         }
 
 

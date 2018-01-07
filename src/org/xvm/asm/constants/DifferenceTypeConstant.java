@@ -68,20 +68,6 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return false;
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return false;
-        }
-
-    @Override
     public boolean isClassType()
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
@@ -125,26 +111,16 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 - T2", which means that we need to
         // first resolve T1 and T2, and then add all the information from T1 that is not in T2 to
         // the passed-in TypeInfo; the primary complication at this point is that we may have
         // type parameter information that will be required to resolve either T1 and/or T2
+        TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
+        TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
         // TODO
-        return false;
-
-//        Set set1 = m_constType1.getOpMethods(sName, sOp, cParams);
-//        Set set2 = m_constType2.getOpMethods(sName, sOp, cParams);
-//        if (set1.equals(set2))
-//            {
-//            return;
-//            }
-//
-//        Set<MethodConstant> setDifference = new HashSet<>(set1);
-//        setDifference.removeAll(set2);
-//        setOps.addAll(setDifference);
+        throw new UnsupportedOperationException("TODO");
         }
 
 

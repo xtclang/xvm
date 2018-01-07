@@ -21,6 +21,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeConstant.TypeInfo;
 import org.xvm.runtime.Adapter;
 
 import org.xvm.util.ListMap;
@@ -404,32 +405,6 @@ public class ClassStructure
         }
 
     /**
-     * Test for fake sub-classing (impersonation).
-     *
-     * @param constClass  the class to test if this type represents an impersonation of
-     *
-     * @return true if this type represents a fake sub-classing of the specified class
-     */
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        // TODO
-        return false;
-        }
-
-    /**
-     * Test for real (extends) or fake (impersonation) sub-classing.
-     *
-     * @param constClass  the class to test if this type represents a sub-class of
-     *
-     * @return true if this type represents either real or fake sub-classing of the specified class
-     */
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        // TODO - this should be done in a single pass
-        return extendsClass(constClass) || impersonatesClass(constClass);
-        }
-
-    /**
      * Find an index of a parameter with the specified name.
      *
      * @param sParamName  the parameter name
@@ -491,7 +466,6 @@ public class ClassStructure
                 case Delegates:
                 case Implements:
                     // TODO: what if the underlying type is relational
-                case Impersonates:
                 case Incorporates:
                 case Extends:
                     TypeConstant typeContrib = contrib.getTypeConstant();
@@ -556,7 +530,6 @@ public class ClassStructure
                         continue nextContribution;
                         }
                 case Annotation:
-                case Impersonates:
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
@@ -700,7 +673,6 @@ public class ClassStructure
                         continue nextContribution;
                         }
                 case Annotation:
-                case Impersonates:
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
@@ -843,7 +815,6 @@ public class ClassStructure
                         continue nextContribution;
                         }
                 case Annotation:
-                case Impersonates:
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class
@@ -1056,7 +1027,6 @@ public class ClassStructure
                         continue nextContribution;
                         }
                 case Annotation:
-                case Impersonates:
                 case Incorporates:
                 case Extends:
                     // the identity constant for those contribution is always a class

@@ -218,7 +218,7 @@ public class MethodDeclarationStatement
                         aconstArgs[iArg] = args.get(iArg).toConstant();
                         }
                     }
-                aAnnotations[i] = new org.xvm.asm.Annotation(pool, constClass, aconstArgs);
+                aAnnotations[i] = new org.xvm.asm.Annotation(constClass, aconstArgs);
                 }
             }
 

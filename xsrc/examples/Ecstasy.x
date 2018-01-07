@@ -2,14 +2,61 @@ module Ecstasy.xtclang.org
     {
     const Module {}
     const Package {}
+    const Class {}
+    interface Const {}
 
     typedef Tuple<> Void;
 
-    class Object
-        {
+//    class Object
+//        {
+//        String to<String>();
+//        @Auto function Object() to<function Object()>();
+//        }
+
+    interface Meta<PublicType, ProtectedType, PrivateType, StructType> {}
+    class Object
+        {
+        protected Meta<Object:public, Object:protected, Object:private> meta;
+
+        static Boolean equals(Object o1, Object o2);
+
         String to<String>();
+
+        Object[] to<Object[]>();
+
+        Tuple<Object> to<Tuple<Object>>();
+
         @Auto function Object() to<function Object()>();
-        }
+
+        immutable Object to<immutable Object>();
+        }
+
+    interface Enum
+        {
+        @RO Enumeration<Enum> enumeration;
+        @RO Int ordinal;
+        @RO String name;
+        conditional Enum next();
+        conditional Enum prev();
+        }
+
+    mixin Enumeration<EnumType extends Enum>
+            into Class
+        {
+        @Override
+        String name;
+
+        @Lazy Int count;
+        @Lazy String[] names;
+        @Lazy EnumType[] values;
+        @Lazy Map<String, EnumType> byName;
+        }
+
+    interface Function // <ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+        {
+//         @Override
+//         function Function() to<function Function()>();
+        }
 
     class IntLiteral
         {
@@ -37,6 +84,9 @@ module Ecstasy.xtclang.org
 
     package collections
         {
+        interface Sequence<ElementType> {}
+        class Array<ElementType> {}
+
         interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
             {
             }
@@ -52,17 +102,21 @@ module Ecstasy.xtclang.org
     interface Ref<RefType>
         {
         RefType get();
+        }
+
+    interface Var<RefType>
+            extends Ref<RefType>
+        {
         Void set(RefType value);
         }
 
     package annotations
         {
         mixin AutoConversion {}
-
+        mixin ReadOnly {}
         mixin Operator(String? token = null) {}
-
         mixin Override {}
-
         mixin InjectedRef<RefType> into Ref<RefType> {}
+        mixin LazyVar<RefType> into Var<RefType> {}
         }
     }

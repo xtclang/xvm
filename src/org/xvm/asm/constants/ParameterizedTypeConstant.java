@@ -15,11 +15,14 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -135,6 +138,12 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public Component.Format getExplicitClassFormat()
+        {
+        return getUnderlyingType().getExplicitClassFormat();
+        }
+
+    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal = m_constType;
@@ -231,20 +240,6 @@ public class ParameterizedTypeConstant
         return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
-    @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
-        {
-        if (atypeParams != null)
-            {
-            // how is this possible? it should be an error
-            // TODO log error
-            throw new IllegalStateException("inexplicable dual occurrence of type params for " + typeinfo.type);
-            }
-
-        return super.resolveStructure(typeinfo, chain, access, m_atypeParams, errs);
-        }
-
 
     // ----- type comparison support --------------------------------------------------------------
 
@@ -285,7 +280,6 @@ public class ParameterizedTypeConstant
                 case Extends:
                 case Incorporates:
                 case Into:
-                case Impersonates:
                     {
                     ClassStructure clzRight = (ClassStructure)
                         ((IdentityConstant) getDefiningConstant()).getComponent();
@@ -362,7 +356,6 @@ public class ParameterizedTypeConstant
             case Extends:
             case Incorporates:
             case Into:
-            case Impersonates:
                 {
                 ClassStructure clzRight = (ClassStructure)
                     ((IdentityConstant) thatRight.getDefiningConstant()).getComponent();
@@ -723,6 +716,26 @@ public class ParameterizedTypeConstant
             {
             writePackedLong(out, constType.getPosition());
             }
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            // a parameterized type constant has to be followed by a terminal type constant
+            // specifying a class/interface identity
+            if (!((TypeConstant) m_constType.simplify()).isExplicitClassIdentity(false))
+                {
+                fHalt |= log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
+                }
+            }
+
+        return fHalt;
         }
 
 

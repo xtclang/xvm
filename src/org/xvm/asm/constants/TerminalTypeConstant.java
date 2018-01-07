@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -297,77 +296,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean impersonatesClass(IdentityConstant constClass)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                return ((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).impersonatesClass(constClass);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).impersonatesClass(constClass);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).impersonatesClass(constClass);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).impersonatesClass(constClass);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
-                        .getComponent()).impersonatesClass(constClass);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public boolean extendsOrImpersonatesClass(IdentityConstant constClass)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-                return ((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).extendsOrImpersonatesClass(constClass);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).extendsOrImpersonatesClass(
-                    constClass);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).extendsOrImpersonatesClass(constClass);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).extendsOrImpersonatesClass(constClass);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
-                        .getComponent()).extendsOrImpersonatesClass(constClass);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
     public boolean isClassType()
         {
         Constant constant = getDefiningConstant();
@@ -499,31 +427,16 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
-                // these always specify a class identity
-                return true;
-
             case Class:
-                {
-                // examine the structure to determine if it represents a class identity
-                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
-                }
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return true;
 
             case Typedef:
             case Property:
             case Register:
                 return false;
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                // follow the indirection to the class structure to determine if it represents a
-                // class identity
-                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
-                        .getDeclarationLevelClass().getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
-                }
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -533,6 +446,36 @@ public class TerminalTypeConstant
             }
         }
 
+    @Override
+    public Component.Format getExplicitClassFormat()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+                return Component.Format.MODULE;
+
+            case Package:
+                return Component.Format.PACKAGE;
+
+            case Class:
+                // get the class referred to and return its format
+                return ((ClassConstant) constant).getComponent().getFormat();
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                // follow the indirection to the class structure
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
+
+            case Typedef:
+            case Property:
+            case Register:
+            case UnresolvedName:
+            default:
+                throw new IllegalStateException("no class format for: " + constant);
+            }
+        }
 
     @Override
     public boolean isConstant()
@@ -553,31 +496,24 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected boolean resolveStructure(TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant)
-                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
+                return getTypedefTypeConstant((TypedefConstant) constant).buildTypeInfo(errs);
 
             case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant)
-                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
+                return getPropertyTypeConstant((PropertyConstant) constant).buildTypeInfo(errs);
 
             case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant)
-                        .resolveStructure(typeinfo, chain, access, atypeParams, errs);
+                return getRegisterTypeConstant((RegisterConstant) constant).buildTypeInfo(errs);
 
             case Module:
             case Package:
             case Class:
-                // load the structure
-                Component component = ((IdentityConstant) constant).getComponent();
-                return resolveClassStructure((ClassStructure) component, typeinfo, chain,
-                        access, atypeParams, errs);
+                return super.buildTypeInfo(errs);
 
             case ThisClass:
             case ParentClass:
@@ -586,7 +522,7 @@ public class TerminalTypeConstant
                 // currently this is a mindf**k just thinking about what it means, but theoretically
                 // it could be some type represented by a child of a parent of this or whatever ...
                 // for example, we could implement an inner interface .. would that use a "child of this" type?
-                throw new IllegalStateException("TODO resolveStructures() for " + this + " (" + typeinfo.type + ")");
+                throw new IllegalStateException("TODO resolveStructures() for " + this);
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -594,736 +530,6 @@ public class TerminalTypeConstant
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
-        }
-
-    /**
-     * Accumulate any information for the type represented by the specified structure into the
-     * passed {@link TypeInfo}, checking the validity of the resulting type and logging any errors.
-     *
-     * @param struct       the class structure
-     * @param typeinfo     the type info to contribute to
-     * @param chain        the chain of contributions that led here from the type specified in the
-     *                     TypeInfo
-     * @param access       the desired accessibility into the current type
-     * @param atypeParams  the types for the type parameters of this class, if any (may be null)
-     * @param errs         the error list to log any errors to
-     *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
-    protected boolean resolveClassStructure(ClassStructure struct, TypeInfo typeinfo, ContributionChain chain,
-            Access access, TypeConstant[] atypeParams, ErrorListener errs)
-        {
-        assert struct != null;
-        assert typeinfo != null;
-        assert chain != null;
-        assert access != null;
-
-        boolean fHalt = false;
-
-        // at this point, the typeinfo represents everything that has already been "built up"; our
-        // job is to contribute everything from the class struct to it
-        boolean fTopmost = typeinfo.getFormat() == null;
-        if (fTopmost)
-            {
-            // this is the "top most" class structure, so remember its format
-            typeinfo.setFormat(struct.getFormat());
-            }
-
-        // evaluate type parameters
-        int cTypeParams = atypeParams == null ? 0 : atypeParams.length;
-        Map<StringConstant, TypeConstant> mapClassParams = struct.getTypeParams();
-        if (mapClassParams.isEmpty())
-            {
-            if (cTypeParams  > 0)
-                {
-                fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
-                        struct.getIdentityConstant().getPathString());
-                }
-            }
-        else
-            {
-            List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
-            int cClassParams = listClassParams.size();
-            if (atypeParams != null && cTypeParams != cClassParams)
-                {
-                if (struct.getIdentityConstant().equals(getConstantPool().clzTuple()))
-                    {
-                    // TODO lots of work to validate the tuple type here
-                    }
-                else
-                    {
-                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAMS_WRONG_NUMBER,
-                            struct.getIdentityConstant().getPathString(), cClassParams, cTypeParams);
-                    }
-                }
-
-            for (int i = 0; i < cClassParams; ++i)
-                {
-                Entry<StringConstant, TypeConstant> entry          = listClassParams.get(i);
-                String                              sName          = entry.getKey().getValue();
-                TypeConstant                        typeConstraint = entry.getValue();
-
-                ParamInfo paraminfo = typeinfo.parameters.get(sName);
-                if (paraminfo == null)
-                    {
-                    paraminfo = new ParamInfo(sName);
-                    paraminfo.setConstraintType(typeConstraint);
-                    typeinfo.parameters.put(sName, paraminfo);
-                    }
-                else if (!paraminfo.getConstraintType().isA(typeConstraint)) // TODO what if constraint is a (or refers to a) formal type (see note below etc.etc.etc.)
-                    {
-                    // since we're accumulating type parameter information "on the way down" the
-                    // tree of structures that form the type, it is possible that our constraint is
-                    // "looser" than the constraint that came before us on the way down, e.g. our
-                    // sub-class narrowed our constraint, but any conflict is an error
-                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONSTRAINT,
-                            struct.getIdentityConstant().getPathString(), sName,
-                            typeConstraint.getValueString(),
-                            paraminfo.getConstraintType().getValueString(),
-                            typeinfo.type.getValueString());
-                    }
-
-                if (i >= cTypeParams)
-                    {
-                    // this just means that we already detected a mismatch between the number of
-                    // class parameters and the number of actual type parameters passed in, and we
-                    // already logged that error, so ignore it here
-                    continue;
-                    }
-
-                TypeConstant typeActual = atypeParams[i];
-                assert typeActual != null;
-
-                // quite often, the type parameter type is a reference to a type parameter
-                typeActual = typeActual.resolveGenerics(typeinfo.ensureTypeResolver(errs));
-
-                if (!typeActual.isA(typeConstraint))
-                    {
-                    if (typeConstraint.getDefiningConstant() != null && typeConstraint.getDefiningConstant().equals(getConstantPool().clzTuple()))
-                        {
-                        // TODO lots of work to validate the tuple type here
-                        }
-                    else
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                                struct.getIdentityConstant().getPathString(), sName,
-                                typeConstraint.getValueString(),
-                                typeActual.getValueString(), typeinfo.type.getValueString());
-                        }
-                    }
-
-                TypeConstant typeOld = paraminfo.getActualType();
-                if (typeOld == null)
-                    {
-                    paraminfo.setActualType(typeActual);
-                    }
-                else if (!typeOld.equals(typeActual))
-                    {
-                    fHalt |= log(errs, Severity.ERROR, VE_TYPE_PARAM_CONFLICTING_TYPES,
-                            struct.getIdentityConstant().getPathString(), sName,
-                            typeOld.getValueString(), typeActual.getValueString(),
-                            typeinfo.type.getValueString());
-                    }
-                }
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // first, determine which compositions need to be subsequently processed; any compositions
-        // that have not already (directly or indirectly) been processed by a "higher" (i.e. toward
-        // the topmost) class structure will be the responsibility of this class structure to
-        // compose. for example, consider mixin M2 extends mixin M1, and class B incorporates M1,
-        // and class D extends B incorporates M2; when processing D, it is responsible for M2
-        // which is responsible for M1, so B does not process the M1 composition. to achieve this
-        // behavior, we will ignore any compositions here that have already appeared in the typeinfo
-        List<Contribution> listRawContribs = struct.getContributionsAsList();
-        int                cContribs       = listRawContribs.size();
-        int                iContrib        = 0;
-
-        // peel off all of the annotations at the front of the contribution list
-        List<Contribution> listAnnotations = Collections.EMPTY_LIST;
-        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
-            {
-            // only process annotations
-            Contribution contrib = listRawContribs.get(iContrib);
-            if (contrib.getComposition() != Composition.Annotation)
-                {
-                break;
-                }
-
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (!typeContrib.isExplicitClassIdentity(false))
-                {
-                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                        struct.getIdentityConstant().getPathString(), typeContrib.getValueString());
-                continue NextContrib;
-                }
-
-            // if any mix-ins already registered match or extend this mixin, then this
-            // mix-in gets ignored
-            if (typeinfo.incorporated.contains(typeContrib))
-                {
-                continue NextContrib;
-                }
-            IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
-            for (TypeConstant typeMixin : typeinfo.incorporated)
-                {
-                if (typeMixin.extendsClass(constClass))
-                    {
-                    continue NextContrib;
-                    }
-                }
-
-            // even though we haven't processed it yet, stake our claim to the
-            // responsibility of processing it by registering it in the typeinfo
-            typeinfo.incorporated.add(typeContrib);
-
-            // ... and add it to our list of things that we need to process
-            if (listAnnotations.isEmpty())
-                {
-                listAnnotations = new ArrayList<>();    // lazy list instantiation
-                }
-            listAnnotations.add(contrib);
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        List<Contribution> listContributions = new ArrayList<>();
-        boolean            fInto             = false;
-        boolean            fExtends          = false;
-        switch (struct.getFormat())
-            {
-            case MODULE:
-            case PACKAGE:
-            case ENUMVALUE:
-            case ENUM:
-            case CLASS:
-            case CONST:
-            case SERVICE:
-                {
-                // next up, for any class type (other than Object itself), there MUST be an "extends"
-                // contribution that specifies another class
-                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-                if (fExtends)
-                    {
-                    ++iContrib;
-                    }
-
-                // Object does not (and must not) extend anything
-                if (struct.getIdentityConstant().equals(getConstantPool().clzObject()))
-                    {
-                    if (fExtends)
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        }
-                    break;
-                    }
-
-                // all other classes must extends something
-                if (!fExtends)
-                    {
-                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED,
-                            struct.getIdentityConstant().getPathString());
-                    break;
-                    }
-
-                // the "extends" clause must specify a class identity
-                TypeConstant typeExtends = contrib.getTypeConstant();
-                if (!typeExtends.isExplicitClassIdentity(true))
-                    {
-                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
-                            struct.getIdentityConstant().getPathString(),
-                            typeExtends.getValueString());
-                    break;
-                    }
-
-                if (typeinfo.extended.contains(typeExtends))
-                    {
-                    // some sort of circular loop
-                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
-                            struct.getIdentityConstant().getPathString());
-                    break;
-                    }
-
-                // the class structure will have to verify its "extends" clause in more detail, for
-                // example verifying ClassStructure.isExtendsLegal(); what we need to determine is
-                // we
-                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
-                ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
-                if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
-                    {
-                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                            struct.getIdentityConstant().getPathString(), struct.getFormat(),
-                            constExtends.getPathString(), structExtends.getFormat());
-                    break;
-                    }
-
-                // check for re-basing
-                TypeConstant typeRebase = struct.getRebaseType();
-                if (typeRebase != null)
-                    {
-                    typeinfo.extended.add(typeRebase);
-                    listContributions.add(new Contribution(Composition.RebasesOnto, typeRebase));
-                    }
-
-                // add the "extends" to the list of contributions to process, and register it so
-                // that no one else will do it
-                typeinfo.extended.add(typeExtends);
-                listContributions.add(contrib);
-                }
-                break;
-
-            case MIXIN:
-                {
-                // a mixin can extend another mixin, and it can specify an "into" that defines a
-                // base type that defines the environment that it will be working within. if neither
-                // is present, then there is an implicit "into Object"
-                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-
-                // check "into"
-                fInto = contrib != null && contrib.getComposition() == Composition.Into;
-                if (fInto)
-                    {
-                    ++iContrib;
-
-                    if (typeinfo.getFormat() == Component.Format.MIXIN && typeinfo.getInto() == null)
-                        {
-                        // the first "into" in the inheritance chain is the one that gets used
-                        typeinfo.setInto(contrib.getTypeConstant());
-                        listContributions.add(contrib);
-                        }
-                    else if (typeinfo.getInto() != null && !typeinfo.getInto().isA(contrib.getTypeConstant()))
-                        {
-                        // subsequent "into" clauses in the inheritance chain must be compatible
-                        // with any previous one
-                        // TODO note that this test will is wrong for a mixin into a mixin
-                        fHalt |= log(errs, Severity.ERROR, VE_INTO_INCOMPATIBLE,
-                                struct.getIdentityConstant().getPathString(),
-                                contrib.getTypeConstant().getValueString(),
-                                typeinfo.type.getValueString(), typeinfo.getInto().getValueString());
-                        }
-
-                    // load the next contribution
-                    contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-                    }
-
-                // check "extends"
-                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-                if (fExtends)
-                    {
-                    ++iContrib;
-
-                    TypeConstant typeExtends = contrib.getTypeConstant();
-                    if (!typeExtends.isExplicitClassIdentity(true))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
-                                struct.getIdentityConstant().getPathString(),
-                                typeExtends.getValueString());
-                        break;
-                        }
-
-                    if (typeinfo.incorporated.contains(typeExtends))
-                        {
-                        // some sort of circular loop or badly directed graph
-                        fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    typeinfo.incorporated.add(typeExtends);
-                    listContributions.add(contrib);
-                    }
-                else if (typeinfo.getInto() == null)
-                    {
-                    // add fake "into Object"
-                    TypeConstant typeInto = getConstantPool().typeObject();
-                    typeinfo.setInto(typeInto);
-                    listContributions.add(new Contribution(Composition.Into, typeInto));
-                    }
-                }
-                break;
-
-            case INTERFACE:
-                // first, lay down the set of methods present in Object (use the "Into" composition
-                // to make the Object methods implicit-only, as opposed to explicitly being present
-                // in this interface)
-                if (fTopmost)
-                    {
-                    listContributions.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
-                    }
-                break;
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // like "extends" and "into", only one "impersonates" clause is allowed
-        boolean fImpersonates = false;
-
-        // go through the rest of the contributions, and add the ones that need to be processed to
-        // the list to do
-        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
-            {
-            // only process annotations
-            Contribution contrib     = listRawContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.getTypeConstant();
-
-            switch (contrib.getComposition())
-                {
-                case Annotation:
-                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
-                            struct.getIdentityConstant().getPathString());
-                    break;
-
-                case Into:
-                    // only applicable on a mixin, only one allowed, and it should have been earlier
-                    // in the list of contributions
-                    fHalt |= log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
-                            struct.getIdentityConstant().getPathString());
-                    fInto |= struct.getFormat() == Component.Format.MIXIN;
-                    break;
-
-                case Extends:
-                    // not applicable on an interface, only one allowed, and it should have been
-                    // earlier in the list of contributions
-                    fHalt |= log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
-                            struct.getIdentityConstant().getPathString());
-                    fExtends |= struct.getFormat() != Component.Format.INTERFACE;
-                    break;
-
-                case Impersonates:
-                    if (fImpersonates
-                            || struct.getFormat() == Component.Format.MIXIN
-                            || struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        // only one allowed, and it must be a class type (not mixin or interface)
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    fImpersonates = true;
-
-                    if (contrib.getTypeConstant().isExplicitClassIdentity(true))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_NOT_CLASS,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    if (typeinfo.getImpersonates() == null)
-                        {
-                        typeinfo.setImpersonates(contrib.getTypeConstant());
-                        }
-                    else if (!typeinfo.getImpersonates().isA(contrib.getTypeConstant()))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPERSONATES_INCOMPATIBLE,
-                                struct.getIdentityConstant().getPathString(),
-                                contrib.getTypeConstant().getValueString(),
-                                typeinfo.type.getValueString(),
-                                typeinfo.getImpersonates().getValueString());
-                        }
-                    break;
-
-                case Incorporates:
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    if (!typeContrib.isExplicitClassIdentity(true))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    // TODO handle the conditional case (GG wrote a helper)
-
-                    // if any mix-ins already registered match or extend this mixin, then this
-                    // mix-in gets ignored
-                    if (typeinfo.incorporated.contains(typeContrib))
-                        {
-                        continue NextContrib;
-                        }
-                    IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
-                    for (TypeConstant typeMixin : typeinfo.incorporated)
-                        {
-                        if (typeMixin.extendsClass(constClass))
-                            {
-                            continue NextContrib;
-                            }
-                        }
-
-                    // the mixin must be compatible with this type, as specified by its "into"
-                    // clause; note: have to validate the type before asking it for a typeinfo
-                    fHalt |= typeContrib.validate(errs);
-                    TypeConstant typeInto = typeContrib.getTypeInfo().getInto();
-                    if (typeInto == null)
-                        {
-                        assert typeContrib.getTypeInfo().getFormat() != Component.Format.MIXIN;
-                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        }
-                    else if (!typeinfo.type.isA(typeInto))
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
-                                struct.getIdentityConstant().getPathString(),
-                                contrib.getTypeConstant().getValueString(),
-                                typeinfo.type.getValueString(),
-                                typeInto.getValueString());
-                        }
-                    else
-                        {
-                        // even though we haven't processed it yet, stake our claim to the
-                        // responsibility of processing it by registering it in the typeinfo
-                        typeinfo.incorporated.add(typeContrib);
-
-                        // ... and add it to our list of things that we need to process
-                        listContributions.add(contrib);
-                        }
-                    break;
-
-
-                case Delegates:
-                    // not applicable on an interface
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_DELEGATES_NOT_INTERFACE,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    // even though we haven't processed it yet, stake our claim to the
-                    // responsibility of processing it by registering it in the typeinfo
-                    typeinfo.implemented.add(typeContrib);
-
-                    // ... and add it to our list of things that we need to process
-                    listContributions.add(contrib);
-                    break;
-
-                case Implements:
-                    // must be an "interface type"
-                    if (typeContrib.isExplicitClassIdentity(true)) // TODO TypeConstant.isInterfaceType()
-                        {
-                        fHalt |= log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
-                                contrib.getTypeConstant().getValueString(),
-                                struct.getIdentityConstant().getPathString());
-                        break;
-                        }
-
-                    // check if it is already implemented
-                    if (typeinfo.implemented.contains(typeContrib))
-                        {
-                        continue NextContrib;
-                        }
-                    for (TypeConstant typeImplemented : typeinfo.implemented)
-                        {
-                        List<ContributionChain> listChains = typeImplemented.collectContributions(
-                                typeContrib, new ArrayList<>(), new ArrayList<>());
-                        if (!listChains.isEmpty())
-                            {
-                            for (ContributionChain chainEach : listChains)
-                                {
-                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
-                                    {
-                                    continue NextContrib;
-                                    }
-                                }
-                            }
-                        }
-
-                    // even though we haven't processed it yet, stake our claim to the
-                    // responsibility of processing it by registering it in the typeinfo
-                    typeinfo.implemented.add(typeContrib);
-
-                    // ... and add it to our list of things that we need to process
-                    listContributions.add(contrib);
-                    break;
-
-                default:
-                    throw new IllegalStateException(struct.getIdentityConstant().getPathString()
-                            + ", contribution=" + contrib);
-                }
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // recurse through compositions
-        for (Contribution contrib : listContributions)
-            {
-            // TODO use Contribution "transform" helper
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            chain.add(contrib);
-            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
-            chain.snip();
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // properties & methods
-        for (Component child : struct.children())
-            {
-            switch (child.getFormat())
-                {
-                case PROPERTY:
-                    fHalt |= resolvePropertyStructure((PropertyStructure) child, typeinfo, access, errs);
-                    break;
-
-                case MULTIMETHOD:
-                    for (Component method : child.children())
-                        {
-                        if (method instanceof MethodStructure)
-                            {
-                            fHalt |= resolveMethodStructure((MethodStructure) method, typeinfo, null, access, errs);
-                            }
-                        else
-                            {
-                            throw new IllegalStateException("multi-method " + child.getName()
-                                    + " contains non-method: " + method);
-                            }
-                        }
-                    break;
-
-                case METHOD:
-                case FILE:
-                case RSVD_D:
-                    throw new IllegalStateException("class " + struct.getName()
-                            + " contains illegal child: " + child);
-                }
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // process annotations
-        for (Contribution contrib : listAnnotations)
-            {
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            // TODO what should be passed for "access" here? e.g. should be PROTECTED if the orig was PRIVATE, for example
-            chain.add(contrib);
-            fHalt |= typeContrib.resolveStructure(typeinfo, chain, Access.PUBLIC, null, errs);
-            chain.snip();
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // TODO trim out everything that doesn't meet our accessibility requirements
-
-        return fHalt;
-        }
-
-    /**
-     * Accumulate any information from the passed property structure into the passed
-     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
-     * any errors.
-     *
-     * @param struct    the property structure
-     * @param typeinfo  the type info to contribute to
-     * @param access    the desired accessibility into the current type
-     * @param errs      the error list to log any errors to
-     *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
-    protected boolean resolvePropertyStructure(PropertyStructure struct, TypeInfo typeinfo, Access access, ErrorListener errs)
-        {
-        assert struct != null;
-        assert typeinfo != null;
-        assert access != null;
-
-        boolean fHalt = false;
-
-        String       sName    = struct.getName();
-        PropertyInfo propinfo = typeinfo.properties.get(sName);
-        if (propinfo == null)
-            {
-            propinfo = new PropertyInfo(this, struct.getType(), sName);
-            if (struct.isSynthetic())
-                {
-                propinfo.markReadOnly();
-                }
-            }
-        else
-            {
-            // make sure there are no conflicts
-            // TODO
-
-            // update property remove annotations (some things get over-written; others merged)
-            // TODO
-            }
-
-        // go through children (methods)
-        // TODO
-
-        return fHalt;
-        }
-
-    /**
-     * Accumulate any information from the passed method structure into the passed
-     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
-     * any errors.
-     *
-     * @param struct      the method structure
-     * @param typeinfo    the type info that this method is somehow a part of
-     * @param mapMethods  the map of methods to contribute to
-     * @param access      the desired accessibility into the current type
-     * @param errs        the error list to log any errors to
-     *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
-    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
-            Map<SignatureConstant, MethodInfo> mapMethods, Access access, ErrorListener errs)
-        {
-        assert struct != null;
-        assert typeinfo != null;
-        assert access != null;
-
-        boolean fHalt = false;
-
-        // first determine if this method should be registered
-        // TODO
-        // System.out.println("method: " + struct.getIdentityConstant().getValueString());
-
-        return fHalt;
         }
 
     @Override
@@ -1832,6 +1038,41 @@ public class TerminalTypeConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constId.getPosition());
+        }
+
+    @Override
+    public boolean validate(ErrorListener errs)
+        {
+        boolean fHalt = false;
+
+        if (!isValidated())
+            {
+            fHalt |= super.validate(errs);
+
+            Constant constant = getDefiningConstant();
+            switch (constant.getFormat())
+                {
+                case Module:
+                case Package:
+                case Class:
+                case Typedef:
+                case Property:
+                case Register:
+                case ThisClass:
+                case ParentClass:
+                case ChildClass:
+                    break;
+
+                case UnresolvedName:
+                default:
+                    // this is basically an illegal state exception
+                    fHalt |= log(errs, Severity.ERROR, VE_UNKNOWN, constant.getValueString()
+                            + " (" + constant.getFormat() + ')');
+                    break;
+                }
+            }
+
+        return fHalt;
         }
 
 
