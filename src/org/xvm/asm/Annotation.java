@@ -57,13 +57,12 @@ public class Annotation
     /**
      * Construct an annotation.
      *
-     * @param pool         the ConstantPool that will contain this Constant
      * @param constClass   the class of the annotation
      * @param aconstParam  the parameters of the annotation, or null
      */
-    public Annotation(ConstantPool pool, Constant constClass, Constant[] aconstParam)
+    public Annotation(Constant constClass, Constant[] aconstParam)
         {
-        super(pool);
+        super(constClass.getConstantPool());
 
         if (constClass == null)
             {

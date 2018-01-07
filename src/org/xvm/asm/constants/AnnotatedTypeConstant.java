@@ -72,12 +72,20 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
-        m_annotation = new Annotation(pool, constClass, aconstParam);
+        m_annotation = new Annotation(constClass, aconstParam);
         m_constType  = constType;
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return the annotation
+     */
+    public Annotation getAnnotation()
+        {
+        return m_annotation;
+        }
 
     /**
      * @return the class of the annotation

@@ -645,38 +645,59 @@ public abstract class TypeConstant
 
         // TODO if (constId.equals(getConstantPool().clzTuple())) ...
 
-        for (int i = 0; i < cClassParams; ++i)
+        if (cClassParams > 0)
             {
-            Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
-            String                              sName           = entryClassParam.getKey().getValue();
-            TypeConstant                        typeConstraint  = entryClassParam.getValue();
-            TypeConstant                        typeActual      = null;
-
-            if (i < cTypeParams)
+            ParamInfoTypeResolver resolver = new ParamInfoTypeResolver(mapTypeParams, errs);
+            for (int i = 0; i < cClassParams; ++i)
                 {
-                typeActual = atypeParams[i];
-                assert typeActual != null;
+                Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
+                String                              sName           = entryClassParam.getKey().getValue();
+                TypeConstant                        typeConstraint  = entryClassParam.getValue();
+                TypeConstant                        typeActual      = null;
 
-                // the actual type of the type parameter may refer to other type parameters
-                // TODO typeActual = typeActual.resolveGenerics(ensureTypeResolver(errs));
+                // resolve any generics in the type constraint
+                typeConstraint = typeConstraint.resolveGenerics(resolver);
 
-                if (!typeActual.isA(typeConstraint))
+                // validate the actual type, if there is one
+                if (i < cTypeParams)
                     {
-                    if (typeConstraint.getDefiningConstant() != null && typeConstraint.getDefiningConstant().equals(getConstantPool().clzTuple()))
+                    typeActual = atypeParams[i];
+                    assert typeActual != null;
+
+                    // the actual type of the type parameter may refer to other type parameters
+                    typeActual = typeActual.resolveGenerics(resolver);
+
+                    if (!typeActual.isA(typeConstraint))
                         {
-                        // TODO lots of work to validate the tuple type here
-                        }
-                    else
-                        {
-                        log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                                constId.getPathString(), sName,
-                                typeConstraint.getValueString(),
-                                typeActual.getValueString(), this.getValueString());
+                        if (typeConstraint.getDefiningConstant() != null && typeConstraint.getDefiningConstant().equals(getConstantPool().clzTuple()))
+                            {
+                            // TODO lots of work to validate the tuple type here
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                                    constId.getPathString(), sName,
+                                    typeConstraint.getValueString(),
+                                    typeActual.getValueString(), this.getValueString());
+                            }
                         }
                     }
-                }
 
-            mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                }
+            }
+
+        // build a list of all of the contributions, starting from the implied contributions that
+        // are represented by annotations in this type constant itself, followed by the annotations
+        // in the class structure, followed by the class structure (as its own pseudo-contribution),
+        // followed by the remaining contributions
+        List<Contribution> listContrib = new ArrayList<>();
+        for (TypeConstant typeEach = this; !(typeEach instanceof TerminalTypeConstant); typeEach = typeEach.getUnderlyingType())
+            {
+            if (typeEach instanceof AnnotatedTypeConstant)
+                {
+                listContrib.add(new Contribution(((AnnotatedTypeConstant) typeEach).getAnnotation()));
+                }
             }
 
 /* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - bulldozer plough goes here
@@ -1863,33 +1884,13 @@ public abstract class TypeConstant
 
         public GenericTypeResolver ensureTypeResolver(ErrorListener errs)
             {
-            if (errs == m_errsResolver)
+            assert errs != null;
+
+            ParamInfoTypeResolver resolver = m_resolver;
+            if (resolver == null || resolver.errs != errs)
                 {
-                return m_typeresolver;
+                m_resolver = resolver = new ParamInfoTypeResolver(parameters, errs);
                 }
-
-            GenericTypeResolver resolver = new GenericTypeResolver()
-                {
-                @Override
-                public TypeConstant resolveGenericType(PropertyConstant constProperty)
-                    {
-                    ParamInfo info = parameters.get(constProperty.getName());
-                    if (info == null)
-                        {
-                        return constProperty.asTypeConstant();
-//                        m_errsResolver.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
-//                                new Object[] {sName, type.getValueString()}, type);
-//                        return type.getConstantPool().typeObject();
-                        }
-
-                    TypeConstant typeResolved = info.getActualType();
-                    return typeResolved == null ? type.getConstantPool().typeObject() : typeResolved;
-                    }
-                };
-
-            m_errsResolver = errs;
-            m_typeresolver = resolver;
-
             return resolver;
             }
 
@@ -2156,8 +2157,7 @@ public abstract class TypeConstant
         private transient MethodConstant      m_methodAuto;
 
         // cached resolver
-        private transient ErrorListener       m_errsResolver;
-        private transient GenericTypeResolver m_typeresolver;
+        private transient ParamInfoTypeResolver m_resolver;
         }
 
 
@@ -2218,6 +2218,43 @@ public abstract class TypeConstant
         private String       m_sName;
         private TypeConstant m_typeConstraint;
         private TypeConstant m_typeActual;
+        }
+
+
+    /**
+     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
+     */
+    public static class ParamInfoTypeResolver
+            implements GenericTypeResolver
+        {
+        public ParamInfoTypeResolver(Map<String, ParamInfo> parameters, ErrorListener errs)
+            {
+            assert parameters != null;
+            assert errs != null;
+
+            this.parameters = parameters;
+            this.errs       = errs;
+            }
+
+        @Override
+        public TypeConstant resolveGenericType(PropertyConstant constProperty)
+            {
+            ParamInfo info = parameters.get(constProperty.getName());
+            if (info == null)
+                {
+// TODO either the name is naturally unknown (so return the property as the type constant), or this is an error -- which is it?
+// TODO need to figure out (in actual usage) when this can happen, and whether any of those times indicate an error!
+//                        m_errs.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
+//                                new Object[] {sName, type.getValueString()}, type);
+//                        return type.getConstantPool().typeObject();
+                return constProperty.asTypeConstant();
+                }
+
+            return info.getActualType();
+            }
+
+        public final Map<String, ParamInfo> parameters;
+        public final ErrorListener          errs;
         }
 
 

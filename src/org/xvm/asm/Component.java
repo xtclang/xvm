@@ -459,7 +459,7 @@ public abstract class Component
      */
     public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
-        addContribution(new Contribution(constType, aconstParam));
+        addContribution(new Contribution(new Annotation(constType, aconstParam)));
         }
 
     /**
@@ -2240,24 +2240,20 @@ public abstract class Component
                 throws IOException
             {
             m_composition = Composition.valueOf(in.readUnsignedByte());
-            m_constContrib = pool.getConstant(readIndex(in));
-            switch (m_composition)
+            if (m_composition == Composition.Annotation)
                 {
-                case Delegates:
+                m_annotation   = new Annotation(pool, in);
+                m_constContrib = m_annotation.getAnnotationClass();
+                }
+            else
+                {
+                m_constContrib = pool.getConstant(readIndex(in));
+                if (m_composition == Composition.Delegates)
+                    {
                     m_constProp = (PropertyConstant) pool.getConstant(readIndex(in));
-                    break;
-
-                case Annotation:
-                    final int cConsts = readMagnitude(in);
-                    final Constant[] aconst = new Constant[cConsts];
-                    for (int i = 0; i < cConsts; ++i)
-                        {
-                        aconst[i] = pool.getConstant(readIndex(in));
-                        }
-                    m_aconstArgs = aconst;
-                    break;
-
-                case Incorporates:
+                    }
+                else if (m_composition == Composition.Incorporates)
+                    {
                     final int cParams = readMagnitude(in);
                     if (cParams > 0)
                         {
@@ -2265,11 +2261,11 @@ public abstract class Component
                         for (int i = 0; i < cParams; ++i)
                             {
                             map.put((StringConstant) pool.getConstant(readMagnitude(in)),
-                                    (TypeConstant  ) pool.getConstant(readMagnitude(in)));
+                                    (TypeConstant) pool.getConstant(readMagnitude(in)));
                             }
                         m_mapParams = map;
                         }
-                    break;
+                    }
                 }
             }
 
@@ -2378,23 +2374,17 @@ public abstract class Component
             }
 
         /**
-         * Construct an annotation Contribution with optional parameters.
+         * Construct an annotation Contribution.
          *
-         * @param constType    specifies the class type of the annotation
-         * @param aconstParam  an array of annotation parameters; may be null
+         * @param annotation  the annotation
          */
-        protected Contribution(TypeConstant constType, Constant[] aconstParam)
+        public Contribution(Annotation annotation)
             {
-            assert constType != null;
-
-            if (aconstParam != null)
-                {
-                checkElementsNonNull(aconstParam);
-                }
+            assert annotation != null;
 
             m_composition  = Composition.Annotation;
-            m_constContrib = constType;
-            m_aconstArgs   = aconstParam;
+            m_constContrib = annotation.getAnnotationClass();
+            m_annotation   = annotation;
             }
 
         /**
@@ -2466,11 +2456,11 @@ public abstract class Component
             }
 
         /**
-         * @return a list of annotation parameters; never null
+         * @return the annotation (if this is an annotation contribution)
          */
-        public List<Constant> getAnnotationParameters()
+        public Annotation getAnnotation()
             {
-            return m_aconstArgs == null ? Collections.EMPTY_LIST : Arrays.asList(m_aconstArgs);
+            return m_annotation;
             }
 
         /**
@@ -2596,13 +2586,9 @@ public abstract class Component
             m_constContrib =                    pool.register(m_constContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
-            final Constant[] aconst = m_aconstArgs;
-            if (aconst != null)
+            if (m_annotation != null)
                 {
-                for (int i = 0, c = aconst.length; i < c; ++i)
-                    {
-                    aconst[i] = pool.register(aconst[i]);
-                    }
+                m_annotation.registerConstants(pool);
                 }
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
@@ -2625,24 +2611,19 @@ public abstract class Component
                 throws IOException
             {
             out.writeByte(m_composition.ordinal());
-            writePackedLong(out, m_constContrib.getPosition());
-            switch (m_composition)
+            if (m_composition == Composition.Annotation)
                 {
-                case Delegates:
+                m_annotation.assemble(out);
+                }
+            else
+                {
+                writePackedLong(out, m_constContrib.getPosition());
+                if (m_composition == Composition.Delegates)
+                    {
                     writePackedLong(out, Constant.indexOf(m_constProp));
-                    break;
-
-                case Annotation:
-                    final Constant[] aconst = m_aconstArgs;
-                    final int cConsts = aconst == null ? 0 : aconst.length;
-                    writePackedLong(out, cConsts);
-                    for (int i = 0; i < cConsts; ++i)
-                        {
-                        writePackedLong(out, aconst[i].getPosition());
-                        }
-                    break;
-
-                case Incorporates:
+                    }
+                else if (m_composition == Composition.Incorporates)
+                    {
                     final ListMap<StringConstant, TypeConstant> map = m_mapParams;
                     if (map == null)
                         {
@@ -2653,10 +2634,11 @@ public abstract class Component
                         writePackedLong(out, map.size());
                         for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet())
                             {
-                            writePackedLong(out, entry.getKey()  .getPosition());
+                            writePackedLong(out, entry.getKey().getPosition());
                             writePackedLong(out, entry.getValue().getPosition());
                             }
                         }
+                    }
                 }
             }
 
@@ -2677,8 +2659,8 @@ public abstract class Component
             return this.m_composition == that.m_composition
                     && this.m_constContrib.equals(that.m_constContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
-                    && Handy.equalArraysNullOk(this.m_aconstArgs, that.m_aconstArgs)
-                    && Handy.equals(this.m_mapParams, that.m_mapParams);
+                    && Handy.equals(this.m_annotation, that.m_annotation)
+                    && Handy.equals(this.m_mapParams, that.m_mapParams);    // TODO should this compare "asList()" of each? (because order matters?)
             }
 
         @Override
@@ -2750,12 +2732,13 @@ public abstract class Component
 
                 if (m_composition == Composition.Annotation)
                     {
-                    if (m_aconstArgs != null && m_aconstArgs.length > 0)
+                    Constant[] aconstArgs = m_annotation.getParams();
+                    if (aconstArgs.length > 0)
                         {
                         sb.append('(');
 
                         boolean fFirst = true;
-                        for (Constant constParam : m_aconstArgs)
+                        for (Constant constParam : aconstArgs)
                             {
                             if (fFirst)
                                 {
@@ -2790,20 +2773,20 @@ public abstract class Component
 
         /**
          * Defines the module (ModuleConstant) or class (TypeConstant) that was used as part
-         * of the composition.
+         * of the Contribution.
          */
         private Constant m_constContrib;
 
         /**
-         * The property specifying the delegate, if this Composition represents a "delegates"
+         * The property specifying the delegate, if this Contribution represents a "delegates"
          * clause.
          */
         private PropertyConstant m_constProp;
 
         /**
-         * The optional arguments, if this Composition represents an annotation.
+         * The annotation data, if this Contribution represents an annotation.
          */
-        private Constant[] m_aconstArgs;
+        private Annotation m_annotation;
 
         /**
          * The name-to-type information for "incorporates conditional" constraints.
