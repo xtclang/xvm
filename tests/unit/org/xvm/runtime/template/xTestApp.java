@@ -10,7 +10,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 /**
  * A test class.
@@ -19,23 +19,23 @@ public class xTestApp extends xModule
     {
     private final Adapter adapter;
 
-    public xTestApp(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xTestApp(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {
             INSTANCE = this;
             }
-        adapter = types.f_container.f_adapter;
+        adapter = templates.f_container.f_adapter;
         }
 
     @Override
     public void initDeclared()
         {
-        f_types.getTemplate("TestApp.TestClass");
-        f_types.getTemplate("TestApp.TestClass2");
-        f_types.getTemplate("TestApp.TestService");
+        f_templates.getTemplate("TestApp.TestClass");
+        f_templates.getTemplate("TestApp.TestClass2");
+        f_templates.getTemplate("TestApp.TestService");
 
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
@@ -511,7 +511,7 @@ public class xTestApp extends xModule
 
         // ----- testConst()
 
-        ClassTemplate ctPoint = f_types.getTemplate("TestApp.Point");
+        ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
         adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
         MethodStructure mtConst = ctPoint.ensureMethodStructure("construct",
                 new String[] {"Int64", "Int64"});
@@ -546,7 +546,7 @@ public class xTestApp extends xModule
             .add(new GP_Add(0, 1, 0))
             .add(new Return_1(0));
 
-        ClassTemplate ctRectangle = f_types.getTemplate("TestApp.Rectangle");
+        ClassTemplate ctRectangle = f_templates.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[]{"TestApp.Point", "TestApp.Point"}, VOID);
         MethodStructure mtRectangle = ctRectangle.ensureMethodStructure("construct",
             new String[]{"TestApp.Point", "TestApp.Point"});
@@ -610,7 +610,7 @@ public class xTestApp extends xModule
 
             .add(new Return_0());
 
-        ClassTemplate ctFormatter = f_types.getTemplate("TestApp.Formatter");
+        ClassTemplate ctFormatter = f_templates.getTemplate("TestApp.Formatter");
         adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
 
         MethodStructure mtFormatter = ctFormatter.ensureMethodStructure("construct", STRING);
@@ -626,7 +626,7 @@ public class xTestApp extends xModule
             .add(new GP_Add(0, 1, 0))
             .add(new Return_1(0));
 
-        ClassTemplate ctPrPoint = f_types.getTemplate("TestApp.PrettyPoint");
+        ClassTemplate ctPrPoint = f_templates.getTemplate("TestApp.PrettyPoint");
         MethodStructure mtPrPConst = ctPrPoint.ensureMethodStructure("construct",
                 new String[] {"Int64", "Int64", "String"});
         mtPrPConst.createCode()
@@ -637,7 +637,7 @@ public class xTestApp extends xModule
                     2))
             .add(new Return_0());
 
-        ClassTemplate ctPrRectangle = f_types.getTemplate("TestApp.PrettyRectangle");
+        ClassTemplate ctPrRectangle = f_templates.getTemplate("TestApp.PrettyRectangle");
         MethodStructure mtPrRConst = ctPrRectangle.ensureMethodStructure("construct",
                 new String[] {"TestApp.Point", "TestApp.Point", "String"});
         mtPrRConst.createCode()

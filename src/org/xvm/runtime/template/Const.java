@@ -16,7 +16,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Enum.EnumHandle;
@@ -34,9 +34,9 @@ public class Const
     // name of the synthetic property for cached hash value
     public static final String PROP_HASH = "@hash";
 
-    public Const(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Const(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

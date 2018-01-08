@@ -17,7 +17,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Service.ServiceHandle;
@@ -33,9 +33,9 @@ public class Function
     {
     public static Function INSTANCE;
 
-    public Function(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Function(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

@@ -8,7 +8,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.Service;
 
@@ -20,11 +20,11 @@ public class xTestService extends Service
     {
     private final Adapter adapter;
 
-    public xTestService(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xTestService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
-        adapter = types.f_container.f_adapter;
+        adapter = templates.f_container.f_adapter;
         }
 
     @Override

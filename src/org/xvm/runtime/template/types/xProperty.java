@@ -10,7 +10,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -21,9 +21,9 @@ public class xProperty
     {
     public static xProperty INSTANCE;
 
-    public xProperty(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xProperty(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

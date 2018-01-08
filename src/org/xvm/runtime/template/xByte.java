@@ -11,7 +11,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -20,9 +20,9 @@ import org.xvm.runtime.TypeSet;
 public class xByte
         extends ClassTemplate
     {
-    public xByte(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xByte(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
         }
 
     @Override

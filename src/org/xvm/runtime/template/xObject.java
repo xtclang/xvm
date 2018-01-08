@@ -8,7 +8,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -20,9 +20,9 @@ public class xObject
     public static xObject INSTANCE;
     public static TypeComposition CLASS;
 
-    public xObject(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xObject(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

@@ -27,14 +27,14 @@ import org.xvm.runtime.template.collections.xTuple;
  */
 public class ObjectHeap
     {
-    public final TypeSet f_types;
+    public final TemplateRegistry f_templates;
     public final ConstantPool f_pool;
 
     Map<Integer, ObjectHandle> m_mapConstants = new HashMap<>();
 
-    public ObjectHeap(ConstantPool pool, TypeSet types)
+    public ObjectHeap(ConstantPool pool, TemplateRegistry templates)
         {
-        f_types = types;
+        f_templates = templates;
         f_pool = pool;
         }
 
@@ -115,7 +115,7 @@ public class ObjectHeap
             case SingletonConst:
                 {
                 SingletonConstant constEnum = (SingletonConstant) constValue;
-                ClassTemplate template = f_types.getTemplate(constEnum.getValue());
+                ClassTemplate template = f_templates.getTemplate(constEnum.getValue());
                 assert (template.isSingleton());
                 return template;
                 }

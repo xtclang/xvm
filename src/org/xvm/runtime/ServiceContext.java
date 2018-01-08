@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.Service;
 import org.xvm.runtime.template.Service.PropertyOperation;
 import org.xvm.runtime.template.Service.PropertyOperation10;
@@ -34,7 +33,7 @@ import org.xvm.runtime.template.Service.ServiceHandle;
 public class ServiceContext
     {
     public final Container f_container;
-    public final TypeSet f_types;
+    public final TemplateRegistry f_templates;
     public final ObjectHeap f_heapGlobal;
     public final ConstantPool f_pool;
 
@@ -80,7 +79,7 @@ public class ServiceContext
         f_nId = nId;
 
         f_heapGlobal = container.f_heapGlobal;
-        f_types = container.f_types;
+        f_templates = container.f_templates;
         f_pool = container.f_pool;
         f_queueMsg = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
@@ -600,7 +599,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
-                    Service service = (Service) frame.f_context.f_types.getTemplate(constClass);
+                    Service service = (Service) frame.f_context.f_templates.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }

@@ -105,7 +105,7 @@ public class Adapter
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
                 }
 
-            ClassConstant constClass = f_container.f_types.getClassConstant(sSimpleName);
+            ClassConstant constClass = f_container.f_templates.getClassConstant(sSimpleName);
             if (constClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
@@ -145,7 +145,7 @@ public class Adapter
 
     public int ensureEnumConstId(String sEnum)
         {
-        ClassConstant constClass = f_container.f_types.getClassConstant(sEnum);
+        ClassConstant constClass = f_container.f_templates.getClassConstant(sEnum);
         return Op.CONSTANT_OFFSET -
             f_container.f_pool.ensureSingletonConstConstant(constClass).getPosition();
         }
@@ -159,7 +159,7 @@ public class Adapter
     // get a "relative" method constant id
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
-        ClassTemplate template = f_container.f_types.getTemplate(sClassName);
+        ClassTemplate template = f_container.f_templates.getTemplate(sClassName);
 
         return Op.CONSTANT_OFFSET -
             getMethod(template, sMethName, asArgType, asRetType).getIdentityConstant().getPosition();
@@ -217,7 +217,7 @@ public class Adapter
         {
         try
             {
-            ClassConstant constClass = f_container.f_types.getClassConstant(sClassName);
+            ClassConstant constClass = f_container.f_templates.getClassConstant(sClassName);
             ClassStructure struct = (ClassStructure) constClass.getComponent();
             PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
             return Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition();

@@ -8,7 +8,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
@@ -23,9 +23,9 @@ public class xAtomicIntNumber
     {
     public static xAtomicIntNumber INSTANCE;
 
-    public xAtomicIntNumber(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xAtomicIntNumber(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {

@@ -14,7 +14,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Enum;
@@ -38,9 +38,9 @@ public class xFutureVar
     public static EnumHandle Result;
     public static EnumHandle Error;
 
-    public xFutureVar(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xFutureVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -57,7 +57,7 @@ public class xFutureVar
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
 
-        Enum enumCompletion = (Enum) f_types.getTemplate("annotations.FutureVar.Completion");
+        Enum enumCompletion = (Enum) f_templates.getTemplate("annotations.FutureVar.Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");

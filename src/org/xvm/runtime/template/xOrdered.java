@@ -5,7 +5,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -20,9 +20,9 @@ public class xOrdered
 
     public static TypeConstant[] TYPES;
 
-    public xOrdered(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xOrdered(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {

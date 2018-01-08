@@ -24,7 +24,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
@@ -911,7 +910,7 @@ public class TerminalTypeConstant
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        TypeComposition clz = frame.f_context.f_types.resolveClass(this);
+        TypeComposition clz = frame.f_context.f_templates.resolveClass(this);
         return clz.f_template.callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -923,7 +922,7 @@ public class TerminalTypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        TypeComposition clz = frame.f_context.f_types.resolveClass(this);
+        TypeComposition clz = frame.f_context.f_templates.resolveClass(this);
         return clz.f_template.callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 

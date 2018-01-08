@@ -31,7 +31,7 @@ import org.xvm.runtime.template.xModule.ModuleHandle;
 public class Container
     {
     final public Runtime f_runtime;
-    final public TypeSet f_types;
+    final public TemplateRegistry f_templates;
     final public ConstantPool f_pool;
     final public Adapter f_adapter;
     final public ObjectHeap f_heapGlobal;
@@ -66,8 +66,8 @@ public class Container
 
         f_pool = f_module.getConstantPool();
         f_adapter = new Adapter(this);
-        f_types = new TypeSet(this);
-        f_heapGlobal = new ObjectHeap(f_pool, f_types);
+        f_templates = new TemplateRegistry(this);
+        f_heapGlobal = new ObjectHeap(f_pool, f_templates);
         }
 
     public void start()
@@ -78,20 +78,20 @@ public class Container
             }
         Utils.registerGlobalSignatures(f_pool);
 
-        f_types.getTemplate("Object");
+        f_templates.getTemplate("Object");
 
         // the native interfaces are pseudo-classes (also with INSTANCE static variable)
-        f_types.initNativeInterfaces();
+        f_templates.initNativeInterfaces();
 
         // every native class that has an INSTANCE static variable may need to be here
-        f_types.getTemplate("String");
-        f_types.getTemplate("Boolean");
-        f_types.getTemplate("Module");
-        f_types.getTemplate("Class");
-        f_types.getTemplate("Type");
-        f_types.getTemplate("Ordered");
-        f_types.getTemplate("types.Method");
-        f_types.getTemplate("types.Property");
+        f_templates.getTemplate("String");
+        f_templates.getTemplate("Boolean");
+        f_templates.getTemplate("Module");
+        f_templates.getTemplate("Class");
+        f_templates.getTemplate("Type");
+        f_templates.getTemplate("Ordered");
+        f_templates.getTemplate("types.Method");
+        f_templates.getTemplate("types.Property");
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,
@@ -102,10 +102,10 @@ public class Container
 
         try
             {
-            // xModule module = (xModule) f_types.getTemplate(sModule);
-            ClassTemplate app = f_types.getTemplate(f_sAppName);
+            // xModule module = (xModule) f_templates.getTemplate(sModule);
+            ClassTemplate app = f_templates.getTemplate(f_sAppName);
 
-            MethodStructure mtRun = app.getDeclaredMethod("run", TypeSet.VOID, TypeSet.VOID);
+            MethodStructure mtRun = app.getDeclaredMethod("run", TemplateRegistry.VOID, TemplateRegistry.VOID);
             if (mtRun == null)
                 {
                 System.err.println("Missing run() method for " + f_sAppName);
@@ -126,12 +126,12 @@ public class Container
     protected void initResources()
         {
         // +++ RuntimeClock
-        ClassTemplate templateClock = f_types.getTemplate("Clock");
+        ClassTemplate templateClock = f_templates.getTemplate("Clock");
         if (templateClock != null)
             {
             TypeConstant typeClock = templateClock.f_clazzCanonical.ensurePublicType();
 
-            ClassTemplate templateRTClock = f_types.getTemplate("Clock.RuntimeClock");
+            ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
                 Service.makeHandle(createServiceContext("RuntimeClock"),
@@ -141,12 +141,12 @@ public class Container
             }
 
         // +++ Console
-        ClassTemplate templateConsole = f_types.getTemplate("io.Console");
+        ClassTemplate templateConsole = f_templates.getTemplate("io.Console");
         if (templateConsole != null)
             {
             TypeConstant typeConsole = templateConsole.f_clazzCanonical.ensurePublicType();
 
-            ClassTemplate templateRTConsole = f_types.getTemplate("io.Console.TerminalConsole");
+            ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
                 Service.makeHandle(createServiceContext("Console"),

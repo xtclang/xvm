@@ -9,7 +9,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -19,12 +19,11 @@ public class xTestClass extends ClassTemplate
     {
     private final Adapter adapter;
 
-    public xTestClass(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xTestClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
-
-        adapter = types.f_container.f_adapter;
+        adapter = templates.f_container.f_adapter;
         }
 
     @Override

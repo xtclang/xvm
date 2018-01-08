@@ -15,7 +15,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -26,9 +26,9 @@ public class xClass
     {
     public static xClass INSTANCE;
 
-    public xClass(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -53,7 +53,7 @@ public class xClass
             TypeConstant typeTarget = (TypeConstant) constant;
 
             return m_mapHandles.computeIfAbsent(typeTarget, type ->
-                new ClassHandle(f_types.resolveClass(
+                new ClassHandle(f_templates.resolveClass(
                     type.getPosition(), frame.getGenericsResolver())));
             }
         return null;

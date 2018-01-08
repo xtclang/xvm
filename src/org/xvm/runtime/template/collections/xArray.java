@@ -17,7 +17,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
@@ -34,15 +34,15 @@ public class xArray
     {
     public static xArray INSTANCE;
 
-    public xArray(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {
             INSTANCE = this;
 
-            new xIntArray(f_types, f_struct, true); // TODO: how to do it right?
+            new xIntArray(f_templates, f_struct, true); // TODO: how to do it right?
             }
         }
 
@@ -64,7 +64,7 @@ public class xArray
         TypeConstant typeArray = constArray.getType();
 
         TypeConstant typeEl = typeArray.getActualParamType("ElementType");
-        ClassTemplate templateEl = f_types.resolveClass(typeEl).f_template;
+        ClassTemplate templateEl = f_templates.resolveClass(typeEl).f_template;
 
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
@@ -78,7 +78,7 @@ public class xArray
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
         IndexSupport templateArray = (IndexSupport) hArray.f_clazz.f_template;
 
-        ObjectHeap heap = f_types.f_container.f_heapGlobal;
+        ObjectHeap heap = f_templates.f_container.f_heapGlobal;
 
         for (int i = 0; i < cSize; i++)
             {
@@ -104,7 +104,7 @@ public class xArray
         {
         // this is a native constructor
         TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        ClassTemplate templateEl = f_types.resolveClass(typeEl).f_template;
+        ClassTemplate templateEl = f_templates.resolveClass(typeEl).f_template;
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 

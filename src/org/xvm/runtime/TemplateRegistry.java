@@ -31,23 +31,23 @@ import org.xvm.runtime.template.xObject;
 /**
  * The type registry.
  */
-public class TypeSet
+public class TemplateRegistry
     {
     public final Container f_container;
-    final public Adapter f_adapter;
+    public final Adapter f_adapter;
 
     // native templates
-    final private Map<String, Class> f_mapTemplateClasses = new HashMap<>();
+    private final Map<String, Class> f_mapTemplateClasses = new HashMap<>();
 
     // cache - ClassTemplates by name
-    final private Map<String, ClassTemplate> f_mapTemplatesByName = new ConcurrentHashMap<>();
+    private final Map<String, ClassTemplate> f_mapTemplatesByName = new ConcurrentHashMap<>();
 
     // cache - ClassTemplates by type
-    final private Map<TypeConstant, ClassTemplate> f_mapTemplateByType = new ConcurrentHashMap<>();
+    private final Map<TypeConstant, ClassTemplate> f_mapTemplateByType = new ConcurrentHashMap<>();
 
     public final static TypeConstant[] VOID = ConstantPool.NO_TYPES;
 
-    TypeSet(Container container)
+    TemplateRegistry(Container container)
         {
         f_container = container;
         f_adapter = container.f_adapter;
@@ -212,7 +212,7 @@ public class TypeSet
 
         try
             {
-            return clz.getConstructor(TypeSet.class, ClassStructure.class, Boolean.TYPE).
+            return clz.getConstructor(TemplateRegistry.class, ClassStructure.class, Boolean.TYPE).
                     newInstance(this, structClass, Boolean.TRUE);
             }
         catch (Exception e)

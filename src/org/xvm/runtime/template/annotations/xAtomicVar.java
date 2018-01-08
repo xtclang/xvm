@@ -12,7 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -25,9 +25,9 @@ import org.xvm.runtime.template.xVar;
 public class xAtomicVar
         extends xVar
     {
-    public xAtomicVar(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xAtomicVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
         }
 
     @Override

@@ -12,7 +12,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
@@ -27,9 +27,9 @@ public class xRuntimeClock
     {
     public static Timer TIMER = new Timer("RuntimeClock", true);
 
-    public xRuntimeClock(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xRuntimeClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
         }
 
     @Override

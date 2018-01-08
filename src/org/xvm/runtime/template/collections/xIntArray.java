@@ -15,7 +15,7 @@ import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
@@ -30,9 +30,9 @@ public class xIntArray
     {
     public static xIntArray INSTANCE;
 
-    public xIntArray(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xIntArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {

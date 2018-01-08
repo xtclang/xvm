@@ -9,7 +9,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -17,8 +16,8 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -48,7 +47,7 @@ import org.xvm.runtime.template.collections.xArray;
  */
 public abstract class ClassTemplate
     {
-    public final TypeSet f_types;
+    public final TemplateRegistry f_templates;
     public final ClassStructure f_struct;
 
     public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
@@ -66,9 +65,9 @@ public abstract class ClassTemplate
     protected Map<TypeConstant, TypeComposition> m_mapCompositions = new HashMap<>();
 
     // construct the template
-    public ClassTemplate(TypeSet types, ClassStructure structClass)
+    public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
         {
-        f_types = types;
+        f_templates = templates;
         f_struct = structClass;
         f_sName = structClass.getIdentityConstant().getPathString();
 
@@ -92,7 +91,7 @@ public abstract class ClassTemplate
                 getTypeConstant().getDefiningConstant();
 
             structSuper = (ClassStructure) idExtend.getComponent();
-            templateSuper = f_types.getTemplate(structSuper.getIdentityConstant());
+            templateSuper = f_templates.getTemplate(structSuper.getIdentityConstant());
             fService = templateSuper.isService();
             }
 
@@ -310,19 +309,16 @@ public abstract class ClassTemplate
     // compare the specified types
     private static boolean compareTypes(TypeConstant tTest, TypeConstant tParam)
         {
-        // TODO: remove all this
-        while (tTest.isSingleDefiningConstant()
-                && tTest.getDefiningConstant().getFormat() == Format.Typedef)
+        if (tTest.isSingleDefiningConstant() && tParam.isSingleDefiningConstant())
             {
-            tTest = ((TypedefStructure)
-                    ((IdentityConstant) tTest.getDefiningConstant()).getComponent()).getType();
-            }
+            // compensate for "function"
+            ClassConstant constFunction = tParam.getConstantPool().clzFunction();
 
-        // compensate for "function"
-        if (tTest.getValueString().contains("Function") &&
-            tParam.getValueString().contains("Function"))
-            {
-            return true;
+            if (tTest.getDefiningConstant().equals(constFunction) &&
+                tParam.getDefiningConstant().equals(constFunction))
+                {
+                return true;
+                }
             }
 
         return tTest.equals(tParam);
@@ -956,7 +952,7 @@ public abstract class ClassTemplate
         {
         PropertyInfo info = property.getInfo();
         TypeConstant type = info == null ? null : info.m_typeAnnotation;
-        return type == null ? null : f_types.resolveClass(type);
+        return type == null ? null : f_templates.resolveClass(type);
         }
 
     protected boolean isGenericType(String sProperty)
@@ -983,13 +979,13 @@ public abstract class ClassTemplate
 
     public MethodStructure ensureMethodStructure(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_types.f_adapter.getMethod(this, sName, asParam, asRet);
+        MethodStructure method = f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
             {
             MethodStructure methodSuper = null;
             for (TypeComposition clzSuper : f_clazzCanonical.getCallChain())
                 {
-                methodSuper = f_types.f_adapter.getMethod(clzSuper.f_template, sName, asParam, asRet);
+                methodSuper = f_templates.f_adapter.getMethod(clzSuper.f_template, sName, asParam, asRet);
                 if (methodSuper != null)
                     {
                     break;
@@ -1078,7 +1074,7 @@ public abstract class ClassTemplate
         PropertyInfo info = property.getInfo();
         if (info == null)
             {
-            property.setInfo(info = new PropertyInfo(f_types.f_container.f_pool, property));
+            property.setInfo(info = new PropertyInfo(f_templates.f_container.f_pool, property));
             }
         return info;
         }

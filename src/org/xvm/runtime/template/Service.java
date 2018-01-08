@@ -19,7 +19,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function.FunctionHandle;
@@ -35,9 +35,9 @@ public class Service
     {
     public static Service INSTANCE;
 
-    public Service(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Service(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

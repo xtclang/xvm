@@ -12,7 +12,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xIntArray;
 
@@ -25,9 +25,9 @@ public class xInt64
     {
     public static xInt64 INSTANCE;
 
-    public xInt64(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {

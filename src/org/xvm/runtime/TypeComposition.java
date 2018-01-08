@@ -243,7 +243,7 @@ public class TypeComposition
 
             TypeConstant typeInto = contribInto.resolveGenerics(this);
 
-            TypeComposition clzInto = f_template.f_types.resolveClass(typeInto);
+            TypeComposition clzInto = f_template.f_templates.resolveClass(typeInto);
 
             addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
             }
@@ -257,7 +257,7 @@ public class TypeComposition
                     TypeConstant typeInto = contrib.resolveGenerics(this);
                     if (typeInto != null)
                         {
-                        TypeComposition clzContribution = f_template.f_types.resolveClass(typeInto);
+                        TypeComposition clzContribution = f_template.f_templates.resolveClass(typeInto);
                         addNoDupes(clzContribution.collectDeclaredCallChain(false), list, set);
                         }
                     break;
@@ -322,7 +322,7 @@ public class TypeComposition
                     TypeConstant typeInto = contrib.resolveGenerics(this);
                     if (typeInto != null)
                         {
-                        TypeComposition clzContribution = f_template.f_types.resolveClass(typeInto);
+                        TypeComposition clzContribution = f_template.f_templates.resolveClass(typeInto);
                         addNoDupes(clzContribution.collectDefaultCallChain(), list, set);
                         }
                     break;

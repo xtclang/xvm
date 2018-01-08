@@ -9,7 +9,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.Ref;
@@ -23,9 +23,9 @@ public class xInjectedRef
     {
     public static xInjectedRef INSTANCE;
 
-    public xInjectedRef(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xInjectedRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -68,7 +68,7 @@ public class xInjectedRef
                 {
                 TypeConstant typeEl = m_type.getActualParamType("RefType");
 
-                hValue = m_hDelegate = INSTANCE.f_types.f_container.getInjectable(m_sName, typeEl);
+                hValue = m_hDelegate = INSTANCE.f_templates.f_container.getInjectable(m_sName, typeEl);
                 if (hValue == null)
                     {
                     throw xException.makeHandle("Unknown injectable property " + m_sName).getException();

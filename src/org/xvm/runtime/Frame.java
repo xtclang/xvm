@@ -87,7 +87,7 @@ public class Frame
         f_framePrev = framePrev;
         f_iPCPrev = framePrev.m_iPC;
 
-        f_adapter = f_context.f_types.f_adapter;
+        f_adapter = f_context.f_templates.f_adapter;
 
         f_function = function;
         f_aOp      = function == null ? Op.STUB : function.getOps();
@@ -110,7 +110,7 @@ public class Frame
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = fiber.f_context;
-        f_adapter = f_context.f_types.f_adapter;
+        f_adapter = f_context.f_templates.f_adapter;
         f_iId = f_context.m_iFrameCounter++;
         f_fiber = fiber;
         f_framePrev = null;
@@ -138,7 +138,7 @@ public class Frame
         f_framePrev = framePrev;
         f_iPCPrev = framePrev.m_iPC;
 
-        f_adapter = f_context.f_types.f_adapter;
+        f_adapter = f_context.f_templates.f_adapter;
 
         f_function = null;
         f_aOp = aopNative;
@@ -586,7 +586,7 @@ public class Frame
     // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK
     public int assignTuple(int iVar, ObjectHandle[] ahValue)
         {
-        TypeComposition clazz = f_context.f_types.resolveClass(getVarInfo(iVar).getType());
+        TypeComposition clazz = f_context.f_templates.resolveClass(getVarInfo(iVar).getType());
 
         return assignValue(iVar, xTuple.makeHandle(clazz, ahValue));
         }
@@ -643,7 +643,7 @@ public class Frame
 
         int iReturn = f_aiReturn[0];
 
-        TypeComposition clazz = f_context.f_types.resolveClass(f_framePrev.getVarInfo(iReturn).getType());
+        TypeComposition clazz = f_context.f_templates.resolveClass(f_framePrev.getVarInfo(iReturn).getType());
         return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
         }
 
@@ -790,18 +790,18 @@ public class Frame
         {
         if (iArg >= 0)
             {
-            return f_context.f_types.resolveClass(getVarInfo(iArg).getType());
+            return f_context.f_templates.resolveClass(getVarInfo(iArg).getType());
             }
 
         // "local property"
         TypeConstant typeProp = getConstant(iArg).getRefType();
-        return f_context.f_types.resolveClass(typeProp.resolveGenerics(getGenericsResolver()));
+        return f_context.f_templates.resolveClass(typeProp.resolveGenerics(getGenericsResolver()));
         }
 
     public TypeComposition resolveClass(int iArg)
         {
         assert iArg < Op.CONSTANT_OFFSET;
-        return f_context.f_types.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
+        return f_context.f_templates.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or

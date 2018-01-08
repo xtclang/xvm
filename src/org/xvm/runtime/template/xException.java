@@ -14,7 +14,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -25,9 +25,9 @@ public class xException
     {
     public static xException INSTANCE;
 
-    public xException(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xException(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -39,7 +39,7 @@ public class xException
     public void initDeclared()
         {
         // TODO: remove everything when compiler generates the constructors
-        f_types.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
+        f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
         markNativeMethod("to", VOID, STRING);
 
         MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});

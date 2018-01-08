@@ -12,7 +12,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -24,9 +24,9 @@ public class Ref
     public static Ref INSTANCE;
     public static TypeConstant TYPE;
 
-    public Ref(TypeSet types, ClassStructure structure, boolean fInstance)
+    public Ref(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

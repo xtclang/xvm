@@ -11,7 +11,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -26,9 +26,9 @@ public class xType
     {
     public static xType INSTANCE;
 
-    public xType(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
 
         if (fInstance)
             {

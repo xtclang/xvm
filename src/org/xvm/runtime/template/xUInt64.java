@@ -3,7 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -12,9 +12,9 @@ import org.xvm.runtime.TypeSet;
 public class xUInt64
         extends Const
     {
-    public xUInt64(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure, false);
+        super(templates, structure, false);
         }
 
     @Override

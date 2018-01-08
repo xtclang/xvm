@@ -13,7 +13,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeSet;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xString.StringHandle;
@@ -28,9 +28,9 @@ public class xTerminalConsole
     public static BufferedReader CONSOLE_IN = new BufferedReader(new InputStreamReader(System.in));
     public static PrintWriter CONSOLE_OUT = new PrintWriter(System.out, true);
 
-    public xTerminalConsole(TypeSet types, ClassStructure structure, boolean fInstance)
+    public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(types, structure);
+        super(templates, structure);
         }
 
     @Override
