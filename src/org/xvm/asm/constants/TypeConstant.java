@@ -34,7 +34,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -356,16 +355,7 @@ public abstract class TypeConstant
      */
     public boolean isVoid()
         {
-        if (isEcstasy("Void"))
-            {
-            return true;
-            }
-
-        TypeConstant constThis = (TypeConstant) this.simplify();
-        return !constThis.containsUnresolved()
-                && constThis.isEcstasy("Tuple")
-                && constThis.isParamsSpecified()
-                && constThis.getParamTypesArray().length == 0;
+        return isTuple() && getParamsCount() == 0;
         }
 
     /**
@@ -498,9 +488,7 @@ public abstract class TypeConstant
      */
     public boolean isTuple()
         {
-        TypeConstant constThis = (TypeConstant) this.simplify();
-        assert !constThis.containsUnresolved();
-        return constThis.isEcstasy("Tuple");
+        return isSingleDefiningConstant() && getDefiningConstant().equals(getConstantPool().clzTuple());
         }
 
     /**
@@ -528,23 +516,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return the number of tuple iff the type is a tuple type; otherwise -1
-     */
-    public int getTupleFieldCount()
-        {
-        TypeConstant constThis = (TypeConstant) this.simplify();
-        if (constThis.containsUnresolved()
-                || !constThis.isEcstasy("Tuple"))
-            {
-            throw new IllegalStateException();
-            }
-
-        return constThis.isParamsSpecified()
-                ? constThis.getParamTypesArray().length
-                : 0;
-        }
-
-    /**
      * Obtain the type of the specified tuple field.
      *
      * @param i  the 0-based tuple field index
@@ -553,15 +524,8 @@ public abstract class TypeConstant
      */
     public TypeConstant getTupleFieldType(int i)
         {
-        TypeConstant constThis = (TypeConstant) this.simplify();
-        if (constThis.containsUnresolved()
-                || !constThis.isEcstasy("Tuple")
-                || !constThis.isParamsSpecified())
-            {
-            throw new IllegalStateException();
-            }
-
-        TypeConstant[] atypeParam = constThis.getParamTypesArray();
+        assert isTuple();
+        TypeConstant[] atypeParam = getParamTypesArray();
         if (i < 0 || i >= atypeParam.length)
             {
             throw new IllegalArgumentException("i=" + i + ", size=" + atypeParam.length);
@@ -623,57 +587,59 @@ public abstract class TypeConstant
         Map<String, ParamInfo> mapTypeParams = new HashMap<>();
 
         // obtain the type parameters encoded in this type constant
+        ConstantPool   pool        = getConstantPool();
         boolean        fTypeParams = isParamsSpecified();
         TypeConstant[] atypeParams = getParamTypesArray();
         int            cTypeParams = atypeParams.length;
+        boolean        fTuple      = isTuple();
 
         // obtain the type parameters declared by the class
         List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
         int                                       cClassParams    = listClassParams.size();
-        if (cTypeParams  > cClassParams)
+        if (fTuple)
             {
-            if (cClassParams == 0)
-                {
-                log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED, constId.getPathString());
-                }
-            else
-                {
-                log(errs, Severity.ERROR, VE_TYPE_PARAMS_WRONG_NUMBER,
-                        constId.getPathString(), cClassParams, cTypeParams);
-                }
+            // warning: turtles
+            ParamInfo param = new ParamInfo("ElementTypes", this, this);
+            mapTypeParams.put(param.getName(), param);
             }
-
-        // TODO if (constId.equals(getConstantPool().clzTuple())) ...
-
-        if (cClassParams > 0)
+        else
             {
-            ParamInfoTypeResolver resolver = new ParamInfoTypeResolver(mapTypeParams, errs);
-            for (int i = 0; i < cClassParams; ++i)
+            if (cTypeParams  > cClassParams)
                 {
-                Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
-                String                              sName           = entryClassParam.getKey().getValue();
-                TypeConstant                        typeConstraint  = entryClassParam.getValue();
-                TypeConstant                        typeActual      = null;
-
-                // resolve any generics in the type constraint
-                typeConstraint = typeConstraint.resolveGenerics(resolver);
-
-                // validate the actual type, if there is one
-                if (i < cTypeParams)
+                if (cClassParams == 0)
                     {
-                    typeActual = atypeParams[i];
-                    assert typeActual != null;
+                    log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED, constId.getPathString());
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, VE_TYPE_PARAMS_WRONG_NUMBER,
+                            constId.getPathString(), cClassParams, cTypeParams);
+                    }
+                }
 
-                    // the actual type of the type parameter may refer to other type parameters
-                    typeActual = typeActual.resolveGenerics(resolver);
+            if (cClassParams > 0)
+                {
+                ParamInfoTypeResolver resolver = new ParamInfoTypeResolver(mapTypeParams, errs);
+                for (int i = 0; i < cClassParams; ++i)
+                    {
+                    Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
+                    String                              sName           = entryClassParam.getKey().getValue();
+                    TypeConstant                        typeConstraint  = entryClassParam.getValue();
+                    TypeConstant                        typeActual      = null;
 
-                    if (!typeActual.isA(typeConstraint))
+                    // resolve any generics in the type constraint
+                    typeConstraint = typeConstraint.resolveGenerics(resolver);
+
+                    // validate the actual type, if there is one
+                    if (i < cTypeParams)
                         {
-                        if (typeConstraint.getDefiningConstant() != null && typeConstraint.getDefiningConstant().equals(getConstantPool().clzTuple()))
-                            {
-                            // TODO lots of work to validate the tuple type here
-                            }
-                        else
+                        typeActual = atypeParams[i];
+                        assert typeActual != null;
+
+                        // the actual type of the type parameter may refer to other type parameters
+                        typeActual = typeActual.resolveGenerics(resolver);
+
+                        if (!typeActual.isA(typeConstraint))
                             {
                             log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
                                     constId.getPathString(), sName,
@@ -681,11 +647,12 @@ public abstract class TypeConstant
                                     typeActual.getValueString(), this.getValueString());
                             }
                         }
-                    }
 
-                mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                    }
                 }
             }
+
 
 // TODO remove
 //        // build a list of all of the contributions, starting from the implied contributions that
@@ -785,7 +752,7 @@ public abstract class TypeConstant
                     }
 
                 // Object does not (and must not) extend anything
-                if (constId.equals(getConstantPool().clzObject()))
+                if (constId.equals(pool.clzObject()))
                     {
                     if (fExtends)
                         {
@@ -903,7 +870,7 @@ public abstract class TypeConstant
                 else if (!fInto)
                     {
                     // add fake "into Object"
-                    typeInto = getConstantPool().typeObject();
+                    typeInto = pool.typeObject();
                     listContrib.add(new Contribution(Composition.Into, typeInto));
                     }
                 }
@@ -913,7 +880,7 @@ public abstract class TypeConstant
                 // first, lay down the set of methods present in Object (use the "Into" composition
                 // to make the Object methods implicit-only, as opposed to explicitly being present
                 // in this interface)
-                listContrib.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
+                listContrib.add(new Contribution(Composition.Into, pool.typeObject()));
                 break;
             }
 

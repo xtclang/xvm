@@ -185,21 +185,41 @@ public class TerminalTypeConstant
     @Override
     public boolean isSingleDefiningConstant()
         {
-        return true;
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() != Format.Typedef ||
+                getTypedefTypeConstant((TypedefConstant) constId).isSingleDefiningConstant();
         }
 
     @Override
     public Constant getDefiningConstant()
         {
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.Typedef
+                ? getTypedefTypeConstant((TypedefConstant) constId).getDefiningConstant()
+                : constId;
+        }
+
+    /**
+     * @return the underlying constant, resolving it if it is still unresolved and can be resolved
+     *         at this point
+     */
+    protected Constant ensureResolvedConstant()
+        {
         Constant constId = m_constId;
+
+        // resolve any previously unresolved constant at this point
         if (constId instanceof ResolvableConstant)
             {
             Constant constResolved = ((ResolvableConstant) constId).getResolvedConstant();
             if (constResolved != null)
                 {
+                // note that this TerminalTypeConstant could not have previously been registered
+                // with the pool because it was not resolved, so changing the reference to the
+                // underlying constant is still safe at this point
                 m_constId = constId = constResolved;
                 }
             }
+
         return constId;
         }
 
