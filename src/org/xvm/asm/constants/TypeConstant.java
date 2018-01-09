@@ -687,73 +687,40 @@ public abstract class TypeConstant
                 }
             }
 
-        // build a list of all of the contributions, starting from the implied contributions that
-        // are represented by annotations in this type constant itself, followed by the annotations
-        // in the class structure, followed by the class structure (as its own pseudo-contribution),
-        // followed by the remaining contributions
-        List<Contribution> listContrib = new ArrayList<>();
-        for (TypeConstant typeEach = this; !(typeEach instanceof TerminalTypeConstant); typeEach = typeEach.getUnderlyingType())
-            {
-            if (typeEach instanceof AnnotatedTypeConstant)
-                {
-                listContrib.add(new Contribution(((AnnotatedTypeConstant) typeEach).getAnnotation()));
-                }
-            }
+// TODO remove
+//        // build a list of all of the contributions, starting from the implied contributions that
+//        // are represented by annotations in this type constant itself, followed by the annotations
+//        // in the class structure, followed by the class structure (as its own pseudo-contribution),
+//        // followed by the remaining contributions
+//        List<Contribution> listContrib = new ArrayList<>();
 
-/* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - bulldozer plough goes here
+        // get the list of contributions from the class structure, and prepare to walk through them
+        List<Contribution> listRawContribs = struct.getContributionsAsList();
 
-// TODO this has to move down to where we process contributions
-//            else if (!paraminfo.getConstraintType().isA(typeConstraint)) // TODO what if constraint is a (or refers to a) formal type (see note below etc.etc.etc.)
-//                {
-//                // since we're accumulating type parameter information "on the way down" the
-//                // tree of structures that form the type, it is possible that our constraint is
-//                // "looser" than the constraint that came before us on the way down, e.g. our
-//                // sub-class narrowed our constraint, but any conflict is an error
-//                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONSTRAINT,
-//                        constId.getPathString(), sName,
-//                        typeConstraint.getValueString(),
-//                        paraminfo.getConstraintType().getValueString(),
-//                        typeinfo.type.getValueString());
-//                }
-//             TypeConstant typeOld = paraminfo.getActualType();
-//             if (typeOld == null)
-//                 {
-//                 paraminfo.setActualType(typeActual);
-//                 }
-//             else if (!typeOld.equals(typeActual))
-//                 {
-//                 log(errs, Severity.ERROR, VE_TYPE_PARAM_CONFLICTING_TYPES,
-//                         constId.getPathString(), sName,
-//                         typeOld.getValueString(), typeActual.getValueString(),
-//                         typeinfo.type.getValueString());
-//                 }
-
-        Access access = getAccess();
-        if (isParamsSpecified())
-            {
-            // TODO
-            }
-
-        // annotations
+        // glue any annotations from the type constant onto the front of the contribution list
         if (isAnnotated())
             {
-            // TODO
+            List<Contribution> listAllContribs = new ArrayList<>();
+            for (TypeConstant typeEach = this;
+                    !(typeEach instanceof TerminalTypeConstant);
+                    typeEach = typeEach.getUnderlyingType())
+                {
+                if (typeEach instanceof AnnotatedTypeConstant)
+                    {
+                    listAllContribs.add(new Contribution(((AnnotatedTypeConstant) typeEach).getAnnotation()));
+                    }
+                }
+            assert !listAllContribs.isEmpty();
+
+            // glue the rest of the contributions onto the end, and then substitute the glued list
+            // for the original
+            listAllContribs.addAll(listRawContribs);
+            listRawContribs = listAllContribs;
             }
 
-
-        // first, determine which compositions need to be subsequently processed; any compositions
-        // that have not already (directly or indirectly) been processed by a "higher" (i.e. toward
-        // the topmost) class structure will be the responsibility of this class structure to
-        // compose. for example, consider mixin M2 extends mixin M1, and class B incorporates M1,
-        // and class D extends B incorporates M2; when processing D, it is responsible for M2
-        // which is responsible for M1, so B does not process the M1 composition. to achieve this
-        // behavior, we will ignore any compositions here that have already appeared in the typeinfo
-        List<Contribution> listRawContribs = struct.getContributionsAsList();
-        int                cContribs       = listRawContribs.size();
-        int                iContrib        = 0;
-
-        // peel off all of the annotations at the front of the contribution list
-        List<Contribution> listAnnotations = Collections.EMPTY_LIST;
+        // process the annotations at the front of the contribution list
+        int cContribs = listRawContribs.size();
+        int iContrib  = 0;
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
@@ -780,40 +747,24 @@ public abstract class TypeConstant
                 continue NextContrib;
                 }
 
-            // if any mix-ins already registered match or extend this mixin, then this
-            // mix-in gets ignored
-            if (typeinfo.incorporated.contains(typeContrib))
-                {
-                continue NextContrib;
-                }
-            IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
-            for (TypeConstant typeMixin : typeinfo.incorporated)
-                {
-                if (typeMixin.extendsClass(constClass))
-                    {
-                    continue NextContrib;
-                    }
-                }
+            // the mixin has to apply to this type
+            // TODO this is more complicated than just an "isA()" check because the mixin specifies
+            //      a type in its "into" clause that we're testing, but the mixin is part of this
+            //      type itself, so its presence can effect the answer
+            if (isA())
 
-            // even though we haven't processed it yet, stake our claim to the
-            // responsibility of processing it by registering it in the typeinfo
-            typeinfo.incorporated.add(typeContrib);
-
-            // ... and add it to our list of things that we need to process
-            if (listAnnotations.isEmpty())
-                {
-                listAnnotations = new ArrayList<>();    // lazy list instantiation
-                }
-            listAnnotations.add(contrib);
-            }
-        if (fHalt)
-            {
-            return fHalt;
+            listContrib.add(contrib);
             }
 
-        List<Contribution> listContributions = new ArrayList<>();
-        boolean            fInto             = false;
-        boolean            fExtends          = false;
+        // put a marker into the list of contributions at this point to indicate that this class
+        // structure's contents need to be processed next
+        // TODO listContrib.add(new Contribution(Composition.Equal, this));
+
+        // process the "into" and "extends" clauses
+        boolean      fInto       = false;
+        TypeConstant typeInto    = null;
+        boolean      fExtends    = false;
+        TypeConstant typeExtends = null;
         switch (struct.getFormat())
             {
             case MODULE:
@@ -823,122 +774,37 @@ public abstract class TypeConstant
             case CLASS:
             case CONST:
             case SERVICE:
-            {
-            // next up, for any class type (other than Object itself), there MUST be an "extends"
-            // contribution that specifies another class
-            Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-            fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-            if (fExtends)
                 {
-                ++iContrib;
-                }
-
-            // Object does not (and must not) extend anything
-            if (constId.equals(getConstantPool().clzObject()))
-                {
+                // next up, for any class type (other than Object itself), there MUST be an "extends"
+                // contribution that specifies another class
+                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
-                    log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
-                            constId.getPathString());
+                    ++iContrib;
                     }
-                break;
-                }
 
-            // all other classes must extends something
-            if (!fExtends)
-                {
-                log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED,
-                        constId.getPathString());
-                break;
-                }
-
-            // the "extends" clause must specify a class identity
-            TypeConstant typeExtends = contrib.getTypeConstant();
-            if (!typeExtends.isExplicitClassIdentity(true))
-                {
-                log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
-                        constId.getPathString(),
-                        typeExtends.getValueString());
-                break;
-                }
-
-            if (typeinfo.extended.contains(typeExtends))
-                {
-                // some sort of circular loop
-                log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
-                        constId.getPathString());
-                break;
-                }
-
-            // the class structure will have to verify its "extends" clause in more detail, but
-            // for now perform a quick sanity check
-            IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
-            ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
-            if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
-                {
-                log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                        constId.getPathString(), struct.getFormat(),
-                        constExtends.getPathString(), structExtends.getFormat());
-                break;
-                }
-
-            // check for re-basing
-            TypeConstant typeRebase = struct.getRebaseType();
-            if (typeRebase != null)
-                {
-                typeinfo.extended.add(typeRebase);
-                listContributions.add(new Contribution(Composition.RebasesOnto, typeRebase));
-                }
-
-            // add the "extends" to the list of contributions to process, and register it so
-            // that no one else will do it
-            typeinfo.extended.add(typeExtends);
-            listContributions.add(contrib);
-            }
-            break;
-
-            case MIXIN:
-            {
-            // a mixin can extend another mixin, and it can specify an "into" that defines a
-            // base type that defines the environment that it will be working within. if neither
-            // is present, then there is an implicit "into Object"
-            Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-
-            // check "into"
-            fInto = contrib != null && contrib.getComposition() == Composition.Into;
-            if (fInto)
-                {
-                ++iContrib;
-
-                if (typeinfo.getFormat() == Component.Format.MIXIN && typeinfo.getInto() == null)
+                // Object does not (and must not) extend anything
+                if (constId.equals(getConstantPool().clzObject()))
                     {
-                    // the first "into" in the inheritance chain is the one that gets used
-                    typeinfo.setInto(contrib.getTypeConstant());
-                    listContributions.add(contrib);
+                    if (fExtends)
+                        {
+                        log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
+                                contrib.getTypeConstant().getValueString(),
+                                constId.getPathString());
+                        }
+                    break;
                     }
-                else if (typeinfo.getInto() != null && !typeinfo.getInto().isA(contrib.getTypeConstant()))
+
+                // all other classes must extends something
+                if (!fExtends)
                     {
-                    // subsequent "into" clauses in the inheritance chain must be compatible
-                    // with any previous one
-                    // TODO note that this test will is wrong for a mixin into a mixin
-                    log(errs, Severity.ERROR, VE_INTO_INCOMPATIBLE,
-                            constId.getPathString(),
-                            contrib.getTypeConstant().getValueString(),
-                            typeinfo.type.getValueString(), typeinfo.getInto().getValueString());
+                    log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
+                    break;
                     }
 
-                // load the next contribution
-                contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
-                }
-
-            // check "extends"
-            fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
-            if (fExtends)
-                {
-                ++iContrib;
-
-                TypeConstant typeExtends = contrib.getTypeConstant();
+                // the "extends" clause must specify a class identity
+                typeExtends = contrib.getTypeConstant();
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -947,49 +813,108 @@ public abstract class TypeConstant
                     break;
                     }
 
-                // verify that it is a mixin
-                if (typeExtends.getExplicitClassFormat() != Component.Format.MIXIN)
+                if (typeExtends.extendsClass(constId))
                     {
-                    log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
-                            typeExtends.getValueString(),
-                            constId.getPathString());
+                    // some sort of circular loop
+                    log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
                     break;
                     }
 
-                if (typeinfo.incorporated.contains(typeExtends))
+                // the class structure will have to verify its "extends" clause in more detail, but
+                // for now perform a quick sanity check
+                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
+                ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
+                if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
                     {
-                    // some sort of circular loop or badly directed graph
-                    log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL,
-                            constId.getPathString());
+                    log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                            constId.getPathString(), struct.getFormat(),
+                            constExtends.getPathString(), structExtends.getFormat());
                     break;
                     }
 
-                typeinfo.incorporated.add(typeExtends);
-                listContributions.add(contrib);
+                // check for re-basing; this occurs when a class format changes and the system has
+                // to insert a layer of code between this class and the class being extended, such
+                // as when a service (which is a Service format) extends Object (which is a Class
+                // format)
+                TypeConstant typeRebase = struct.getRebaseType();
+                if (typeRebase != null)
+                    {
+                    listContrib.add(new Contribution(Composition.RebasesOnto, typeRebase));
+                    }
+
+                // add the "extends" to the list of contributions to process, and register it so
+                // that no one else will do it
+                listContrib.add(contrib);
                 }
-            else if (typeinfo.getInto() == null)
+            break;
+
+            case MIXIN:
                 {
-                // add fake "into Object"
-                TypeConstant typeInto = getConstantPool().typeObject();
-                typeinfo.setInto(typeInto);
-                listContributions.add(new Contribution(Composition.Into, typeInto));
+                // a mixin can extend another mixin, and it can specify an "into" that defines a
+                // base type that defines the environment that it will be working within. if neither
+                // is present, then there is an implicit "into Object"
+                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+
+                // check "into"
+                fInto = contrib != null && contrib.getComposition() == Composition.Into;
+                if (fInto)
+                    {
+                    ++iContrib;
+                    typeInto = contrib.getTypeConstant();
+                    listContrib.add(contrib);
+
+                    // load the next contribution
+                    contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                    }
+
+                // check "extends"
+                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+                if (fExtends)
+                    {
+                    ++iContrib;
+
+                    typeExtends = contrib.getTypeConstant();
+                    if (!typeExtends.isExplicitClassIdentity(true))
+                        {
+                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
+                                constId.getPathString(),
+                                typeExtends.getValueString());
+                        break;
+                        }
+
+                    // verify that it is a mixin
+                    if (typeExtends.getExplicitClassFormat() != Component.Format.MIXIN)
+                        {
+                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
+                                typeExtends.getValueString(),
+                                constId.getPathString());
+                        break;
+                        }
+
+                    if (typeExtends.extendsClass(constId))
+                        {
+                        // some sort of circular loop
+                        log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
+                        break;
+                        }
+
+                    listContrib.add(contrib);
+                    }
+                else if (!fInto)
+                    {
+                    // add fake "into Object"
+                    typeInto = getConstantPool().typeObject();
+                    listContrib.add(new Contribution(Composition.Into, typeInto));
+                    }
                 }
-            }
             break;
 
             case INTERFACE:
                 // first, lay down the set of methods present in Object (use the "Into" composition
                 // to make the Object methods implicit-only, as opposed to explicitly being present
                 // in this interface)
-                if (fTopmost)
-                    {
-                    listContributions.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
-                    }
+                listContrib.add(new Contribution(Composition.Into, getConstantPool().typeObject()));
                 break;
-            }
-        if (fHalt)
-            {
-            return fHalt;
             }
 
         // go through the rest of the contributions, and add the ones that need to be processed to
@@ -1180,6 +1105,40 @@ public abstract class TypeConstant
         if (fHalt)
             {
             return fHalt;
+            }
+
+/* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - bulldozer plough goes here
+
+// TODO this has to move down to where we process contributions
+//            else if (!paraminfo.getConstraintType().isA(typeConstraint)) // TODO what if constraint is a (or refers to a) formal type (see note below etc.etc.etc.)
+//                {
+//                // since we're accumulating type parameter information "on the way down" the
+//                // tree of structures that form the type, it is possible that our constraint is
+//                // "looser" than the constraint that came before us on the way down, e.g. our
+//                // sub-class narrowed our constraint, but any conflict is an error
+//                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONSTRAINT,
+//                        constId.getPathString(), sName,
+//                        typeConstraint.getValueString(),
+//                        paraminfo.getConstraintType().getValueString(),
+//                        typeinfo.type.getValueString());
+//                }
+//             TypeConstant typeOld = paraminfo.getActualType();
+//             if (typeOld == null)
+//                 {
+//                 paraminfo.setActualType(typeActual);
+//                 }
+//             else if (!typeOld.equals(typeActual))
+//                 {
+//                 log(errs, Severity.ERROR, VE_TYPE_PARAM_CONFLICTING_TYPES,
+//                         constId.getPathString(), sName,
+//                         typeOld.getValueString(), typeActual.getValueString(),
+//                         typeinfo.type.getValueString());
+//                 }
+
+        Access access = getAccess();
+        if (isParamsSpecified())
+            {
+            // TODO
             }
 
         // recurse through compositions
