@@ -113,8 +113,8 @@ public class IntersectionTypeConstant
         // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
         TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
         TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
-        // TODO
-        throw new UnsupportedOperationException("TODO");
+        // TODO CP
+        return info1;
         }
 
 

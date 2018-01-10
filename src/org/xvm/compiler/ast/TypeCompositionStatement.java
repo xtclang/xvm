@@ -752,7 +752,8 @@ public class TypeCompositionStatement
 
             case MIXIN:
                 // mixins apply to ("mix into") any Object by default
-                constDefaultInto = OBJECT_CLASS;
+                constDefaultSuper = null;
+                constDefaultInto  = OBJECT_CLASS;
                 break;
             }
 
