@@ -184,21 +184,41 @@ public class TerminalTypeConstant
     @Override
     public boolean isSingleDefiningConstant()
         {
-        return true;
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() != Format.Typedef ||
+                getTypedefTypeConstant((TypedefConstant) constId).isSingleDefiningConstant();
         }
 
     @Override
     public Constant getDefiningConstant()
         {
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.Typedef
+                ? getTypedefTypeConstant((TypedefConstant) constId).getDefiningConstant()
+                : constId;
+        }
+
+    /**
+     * @return the underlying constant, resolving it if it is still unresolved and can be resolved
+     *         at this point
+     */
+    protected Constant ensureResolvedConstant()
+        {
         Constant constId = m_constId;
+
+        // resolve any previously unresolved constant at this point
         if (constId instanceof ResolvableConstant)
             {
             Constant constResolved = ((ResolvableConstant) constId).getResolvedConstant();
             if (constResolved != null)
                 {
+                // note that this TerminalTypeConstant could not have previously been registered
+                // with the pool because it was not resolved, so changing the reference to the
+                // underlying constant is still safe at this point
                 m_constId = constId = constResolved;
                 }
             }
+
         return constId;
         }
 
@@ -491,43 +511,6 @@ public class TerminalTypeConstant
 
             default:
                 return true;
-            }
-        }
-
-    @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).buildTypeInfo(errs);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).buildTypeInfo(errs);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).buildTypeInfo(errs);
-
-            case Module:
-            case Package:
-            case Class:
-                return super.buildTypeInfo(errs);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                // TODO - find an example where this happens. particularly in a composition.
-                // currently this is a mindf**k just thinking about what it means, but theoretically
-                // it could be some type represented by a child of a parent of this or whatever ...
-                // for example, we could implement an inner interface .. would that use a "child of this" type?
-                throw new IllegalStateException("TODO resolveStructures() for " + this);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
             }
         }
 
