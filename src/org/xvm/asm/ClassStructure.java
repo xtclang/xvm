@@ -21,7 +21,6 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.TypeConstant.TypeInfo;
 import org.xvm.runtime.Adapter;
 
 import org.xvm.util.ListMap;
