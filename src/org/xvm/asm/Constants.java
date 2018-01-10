@@ -233,6 +233,10 @@ public interface Constants
      * {0} is not a type that can be parameterized.
      */
     public static final String VE_PARAM_TYPE_ILLEGAL                 = "VERIFY-31";
+    /**
+     * {0} is annotated by {1}, but is not compatible with the required "into": {2}.
+     */
+    public static final String VE_ANNOTATION_INCOMPATIBLE            = "VERIFY-32";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

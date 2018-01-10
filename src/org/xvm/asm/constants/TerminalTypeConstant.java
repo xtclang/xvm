@@ -516,43 +516,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).buildTypeInfo(errs);
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).buildTypeInfo(errs);
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).buildTypeInfo(errs);
-
-            case Module:
-            case Package:
-            case Class:
-                return super.buildTypeInfo(errs);
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                // TODO - find an example where this happens. particularly in a composition.
-                // currently this is a mindf**k just thinking about what it means, but theoretically
-                // it could be some type represented by a child of a parent of this or whatever ...
-                // for example, we could implement an inner interface .. would that use a "child of this" type?
-                throw new IllegalStateException("TODO resolveStructures() for " + this);
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
     public <T extends TypeConstant> T findFirst(Class<T> clz)
         {
         return clz == getClass() ? (T) this : null;

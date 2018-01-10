@@ -9,7 +9,10 @@ import java.io.PrintWriter;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Component.Format;
+
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -87,6 +90,15 @@ public class Annotation
     public Constant getAnnotationClass()
         {
         return m_constClass;
+        }
+
+    /**
+     * @return the type of the annotation (which is always the terminal type constant of the
+     *         annotation class)
+     */
+    public TypeConstant getAnnotationType()
+        {
+        return getConstantPool().ensureTerminalTypeConstant(m_constClass);
         }
 
     /**

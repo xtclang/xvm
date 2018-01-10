@@ -569,11 +569,17 @@ public abstract class TypeConstant
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
+        if (!isSingleDefiningConstant())
+            {
+            return ((TypeConstant) simplify()).buildTypeInfo(errs);
+            }
+
         // load the class structure for the type
         IdentityConstant constId;
         ClassStructure   struct;
         try
             {
+            // TODO how to handle "Property" and "Register" and auto-narrowing types?
             constId = (IdentityConstant) ((TypeConstant) simplify()).getDefiningConstant();
             struct  = (ClassStructure) constId.getComponent();
             }
@@ -653,79 +659,118 @@ public abstract class TypeConstant
                 }
             }
 
-
-// TODO remove
-//        // build a list of all of the contributions, starting from the implied contributions that
-//        // are represented by annotations in this type constant itself, followed by the annotations
-//        // in the class structure, followed by the class structure (as its own pseudo-contribution),
-//        // followed by the remaining contributions
-//        List<Contribution> listContrib = new ArrayList<>();
-
-        // get the list of contributions from the class structure, and prepare to walk through them
-        List<Contribution> listRawContribs = struct.getContributionsAsList();
+        // walk through each of the contributions, starting from the implied contributions that are
+        // represented by annotations in this type constant itself, followed by the annotations in
+        // the class structure, followed by the class structure (as its own pseudo-contribution),
+        // followed by the remaining contributions
 
         // glue any annotations from the type constant onto the front of the contribution list
-        if (isAnnotated())
+        // (and remember the type of the annotated class)
+        TypeConstant typeClass = this;
+        NextTypeInChain: while (true)
             {
-            List<Contribution> listAllContribs = new ArrayList<>();
-            for (TypeConstant typeEach = this;
-                    !(typeEach instanceof TerminalTypeConstant);
-                    typeEach = typeEach.getUnderlyingType())
+            switch (typeClass.getFormat())
                 {
-                if (typeEach instanceof AnnotatedTypeConstant)
-                    {
-                    listAllContribs.add(new Contribution(((AnnotatedTypeConstant) typeEach).getAnnotation()));
-                    }
-                }
-            assert !listAllContribs.isEmpty();
+                case ParameterizedType:
+                case TerminalType:
+                    // we found the class specification (with optional parameters) at the end of the
+                    // type constant chain
+                    break NextTypeInChain;
 
-            // glue the rest of the contributions onto the end, and then substitute the glued list
-            // for the original
-            listAllContribs.addAll(listRawContribs);
-            listRawContribs = listAllContribs;
+                case AnnotatedType:
+                    // has to be an explicit class identity
+                    TypeConstant typeMixin =
+                            ((AnnotatedTypeConstant) typeClass).getAnnotation().getAnnotationType();
+                    if (!typeMixin.isExplicitClassIdentity(false))
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                                constId.getPathString(), typeMixin.getValueString());
+                        continue;
+                        }
+
+                    // has to be a mixin
+                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                                constId.getPathString(), typeMixin.getValueString());
+                        continue;
+                        }
+
+                    // the mixin has to be able to apply to the remainder of the type constant chain
+                    TypeInfo infoMixin = typeMixin.ensureTypeInfo(errs);
+                    if (!typeClass.getUnderlyingType().isA(infoMixin.getInto()))
+                        {
+                        log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                                typeClass.getUnderlyingType().getValueString(),
+                                typeMixin.getValueString(),
+                                infoMixin.getInto().getValueString());
+                        continue;
+                        }
+
+                    // apply annotation
+// TODO
+System.out.println("** " + getValueString() + " annotated by " + typeMixin.getValueString());
+                    break;
+
+                default:
+                    break;
+                }
+
+            // advance to the next type in the chain
+            typeClass = typeClass.getUnderlyingType();
             }
+        assert typeClass != null;
 
         // process the annotations at the front of the contribution list
-        int cContribs = listRawContribs.size();
-        int iContrib  = 0;
+        List<Contribution> listContribs = struct.getContributionsAsList();
+        int                cContribs    = listContribs.size();
+        int                iContrib     = 0;
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib = listRawContribs.get(iContrib);
+            Contribution contrib = listContribs.get(iContrib);
             if (contrib.getComposition() != Composition.Annotation)
                 {
-                break;
+                // ... all done processing annotations; move to the next stage
+                break NextContrib;
                 }
 
             // has to be an explicit class identity
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (!typeContrib.isExplicitClassIdentity(false))
+            TypeConstant typeMixin = contrib.getTypeConstant();
+            if (!typeMixin.isExplicitClassIdentity(false))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                        constId.getPathString(), typeContrib.getValueString());
+                        constId.getPathString(), typeMixin.getValueString());
                 continue NextContrib;
                 }
 
             // has to be a mixin
-            if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
+            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        constId.getPathString(), typeContrib.getValueString());
+                        constId.getPathString(), typeMixin.getValueString());
                 continue NextContrib;
                 }
 
             // the mixin has to apply to this type
-            // TODO this is more complicated than just an "isA()" check because the mixin specifies
-            //      a type in its "into" clause that we're testing, but the mixin is part of this
-            //      type itself, so its presence can effect the answer
-            if (isA())
+            TypeInfo infoMixin = typeMixin.ensureTypeInfo(errs);
+            if (!typeClass.isA(infoMixin.getInto())) // note: not 100% correct because the presence of this mixin may affect the answer
+                {
+                log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                        typeClass.getValueString(),
+                        typeMixin.getValueString(),
+                        infoMixin.getInto().getValueString());
+                continue NextContrib;
+                }
 
-            listContrib.add(contrib);
+// TODO process mix-in "contrib"
+System.out.println("** " + getValueString() + " annotated by " + typeMixin.getValueString());
             }
 
         // put a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-        // TODO listContrib.add(new Contribution(Composition.Equal, this));
+// TODO process contents of "this"
+System.out.println("** " + getValueString() + " methods and properties");
 
         // process the "into" and "extends" clauses
         boolean      fInto       = false;
@@ -744,7 +789,7 @@ public abstract class TypeConstant
                 {
                 // next up, for any class type (other than Object itself), there MUST be an "extends"
                 // contribution that specifies another class
-                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
                 fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
@@ -806,12 +851,14 @@ public abstract class TypeConstant
                 TypeConstant typeRebase = struct.getRebaseType();
                 if (typeRebase != null)
                     {
-                    listContrib.add(new Contribution(Composition.RebasesOnto, typeRebase));
+// TODO process "class rebase onto class" typeRebase
+System.out.println("** " + getValueString() + struct.getFormat().name() + " rebases onto " + typeRebase.getValueString());
                     }
 
                 // add the "extends" to the list of contributions to process, and register it so
                 // that no one else will do it
-                listContrib.add(contrib);
+// TODO process "class extends class" contrib
+System.out.println("** " + getValueString() + " extends class " + typeExtends.getValueString());
                 }
             break;
 
@@ -820,7 +867,7 @@ public abstract class TypeConstant
                 // a mixin can extend another mixin, and it can specify an "into" that defines a
                 // base type that defines the environment that it will be working within. if neither
                 // is present, then there is an implicit "into Object"
-                Contribution contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
 
                 // check "into"
                 fInto = contrib != null && contrib.getComposition() == Composition.Into;
@@ -828,10 +875,9 @@ public abstract class TypeConstant
                     {
                     ++iContrib;
                     typeInto = contrib.getTypeConstant();
-                    listContrib.add(contrib);
 
                     // load the next contribution
-                    contrib = iContrib < cContribs ? listRawContribs.get(iContrib) : null;
+                    contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
                     }
 
                 // check "extends"
@@ -864,14 +910,24 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
                         break;
                         }
-
-                    listContrib.add(contrib);
                     }
                 else if (!fInto)
                     {
                     // add fake "into Object"
+                    fInto    = true;
                     typeInto = pool.typeObject();
-                    listContrib.add(new Contribution(Composition.Into, typeInto));
+                    }
+
+                if (fInto)
+                    {
+// TODO process "mi-xin into type" typeInto
+System.out.println("** " + getValueString() + " mixes into " + typeInto.getValueString());
+                    }
+
+                if (fExtends)
+                    {
+// TODO process "mix-in extends mix-in" typeExtends
+System.out.println("** " + getValueString() + " extends mixin " + typeExtends.getValueString());
                     }
                 }
             break;
@@ -880,7 +936,8 @@ public abstract class TypeConstant
                 // first, lay down the set of methods present in Object (use the "Into" composition
                 // to make the Object methods implicit-only, as opposed to explicitly being present
                 // in this interface)
-                listContrib.add(new Contribution(Composition.Into, pool.typeObject()));
+// TODO process "interface into Object" - pool.typeObject()
+System.out.println("** " + getValueString() + " interface implies Object methods");
                 break;
             }
 
@@ -889,7 +946,7 @@ public abstract class TypeConstant
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib     = listRawContribs.get(iContrib);
+            Contribution contrib     = listContribs.get(iContrib);
             TypeConstant typeContrib = contrib.getTypeConstant();
 
             switch (contrib.getComposition())
@@ -951,46 +1008,41 @@ public abstract class TypeConstant
 
                     // if any mix-ins already registered match or extend this mixin, then this
                     // mix-in gets ignored
-                    if (typeinfo.incorporated.contains(typeContrib))
-                        {
-                        continue NextContrib;
-                        }
-                    IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
-                    for (TypeConstant typeMixin : typeinfo.incorporated)
-                        {
-                        if (typeMixin.extendsClass(constClass))
-                            {
-                            continue NextContrib;
-                            }
-                        }
+//                    if (typeinfo.incorporated.contains(typeContrib))
+//                        {
+//                        continue NextContrib;
+//                        }
+//                    IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
+//                    for (TypeConstant typeMixin : typeinfo.incorporated)
+//                        {
+//                        if (typeMixin.extendsClass(constClass))
+//                            {
+//                            continue NextContrib;
+//                            }
+//                        }
 
                     // the mixin must be compatible with this type, as specified by its "into"
-                    // clause; note: have to validate the type before asking it for a typeinfo
-                    typeContrib.validate(errs);
-                    TypeConstant typeInto = typeContrib.getTypeInfo().getInto();
-                    if (typeInto == null)
+                    // clause
+                    TypeConstant typeReq = typeContrib.ensureTypeInfo(errs).getInto();
+                    if (typeReq == null)
                         {
                         assert typeContrib.getTypeInfo().getFormat() != Component.Format.MIXIN;
                         log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
                                 contrib.getTypeConstant().getValueString(),
                                 constId.getPathString());
                         }
-                    else if (!typeinfo.type.isA(typeInto))
+                    else if (!this.isA(typeReq)) // note: not 100% correct because the presence of this mixin may affect the answer
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                                 constId.getPathString(),
                                 contrib.getTypeConstant().getValueString(),
-                                typeinfo.type.getValueString(),
-                                typeInto.getValueString());
+                                this.getValueString(),
+                                typeReq.getValueString());
                         }
                     else
                         {
-                        // even though we haven't processed it yet, stake our claim to the
-                        // responsibility of processing it by registering it in the typeinfo
-                        typeinfo.incorporated.add(typeContrib);
-
-                        // ... and add it to our list of things that we need to process
-                        listContributions.add(contrib);
+// TODO process "incorporates mix-in" typeContrib
+System.out.println("** " + getValueString() + " incorporates " + typeContrib.getValueString());
                         }
                     break;
 
@@ -1015,12 +1067,8 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // even though we haven't processed it yet, stake our claim to the
-                    // responsibility of processing it by registering it in the typeinfo
-                    typeinfo.implemented.add(typeContrib);
-
-                    // ... and add it to our list of things that we need to process
-                    listContributions.add(contrib);
+// TODO process "delegates interface" typeContrib
+System.out.println("** " + getValueString() + " delegates interface " + typeContrib.getValueString());
                     break;
 
                 case Implements:
@@ -1036,42 +1084,34 @@ public abstract class TypeConstant
                         }
 
                     // check if it is already implemented
-                    if (typeinfo.implemented.contains(typeContrib))
-                        {
-                        continue NextContrib;
-                        }
-                    for (TypeConstant typeImplemented : typeinfo.implemented)
-                        {
-                        List<ContributionChain> listChains = typeImplemented.collectContributions(
-                                typeContrib, new ArrayList<>(), new ArrayList<>());
-                        if (!listChains.isEmpty())
-                            {
-                            for (ContributionChain chainEach : listChains)
-                                {
-                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
-                                    {
-                                    continue NextContrib;
-                                    }
-                                }
-                            }
-                        }
+//                    if (typeinfo.implemented.contains(typeContrib))
+//                        {
+//                        continue NextContrib;
+//                        }
+//                    for (TypeConstant typeImplemented : typeinfo.implemented)
+//                        {
+//                        List<ContributionChain> listChains = typeImplemented.collectContributions(
+//                                typeContrib, new ArrayList<>(), new ArrayList<>());
+//                        if (!listChains.isEmpty())
+//                            {
+//                            for (ContributionChain chainEach : listChains)
+//                                {
+//                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
+//                                    {
+//                                    continue NextContrib;
+//                                    }
+//                                }
+//                            }
+//                        }
 
-                    // even though we haven't processed it yet, stake our claim to the
-                    // responsibility of processing it by registering it in the typeinfo
-                    typeinfo.implemented.add(typeContrib);
-
-                    // ... and add it to our list of things that we need to process
-                    listContributions.add(contrib);
+// TODO process "implements interface" typeContrib
+System.out.println("** " + getValueString() + " implements interface " + typeContrib.getValueString());
                     break;
 
                 default:
                     throw new IllegalStateException(constId.getPathString()
                             + ", contribution=" + contrib);
                 }
-            }
-        if (fHalt)
-            {
-            return fHalt;
             }
 
 /* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - bulldozer plough goes here
