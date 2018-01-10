@@ -62,7 +62,7 @@ public class MoveCast
                 }
 
             // TODO: cast implementation
-            TypeConstant typeFrom = hValue.m_type;
+            TypeConstant typeFrom = hValue.getType();
             TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
 
             return frame.assignValue(m_nToValue, hValue);

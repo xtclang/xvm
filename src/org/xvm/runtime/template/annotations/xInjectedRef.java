@@ -66,7 +66,7 @@ public class xInjectedRef
             ObjectHandle hValue = m_hDelegate;
             if (hValue == null)
                 {
-                TypeConstant typeEl = m_type.getActualParamType("RefType");
+                TypeConstant typeEl = getType().getActualParamType("RefType");
 
                 hValue = m_hDelegate = INSTANCE.f_templates.f_container.getInjectable(m_sName, typeEl);
                 if (hValue == null)

@@ -630,7 +630,7 @@ public abstract class TypeConstant
         // obtain the type parameters declared by the class
         List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
         int                                       cClassParams    = listClassParams.size();
-        if (cTypeParams  > cClassParams)
+        if (cTypeParams > cClassParams && !constId.equals(getConstantPool().clzTuple()))
             {
             if (cClassParams == 0)
                 {
@@ -1751,7 +1751,7 @@ public abstract class TypeConstant
     /**
      * @return a handle for the Type object represented by this TypeConstant
      */
-    public TypeHandle getHandle()
+    public TypeHandle getTypeHandle()
         {
         TypeHandle hType = m_handle;
         if (hType == null)

@@ -14,7 +14,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Op;
 

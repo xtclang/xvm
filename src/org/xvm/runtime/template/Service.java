@@ -253,7 +253,7 @@ public class Service
 
     public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, TypeConstant type)
         {
-        ServiceHandle hService = new ServiceHandle(clz, type, context);
+        ServiceHandle hService = new ServiceHandle(clz.maskAs(type), context);
         context.setService(hService);
         return hService;
         }
@@ -263,9 +263,9 @@ public class Service
         {
         public ServiceContext m_context;
 
-        public ServiceHandle(TypeComposition clazz, TypeConstant type, ServiceContext context)
+        public ServiceHandle(TypeComposition clazz, ServiceContext context)
             {
-            super(clazz, type);
+            super(clazz);
 
             m_context = context;
             }

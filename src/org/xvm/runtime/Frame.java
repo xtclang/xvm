@@ -448,7 +448,7 @@ public class Frame
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
-                        if (info.getType() == hValue.m_type)
+                        if (info.getType() == hValue.getType())
                             {
                             // TODO: allow hValue to be a subclass?
                             // this can only be a trivial assignment, for example:
@@ -1254,7 +1254,7 @@ public class Frame
 
             frame.f_anNextVar[nScope] = frame.f_anNextVar[nScope - 1];
 
-            frame.introduceResolvedVar(hException.m_type, sVarName, VAR_STANDARD, hException);
+            frame.introduceResolvedVar(hException.getType(), sVarName, VAR_STANDARD, hException);
 
             frame.m_hException = null;
             }

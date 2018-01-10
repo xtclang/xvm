@@ -62,7 +62,7 @@ public class xMethod
             MethodStructure method = (MethodStructure) constMethod.getComponent();
 
             // TODO: assert if a function
-            return new MethodHandle(f_clazzCanonical, method, frame.getThis().m_type);
+            return new MethodHandle(f_clazzCanonical, method, frame.getThis().getType());
             }
         return null;
         }

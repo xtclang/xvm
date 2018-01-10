@@ -41,11 +41,25 @@ import org.xvm.runtime.template.Ref.RefHandle;
 public class TypeComposition
         implements GenericTypeResolver
     {
+    /**
+     * The underlying class template.
+     */
     public final ClassTemplate f_template;
 
-    public final TypeConstant f_typeActual;
+    /**
+     * The actual type - the maximum of what this type composition could be revealed as.
+     */
+    private final TypeConstant f_typeActual;
 
+    /**
+     * The type that is revealed by the ObjectHandle that refer to this composition.
+     */
+    private final TypeConstant f_typeRevealed;
+
+    // super composition
     private TypeComposition m_clzSuper;
+
+    // cached derivative types
     private TypeConstant m_typePublic;
     private TypeConstant m_typeProtected;
     private TypeConstant m_typePrivate;
@@ -75,7 +89,7 @@ public class TypeComposition
     public TypeComposition(ClassTemplate template, TypeConstant typeActual)
         {
         f_template = template;
-        f_typeActual = typeActual;
+        f_typeActual = f_typeRevealed = typeActual;
 
         assert typeActual.isSingleDefiningConstant() &&
             ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == template.f_struct;
@@ -142,6 +156,52 @@ public class TypeComposition
         }
 
     /**
+     * Retrieve a TypeComposition that widens the current type to the specified type.
+     */
+    public TypeComposition maskAs(TypeConstant type)
+        {
+        if (type.equals(f_typeRevealed))
+            {
+            return this;
+            }
+
+        if (!f_typeRevealed.isA(type))
+            {
+            throw new IllegalArgumentException("Type " + f_typeRevealed + " cannot be widened to " + type);
+            }
+
+        return f_template.ensureClass(type);
+        }
+
+    /**
+     * Retrieve a TypeComposition that widens the actual type to the specified type.
+     */
+    public TypeComposition revealAs(TypeConstant type, Container container)
+        {
+        // TODO: this is only allowed within the container that created the original TypeComposition
+
+        if (type.equals(f_typeActual))
+            {
+            return this;
+            }
+
+        if (!f_typeActual.isA(type))
+            {
+            throw new IllegalArgumentException("Type " + f_typeActual + " cannot be widened to " + type);
+            }
+
+        return f_template.ensureClass(type);
+        }
+
+    /**
+     * @return the revealed type of this TypeComposition.
+     */
+    public TypeConstant getType()
+        {
+        return f_typeRevealed;
+        }
+
+    /**
      * Find the type for the specified formal parameter. Note that the formal name could be declared
      * by some contributions, rather than this class itself.
      *
@@ -151,7 +211,7 @@ public class TypeComposition
      */
     public TypeConstant getActualParamType(String sName)
         {
-        return f_typeActual.getActualParamType(sName);
+        return f_typeRevealed.getActualParamType(sName);
         }
 
     @Override
@@ -350,7 +410,7 @@ public class TypeComposition
         {
         assert handle.f_clazz == this;
 
-        TypeConstant typeCurrent = handle.m_type;
+        TypeConstant typeCurrent = handle.f_clazz.f_typeRevealed;
         TypeConstant typeTarget;
 
         switch (access)
@@ -392,7 +452,7 @@ public class TypeComposition
             }
 
         handle = handle.cloneHandle();
-        handle.m_type = typeTarget;
+        handle.f_clazz = f_template.ensureClass(typeTarget);
         return handle;
         }
 
@@ -435,9 +495,9 @@ public class TypeComposition
         return type;
         }
 
-    public boolean isStruct(TypeConstant type)
+    public boolean isStruct()
         {
-        return type == m_typeStruct;
+        return f_typeRevealed == m_typeStruct;
         }
 
     // is the public interface of this class assignable to the specified class

@@ -62,7 +62,7 @@ public class xType
         xMethod.MethodHandle[] ahMethods = new xMethod.MethodHandle[aMethods.length];
         for (int i = 0, c = aMethods.length; i < c; i++)
             {
-            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.getType());
+            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.getDataType());
             }
         return xArray.makeHandle(xMethod.TYPE, ahMethods);
         }
@@ -86,7 +86,7 @@ public class xType
             m_type = type;
             }
 
-        protected TypeConstant getType()
+        protected TypeConstant getDataType()
             {
             return m_type;
             }

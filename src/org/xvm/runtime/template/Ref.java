@@ -61,7 +61,7 @@ public class Ref
                 try
                     {
                     ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, hReferent.m_type.getHandle());
+                    return frame.assignValue(iReturn, hReferent.getType().getTypeHandle());
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {

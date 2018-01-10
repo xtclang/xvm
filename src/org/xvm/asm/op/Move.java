@@ -86,7 +86,7 @@ public class Move
                 }
             else
                 {
-                TypeConstant typeFrom = hValue.m_type;
+                TypeConstant typeFrom = hValue.getType();
                 TypeConstant typeTo   = frame.getArgumentType(nTo);
 
                 switch (typeFrom.calculateRelation(typeTo))

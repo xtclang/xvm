@@ -85,12 +85,12 @@ public class Const
         assert (f_struct.getFormat() == Component.Format.CONST);
 
         return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
-                clazz, clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+            clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
     public int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
         MethodStructure functionCompare = findCompareFunction("compare", xOrdered.TYPES);
@@ -103,7 +103,7 @@ public class Const
         assert (f_struct.getFormat() == Component.Format.CONST);
 
         return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
-                clazz, clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+            clazz.getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     @Override
@@ -143,16 +143,14 @@ public class Const
         {
         final private GenericHandle hValue1;
         final private GenericHandle hValue2;
-        final private TypeComposition clazz;
         final private Iterator<String> iterFields;
         final private int iReturn;
 
-        public Equals(GenericHandle hValue1, GenericHandle hValue2, TypeComposition clazz,
+        public Equals(GenericHandle hValue1, GenericHandle hValue2,
                       Iterator<String> iterFields, int iReturn)
             {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
-            this.clazz = clazz;
             this.iterFields = iterFields;
             this.iReturn = iReturn;
             }
@@ -218,16 +216,14 @@ public class Const
         {
         final private GenericHandle hValue1;
         final private GenericHandle hValue2;
-        final private TypeComposition clazz;
         final private Iterator<String> iterFields;
         final private int iReturn;
 
-        public Compare(GenericHandle hValue1, GenericHandle hValue2, TypeComposition clazz,
+        public Compare(GenericHandle hValue1, GenericHandle hValue2,
                        Iterator<String> iterFields, int iReturn)
             {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
-            this.clazz = clazz;
             this.iterFields = iterFields;
             this.iReturn = iReturn;
             }

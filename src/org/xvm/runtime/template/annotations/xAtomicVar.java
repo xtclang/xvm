@@ -78,7 +78,7 @@ public class xAtomicVar
                             return frame.assignValue(iReturn, xBoolean.TRUE);
                             }
 
-                        TypeConstant type = hThis.m_type.getActualParamType("RefType");
+                        TypeConstant type = hThis.getType().getActualParamType("RefType");
 
                         return new Replace(type, atomic, hExpect, hNew, iReturn).doNext(frame);
                         }
@@ -129,7 +129,7 @@ public class xAtomicVar
                             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                             }
 
-                        TypeConstant type = hThis.m_type.getActualParamType("RefType");
+                        TypeConstant type = hThis.getType().getActualParamType("RefType");
 
                         return new ReplaceFailed(type, atomic, hExpect, hNew, aiReturn).doNext(frame);
                         }

@@ -16,19 +16,12 @@ import org.xvm.util.ListMap;
 public class ObjectHandle
         implements Cloneable
     {
-    final public TypeComposition f_clazz;
-    public TypeConstant m_type;
+    public TypeComposition f_clazz;
     protected boolean m_fMutable = false;
 
     protected ObjectHandle(TypeComposition clazz)
         {
-        this(clazz, clazz.ensurePublicType());
-        }
-
-    protected ObjectHandle(TypeComposition clazz, TypeConstant type)
-        {
         f_clazz = clazz;
-        m_type = type;
         }
 
     public ObjectHandle cloneHandle()
@@ -55,7 +48,15 @@ public class ObjectHandle
 
     public boolean isStruct()
         {
-        return f_clazz.isStruct(m_type);
+        return f_clazz.isStruct();
+        }
+
+    /**
+     * @return the revealed type of this handle.
+     */
+    public TypeConstant getType()
+        {
+        return f_clazz.getType();
         }
 
     @Override
@@ -72,12 +73,7 @@ public class ObjectHandle
 
         public GenericHandle(TypeComposition clazz)
             {
-            this(clazz, clazz.ensurePublicType());
-            }
-
-        public GenericHandle(TypeComposition clazz, TypeConstant type)
-            {
-            super(clazz, type);
+            super(clazz);
 
             m_fMutable = true;
 
@@ -97,7 +93,7 @@ public class ObjectHandle
 
         public ExceptionHandle(TypeComposition clazz, boolean fInitialize, Throwable eCause)
             {
-            super(clazz, clazz.ensureStructType());
+            super(clazz);
 
             if (fInitialize)
                 {

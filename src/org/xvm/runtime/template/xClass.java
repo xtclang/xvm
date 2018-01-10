@@ -68,7 +68,7 @@ public class xClass
         switch (property.getName())
             {
             case "hash":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_type.hashCode()));
+                return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getType().hashCode()));
             }
 
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
@@ -91,7 +91,7 @@ public class xClass
         ClassHandle hThis = (ClassHandle) hValue1;
         ClassHandle hThat = (ClassHandle) hValue2;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_type.compareTo(hThat.m_type)));
+        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getType().compareTo(hThat.getType())));
         }
 
     public static class ClassHandle

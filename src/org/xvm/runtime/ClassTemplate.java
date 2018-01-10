@@ -148,9 +148,6 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        assert typeActual.isSingleDefiningConstant() &&
-            ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
-
         if (!typeActual.isModifyingType())
             {
             return f_clazzCanonical;
@@ -397,11 +394,13 @@ public abstract class ClassTemplate
     // return a handle with this:struct access
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        assert f_struct.getTypeParamsAsList().isEmpty();
         assert f_struct.getFormat() == Component.Format.CLASS ||
                f_struct.getFormat() == Component.Format.CONST;
 
-        return new GenericHandle(clazz, clazz.ensureStructType());
+        TypeConstant typeStruct = clazz.ensureStructType();
+        TypeComposition clzStruct = ensureClass(typeStruct);
+
+        return new GenericHandle(clzStruct);
         }
 
     // invoke the default constructors, then the specified constructor,
@@ -722,9 +721,9 @@ public abstract class ClassTemplate
 
         if (isGenericType(sName))
             {
-            TypeConstant type = hTarget.m_type.getActualParamType(sName);
+            TypeConstant type = hTarget.f_clazz.getActualParamType(sName);
 
-            return frame.assignValue(iReturn, type.getHandle());
+            return frame.assignValue(iReturn, type.getTypeHandle());
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
