@@ -127,7 +127,7 @@ public class Var_SN
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant typeSequence = frame.getArgumentType(m_nType);
+        TypeConstant typeSequence = frame.resolveType(m_nType);
         TypeConstant typeEl = typeSequence.getActualParamType("ElementType");
 
         try

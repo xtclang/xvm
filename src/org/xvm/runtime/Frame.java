@@ -773,7 +773,7 @@ public class Frame
         {
         return iArg >= 0
                 ? getVarInfo(iArg).getType()
-                : getConstant(iArg).getType();
+                : getConstant(iArg).getType(); // a constant cannot be generic
         }
 
     // same as getArgumentType, but treats the negative ids as "local-property" references
@@ -802,6 +802,12 @@ public class Frame
         {
         assert iArg < Op.CONSTANT_OFFSET;
         return f_context.f_templates.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
+        }
+
+    public TypeConstant resolveType(int iArg)
+        {
+        TypeConstant type = (TypeConstant) getConstant(iArg);
+        return type.resolveGenerics(getGenericsResolver());
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or

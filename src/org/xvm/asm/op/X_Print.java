@@ -11,7 +11,6 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
@@ -74,14 +73,14 @@ public class X_Print
                 if (isProperty(hValue))
                     {
                     PropertyHandle hProp = (PropertyHandle) hValue;
-                    sb.append("Local property: ").append(hProp.m_constProperty.getName());
+                    sb.append("Local property: ").append(hProp.m_property.getName());
                     return R_NEXT;
                     }
 
                 // call the "to<String>()" method for the object to get the value
                 m_nMethodId = frame.f_adapter.getMethodConstId("Object", "to",
                     ClassTemplate.VOID, ClassTemplate.STRING);
-                CallChain chain = getCallChain(frame, hValue.f_clazz);
+                CallChain chain = getCallChain(frame, hValue);
 
                 int iResult;
                 if (chain.isNative())

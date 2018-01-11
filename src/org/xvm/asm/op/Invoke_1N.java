@@ -15,7 +15,6 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -150,7 +149,7 @@ public class Invoke_1N
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
         checkReturnRegisters(frame, method);

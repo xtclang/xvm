@@ -85,25 +85,6 @@ public class xTuple
         }
 
     @Override
-    public boolean isConstantCacheable(Constant constant)
-        {
-        ArrayConstant constTuple = (ArrayConstant) constant;
-        TypeConstant constType = constTuple.getType();
-
-        ObjectHeap heap = f_templates.f_container.f_heapGlobal;
-
-        for (TypeConstant constElemType : constType.getParamTypes())
-            {
-            ClassTemplate template = heap.getConstTemplate(constElemType);
-            if (!template.isConstantCacheable(constElemType))
-                {
-                return false;
-                }
-            }
-        return true;
-        }
-
-    @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {

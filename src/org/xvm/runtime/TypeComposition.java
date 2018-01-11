@@ -224,12 +224,6 @@ public class TypeComposition
         return f_typeActual.getActualParamType(sName);
         }
 
-//    @Override
-    public TypeConstant resolveGenericType(PropertyConstant constProperty)
-        {
-        return getActualParamType(constProperty.getName());
-        }
-
     public boolean isRoot()
         {
         return this == xObject.CLASS;

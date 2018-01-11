@@ -385,17 +385,12 @@ public abstract class ClassTemplate
         return null;
         }
 
-    // @return true if a constant always results into the same ObjectHandle
-    public boolean isConstantCacheable(Constant constant)
-        {
-        return true;
-        }
-
     // return a handle with this:struct access
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        assert f_struct.getFormat() == Component.Format.CLASS ||
-               f_struct.getFormat() == Component.Format.CONST;
+        assert clazz.getTemplate() == this &&
+             (f_struct.getFormat() == Component.Format.CLASS ||
+              f_struct.getFormat() == Component.Format.CONST);
 
         TypeConstant typeStruct = clazz.ensureStructType();
         TypeComposition clzStruct = ensureClass(typeStruct);

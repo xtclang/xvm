@@ -14,10 +14,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-
-import org.xvm.runtime.template.xClass.ClassHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -102,42 +99,21 @@ public class NewG_0
     @Override
     public int process(Frame frame, int iPC)
         {
-        try
+        MethodStructure constructor = getMethodStructure(frame);
+        TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
+
+        ClassTemplate template = clzTarget.getTemplate();
+
+        assert constructor.getParent().getParent() == template.f_struct;
+
+        if (frame.isNextRegister(m_nRetValue))
             {
-            TypeComposition clzTarget;
-            if (m_nTypeValue >= 0)
-                {
-                 // TODO: is this really a possibility?
-                ClassHandle hClass = (ClassHandle) frame.getArgument(m_nTypeValue);
-                if (hClass == null)
-                    {
-                    return R_REPEAT;
-                    }
-                clzTarget = hClass.f_clazz;
-                }
-            else
-                {
-                clzTarget = frame.resolveClass(m_nTypeValue);
-                }
-
-            MethodStructure constructor = getMethodStructure(frame);
-            ClassTemplate template = clzTarget.getTemplate();
-
-            assert constructor.getParent().getParent() == template.f_struct;
-
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                frame.introduceResolvedVar(clzTarget.ensurePublicType());
-                }
-
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
-
-            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+            frame.introduceResolvedVar(clzTarget.ensurePublicType());
             }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+
+        return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
         }
 
     @Override

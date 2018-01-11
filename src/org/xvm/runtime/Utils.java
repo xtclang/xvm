@@ -312,10 +312,10 @@ public abstract class Utils
             if (handle instanceof PropertyHandle)
                 {
                 ObjectHandle hThis = frameCaller.getThis();
-                String sProp = ((PropertyHandle) handle).m_constProperty.getName();
+                String sProp = ((PropertyHandle) handle).m_property.getName();
 
                 switch (hThis.getTemplate().getPropertyValue(
-                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                    frameCaller, hThis, sProp, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         // replace the property handle with the value
@@ -377,10 +377,10 @@ public abstract class Utils
                 if (handle instanceof PropertyHandle)
                     {
                     ObjectHandle hThis = frameCaller.getThis();
-                    String sProp = ((PropertyHandle) handle).m_constProperty.getName();
+                    String sProp = ((PropertyHandle) handle).m_property.getName();
 
                     switch (hThis.getTemplate().getPropertyValue(
-                            frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
                         {
                         case Op.R_NEXT:
                             // replace the property handle with the value

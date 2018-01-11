@@ -179,7 +179,7 @@ public class AssertV
                 ObjectHandle hValueOrig = ahOrig[i];
                 if (isProperty(hValueOrig))
                     {
-                    asName[i] = ((PropertyHandle) hValueOrig).m_constProperty.getName();
+                    asName[i] = ((PropertyHandle) hValueOrig).m_property.getName();
                     }
                 else // simply a constant; no label
                     {
