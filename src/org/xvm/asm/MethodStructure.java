@@ -30,7 +30,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents a method.
+ * An XVM Structure that represents a method. TODO or a function
  * TODO annotations - there might be method annotations that belong to the return type and not the method itself e.g. "@Unsafe Int foo()"
  */
 public class MethodStructure
@@ -95,6 +95,15 @@ public class MethodStructure
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return true iff this is a function, not a method
+     */
+    public boolean isFunction()
+        {
+        // TODO
+        return false;
+        }
 
     /**
      * @return the number of annotations

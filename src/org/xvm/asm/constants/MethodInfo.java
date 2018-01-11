@@ -7,7 +7,11 @@ import org.xvm.asm.Constants.Access;
 
 
 /**
- * Represents a single method (or function).
+ * Represents all of the information about a method (or function).
+ *
+ * TODO appendDefault / overrideDefault (?)
+ * TODO appendInfo(MethodInfo)
+ *
  */
 public class MethodInfo
     {
@@ -16,8 +20,9 @@ public class MethodInfo
      *
      * @param constSig  the signature for the new MethodInfo
      */
-    public MethodInfo(SignatureConstant constSig)
+    public MethodInfo(MethodBody method)
         {
+        // TODO
         m_constSig = constSig;
         }
 

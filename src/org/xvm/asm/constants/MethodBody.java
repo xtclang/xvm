@@ -10,9 +10,40 @@ import org.xvm.asm.MethodStructure;
  */
 public class MethodBody
     {
-    public MethodBody(MethodConstant constMethod)
+    /**
+     * Construct an implicit, abstract, native, or normal byte-code method body.
+     *
+     * @param constMethod  the method constant that this body represents
+     * @param impl         one of Implicit, Abstract, Native, or ByteCode
+     */
+    public MethodBody(MethodConstant constMethod, Implementation impl)
         {
+        assert constMethod != null;
+        assert impl != null && impl != Implementation.Delegating;
+
         m_constMethod = constMethod;
+        m_impl        = impl;
+        }
+
+    /**
+     * Construct a delegating method body.
+     *
+     * @param constMethod  the method constant that this body represents
+     * @param constProp    the property constant that provides the reference to delegate to
+     */
+    public MethodBody(MethodConstant constMethod, PropertyConstant constProp)
+        {
+        m_constMethod    = constMethod;
+        m_impl           = Implementation.Delegating;
+        m_constDelegProp = constProp;
+        }
+
+    /**
+     * @return the signature of the MethodConstant associated with this MethodBody
+     */
+    public SignatureConstant getSignature()
+        {
+        return m_constMethod.getSignature();
         }
 
     /**
@@ -28,7 +59,37 @@ public class MethodBody
      */
     public MethodStructure getMethodStructure()
         {
-        return (MethodStructure) m_constMethod.getComponent();
+        MethodStructure structMethod = m_structMethod;
+        if (structMethod == null)
+            {
+            m_structMethod = structMethod = (MethodStructure) m_constMethod.getComponent();
+            }
+        return structMethod;
+        }
+
+    /**
+     * @return true iff this is a function, not a method
+     */
+    public boolean isFunction()
+        {
+        return getMethodStructure().isFunction();
+        }
+
+    /**
+     * @return the Implementation form of this MethodBody
+     */
+    public Implementation getImplementation()
+        {
+        return m_impl;
+        }
+
+    /**
+     * @return the PropertyConstant of the property that provides the reference to delegate this
+     *         method to
+     */
+    public PropertyConstant getDelegationProperty()
+        {
+        return m_constDelegProp;
         }
 
     /**
@@ -93,66 +154,44 @@ public class MethodBody
                  annotation.getParams().length >= 1 && sOp.equals(annotation.getParams()[0]));
         }
 
-    /**
-     * @return the signature of the MethodConstant associated with this MethodBody
-     */
-    public SignatureConstant getSignature()
-        {
-        return getMethodConstant().getSignature();
-        }
 
-    /**
-     * @return the Implementation form of this MethodBody
-     */
-    public Implementation getImplementationForm()
-        {
-        return m_impl;
-        }
-
-    void setImplementationForm(Implementation impl)
-        {
-        assert impl != null;
-        m_impl = impl;
-        }
-
-    /**
-     * @return the PropertyConstant of the property that provides the reference to delegate this
-     *         method to
-     */
-    public PropertyConstant getDelegationProperty()
-        {
-        return m_constDelegProp;
-        }
-
-    void setDelegationProperty(PropertyConstant constProp)
-        {
-        m_impl           = Implementation.Delegating;
-        m_constDelegProp = constProp;
-        }
-
-    /**
-     * @return the MethodBody that represents the "super" of this MethodBody
-     */
-    public MethodBody getSuper()
-        {
-        return m_super;
-        }
-
-    void setSuper(MethodBody bodySuper)
-        {
-        m_super = bodySuper;
-        }
+    // ----- enumeration: Implementation -----------------------------------------------------------
 
     /**
      * An enumeration of various forms of method body implementations.
+     * <p/>
+     * <ul>
+     * <li><b>Implicit</b> - the method body represents a method known to exist for compilation
+     * purposes, but is otherwise not present; this is the result of the {@code into} clause</li>
+     * <li><b>Abstract</b> - the method body represents a declared but non-implemented method</li>
+     * <li><b>Delegating</b> - the method body is implemented by delegating the method call</li>
+     * <li><b>Native</b> - the method body is implemented natively by the runtime</li>
+     * <li><b>ByteCode</b> - the method body is represented by byte code that gets executed</li>
+     * </ul>
      */
-    public enum Implementation {Implicit, Abstract, Delegating, Native, ActualCode}
+    public enum Implementation {Implicit, Abstract, Delegating, Native, ByteCode}
 
 
-    // -----fields ---------------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The MethodConstant that this method body corresponds to.
+     */
     private MethodConstant m_constMethod;
-    private Implementation m_impl = Implementation.ActualCode;
+
+    /**
+     * The implementation type for the method body.
+     */
+    private Implementation m_impl;
+
+    /**
+     * In the case of delegation, this specifies the property which contains the reference to
+     * delegate to.
+     */
     private PropertyConstant m_constDelegProp;
-    private MethodBody       m_super;
+
+    /**
+     * The cached method structure.
+     */
+    private transient MethodStructure m_structMethod;
     }
