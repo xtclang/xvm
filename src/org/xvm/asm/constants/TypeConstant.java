@@ -565,7 +565,7 @@ public abstract class TypeConstant
      *
      * @param errs  the error list to log any errors to
      *
-     * @return
+     * @return TODO
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
@@ -586,7 +586,7 @@ public abstract class TypeConstant
         catch (Exception e)
             {
             System.err.println("** Unable to get underlying class for " + getValueString());
-            return new TypeInfo(this, Collections.EMPTY_MAP);
+            return new TypeInfo(this, Collections.EMPTY_MAP, null, null);
             // TODO CP throw new IllegalStateException("Unable to get underlying class for " + getValueString(), e);
             }
 
@@ -1279,7 +1279,7 @@ System.out.println("** " + getValueString() + " implements interface " + typeCon
             }
  */
 
-        return new TypeInfo(this, mapTypeParams);
+        return new TypeInfo(this, mapTypeParams, null, null);  // TODO - need the listmaps of call chains
         }
 
     /**

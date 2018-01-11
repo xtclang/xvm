@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Component;
@@ -13,21 +14,103 @@ import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
 
+import org.xvm.util.ListMap;
+
 
 /**
  * Represents the "flattened" information about the type.
  */
 public class TypeInfo
     {
-    public TypeInfo(TypeConstant type, Map<String, ParamInfo> mapTypeParams)
+    /**
+     * Construct a TypeInfo.
+     *
+     * @param type                 the type that the TypeInfo represents
+     * @param mapTypeParams        the collected type parameters for the type
+     * @param listmapClassChain    the potential call chain of classes
+     * @param listmapDefaultChain  the potential call chain of default implementations
+     */
+    public TypeInfo(TypeConstant type, Map<String, ParamInfo> mapTypeParams,
+            ListMap<IdentityConstant, Boolean> listmapClassChain,
+            ListMap<IdentityConstant, Boolean> listmapDefaultChain)
         {
         assert type != null;
         assert mapTypeParams != null;
 
         this.type       = type;
         this.parameters = mapTypeParams;
+
+        m_listmapClassChain   = listmapClassChain;
+        m_listmapDefaultChain = listmapDefaultChain;
         }
 
+    /**
+     * Obtain a type resolver that uses the information from this type's type parameters.
+     *
+     * @param errs  the error list to log any errors to
+     *
+     * @return a GenericTypeResolver
+     */
+    public GenericTypeResolver ensureTypeResolver(ErrorListener errs)
+        {
+        assert errs != null;
+
+        TypeResolver resolver = m_resolver;
+        if (resolver == null || resolver.errs != errs)
+            {
+            m_resolver = resolver = new TypeResolver(parameters, errs);
+            }
+        return resolver;
+        }
+
+    /**
+     * Contribute this TypeInfo's knowledge of potential call chain information to another deriving
+     * type's TypeInfo information.
+     *
+     * @param listmapClassChain    the class chain being collected for the derivative type
+     * @param listmapDefaultChain  the default chain being collected for the derivative type
+     * @param fAnnotation          true iff this type is being used as an annotation in the derived
+     *                             type
+     */
+    public void contributeChains(
+            ListMap<IdentityConstant, Boolean> listmapClassChain,
+            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            boolean fAnnotation)
+        {
+        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+            {
+            IdentityConstant constId = entry.getKey();
+            boolean          fYank   = entry.getValue();
+
+            Boolean BAnchored = listmapClassChain.get(constId);
+            if (BAnchored == null)
+                {
+                // the identity does not already appear in the chain, so add it to the chain
+                listmapClassChain.put(constId, fAnnotation & fYank);
+                }
+            else if (BAnchored)
+                {
+                // the identity in the chain was "yanked" from us, so we can't claim it; just leave
+                // it where it is in the chain
+                }
+            else
+                {
+                // the identity in the chain is owned by this type, so remove it from its old
+                // location in the chain, and add it to the end
+                listmapClassChain.remove(constId);
+                listmapClassChain.put(constId, fAnnotation & fYank);
+                }
+            }
+
+        // append our defaults to the default chain (just the oneos that are absent from the chain)
+        for (IdentityConstant constId : m_listmapDefaultChain.keySet())
+            {
+            listmapDefaultChain.putIfAbsent(constId, true);
+            }
+        }
+
+
+    // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
     /**
      * @return the format of the topmost structure that the TypeConstant refers to
      */
@@ -41,18 +124,6 @@ public class TypeInfo
         assert format != null;
         assert m_formatActual == null;
         this.m_formatActual = format;
-        }
-
-    public GenericTypeResolver ensureTypeResolver(ErrorListener errs)
-        {
-        assert errs != null;
-
-        TypeResolver resolver = m_resolver;
-        if (resolver == null || resolver.errs != errs)
-            {
-            m_resolver = resolver = new TypeResolver(parameters, errs);
-            }
-        return resolver;
         }
 
     /**
@@ -236,8 +307,8 @@ public class TypeInfo
             {
             for (MethodInfo info : getAutoMethodInfos())
                 {
-                MethodConstant method = info.getMethodConstant();
-                TypeConstant typeResult = method.getRawReturns()[0];
+                MethodConstant method     = info.getMethodConstant();
+                TypeConstant   typeResult = method.getRawReturns()[0];
                 if (typeResult.equals(typeDesired))
                     {
                     // exact match -- it's not going to get any better than this
@@ -321,4 +392,7 @@ public class TypeInfo
 
     // cached resolver
     private transient TypeResolver m_resolver;
+
+    private ListMap<IdentityConstant, Boolean> m_listmapClassChain;
+    private ListMap<IdentityConstant, Boolean> m_listmapDefaultChain;
     }

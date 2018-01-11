@@ -2,6 +2,7 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
 
@@ -14,28 +15,33 @@ public class MethodBody
      * Construct an implicit, abstract, native, or normal byte-code method body.
      *
      * @param constMethod  the method constant that this body represents
-     * @param impl         one of Implicit, Abstract, Native, or ByteCode
+     * @param impl         one of Implicit, Declared, Native, or Explicit
      */
     public MethodBody(MethodConstant constMethod, Implementation impl)
         {
         assert constMethod != null;
-        assert impl != null && impl != Implementation.Delegating;
+        assert impl != null && impl != Implementation.Delegating && impl != Implementation.Property;
 
         m_constMethod = constMethod;
         m_impl        = impl;
         }
 
     /**
-     * Construct a delegating method body.
+     * Construct a delegating or property field access method body.
      *
      * @param constMethod  the method constant that this body represents
+     * @param impl         one of Delegating or Property
      * @param constProp    the property constant that provides the reference to delegate to
      */
-    public MethodBody(MethodConstant constMethod, PropertyConstant constProp)
+    public MethodBody(MethodConstant constMethod, Implementation impl, PropertyConstant constProp)
         {
-        m_constMethod    = constMethod;
-        m_impl           = Implementation.Delegating;
-        m_constDelegProp = constProp;
+        assert constMethod != null;
+        assert impl == Implementation.Delegating || impl == Implementation.Property;
+        assert constProp != null;
+
+        m_constMethod = constMethod;
+        m_impl        = impl;
+        m_constProp   = constProp;
         }
 
     /**
@@ -55,16 +61,32 @@ public class MethodBody
         }
 
     /**
-     * @return the MethodStructure that this MethodBody represents
+     * @return the MethodStructure that this MethodBody represents, or null if the method
+     *         implementation is Delegating or Property
      */
     public MethodStructure getMethodStructure()
         {
         MethodStructure structMethod = m_structMethod;
         if (structMethod == null)
             {
+            // delegating methods and property methods don't exist in the structural sense
+            if (m_impl == Implementation.Delegating || m_impl == Implementation.Property)
+                {
+                return null;
+                }
+
             m_structMethod = structMethod = (MethodStructure) m_constMethod.getComponent();
             }
         return structMethod;
+        }
+
+    /**
+     * @return true iff this is an abstract method, which means that the method is declared or
+     *         implied, but not implemented
+     */
+    public boolean isAbstract()
+        {
+        return m_impl == Implementation.Implicit || m_impl == Implementation.Declared;
         }
 
     /**
@@ -72,7 +94,8 @@ public class MethodBody
      */
     public boolean isFunction()
         {
-        return getMethodStructure().isFunction();
+        MethodStructure structMethod = getMethodStructure();
+        return structMethod != null && structMethod.isFunction();
         }
 
     /**
@@ -87,9 +110,9 @@ public class MethodBody
      * @return the PropertyConstant of the property that provides the reference to delegate this
      *         method to
      */
-    public PropertyConstant getDelegationProperty()
+    public PropertyConstant getPropertyConstant()
         {
-        return m_constDelegProp;
+        return m_constProp;
         }
 
     /**
@@ -101,10 +124,10 @@ public class MethodBody
      */
     public Annotation findAnnotation(ClassConstant clzAnno)
         {
-        MethodStructure struct = getMethodStructure();
-        if (struct.getAnnotationCount() > 0)
+        MethodStructure structMethod = getMethodStructure();
+        if (structMethod != null && structMethod.getAnnotationCount() > 0)
             {
-            for (Annotation annotation : struct.getAnnotations())
+            for (Annotation annotation : structMethod.getAnnotations())
                 {
                 if (((ClassConstant) annotation.getAnnotationClass()).extendsClass(clzAnno))
                     {
@@ -149,9 +172,20 @@ public class MethodBody
         // otherwise we need to get the operator text from the operator annotation
         // (it's the first of the @Op annotation parameters)
         Annotation annotation = findAnnotation(m_constMethod.getConstantPool().clzOp());
-        return annotation != null &&
-                (m_constMethod.getName().equals(sName) ||
-                 annotation.getParams().length >= 1 && sOp.equals(annotation.getParams()[0]));
+        if (annotation == null)
+            {
+            return false;
+            }
+
+        if (m_constMethod.getName().equals(sName))
+            {
+            return true;
+            }
+
+        Constant[] aconstParams = annotation.getParams();
+        return aconstParams.length >= 1
+                && aconstParams[0] instanceof StringConstant
+                && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
         }
 
 
@@ -162,14 +196,18 @@ public class MethodBody
      * <p/>
      * <ul>
      * <li><b>Implicit</b> - the method body represents a method known to exist for compilation
-     * purposes, but is otherwise not present; this is the result of the {@code into} clause</li>
-     * <li><b>Abstract</b> - the method body represents a declared but non-implemented method</li>
+     * purposes, but is otherwise not present; this is the result of the {@code into} clause, or the
+     * methods of {@code Object} in the context of an interface, for example</li>
+     * <li><b>Declared</b> - the method body represents a declared but non-implemented method</li>
+     * <li><b>Default</b> - the method body is a default implemention from an interface</li>
      * <li><b>Delegating</b> - the method body is implemented by delegating the method call</li>
+     * <li><b>Property</b> - the method body represents access to a property's underlying field,
+     * which occurs when a property's method is overridden and calls {@code super()}</li>
      * <li><b>Native</b> - the method body is implemented natively by the runtime</li>
-     * <li><b>ByteCode</b> - the method body is represented by byte code that gets executed</li>
+     * <li><b>Explicit</b> - the method body is represented by byte code that gets executed</li>
      * </ul>
      */
-    public enum Implementation {Implicit, Abstract, Delegating, Native, ByteCode}
+    public enum Implementation {Implicit, Declared, Default, Delegating, Property, Native, Explicit}
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -185,10 +223,16 @@ public class MethodBody
     private Implementation m_impl;
 
     /**
-     * In the case of delegation, this specifies the property which contains the reference to
-     * delegate to.
+     * The property related to the method body:
+     * <ul>
+     * <li>For Implementation Property, this specifies the property that the method body corresponds
+     * to. For example, this is used to represent the field access for a {@code get()} method on a
+     * property.</li>
+     * <li>For Implementation Delegating, this specifies the property which contains the reference
+     * to delegate to.</li>
+     * </ul>
      */
-    private PropertyConstant m_constDelegProp;
+    private PropertyConstant m_constProp;
 
     /**
      * The cached method structure.
