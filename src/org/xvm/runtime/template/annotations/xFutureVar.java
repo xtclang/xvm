@@ -45,7 +45,7 @@ public class xFutureVar
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.ensurePublicType();
+            TYPE = f_clazzCanonical.getType();
             }
         }
 
@@ -272,7 +272,7 @@ public class xFutureVar
         @Override
         public String toString()
             {
-            return "(" + f_clazz + ") " + (
+            return "(" + m_clazz + ") " + (
                     m_future == null ?  "Unassigned" :
                     m_future.isDone() ? "Completed: "  + toSafeString():
                                         "Not completed"

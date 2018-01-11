@@ -14,7 +14,6 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.Function;
@@ -122,11 +121,9 @@ public class MBind
 
     protected int proceed(Frame frame, ObjectHandle hTarget)
         {
-        TypeComposition clz = hTarget.f_clazz;
+        CallChain chain = getCallChain(frame, hTarget);
 
-        CallChain chain = getCallChain(frame, clz);
-
-        return frame.assignValue(m_nRetValue, clz.f_template.isService() ?
+        return frame.assignValue(m_nRetValue, hTarget.getTemplate().isService() ?
                 Function.makeAsyncHandle(chain, 0).bindTarget(hTarget) :
                 Function.makeHandle(chain, 0).bindTarget(hTarget));
         }

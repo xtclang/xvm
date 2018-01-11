@@ -9,6 +9,7 @@ import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -116,16 +117,16 @@ public abstract class OpInvocable extends Op
         }
 
     // helper methods
-    protected CallChain getCallChain(Frame frame, TypeComposition clazz)
+    protected CallChain getCallChain(Frame frame, ObjectHandle hTarget)
         {
-        if (m_chain != null && m_clazz == clazz)
+        if (m_chain != null && m_clazz == hTarget.getComposition())
             {
             return m_chain;
             }
 
         MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
 
-        m_clazz = clazz;
+        m_clazz = hTarget.getComposition();
 
         Constants.Access access = constMethod.getAccess();
         if (access == Constants.Access.PRIVATE)
@@ -134,7 +135,7 @@ public abstract class OpInvocable extends Op
             }
         else
             {
-            m_chain = clazz.getMethodCallChain(constMethod.getSignature(), access);
+            m_chain = m_clazz.getMethodCallChain(constMethod.getSignature(), access);
             }
 
         return m_chain;

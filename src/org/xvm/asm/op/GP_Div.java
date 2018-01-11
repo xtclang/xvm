@@ -49,6 +49,6 @@ public class GP_Div
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.f_clazz.f_template.invokeDiv(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getTemplate().invokeDiv(frame, hTarget, hArg, m_nRetValue);
         }
     }

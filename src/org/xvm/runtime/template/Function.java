@@ -172,18 +172,18 @@ public class Function
         // bind a specified argument
         public FunctionHandle bind(int iArg, ObjectHandle hArg)
             {
-            return new SingleBoundHandle(f_clazz, this, iArg, hArg);
+            return new SingleBoundHandle(m_clazz, this, iArg, hArg);
             }
 
         // bind the target
         public FunctionHandle bindTarget(ObjectHandle hArg)
             {
-            return new SingleBoundHandle(f_clazz, this, -1, hArg);
+            return new SingleBoundHandle(m_clazz, this, -1, hArg);
             }
 
         public FullyBoundHandle bindAll(ObjectHandle hTarget, ObjectHandle[] ahArg)
             {
-            return new FullyBoundHandle(f_clazz, this, hTarget, ahArg);
+            return new FullyBoundHandle(m_clazz, this, hTarget, ahArg);
             }
 
         protected void addBoundArguments(ObjectHandle[] ahVar)
@@ -413,7 +413,7 @@ public class Function
             ObjectHandle hTarget = f_hTarget;
             if (access != null)
                 {
-                hTarget = hTarget.f_clazz.ensureAccess(hTarget, access);
+                hTarget = hTarget.ensureAccess(access);
                 }
 
             Frame frameSave = frame.m_frameNext;

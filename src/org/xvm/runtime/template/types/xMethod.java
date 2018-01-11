@@ -3,6 +3,7 @@ package org.xvm.runtime.template.types;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
@@ -38,7 +39,7 @@ public class xMethod
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.ensurePublicType();
+            TYPE = f_clazzCanonical.getType();
             }
         }
 
@@ -58,11 +59,11 @@ public class xMethod
         {
         if (constant instanceof MethodConstant)
             {
-            MethodConstant constMethod = (MethodConstant) constant;
-            MethodStructure method = (MethodStructure) constMethod.getComponent();
+            MethodStructure method = (MethodStructure) ((MethodConstant) constant).getComponent();
 
             // TODO: assert if a function
-            return new MethodHandle(f_clazzCanonical, method, frame.getThis().getType());
+
+            return makeHandle(method, frame.getThis().getType());
             }
         return null;
         }
@@ -87,7 +88,14 @@ public class xMethod
 
     public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)
         {
-        return new MethodHandle(INSTANCE.f_clazzCanonical, method, typeTarget);
+        ConstantPool pool = INSTANCE.f_templates.f_container.f_pool;
+
+        TypeConstant typeRet = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getReturnTypes());
+        TypeConstant typeArg = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getParamTypes());
+
+        TypeComposition clzMethod = INSTANCE.ensureParameterizedClass(typeTarget, typeRet, typeArg);
+
+        return new MethodHandle(clzMethod, method);
         }
 
     public static class MethodHandle
@@ -95,24 +103,26 @@ public class xMethod
         {
         public final MethodStructure f_method;
         public final PropertyStructure f_property;
-        public final TypeConstant f_typeTarget;
 
-        protected MethodHandle(TypeComposition clazz, MethodStructure method, TypeConstant typeTarget)
+        protected MethodHandle(TypeComposition clazz, MethodStructure method)
             {
             super(clazz);
 
             f_method = method;
             f_property = null;
-            f_typeTarget = typeTarget;
             }
 
-        protected MethodHandle(TypeComposition clazz, PropertyStructure property, TypeConstant typeTarget)
+        protected MethodHandle(TypeComposition clazz, PropertyStructure property)
             {
             super(clazz);
 
             f_method = null;
             f_property = property;
-            f_typeTarget = typeTarget;
+            }
+
+        public TypeConstant getTarget()
+            {
+            return getType().getActualParamType("TargetType");
             }
 
         @Override
@@ -121,5 +131,4 @@ public class xMethod
             return super.toString() + f_method;
             }
         }
-
     }

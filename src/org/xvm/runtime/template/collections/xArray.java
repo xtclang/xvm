@@ -64,7 +64,7 @@ public class xArray
         TypeConstant typeArray = constArray.getType();
 
         TypeConstant typeEl = typeArray.getActualParamType("ElementType");
-        ClassTemplate templateEl = f_templates.resolveClass(typeEl).f_template;
+        ClassTemplate templateEl = f_templates.getTemplate(typeEl);
 
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
@@ -76,7 +76,7 @@ public class xArray
             }
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
-        IndexSupport templateArray = (IndexSupport) hArray.f_clazz.f_template;
+        IndexSupport templateArray = (IndexSupport) hArray.getTemplate();
 
         ObjectHeap heap = f_templates.f_container.f_heapGlobal;
 
@@ -104,7 +104,7 @@ public class xArray
         {
         // this is a native constructor
         TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        ClassTemplate templateEl = f_templates.resolveClass(typeEl).f_template;
+        ClassTemplate templateEl = f_templates.getTemplate(typeEl);
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
@@ -219,9 +219,7 @@ public class xArray
     @Override
     public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-
-        return hArray.f_clazz.getActualParamType("ElementType");
+        return hTarget.getType().getActualParamType("ElementType");
         }
 
     @Override

@@ -4,8 +4,10 @@ package org.xvm.runtime.template.types;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -41,19 +43,26 @@ public class xProperty
         {
         if (constant instanceof PropertyConstant)
             {
-            return new PropertyHandle(f_clazzCanonical, (PropertyConstant) constant);
+            PropertyStructure prop = (PropertyStructure) ((PropertyConstant) constant).getComponent();
+
+            TypeConstant typeTarget = prop.getParent().getIdentityConstant().asTypeConstant();
+            TypeConstant typeProp = prop.getType();
+
+            TypeComposition clzProp = ensureParameterizedClass(typeTarget, typeProp);
+
+            return new PropertyHandle(clzProp, prop);
             }
         return null;
         }
 
     public static class PropertyHandle extends ObjectHandle
         {
-        public PropertyConstant m_constProperty;
+        public PropertyStructure m_property;
 
-        protected PropertyHandle(TypeComposition clazz, PropertyConstant constProperty)
+        protected PropertyHandle(TypeComposition clazz, PropertyStructure prop)
             {
             super(clazz);
-            m_constProperty = constProperty;
+            m_property = prop;
             }
         }
     }

@@ -195,14 +195,7 @@ public class MethodStructure
      */
     public TypeConstant[] getReturnTypes()
         {
-        Parameter[]    aparam = m_aReturns;
-        int            cparam = aparam.length;
-        TypeConstant[] atype  = new TypeConstant[cparam];
-        for (int i = 0; i < cparam; ++i)
-            {
-            atype[i] = aparam[i].getType();
-            }
-        return atype;
+        return toTypeArray(m_aReturns);
         }
 
     /**
@@ -241,6 +234,37 @@ public class MethodStructure
         {
         return Arrays.asList(m_aParams);
         }
+
+    /**
+     * @return an array of Parameter structures that represent all parameters of the method
+     */
+    public Parameter[] getParamArray()
+        {
+        return m_aParams;
+        }
+
+    /**
+     * @return an array of Parameter structures that represent all return values of the method
+     */
+    public TypeConstant[] getParamTypes()
+        {
+        return toTypeArray(m_aParams);
+        }
+
+    /**
+     * @return an array of types for the specified array of parameters
+     */
+    private static TypeConstant[] toTypeArray(Parameter[] aParam)
+        {
+        int            cParam = aParam.length;
+        TypeConstant[] aType  = new TypeConstant[cParam];
+        for (int i = 0; i < cParam; ++i)
+            {
+            aType[i] = aParam[i].getType();
+            }
+        return aType;
+        }
+
 
     /**
      * Ensure that a Code object exists. If the MethodStructure was disassembled, then the Code will

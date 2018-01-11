@@ -113,13 +113,13 @@ public class P_Set
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                 Frame.Continuation stepNext = frameCaller ->
-                    ahArg[0].f_clazz.f_template.setPropertyValue(
+                    ahArg[0].getTemplate().setPropertyValue(
                         frame, ahArg[0], sProperty, ahArg[1]);
 
                 return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
                 }
 
-            return hTarget.f_clazz.f_template.setPropertyValue(
+            return hTarget.getTemplate().setPropertyValue(
                     frame, hTarget, sProperty, hValue);
             }
         catch (ExceptionHandle.WrapperException e)

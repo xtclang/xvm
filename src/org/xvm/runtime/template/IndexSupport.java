@@ -61,7 +61,7 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.f_clazz.f_template.
+            return hValue.getTemplate().
                     invokePreInc(frame, hValue, null, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)

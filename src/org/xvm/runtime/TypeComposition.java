@@ -14,14 +14,12 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -39,12 +37,11 @@ import org.xvm.runtime.template.Ref.RefHandle;
  *       the extended classes (UnionComposition, InterComposition and ConstComposition)
  */
 public class TypeComposition
-        implements GenericTypeResolver
     {
     /**
      * The underlying class template.
      */
-    public final ClassTemplate f_template;
+    private final ClassTemplate f_template;
 
     /**
      * The actual type - the maximum of what this type composition could be revealed as.
@@ -123,6 +120,14 @@ public class TypeComposition
             }
         }
 
+    /**
+     * @return the template for the actual type of this handle.
+     */
+    public ClassTemplate getTemplate()
+        {
+        return f_template;
+        }
+
     protected TypeComposition getSuper()
         {
         if (m_clzSuper != null)
@@ -157,6 +162,8 @@ public class TypeComposition
 
     /**
      * Retrieve a TypeComposition that widens the current type to the specified type.
+     *
+     * Note that the underlying ClassTemplate doesn't change.
      */
     public TypeComposition maskAs(TypeConstant type)
         {
@@ -175,6 +182,8 @@ public class TypeComposition
 
     /**
      * Retrieve a TypeComposition that widens the actual type to the specified type.
+     *
+     * Note that the underlying ClassTemplate doesn't change.
      */
     public TypeComposition revealAs(TypeConstant type, Container container)
         {
@@ -211,13 +220,7 @@ public class TypeComposition
      */
     public TypeConstant getActualParamType(String sName)
         {
-        return f_typeRevealed.getActualParamType(sName);
-        }
-
-    @Override
-    public TypeConstant resolveGenericType(PropertyConstant constProperty)
-        {
-        return getActualParamType(constProperty.getName());
+        return f_typeActual.getActualParamType(sName);
         }
 
     public boolean isRoot()
@@ -293,6 +296,7 @@ public class TypeComposition
         // 1.2
         list.add(this);
 
+        TypeConstant typeActual = f_typeActual;
         Component.Format format = structThis.getFormat();
         if (fTop && format == Component.Format.MIXIN)
             {
@@ -301,7 +305,7 @@ public class TypeComposition
 
             assert contribInto != null;
 
-            TypeConstant typeInto = contribInto.resolveGenerics(this);
+            TypeConstant typeInto = contribInto.resolveGenerics(typeActual);
 
             TypeComposition clzInto = f_template.f_templates.resolveClass(typeInto);
 
@@ -314,7 +318,7 @@ public class TypeComposition
             switch (contrib.getComposition())
                 {
                 case Incorporates:
-                    TypeConstant typeInto = contrib.resolveGenerics(this);
+                    TypeConstant typeInto = contrib.resolveGenerics(typeActual);
                     if (typeInto != null)
                         {
                         TypeComposition clzContribution = f_template.f_templates.resolveClass(typeInto);
@@ -360,6 +364,7 @@ public class TypeComposition
             }
 
         ClassStructure struct = f_template.f_struct;
+        TypeConstant typeActual = f_typeActual;
         List<TypeComposition> list = new ArrayList<>();
         Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
@@ -379,7 +384,7 @@ public class TypeComposition
                 case Incorporates:
                 case Implements:
                 case Delegates:
-                    TypeConstant typeInto = contrib.resolveGenerics(this);
+                    TypeConstant typeInto = contrib.resolveGenerics(typeActual);
                     if (typeInto != null)
                         {
                         TypeComposition clzContribution = f_template.f_templates.resolveClass(typeInto);
@@ -408,9 +413,9 @@ public class TypeComposition
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
-        assert handle.f_clazz == this;
+        assert handle.getComposition() == this;
 
-        TypeConstant typeCurrent = handle.f_clazz.f_typeRevealed;
+        TypeConstant typeCurrent = f_typeRevealed;
         TypeConstant typeTarget;
 
         switch (access)
@@ -451,21 +456,20 @@ public class TypeComposition
                 throw new IllegalStateException();
             }
 
-        handle = handle.cloneHandle();
-        handle.f_clazz = f_template.ensureClass(typeTarget);
-        return handle;
+        return handle.cloneAs(f_template.ensureClass(typeTarget));
         }
 
-    public synchronized TypeConstant ensurePublicType()
+    public TypeConstant ensurePublicType()
         {
         TypeConstant type = m_typePublic;
         if (type == null)
             {
-            m_typePublic = type = f_typeActual.modifyAccess(Access.PUBLIC);
+            m_typePublic = type = f_typeRevealed.modifyAccess(Access.PUBLIC);
             }
         return type;
         }
-    public synchronized TypeConstant ensureProtectedType()
+
+    public TypeConstant ensureProtectedType()
         {
         TypeConstant type = m_typeProtected;
         if (type == null)
@@ -475,7 +479,7 @@ public class TypeComposition
         return type;
         }
 
-    public synchronized TypeConstant ensurePrivateType()
+    public TypeConstant ensurePrivateType()
         {
         TypeConstant type = m_typePrivate;
         if (type == null)
@@ -485,7 +489,7 @@ public class TypeComposition
         return type;
         }
 
-    public synchronized TypeConstant ensureStructType()
+    public TypeConstant ensureStructType()
         {
         TypeConstant type = m_typeStruct;
         if (type == null)
@@ -564,22 +568,23 @@ public class TypeComposition
         {
         List<MethodStructure> list = new ArrayList<>();
 
-        if (f_typeActual.isParamsSpecified())
+        TypeConstant typeActual = f_typeActual;
+        if (typeActual.isParamsSpecified())
             {
-            constSignature = constSignature.resolveGenericTypes(this);
+            constSignature = constSignature.resolveGenericTypes(typeActual);
             }
 
         nextInChain:
         for (TypeComposition clz : getCallChain())
             {
             MultiMethodStructure mms = (MultiMethodStructure)
-                clz.f_template.f_struct.getChild(constSignature.getName());
+                clz.getTemplate().f_struct.getChild(constSignature.getName());
             if (mms != null)
                 {
                 for (MethodStructure method : mms.methods())
                     {
                     if (method.getAccess().compareTo(access) <= 0 &&
-                        method.isSubstitutableFor(constSignature, this))
+                        method.isSubstitutableFor(constSignature, typeActual))
                         {
                         list.add(method);
 
@@ -621,7 +626,7 @@ public class TypeComposition
 
         for (TypeComposition clz : getCallChain())
             {
-            ClassTemplate template = clz.f_template;
+            ClassTemplate template = clz.getTemplate();
             PropertyStructure property = template.getProperty(sPropName);
             if (property != null)
                 {
@@ -701,7 +706,7 @@ public class TypeComposition
 
         for (TypeComposition clz : collectDeclaredCallChain(true))
             {
-            ClassTemplate template = clz.f_template;
+            ClassTemplate template = clz.getTemplate();
 
             for (Component child : template.f_struct.children())
                 {
@@ -713,7 +718,7 @@ public class TypeComposition
                     if (template.isAnnotated(prop))
                         {
                         TypeComposition clzAnno = template.getAnnotation(prop);
-                        Ref templateRef = (Ref) clzAnno.f_template;
+                        Ref templateRef = (Ref) clzAnno.getTemplate();
                         TypeComposition clzRef = templateRef.ensureParameterizedClass(prop.getType());
 
                         hRef = templateRef.createRefHandle(clzRef, prop.getName());
@@ -751,6 +756,6 @@ public class TypeComposition
     @Override
     public String toString()
         {
-        return f_typeActual.getValueString();
+        return f_typeRevealed.getValueString();
         }
     }

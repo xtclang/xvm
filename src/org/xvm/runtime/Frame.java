@@ -297,28 +297,28 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PUBLIC);
+                return f_hTarget.ensureAccess(Access.PUBLIC);
 
             case Op.A_PROTECTED:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PROTECTED);
+                return f_hTarget.ensureAccess(Access.PROTECTED);
 
             case Op.A_PRIVATE:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
+                return f_hTarget.ensureAccess(Access.PRIVATE);
 
             case Op.A_STRUCT:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.STRUCT);
+                return f_hTarget.ensureAccess(Access.STRUCT);
 
             case Op.A_TYPE:
                 if (f_hTarget == null)
@@ -427,7 +427,7 @@ public class Frame
                     }
                 };
             }
-        return f_hTarget.f_clazz;
+        return f_hTarget.getType();
         }
 
     public ObjectHandle getFrameLocal()
@@ -520,7 +520,7 @@ public class Frame
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
-                    return hThis.f_clazz.f_template.setPropertyValue(
+                    return hThis.getTemplate().setPropertyValue(
                             this, hThis, constProperty.getName(), hValue);
                     }
                 catch (ClassCastException e)
@@ -773,7 +773,7 @@ public class Frame
         {
         return iArg >= 0
                 ? getVarInfo(iArg).getType()
-                : getConstant(iArg).getType();
+                : getConstant(iArg).getType(); // a constant cannot be generic
         }
 
     // same as getArgumentType, but treats the negative ids as "local-property" references
@@ -802,6 +802,12 @@ public class Frame
         {
         assert iArg < Op.CONSTANT_OFFSET;
         return f_context.f_templates.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
+        }
+
+    public TypeConstant resolveType(int iArg)
+        {
+        TypeConstant type = (TypeConstant) getConstant(iArg);
+        return type.resolveGenerics(getGenericsResolver());
         }
 
     // return the ObjectHandle, or null if the value is "pending future", or
@@ -1299,7 +1305,7 @@ public class Frame
 
         public int handle(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            TypeComposition clzException = hException.f_clazz;
+            TypeComposition clzException = hException.getComposition();
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {

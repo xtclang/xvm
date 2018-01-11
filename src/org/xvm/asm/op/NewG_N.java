@@ -18,8 +18,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xClass.ClassHandle;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -112,21 +110,6 @@ public class NewG_N
         {
         try
             {
-            TypeComposition clzTarget;
-            if (m_nTypeValue >= 0)
-                {
-                ClassHandle hClass = (ClassHandle) frame.getArgument(m_nTypeValue);
-                if (hClass == null)
-                    {
-                    return R_REPEAT;
-                    }
-                clzTarget = hClass.f_clazz;
-                }
-            else
-                {
-                clzTarget = frame.resolveClass(m_nTypeValue);
-                }
-
             MethodStructure constructor = getMethodStructure(frame);
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
@@ -135,13 +118,14 @@ public class NewG_N
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = clzTarget.f_template;
+            TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
+            ClassTemplate template = clzTarget.getTemplate();
 
             assert constructor.getParent().getParent() == template.f_struct;
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clzTarget.ensurePublicType());
+                frame.introduceResolvedVar(clzTarget.getType());
                 }
 
             if (anyProperty(ahVar))

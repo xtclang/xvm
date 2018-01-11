@@ -60,9 +60,11 @@ public class xType
         {
         MethodStructure[] aMethods = null;
         xMethod.MethodHandle[] ahMethods = new xMethod.MethodHandle[aMethods.length];
+        TypeConstant typeTarget = hType.getDataType();
+
         for (int i = 0, c = aMethods.length; i < c; i++)
             {
-            ahMethods[i] = xMethod.makeHandle(aMethods[i], hType.getDataType());
+            ahMethods[i] = xMethod.makeHandle(aMethods[i], typeTarget);
             }
         return xArray.makeHandle(xMethod.TYPE, ahMethods);
         }

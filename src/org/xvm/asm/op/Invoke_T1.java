@@ -15,7 +15,6 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
@@ -151,8 +150,7 @@ public class Invoke_T1
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
-        TypeComposition clz = hTarget.f_clazz;
-        CallChain chain = getCallChain(frame, clz);
+        CallChain chain = getCallChain(frame, hTarget);
         MethodStructure method = chain.getTop();
 
         if (ahArg.length != method.getParamCount())
@@ -163,8 +161,8 @@ public class Invoke_T1
         checkReturnRegister(frame, method);
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
-            : clz.f_template.invoke1(frame, chain, hTarget,
+            ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
+            : hTarget.getTemplate().invoke1(frame, chain, hTarget,
             Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 

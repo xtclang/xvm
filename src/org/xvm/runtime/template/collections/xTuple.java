@@ -85,30 +85,11 @@ public class xTuple
         }
 
     @Override
-    public boolean isConstantCacheable(Constant constant)
-        {
-        ArrayConstant constTuple = (ArrayConstant) constant;
-        TypeConstant constType = constTuple.getType();
-
-        ObjectHeap heap = f_templates.f_container.f_heapGlobal;
-
-        for (TypeConstant constElemType : constType.getParamTypes())
-            {
-            ClassTemplate template = heap.getConstTemplate(constElemType);
-            if (!template.isConstantCacheable(constElemType))
-                {
-                return false;
-                }
-            }
-        return true;
-        }
-
-    @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];
-        IndexSupport support = (IndexSupport) hSequence.f_clazz.f_template;
+        IndexSupport support = (IndexSupport) hSequence.getTemplate();
 
         ObjectHandle[] ahValue;
 
@@ -195,7 +176,7 @@ public class xTuple
         TupleHandle hTuple = (TupleHandle) hTarget;
 
         StringBuilder sb = new StringBuilder()
-          .append(hTuple.f_clazz.toString())
+          .append(hTuple.getComposition().toString())
           .append('(');
 
         ObjectHandle[] ahValue = hTuple.m_ahValue;

@@ -79,9 +79,9 @@ public class Var_D
         {
         TypeComposition clz = frame.resolveClass(m_nType);
 
-        RefHandle hRef = clz.f_template.createRefHandle(clz, null);
+        RefHandle hRef = clz.getTemplate().createRefHandle(clz, null);
 
-        frame.introduceResolvedVar(clz.ensurePublicType(), null, Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceResolvedVar(clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

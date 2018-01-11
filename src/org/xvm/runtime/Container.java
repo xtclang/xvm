@@ -96,7 +96,7 @@ public class Container
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,
                 Service.INSTANCE.f_clazzCanonical,
-                Service.INSTANCE.f_clazzCanonical.ensurePublicType());
+                Service.INSTANCE.f_clazzCanonical.getType());
 
         initResources();
 
@@ -129,7 +129,7 @@ public class Container
         ClassTemplate templateClock = f_templates.getTemplate("Clock");
         if (templateClock != null)
             {
-            TypeConstant typeClock = templateClock.f_clazzCanonical.ensurePublicType();
+            TypeConstant typeClock = templateClock.f_clazzCanonical.getType();
 
             ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
 
@@ -144,7 +144,7 @@ public class Container
         ClassTemplate templateConsole = f_templates.getTemplate("io.Console");
         if (templateConsole != null)
             {
-            TypeConstant typeConsole = templateConsole.f_clazzCanonical.ensurePublicType();
+            TypeConstant typeConsole = templateConsole.f_clazzCanonical.getType();
 
             ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
 

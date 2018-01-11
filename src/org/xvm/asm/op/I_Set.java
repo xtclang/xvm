@@ -73,7 +73,7 @@ public class I_Set
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue)
         {
-        IndexSupport template = (IndexSupport) hTarget.f_clazz.f_template;
+        IndexSupport template = (IndexSupport) hTarget.getTemplate();
 
         ExceptionHandle hException = template.assignArrayValue(hTarget, hIndex.getValue(), hValue);
 

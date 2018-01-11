@@ -112,10 +112,11 @@ public class Const
         GenericHandle hConst = (GenericHandle) hTarget;
 
         StringBuilder sb = new StringBuilder()
-          .append(hConst.f_clazz.toString())
+          .append(hConst.getComposition().toString())
           .append('{');
 
-        return new ToString(hConst, sb, hConst.f_clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+        return new ToString(hConst, sb,
+            hConst.getComposition().getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     // build the hashValue and assign it to the specified register
@@ -130,7 +131,8 @@ public class Const
             return frame.assignValue(iReturn, hHash);
             }
 
-        return new HashGet(hConst, new long[1], hConst.f_clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+        return new HashGet(hConst, new long[1],
+            hConst.getComposition().getFieldNames().iterator(), iReturn).doNext(frame);
         }
 
     // ----- helper classes -----

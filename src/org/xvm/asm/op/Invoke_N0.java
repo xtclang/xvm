@@ -14,10 +14,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
-
-import static org.xvm.util.Handy.readPackedInt;
 
 
 /**
@@ -127,7 +124,7 @@ public class Invoke_N0
 
     protected int resolveArgs(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
         {
-        CallChain chain = getCallChain(frame, hTarget.f_clazz);
+        CallChain chain = getCallChain(frame, hTarget);
 
         ObjectHandle[] ahVar;
         if (ahArg == null)
@@ -161,11 +158,9 @@ public class Invoke_N0
 
     protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
-        TypeComposition clz = hTarget.f_clazz;
-
         return chain.isNative()
-             ? clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget, ahVar, Frame.RET_UNUSED)
-             : clz.f_template.invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
+             ? hTarget.getTemplate().invokeNativeN(frame, chain.getTop(), hTarget, ahVar, Frame.RET_UNUSED)
+             : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
     @Override
