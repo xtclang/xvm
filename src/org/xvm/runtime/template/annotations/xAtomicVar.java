@@ -187,7 +187,7 @@ public class xAtomicVar
         @Override
         public String toString()
             {
-            return f_clazz + " -> " + m_atomic.get();
+            return m_clazz + " -> " + m_atomic.get();
             }
         }
 

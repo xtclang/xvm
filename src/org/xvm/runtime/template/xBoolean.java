@@ -31,7 +31,7 @@ public class xBoolean
 
         if (fInstance)
             {
-            TYPE = f_clazzCanonical.ensurePublicType();
+            TYPE = f_clazzCanonical.getType();
             PARAMETERS = new TypeConstant[] {getTypeConstant()};
             }
         }

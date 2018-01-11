@@ -20,7 +20,6 @@ public class xVar
         extends Ref
     {
     public static xVar INSTANCE;
-    public static TypeConstant TYPE;
 
     public xVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -29,7 +28,6 @@ public class xVar
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.ensurePublicType();
             }
         }
 

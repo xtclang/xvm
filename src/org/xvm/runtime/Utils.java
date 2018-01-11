@@ -129,7 +129,7 @@ public abstract class Utils
     // return R_EXCEPTION, R_NEXT or R_CALL
     public static int callHash(Frame frame, ObjectHandle hConst)
         {
-        TypeComposition clzConst = hConst.f_clazz;
+        TypeComposition clzConst = hConst.getComposition();
         CallChain chain = clzConst.getPropertyGetterChain("hash");
 
         if (chain.isNative())
@@ -148,7 +148,7 @@ public abstract class Utils
     // return R_EXCEPTION, R_NEXT or R_CALL
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
-        TypeComposition clzValue = hValue.f_clazz;
+        TypeComposition clzValue = hValue.getComposition();
         CallChain chain = clzValue.getMethodCallChain(Utils.SIG_TO_STRING, Constants.Access.PUBLIC);
 
         if (chain.isNative())

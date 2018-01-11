@@ -297,28 +297,28 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PUBLIC);
+                return f_hTarget.ensureAccess(Access.PUBLIC);
 
             case Op.A_PROTECTED:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PROTECTED);
+                return f_hTarget.ensureAccess(Access.PROTECTED);
 
             case Op.A_PRIVATE:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.PRIVATE);
+                return f_hTarget.ensureAccess(Access.PRIVATE);
 
             case Op.A_STRUCT:
                 if (f_hTarget == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.f_clazz.ensureAccess(f_hTarget, Access.STRUCT);
+                return f_hTarget.ensureAccess(Access.STRUCT);
 
             case Op.A_TYPE:
                 if (f_hTarget == null)
@@ -1305,7 +1305,7 @@ public class Frame
 
         public int handle(Frame frame, ExceptionHandle hException, int iGuard)
             {
-            TypeComposition clzException = hException.f_clazz;
+            TypeComposition clzException = hException.getComposition();
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++)
                 {

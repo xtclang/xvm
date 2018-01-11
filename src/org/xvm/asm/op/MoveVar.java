@@ -90,7 +90,7 @@ public class MoveVar
 
             if (frame.isNextRegister(m_nToValue))
                 {
-                frame.introduceResolvedVar(clzRef.ensurePublicType());
+                frame.introduceResolvedVar(clzRef.getType());
                 }
 
             // the destination type must be the same as the source

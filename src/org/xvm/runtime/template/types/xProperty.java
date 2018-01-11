@@ -7,6 +7,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -43,10 +44,13 @@ public class xProperty
         if (constant instanceof PropertyConstant)
             {
             PropertyStructure prop = (PropertyStructure) ((PropertyConstant) constant).getComponent();
-            TypeComposition clz = ensureParameterizedClass(
-                prop.getType(), prop.getParent().getIdentityConstant().asTypeConstant());
 
-            return new PropertyHandle(clz, prop);
+            TypeConstant typeTarget = prop.getParent().getIdentityConstant().asTypeConstant();
+            TypeConstant typeProp = prop.getType();
+
+            TypeComposition clzProp = ensureParameterizedClass(typeTarget, typeProp);
+
+            return new PropertyHandle(clzProp, prop);
             }
         return null;
         }

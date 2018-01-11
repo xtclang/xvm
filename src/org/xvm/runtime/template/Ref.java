@@ -31,7 +31,7 @@ public class Ref
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.ensurePublicType();
+            TYPE = f_clazzCanonical.getType();
             }
         }
 

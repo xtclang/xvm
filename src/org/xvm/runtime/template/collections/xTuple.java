@@ -176,7 +176,7 @@ public class xTuple
         TupleHandle hTuple = (TupleHandle) hTarget;
 
         StringBuilder sb = new StringBuilder()
-          .append(hTuple.f_clazz.toString())
+          .append(hTuple.getComposition().toString())
           .append('(');
 
         ObjectHandle[] ahValue = hTuple.m_ahValue;

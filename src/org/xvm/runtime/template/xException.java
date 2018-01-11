@@ -71,8 +71,7 @@ public class xException
         INSTANCE.setFieldValue(hException,
                 INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
 
-        return (ExceptionHandle)
-                hException.f_clazz.ensureAccess(hException, Constants.Access.PUBLIC);
+        return (ExceptionHandle) hException.ensureAccess(Constants.Access.PUBLIC);
         }
 
     private static ExceptionHandle makeStructHandle(ExceptionHandle hCause, Throwable eCause)

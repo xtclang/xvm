@@ -89,7 +89,7 @@ public class xInjectedRef
             {
             try
                 {
-                return "(" + f_clazz + ") " + get();
+                return "(" + m_clazz + ") " + get();
                 }
             catch (Throwable e)
                 {

@@ -22,6 +22,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.CallChain.PropertyCallChain;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
@@ -43,7 +44,6 @@ import org.xvm.runtime.template.collections.xArray;
 
 /**
  * ClassTemplate represents a run-time class.
-
  */
 public abstract class ClassTemplate
     {
@@ -419,13 +419,12 @@ public abstract class ClassTemplate
         // the very last frame should also assign the resulting new object
 
         Frame.Continuation contAssign =
-                frameCaller -> frameCaller.assignValue(iReturn,
-                    hStruct.f_clazz.ensureAccess(hStruct, Access.PUBLIC));
+            frameCaller -> frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
         Frame frameRC1 = frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
 
         Frame frameDC0 = clazz.callDefaultConstructors(frame, hStruct, ahVar,
-                frameCaller -> frameCaller.call(frameRC1));
+            frameCaller -> frameCaller.call(frameRC1));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         frameRC1.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
@@ -687,7 +686,8 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertyGetterChain(sPropName);
+        PropertyCallChain chain = hTarget.getComposition().
+            getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
@@ -716,7 +716,7 @@ public abstract class ClassTemplate
 
         if (isGenericType(sName))
             {
-            TypeConstant type = hTarget.f_clazz.getActualParamType(sName);
+            TypeConstant type = hTarget.getComposition().getActualParamType(sName);
 
             return frame.assignValue(iReturn, type.getTypeHandle());
             }
@@ -769,7 +769,7 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        CallChain.PropertyCallChain chain = hTarget.f_clazz.getPropertySetterChain(sPropName);
+        PropertyCallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
         PropertyStructure property = chain.getProperty();
 
         ExceptionHandle hException = null;

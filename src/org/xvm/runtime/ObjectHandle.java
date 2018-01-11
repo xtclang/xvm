@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.Map;
 
+import org.xvm.asm.Constants;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ListMap;
@@ -16,19 +17,28 @@ import org.xvm.util.ListMap;
 public class ObjectHandle
         implements Cloneable
     {
-    public TypeComposition f_clazz;
+    protected TypeComposition m_clazz;
     protected boolean m_fMutable = false;
 
     protected ObjectHandle(TypeComposition clazz)
         {
-        f_clazz = clazz;
+        m_clazz = clazz;
         }
 
-    public ObjectHandle cloneHandle()
+    /**
+     * Clone this handle using the specified TypeComposition.
+     *
+     * @param clazz  the TypeComposition to mask/reveal this handle as
+     *
+     * @return the new handle
+     */
+    public ObjectHandle cloneAs(TypeComposition clazz)
         {
         try
             {
-            return (ObjectHandle) super.clone();
+            ObjectHandle handle = (ObjectHandle) super.clone();
+            handle.m_clazz = clazz;
+            return handle;
             }
         catch (CloneNotSupportedException e)
             {
@@ -48,29 +58,42 @@ public class ObjectHandle
 
     public boolean isStruct()
         {
-        return f_clazz.isStruct();
+        return m_clazz.isStruct();
         }
 
     /**
-     * @return the template for the actual type of this handle.
+     * @return the TypeComposition for this handle
+     */
+    public TypeComposition getComposition()
+        {
+        return m_clazz;
+        }
+
+    /**
+     * @return the template for the actual type of this handle
      */
     public ClassTemplate getTemplate()
         {
-        return f_clazz.getTemplate();
+        return m_clazz.getTemplate();
         }
 
     /**
-     * @return the revealed type of this handle.
+     * @return the revealed type of this handle
      */
     public TypeConstant getType()
         {
-        return f_clazz.getType();
+        return m_clazz.getType();
+        }
+
+    public ObjectHandle ensureAccess(Constants.Access access)
+        {
+        return m_clazz.ensureAccess(this, access);
         }
 
     @Override
     public String toString()
         {
-        return "(" + f_clazz + ") ";
+        return "(" + m_clazz + ") ";
         }
 
     public static class GenericHandle

@@ -219,9 +219,7 @@ public class xArray
     @Override
     public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-
-        return hArray.f_clazz.getActualParamType("ElementType");
+        return hTarget.getType().getActualParamType("ElementType");
         }
 
     @Override

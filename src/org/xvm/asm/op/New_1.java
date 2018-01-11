@@ -119,7 +119,7 @@ public class New_1
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clzTarget.ensurePublicType());
+                frame.introduceResolvedVar(clzTarget.getType());
                 }
 
             if (isProperty(ahVar[0]))

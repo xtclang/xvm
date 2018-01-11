@@ -125,7 +125,7 @@ public class NewG_N
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clzTarget.ensurePublicType());
+                frame.introduceResolvedVar(clzTarget.getType());
                 }
 
             if (anyProperty(ahVar))

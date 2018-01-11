@@ -20,7 +20,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -414,9 +413,9 @@ public class TypeComposition
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
         {
-        assert handle.f_clazz == this;
+        assert handle.getComposition() == this;
 
-        TypeConstant typeCurrent = handle.f_clazz.f_typeRevealed;
+        TypeConstant typeCurrent = f_typeRevealed;
         TypeConstant typeTarget;
 
         switch (access)
@@ -457,9 +456,7 @@ public class TypeComposition
                 throw new IllegalStateException();
             }
 
-        handle = handle.cloneHandle();
-        handle.f_clazz = f_template.ensureClass(typeTarget);
-        return handle;
+        return handle.cloneAs(f_template.ensureClass(typeTarget));
         }
 
     public TypeConstant ensurePublicType()
