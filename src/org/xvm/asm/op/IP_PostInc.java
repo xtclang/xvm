@@ -63,7 +63,7 @@ public class IP_PostInc
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.f_clazz.f_template.invokeNext(frame, hTarget, Frame.RET_LOCAL))
+        switch (hTarget.getTemplate().invokeNext(frame, hTarget, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
@@ -88,6 +88,6 @@ public class IP_PostInc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.f_clazz.f_template.invokePostInc(frame, hTarget, sProperty, m_nRetValue);
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, m_nRetValue);
         }
     }

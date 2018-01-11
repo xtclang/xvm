@@ -177,11 +177,9 @@ public class Invoke_NN
 
     protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
-        TypeComposition clz = hTarget.f_clazz;
-
         return chain.isNative()
-             ? clz.f_template.invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
-             : clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+             ? hTarget.getTemplate().invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
+             : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
     private int[] m_anArgValue;

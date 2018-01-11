@@ -74,20 +74,19 @@ public class X_Print
                 if (isProperty(hValue))
                     {
                     PropertyHandle hProp = (PropertyHandle) hValue;
-                    sb.append("Local property: " + hProp.m_constProperty.getName());
+                    sb.append("Local property: ").append(hProp.m_constProperty.getName());
                     return R_NEXT;
                     }
 
                 // call the "to<String>()" method for the object to get the value
                 m_nMethodId = frame.f_adapter.getMethodConstId("Object", "to",
                     ClassTemplate.VOID, ClassTemplate.STRING);
-                TypeComposition clz = hValue.f_clazz;
-                CallChain chain = getCallChain(frame, clz);
+                CallChain chain = getCallChain(frame, hValue.f_clazz);
 
                 int iResult;
                 if (chain.isNative())
                     {
-                    iResult = clz.f_template.invokeNativeN(frame, chain.getTop(), hValue,
+                    iResult = hValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue,
                             Utils.OBJECTS_NONE, Frame.RET_LOCAL);
                     if (iResult == R_NEXT)
                         {
@@ -98,7 +97,7 @@ public class X_Print
                     {
                     ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-                    iResult = clz.f_template.invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+                    iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
                     }
 
                 if (iResult == R_CALL)

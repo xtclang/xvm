@@ -114,21 +114,21 @@ public class New_N
 
             IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_templates.getTemplate(constClz);
-            TypeComposition clztarget = template.f_clazzCanonical;
+            TypeComposition clzTarget = template.f_clazzCanonical;
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clztarget.ensurePublicType());
+                frame.introduceResolvedVar(clzTarget.ensurePublicType());
                 }
 
             if (anyProperty(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clztarget, ahVar, m_nRetValue);
+                    template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
-            return template.construct(frame, constructor, clztarget, ahVar, m_nRetValue);
+            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

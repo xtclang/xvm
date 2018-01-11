@@ -176,8 +176,8 @@ public class Invoke_N1
         TypeComposition clz = hTarget.f_clazz;
 
         return chain.isNative()
-             ? clz.f_template.invokeNativeN(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
-             : clz.f_template.invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
+             ? hTarget.getTemplate().invokeNativeN(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
+             : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override

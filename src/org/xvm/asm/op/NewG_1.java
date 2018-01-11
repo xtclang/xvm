@@ -137,7 +137,7 @@ public class NewG_1
                 return R_REPEAT;
                 }
 
-            ClassTemplate template = clzTarget.f_template;
+            ClassTemplate template = clzTarget.getTemplate();
 
             assert constructor.getParent().getParent() == template.f_struct;
 

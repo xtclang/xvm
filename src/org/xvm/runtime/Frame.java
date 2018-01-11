@@ -427,7 +427,7 @@ public class Frame
                     }
                 };
             }
-        return f_hTarget.f_clazz;
+        return f_hTarget.getType();
         }
 
     public ObjectHandle getFrameLocal()
@@ -520,7 +520,7 @@ public class Frame
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
-                    return hThis.f_clazz.f_template.setPropertyValue(
+                    return hThis.getTemplate().setPropertyValue(
                             this, hThis, constProperty.getName(), hValue);
                     }
                 catch (ClassCastException e)

@@ -176,8 +176,8 @@ public class Invoke_NT
         TypeComposition clz = hTarget.f_clazz;
 
         return chain.isNative()
-             ? clz.f_template.invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
-             : clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
+             ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
+             : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override

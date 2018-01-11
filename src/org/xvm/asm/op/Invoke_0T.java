@@ -123,21 +123,20 @@ public class Invoke_0T
 
     protected int complete(Frame frame, ObjectHandle hTarget)
         {
-        TypeComposition clz = hTarget.f_clazz;
-        CallChain chain = getCallChain(frame, clz);
+        CallChain chain = getCallChain(frame, hTarget.f_clazz);
         MethodStructure method = chain.getTop();
 
         checkReturnTupleRegister(frame, method);
 
         if (chain.isNative())
             {
-            return clz.f_template.invokeNativeT(frame, method, hTarget,
+            return hTarget.getTemplate().invokeNativeT(frame, method, hTarget,
                 Utils.OBJECTS_NONE, m_nRetValue);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
-        return clz.f_template.invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
+        return hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     }

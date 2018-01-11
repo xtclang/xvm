@@ -156,8 +156,8 @@ public class Invoke_T0
             }
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED)
-            : clz.f_template.invoke1(frame, chain, hTarget,
+            ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED)
+            : hTarget.getTemplate().invoke1(frame, chain, hTarget,
                 Utils.ensureSize(ahArg, method.getMaxVars()), Frame.RET_UNUSED);
         }
 

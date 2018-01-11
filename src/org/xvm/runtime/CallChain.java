@@ -107,7 +107,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.f_clazz.f_template.
+            return hThis.getTemplate().
                     invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
             }
 
@@ -134,7 +134,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.f_clazz.f_template.
+            return hThis.getTemplate().
                     invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
             }
 
@@ -164,9 +164,9 @@ public class CallChain
         if (Adapter.isNative(methodSuper))
             {
             return fReturnTuple
-                ? hThis.f_clazz.f_template.
+                ? hThis.getTemplate().
                     invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
-                : hThis.f_clazz.f_template.
+                : hThis.getTemplate().
                     invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
             }
 
@@ -190,7 +190,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.f_clazz.f_template.
+            return hThis.getTemplate().
                     invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
             }
 
@@ -234,14 +234,14 @@ public class CallChain
         @Override
         protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
             {
-            return hThis.f_clazz.f_template.getFieldValue(frame, hThis, f_property, iReturn);
+            return hThis.getTemplate().getFieldValue(frame, hThis, f_property, iReturn);
             }
 
         @Override
         protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
             {
             ObjectHandle.ExceptionHandle hException =
-                    hThis.f_clazz.f_template.setFieldValue(hThis, f_property, hArg);
+                    hThis.getTemplate().setFieldValue(hThis, f_property, hArg);
             return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }
         }

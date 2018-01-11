@@ -236,6 +236,12 @@ public class TemplateRegistry
     // using the specified actual type parameters
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
+        return getTemplate(typeActual).ensureClass(typeActual);
+        }
+
+    // obtain a ClassTemplate for the specified type
+    public ClassTemplate getTemplate(TypeConstant typeActual)
+        {
         ClassTemplate template = f_mapTemplateByType.get(typeActual);
         if (template == null)
             {
@@ -251,7 +257,6 @@ public class TemplateRegistry
                 }
             f_mapTemplateByType.put(typeActual, template);
             }
-
-        return template.ensureClass(typeActual);
+        return template;
         }
     }

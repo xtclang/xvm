@@ -170,8 +170,8 @@ public class Invoke_TN
         checkReturnRegisters(frame, method);
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)
-            : clz.f_template.invokeN(frame, chain, hTarget,
+            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahArg, m_anRetValue)
+            : hTarget.getTemplate().invokeN(frame, chain, hTarget,
                 Utils.ensureSize(ahArg, method.getMaxVars()), m_anRetValue);
         }
 

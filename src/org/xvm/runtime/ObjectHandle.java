@@ -52,6 +52,14 @@ public class ObjectHandle
         }
 
     /**
+     * @return the template for the actual type of this handle.
+     */
+    public ClassTemplate getTemplate()
+        {
+        return f_clazz.getTemplate();
+        }
+
+    /**
      * @return the revealed type of this handle.
      */
     public TypeConstant getType()

@@ -71,6 +71,6 @@ public class GP_Neg
     @Override
     protected int completeUnary(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.f_clazz.f_template.invokeNeg(frame, hTarget, m_nRetValue);
+        return hTarget.getTemplate().invokeNeg(frame, hTarget, m_nRetValue);
         }
     }

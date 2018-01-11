@@ -228,7 +228,7 @@ public abstract class ClassTemplate
         PropertyStructure propSuper = null;
         for (TypeComposition clzSuper : f_clazzCanonical.getCallChain())
             {
-            propSuper = clzSuper.f_template.getProperty(sPropName);
+            propSuper = clzSuper.getTemplate().getProperty(sPropName);
             if (propSuper != null)
                 {
                 break;
@@ -984,7 +984,7 @@ public abstract class ClassTemplate
             MethodStructure methodSuper = null;
             for (TypeComposition clzSuper : f_clazzCanonical.getCallChain())
                 {
-                methodSuper = f_templates.f_adapter.getMethod(clzSuper.f_template, sName, asParam, asRet);
+                methodSuper = f_templates.f_adapter.getMethod(clzSuper.getTemplate(), sName, asParam, asRet);
                 if (methodSuper != null)
                     {
                     break;

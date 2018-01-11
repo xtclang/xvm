@@ -88,7 +88,7 @@ public class Ref
                     {
                     ObjectHandle hReferent = hThis.get();
                     return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            hReferent.f_clazz.f_template.isService()));
+                            hReferent.getTemplate().isService()));
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
@@ -100,7 +100,7 @@ public class Ref
                     {
                     ObjectHandle hReferent = hThis.get();
                     return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            hReferent.f_clazz.f_template.isConst()));
+                            hReferent.getTemplate().isConst()));
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
@@ -340,14 +340,14 @@ public class Ref
         public ObjectHandle get()
                 throws ExceptionHandle.WrapperException
             {
-            return ((IndexSupport) f_hTarget.f_clazz.f_template).
+            return ((IndexSupport) f_hTarget.getTemplate()).
                     extractArrayValue(f_hTarget, f_lIndex);
             }
 
         @Override
         public ExceptionHandle set(ObjectHandle handle)
             {
-            return ((IndexSupport) f_hTarget.f_clazz.f_template).
+            return ((IndexSupport) f_hTarget.getTemplate()).
                     assignArrayValue(f_hTarget, f_lIndex, handle);
             }
 

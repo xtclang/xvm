@@ -119,12 +119,12 @@ public class P_Get
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
-                    hTarget.f_clazz.f_template.getPropertyValue(
+                    hTarget.getTemplate().getPropertyValue(
                         frame, ahTarget[0], sProperty, m_nRetValue);
 
                 return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
-            return hTarget.f_clazz.f_template.getPropertyValue(
+            return hTarget.getTemplate().getPropertyValue(
                 frame, hTarget, sProperty, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)

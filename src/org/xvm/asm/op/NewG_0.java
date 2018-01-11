@@ -121,7 +121,7 @@ public class NewG_0
                 }
 
             MethodStructure constructor = getMethodStructure(frame);
-            ClassTemplate template = clzTarget.f_template;
+            ClassTemplate template = clzTarget.getTemplate();
 
             assert constructor.getParent().getParent() == template.f_struct;
 

@@ -150,7 +150,6 @@ public class Invoke_1N
 
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        TypeComposition clz = hTarget.f_clazz;
         CallChain chain = getCallChain(frame, hTarget.f_clazz);
         MethodStructure method = chain.getTop();
 
@@ -160,8 +159,8 @@ public class Invoke_1N
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? clz.f_template.invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
-            : clz.f_template.invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
+            : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
     private int m_nArgValue;
