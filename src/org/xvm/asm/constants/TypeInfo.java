@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -36,7 +35,7 @@ public class TypeInfo
      * @param mapProperties        the properties of the type
      * @param mapMethods           the methods of the type
      */
-    public TypeInfo(TypeConstant type, Component.Format format, Map<String, ParamInfo> mapTypeParams,
+    public TypeInfo(TypeConstant type, Format format, Map<String, ParamInfo> mapTypeParams,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
@@ -94,33 +93,26 @@ public class TypeInfo
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
             boolean fAnnotation)
         {
-        // TODO review GG if this TypeInfo is a "type" not a "class", what else does it need to add, if anything?
-        if (m_format != Format.INTERFACE)
+        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
             {
-            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
-                {
-                IdentityConstant constId = entry.getKey();
-                boolean          fYank   = entry.getValue();
+            IdentityConstant constId = entry.getKey();
+            boolean          fYank   = entry.getValue();
 
-                Boolean BAnchored = listmapClassChain.get(constId);
-                if (BAnchored == null)
-                    {
-                    // the identity does not already appear in the chain, so add it to the chain
-                    listmapClassChain.put(constId, fAnnotation & fYank);
-                    }
-                else if (BAnchored)
-                    {
-                    // the identity in the chain was "yanked" from us, so we can't claim it; just leave
-                    // it where it is in the chain
-                    }
-                else
-                    {
-                    // the identity in the chain is owned by this type, so remove it from its old
-                    // location in the chain, and add it to the end
-                    listmapClassChain.remove(constId);
-                    listmapClassChain.put(constId, fAnnotation & fYank);
-                    }
+            Boolean BAnchored = listmapClassChain.get(constId);
+            if (BAnchored == null)
+                {
+                // the identity does not already appear in the chain, so add it to the chain
+                listmapClassChain.put(constId, fAnnotation & fYank);
                 }
+            else if (!BAnchored)
+                {
+                // the identity in the chain is owned by this type, so remove it from its old
+                // location in the chain, and add it to the end
+                listmapClassChain.remove(constId);
+                listmapClassChain.put(constId, fAnnotation & fYank);
+                }
+            // else ... the identity in the chain was "yanked" from us, so we can't claim it;
+            // just leave it where it is in the chain
             }
 
         // append our defaults to the default chain (just the ones that are absent from the chain)
@@ -139,16 +131,38 @@ public class TypeInfo
         }
 
     /**
-     * @return the format of the topmost structure that the TypeConstant refers to
+     * @return the format of the topmost structure that the TypeConstant refers to, or
+     *         {@code INTERFACE} for any non-class / non-mixin type (such as a difference type)
      */
-    public Component.Format getFormat()
+    public Format getFormat()
         {
         return m_format;
         }
 
+    /**
+     * @return the complete set of type parameters declared within the type
+     */
     public Map<String, ParamInfo> getTypeParams()
         {
         return m_mapTypeParams;
+        }
+
+    /**
+     * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
+     *         not a mixin
+     */
+    public TypeConstant getRebases()
+        {
+        return m_typeRebases;
+        }
+
+    /**
+     * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
+     *         not a mixin
+     */
+    public TypeConstant getExtends()
+        {
+        return m_typeExtends;
         }
 
     /**
@@ -161,11 +175,19 @@ public class TypeInfo
         }
 
     /**
-     * @return true iff this TypeInfo represents a service
+     * @return all of the properties for this type
      */
-    public boolean isService()
+    public Map<String, PropertyInfo> getProperties()
         {
-        return m_format == Format.SERVICE;
+        return m_mapProperties;
+        }
+
+    /**
+     * @return all of the methods for this type
+     */
+    public Map<SignatureConstant, MethodInfo> getMethods()
+        {
+        return m_mapMethods;
         }
 
     /**
@@ -420,7 +442,7 @@ public class TypeInfo
      * The Format of the type. In some cases, such as a difference type, or a "private interface",
      * the format is considered to be an interface, because it is not (and can not be) a class.
      */
-    private Component.Format m_format;
+    private final Format m_format;
 
     /**
      * The type parameters for this TypeInfo.
@@ -431,17 +453,17 @@ public class TypeInfo
      * The type that is extended. The term "extends" has slightly different meanings for mixins and
      * other classes.
      */
-    private TypeConstant m_typeExtends;
+    private final TypeConstant m_typeExtends;
 
     /**
      * The type that is rebased onto.
      */
-    private TypeConstant m_typeRebases;
+    private final TypeConstant m_typeRebases;
 
     /**
      * For mixins, the type that is mixed into. For interfaces, this is always Object.
      */
-    private TypeConstant m_typeInto;
+    private final TypeConstant m_typeInto;
 
     /**
      * The potential call chain of classes.

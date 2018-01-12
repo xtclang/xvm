@@ -237,6 +237,21 @@ public interface Constants
      * {0} is annotated by {1}, but is not compatible with the required "into": {2}.
      */
     public static final String VE_ANNOTATION_INCOMPATIBLE            = "VERIFY-32";
+    /**
+     * {0} type parameter {1} is of type {2}, which conflicts with the type parameter contribution
+     * from {3} of type {4}.
+     */
+    public static final String VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB    = "VERIFY-33";
+    /**
+     * {0} type parameter {1} is not specified, which conflicts with the type parameter contribution
+     * from {2} of type {3}.
+     */
+    public static final String VE_TYPE_PARAM_CONTRIB_HAS_SPEC        = "VERIFY-34";
+    /**
+     * {0} type parameter {1} is of type {2}, which conflicts with the type parameter contribution
+     * from {3} of the unspecified type.
+     */
+    public static final String VE_TYPE_PARAM_CONTRIB_NO_SPEC         = "VERIFY-35";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

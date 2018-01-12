@@ -7,7 +7,9 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -213,7 +215,7 @@ public class ImmutableTypeConstant
                 }
 
             // a service type cannot be immutable
-            if (type.ensureTypeInfo(errs).isService())
+            if (type.ensureTypeInfo(errs).getFormat() == Component.Format.SERVICE)
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, m_constType.getValueString());
                 }

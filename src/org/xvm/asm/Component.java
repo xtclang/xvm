@@ -2364,7 +2364,7 @@ public abstract class Component
          * @param delegate     for a Delegates composition, this is the property that provides the
          *                     delegate reference
          */
-        protected Contribution(TypeConstant constant, PropertyConstant delegate)
+        public Contribution(TypeConstant constant, PropertyConstant delegate)
             {
             assert constant != null && delegate != null;
 

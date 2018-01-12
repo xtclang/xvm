@@ -570,7 +570,7 @@ System.out.println(m_typeinfo);
      *
      * @param errs  the error list to log any errors to
      *
-     * @return TODO
+     * @return a new TypeInfo representing this TypeConstant
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
@@ -601,6 +601,7 @@ System.out.println(m_typeinfo);
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
         Map<String, ParamInfo> mapTypeParams = new HashMap<>();
+        TypeResolver           resolver      = new TypeResolver(mapTypeParams, errs);
 
         // obtain the type parameters encoded in this type constant
         ConstantPool   pool        = getConstantPool();
@@ -634,7 +635,6 @@ System.out.println(m_typeinfo);
 
             if (cClassParams > 0)
                 {
-                TypeResolver resolver = new TypeResolver(mapTypeParams, errs);
                 for (int i = 0; i < cClassParams; ++i)
                     {
                     Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
@@ -672,10 +672,8 @@ System.out.println(m_typeinfo);
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
-        List<Contribution>                 listProcess         = new ArrayList<>();
-        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
-        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
-        Component.Format                   formatInfo          = struct.getFormat();
+        List<Contribution> listProcess = new ArrayList<>();
+        Component.Format   formatInfo  = struct.getFormat();
 
         // glue any annotations from the type constant onto the front of the contribution list
         // (and remember the type of the annotated class)
@@ -684,13 +682,6 @@ System.out.println(m_typeinfo);
             {
             switch (typeClass.getFormat())
                 {
-                case ImmutableType:
-                case AccessType:
-                    // these modifiers turn what might be a reference to a class into a reference to
-                    // just a type
-                    formatInfo = Component.Format.INTERFACE;
-                    break;
-
                 case ParameterizedType:
                 case TerminalType:
                     // we found the class specification (with optional parameters) at the end of the
@@ -787,8 +778,6 @@ System.out.println(m_typeinfo);
 
         // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-        assert !listmapClassChain.containsKey(constId);
-        assert !listmapDefaultChain.containsKey(constId);
         listProcess.add(new Contribution(Composition.Equal, typeClass));  // place-holder for "this"
 
         // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
@@ -805,9 +794,6 @@ System.out.println(m_typeinfo);
             case CONST:
             case SERVICE:
                 {
-                // "this" class is next in the chain
-                listmapClassChain.put(constId, false);
-
                 // next up, for any class type (other than Object itself), there MUST be an "extends"
                 // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
@@ -833,16 +819,18 @@ System.out.println(m_typeinfo);
                 if (!fExtends)
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
+                    typeExtends = pool.typeObject();
                     break;
                     }
 
                 // the "extends" clause must specify a class identity
-                typeExtends = contrib.getTypeConstant();
+                typeExtends = contrib.resolveGenerics(resolver);
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
                             constId.getPathString(),
                             typeExtends.getValueString());
+                    typeExtends = pool.typeObject();
                     break;
                     }
 
@@ -850,6 +838,7 @@ System.out.println(m_typeinfo);
                     {
                     // some sort of circular loop
                     log(errs, Severity.ERROR, VE_EXTENDS_CYCLICAL, constId.getPathString());
+                    typeExtends = pool.typeObject();
                     break;
                     }
 
@@ -862,6 +851,7 @@ System.out.println(m_typeinfo);
                     log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                             constId.getPathString(), struct.getFormat(),
                             constExtends.getPathString(), structExtends.getFormat());
+                    typeExtends = pool.typeObject();
                     break;
                     }
 
@@ -885,7 +875,7 @@ System.out.println(m_typeinfo);
                 if (fInto)
                     {
                     ++iContrib;
-                    typeInto = contrib.getTypeConstant();
+                    typeInto = contrib.resolveGenerics(resolver);
 
                     // load the next contribution
                     contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
@@ -897,7 +887,7 @@ System.out.println(m_typeinfo);
                     {
                     ++iContrib;
 
-                    typeExtends = contrib.getTypeConstant();
+                    typeExtends = contrib.resolveGenerics(resolver);
                     if (!typeExtends.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -925,16 +915,12 @@ System.out.println(m_typeinfo);
                 else if (!fInto)
                     {
                     // add fake "into Object"
-                    fInto    = true;
                     typeInto = pool.typeObject();
                     }
                 }
             break;
 
             case INTERFACE:
-                // "this" interface is next in the chain
-                listmapDefaultChain.put(constId, false);
-
                 // an interface implies the set of methods present in Object
                 // (use the "Into" composition to make the Object methods implicit-only, as opposed
                 // to explicitly being present in this interface)
@@ -951,7 +937,7 @@ System.out.println(m_typeinfo);
             {
             // only process annotations
             Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.getTypeConstant();
+            TypeConstant typeContrib = contrib.resolveGenerics(resolver);
 
             switch (contrib.getComposition())
                 {
@@ -978,12 +964,19 @@ System.out.println(m_typeinfo);
                     break;
 
                 case Incorporates:
+                    {
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
                                 contrib.getTypeConstant().getValueString(),
                                 constId.getPathString());
                         break;
+                        }
+
+                    if (typeContrib == null)
+                        {
+                        // the type contribution does not apply conditionally to "this" type
+                        continue NextContrib;
                         }
 
                     if (!typeContrib.isExplicitClassIdentity(true))
@@ -1003,8 +996,6 @@ System.out.println(m_typeinfo);
                         break;
                         }
 
-                    // TODO handle the conditional case (GG wrote a helper)
-
                     // the mixin must be compatible with this type, as specified by its "into"
                     // clause
                     TypeInfo     infoMixin   = typeContrib.ensureTypeInfo(errs);
@@ -1019,10 +1010,12 @@ System.out.println(m_typeinfo);
                         break;
                         }
 
-                    listProcess.add(contrib);
+                    listProcess.add(new Contribution(Composition.Incorporates, typeContrib));
+                    }
                     break;
 
                 case Delegates:
+                    {
                     // not applicable on an interface
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
@@ -1043,10 +1036,12 @@ System.out.println(m_typeinfo);
                         break;
                         }
 
-                    listProcess.add(contrib);
+                    listProcess.add(new Contribution(typeContrib, contrib.getDelegatePropertyConstant()));
+                    }
                     break;
 
                 case Implements:
+                    {
                     // must be an "interface type"
                     // TODO this is not a complete check because it does not check non-classes
                     if (typeContrib.isExplicitClassIdentity(true)
@@ -1058,7 +1053,8 @@ System.out.println(m_typeinfo);
                         break;
                         }
 
-                    listProcess.add(contrib);
+                    listProcess.add(new Contribution(Composition.Implements, typeContrib));
+                    }
                     break;
 
                 default:
@@ -1083,32 +1079,94 @@ System.out.println(m_typeinfo);
             listProcess.add(new Contribution(Composition.Into, typeInto));
             }
 
-        // build the "potential call chains" (basically, the order in which we would search for
-        // methods to call in a virtual manner)
-        for (Contribution contrib : listProcess)
+        // 1) build the "potential call chains" (basically, the order in which we would search for
+        //    methods to call in a virtual manner)
+        // 2) collect all of the type parameter data from the various contributions
+        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
+        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
+        NextContrib: for (Contribution contrib : listProcess)
             {
-            boolean fYank = false;
-            switch (contrib.getComposition())
+            Composition compContrib = contrib.getComposition();
+            if (compContrib == Composition.Equal) // i.e. "this" type
                 {
-                case Equal:
-                    // "this" interface is next in the chain
-                    if (formatInfo != Component.Format.INTERFACE)
-                        {
-                        listmapClassChain.put(constId, true);
-                        }
+                assert !listmapClassChain.containsKey(constId);
+                assert !listmapDefaultChain.containsKey(constId);
+
+                if (formatInfo == Component.Format.INTERFACE)
+                    {
+                    listmapDefaultChain.put(constId, true);
+                    }
+                else
+                    {
+                    listmapClassChain.put(constId, true);
+                    }
+
+                continue NextContrib;
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
+            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+            switch (compContrib)
+                {
+                case Annotation:
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, true);
+                    break;
+
+                case Incorporates:
+                case Delegates:     // TODO needs to go to call chain
+                case Implements:    // TODO needs to go to default chain
+                case Extends:
+                case RebasesOnto:
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, false);
                     break;
 
                 case Into:
-                    // "into" is all implied methods, so it is not part of a chain
-                    break;
+                    // "into" contains only implicit methods, so it is not part of a chain
+                    // furthermore, an "into" does not contribute type parameters, so we're done
+                    continue NextContrib;
 
-                case Annotation:
-                    fYank = true;
-                    // fall through
                 default:
-                    contrib.getTypeConstant().ensureTypeInfo(errs).
-                            contributeChains(listmapClassChain, listmapDefaultChain, fYank);
-                    break;
+                    throw new IllegalStateException("composition=" + compContrib);
+                }
+
+            // collect type parameters
+            for (ParamInfo paramNew : infoContrib.getTypeParams().values())
+                {
+                String    sParam   = paramNew.getName();
+                ParamInfo paramOld = mapTypeParams.get(sParam);
+                if (paramOld == null)
+                    {
+                    mapTypeParams.put(sParam, paramNew);
+                    }
+                else
+                    {
+                    // check that everything matches between the old and new parameter
+                    if (paramNew.isActualTypeSpecified() != paramOld.isActualTypeSpecified())
+                        {
+                        if (paramOld.isActualTypeSpecified())
+                            {
+                            log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
+                                    this.getValueString(), sParam,
+                                    paramOld.getActualType().getValueString(),
+                                    typeContrib.getValueString());
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
+                                    this.getValueString(), sParam,
+                                    typeContrib.getValueString(),
+                                    paramNew.getActualType().getValueString());
+                            }
+                        }
+                    else if (!paramNew.getActualType().equals(paramOld.getActualType()))
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                                this.getValueString(), sParam,
+                                paramOld.getActualType().getValueString(),
+                                typeContrib.getValueString(),
+                                paramNew.getActualType().getValueString());
+                        }
+                    }
                 }
             }
 
@@ -1118,8 +1176,34 @@ System.out.println(m_typeinfo);
         Map<SignatureConstant, MethodInfo  > mapMethods    = new HashMap<>();
         for (Contribution contrib : listProcess)
             {
+            switch (contrib.getComposition())
+                {
+                case Equal:
+                    // add the properties and methods from "struct"
+                    // if this is an interface, then these are "abstract" or "default" methods
+                    // otherwise these are added to the primary chain
+                    // TODO
+                    break;
+
+                case Implements:
+                    // each property/method in the contrib type need to be declared abstract/default
+                    // TODO
+                    break;
+
+                case Delegates:
+                    // each property/method in the contrib type need to be delegated (in the primary call chains)
+                    // TODO
+                    break;
+
+                case Into:
+                    // each property/method in the contrib type need to be declared "implicit"
+                    // TODO
+                    break;
+
+                }
+//            TypeConstant typeContrib = contrib.getTypeConstant();
+//            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
             // TODO
-            System.out.println("processing " + contrib.getComposition() + " of " + contrib.getTypeConstant().getValueString());
             }
 
         return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProperties, mapMethods);

@@ -346,6 +346,8 @@ public class ClassStructure
         }
 
     /**
+     * Determine the type to rebase onto. Note that a rebase type is NEVER parameterized.
+     *
      * @return a type to rebase onto, if rebasing is required by this class; otherwise null
      */
     public TypeConstant getRebaseType()
