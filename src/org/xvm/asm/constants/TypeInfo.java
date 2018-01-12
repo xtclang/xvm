@@ -2,13 +2,13 @@ package org.xvm.asm.constants;
 
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
@@ -26,22 +26,39 @@ public class TypeInfo
      * Construct a TypeInfo.
      *
      * @param type                 the type that the TypeInfo represents
+     * @param format               the Format of the type; Interface is the "type" catch-all
      * @param mapTypeParams        the collected type parameters for the type
+     * @param typeExtends          the type that is extended
+     * @param typeRebases          the type that is rebased onto
+     * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
+     * @param mapProperties        the properties of the type
+     * @param mapMethods           the methods of the type
      */
-    public TypeInfo(TypeConstant type, Map<String, ParamInfo> mapTypeParams,
+    public TypeInfo(TypeConstant type, Component.Format format, Map<String, ParamInfo> mapTypeParams,
+            TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
-            ListMap<IdentityConstant, Boolean> listmapDefaultChain)
+            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            Map<String, PropertyInfo> mapProperties, Map<SignatureConstant, MethodInfo> mapMethods)
         {
         assert type != null;
         assert mapTypeParams != null;
+        assert listmapClassChain != null;
+        assert listmapDefaultChain != null;
+        assert mapProperties != null;
+        assert mapMethods != null;
 
-        this.type       = type;
-        this.parameters = mapTypeParams;
-
-        m_listmapClassChain   = listmapClassChain;
-        m_listmapDefaultChain = listmapDefaultChain;
+        m_type                  = type;
+        m_format                = format;
+        m_mapTypeParams         = mapTypeParams;
+        m_typeExtends           = typeExtends;
+        m_typeRebases           = typeRebases;
+        m_typeInto              = typeInto;
+        m_listmapClassChain     = listmapClassChain;
+        m_listmapDefaultChain   = listmapDefaultChain;
+        m_mapProperties         = mapProperties;
+        m_mapMethods            = mapMethods;
         }
 
     /**
@@ -58,7 +75,7 @@ public class TypeInfo
         TypeResolver resolver = m_resolver;
         if (resolver == null || resolver.errs != errs)
             {
-            m_resolver = resolver = new TypeResolver(parameters, errs);
+            m_resolver = resolver = new TypeResolver(m_mapTypeParams, errs);
             }
         return resolver;
         }
@@ -77,53 +94,61 @@ public class TypeInfo
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
             boolean fAnnotation)
         {
-        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+        // TODO review GG if this TypeInfo is a "type" not a "class", what else does it need to add, if anything?
+        if (m_format != Format.INTERFACE)
             {
-            IdentityConstant constId = entry.getKey();
-            boolean          fYank   = entry.getValue();
+            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+                {
+                IdentityConstant constId = entry.getKey();
+                boolean          fYank   = entry.getValue();
 
-            Boolean BAnchored = listmapClassChain.get(constId);
-            if (BAnchored == null)
-                {
-                // the identity does not already appear in the chain, so add it to the chain
-                listmapClassChain.put(constId, fAnnotation & fYank);
-                }
-            else if (BAnchored)
-                {
-                // the identity in the chain was "yanked" from us, so we can't claim it; just leave
-                // it where it is in the chain
-                }
-            else
-                {
-                // the identity in the chain is owned by this type, so remove it from its old
-                // location in the chain, and add it to the end
-                listmapClassChain.remove(constId);
-                listmapClassChain.put(constId, fAnnotation & fYank);
+                Boolean BAnchored = listmapClassChain.get(constId);
+                if (BAnchored == null)
+                    {
+                    // the identity does not already appear in the chain, so add it to the chain
+                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    }
+                else if (BAnchored)
+                    {
+                    // the identity in the chain was "yanked" from us, so we can't claim it; just leave
+                    // it where it is in the chain
+                    }
+                else
+                    {
+                    // the identity in the chain is owned by this type, so remove it from its old
+                    // location in the chain, and add it to the end
+                    listmapClassChain.remove(constId);
+                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    }
                 }
             }
 
-        // append our defaults to the default chain (just the oneos that are absent from the chain)
+        // append our defaults to the default chain (just the ones that are absent from the chain)
         for (IdentityConstant constId : m_listmapDefaultChain.keySet())
             {
             listmapDefaultChain.putIfAbsent(constId, true);
             }
         }
 
+    /**
+     * @return the type that the TypeInfo represents
+     */
+    public TypeConstant getType()
+        {
+        return m_type;
+        }
 
-    // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
     /**
      * @return the format of the topmost structure that the TypeConstant refers to
      */
     public Component.Format getFormat()
         {
-        return m_formatActual;
+        return m_format;
         }
 
-    void setFormat(Component.Format format)
+    public Map<String, ParamInfo> getTypeParams()
         {
-        assert format != null;
-        assert m_formatActual == null;
-        this.m_formatActual = format;
+        return m_mapTypeParams;
         }
 
     /**
@@ -135,35 +160,12 @@ public class TypeInfo
         return m_typeInto;
         }
 
-    void setInto(TypeConstant type)
-        {
-        assert type != null;
-        assert m_typeInto == null;
-        this.m_typeInto = type;
-        }
-
-    public boolean isSingleton()
-        {
-        // TODO
-        return false;
-        }
-
-    public boolean isAbstract()
-        {
-        // TODO
-        return false;
-        }
-
-    public boolean isImmutable()
-        {
-        // TODO
-        return false;
-        }
-
+    /**
+     * @return true iff this TypeInfo represents a service
+     */
     public boolean isService()
         {
-        // TODO
-        return false;
+        return m_format == Format.SERVICE;
         }
 
     /**
@@ -176,7 +178,7 @@ public class TypeInfo
         Set<MethodInfo> setOps = m_setOps;
         if (setOps == null)
             {
-            for (MethodInfo info : methods.values())
+            for (MethodInfo info : m_mapMethods.values())
                 {
                 if (info.isOp())
                     {
@@ -265,7 +267,7 @@ public class TypeInfo
         Set<MethodInfo> setAuto = m_setAuto;
         if (setAuto == null)
             {
-            for (MethodInfo info : methods.values())
+            for (MethodInfo info : m_mapMethods.values())
                 {
                 if (info.isAuto())
                     {
@@ -350,49 +352,127 @@ public class TypeInfo
         }
 
 
-    // -----fields ---------------------------------------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
-    public final TypeConstant           type;
-    public final Map<String, ParamInfo> parameters;
-    public final Map<String, PropertyInfo>          properties = new HashMap<>();
-    public final Map<SignatureConstant, MethodInfo> methods    = new HashMap<>();
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("TypeInfo: ")
+          .append(m_type.getValueString());
+
+        sb.append("\n- Parameters (")
+                .append(m_mapTypeParams.size())
+                .append(')');
+        int i = 0;
+        for (Entry<String, ParamInfo> entry : m_mapTypeParams.entrySet())
+            {
+            sb.append("\n  [")
+              .append(i++)
+              .append("] ")
+              .append(entry.getKey())
+              .append("=")
+              .append(entry.getValue());
+            }
+
+        sb.append("\n- Class Chain (")
+                .append(m_listmapClassChain.size())
+                .append(')');
+        i = 0;
+        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+            {
+            sb.append("\n  [")
+              .append(i++)
+              .append("] ")
+              .append(entry.getKey().getValueString());
+
+            if (entry.getValue())
+                {
+                sb.append(" (Anchored)");
+                }
+            }
+
+        sb.append("\n- Default Chain (")
+                .append(m_listmapDefaultChain.size())
+                .append(')');
+        i = 0;
+        for (IdentityConstant constId : m_listmapDefaultChain.keySet())
+            {
+            sb.append("\n  [")
+              .append(i++)
+              .append("] ")
+              .append(constId.getValueString());
+            }
+
+        return sb.toString();
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The Format of the topmost class structure.
-     * TODO what about relational types?
+     * The data type that this TypeInfo represents.
      */
-    private Component.Format m_formatActual;
+    private final TypeConstant m_type;
 
     /**
-     * This is one of {@link Component.Format#CLASS}, {@link Component.Format#INTERFACE}, and
-     * {@link Component.Format#MIXIN}. It identifies how this type is actually used:
-     * <ul>
-     * <li>Class - this is a type that requires a specific class identity, either by being an
-     * instance of that class, or by being a sub-class of that class;</li>
-     * <li>Interface - this is an interface type, and ;</li>
-     * <li>Mixin - this is an instantiable (or abstract or singleton) class type;</li>
-     * </ul>
+     * The Format of the type. In some cases, such as a difference type, or a "private interface",
+     * the format is considered to be an interface, because it is not (and can not be) a class.
      */
-    private Component.Format m_formatUsage;
+    private Component.Format m_format;
 
-    public final Set<TypeConstant> extended     = new HashSet<>();
-    public final Set<TypeConstant> implemented  = new HashSet<>();
-    public final Set<TypeConstant> incorporated = new HashSet<>();
-    public final Set<TypeConstant> implicit     = new HashSet<>();
+    /**
+     * The type parameters for this TypeInfo.
+     */
+    private final Map<String, ParamInfo> m_mapTypeParams;
 
+    /**
+     * The type that is extended. The term "extends" has slightly different meanings for mixins and
+     * other classes.
+     */
+    private TypeConstant m_typeExtends;
+
+    /**
+     * The type that is rebased onto.
+     */
+    private TypeConstant m_typeRebases;
+
+    /**
+     * For mixins, the type that is mixed into. For interfaces, this is always Object.
+     */
     private TypeConstant m_typeInto;
 
-    // cached results
+    /**
+     * The potential call chain of classes.
+     */
+    private final ListMap<IdentityConstant, Boolean> m_listmapClassChain;
+
+    /**
+     * The potential default call chain of interfaces.
+     */
+    private final ListMap<IdentityConstant, Boolean> m_listmapDefaultChain;
+
+    /**
+     * The properties of the type.
+     */
+    private final Map<String, PropertyInfo> m_mapProperties;
+
+    /**
+     * The methods of the type.
+     */
+    private final Map<SignatureConstant, MethodInfo> m_mapMethods;
+
+    /**
+     * A cached type resolver.
+     */
+    private transient TypeResolver m_resolver;
+
+    // cached query results
     private transient Set<MethodInfo>     m_setAuto;
     private transient Set<MethodInfo>     m_setOps;
     private transient String              m_sOp;
     private transient Set<MethodConstant> m_setOp;
     private transient TypeConstant        m_typeAuto;
     private transient MethodConstant      m_methodAuto;
-
-    // cached resolver
-    private transient TypeResolver m_resolver;
-
-    private ListMap<IdentityConstant, Boolean> m_listmapClassChain;
-    private ListMap<IdentityConstant, Boolean> m_listmapDefaultChain;
     }

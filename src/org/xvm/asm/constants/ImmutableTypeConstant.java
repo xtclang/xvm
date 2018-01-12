@@ -213,7 +213,7 @@ public class ImmutableTypeConstant
                 }
 
             // a service type cannot be immutable
-            if (type.getTypeInfo().isService())
+            if (type.ensureTypeInfo(errs).isService())
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, m_constType.getValueString());
                 }

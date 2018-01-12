@@ -14,11 +14,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -34,6 +36,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -555,6 +558,8 @@ public abstract class TypeConstant
             {
             validate(errs);
             m_typeinfo = buildTypeInfo(errs);
+// TODO remove
+System.out.println(m_typeinfo);
             }
 
         return m_typeinfo;
@@ -586,7 +591,10 @@ public abstract class TypeConstant
         catch (Exception e)
             {
             System.err.println("** Unable to get underlying class for " + getValueString());
-            return new TypeInfo(this, Collections.EMPTY_MAP, null, null);
+            return new TypeInfo(this, Component.Format.INTERFACE, Collections.EMPTY_MAP,
+                    getConstantPool().typeObject(), null, getConstantPool().typeObject(),
+                    new ListMap<>(), new ListMap<>(),
+                    Collections.EMPTY_MAP, Collections.EMPTY_MAP);
             // TODO CP throw new IllegalStateException("Unable to get underlying class for " + getValueString(), e);
             }
 
@@ -596,7 +604,6 @@ public abstract class TypeConstant
 
         // obtain the type parameters encoded in this type constant
         ConstantPool   pool        = getConstantPool();
-        boolean        fTypeParams = isParamsSpecified();
         TypeConstant[] atypeParams = getParamTypesArray();
         int            cTypeParams = atypeParams.length;
         boolean        fTuple      = isTuple();
@@ -665,6 +672,10 @@ public abstract class TypeConstant
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
+        List<Contribution>                 listProcess         = new ArrayList<>();
+        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
+        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
+        Component.Format                   formatInfo          = struct.getFormat();
 
         // glue any annotations from the type constant onto the front of the contribution list
         // (and remember the type of the annotated class)
@@ -673,6 +684,13 @@ public abstract class TypeConstant
             {
             switch (typeClass.getFormat())
                 {
+                case ImmutableType:
+                case AccessType:
+                    // these modifiers turn what might be a reference to a class into a reference to
+                    // just a type
+                    formatInfo = Component.Format.INTERFACE;
+                    break;
+
                 case ParameterizedType:
                 case TerminalType:
                     // we found the class specification (with optional parameters) at the end of the
@@ -681,8 +699,8 @@ public abstract class TypeConstant
 
                 case AnnotatedType:
                     // has to be an explicit class identity
-                    TypeConstant typeMixin =
-                            ((AnnotatedTypeConstant) typeClass).getAnnotation().getAnnotationType();
+                    Annotation   annotation = ((AnnotatedTypeConstant) typeClass).getAnnotation();
+                    TypeConstant typeMixin  = annotation.getAnnotationType();
                     if (!typeMixin.isExplicitClassIdentity(false))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
@@ -710,8 +728,7 @@ public abstract class TypeConstant
                         }
 
                     // apply annotation
-// TODO
-System.out.println("** " + getValueString() + " annotated by " + typeMixin.getValueString());
+                    listProcess.add(new Contribution(annotation));
                     break;
 
                 default:
@@ -765,20 +782,19 @@ System.out.println("** " + getValueString() + " annotated by " + typeMixin.getVa
                 continue NextContrib;
                 }
 
-// TODO process mix-in "contrib"
-System.out.println("** " + getValueString() + " annotated by " + typeMixin.getValueString());
+            listProcess.add(contrib);
             }
 
-        // put a marker into the list of contributions at this point to indicate that this class
+        // add a marker into the list of contributions at this point to indicate that this class
         // structure's contents need to be processed next
-// TODO process contents of "this"
-System.out.println("** " + getValueString() + " methods and properties");
+        assert !listmapClassChain.containsKey(constId);
+        assert !listmapDefaultChain.containsKey(constId);
+        listProcess.add(new Contribution(Composition.Equal, typeClass));  // place-holder for "this"
 
-        // process the "into" and "extends" clauses
-        boolean      fInto       = false;
+        // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
         TypeConstant typeInto    = null;
-        boolean      fExtends    = false;
         TypeConstant typeExtends = null;
+        TypeConstant typeRebase  = null;
         switch (struct.getFormat())
             {
             case MODULE:
@@ -789,10 +805,13 @@ System.out.println("** " + getValueString() + " methods and properties");
             case CONST:
             case SERVICE:
                 {
+                // "this" class is next in the chain
+                listmapClassChain.put(constId, false);
+
                 // next up, for any class type (other than Object itself), there MUST be an "extends"
                 // contribution that specifies another class
                 Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
-                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+                boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
                     ++iContrib;
@@ -850,17 +869,7 @@ System.out.println("** " + getValueString() + " methods and properties");
                 // to insert a layer of code between this class and the class being extended, such
                 // as when a service (which is a Service format) extends Object (which is a Class
                 // format)
-                TypeConstant typeRebase = struct.getRebaseType();
-                if (typeRebase != null)
-                    {
-// TODO process "class rebase onto class" typeRebase
-System.out.println("** " + getValueString() + struct.getFormat().name() + " rebases onto " + typeRebase.getValueString());
-                    }
-
-                // add the "extends" to the list of contributions to process, and register it so
-                // that no one else will do it
-// TODO process "class extends class" contrib
-System.out.println("** " + getValueString() + " extends class " + typeExtends.getValueString());
+                typeRebase = struct.getRebaseType();
                 }
             break;
 
@@ -872,7 +881,7 @@ System.out.println("** " + getValueString() + " extends class " + typeExtends.ge
                 Contribution contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
 
                 // check "into"
-                fInto = contrib != null && contrib.getComposition() == Composition.Into;
+                boolean fInto = contrib != null && contrib.getComposition() == Composition.Into;
                 if (fInto)
                     {
                     ++iContrib;
@@ -883,7 +892,7 @@ System.out.println("** " + getValueString() + " extends class " + typeExtends.ge
                     }
 
                 // check "extends"
-                fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
+                boolean fExtends = contrib != null && contrib.getComposition() == Composition.Extends;
                 if (fExtends)
                     {
                     ++iContrib;
@@ -919,28 +928,21 @@ System.out.println("** " + getValueString() + " extends class " + typeExtends.ge
                     fInto    = true;
                     typeInto = pool.typeObject();
                     }
-
-                if (fInto)
-                    {
-// TODO process "mi-xin into type" typeInto
-System.out.println("** " + getValueString() + " mixes into " + typeInto.getValueString());
-                    }
-
-                if (fExtends)
-                    {
-// TODO process "mix-in extends mix-in" typeExtends
-System.out.println("** " + getValueString() + " extends mixin " + typeExtends.getValueString());
-                    }
                 }
             break;
 
             case INTERFACE:
-                // first, lay down the set of methods present in Object (use the "Into" composition
-                // to make the Object methods implicit-only, as opposed to explicitly being present
-                // in this interface)
-// TODO process "interface into Object" - pool.typeObject()
-System.out.println("** " + getValueString() + " interface implies Object methods");
+                // "this" interface is next in the chain
+                listmapDefaultChain.put(constId, false);
+
+                // an interface implies the set of methods present in Object
+                // (use the "Into" composition to make the Object methods implicit-only, as opposed
+                // to explicitly being present in this interface)
+                typeInto = pool.typeObject();
                 break;
+
+            default:
+                throw new IllegalStateException(getValueString() + "=" + struct.getFormat());
             }
 
         // go through the rest of the contributions, and add the ones that need to be processed to
@@ -965,7 +967,6 @@ System.out.println("** " + getValueString() + " interface implies Object methods
                     log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
                             contrib.getTypeConstant().getValueString(),
                             constId.getPathString());
-                    fInto |= struct.getFormat() == Component.Format.MIXIN;
                     break;
 
                 case Extends:
@@ -974,7 +975,6 @@ System.out.println("** " + getValueString() + " interface implies Object methods
                     log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
                             contrib.getTypeConstant().getValueString(),
                             constId.getPathString());
-                    fExtends |= struct.getFormat() != Component.Format.INTERFACE;
                     break;
 
                 case Incorporates:
@@ -997,7 +997,7 @@ System.out.println("** " + getValueString() + " interface implies Object methods
                     // validate that the class is a mixin
                     if (typeContrib.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
-                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN,
+                        log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
                                 typeContrib.getValueString(),
                                 constId.getPathString());
                         break;
@@ -1005,49 +1005,21 @@ System.out.println("** " + getValueString() + " interface implies Object methods
 
                     // TODO handle the conditional case (GG wrote a helper)
 
-                    // validate that the "into" matches this type
-                    // TODO
-
-                    // if any mix-ins already registered match or extend this mixin, then this
-                    // mix-in gets ignored
-//                    if (typeinfo.incorporated.contains(typeContrib))
-//                        {
-//                        continue NextContrib;
-//                        }
-//                    IdentityConstant constClass = typeContrib.getSingleUnderlyingClass();
-//                    for (TypeConstant typeMixin : typeinfo.incorporated)
-//                        {
-//                        if (typeMixin.extendsClass(constClass))
-//                            {
-//                            continue NextContrib;
-//                            }
-//                        }
-
                     // the mixin must be compatible with this type, as specified by its "into"
                     // clause
-                    TypeConstant typeReq = typeContrib.ensureTypeInfo(errs).getInto();
-                    if (typeReq == null)
-                        {
-                        // TODO CP review: assert typeContrib.getTypeInfo().getFormat() != Component.Format.MIXIN;
-
-                        // TODO CP until info.getInto() works, this will always be an error
-                        // log(errs, Severity.ERROR, VE_INCORPORATES_NOT_MIXIN,
-                        //         contrib.getTypeConstant().getValueString(),
-                        //         constId.getPathString());
-                        }
-                    else if (!this.isA(typeReq)) // note: not 100% correct because the presence of this mixin may affect the answer
+                    TypeInfo     infoMixin   = typeContrib.ensureTypeInfo(errs);
+                    TypeConstant typeRequire = infoMixin.getInto();
+                    if (typeRequire != null && !this.isA(typeRequire)) // note: not 100% correct because the presence of this mixin may affect the answer
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                                 constId.getPathString(),
                                 contrib.getTypeConstant().getValueString(),
                                 this.getValueString(),
-                                typeReq.getValueString());
+                                typeRequire.getValueString());
+                        break;
                         }
-                    else
-                        {
-// TODO process "incorporates mix-in" typeContrib
-System.out.println("** " + getValueString() + " incorporates " + typeContrib.getValueString());
-                        }
+
+                    listProcess.add(contrib);
                     break;
 
                 case Delegates:
@@ -1071,8 +1043,7 @@ System.out.println("** " + getValueString() + " incorporates " + typeContrib.get
                         break;
                         }
 
-// TODO process "delegates interface" typeContrib
-System.out.println("** " + getValueString() + " delegates interface " + typeContrib.getValueString());
+                    listProcess.add(contrib);
                     break;
 
                 case Implements:
@@ -1087,29 +1058,7 @@ System.out.println("** " + getValueString() + " delegates interface " + typeCont
                         break;
                         }
 
-                    // check if it is already implemented
-//                    if (typeinfo.implemented.contains(typeContrib))
-//                        {
-//                        continue NextContrib;
-//                        }
-//                    for (TypeConstant typeImplemented : typeinfo.implemented)
-//                        {
-//                        List<ContributionChain> listChains = typeImplemented.collectContributions(
-//                                typeContrib, new ArrayList<>(), new ArrayList<>());
-//                        if (!listChains.isEmpty())
-//                            {
-//                            for (ContributionChain chainEach : listChains)
-//                                {
-//                                if (chainEach.first().getComposition() != Component.Composition.MaybeDuckType)
-//                                    {
-//                                    continue NextContrib;
-//                                    }
-//                                }
-//                            }
-//                        }
-
-// TODO process "implements interface" typeContrib
-System.out.println("** " + getValueString() + " implements interface " + typeContrib.getValueString());
+                    listProcess.add(contrib);
                     break;
 
                 default:
@@ -1118,267 +1067,64 @@ System.out.println("** " + getValueString() + " implements interface " + typeCon
                 }
             }
 
-/* TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO - bulldozer plough goes here
-
-// TODO this has to move down to where we process contributions
-//            else if (!paraminfo.getConstraintType().isA(typeConstraint)) // TODO what if constraint is a (or refers to a) formal type (see note below etc.etc.etc.)
-//                {
-//                // since we're accumulating type parameter information "on the way down" the
-//                // tree of structures that form the type, it is possible that our constraint is
-//                // "looser" than the constraint that came before us on the way down, e.g. our
-//                // sub-class narrowed our constraint, but any conflict is an error
-//                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONSTRAINT,
-//                        constId.getPathString(), sName,
-//                        typeConstraint.getValueString(),
-//                        paraminfo.getConstraintType().getValueString(),
-//                        typeinfo.type.getValueString());
-//                }
-//             TypeConstant typeOld = paraminfo.getActualType();
-//             if (typeOld == null)
-//                 {
-//                 paraminfo.setActualType(typeActual);
-//                 }
-//             else if (!typeOld.equals(typeActual))
-//                 {
-//                 log(errs, Severity.ERROR, VE_TYPE_PARAM_CONFLICTING_TYPES,
-//                         constId.getPathString(), sName,
-//                         typeOld.getValueString(), typeActual.getValueString(),
-//                         typeinfo.type.getValueString());
-//                 }
-
-        Access access = getAccess();
-        if (isParamsSpecified())
+        // the last three contributions to get processed are the "re-basing", the "extends" and the
+        // "into" (which we also use for filling out the implied methods under interfaces, i.e.
+        // "into Object")
+        if (typeRebase != null)
             {
-            // TODO
+            listProcess.add(new Contribution(Composition.RebasesOnto, typeRebase));
+            }
+        if (typeExtends != null)
+            {
+            listProcess.add(new Contribution(Composition.Extends, typeExtends));
+            }
+        if (typeInto != null)
+            {
+            listProcess.add(new Contribution(Composition.Into, typeInto));
             }
 
-        // recurse through compositions
-        for (Contribution contrib : listContributions)
+        // build the "potential call chains" (basically, the order in which we would search for
+        // methods to call in a virtual manner)
+        for (Contribution contrib : listProcess)
             {
-            TypeConstant typeContrib = contrib.getTypeConstant(); // TODO use Contribution "transform" helper
-            // we need to contributions to disclose their "protected" members, even if all we're
-            // interested in are public members; the topmost type will lop off anything that isn't
-            // supposed to be accessible
-            typeContrib.resolveStructure(typeinfo, chain, Access.PROTECTED, null, errs);
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // properties & methods
-        // the challenge with this process is immense:
-        // 1) each child member has to be analyzed to determine if it represents a new member of the
-        //    flattened (resolved) class, or whether it augments an existing member of the flattened
-        //    class, or whether it conflicts with an existing member of the flattened class
-        // 2) each child member that augments an existing member of the flattened class has the
-        //    effect of _hiding_ the existing member. in the case of a property, this simply means
-        //    overlaying or augmenting the existing information, but in the case of a method, there
-        //    can be more than one method that augments the same existing method, i.e. more than one
-        //    method that could "super to" that existing method. the result must be that the
-        //    existing member is no longer visible, but that the augmenting members are
-        // 3) because visibility can be expanded (but never reduced), all protected members have to
-        //    be included in the resolution, although at the end of the resolution, any remaining
-        //    protected members are removed if the access specified is public. similarly, at the
-        //    topmost level, private members are included if the access specified is private.
-        // 4) properties can be annotated and can contain methods
-        // 5) methods can contain properties, but these properties are "invisible" outside of the
-        //    declaring method, including to other methods and even to the same method in a
-        //    sub-class
-        List<PropertyInfo>      listUpdateProperties = new ArrayList<>();
-        List<SignatureConstant> listRemoveMethods    = new ArrayList<>();
-        List<MethodInfo>        listUpdateMethods    = new ArrayList<>();
-        for (Component child : struct.children())
-            {
-            switch (child.getFormat())
+            boolean fYank = false;
+            switch (contrib.getComposition())
                 {
-                case PROPERTY:
-                    resolvePropertyStructure((PropertyStructure) child, typeinfo, access, errs);
-                    break;
-
-                case MULTIMETHOD:
-                    for (Component method : child.children())
+                case Equal:
+                    // "this" interface is next in the chain
+                    if (formatInfo != Component.Format.INTERFACE)
                         {
-                        if (!(method instanceof MethodStructure))
-                            {
-                            throw new IllegalStateException("multi-method " + child.getName()
-                                    + " contains non-method: " + method);
-                            }
-
-                        // for now, all of the method-info objects resolved at this level are
-                        // accumulated into a separate data structure, so that the resolution is not
-                        // affected by the order that the methods are resolved in (i.e. each
-                        // resolution is indepdent of the other resolutions)
-                        resolveMethodStructure((MethodStructure) method, typeinfo,
-                                listRemoveMethods, listUpdateMethods, access, errs);
+                        listmapClassChain.put(constId, true);
                         }
                     break;
 
-                case METHOD:
-                case FILE:
-                case RSVD_D:
-                    throw new IllegalStateException("class " + struct.getName()
-                            + " contains illegal child: " + child);
+                case Into:
+                    // "into" is all implied methods, so it is not part of a chain
+                    break;
+
+                case Annotation:
+                    fYank = true;
+                    // fall through
+                default:
+                    contrib.getTypeConstant().ensureTypeInfo(errs).
+                            contributeChains(listmapClassChain, listmapDefaultChain, fYank);
+                    break;
                 }
             }
 
-        // now that all of the properties and methods have been accumulated, update the typeinfo
-        // accordingly
-        for (PropertyInfo propertyinfo : listUpdateProperties)
+        // next, we need to process the list of contributions in order, asking each for its
+        // properties and methods, and collecting all of them
+        Map<String           , PropertyInfo> mapProperties = new HashMap<>();
+        Map<SignatureConstant, MethodInfo  > mapMethods    = new HashMap<>();
+        for (Contribution contrib : listProcess)
             {
-            // this may replace a previously existing property
-            typeinfo.properties.put(propertyinfo.getName(), propertyinfo);
-            }
-        for (SignatureConstant constSig : listRemoveMethods)
-            {
-            // this should always delete a method
-            assert typeinfo.methods.containsKey(constSig);
-            typeinfo.methods.remove(constSig);
-            }
-        for (MethodInfo methodinfo : listUpdateMethods)
-            {
-            typeinfo.methods.put(methodinfo.getSignature(), methodinfo);
-            }
-
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        // process annotations
-        for (Contribution contrib : listAnnotations)
-            {
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            // we need the annotations to disclose their "protected" members, even if all we're
-            // interested in are public members; the topmost type will lop off anything that isn't
-            // supposed to be accessible
-            typeContrib.resolveStructure(typeinfo, chain, Access.PROTECTED, null, errs);
-            }
-        if (fHalt)
-            {
-            return fHalt;
-            }
-
-        if (fTopmost && access == Access.PUBLIC)
-            {
-            // remove any remaining protected members
-            for (Iterator<MethodInfo> iter = typeinfo.methods.values().iterator(); iter.hasNext(); )
-                {
-                if (iter.next().getAccess() == Access.PROTECTED)
-                    {
-                    iter.remove();
-                    }
-                }
-            for (Iterator<PropertyInfo> iter = typeinfo.properties.values().iterator(); iter.hasNext(); )
-                {
-                if (iter.next().getAccess() == Access.PROTECTED)
-                    {
-                    iter.remove();
-                    }
-                }
-            }
- */
-
-        return new TypeInfo(this, mapTypeParams, null, null);  // TODO - need the listmaps of call chains
-        }
-
-    /**
-     * Accumulate any information from the passed property structure into the passed
-     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
-     * any errors.
-     *
-     * @param struct    the property structure
-     * @param typeinfo  the type info to contribute to
-     * @param access    the desired accessibility into the current type
-     * @param errs      the error list to log any errors to
-     *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
-    protected boolean resolvePropertyStructure(PropertyStructure struct, TypeInfo typeinfo, Access access, ErrorListener errs)
-        {
-        assert struct != null;
-        assert typeinfo != null;
-        assert access != null;
-
-        boolean fHalt = false;
-
-        String       sName    = struct.getName();
-        PropertyInfo propinfo = typeinfo.properties.get(sName);
-        if (propinfo == null)
-            {
-            propinfo = new PropertyInfo(this, struct);
-            if (struct.isSynthetic())
-                {
-                propinfo.markReadOnly();
-                }
-            }
-        else
-            {
-            // make sure there are no conflicts
             // TODO
-
-            // update property remove annotations (some things get over-written; others merged)
-            // TODO
+            System.out.println("processing " + contrib.getComposition() + " of " + contrib.getTypeConstant().getValueString());
             }
 
-        // go through children (methods)
-        // TODO
-
-        return fHalt;
+        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProperties, mapMethods);
         }
 
-    /**
-     * Accumulate any information from the passed method structure into the passed
-     * {@link TypeInfo}, checking the validity of the property and the resulting type, and logging
-     * any errors.
-     *
-     * @param struct      the method structure
-     * @param typeinfo    the type info that this method is somehow a part of
-     * @param listRemoveMethods  a list to add a method signature to in order to remove the
-     *                           corresponding MethodInfo from the resulting TypeInfo
-     * @param listUpdateMethods  a list to add a MethodInfo to in order to add information to the
-     *                           resulting TypeInfo
-     * @param access             the desired accessibility into the current type
-     * @param errs               the error list to log any errors to
-     *
-     * @return true if the resolution process was halted before it completed, for example if the
-     *         error list reached its size limit
-     */
-    protected boolean resolveMethodStructure(MethodStructure struct, TypeInfo typeinfo,
-            List<SignatureConstant> listRemoveMethods, List<MethodInfo> listUpdateMethods,
-            Access access, ErrorListener errs)
-        {
-        assert struct != null;
-        assert typeinfo != null;
-        assert access != null;
-
-        // find the super method
-        // TODO need to "resolve" the signature, e.g. against "this type", params, etc.?
-        MethodInfo methodinfoSuper = typeinfo.findMethod(struct.getIdentityConstant().getSignature(), errs);
-
-        // if there is a super method, then this method must not decrease the accessibility of the
-        // super method
-        if (methodinfoSuper != null && struct.getAccess().ordinal() > methodinfoSuper.getAccess().ordinal())
-            {
-            // TODO log error
-            throw new IllegalStateException("decreasing accessibility on "
-                    + struct.getIdentityConstant().getValueString());
-            }
-
-        // TODO at some point, we have to handle a "struct" access request, i.e. only collect info on fields
-        // access levels are in order of "security": struct, public, protected, private
-        if (struct.getAccess().ordinal() > access.ordinal())
-            {
-            // this method should not be included
-            return false;
-            }
-
-        // TODO
-
-        return false;
-        }
-// TODO:END
 
     // ----- type comparison support ---------------------------------------------------------------
 

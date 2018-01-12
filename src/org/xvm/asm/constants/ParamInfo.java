@@ -67,7 +67,29 @@ public class ParamInfo
         }
 
 
-    // -----inner class: TypeResolver --------------------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("<")
+          .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
+
+        if (!getConstraintType().isEcstasy("Object"))
+            {
+            sb.append(" extends ")
+              .append(getConstraintType().getValueString());
+            }
+
+        sb.append(">");
+
+        return sb.toString();
+        }
+
+
+    // ----- inner class: TypeResolver -------------------------------------------------------------
 
     /**
      * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
@@ -120,7 +142,7 @@ public class ParamInfo
         }
 
 
-    // -----fields ---------------------------------------------------------------------------------
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The name of the type parameter.
