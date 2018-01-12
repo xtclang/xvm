@@ -14,11 +14,12 @@ public class MethodInfo
     /**
      * Construct a MethodInfo for a method body.
      *
-     * @param body  the initial method body
+     * @param constSig  the method signature
+     * @param body      the initial method body
      */
-    public MethodInfo(MethodBody body)
+    public MethodInfo(SignatureConstant constSig, MethodBody body)
         {
-        this(body.getSignature(), new MethodBody[] {body});
+        this(constSig, new MethodBody[] {body});
         }
 
     /**
