@@ -423,7 +423,7 @@ public class MethodStructure
         }
 
     /**
-     * Specifies whether or not the method implementation is implementated at this virtual level.
+     * Specifies whether or not the method implementation is implemented at this virtual level.
      *
      * @param fAbstract  pass true to mark the method as abstract
      */
@@ -1110,7 +1110,7 @@ public class MethodStructure
                 m_hole = hole = new BlackHole(this);
                 }
 
-            return m_hole;
+            return hole;
             }
 
         // ----- read-only wrapper ------------------------------------------------------------
