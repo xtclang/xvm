@@ -54,6 +54,12 @@ public abstract class OpCallable extends Op
         writePackedLong(out, m_nFunctionId);
         }
 
+    @Override
+    public boolean usesSuper()
+        {
+        return m_nFunctionId == A_SUPER;
+        }
+
     /**
      * A "virtual constant" indicating whether or not this op has multiple return values.
      *

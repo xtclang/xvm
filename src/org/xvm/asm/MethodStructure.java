@@ -1017,6 +1017,25 @@ public class MethodStructure
             }
 
         /**
+         * @return true iff any of the op codes refer to the "super"
+         */
+        public boolean usesSuper()
+            {
+            Op[] aop = ensureOps();
+            if (aop != null)
+                {
+                for (Op op : aop)
+                    {
+                    if (op.usesSuper())
+                        {
+                        return true;
+                        }
+                    }
+                }
+            return false;
+            }
+
+        /**
          * @return the array of Ops that make up the Code
          */
         public Op[] getAssembledOps()
@@ -1096,6 +1115,12 @@ public class MethodStructure
             public int addressOf(Op op)
                 {
                 return Code.this.addressOf(op);
+                }
+
+            @Override
+            public boolean usesSuper()
+                {
+                return false;
                 }
 
             @Override

@@ -108,6 +108,14 @@ public abstract class Op
         }
 
     /**
+     * @return true iff this op is using the {@link #A_SUPER} argument
+     */
+    public boolean usesSuper()
+        {
+        return false;
+        }
+
+    /**
      * Represents any argument for an op, including constants, registers, and pre-defined
      * references like "this".
      */
