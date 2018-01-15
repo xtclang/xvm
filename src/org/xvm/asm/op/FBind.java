@@ -49,7 +49,7 @@ public class FBind
         }
 
     /**
-     * Construct a FBIND op based on the passed arguments.
+     * Construct an FBIND op based on the passed arguments.
      *
      * @param argFunction  the function Argument
      * @param anParamIx    the indexes of parameter(s) to bind (sorted in ascending order)

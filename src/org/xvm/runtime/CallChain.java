@@ -84,6 +84,11 @@ public class CallChain
         return Adapter.isNative(method);
         }
 
+    public PropertyStructure getProperty()
+        {
+        return null;
+        }
+
     protected boolean isNativeProperty()
         {
         throw new IllegalStateException();
@@ -219,6 +224,7 @@ public class CallChain
             f_fGet = fGet;
             }
 
+        @Override
         public PropertyStructure getProperty()
             {
             return f_property;

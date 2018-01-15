@@ -7,6 +7,8 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -129,13 +131,23 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
+    protected void checkReturnRegister(Frame frame, PropertyConstant constProperty)
+        {
+        assert !isMultiReturn();
+
+        if (frame.isNextRegister(m_nRetValue))
+            {
+            frame.introduceVar(constProperty.getRefType());
+            }
+        }
+
     protected void checkReturnRegister(Frame frame, MethodConstant constMethod)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnVar(A_FRAME, constMethod);
+            frame.introduceVar(constMethod.getSignature().getRawReturns()[0]);
             }
         }
 
@@ -145,7 +157,7 @@ public abstract class OpCallable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnVar(A_FRAME, constMethod);
+            frame.introduceReturnTuple(A_FRAME, constMethod);
             }
         }
 
@@ -156,16 +168,11 @@ public abstract class OpCallable extends Op
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
+            TypeConstant[] aRetType = constMethod.getSignature().getRawReturns();
+
             if (frame.isNextRegister(anRet[i]))
                 {
-                if (i == 0)
-                    {
-                    frame.introduceReturnVar(A_FRAME, constMethod);
-                    }
-                else
-                    {
-                    throw new UnsupportedOperationException();
-                    }
+                frame.introduceVar(aRetType[i]);
                 }
             }
         }

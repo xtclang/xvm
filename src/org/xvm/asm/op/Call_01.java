@@ -104,14 +104,9 @@ public class Call_01
             MethodStructure method = chain.getSuper(frame);
             if (method == null)
                 {
-                // it's a super() call for a property.get();
-                // the return type must be identical to the method's return value
-                if (frame.isNextRegister(m_nRetValue))
-                    {
-                    frame.introduceVar(
-                        ((CallChain.PropertyCallChain) chain).getProperty().
-                            getIdentityConstant().getRefType());
-                    }
+                // it's a super() call for the property's field access
+                // the return type must be identical to the property type
+                checkReturnRegister(frame, chain.getProperty().getIdentityConstant());
                 }
             else
                 {

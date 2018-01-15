@@ -265,7 +265,6 @@ public class MethodStructure
         return aType;
         }
 
-
     /**
      * Ensure that a Code object exists. If the MethodStructure was disassembled, then the Code will
      * hold the deserialized Ops. If the MethodStructure has been created but no Code has already

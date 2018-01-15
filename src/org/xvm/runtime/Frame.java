@@ -1004,24 +1004,6 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable that has a return type of the specified method
-     * in the context of the specified target.
-     *
-     * Note: this method increments the "nextVar" index.
-     *
-     * @param nTargetId    if positive, the register number holding a target (handle);
-     *                      otherwise a constant id pointing to local property holding the target
-     * @param constMethod  the method constant whose return type needs to be resolved in the context
-     *                      of the target class
-     */
-    public void introduceReturnVar(int nTargetId, MethodConstant constMethod)
-        {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), RETURN_RESOLVER);
-        }
-
-    /**
      * Introduce a new standard variable that has a return type of a Tuple of the
      * specified method return types in the context of the specified target.
      *
@@ -1479,26 +1461,6 @@ public class Frame
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
             return frame.f_context.f_pool.ensureParameterizedTypeConstant(Ref.TYPE, typeEl);
-            }
-        };
-
-    protected static final VarTypeResolver RETURN_RESOLVER = new VarTypeResolver()
-        {
-        // nTargetReg - the target register (or property)
-        // nMethodId  - the MethodConstant id
-        @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int nMethodId)
-            {
-            ConstantPool pool = frame.f_context.f_pool;
-
-            MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
-            TypeConstant typeRet = constMethod.getRawReturns()[0];
-
-            return nTargetReg == Op.A_FRAME
-                // a static method (function) resolution
-                ? typeRet.resolveGenerics(frame.getGenericsResolver())
-                // a target type-based resolution
-                : typeRet.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
 

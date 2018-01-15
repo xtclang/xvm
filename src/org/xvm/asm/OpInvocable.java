@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -147,7 +148,7 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
+            frame.introduceVar(method.getIdentityConstant().getSignature().getRawReturns()[0]);
             }
         }
 
@@ -168,16 +169,11 @@ public abstract class OpInvocable extends Op
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
+            TypeConstant[] aRetType = method.getIdentityConstant().getSignature().getRawReturns();
+
             if (frame.isNextRegister(anRet[i]))
                 {
-                if (i == 0)
-                    {
-                    frame.introduceReturnVar(m_nTarget, method.getIdentityConstant());
-                    }
-                else
-                    {
-                    throw new UnsupportedOperationException();
-                    }
+                frame.introduceVar(aRetType[i]);
                 }
             }
         }
