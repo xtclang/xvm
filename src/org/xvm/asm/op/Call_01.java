@@ -106,11 +106,11 @@ public class Call_01
                 {
                 // it's a super() call for the property's field access
                 // the return type must be identical to the property type
-                checkReturnRegister(frame, chain.getProperty().getIdentityConstant());
+                checkReturnRegister(frame, chain.getProperty());
                 }
             else
                 {
-                checkReturnRegister(frame, method.getIdentityConstant());
+                checkReturnRegister(frame, method);
                 }
 
             return chain.callSuper01(frame, m_nRetValue);
@@ -120,7 +120,7 @@ public class Call_01
             {
             MethodStructure function = getMethodStructure(frame);
 
-            checkReturnRegister(frame, function.getIdentityConstant());
+            checkReturnRegister(frame, function);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -135,7 +135,7 @@ public class Call_01
                 return R_REPEAT;
                 }
 
-            checkReturnRegister(frame, hFunction.getMethodId());
+            checkReturnRegister(frame, hFunction.getMethod());
 
             return hFunction.call1(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
