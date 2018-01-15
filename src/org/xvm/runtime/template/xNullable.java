@@ -28,7 +28,7 @@ public class xNullable
         {
         if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            NULL = new NullHandle(f_clazzCanonical);
+            NULL = new NullHandle(ensureCanonicalClass());
 
             m_listNames = Collections.singletonList("Null");
             m_listHandles = Collections.singletonList(NULL);

@@ -114,7 +114,7 @@ public class New_N
 
             IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate template = frame.f_context.f_templates.getTemplate(constClz);
-            TypeComposition clzTarget = template.f_clazzCanonical;
+            TypeComposition clzTarget = template.ensureCanonicalClass();
 
             if (frame.isNextRegister(m_nRetValue))
                 {

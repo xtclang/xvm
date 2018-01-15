@@ -942,6 +942,8 @@ public abstract class Op
             case OP_CONSTR_N:    return "CONSTR_N";
             case OP_CONSTR_T:    return "CONSTR_T";
 
+            case OP_X_PRINT:     return "X_PRINT";
+
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));
             }

@@ -2,7 +2,6 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -54,7 +53,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeStructHandle(null, null);
+        return makeHandle(clazz, null, null);
         }
 
     // ---- ObjectHandle helpers -----
@@ -66,22 +65,20 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeStructHandle(null, null);
+        ExceptionHandle hException = makeHandle(INSTANCE.ensureCanonicalClass(), null, null);
 
         INSTANCE.setFieldValue(hException,
                 INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
 
-        return (ExceptionHandle) hException.ensureAccess(Constants.Access.PUBLIC);
+        return hException;
         }
 
-    private static ExceptionHandle makeStructHandle(ExceptionHandle hCause, Throwable eCause)
+    private static ExceptionHandle makeHandle(TypeComposition clazz,
+                                              ExceptionHandle hCause, Throwable eCause)
         {
-        ExceptionHandle hException = eCause == null ?
-                new ExceptionHandle(INSTANCE.f_clazzCanonical, true, null) :
-                new ExceptionHandle(INSTANCE.f_clazzCanonical, true, eCause);
+        ExceptionHandle hException = new ExceptionHandle(clazz, true, eCause);
 
-        ServiceContext context = ServiceContext.getCurrentContext();
-        Frame frame = context.getCurrentFrame();
+        Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 
         INSTANCE.setFieldValue(hException, INSTANCE.getProperty("stackTrace"),
                 xString.makeHandle(frame.getStackTrace()));

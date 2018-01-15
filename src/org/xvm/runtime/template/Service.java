@@ -64,7 +64,7 @@ public class Service
         {
         ServiceContext context = frame.f_context;
 
-        ServiceHandle hService = makeHandle(context, clazz, clazz.ensureStructType());
+        ServiceHandle hService = makeHandle(context, clazz, clazz.getType());
 
         setFieldValue(hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
 

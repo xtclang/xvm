@@ -45,7 +45,7 @@ public class xFutureVar
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.getType();
+            TYPE = getCanonicalType();
             }
         }
 
@@ -298,6 +298,6 @@ public class xFutureVar
 
     public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.f_clazzCanonical, null, future);
+        return new FutureHandle(INSTANCE.ensureCanonicalClass(), null, future);
         }
     }

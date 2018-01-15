@@ -60,7 +60,7 @@ public class Enum
                 if (child.getFormat() == Component.Format.ENUMVALUE)
                     {
                     listNames.add(child.getName());
-                    listHandles.add(new EnumHandle(f_clazzCanonical, cValues++));
+                    listHandles.add(new EnumHandle(ensureCanonicalClass(), cValues++));
                     }
                 }
             m_listNames = listNames;

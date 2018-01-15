@@ -101,7 +101,22 @@ public class Call_01
                 throw new IllegalStateException();
                 }
 
-            checkReturnRegister(frame, chain.getSuper(frame).getIdentityConstant());
+            MethodStructure method = chain.getSuper(frame);
+            if (method == null)
+                {
+                // it's a super() call for a property.get();
+                // the return type must be identical to the method's return value
+                if (frame.isNextRegister(m_nRetValue))
+                    {
+                    frame.introduceVar(
+                        ((CallChain.PropertyCallChain) chain).getProperty().
+                            getIdentityConstant().getRefType());
+                    }
+                }
+            else
+                {
+                checkReturnRegister(frame, method.getIdentityConstant());
+                }
 
             return chain.callSuper01(frame, m_nRetValue);
             }

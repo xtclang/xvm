@@ -30,7 +30,7 @@
  * provided.)
  */
 mixin LazyVar<RefType>(function RefType ()? calculate)
-        into Ref<RefType>
+        into Var<RefType>
     {
     private function RefType ()? calculate;
     private Boolean assignable = false;

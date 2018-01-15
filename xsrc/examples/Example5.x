@@ -718,3 +718,17 @@ mixin Marshaling
     extends conditional (Avro.isPresent) AvroMarshaler
     extends conditional (Thrift.isPresent) ThriftMarshaler2
     incorporates conditional (Thrift.isPresent) {ThriftMarshaler}
+
+// conditional mixin
+
+public/private @Dual Int p;
+
+mixin Dual<T>
+    into Ref<T>
+    conditional into Var<T>
+    {
+    Void set(T t)
+        {
+        super(t);
+        }
+    }

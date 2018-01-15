@@ -71,7 +71,7 @@ public class xType
 
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return new TypeHandle(INSTANCE.f_clazzCanonical, type);
+        return new TypeHandle(INSTANCE.ensureCanonicalClass(), type);
         }
 
     // most of the time the TypeHandle is based on the underlying DataType (Type);

@@ -95,8 +95,8 @@ public class Container
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,
-                Service.INSTANCE.f_clazzCanonical,
-                Service.INSTANCE.f_clazzCanonical.getType());
+                Service.INSTANCE.ensureCanonicalClass(),
+                Service.INSTANCE.getCanonicalType());
 
         initResources();
 
@@ -129,13 +129,13 @@ public class Container
         ClassTemplate templateClock = f_templates.getTemplate("Clock");
         if (templateClock != null)
             {
-            TypeConstant typeClock = templateClock.f_clazzCanonical.getType();
+            TypeConstant typeClock = templateClock.getCanonicalType();
 
             ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
                 Service.makeHandle(createServiceContext("RuntimeClock"),
-                    templateRTClock.f_clazzCanonical, typeClock);
+                    templateRTClock.ensureCanonicalClass(), typeClock);
 
             f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
             }
@@ -144,13 +144,13 @@ public class Container
         ClassTemplate templateConsole = f_templates.getTemplate("io.Console");
         if (templateConsole != null)
             {
-            TypeConstant typeConsole = templateConsole.f_clazzCanonical.getType();
+            TypeConstant typeConsole = templateConsole.getCanonicalType();
 
             ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
                 Service.makeHandle(createServiceContext("Console"),
-                    templateRTConsole.f_clazzCanonical, typeConsole);
+                    templateRTConsole.ensureCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }

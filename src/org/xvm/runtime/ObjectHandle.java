@@ -46,6 +46,16 @@ public class ObjectHandle
             }
         }
 
+    /**
+     * Reveal this handle using the "inception" type.
+     *
+     * @return the "fully accessible" handle
+     */
+    public ObjectHandle revealOrigin()
+        {
+        return m_clazz.ensureOrigin(this);
+        }
+
     public boolean isMutable()
         {
         return m_fMutable;
@@ -59,6 +69,11 @@ public class ObjectHandle
     public boolean isStruct()
         {
         return m_clazz.isStruct();
+        }
+
+    public boolean isSelfContained()
+        {
+        return false;
         }
 
     /**
@@ -174,6 +189,12 @@ public class ObjectHandle
             {
             super(clazz);
             m_lValue = lValue;
+            }
+
+        @Override
+        public boolean isSelfContained()
+            {
+            return true;
             }
 
         public long getValue()

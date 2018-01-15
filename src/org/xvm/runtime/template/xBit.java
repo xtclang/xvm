@@ -32,7 +32,7 @@ public class xBit
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof IntConstant ? new JavaLong(f_clazzCanonical,
+        return constant instanceof IntConstant ? new JavaLong(ensureCanonicalClass(),
                 ((IntConstant) constant).getValue().getLong()) : null;
         }
 

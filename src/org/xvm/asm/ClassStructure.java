@@ -406,13 +406,13 @@ public class ClassStructure
         }
 
     /**
-     * Find an index of a parameter with the specified name.
+     * Find an index of a generic parameter with the specified name.
      *
      * @param sParamName  the parameter name
      *
      * @return the parameter index or -1 if not found
      */
-    public int indexOfFormalParameter(String sParamName)
+    public int indexOfGenericParameter(String sParamName)
         {
         Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormalEntry =
                 getTypeParams().entrySet().iterator();
@@ -432,10 +432,10 @@ public class ClassStructure
      * Recursively find the type for the specified formal name. Note that the formal name could
      * be introduced by some contributions, rather than this class itself.
      */
-    public TypeConstant getActualParamType(String sName, List<TypeConstant> listActual)
+    public TypeConstant getGenericParamType(String sName, List<TypeConstant> listActual)
         {
         // TODO: use the type info when done
-        return getActualParamTypeImpl(sName, listActual, true);
+        return getGenericParamTypeImpl(sName, listActual, true);
         }
 
     /**
@@ -443,10 +443,10 @@ public class ClassStructure
      *
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      */
-    protected TypeConstant getActualParamTypeImpl(String sName, List<TypeConstant> listActual,
-                                                  boolean fAllowInto)
+    protected TypeConstant getGenericParamTypeImpl(String sName, List<TypeConstant> listActual,
+                                                   boolean fAllowInto)
         {
-        int ix = indexOfFormalParameter(sName);
+        int ix = indexOfGenericParameter(sName);
         if (ix >= 0)
             {
             return ix < listActual.size()
@@ -475,7 +475,7 @@ public class ClassStructure
                         ClassStructure clzContrib = (ClassStructure)
                             ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
                                 getComponent();
-                        TypeConstant type = clzContrib.getActualParamTypeImpl(sName,
+                        TypeConstant type = clzContrib.getGenericParamTypeImpl(sName,
                             typeContrib.getParamTypes(), false);
                         if (type != null)
                             {
@@ -605,7 +605,7 @@ public class ClassStructure
     protected boolean consumesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
-        assert indexOfFormalParameter(sName) >= 0;
+        assert indexOfGenericParameter(sName) >= 0;
 
         for (Component child : children())
             {
@@ -747,7 +747,7 @@ public class ClassStructure
     protected boolean producesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
-        assert indexOfFormalParameter(sName) >= 0;
+        assert indexOfGenericParameter(sName) >= 0;
 
         for (Component child : children())
             {
@@ -1242,7 +1242,7 @@ public class ClassStructure
         @Override
         public TypeConstant resolveGenericType(PropertyConstant constProperty)
             {
-            int ix = indexOfFormalParameter(constProperty.getName());
+            int ix = indexOfGenericParameter(constProperty.getName());
             if (ix < 0)
                 {
                 throw new IllegalStateException(

@@ -57,7 +57,8 @@ public class Function
             MethodStructure function = (MethodStructure) constFunction.getComponent();
 
             // TODO: assert if a method
-            return new FunctionHandle(f_clazzCanonical, function);
+            // TODO: construct the correct TypeComposition
+            return new FunctionHandle(ensureCanonicalClass(), function);
             }
         return null;
         }
@@ -266,7 +267,7 @@ public class Function
 
         public NativeMethodHandle(Service.NativeOperation op)
             {
-            super(INSTANCE.f_clazzCanonical, null);
+            super(INSTANCE.ensureCanonicalClass(), null);
 
             f_op = op;
             }
@@ -437,7 +438,7 @@ public class Function
             }
 
         public static FullyBoundHandle NO_OP = new FullyBoundHandle(
-                INSTANCE.f_clazzCanonical, null, null, null)
+                INSTANCE.ensureCanonicalClass(), null, null, null)
             {
             @Override
             public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
@@ -587,17 +588,17 @@ public class Function
 
     public static AsyncHandle makeAsyncHandle(CallChain chain, int nDepth)
         {
-        return new AsyncHandle(INSTANCE.f_clazzCanonical, chain, nDepth);
+        return new AsyncHandle(INSTANCE.ensureCanonicalClass(), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)
         {
-        return new FunctionHandle(INSTANCE.f_clazzCanonical, chain, nDepth);
+        return new FunctionHandle(INSTANCE.ensureCanonicalClass(), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(MethodStructure function)
         {
-        return new FunctionHandle(INSTANCE.f_clazzCanonical, function);
+        return new FunctionHandle(INSTANCE.ensureCanonicalClass(), function);
         }
 
     private static final Op GET_AND_RETURN = new Op()

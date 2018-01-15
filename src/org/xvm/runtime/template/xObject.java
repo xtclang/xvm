@@ -27,7 +27,7 @@ public class xObject
         if (fInstance)
             {
             INSTANCE = this;
-            CLASS = f_clazzCanonical;
+            CLASS = ensureCanonicalClass();
             }
         }
 

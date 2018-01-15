@@ -46,7 +46,7 @@ public class xString
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof StringConstant ? new StringHandle(f_clazzCanonical,
+        return constant instanceof StringConstant ? new StringHandle(ensureCanonicalClass(),
                 ((StringConstant) constant).getValue()) : null;
         }
 
@@ -226,6 +226,6 @@ public class xString
 
     public static StringHandle makeHandle(String sValue)
         {
-        return new StringHandle(INSTANCE.f_clazzCanonical, sValue);
+        return new StringHandle(INSTANCE.ensureCanonicalClass(), sValue);
         }
     }

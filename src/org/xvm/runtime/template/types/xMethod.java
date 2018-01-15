@@ -39,7 +39,7 @@ public class xMethod
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.getType();
+            TYPE = getCanonicalType();
             }
         }
 
@@ -122,7 +122,7 @@ public class xMethod
 
         public TypeConstant getTarget()
             {
-            return getType().getActualParamType("TargetType");
+            return getType().getGenericParamType("TargetType");
             }
 
         @Override

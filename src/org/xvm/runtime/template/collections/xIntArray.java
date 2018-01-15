@@ -143,12 +143,12 @@ public class xIntArray
 
     public static IntArrayHandle makeIntArrayInstance(long[] alValue)
         {
-        return new IntArrayHandle(INSTANCE.f_clazzCanonical, alValue);
+        return new IntArrayHandle(INSTANCE.ensureCanonicalClass(), alValue);
         }
 
     public static IntArrayHandle makeIntArrayInstance(long cCapacity)
         {
-        return new IntArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
+        return new IntArrayHandle(INSTANCE.ensureCanonicalClass(), cCapacity);
         }
 
     public static class IntArrayHandle

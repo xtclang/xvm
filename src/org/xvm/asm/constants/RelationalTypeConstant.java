@@ -252,19 +252,6 @@ public abstract class RelationalTypeConstant
                 : cloneRelational(constResolved1, constResolved2);
         }
 
-    @Override
-    public TypeConstant modifyAccess(Access access)
-        {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
-        TypeConstant constResolved1 = constOriginal1.modifyAccess(access);
-        TypeConstant constResolved2 = constOriginal2.modifyAccess(access);
-
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : cloneRelational(constResolved1, constResolved2);
-        }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 

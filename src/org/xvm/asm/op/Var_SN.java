@@ -128,7 +128,7 @@ public class Var_SN
     public int process(Frame frame, int iPC)
         {
         TypeConstant typeSequence = frame.resolveType(m_nType);
-        TypeConstant typeEl = typeSequence.getActualParamType("ElementType");
+        TypeConstant typeEl = typeSequence.getGenericParamType("ElementType");
 
         try
             {
