@@ -1174,8 +1174,10 @@ System.out.println(m_typeinfo);
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
-        Map<String           , PropertyInfo> mapProperties = new HashMap<>();
-        Map<SignatureConstant, MethodInfo  > mapMethods    = new HashMap<>();
+        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
+        Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProperties;
@@ -1198,6 +1200,7 @@ System.out.println(m_typeinfo);
                             {
                             SignatureConstant constSig = structMethod.getIdentityConstant()
                                     .getSignature().resolveGenericTypes(resolver);
+                            assert constSig != null;
                             MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
                                     structMethod.isAbstract()                ? Implementation.Declared :
                                     formatInfo == Component.Format.INTERFACE ? Implementation.Default  :
@@ -1208,7 +1211,7 @@ System.out.println(m_typeinfo);
                         }
                     else if (child instanceof PropertyStructure)
                         {
-                        mapContribProperties.put(sName, new PropertyInfo(constId, (PropertyStructure) child));
+                        // TODO mapContribProperties.put(sName, new PropertyInfo(constId, (PropertyStructure) child));
                         }
                     }
                 }
@@ -1219,13 +1222,13 @@ System.out.println(m_typeinfo);
                 mapContribMethods    = infoContrib.getMethods();
                 }
 
-            contributeMembers(mapProperties, mapMethods,
+            contributeMembers(mapProps, mapMethods,
                     composition, mapContribProperties, mapContribMethods,
                     contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null,
                     errs);
             }
 
-        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProperties, mapMethods);
+        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProps, mapMethods);
         }
 
     protected void contributeMembers(

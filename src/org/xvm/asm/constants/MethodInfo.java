@@ -30,8 +30,8 @@ public class MethodInfo
      */
     protected MethodInfo(SignatureConstant constSig, MethodBody[] abody)
         {
-        assert m_constSig != null;
-        assert m_abody != null && m_abody.length >= 1;
+        assert constSig != null;
+        assert abody != null && abody.length >= 1;
 
         m_constSig = constSig;
         m_abody    = abody;

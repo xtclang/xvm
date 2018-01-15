@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.Format;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Severity;
@@ -89,7 +90,22 @@ public class Annotation
      */
     public Constant getAnnotationClass()
         {
-        return m_constClass;
+        Constant constClass = m_constClass;
+
+        // resolve any previously unresolved constant at this point
+        if (constClass instanceof ResolvableConstant)
+            {
+            Constant constResolved = ((ResolvableConstant) constClass).getResolvedConstant();
+            if (constResolved != null)
+                {
+                // note that this TerminalTypeConstant could not have previously been registered
+                // with the pool because it was not resolved, so changing the reference to the
+                // underlying constant is still safe at this point
+                m_constClass = constClass = constResolved;
+                }
+            }
+
+        return constClass;
         }
 
     /**
@@ -98,7 +114,7 @@ public class Annotation
      */
     public TypeConstant getAnnotationType()
         {
-        return getConstantPool().ensureTerminalTypeConstant(m_constClass);
+        return getConstantPool().ensureTerminalTypeConstant(getAnnotationClass());
         }
 
     /**
@@ -153,7 +169,7 @@ public class Annotation
      */
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constClass);
+        visitor.accept(getAnnotationClass());
         for (Constant param : m_aParams)
             {
             visitor.accept(param);
@@ -197,7 +213,7 @@ public class Annotation
     @Override
     public void registerConstants(ConstantPool pool)
         {
-        m_constClass = pool.register(m_constClass);
+        m_constClass = pool.register(getAnnotationClass());
 
         Constant[] aParams = m_aParams;
         for (int i = 0, c = aParams.length; i < c; ++i)
@@ -215,7 +231,7 @@ public class Annotation
     public void assemble(DataOutput out)
             throws IOException
         {
-        writePackedLong(out, m_constClass.getPosition());
+        writePackedLong(out, getAnnotationClass().getPosition());
         writePackedLong(out, m_aParams.length);
         for (Constant param : m_aParams)
             {
@@ -229,7 +245,7 @@ public class Annotation
         boolean fHalt = super.validate(errlist);
 
         // it must be a mixin type
-        Constant constClass = m_constClass;
+        Constant constClass = getAnnotationClass();
         if (!(constClass instanceof ClassConstant
                 && ((ClassConstant) constClass).getComponent().getFormat() == Format.MIXIN))
             {
@@ -248,7 +264,7 @@ public class Annotation
         int cParams = m_aParams.length;
 
         sb.append("class=")
-          .append(m_constClass.getValueString())
+          .append(getAnnotationClass().getValueString())
           .append(", params=")
           .append(cParams);
 
@@ -282,7 +298,7 @@ public class Annotation
     @Override
     public int compareTo(Annotation that)
         {
-        int n = this.m_constClass.compareTo(that.m_constClass);
+        int n = this.getAnnotationClass().compareTo(that.getAnnotationClass());
 
         if (n == 0)
             {
@@ -310,7 +326,7 @@ public class Annotation
         {
         Constant[] aParams = m_aParams;
         int        cParams = aParams.length;
-        int        n       = m_constClass.hashCode() + cParams;
+        int        n       = getAnnotationClass().hashCode() + cParams;
         for (int i = 0; i < cParams; ++i)
             {
             n *= 11 + aParams[i].hashCode();
@@ -326,7 +342,8 @@ public class Annotation
             Annotation that       = (Annotation) obj;
             Constant[] aThisParam = this.m_aParams;
             Constant[] aThatParam = that.m_aParams;
-            if (this.m_constClass.equals(that.m_constClass) && aThisParam.length == aThatParam.length)
+            if (this.getAnnotationClass().equals(that.getAnnotationClass())
+                    && aThisParam.length == aThatParam.length)
                 {
                 for (int i = 0, c = aThisParam.length; i < c; ++i)
                     {
@@ -348,7 +365,7 @@ public class Annotation
         StringBuilder sb = new StringBuilder();
 
         sb.append('@')
-          .append(m_constClass.getValueString());
+          .append(getAnnotationClass().getValueString());
 
         if (m_aParams.length > 0)
             {
