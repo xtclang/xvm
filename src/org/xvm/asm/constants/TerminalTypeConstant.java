@@ -250,12 +250,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant modifyAccess(Access access)
-        {
-        return this;
-        }
-
-    @Override
     public boolean isOnlyNullable()
         {
         TypeConstant typeResolved = resolveTypedefs();

@@ -108,6 +108,14 @@ public abstract class Op
         }
 
     /**
+     * @return true iff this op is using the {@link #A_SUPER} argument
+     */
+    public boolean usesSuper()
+        {
+        return false;
+        }
+
+    /**
      * Represents any argument for an op, including constants, registers, and pre-defined
      * references like "this".
      */
@@ -941,6 +949,8 @@ public abstract class Op
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";
             case OP_CONSTR_T:    return "CONSTR_T";
+
+            case OP_X_PRINT:     return "X_PRINT";
 
             default:
                 throw new IllegalStateException("op=" + byteToHexString(nOp));

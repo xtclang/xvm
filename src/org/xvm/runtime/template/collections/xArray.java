@@ -63,7 +63,7 @@ public class xArray
 
         TypeConstant typeArray = constArray.getType();
 
-        TypeConstant typeEl = typeArray.getActualParamType("ElementType");
+        TypeConstant typeEl = typeArray.getGenericParamType("ElementType");
         ClassTemplate templateEl = f_templates.getTemplate(typeEl);
 
         Constant[] aconst = constArray.getValue();
@@ -219,7 +219,7 @@ public class xArray
     @Override
     public TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
         {
-        return hTarget.getType().getActualParamType("ElementType");
+        return hTarget.getType().getGenericParamType("ElementType");
         }
 
     @Override
@@ -366,7 +366,7 @@ public class xArray
 
     public static GenericArrayHandle makeHandle(long cCapacity)
         {
-        return new GenericArrayHandle(INSTANCE.f_clazzCanonical, cCapacity);
+        return new GenericArrayHandle(INSTANCE.ensureCanonicalClass(), cCapacity);
         }
 
     public static GenericArrayHandle makeHandle(TypeConstant typeEl, ObjectHandle[] ahValue)

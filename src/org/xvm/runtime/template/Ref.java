@@ -31,7 +31,7 @@ public class Ref
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = f_clazzCanonical.getType();
+            TYPE = getCanonicalType();
             }
         }
 
@@ -111,8 +111,7 @@ public class Ref
                 try
                     {
                     ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            !hReferent.isMutable()));
+                    return frame.assignValue(iReturn, xBoolean.makeHandle(!hReferent.isMutable()));
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
@@ -191,13 +190,22 @@ public class Ref
 
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
 
-        // indicates ath the the m_hDelegate field holds a referent
+        // indicates that the m_hDelegate field holds a referent
         private static final int REF_REFERENT = -1;
 
-        // indicates ath the the m_hDelegate field holds a Ref that this Ref is "chained" to
-        private static final int REF_REF = -2;
+        // indicates that the m_hDelegate field holds a property target
+        private static final int REF_PROPERTY = -2;
 
-        public RefHandle(TypeComposition clazz, String sName)
+        // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
+        private static final int REF_REF = -3;
+
+        /**
+         * Create an unassigned RefHandle for a given clazz.
+         *
+         * @param clazz  the class of the Ref (e.g. FutureRef<String>)
+         * @param sName  optional name
+         */
+        protected RefHandle(TypeComposition clazz, String sName)
             {
             super(clazz);
 
@@ -206,6 +214,32 @@ public class Ref
             m_iVar = REF_REFERENT;
             }
 
+        /**
+         * Create a RefHandle for a given property.
+         *
+         * @param clazz      the class of the Ref (e.g. FutureRef<String>)
+         * @param hTarget    the target object
+         * @param sPropName  the property name
+         */
+        public RefHandle(TypeComposition clazz, ObjectHandle hTarget, String sPropName)
+            {
+            super(clazz);
+
+            assert hTarget instanceof GenericHandle;
+
+            m_hDelegate = hTarget;
+            m_sName = sPropName;
+            m_fMutable = true;
+            m_iVar = REF_PROPERTY;
+            }
+
+        /**
+         * Create a RefHandle for a frame register.
+         *
+         * @param clazz  the class of the Ref
+         * @param frame  the frame
+         * @param iVar   the register index
+         */
         public RefHandle(TypeComposition clazz, Frame frame, int iVar)
             {
             super(clazz);
@@ -241,6 +275,10 @@ public class Ref
                 case REF_REFERENT:
                     return m_hDelegate != null;
 
+                case REF_PROPERTY:
+                    return m_hDelegate != null &&
+                        ((GenericHandle) m_hDelegate).m_mapFields.get(m_sName) != null;
+
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).isAssigned();
 
@@ -251,7 +289,7 @@ public class Ref
 
         public boolean isSelfContained()
             {
-            return m_iVar == REF_REFERENT;
+            return m_hDelegate == null || m_hDelegate.isSelfContained();
             }
 
         public ObjectHandle get()
@@ -261,6 +299,9 @@ public class Ref
                 {
                 case REF_REFERENT:
                     return getInternal();
+
+                case REF_PROPERTY:
+                    throw new IllegalStateException();
 
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).get();
@@ -286,6 +327,9 @@ public class Ref
                 {
                 case REF_REFERENT:
                     return setInternal(handle);
+
+                case REF_PROPERTY:
+                    throw new IllegalStateException();
 
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).set(handle);

@@ -31,7 +31,7 @@ public class xBoolean
 
         if (fInstance)
             {
-            TYPE = f_clazzCanonical.getType();
+            TYPE = getCanonicalType();
             PARAMETERS = new TypeConstant[] {getTypeConstant()};
             }
         }
@@ -43,8 +43,8 @@ public class xBoolean
 
         if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            FALSE = new BooleanHandle(f_clazzCanonical, false);
-            TRUE = new BooleanHandle(f_clazzCanonical, true);
+            FALSE = new BooleanHandle(ensureCanonicalClass(), false);
+            TRUE = new BooleanHandle(ensureCanonicalClass(), true);
             }
         }
 

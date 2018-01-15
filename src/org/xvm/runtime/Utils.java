@@ -263,7 +263,7 @@ public abstract class Utils
 
                 if (ixStep == algorithm.length - 1)
                     {
-                    // teh last step; no need to come back
+                    // the last step; no need to come back
                     return iResult;
                     }
 

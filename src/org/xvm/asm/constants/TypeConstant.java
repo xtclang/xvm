@@ -92,7 +92,7 @@ public abstract class TypeConstant
     @Override
     public TypeConstant resolveGenericType(PropertyConstant constProperty)
         {
-        return getActualParamType(constProperty.getName());
+        return getGenericParamType(constProperty.getName());
         }
 
 
@@ -237,20 +237,37 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find the type of the specified formal parameter for this actual type.
-     *
-     * @param sName  the formal parameter name
-     *
-     * @return the corresponding actual type
+     * @return true iff this type has a formal type parameter with the specified name
      */
-    public TypeConstant getActualParamType(String sName)
+     public boolean isGenericType(String sName)
         {
         // TODO: use the type info when done
         if (isSingleDefiningConstant())
             {
             ClassStructure clz = (ClassStructure)
                 ((ClassConstant) getDefiningConstant()).getComponent();
-            TypeConstant type = clz.getActualParamType(sName, getParamTypes());
+            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
+            return type != null;
+            }
+
+        return false;
+        }
+
+    /**
+     * Find the type of the specified formal parameter for this actual type.
+     *
+     * @param sName  the formal parameter name
+     *
+     * @return the corresponding actual type
+     */
+    public TypeConstant getGenericParamType(String sName)
+        {
+        // TODO: use the type info when done
+        if (isSingleDefiningConstant())
+            {
+            ClassStructure clz = (ClassStructure)
+                ((ClassConstant) getDefiningConstant()).getComponent();
+            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
             if (type == null)
                 {
                 throw new IllegalArgumentException(
@@ -451,19 +468,6 @@ public abstract class TypeConstant
         {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.normalizeParameters();
-
-        return constResolved == constOriginal
-                ? this
-                : cloneSingle(constResolved);
-        }
-
-    /**
-     * @return this same type, but with a specified access
-     */
-    public TypeConstant modifyAccess(Access access)
-        {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.modifyAccess(access);
 
         return constResolved == constOriginal
                 ? this
@@ -1723,6 +1727,24 @@ System.out.println(m_typeinfo);
 
     @Override
     public abstract int hashCode();
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof TypeConstant))
+            {
+            return false;
+            }
+
+        TypeConstant that = (TypeConstant) obj;
+
+        return this.getFormat() == that.getFormat() && this.compareDetails(that) == 0;
+        }
 
 
     // -----fields ---------------------------------------------------------------------------------

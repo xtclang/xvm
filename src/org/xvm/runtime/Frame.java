@@ -37,10 +37,13 @@ public class Frame
     {
     public final Adapter         f_adapter; // TEMPORARY
     public final Fiber           f_fiber;
-    public final ServiceContext  f_context;      // same as f_fiber.f_context
-    public final MethodStructure f_function;
-    public final Op[]            f_aOp;          // the op-codes
-    public final ObjectHandle    f_hTarget;      // target
+    public final ServiceContext  f_context; // same as f_fiber.f_context
+
+    protected final MethodStructure f_function;
+    protected final Op[]            f_aOp;       // the op-codes
+    protected final ObjectHandle    f_hTarget;   // the passed in target
+    protected final ObjectHandle    f_hThis;     // the "private" view of the target
+
     public final ObjectHandle[]  f_ahVar;        // arguments/local var registers
     public final VarInfo[]       f_aInfo;        // optional info for var registers
     public final int             f_iReturn;      // an index for a single return value;
@@ -93,6 +96,7 @@ public class Frame
         f_aOp      = function == null ? Op.STUB : function.getOps();
 
         f_hTarget = hTarget;
+        f_hThis   = hTarget == null ? null : hTarget.revealOrigin();
 
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
@@ -118,7 +122,7 @@ public class Frame
         f_function = null;
         f_aOp = aopNative;
 
-        f_hTarget = null;
+        f_hTarget = f_hThis = null;
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
@@ -144,6 +148,8 @@ public class Frame
         f_aOp = aopNative;
 
         f_hTarget = framePrev.f_hTarget;
+        f_hThis   = framePrev.f_hThis;
+
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
 
@@ -278,12 +284,12 @@ public class Frame
         switch (nArgId)
             {
             case Op.A_SUPER:
-                ObjectHandle hThis = f_hTarget;
+                ObjectHandle hThis = f_hThis;
                 if (hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return Function.makeHandle(m_chain, m_nDepth).bind(0, f_hTarget);
+                return Function.makeHandle(m_chain, m_nDepth).bind(0, hThis);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)
@@ -293,38 +299,39 @@ public class Frame
                 return f_hTarget;
 
             case Op.A_PUBLIC:
-                if (f_hTarget == null)
+                if (f_hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.ensureAccess(Access.PUBLIC);
+                return f_hThis.ensureAccess(Access.PUBLIC);
 
             case Op.A_PROTECTED:
-                if (f_hTarget == null)
+                if (f_hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.ensureAccess(Access.PROTECTED);
+                return f_hThis.ensureAccess(Access.PROTECTED);
 
             case Op.A_PRIVATE:
-                if (f_hTarget == null)
+                if (f_hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.ensureAccess(Access.PRIVATE);
+                return f_hThis.ensureAccess(Access.PRIVATE);
 
             case Op.A_STRUCT:
-                if (f_hTarget == null)
+                if (f_hThis == null)
                     {
                     throw new IllegalStateException();
                     }
-                return f_hTarget.ensureAccess(Access.STRUCT);
+                return f_hThis.ensureAccess(Access.STRUCT);
 
             case Op.A_TYPE:
-                if (f_hTarget == null)
+                if (f_hThis == null)
                     {
                     throw new IllegalStateException();
                     }
+                return f_hThis.getType().getTypeHandle();
 
             case Op.A_FRAME:
                 throw new UnsupportedOperationException("TODO");
@@ -397,13 +404,13 @@ public class Frame
     // return "private:this"
     public ObjectHandle getThis()
         {
-        assert f_hTarget != null;
-        return f_hTarget;
+        assert f_hThis != null;
+        return f_hThis;
         }
 
     public GenericTypeResolver getGenericsResolver()
         {
-        if (f_hTarget == null)
+        if (f_hThis == null)
             {
             return new GenericTypeResolver()
                 {
@@ -427,7 +434,7 @@ public class Frame
                     }
                 };
             }
-        return f_hTarget.getType();
+        return f_hThis.getType();
         }
 
     public ObjectHandle getFrameLocal()
@@ -1451,7 +1458,7 @@ public class Frame
             if (nTargetReg >= 0)
                 {
                 VarInfo infoArray = frame.f_aInfo[nTargetReg];
-                return infoArray.getType().getActualParamType("ElementType");
+                return infoArray.getType().getGenericParamType("ElementType");
                 }
 
             // "local property" or a literal constant

@@ -112,14 +112,6 @@ public class AccessTypeConstant
         return getConstantPool().ensureAccessTypeConstant(type, m_access);
         }
 
-    @Override
-    public TypeConstant modifyAccess(Access access)
-        {
-        return access == m_access
-            ? this
-            : getConstantPool().ensureAccessTypeConstant(m_constType, access);
-        }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 

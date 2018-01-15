@@ -13,6 +13,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -26,7 +27,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 
 
@@ -46,7 +46,7 @@ public class TypeComposition
     /**
      * The actual type - the maximum of what this type composition could be revealed as.
      */
-    private final TypeConstant f_typeActual;
+    private final TypeConstant f_typeInception;
 
     /**
      * The type that is revealed by the ObjectHandle that refer to this composition.
@@ -55,12 +55,6 @@ public class TypeComposition
 
     // super composition
     private TypeComposition m_clzSuper;
-
-    // cached derivative types
-    private TypeConstant m_typePublic;
-    private TypeConstant m_typeProtected;
-    private TypeConstant m_typePrivate;
-    private TypeConstant m_typeStruct;
 
     // cached "declared" call chain
     private List<TypeComposition> m_listDeclaredChain;
@@ -83,49 +77,62 @@ public class TypeComposition
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
 
-    public TypeComposition(ClassTemplate template, TypeConstant typeActual)
+    /**
+     * Construct the TypeComposition for a given "inception" type.
+     *
+     * @param template       the ClassTemplate
+     * @param typeInception  the "inception type"
+     */
+    public TypeComposition(ClassTemplate template, TypeConstant typeInception)
+        {
+        this(template, typeInception, typeInception);
+        }
+    /**
+     * Construct the TypeComposition for a given "inception" type and a "revealed" type.
+     *
+     * The guarantees for the inception type are:
+     *  - it has to be a class (TypeConstant.isClass()) or a native template
+     *  - it cannot be abstract
+     *  - the only modifying types that are allowed are Annotation*, Parameterized?
+     *
+     * @param template       the ClassTemplate
+     * @param typeInception  the "origin type"
+     * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
+     */
+    public TypeComposition(ClassTemplate template, TypeConstant typeInception, TypeConstant typeRevealed)
         {
         f_template = template;
-        f_typeActual = f_typeRevealed = typeActual;
+        f_typeInception = typeInception;
+        f_typeRevealed = typeRevealed;
 
-        assert typeActual.isSingleDefiningConstant() &&
-            ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == template.f_struct;
+        assert typeInception.isSingleDefiningConstant();
+        assert ((IdentityConstant) typeInception.getDefiningConstant()).getComponent() == template.f_struct;
+        assert typeInception.getAccess() == Access.PUBLIC;
 
-        if (typeActual.isParamsSpecified())
+        if (typeInception.isParamsSpecified())
             {
             ClassStructure struct = template.f_struct;
-            assert typeActual.getParamTypesArray().length ==
+            assert typeInception.getParamTypesArray().length ==
                         struct.getTypeParams().size() ||
                    struct.getIdentityConstant().equals(
                        struct.getConstantPool().clzTuple());
             }
-
-        switch (typeActual.getAccess())
-            {
-            case STRUCT:
-                m_typeStruct = typeActual;
-                break;
-
-            case PUBLIC:
-                m_typePublic = typeActual;
-                break;
-
-            case PROTECTED:
-                m_typeProtected = typeActual;
-                break;
-
-            case PRIVATE:
-                m_typePrivate = typeActual;
-                break;
-            }
         }
 
     /**
-     * @return the template for the actual type of this handle.
+     * @return the template for the inception type of this class
      */
     public ClassTemplate getTemplate()
         {
         return f_template;
+        }
+
+    /**
+     * @return the current (revealed) type of this TypeComposition
+     */
+    public TypeConstant getType()
+        {
+        return f_typeRevealed;
         }
 
     protected TypeComposition getSuper()
@@ -145,7 +152,7 @@ public class TypeComposition
         Contribution   contribExtends = structClz.findContribution(Composition.Extends);
         if (contribExtends != null)
             {
-            TypeConstant typeActual = f_typeActual;
+            TypeConstant typeActual = f_typeInception;
             if (typeActual.isParamsSpecified())
                 {
                 List<TypeConstant> listActual =
@@ -153,11 +160,13 @@ public class TypeComposition
 
                 TypeConstant typeSuper = templateSuper.f_struct.resolveType(listActual);
 
+                // alternatively, we can do
+                //     template.ensureClass(f_typeInception, typeSuper);
                 return m_clzSuper = templateSuper.ensureClass(typeSuper);
                 }
             }
 
-        return m_clzSuper = templateSuper.f_clazzCanonical;
+        return m_clzSuper = templateSuper.ensureCanonicalClass();
         }
 
     /**
@@ -177,7 +186,7 @@ public class TypeComposition
             throw new IllegalArgumentException("Type " + f_typeRevealed + " cannot be widened to " + type);
             }
 
-        return f_template.ensureClass(type);
+        return f_template.ensureClass(f_typeInception, type);
         }
 
     /**
@@ -189,25 +198,73 @@ public class TypeComposition
         {
         // TODO: this is only allowed within the container that created the original TypeComposition
 
-        if (type.equals(f_typeActual))
+        if (type.equals(f_typeRevealed))
             {
             return this;
             }
 
-        if (!f_typeActual.isA(type))
+        if (!f_typeInception.isA(type))
             {
-            throw new IllegalArgumentException("Type " + f_typeActual + " cannot be widened to " + type);
+            throw new IllegalArgumentException("Type " + f_typeInception + " cannot be revealed as " + type);
             }
 
-        return f_template.ensureClass(type);
+        return f_template.ensureClass(f_typeInception, type);
+        }
+
+    public ObjectHandle ensureOrigin(ObjectHandle handle)
+        {
+        assert handle.getComposition() == this;
+
+        // struct is not "revealable"
+        return f_typeRevealed == f_typeInception || isStruct()
+            ? handle : handle.cloneAs(f_template.ensureClass(f_typeInception));
+        }
+
+    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
+        {
+        assert handle.getComposition() == this;
+
+        TypeConstant typeCurrent = f_typeRevealed;
+        TypeConstant typeTarget;
+
+        ConstantPool pool = typeCurrent.getConstantPool();
+        switch (access)
+            {
+            case PUBLIC:
+                typeTarget = f_typeInception;
+                break;
+
+            case PROTECTED:
+                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.PROTECTED);
+                break;
+
+            case PRIVATE:
+                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.PRIVATE);
+                break;
+
+            case STRUCT:
+                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.STRUCT);
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        return typeCurrent.equals(typeTarget) ?
+            handle : handle.cloneAs(f_template.ensureClass(f_typeInception, typeTarget));
+        }
+
+    public boolean isStruct()
+        {
+        return f_typeRevealed.getAccess() == Access.STRUCT;
         }
 
     /**
-     * @return the revealed type of this TypeComposition.
+     * @return true iff the revealed type has a formal type parameter with the specified name
      */
-    public TypeConstant getType()
+    public boolean isGenericType(String sName)
         {
-        return f_typeRevealed;
+        return f_typeRevealed.isGenericType(sName);
         }
 
     /**
@@ -220,7 +277,7 @@ public class TypeComposition
      */
     public TypeConstant getActualParamType(String sName)
         {
-        return f_typeActual.getActualParamType(sName);
+        return f_typeRevealed.getGenericParamType(sName);
         }
 
     public boolean isRoot()
@@ -296,7 +353,7 @@ public class TypeComposition
         // 1.2
         list.add(this);
 
-        TypeConstant typeActual = f_typeActual;
+        TypeConstant typeActual = f_typeInception;
         Component.Format format = structThis.getFormat();
         if (fTop && format == Component.Format.MIXIN)
             {
@@ -337,7 +394,7 @@ public class TypeComposition
         if (templateCategory != null)
             {
             // all categories are non-generic
-            list.add(templateCategory.f_clazzCanonical);
+            list.add(templateCategory.ensureCanonicalClass());
             }
 
         // 1.5
@@ -364,7 +421,7 @@ public class TypeComposition
             }
 
         ClassStructure struct = f_template.f_struct;
-        TypeConstant typeActual = f_typeActual;
+        TypeConstant typeActual = f_typeInception;
         List<TypeComposition> list = new ArrayList<>();
         Set<TypeComposition> set = new HashSet<>(); // to avoid duplicates
 
@@ -411,103 +468,10 @@ public class TypeComposition
             }
         }
 
-    public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
-        {
-        assert handle.getComposition() == this;
-
-        TypeConstant typeCurrent = f_typeRevealed;
-        TypeConstant typeTarget;
-
-        switch (access)
-            {
-            case PUBLIC:
-                typeTarget = ensurePublicType();
-                if (typeCurrent == typeTarget)
-                    {
-                    return handle;
-                    }
-                break;
-
-            case PROTECTED:
-                typeTarget = ensureProtectedType();
-                if (typeCurrent == typeTarget)
-                    {
-                    return handle;
-                    }
-                break;
-
-            case PRIVATE:
-                typeTarget = ensurePrivateType();
-                if (typeCurrent == typeTarget)
-                    {
-                    return handle;
-                    }
-                break;
-
-            case STRUCT:
-                typeTarget = ensureStructType();
-                if (typeCurrent == typeTarget)
-                    {
-                    return handle;
-                    }
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
-
-        return handle.cloneAs(f_template.ensureClass(typeTarget));
-        }
-
-    public TypeConstant ensurePublicType()
-        {
-        TypeConstant type = m_typePublic;
-        if (type == null)
-            {
-            m_typePublic = type = f_typeRevealed.modifyAccess(Access.PUBLIC);
-            }
-        return type;
-        }
-
-    public TypeConstant ensureProtectedType()
-        {
-        TypeConstant type = m_typeProtected;
-        if (type == null)
-            {
-            m_typeProtected = type = f_typeActual.modifyAccess(Access.PROTECTED);
-            }
-        return type;
-        }
-
-    public TypeConstant ensurePrivateType()
-        {
-        TypeConstant type = m_typePrivate;
-        if (type == null)
-            {
-            m_typePrivate = type = f_typeActual.modifyAccess(Access.PRIVATE);
-            }
-        return type;
-        }
-
-    public TypeConstant ensureStructType()
-        {
-        TypeConstant type = m_typeStruct;
-        if (type == null)
-            {
-            m_typeStruct = type = f_typeActual.modifyAccess(Access.STRUCT);
-            }
-        return type;
-        }
-
-    public boolean isStruct()
-        {
-        return f_typeRevealed == m_typeStruct;
-        }
-
-    // is the public interface of this class assignable to the specified class
+    // is the revealed type of this class assignable to the revealed type of the specified class
     public boolean isA(TypeComposition that)
         {
-        return this.ensurePublicType().isA(that.ensurePublicType());
+        return this.f_typeRevealed.isA(that.f_typeRevealed);
         }
 
     // create a sequence of frames to be called in the inverse order (the base super first)
@@ -568,7 +532,7 @@ public class TypeComposition
         {
         List<MethodStructure> list = new ArrayList<>();
 
-        TypeConstant typeActual = f_typeActual;
+        TypeConstant typeActual = f_typeInception;
         if (typeActual.isParamsSpecified())
             {
             constSignature = constSignature.resolveGenericTypes(typeActual);
@@ -715,13 +679,11 @@ public class TypeComposition
                     PropertyStructure prop = (PropertyStructure) child;
 
                     RefHandle hRef = null;
-                    if (template.isAnnotated(prop))
+                    if (template.isRef(prop))
                         {
-                        TypeComposition clzAnno = template.getAnnotation(prop);
-                        Ref templateRef = (Ref) clzAnno.getTemplate();
-                        TypeComposition clzRef = templateRef.ensureParameterizedClass(prop.getType());
+                        TypeComposition clzRef = template.getRefClass(prop);
 
-                        hRef = templateRef.createRefHandle(clzRef, prop.getName());
+                        hRef = clzRef.getTemplate().createRefHandle(clzRef, prop.getName());
                         }
 
                     if (template.isCalculated(prop))
