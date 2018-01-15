@@ -335,25 +335,25 @@ public class CompositeComponent
         }
 
     @Override
-    protected Map<String, Component> getChildByNameMap()
+    public Map<String, Component> getChildByNameMap()
         {
         return m_siblings.get(0).getChildByNameMap();
         }
 
     @Override
-    protected Map<String, Component> ensureChildByNameMap()
+    public Map<String, Component> ensureChildByNameMap()
         {
         return m_siblings.get(0).ensureChildByNameMap();
         }
 
     @Override
-    protected Map<MethodConstant, MethodStructure> getMethodByConstantMap()
+    public Map<MethodConstant, MethodStructure> getMethodByConstantMap()
         {
         return m_siblings.get(0).getMethodByConstantMap();
         }
 
     @Override
-    protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
+    public Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
         {
         return m_siblings.get(0).ensureMethodByConstantMap();
         }

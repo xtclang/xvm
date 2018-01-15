@@ -14,11 +14,12 @@ public class MethodInfo
     /**
      * Construct a MethodInfo for a method body.
      *
-     * @param body  the initial method body
+     * @param constSig  the method signature
+     * @param body      the initial method body
      */
-    public MethodInfo(MethodBody body)
+    public MethodInfo(SignatureConstant constSig, MethodBody body)
         {
-        this(body.getSignature(), new MethodBody[] {body});
+        this(constSig, new MethodBody[] {body});
         }
 
     /**
@@ -29,8 +30,8 @@ public class MethodInfo
      */
     protected MethodInfo(SignatureConstant constSig, MethodBody[] abody)
         {
-        assert m_constSig != null;
-        assert m_abody != null && m_abody.length >= 1;
+        assert constSig != null;
+        assert abody != null && abody.length >= 1;
 
         m_constSig = constSig;
         m_abody    = abody;

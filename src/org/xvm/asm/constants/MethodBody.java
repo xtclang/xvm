@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
 
@@ -42,14 +43,6 @@ public class MethodBody
         m_constMethod = constMethod;
         m_impl        = impl;
         m_constProp   = constProp;
-        }
-
-    /**
-     * @return the signature of the MethodConstant associated with this MethodBody
-     */
-    public SignatureConstant getSignature()
-        {
-        return m_constMethod.getSignature();
         }
 
     /**

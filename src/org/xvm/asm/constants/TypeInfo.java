@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -85,34 +86,37 @@ public class TypeInfo
      *
      * @param listmapClassChain    the class chain being collected for the derivative type
      * @param listmapDefaultChain  the default chain being collected for the derivative type
-     * @param fAnnotation          true iff this type is being used as an annotation in the derived
-     *                             type
+     * @param composition          the composition of the contribution
      */
     public void contributeChains(
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
-            boolean fAnnotation)
+            Composition composition)
         {
-        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+        if (composition != Composition.Implements && composition != Composition.Delegates)
             {
-            IdentityConstant constId = entry.getKey();
-            boolean          fYank   = entry.getValue();
+            boolean fAnnotation = composition == Composition.Annotation;
+            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+                {
+                IdentityConstant constId = entry.getKey();
+                boolean fYank = entry.getValue();
 
-            Boolean BAnchored = listmapClassChain.get(constId);
-            if (BAnchored == null)
-                {
-                // the identity does not already appear in the chain, so add it to the chain
-                listmapClassChain.put(constId, fAnnotation & fYank);
+                Boolean BAnchored = listmapClassChain.get(constId);
+                if (BAnchored == null)
+                    {
+                    // the identity does not already appear in the chain, so add it to the chain
+                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    }
+                else if (!BAnchored)
+                    {
+                    // the identity in the chain is owned by this type, so remove it from its old
+                    // location in the chain, and add it to the end
+                    listmapClassChain.remove(constId);
+                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    }
+                // else ... the identity in the chain was "yanked" from us, so we can't claim it;
+                // just leave it where it is in the chain
                 }
-            else if (!BAnchored)
-                {
-                // the identity in the chain is owned by this type, so remove it from its old
-                // location in the chain, and add it to the end
-                listmapClassChain.remove(constId);
-                listmapClassChain.put(constId, fAnnotation & fYank);
-                }
-            // else ... the identity in the chain was "yanked" from us, so we can't claim it;
-            // just leave it where it is in the chain
             }
 
         // append our defaults to the default chain (just the ones that are absent from the chain)

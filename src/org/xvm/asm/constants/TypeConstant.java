@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
@@ -24,7 +25,11 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
 
 import org.xvm.runtime.Frame;
@@ -585,7 +590,7 @@ System.out.println(m_typeinfo);
         ClassStructure   struct;
         try
             {
-            // TODO how to handle "Property" and "Register" and auto-narrowing types?
+            // TODO Property, Register, and auto-narrowing types?
             constId = (IdentityConstant) ((TypeConstant) simplify()).getDefiningConstant();
             struct  = (ClassStructure) constId.getComponent();
             }
@@ -1026,8 +1031,7 @@ System.out.println(m_typeinfo);
                         break;
                         }
 
-                    // must be an "interface type"
-                    // TODO this is not a complete check because it does not check non-classes
+                    // must be an "interface type" (not a class type)
                     if (typeContrib.isExplicitClassIdentity(true)
                             && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
                         {
@@ -1043,8 +1047,7 @@ System.out.println(m_typeinfo);
 
                 case Implements:
                     {
-                    // must be an "interface type"
-                    // TODO this is not a complete check because it does not check non-classes
+                    // must be an "interface type" (not a class type)
                     if (typeContrib.isExplicitClassIdentity(true)
                             && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
                         {
@@ -1085,129 +1088,203 @@ System.out.println(m_typeinfo);
         // 2) collect all of the type parameter data from the various contributions
         ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
-        NextContrib: for (Contribution contrib : listProcess)
+        for (Contribution contrib : listProcess)
             {
             Composition compContrib = contrib.getComposition();
-            if (compContrib == Composition.Equal) // i.e. "this" type
-                {
-                assert !listmapClassChain.containsKey(constId);
-                assert !listmapDefaultChain.containsKey(constId);
-
-                if (formatInfo == Component.Format.INTERFACE)
-                    {
-                    listmapDefaultChain.put(constId, true);
-                    }
-                else
-                    {
-                    listmapClassChain.put(constId, true);
-                    }
-
-                continue NextContrib;
-                }
-
-            TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
-            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
             switch (compContrib)
                 {
-                case Annotation:
-                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, true);
+                case Equal: // i.e. "this" type
+                    {
+                    assert !listmapClassChain.containsKey(constId);
+                    assert !listmapDefaultChain.containsKey(constId);
+
+                    // append self to the call chain
+                    if (formatInfo == Component.Format.INTERFACE)
+                        {
+                        listmapDefaultChain.put(constId, true);
+                        }
+                    else
+                        {
+                        listmapClassChain.put(constId, true);
+                        }
+
+                    // this type's type parameters were already collected
+                    }
                     break;
 
+                case Annotation:
+                case Implements:
                 case Incorporates:
-                case Delegates:     // TODO needs to go to call chain
-                case Implements:    // TODO needs to go to default chain
+                case Delegates:
                 case Extends:
                 case RebasesOnto:
-                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, false);
-                    break;
-
-                case Into:
-                    // "into" contains only implicit methods, so it is not part of a chain
-                    // furthermore, an "into" does not contribute type parameters, so we're done
-                    continue NextContrib;
-
-                default:
-                    throw new IllegalStateException("composition=" + compContrib);
-                }
-
-            // collect type parameters
-            for (ParamInfo paramNew : infoContrib.getTypeParams().values())
-                {
-                String    sParam   = paramNew.getName();
-                ParamInfo paramOld = mapTypeParams.get(sParam);
-                if (paramOld == null)
                     {
-                    mapTypeParams.put(sParam, paramNew);
-                    }
-                else
-                    {
-                    // check that everything matches between the old and new parameter
-                    if (paramNew.isActualTypeSpecified() != paramOld.isActualTypeSpecified())
+                    // append to the call chain
+                    TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
+                    TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
+
+                    // collect type parameters
+                    for (ParamInfo paramNew : infoContrib.getTypeParams().values())
                         {
-                        if (paramOld.isActualTypeSpecified())
+                        String    sParam   = paramNew.getName();
+                        ParamInfo paramOld = mapTypeParams.get(sParam);
+                        if (paramOld == null)
                             {
-                            log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
-                                    this.getValueString(), sParam,
-                                    paramOld.getActualType().getValueString(),
-                                    typeContrib.getValueString());
+                            mapTypeParams.put(sParam, paramNew);
                             }
                         else
                             {
-                            log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
-                                    this.getValueString(), sParam,
-                                    typeContrib.getValueString(),
-                                    paramNew.getActualType().getValueString());
+                            // check that everything matches between the old and new parameter
+                            if (paramNew.isActualTypeSpecified() != paramOld.isActualTypeSpecified())
+                                {
+                                if (paramOld.isActualTypeSpecified())
+                                    {
+                                    log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
+                                            this.getValueString(), sParam,
+                                            paramOld.getActualType().getValueString(),
+                                            typeContrib.getValueString());
+                                    }
+                                else
+                                    {
+                                    log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
+                                            this.getValueString(), sParam,
+                                            typeContrib.getValueString(),
+                                            paramNew.getActualType().getValueString());
+                                    }
+                                }
+                            else if (!paramNew.getActualType().equals(paramOld.getActualType()))
+                                {
+                                log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
+                                        this.getValueString(), sParam,
+                                        paramOld.getActualType().getValueString(),
+                                        typeContrib.getValueString(),
+                                        paramNew.getActualType().getValueString());
+                                }
                             }
                         }
-                    else if (!paramNew.getActualType().equals(paramOld.getActualType()))
-                        {
-                        log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                                this.getValueString(), sParam,
-                                paramOld.getActualType().getValueString(),
-                                typeContrib.getValueString(),
-                                paramNew.getActualType().getValueString());
-                        }
                     }
+                    break;
+
+                case Into:
+                    // "into" contains only implicit methods, so it is not part of a chain;
+                    // "into" does not contribute type parameters
+                    break;
+
+                default:
+                    throw new IllegalStateException("composition=" + compContrib);
                 }
             }
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
-        Map<String           , PropertyInfo> mapProperties = new HashMap<>();
-        Map<SignatureConstant, MethodInfo  > mapMethods    = new HashMap<>();
+        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
+        Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
         for (Contribution contrib : listProcess)
             {
-            switch (contrib.getComposition())
+            Map<String           , PropertyInfo> mapContribProperties;
+            Map<SignatureConstant, MethodInfo  > mapContribMethods;
+            Composition composition = contrib.getComposition();
+            if (composition == Composition.Equal)
                 {
-                case Equal:
-                    // add the properties and methods from "struct"
-                    // if this is an interface, then these are "abstract" or "default" methods
-                    // otherwise these are added to the primary chain
-                    // TODO
-                    break;
-
-                case Implements:
-                    // each property/method in the contrib type need to be declared abstract/default
-                    // TODO
-                    break;
-
-                case Delegates:
-                    // each property/method in the contrib type need to be delegated (in the primary call chains)
-                    // TODO
-                    break;
-
-                case Into:
-                    // each property/method in the contrib type need to be declared "implicit"
-                    // TODO
-                    break;
-
+                // add the properties and methods from "struct"
+                // if this is an interface, then these are "abstract" or "default" methods
+                // otherwise these are added to the primary chain
+                mapContribProperties = new HashMap<>();
+                mapContribMethods    = new HashMap<>();
+                for (Entry<String, Component> entryChild : struct.ensureChildByNameMap().entrySet())
+                    {
+                    String    sName = entryChild.getKey();
+                    Component child = entryChild.getValue();
+                    if (child instanceof MultiMethodStructure)
+                        {
+                        for (MethodStructure structMethod : child.getMethodByConstantMap().values())
+                            {
+                            SignatureConstant constSig = structMethod.getIdentityConstant()
+                                    .getSignature().resolveGenericTypes(resolver);
+                            assert constSig != null;
+                            MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
+                                    structMethod.isAbstract()                ? Implementation.Declared :
+                                    formatInfo == Component.Format.INTERFACE ? Implementation.Default  :
+                                    structMethod.isNative()                  ? Implementation.Native   :
+                                                                               Implementation.Explicit  );
+                            mapContribMethods.put(constSig, new MethodInfo(constSig, body));
+                            }
+                        }
+                    else if (child instanceof PropertyStructure)
+                        {
+                        // TODO mapContribProperties.put(sName, new PropertyInfo(constId, (PropertyStructure) child));
+                        }
+                    }
                 }
-//            TypeConstant typeContrib = contrib.getTypeConstant();
-//            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
-            // TODO
+            else
+                {
+                TypeInfo infoContrib = contrib.getTypeConstant().getTypeInfo();
+                mapContribProperties = infoContrib.getProperties();
+                mapContribMethods    = infoContrib.getMethods();
+                }
+
+            contributeMembers(mapProps, mapMethods,
+                    composition, mapContribProperties, mapContribMethods,
+                    contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null,
+                    errs);
             }
 
-        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProperties, mapMethods);
+        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProps, mapMethods);
+        }
+
+    protected void contributeMembers(
+            Map<String, PropertyInfo>          mapProperties,
+            Map<SignatureConstant, MethodInfo> mapMethods,
+            Composition                        compAdd,
+            Map<String, PropertyInfo>          mapAddProperties,
+            Map<SignatureConstant, MethodInfo> mapAddMethods,
+            PropertyConstant                   propDelegate,
+            ErrorListener                      errs)
+        {
+        // first find the "super" chains of each of the existing methods
+        Set<SignatureConstant> setSuperMethods = new HashSet<>();
+        for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+            // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
+            // mapMethods.put(entry.getKey(), )
+            }
+
+        // sweep over the remaining chains
+        for (Entry<SignatureConstant, MethodInfo> entry : mapAddMethods.entrySet())
+            {
+            if (!setSuperMethods.contains(entry.getKey()))
+                {
+                // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
+                mapMethods.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+//        switch (compAdd)
+//            {
+//            case Equal:
+//                break;
+//
+//            case Implements:
+//                // each property/method in the contrib type need to be declared abstract/default
+//                // TODO need a way to say "use just the abstract/default part"
+//                break;
+//
+//            case Delegates:
+//                // each property/method in the contrib type need to be delegated (in the primary call chains)
+//                // TODO
+//                break;
+//
+//            case Into:
+//                // each property/method in the contrib type need to be declared "implicit"
+//                // TODO
+//                break;
+//
+//            }
+//            TypeConstant typeContrib = contrib.getTypeConstant();
+//            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
         }
 
 

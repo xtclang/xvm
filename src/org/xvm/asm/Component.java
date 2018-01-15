@@ -594,7 +594,7 @@ public abstract class Component
      * @return a read-only map from name to child component; never null, even if there are no
      *         children
      */
-    protected Map<String, Component> getChildByNameMap()
+    public Map<String, Component> getChildByNameMap()
         {
         ensureChildren();
         Map<String, Component> map = m_childByName;
@@ -608,7 +608,7 @@ public abstract class Component
      *
      * @return obtain the actual map from name to child component, creating the map if necessary
      */
-    protected Map<String, Component> ensureChildByNameMap()
+    public Map<String, Component> ensureChildByNameMap()
         {
         ensureChildren();
         Map<String, Component> map = m_childByName;
@@ -636,7 +636,7 @@ public abstract class Component
      * @return a read-only map from method constant to method component; never null, even if there
      *         are no child methods
      */
-    protected Map<MethodConstant, MethodStructure> getMethodByConstantMap()
+    public Map<MethodConstant, MethodStructure> getMethodByConstantMap()
         {
         ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
@@ -652,7 +652,7 @@ public abstract class Component
      * @return obtain the actual map from method constant to method component, creating the map if
      *         necessary
      */
-    protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
+    public Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
         {
         ensureChildren();
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;

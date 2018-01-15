@@ -225,7 +225,7 @@ public class TerminalTypeConstant
     @Override
     public boolean isAutoNarrowing()
         {
-        return m_constId.isAutoNarrowing();
+        return ensureResolvedConstant().isAutoNarrowing();
         }
 
     @Override
@@ -254,7 +254,7 @@ public class TerminalTypeConstant
         {
         TypeConstant typeResolved = resolveTypedefs();
         return this == typeResolved
-                ? m_constId.equals(getConstantPool().clzNullable())
+                ? ensureResolvedConstant().equals(getConstantPool().clzNullable())
                 : typeResolved.isOnlyNullable();
         }
 
@@ -915,19 +915,23 @@ public class TerminalTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constId.containsUnresolved();
+        return ensureResolvedConstant().containsUnresolved();
         }
 
     @Override
     public Constant simplify()
         {
-        m_constId = m_constId.simplify();
+        // simplify the underlying constant
+        Constant constId = ensureResolvedConstant().simplify();
+
+        // store off the result
+        m_constId = constId;
 
         // compile down all of the types that refer to typedefs so that they refer to the underlying
         // types instead
-        if (m_constId instanceof TypedefConstant)
+        if (constId instanceof TypedefConstant)
             {
-            Component    typedef   = ((TypedefConstant) m_constId).getComponent();
+            Component    typedef   = ((TypedefConstant) constId).getComponent();
             TypeConstant constType;
             if (typedef instanceof CompositeComponent)
                 {
@@ -958,15 +962,16 @@ public class TerminalTypeConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        visitor.accept(m_constId);
+        visitor.accept(ensureResolvedConstant());
         }
 
     @Override
     protected Object getLocator()
         {
-        return m_constId.getFormat() == Format.UnresolvedName
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.UnresolvedName
                 ? null
-                : m_constId;
+                : constId;
         }
 
     @Override
@@ -989,7 +994,7 @@ public class TerminalTypeConstant
     @Override
     public String getValueString()
         {
-        return m_constId.getValueString();
+        return ensureResolvedConstant().getValueString();
         }
 
 
@@ -1005,7 +1010,7 @@ public class TerminalTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constId = pool.register(m_constId);
+        m_constId = pool.register(ensureResolvedConstant());
         }
 
     @Override
@@ -1013,7 +1018,7 @@ public class TerminalTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, m_constId.getPosition());
+        writePackedLong(out, ensureResolvedConstant().getPosition());
         }
 
     @Override
@@ -1057,7 +1062,7 @@ public class TerminalTypeConstant
     @Override
     public int hashCode()
         {
-        return m_constId.hashCode();
+        return ensureResolvedConstant().hashCode();
         }
 
 

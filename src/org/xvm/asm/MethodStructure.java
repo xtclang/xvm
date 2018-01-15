@@ -275,7 +275,7 @@ public class MethodStructure
      */
     public Code ensureCode()
         {
-        if (isNative())
+        if (isNative() || isAbstract())
             {
             return null;
             }
@@ -298,6 +298,8 @@ public class MethodStructure
         Code code;
 
         resetRuntimeInfo();
+        m_fAbstract   = false;
+        m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
         m_code = code = new Code();
@@ -340,6 +342,8 @@ public class MethodStructure
         m_aconstLocal = null;
         m_abOps       = null;
         m_code        = new Code(aop);
+        m_fAbstract   = false;
+        m_fNative     = false;
         markModified();
         }
 
@@ -411,6 +415,31 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff the method is present, but has no implementation at this virtual level
+     */
+    public boolean isAbstract()
+        {
+        return m_fAbstract;
+        }
+
+    /**
+     * Specifies whether or not the method implementation is implementated at this virtual level.
+     *
+     * @param fAbstract  pass true to mark the method as abstract
+     */
+    public void setAbstract(boolean fAbstract)
+        {
+        if (fAbstract)
+            {
+            m_abOps   = null;
+            m_code    = null;
+            m_fNative = false;
+            }
+
+        m_fAbstract = fAbstract;
+        }
+
+    /**
      * @return true iff the method has been marked as native
      */
     public boolean isNative()
@@ -428,6 +457,7 @@ public class MethodStructure
         {
         if (fNative)
             {
+            m_fAbstract = false;
             resetRuntimeInfo();
             }
         m_fNative = fNative;
@@ -1307,6 +1337,11 @@ public class MethodStructure
      * The constants used by the Ops.
      */
     transient Constant[] m_aconstLocal;
+
+    /**
+     * True iff the method has been marked as "abstract".
+     */
+    private boolean m_fAbstract;
 
     /**
      * The yet-to-be-deserialized ops.
