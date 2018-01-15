@@ -101,7 +101,7 @@ public class Call_0T
                 throw new IllegalStateException();
                 }
 
-            checkReturnTupleRegister(frame, chain.getSuper(frame).getIdentityConstant());
+            checkReturnTupleRegister(frame, chain.getSuper(frame));
 
             switch (chain.callSuper01(frame, Frame.RET_LOCAL))
                 {
@@ -127,7 +127,7 @@ public class Call_0T
             {
             MethodStructure function = getMethodStructure(frame);
 
-            checkReturnTupleRegister(frame, function.getIdentityConstant());
+            checkReturnTupleRegister(frame, function);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -142,7 +142,7 @@ public class Call_0T
                 return R_REPEAT;
                 }
 
-            checkReturnTupleRegister(frame, hFunction.getMethodId());
+            checkReturnTupleRegister(frame, hFunction.getMethod());
 
             return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
             }

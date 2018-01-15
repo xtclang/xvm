@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 
@@ -131,44 +130,44 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
-    protected void checkReturnRegister(Frame frame, PropertyConstant constProperty)
+    protected void checkReturnRegister(Frame frame, PropertyStructure property)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(constProperty.getRefType());
+            frame.introduceVar(property.getType());
             }
         }
 
-    protected void checkReturnRegister(Frame frame, MethodConstant constMethod)
+    protected void checkReturnRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(constMethod.getSignature().getRawReturns()[0]);
+            frame.introduceVar(method.getIdentityConstant().getSignature().getRawReturns()[0]);
             }
         }
 
-    protected void checkReturnTupleRegister(Frame frame, MethodConstant constMethod)
+    protected void checkReturnTupleRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnTuple(A_FRAME, constMethod);
+            frame.introduceReturnTuple(A_FRAME, method.getIdentityConstant());
             }
         }
 
-    protected void checkReturnRegisters(Frame frame, MethodConstant constMethod)
+    protected void checkReturnRegisters(Frame frame, MethodStructure method)
         {
         assert isMultiReturn();
 
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
-            TypeConstant[] aRetType = constMethod.getSignature().getRawReturns();
+            TypeConstant[] aRetType = method.getIdentityConstant().getSignature().getRawReturns();
 
             if (frame.isNextRegister(anRet[i]))
                 {

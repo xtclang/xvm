@@ -91,9 +91,9 @@ public class Function
             f_nDepth = nDepth;
             }
 
-        public MethodConstant getMethodId()
+        public MethodStructure getMethod()
             {
-            return (f_function == null ? f_chain.getMethod(f_nDepth) : f_function).getIdentityConstant();
+            return f_function == null ? f_chain.getMethod(f_nDepth) : f_function;
             }
 
         public int getParamCount()
@@ -236,9 +236,9 @@ public class Function
             }
 
         @Override
-        public MethodConstant getMethodId()
+        public MethodStructure getMethod()
             {
-            return m_hDelegate.getMethodId();
+            return m_hDelegate.getMethod();
             }
 
         @Override
@@ -279,7 +279,7 @@ public class Function
             }
 
         @Override
-        public MethodConstant getMethodId()
+        public MethodStructure getMethod()
             {
             throw new UnsupportedOperationException();
             }

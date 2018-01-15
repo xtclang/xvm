@@ -122,7 +122,7 @@ public class Call_1N
                     throw new IllegalStateException();
                     }
 
-                checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+                checkReturnRegisters(frame, chain.getSuper(frame));
 
                 if (isProperty(hArg))
                     {
@@ -140,7 +140,7 @@ public class Call_1N
                 {
                 MethodStructure function = getMethodStructure(frame);
 
-                checkReturnRegisters(frame, function.getIdentityConstant());
+                checkReturnRegisters(frame, function);
 
                 if (isProperty(hArg))
                     {
@@ -160,7 +160,7 @@ public class Call_1N
                 return R_REPEAT;
                 }
 
-            checkReturnRegisters(frame, hFunction.getMethodId());
+            checkReturnRegisters(frame, hFunction.getMethod());
 
             if (isProperty(hArg))
                 {

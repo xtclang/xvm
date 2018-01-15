@@ -104,7 +104,7 @@ public class Call_0N
                 throw new IllegalStateException();
                 }
 
-            checkReturnRegisters(frame, chain.getSuper(frame).getIdentityConstant());
+            checkReturnRegisters(frame, chain.getSuper(frame));
 
             return chain.callSuperNN(frame, Utils.OBJECTS_NONE, m_anRetValue);
             }
@@ -113,7 +113,7 @@ public class Call_0N
             {
             MethodStructure function = getMethodStructure(frame);
 
-            checkReturnRegisters(frame, function.getIdentityConstant());
+            checkReturnRegisters(frame, function);
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
@@ -128,7 +128,7 @@ public class Call_0N
                 return R_REPEAT;
                 }
 
-            checkReturnRegisters(frame, hFunction.getMethodId());
+            checkReturnRegisters(frame, hFunction.getMethod());
 
             return hFunction.callN(frame, null, Utils.OBJECTS_NONE, m_anRetValue);
             }

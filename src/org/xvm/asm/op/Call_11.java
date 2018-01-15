@@ -116,7 +116,7 @@ public class Call_11
                     throw new IllegalStateException();
                     }
 
-                checkReturnRegister(frame, chain.getSuper(frame).getIdentityConstant());
+                checkReturnRegister(frame, chain.getSuper(frame));
 
                 if (isProperty(hArg))
                     {
@@ -134,7 +134,7 @@ public class Call_11
                 {
                 MethodStructure function = getMethodStructure(frame);
 
-                checkReturnRegister(frame, function.getIdentityConstant());
+                checkReturnRegister(frame, function);
 
                 if (isProperty(hArg))
                     {
@@ -154,7 +154,7 @@ public class Call_11
                 return R_REPEAT;
                 }
 
-            checkReturnRegister(frame, hFunction.getMethodId());
+            checkReturnRegister(frame, hFunction.getMethod());
 
             if (isProperty(hArg))
                 {

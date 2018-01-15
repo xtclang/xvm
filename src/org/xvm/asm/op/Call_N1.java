@@ -110,7 +110,7 @@ public class Call_N1
                     throw new IllegalStateException();
                     }
 
-                checkReturnRegister(frame, chain.getSuper(frame).getIdentityConstant());
+                checkReturnRegister(frame, chain.getSuper(frame));
 
                 ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
                 if (ahVar == null)
@@ -139,7 +139,7 @@ public class Call_N1
                     return R_REPEAT;
                     }
 
-                checkReturnRegister(frame, function.getIdentityConstant());
+                checkReturnRegister(frame, function);
 
                 if (anyProperty(ahVar))
                     {
@@ -157,7 +157,7 @@ public class Call_N1
                 return R_REPEAT;
                 }
 
-            checkReturnRegister(frame, hFunction.getMethodId());
+            checkReturnRegister(frame, hFunction.getMethod());
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
             if (ahVar == null)

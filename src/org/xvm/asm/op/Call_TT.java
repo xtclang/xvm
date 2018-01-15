@@ -121,7 +121,7 @@ public class Call_TT
                     throw new IllegalStateException();
                     }
 
-                checkReturnTupleRegister(frame, chain.getSuper(frame).getIdentityConstant());
+                checkReturnTupleRegister(frame, chain.getSuper(frame));
 
                 if (isProperty(hArg))
                     {
@@ -138,7 +138,7 @@ public class Call_TT
                 {
                 MethodStructure function = getMethodStructure(frame);
 
-                checkReturnTupleRegister(frame, function.getIdentityConstant());
+                checkReturnTupleRegister(frame, function);
 
                 if (isProperty(hArg))
                     {
@@ -158,7 +158,7 @@ public class Call_TT
                 return R_REPEAT;
                 }
 
-            checkReturnTupleRegister(frame, hFunction.getMethodId());
+            checkReturnTupleRegister(frame, hFunction.getMethod());
 
             if (isProperty(hArg))
                 {
