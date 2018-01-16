@@ -4,8 +4,12 @@ module Ecstasy.xtclang.org
     const Package {}
     const Class {}
     interface Const {}
-    interface Property {}
-    interface Method {}
+
+    package types
+        {
+        interface Property {}
+        interface Method {}
+        }
 
     typedef Tuple<> Void;
 

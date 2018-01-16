@@ -5,9 +5,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -172,6 +174,111 @@ public class PropertyStructure
 
         // TODO: if read-only then isA() would suffice
         return sigThat.equals(sigThis);
+        }
+
+    /**
+     * For a property structure that contains annotations whose types are now resolved, sort the
+     * annotations into the annotations that apply to the property, the annotations that apply to
+     * the Ref/Var, and the annotations that apply to the property type.
+     * <p/>
+     * This method isn't responsible for validating the annotations, so it doesn't log any errors.
+     * Anything that it finds that is suspect, it leaves for someone else to validate later.
+     *
+     * @return true iff the annotations are resolved
+     */
+    public boolean resolveAnnotations()
+        {
+        // first, make sure that the property type and the annotations are all resolved
+        List<Contribution> listContribs = getContributionsAsList();
+        if (listContribs.isEmpty())
+            {
+            return true;
+            }
+
+        TypeConstant typeProp = getType();
+        if (typeProp.containsUnresolved())
+            {
+            return false;
+            }
+
+        List<Contribution> listMove = null;
+        for (Contribution contrib : listContribs)
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                Annotation annotation = contrib.getAnnotation();
+                if (annotation.containsUnresolved())
+                    {
+                    return false;
+                    }
+
+                // find the "into" of the mixin
+                ClassStructure structMixin    = (ClassStructure) ((IdentityConstant) annotation.getAnnotationClass()).getComponent();
+                Contribution   contribInto    = null;
+                Contribution   contribExtends = null;
+                while (structMixin != null && structMixin.getFormat() == Format.MIXIN
+                        && (contribInto    = structMixin.findContribution(Composition.Into   )) == null
+                        && (contribExtends = structMixin.findContribution(Composition.Extends)) != null)
+                    {
+                    TypeConstant typeExtends = contribExtends.getTypeConstant();
+                    if (typeExtends.containsUnresolved())
+                        {
+                        return false;
+                        }
+
+                    structMixin = null;
+                    if (typeExtends.isExplicitClassIdentity(true))
+                        {
+                        Constant constExtends = ((TypeConstant) typeExtends.simplify()).getDefiningConstant();
+                        if (constExtends instanceof IdentityConstant)
+                            {
+                            structMixin = (ClassStructure) ((IdentityConstant) constExtends).getComponent();
+                            }
+                        }
+                    }
+
+                // see if the mixin applies to a Property or a Ref/Var, in which case it stays in
+                // this list; otherwise, move it
+                boolean fMove = true;
+                if (contribInto != null)
+                    {
+                    TypeConstant typeInto = contribInto.getTypeConstant();
+                    if (typeInto.containsUnresolved())
+                        {
+                        return false;
+                        }
+
+                    fMove = !typeInto.isIntoPropertyType();
+                    }
+
+                if (fMove)
+                    {
+                    if (listMove == null)
+                        {
+                        listMove = new ArrayList<>();
+                        }
+                    listMove.add(contrib);
+                    }
+                }
+            }
+
+        // now that everything is figured out, do the actual move of any selected contributions
+        if (listMove != null)
+            {
+            // go backwards to that the resulting type constant is built up (nested) correctly
+            ConstantPool pool = getConstantPool();
+            for (int i = listMove.size()-1; i >= 0; --i)
+                {
+                Contribution contrib    = listMove.get(i);
+                Annotation   annotation = contrib.getAnnotation();
+                removeContribution(contrib);
+                typeProp = pool.ensureAnnotatedTypeConstant
+                        (annotation.getAnnotationClass(), annotation.getParams(), typeProp);
+                }
+            setType(typeProp);
+            }
+
+        return true;
         }
 
 

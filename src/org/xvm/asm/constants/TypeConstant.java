@@ -21,6 +21,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -709,7 +710,7 @@ System.out.println(m_typeinfo);
                     if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                                constId.getPathString(), typeMixin.getValueString());
+                                typeMixin.getValueString());
                         continue;
                         }
 
@@ -764,7 +765,7 @@ System.out.println(m_typeinfo);
             if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        constId.getPathString(), typeMixin.getValueString());
+                        typeMixin.getValueString());
                 continue NextContrib;
                 }
 
@@ -1261,6 +1262,8 @@ System.out.println(m_typeinfo);
             Map<MethodConstant   , MethodInfo  > mapScopedMethods,
             ErrorListener                        errs)
         {
+        ConstantPool pool = getConstantPool();
+
         // determine the desired amount of access to expose the members of "struct"
         Access access = getAccess();
 
@@ -1296,6 +1299,7 @@ System.out.println(m_typeinfo);
                 {
                 // determine whether the property is accessible, whether the property is read-only,
                 // and whether the property has a field:
+                // - a property on an interface with "@RO" is read-only
                 // - a property with "@Override" does NOT have a field (at this level); i.e. it
                 //   defers to its super TODO
                 // - if the type access is public or protected, the property could be read-only
@@ -1307,20 +1311,20 @@ System.out.println(m_typeinfo);
                 // - if the type access is struct, then only include the property if it has a field TODO
                 // - it is an error for a property with a field to have a set that does not call
                 //   super TODO
-                PropertyStructure prop        = (PropertyStructure) child;
+                PropertyStructure prop = (PropertyStructure) child;
                 if (prop.isTypeParameter())
                     {
                     mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
                     continue;
                     }
 
-                Access            accessRef   = prop.getAccess();
-                Access            accessVar   = prop.getAccess(); // TODO property access needs to be split between Ref and Var
-                boolean           fRO         = false;
-                Annotation[]      aPropAnno   = null;
-                Annotation[]      aRefAnno    = null;
-                boolean           fCustomCode = false;
-                boolean           fReqField   = false;
+                Access           accessRef    = prop.getAccess();
+                Access           accessVar    = prop.getAccess(); // TODO property access needs to be split between Ref and Var
+                boolean          fRO          = false;
+                List<Annotation> listPropAnno = null;
+                List<Annotation> listRefAnno  = null;
+                boolean          fCustomCode  = false;
+                boolean          fReqField    = false;
                 if (accessRef != Access.STRUCT)
                     {
                     if (access.ordinal() < accessRef.ordinal())
@@ -1332,15 +1336,60 @@ System.out.println(m_typeinfo);
                     fRO = access.ordinal() < accessVar.ordinal();
                     }
 
-                // TODO for (Annotation anoo : prop.)
+                // sort annotations into Ref/Var annotations and Property annotations
+                for (Contribution contrib : prop.getContributionsAsList())
+                    {
+                    if (contrib.getComposition() == Composition.Annotation)
+                        {
+                        Annotation   annotation = contrib.getAnnotation();
+                        Constant     constMixin = annotation.getAnnotationClass();
+                        TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+                        TypeInfo     infoMixin  = typeMixin.ensureTypeInfo(errs);
+                        if (infoMixin.getFormat() != Component.Format.MIXIN)
+                            {
+                            log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                                    typeMixin.getValueString());
+                            continue;
+                            }
 
-                PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO, aPropAnno, aRefAnno, fCustomCode, fReqField);
+                        TypeConstant typeInto = infoMixin.getInto();
+                        if (!typeInto.isIntoPropertyType())
+                            {
+                            log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
+                                    sName, constId.getValueString(), typeMixin.getValueString());
+                            continue;
+                            }
+
+                        if (typeInto.isA(pool.typeRef()))
+                            {
+                            if (listRefAnno == null)
+                                {
+                                listRefAnno = new ArrayList<>();
+                                }
+                            listRefAnno.add(annotation);
+                            }
+                        else
+                            {
+                            if (listPropAnno == null)
+                                {
+                                listPropAnno = new ArrayList<>();
+                                }
+                            listPropAnno.add(annotation);
+                            }
+                        }
+                    }
+
+                PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
+                        listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        fCustomCode, fReqField);
                 mapProps.put(sName, propinfo);
 
                 for (Component grandchild : child.children())
                     {
                     // TODO any children of the property structure (into the "scoped" bucket)
-                    System.out.println("** skipping property " + sName + " child " + grandchild.getIdentityConstant().getValueString());
+                    System.out.println("** skipping property " + sName + " child " +
+                            grandchild.getIdentityConstant().getValueString());
                     }
                 }
             }
@@ -1743,6 +1792,36 @@ System.out.println(m_typeinfo);
     public Component.Format getExplicitClassFormat()
         {
         throw new IllegalStateException();
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a class to signify
+     *         that the mix-in applies to the meta-data of the class and is not actually mixed into
+     *         the class functionality itself
+     */
+    public boolean isIntoClassType()
+        {
+        return equals(getConstantPool().typeClass());
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a property, which
+     *         means that the mix-in applies to the meta-data of the property or to the Ref/Var
+     *         instance used for the property
+     */
+    public boolean isIntoPropertyType()
+        {
+        ConstantPool pool = getConstantPool();
+        return equals(pool.typeProperty()) || isA(pool.typeRef());
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a method, which
+     *         means that the mix-in applies to the meta-data of the method
+     */
+    public boolean isIntoMethodType()
+        {
+        return equals(getConstantPool().typeMethod());
         }
 
     /**

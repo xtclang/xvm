@@ -264,6 +264,10 @@ public interface Constants
      * {0} has a misconfigured property {1} for the type parameter of the same name.
      */
     public static final String VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE   = "VERIFY-38";
+    /**
+     * The {0} property on {1} is annotated by {2}, which is an incompatible mixin for a property.
+     */
+    public static final String VE_PROPERTY_ANNOTATION_INCOMPATIBLE   = "VERIFY-39";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

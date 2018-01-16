@@ -247,6 +247,30 @@ public abstract class Component
         }
 
     /**
+     * @return the secondary Access for this Component
+     */
+    public Access getAccess2()
+        {
+        return Access.valueOf((m_nFlags & ACCESS2_MASK) >>> ACCESS2_SHIFT);
+        }
+
+    /**
+     * Specify the secondary accessibility of the component.
+     *
+     * @param access  the secondary accessibility of the component
+     */
+    public void setAccess2(Access access)
+        {
+        int nFlagsOld = m_nFlags;
+        int nFlagsNew = (nFlagsOld & ~ACCESS2_MASK) | (access.ordinal() << ACCESS2_SHIFT);
+        if (nFlagsNew != nFlagsOld)
+            {
+            m_nFlags = (short) nFlagsNew;
+            markModified();
+            }
+        }
+
+    /**
      * @return true iff the component is marked as abstract
      */
     public boolean isAbstract()
@@ -536,6 +560,20 @@ public abstract class Component
 
         list.add(contrib);
         markModified();
+        }
+
+    /**
+     * Remove a contribution from the list of contributions.
+     *
+     * @param contrib  the contribution to remove from the list
+     */
+    protected void removeContribution(Contribution contrib)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list != null)
+            {
+            list.remove(contrib);
+            }
         }
 
     /**
@@ -907,14 +945,18 @@ public abstract class Component
      * Create and register a PropertyStructure with the specified name.
      *
      * @param fStatic    true if the property is marked as static
-     * @param access     the accessibility of the property to create
+     * @param accessRef  the "Ref" accessibility of the property to create
+     * @param accessRef  the "Var" accessibility of the property to create
      * @param constType  the type of the property to create
      * @param sName      the simple (unqualified) property name to create
      */
-    public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant constType, String sName)
+    public PropertyStructure createProperty(boolean fStatic, Access accessRef, Access accessVar,
+            TypeConstant constType, String sName)
         {
         assert sName != null;
-        assert access != null;
+        assert accessRef != null;
+        assert accessVar != null;
+        assert accessRef.ordinal() <= accessVar.ordinal();
         assert constType != null;
 
         if (!isClassContainer())
@@ -932,7 +974,9 @@ public abstract class Component
         //             + "\" because a child with that name already exists: " + component);
         //     }
 
-        int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
+        int               nFlags  = Format.PROPERTY.ordinal()
+                                  | accessRef.FLAGS
+                                  | ((accessVar.FLAGS >>> ACCESS_SHIFT) << ACCESS2_SHIFT);
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(),
                 sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
@@ -2973,17 +3017,21 @@ public abstract class Component
      * for the conditional constant ID followed by the body of the component. (The children that go
      * with the various conditional components occur in the stream after the <b>last</b> body.)
      */
-    public static final int CONDITIONAL_BIT  =   0x80;
+    public static final int CONDITIONAL_BIT   =   0x80;
 
-    public static final int FORMAT_MASK      = 0x000F, FORMAT_SHIFT     = 0;
-    public static final int ACCESS_MASK      = 0x0300, ACCESS_SHIFT     = 8;
-    public static final int ACCESS_PUBLIC    = 0x0100;
-    public static final int ACCESS_PROTECTED = 0x0200;
-    public static final int ACCESS_PRIVATE   = 0x0300;
-    public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
-    public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
-    public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
-    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
+    public static final int FORMAT_MASK       = 0x000F, FORMAT_SHIFT     = 0;
+    public static final int ACCESS_MASK       = 0x0300, ACCESS_SHIFT     = 8;
+    public static final int ACCESS_PUBLIC     = 0x0100;
+    public static final int ACCESS_PROTECTED  = 0x0200;
+    public static final int ACCESS_PRIVATE    = 0x0300;
+    public static final int ACCESS2_MASK      = 0x0C00, ACCESS2_SHIFT    = 10;
+    public static final int ACCESS2_PUBLIC    = 0x0400;
+    public static final int ACCESS2_PROTECTED = 0x0800;
+    public static final int ACCESS2_PRIVATE   = 0x0C00;
+    public static final int ABSTRACT_BIT      = 0x1000, ABSTRACT_SHIFT   = 12;
+    public static final int STATIC_BIT        = 0x2000, STATIC_SHIFT     = 13;
+    public static final int SYNTHETIC_BIT     = 0x4000, SYNTHETIC_SHIFT  = 14;
+    public static final int COND_RET_BIT      = 0x8000, COND_RET_SHIFT   = 15;
 
 
     // ----- fields --------------------------------------------------------------------------------

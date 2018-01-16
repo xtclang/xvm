@@ -302,6 +302,7 @@ module Test
 
     class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
         {
+        @Unchecked String s;                    // TODO should fail
         @Override @RO @Lazy @Unchecked Int x;
 
         Void bar();

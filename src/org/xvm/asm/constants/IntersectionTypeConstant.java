@@ -194,6 +194,30 @@ public class IntersectionTypeConstant
             && getUnderlyingType2().containsSubstitutableMethod(signature, access, listParams);
         }
 
+    @Override
+    public boolean isIntoClassType()
+        {
+        return super.isIntoClassType()
+                || getUnderlyingType().isIntoClassType()
+                || getUnderlyingType2().isIntoClassType();
+        }
+
+    @Override
+    public boolean isIntoPropertyType()
+        {
+        return super.isIntoPropertyType()
+                || getUnderlyingType().isIntoPropertyType()
+                || getUnderlyingType2().isIntoPropertyType();
+        }
+
+    @Override
+    public boolean isIntoMethodType()
+        {
+        return super.isIntoMethodType()
+                || getUnderlyingType().isIntoMethodType()
+                || getUnderlyingType2().isIntoMethodType();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

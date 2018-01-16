@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -17,6 +18,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.Token.Id;
@@ -101,6 +103,60 @@ public class PropertyDeclarationStatement
                 : access;
         }
 
+    public Access getVarAccess()
+        {
+        if (modifiers != null && !modifiers.isEmpty())
+            {
+            Access access = null;
+            for (Token modifier : modifiers)
+                {
+                switch (modifier.getId())
+                    {
+                    case PUBLIC:
+                        if (access == null)
+                            {
+                            access = Access.PUBLIC;
+                            }
+                        else
+                            {
+                            return Access.PUBLIC;
+                            }
+                        break;
+
+                    case PROTECTED:
+                        if (access == null)
+                            {
+                            access = Access.PROTECTED;
+                            }
+                        else
+                            {
+                            return Access.PROTECTED;
+                            }
+                        break;
+
+                    case PRIVATE:
+                        if (access == null)
+                            {
+                            access = Access.PROTECTED;
+                            }
+                        else
+                            {
+                            return Access.PROTECTED;
+                            }
+                        break;
+
+                    }
+                }
+
+            if (access != null)
+                {
+                return access;
+                }
+            }
+
+        return getDefaultAccess();
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -129,7 +185,7 @@ public class PropertyDeclarationStatement
 
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
-                        isStatic(), getDefaultAccess(), constType, sName);
+                        isStatic(), getDefaultAccess(), getVarAccess(), constType, sName);
                 setComponent(prop);
 
                 // introduce the unresolved type constant to the type expression, so that when the
@@ -155,6 +211,21 @@ public class PropertyDeclarationStatement
             }
 
         super.registerStructures(errs);
+        }
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < Stage.Resolved.ordinal())
+            {
+            super.resolveNames(listRevisit, errs);
+            }
+
+        PropertyStructure struct = (PropertyStructure) getComponent();
+        if (!struct.resolveAnnotations())
+            {
+            listRevisit.add(this);
+            }
         }
 
 

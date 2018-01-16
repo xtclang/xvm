@@ -943,6 +943,7 @@ public class ConstantPool
             case "Type":
             case "Orderable":
             case "Sequential":
+            case "Var":
                 sClz = sName;
                 break;
 
@@ -1672,6 +1673,7 @@ public class ConstantPool
 
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"     );} return c;}
     public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"        );} return c;}
+    public ClassConstant     clzVar()           {ClassConstant     c = m_clzVar;          if (c == null) {m_clzVar          = c = (ClassConstant) getImplicitlyImportedIdentity("Var"        );} return c;}
     public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"     );} return c;}
     public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"       );} return c;}
     public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
@@ -1682,6 +1684,8 @@ public class ConstantPool
     public ClassConstant     clzEnum()          {ClassConstant     c = m_clzEnum;         if (c == null) {m_clzEnum         = c = (ClassConstant) getImplicitlyImportedIdentity("Enum"       );} return c;}
     public ClassConstant     clzEnumeration()   {ClassConstant     c = m_clzEnumeration;  if (c == null) {m_clzEnumeration  = c = (ClassConstant) getImplicitlyImportedIdentity("Enumeration");} return c;}
     public ClassConstant     clzException()     {ClassConstant     c = m_clzException;    if (c == null) {m_clzException    = c = (ClassConstant) getImplicitlyImportedIdentity("Exception"  );} return c;}
+    public ClassConstant     clzProperty()      {ClassConstant     c = m_clzProperty;     if (c == null) {m_clzProperty     = c = (ClassConstant) getImplicitlyImportedIdentity("Property"   );} return c;}
+    public ClassConstant     clzMethod()        {ClassConstant     c = m_clzMethod;       if (c == null) {m_clzMethod       = c = (ClassConstant) getImplicitlyImportedIdentity("Method"     );} return c;}
     public ClassConstant     clzFunction()      {ClassConstant     c = m_clzFunction;     if (c == null) {m_clzFunction     = c = (ClassConstant) getImplicitlyImportedIdentity("Function"   );} return c;}
     public ClassConstant     clzBoolean()       {ClassConstant     c = m_clzBoolean;      if (c == null) {m_clzBoolean      = c = (ClassConstant) getImplicitlyImportedIdentity("Boolean"    );} return c;}
     public ClassConstant     clzFalse()         {ClassConstant     c = m_clzFalse;        if (c == null) {m_clzFalse        = c = (ClassConstant) getImplicitlyImportedIdentity("False"      );} return c;}
@@ -1714,6 +1718,8 @@ public class ConstantPool
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
+    public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
+    public TypeConstant      typeVar()          {TypeConstant      c = m_typeVar;         if (c == null) {m_typeVar         = c = ensureTerminalTypeConstant(clzVar()                        );} return c;}
     public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
     public TypeConstant      typeType()         {TypeConstant      c = m_typeType;        if (c == null) {m_typeType        = c = ensureTerminalTypeConstant(clzType()                       );} return c;}
     public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                      );} return c;}
@@ -1724,6 +1730,8 @@ public class ConstantPool
     public TypeConstant      typeEnum()         {TypeConstant      c = m_typeEnum;        if (c == null) {m_typeEnum        = c = ensureTerminalTypeConstant(clzEnum()                       );} return c;}
     public TypeConstant      typeEnumeration()  {TypeConstant      c = m_typeEnumeration; if (c == null) {m_typeEnumeration = c = ensureTerminalTypeConstant(clzEnumeration()                );} return c;}
     public TypeConstant      typeException()    {TypeConstant      c = m_typeException;   if (c == null) {m_typeException   = c = ensureTerminalTypeConstant(clzException()                  );} return c;}
+    public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                   );} return c;}
+    public TypeConstant      typeMethod()       {TypeConstant      c = m_typeMethod;      if (c == null) {m_typeMethod    = c = ensureTerminalTypeConstant(clzMethod()                   );} return c;}
     public TypeConstant      typeFunction()     {TypeConstant      c = m_typeFunction;    if (c == null) {m_typeFunction    = c = ensureTerminalTypeConstant(clzFunction()                   );} return c;}
     public TypeConstant      typeBoolean()      {TypeConstant      c = m_typeBoolean;     if (c == null) {m_typeBoolean     = c = ensureTerminalTypeConstant(clzBoolean()                    );} return c;}
     public TypeConstant      typeTrue()         {TypeConstant      c = m_typeTrue;        if (c == null) {m_typeTrue        = c = ensureTerminalTypeConstant(clzTrue()                       );} return c;}
@@ -2248,6 +2256,7 @@ public class ConstantPool
         m_valEcstasy      = null;
         m_clzObject       = null;
         m_clzRef          = null;
+        m_clzVar          = null;
         m_clzStruct       = null;
         m_clzType         = null;
         m_clzClass        = null;
@@ -2258,6 +2267,8 @@ public class ConstantPool
         m_clzEnum         = null;
         m_clzEnumeration  = null;
         m_clzException    = null;
+        m_clzProperty     = null;
+        m_clzMethod       = null;
         m_clzFunction     = null;
         m_clzBoolean      = null;
         m_clzFalse        = null;
@@ -2289,6 +2300,8 @@ public class ConstantPool
         m_clzOp           = null;
         m_clzUnchecked    = null;
         m_typeObject      = null;
+        m_typeRef         = null;
+        m_typeVar         = null;
         m_typeStruct      = null;
         m_typeType        = null;
         m_typeClass       = null;
@@ -2300,6 +2313,8 @@ public class ConstantPool
         m_typeEnumeration = null;
         m_typeException   = null;
         m_typeException१  = null;
+        m_typeProperty    = null;
+        m_typeMethod      = null;
         m_typeFunction    = null;
         m_typeBoolean     = null;
         m_typeTrue        = null;
@@ -2496,6 +2511,7 @@ public class ConstantPool
     private transient ModuleConstant    m_valEcstasy;
     private transient ClassConstant     m_clzObject;
     private transient ClassConstant     m_clzRef;
+    private transient ClassConstant     m_clzVar;
     private transient ClassConstant     m_clzType;
     private transient ClassConstant     m_clzStruct;
     private transient ClassConstant     m_clzClass;
@@ -2506,6 +2522,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzEnum;
     private transient ClassConstant     m_clzEnumeration;
     private transient ClassConstant     m_clzException;
+    private transient ClassConstant     m_clzProperty;
+    private transient ClassConstant     m_clzMethod;
     private transient ClassConstant     m_clzFunction;
     private transient ClassConstant     m_clzBoolean;
     private transient ClassConstant     m_clzFalse;
@@ -2537,6 +2555,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzOp;
     private transient ClassConstant     m_clzUnchecked;
     private transient TypeConstant      m_typeObject;
+    private transient TypeConstant      m_typeRef;
+    private transient TypeConstant      m_typeVar;
     private transient TypeConstant      m_typeType;
     private transient TypeConstant      m_typeStruct;
     private transient TypeConstant      m_typeClass;
@@ -2548,6 +2568,8 @@ public class ConstantPool
     private transient TypeConstant      m_typeEnumeration;
     private transient TypeConstant      m_typeException;
     private transient TypeConstant      m_typeException१;
+    private transient TypeConstant      m_typeProperty;
+    private transient TypeConstant      m_typeMethod;
     private transient TypeConstant      m_typeFunction;
     private transient TypeConstant      m_typeBoolean;
     private transient TypeConstant      m_typeTrue;
