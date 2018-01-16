@@ -920,7 +920,7 @@ public abstract class Component
      *
      * @param fStatic    true if the property is marked as static
      * @param accessRef  the "Ref" accessibility of the property to create
-     * @param accessRef  the "Var" accessibility of the property to create
+     * @param accessVar  the "Var" accessibility of the property to create
      * @param constType  the type of the property to create
      * @param sName      the simple (unqualified) property name to create
      */

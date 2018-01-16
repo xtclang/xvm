@@ -329,7 +329,7 @@ public abstract class RelationalTypeConstant
         switch (getUnderlyingType().callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
             {
             case Op.R_NEXT:
-                return completeEquals(frame, hValue1, hValue2, iReturn);
+                return completeCompare(frame, hValue1, hValue2, iReturn);
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
