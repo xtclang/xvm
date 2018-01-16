@@ -123,14 +123,11 @@ public class xAtomicIntNumber
             }
 
         @Override
-        protected ObjectHandle getInternal()
-                throws ExceptionHandle.WrapperException
+        protected int getInternal(Frame frame, int iReturn)
             {
-            if (m_atomicValue == null)
-                {
-                throw xException.makeHandle("Unassigned reference").getException();
-                }
-            return xInt64.makeHandle(m_atomicValue.get());
+            return m_atomicValue == null
+                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+                : frame.assignValue(iReturn, xInt64.makeHandle(m_atomicValue.get()));
             }
 
         @Override

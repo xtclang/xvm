@@ -764,14 +764,7 @@ public abstract class ClassTemplate
 
         if (isRef(property))
             {
-            try
-                {
-                hValue = ((RefHandle) hValue).get();
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
+            return ((RefHandle) hValue).get(frame, Frame.RET_LOCAL);
             }
 
         return frame.assignValue(iReturn, hValue);

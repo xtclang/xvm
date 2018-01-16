@@ -7,6 +7,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -60,22 +61,21 @@ public class xInjectedRef
             }
 
         @Override
-        protected ObjectHandle getInternal()
-                throws ExceptionHandle.WrapperException
+        protected int getInternal(Frame frame, int iReturn)
             {
             ObjectHandle hValue = m_hDelegate;
             if (hValue == null)
                 {
                 TypeConstant typeEl = getType().getGenericParamType("RefType");
 
-                hValue = m_hDelegate = INSTANCE.f_templates.f_container.getInjectable(m_sName, typeEl);
+                hValue = m_hDelegate = frame.f_context.f_container.getInjectable(m_sName, typeEl);
                 if (hValue == null)
                     {
-                    throw xException.makeHandle("Unknown injectable property " + m_sName).getException();
+                    return frame.raiseException(xException.makeHandle("Unknown injectable property " + m_sName));
                     }
                 }
 
-            return hValue;
+            return frame.assignValue(iReturn, hValue);
             }
 
         @Override
@@ -89,7 +89,7 @@ public class xInjectedRef
             {
             try
                 {
-                return "(" + m_clazz + ") " + get();
+                return "(" + m_clazz + ") " + m_hDelegate;
                 }
             catch (Throwable e)
                 {

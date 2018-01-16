@@ -187,9 +187,6 @@ public class Const
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Frame.RET_LOCAL))
                     {
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
                     case Op.R_NEXT:
                         ObjectHandle hResult = frameCaller.getFrameLocal();
                         if (hResult == xBoolean.FALSE)
@@ -201,6 +198,9 @@ public class Const
                     case Op.R_CALL:
                         frameCaller.m_frameNext.setContinuation(this);
                         return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();
@@ -260,9 +260,6 @@ public class Const
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Frame.RET_LOCAL))
                     {
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
                     case Op.R_NEXT:
                         EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();
                         if (hResult != xOrdered.EQUAL)
@@ -274,6 +271,9 @@ public class Const
                     case Op.R_CALL:
                         frameCaller.m_frameNext.setContinuation(this);
                         return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();

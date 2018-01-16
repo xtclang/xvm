@@ -3,6 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -10,7 +11,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -58,14 +58,23 @@ public class Ref
         switch (property.getName())
             {
             case "ActualType":
-                try
+                switch (hThis.get(frame, Frame.RET_LOCAL))
                     {
-                    ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, hReferent.getType().getTypeHandle());
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
+                    case Op.R_NEXT:
+                        return frame.assignValue(iReturn,
+                            frame.getFrameLocal().getType().getTypeHandle());
+
+                    case Op.R_CALL:
+                        frame.setContinuation(frameCaller ->
+                            frameCaller.assignValue(iReturn,
+                                frameCaller.getFrameLocal().getType().getTypeHandle()));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
             case "assigned":
@@ -84,38 +93,63 @@ public class Ref
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
 
             case "service_":
-                try
+                switch (hThis.get(frame, Frame.RET_LOCAL))
                     {
-                    ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            hReferent.getTemplate().isService()));
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
+                    case Op.R_NEXT:
+                        return frame.assignValue(iReturn,
+                            xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isService()));
+
+                    case Op.R_CALL:
+                        frame.setContinuation(frameCaller ->
+                            frameCaller.assignValue(iReturn,
+                                xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isService())));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
             case "const_":
-                try
+                switch (hThis.get(frame, Frame.RET_LOCAL))
                     {
-                    ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, xBoolean.makeHandle(
-                            hReferent.getTemplate().isConst()));
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
+                    case Op.R_NEXT:
+                        return frame.assignValue(iReturn,
+                            xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isConst()));
+
+                    case Op.R_CALL:
+                        frame.setContinuation(frameCaller ->
+                            frameCaller.assignValue(iReturn,
+                                xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isConst())));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
             case "immutable_":
-                try
+                switch (hThis.get(frame, Frame.RET_LOCAL))
                     {
-                    ObjectHandle hReferent = hThis.get();
-                    return frame.assignValue(iReturn, xBoolean.makeHandle(!hReferent.isMutable()));
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
+                    case Op.R_NEXT:
+                        return frame.assignValue(iReturn,
+                            xBoolean.makeHandle(!frame.getFrameLocal().isMutable()));
+
+                    case Op.R_CALL:
+                        frame.setContinuation(frameCaller ->
+                            frameCaller.assignValue(iReturn,
+                                xBoolean.makeHandle(!frame.getFrameLocal().isMutable())));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
             }
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
@@ -133,14 +167,7 @@ public class Ref
                 switch (method.getName())
                     {
                     case "get":
-                        try
-                            {
-                            return frame.assignValue(iReturn, hThis.get());
-                            }
-                        catch (ExceptionHandle.WrapperException e)
-                            {
-                            return frame.raiseException(e);
-                            }
+                        return hThis.get(frame, iReturn);
                     }
             }
 
@@ -157,13 +184,21 @@ public class Ref
             case "peek":
                 if (hThis.isAssigned())
                     {
-                    try
+                    switch (hThis.get(frame, Frame.RET_LOCAL))
                         {
-                        return frame.assignValues(aiReturn, xBoolean.TRUE, hThis.get());
-                        }
-                    catch (ExceptionHandle.WrapperException e)
-                        {
-                        return frame.raiseException(e);
+                        case Op.R_NEXT:
+                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal());
+
+                        case Op.R_CALL:
+                            frame.setContinuation(frameCaller ->
+                                frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal()));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
                         }
                     }
                  else
@@ -292,33 +327,29 @@ public class Ref
             return m_hDelegate == null || m_hDelegate.isSelfContained();
             }
 
-        public ObjectHandle get()
-                throws ExceptionHandle.WrapperException
+        public int get(Frame frame, int iReturn)
             {
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return getInternal();
+                    return getInternal(frame, iReturn);
 
                 case REF_PROPERTY:
                     throw new IllegalStateException();
 
                 case REF_REF:
-                    return ((RefHandle) m_hDelegate).get();
+                    return ((RefHandle) m_hDelegate).get(frame, iReturn);
 
                 default: // assertion m_iVar >= 0
-                    return m_frame.f_ahVar[m_iVar];
+                    return frame.assignValue(iReturn, m_frame.f_ahVar[m_iVar]);
                 }
             }
 
-        protected ObjectHandle getInternal()
-                throws ExceptionHandle.WrapperException
+        protected int getInternal(Frame frame, int iReturn)
             {
-            if (m_hDelegate == null)
-                {
-                throw xException.makeHandle("Unassigned reference").getException();
-                }
-            return m_hDelegate;
+            return m_hDelegate == null
+                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+                : frame.assignValue(iReturn, m_hDelegate);
             }
 
         public ExceptionHandle set(ObjectHandle handle)
@@ -381,11 +412,17 @@ public class Ref
             }
 
         @Override
-        public ObjectHandle get()
-                throws ExceptionHandle.WrapperException
+        public int get(Frame frame, int iReturn)
             {
-            return ((IndexSupport) f_hTarget.getTemplate()).
-                    extractArrayValue(f_hTarget, f_lIndex);
+            try
+                {
+                return frame.assignValue(iReturn,
+                    ((IndexSupport) f_hTarget.getTemplate()).extractArrayValue(f_hTarget, f_lIndex));
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
             }
 
         @Override

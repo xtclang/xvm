@@ -221,4 +221,9 @@ public class FiberQueue
         // reset the cached indexes
         m_aixPriority[0] = m_aixPriority[1] = m_aixPriority[2] = -1;
         }
+
+    public String toString()
+        {
+        return "size=" + m_cSize;
+        }
     }

@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -200,20 +201,19 @@ public class xFutureVar
             }
 
         @Override
-        protected ObjectHandle getInternal()
-                throws ExceptionHandle.WrapperException
+        protected int getInternal(Frame frame, int iReturn)
             {
             CompletableFuture<ObjectHandle> cf = m_future;
             if (cf == null)
                 {
-                throw xException.makeHandle("Unassigned reference").getException();
+                return frame.raiseException(xException.makeHandle("Unassigned reference"));
                 }
 
             if (cf.isDone())
                 {
                 try
                     {
-                    return cf.get();
+                    return frame.assignValue(iReturn, cf.get());
                     }
                 catch (InterruptedException e)
                     {
@@ -224,7 +224,7 @@ public class xFutureVar
                     Throwable eOrig = e.getCause();
                     if (eOrig instanceof ExceptionHandle.WrapperException)
                         {
-                        throw (ExceptionHandle.WrapperException) eOrig;
+                        return frame.raiseException((ExceptionHandle.WrapperException) eOrig);
                         }
                     throw new UnsupportedOperationException("Unexpected exception", eOrig);
                     }
@@ -233,7 +233,7 @@ public class xFutureVar
                 {
                 // wait for the completion;
                 // the service is responsible for timing out
-                return null;
+                return Op.R_BLOCK;
                 }
             }
 

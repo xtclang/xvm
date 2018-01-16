@@ -166,15 +166,12 @@ public class xAtomicVar
             }
 
         @Override
-        protected ObjectHandle getInternal()
-                throws ExceptionHandle.WrapperException
+        protected int getInternal(Frame frame, int iReturn)
             {
             ObjectHandle hValue = m_atomic.get();
-            if (hValue == null)
-                {
-                throw xException.makeHandle("Unassigned reference").getException();
-                }
-            return hValue;
+            return hValue == null
+                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+                : frame.assignValue(iReturn, hValue);
             }
 
         @Override
@@ -221,9 +218,6 @@ public class xAtomicVar
 
                 switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
                     {
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
                     case Op.R_NEXT:
                         if (frameCaller.getFrameLocal() == xBoolean.FALSE)
                             {
@@ -241,6 +235,9 @@ public class xAtomicVar
                         frameCaller.m_frameNext.setContinuation(this);
                         hExpect = hCurrent;
                         return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();
@@ -311,9 +308,6 @@ public class xAtomicVar
 
                 switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
                     {
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
                     case Op.R_NEXT:
                         if (frameCaller.getFrameLocal() == xBoolean.FALSE)
                             {
@@ -331,6 +325,9 @@ public class xAtomicVar
                         frameCaller.m_frameNext.setContinuation(this);
                         hExpect = hCurrent;
                         return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();

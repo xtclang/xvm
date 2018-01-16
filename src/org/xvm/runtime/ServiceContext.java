@@ -603,6 +603,11 @@ public class ServiceContext
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }
+
+                public String toString()
+                    {
+                    return "ConstructRequest";
+                    }
                 };
 
             Frame frame0 = context.createServiceEntryFrame(this, 1,
@@ -648,7 +653,13 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, context.getService(), f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
+                    return f_hFunction.call1(frame, context.getService(),
+                        f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
+                    }
+
+            public String toString()
+                    {
+                    return "Invoke1Request";
                     }
                 };
 
@@ -714,6 +725,11 @@ public class ServiceContext
                     {
                     return f_hFunction.callN(frame, context.getService(), f_ahArg, aiReturn);
                     }
+
+            public String toString()
+                    {
+                    return "InvokeNRequest";
+                    }
                 };
 
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
@@ -769,6 +785,11 @@ public class ServiceContext
                        : f_hValue == null
                             ? ((PropertyOperation01) f_op).invoke(frame, context.m_hService, f_sPropName, 0)
                             : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue, 0);
+                    }
+
+            public String toString()
+                    {
+                    return "PropertyOpRequest";
                     }
                 };
 

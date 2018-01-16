@@ -13,7 +13,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.Ref.RefHandle;
@@ -126,13 +125,9 @@ public class Var_DN
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {
                 // prime the injection (fail fast)
-                try
+                if (hRef.get(frame, Frame.RET_UNUSED) == R_EXCEPTION)
                     {
-                    hRef.get();
-                    }
-                catch (ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
+                    return R_EXCEPTION;
                     }
 
                 m_ref = hRef;

@@ -452,6 +452,9 @@ public class Frame
 
             switch (info.m_nStyle)
                 {
+                case VAR_WAITING:
+                    info.m_nStyle = VAR_STANDARD;
+                    // fall through
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
@@ -467,33 +470,24 @@ public class Frame
                         FutureHandle hFuture = (FutureHandle) hValue;
                         if (hFuture.isAssigned())
                             {
-                            try
-                                {
-                                hValue = hFuture.get();
-                                }
-                            catch (ExceptionHandle.WrapperException e)
-                                {
-                                return raiseException(e);
-                                }
+                            return hFuture.get(this, nVar);
                             }
-                        else
-                            {
-                            // mark the register as "waiting for a result",
-                            // blocking the next op-code from being executed
-                            // and add a notification
-                            CompletableFuture<ObjectHandle> cf = hFuture.m_future;
-                            if (cf == null)
-                                {
-                                // since this ref can only be changed by this service,
-                                // we can safely add a completable future now
-                                cf = hFuture.m_future = new CompletableFuture();
-                                }
-                            cf.whenComplete((r, x) -> f_fiber.m_fResponded = true);
 
-                            f_ahVar[nVar] = hFuture;
-                            info.m_nStyle = VAR_WAITING;
-                            return Op.R_BLOCK;
+                        // mark the register as "waiting for a result",
+                        // blocking the next op-code from being executed
+                        // and add a notification
+                        CompletableFuture<ObjectHandle> cf = hFuture.m_future;
+                        if (cf == null)
+                            {
+                            // since this ref can only be changed by this service,
+                            // we can safely add a completable future now
+                            cf = hFuture.m_future = new CompletableFuture();
                             }
+                        cf.whenComplete((r, x) -> f_fiber.m_fResponded = true);
+
+                        f_ahVar[nVar] = hFuture;
+                        info.m_nStyle = VAR_WAITING;
+                        return Op.R_BLOCK;
                         }
                     break;
 
@@ -735,8 +729,6 @@ public class Frame
 
     public int checkWaitingRegisters()
         {
-        ExceptionHandle hException = null;
-
         VarInfo[] aInfo = f_aInfo;
         for (int i = 0, c = aInfo.length; i < c; i++)
             {
@@ -745,27 +737,27 @@ public class Frame
             if (info != null && info.m_nStyle == VAR_WAITING)
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isAssigned())
+                switch (hFuture.get(this, i))
                     {
-                    try
-                        {
-                        f_ahVar[i] = hFuture.get();
-                        }
-                    catch (ExceptionHandle.WrapperException e)
-                        {
-                        // use just the last exception
-                        hException = e.getExceptionHandle();
-                        }
-                    info.m_nStyle = VAR_STANDARD;
-                    }
-                else
-                    {
-                    return Op.R_BLOCK;
+                    case Op.R_NEXT:
+                        info.m_nStyle = VAR_STANDARD;
+                        continue;
+
+                    case Op.R_EXCEPTION:
+                        info.m_nStyle = VAR_STANDARD;
+                        return Op.R_EXCEPTION;
+
+                    case Op.R_BLOCK:
+                        return Op.R_BLOCK;
+
+                    default:
+                        // future cannot return R_CALL
+                        throw new IllegalStateException();
                     }
                 }
             }
 
-        return hException == null ? Op.R_NEXT : raiseException(hException);
+        return Op.R_NEXT;
         }
 
     // return a string value of the specified StringConstant
@@ -834,11 +826,22 @@ public class Frame
 
             if (info != null && info.m_nStyle == VAR_DYNAMIC_REF)
                 {
-                hValue = ((RefHandle) hValue).get();
-
-                if (hValue == null)
+                switch (((RefHandle) hValue).get(this, RET_LOCAL))
                     {
-                    info.m_nStyle = VAR_WAITING;
+                    case Op.R_NEXT:
+                        hValue = getFrameLocal();
+                        break;
+
+                    case Op.R_EXCEPTION:
+                        throw m_hException.getException();
+
+                    case Op.R_BLOCK:
+                        info.m_nStyle = VAR_WAITING;
+                        return null;
+
+                    default:
+                        // future cannot return R_CALL
+                        throw new IllegalStateException();
                     }
                 }
 
@@ -1411,9 +1414,23 @@ public class Frame
                 }
             }
 
+        protected String getStyleName()
+            {
+            switch (m_nStyle)
+                {
+                case VAR_STANDARD:
+                    return "";
+                case VAR_DYNAMIC_REF:
+                    return "<dynamic> ";
+                case VAR_WAITING:
+                    return "<waiting> ";
+                default:
+                    return "unknown ";
+                }
+            }
         public String toString()
             {
-            return getName() + ": " + getType();
+            return getStyleName() + getName() + ": " + getType();
             }
         }
 

@@ -339,9 +339,6 @@ public class xArray
                 {
                 switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
                     {
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
                     case Op.R_NEXT:
                         ObjectHandle hResult = frameCaller.getFrameLocal();
                         if (hResult == xBoolean.FALSE)
@@ -353,6 +350,9 @@ public class xArray
                     case Op.R_CALL:
                         frameCaller.m_frameNext.setContinuation(this);
                         return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
                     default:
                         throw new IllegalStateException();
