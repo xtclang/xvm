@@ -1072,6 +1072,11 @@ public class ConstantPool
                 sClz = "WeakRef";
                 break;
 
+            case "Unchecked":
+                sPkg = "annotations";
+                sClz = "UncheckedInt";
+                break;
+
             default:
                 return null;
             }
@@ -1706,6 +1711,7 @@ public class ConstantPool
     public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
+    public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
     public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
@@ -2281,6 +2287,7 @@ public class ConstantPool
         m_clzFrame        = null;
         m_clzAuto         = null;
         m_clzOp           = null;
+        m_clzUnchecked    = null;
         m_typeObject      = null;
         m_typeStruct      = null;
         m_typeType        = null;
@@ -2528,6 +2535,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzFrame;
     private transient ClassConstant     m_clzAuto;
     private transient ClassConstant     m_clzOp;
+    private transient ClassConstant     m_clzUnchecked;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeType;
     private transient TypeConstant      m_typeStruct;

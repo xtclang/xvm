@@ -1213,18 +1213,21 @@ System.out.println(m_typeinfo);
                     contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null, errs);
             }
 
-        // add in properties for each of the type parameters
+        // verify that properties exist for each of the type parameters
         for (ParamInfo param : mapTypeParams.values())
             {
-            String sParam = param.getName();
-            if (mapProps.containsKey(sParam))
+            String       sParam = param.getName();
+            PropertyInfo prop   = mapProps.get(sParam);
+            if (prop == null)
                 {
-                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.getValueString(), sParam);
                 }
-            else
+            else if (!prop.isTypeParam() || !prop.isRO() || !prop.getType().equals(
+                    pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
                 {
-                mapProps.put(sParam, new PropertyInfo(param));
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
+                        this.getValueString(), sParam);
                 }
             }
 
@@ -1251,7 +1254,7 @@ System.out.println(m_typeinfo);
             IdentityConstant                     constId,
             ClassStructure                       struct,
             Component.Format                     formatInfo,
-            GenericTypeResolver                  resolver,
+            ParamInfo.TypeResolver               resolver,
             Map<String           , PropertyInfo> mapProps,
             Map<PropertyConstant , PropertyInfo> mapScopedProps,
             Map<SignatureConstant, MethodInfo  > mapMethods,
@@ -1294,17 +1297,23 @@ System.out.println(m_typeinfo);
                 // determine whether the property is accessible, whether the property is read-only,
                 // and whether the property has a field:
                 // - a property with "@Override" does NOT have a field (at this level); i.e. it
-                //   defers to its super
+                //   defers to its super TODO
                 // - if the type access is public or protected, the property could be read-only
                 //   because there is access to the Ref, but not the Var (e.g. "public/private")
                 // - a property that overrides get (but not set) and does not call super does not
-                //   have a field, and is read-only
+                //   have a field, and is read-only TODO
                 // - a property that overrides get and set and does not call super does not
-                //   have a field
-                // - if the type access is struct, then only include the property if it has a field
+                //   have a field TODO
+                // - if the type access is struct, then only include the property if it has a field TODO
                 // - it is an error for a property with a field to have a set that does not call
-                //   super
+                //   super TODO
                 PropertyStructure prop        = (PropertyStructure) child;
+                if (prop.isTypeParameter())
+                    {
+                    mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
+                    continue;
+                    }
+
                 Access            accessRef   = prop.getAccess();
                 Access            accessVar   = prop.getAccess(); // TODO property access needs to be split between Ref and Var
                 boolean           fRO         = false;
@@ -1323,7 +1332,7 @@ System.out.println(m_typeinfo);
                     fRO = access.ordinal() < accessVar.ordinal();
                     }
 
-                // TODO
+                // TODO for (Annotation anoo : prop.)
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO, aPropAnno, aRefAnno, fCustomCode, fReqField);
                 mapProps.put(sName, propinfo);

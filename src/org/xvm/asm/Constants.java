@@ -256,6 +256,14 @@ public interface Constants
      * {0} contains a property {1} which collides with a type parameter of the same name.
      */
     public static final String VE_TYPE_PARAM_PROPERTY_COLLISION      = "VERIFY-36";
+    /**
+     * {0} missing a property {1} for the type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_MISSING        = "VERIFY-37";
+    /**
+     * {0} has a misconfigured property {1} for the type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE   = "VERIFY-38";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

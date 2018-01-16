@@ -204,21 +204,7 @@ public class MethodDeclarationStatement
             aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
             for (int i = 0; i < cAnnotations; ++i)
                 {
-                Annotation       annotation = annotations.get(i);
-                Constant         constClass = annotation.getType().getIdentityConstant();
-                List<Expression> args       = annotation.getArguments();
-                Constant[]       aconstArgs = null;
-                if (args != null && !args.isEmpty())
-                    {
-                    int cArgs = args.size();
-                    aconstArgs = new Constant[cArgs];
-                    for (int iArg = 0; iArg < cArgs; ++iArg)
-                        {
-                        // TODO this is wrong ... we're not ready at this stage to resolve all constants
-                        aconstArgs[iArg] = args.get(iArg).toConstant();
-                        }
-                    }
-                aAnnotations[i] = new org.xvm.asm.Annotation(constClass, aconstArgs);
+                aAnnotations[i] = annotations.get(i).buildAnnotation(pool);
                 }
             }
 

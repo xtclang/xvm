@@ -174,6 +174,7 @@ public class PropertyStructure
         return sigThat.equals(sigThis);
         }
 
+
     // ----- component methods ---------------------------------------------------------------------
 
     @Override

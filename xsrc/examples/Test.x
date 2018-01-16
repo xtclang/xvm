@@ -302,6 +302,8 @@ module Test
 
     class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
         {
+        @Override @RO @Lazy @Unchecked Int x;
+
         Void bar();
         @Auto Int size();
         }

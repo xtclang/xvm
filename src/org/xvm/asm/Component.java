@@ -459,7 +459,17 @@ public abstract class Component
      */
     public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
-        addContribution(new Contribution(new Annotation(constType, aconstParam)));
+        addAnnotation(new Annotation(constType, aconstParam));
+        }
+
+    /**
+     * Add an annotation.
+     *
+     * @param annotation  the Annotation
+     */
+    public void addAnnotation(Annotation annotation)
+        {
+        addContribution(new Contribution(annotation));
         }
 
     /**
