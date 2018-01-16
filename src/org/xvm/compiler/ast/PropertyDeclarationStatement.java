@@ -137,11 +137,11 @@ public class PropertyDeclarationStatement
                     case PRIVATE:
                         if (access == null)
                             {
-                            access = Access.PROTECTED;
+                            access = Access.PRIVATE;
                             }
                         else
                             {
-                            return Access.PROTECTED;
+                            return Access.PRIVATE;
                             }
                         break;
 

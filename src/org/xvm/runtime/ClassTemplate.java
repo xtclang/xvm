@@ -260,7 +260,7 @@ public abstract class ClassTemplate
             }
 
         return f_struct.createProperty(false,
-            propSuper.getAccess(), propSuper.getAccess2(), propSuper.getType(), sPropName);
+            propSuper.getAccess(), propSuper.getVarAccess(), propSuper.getType(), sPropName);
         }
 
     public TypeConstant getTypeConstant()

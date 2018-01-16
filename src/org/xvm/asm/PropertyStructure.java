@@ -39,6 +39,7 @@ public class PropertyStructure
     protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
+        setVarAccess(getAccess());
         }
 
 
@@ -48,6 +49,31 @@ public class PropertyStructure
     public PropertyConstant getIdentityConstant()
         {
         return (PropertyConstant) super.getIdentityConstant();
+        }
+
+    @Override
+    public void setAccess(Access access)
+        {
+        super.setAccess(access);
+        if (access.ordinal() > getVarAccess().ordinal())
+            {
+            setVarAccess(access);
+            }
+        }
+
+    /**
+     * @return the access of the property as a Var, which may be more restricted than the access of
+     *         the property (as a Ref); note that this has no meaning if the property is read-only
+     */
+    public Access getVarAccess()
+        {
+        return m_accessVar;
+        }
+
+    public void setVarAccess(Access access)
+        {
+        assert access != null && access.ordinal() >= getAccess().ordinal();
+        m_accessVar = access;
         }
 
     /**
@@ -299,7 +325,8 @@ public class PropertyStructure
         {
         super.disassemble(in);
 
-        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
+        m_accessVar = Access.valueOf(in.readByte());
+        m_type      = (TypeConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -316,25 +343,41 @@ public class PropertyStructure
         {
         super.assemble(out);
 
+        out.writeByte(m_accessVar.ordinal());
         writePackedLong(out, m_type.getPosition());
         }
 
     @Override
     public String getDescription()
         {
-        return new StringBuilder()
+        StringBuilder sb = new StringBuilder()
                 .append("id=")
                 .append(getIdentityConstant().getValueString())
                 .append(", type=")
                 .append(m_type)
-                .append(", ")
-                .append(super.getDescription())
-                .toString();
+                .append(", ");
+
+        if (getAccess() != m_accessVar)
+            {
+            sb.append("var-access=")
+              .append(m_accessVar)
+              .append(", ");
+            }
+
+        return sb.append(super.getDescription()).toString();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * The access for the Var (as opposed to the access to the Ref).
+     */
+    private Access m_accessVar;
+
+    /**
+     * The property type.
+     */
     private TypeConstant m_type;
 
 
