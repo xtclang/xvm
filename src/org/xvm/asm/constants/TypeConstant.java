@@ -715,13 +715,13 @@ System.out.println(m_typeinfo);
                         }
 
                     // the mixin has to be able to apply to the remainder of the type constant chain
-                    TypeInfo infoMixin = typeMixin.ensureTypeInfo(errs);
-                    if (!typeClass.getUnderlyingType().isA(infoMixin.getInto()))
+                    TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                    if (!typeClass.getUnderlyingType().isA(typeInto))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                                 typeClass.getUnderlyingType().getValueString(),
                                 typeMixin.getValueString(),
-                                infoMixin.getInto().getValueString());
+                                typeInto.getValueString());
                         continue;
                         }
 
@@ -770,13 +770,13 @@ System.out.println(m_typeinfo);
                 }
 
             // the mixin has to apply to this type
-            TypeInfo infoMixin = typeMixin.ensureTypeInfo(errs);
-            if (!typeClass.isA(infoMixin.getInto())) // note: not 100% correct because the presence of this mixin may affect the answer
+            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                         typeClass.getValueString(),
                         typeMixin.getValueString(),
-                        infoMixin.getInto().getValueString());
+                        typeInto.getValueString());
                 continue NextContrib;
                 }
 
@@ -1005,8 +1005,7 @@ System.out.println(m_typeinfo);
 
                     // the mixin must be compatible with this type, as specified by its "into"
                     // clause
-                    TypeInfo     infoMixin   = typeContrib.ensureTypeInfo(errs);
-                    TypeConstant typeRequire = infoMixin.getInto();
+                    TypeConstant typeRequire = typeContrib.getExplicitClassInto();
                     if (typeRequire != null && !this.isA(typeRequire)) // note: not 100% correct because the presence of this mixin may affect the answer
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
@@ -1197,12 +1196,14 @@ System.out.println(m_typeinfo);
                 mapContribScopedProps   = new HashMap<>();
                 mapContribMethods       = new HashMap<>();
                 mapContribScopedMethods = new HashMap<>();
+
                 createMemberInfo(constId, struct, formatInfo, resolver,
                         mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
                 }
             else
                 {
-                TypeInfo infoContrib = contrib.getTypeConstant().getTypeInfo();
+                TypeInfo infoContrib = contrib.getTypeConstant().ensureTypeInfo(errs);
+
                 mapContribProps         = infoContrib.getProperties();
                 mapContribScopedProps   = infoContrib.getScopedProperties();
                 mapContribMethods       = infoContrib.getMethods();
@@ -1344,15 +1345,16 @@ System.out.println(m_typeinfo);
                         Annotation   annotation = contrib.getAnnotation();
                         Constant     constMixin = annotation.getAnnotationClass();
                         TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
-                        TypeInfo     infoMixin  = typeMixin.ensureTypeInfo(errs);
-                        if (infoMixin.getFormat() != Component.Format.MIXIN)
+
+                        if (!typeMixin.isExplicitClassIdentity(true)
+                                || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                             {
                             log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                                     typeMixin.getValueString());
                             continue;
                             }
 
-                        TypeConstant typeInto = infoMixin.getInto();
+                        TypeConstant typeInto = typeMixin.getExplicitClassInto();
                         if (!typeInto.isIntoPropertyType())
                             {
                             log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
@@ -1381,7 +1383,7 @@ System.out.println(m_typeinfo);
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno.toArray(Annotation.NO_ANNOTATIONS),
                         fCustomCode, fReqField);
                 mapProps.put(sName, propinfo);
 
@@ -1790,6 +1792,17 @@ System.out.println(m_typeinfo);
      * @return a {@link Component.Format Component Format} value
      */
     public Component.Format getExplicitClassFormat()
+        {
+        throw new IllegalStateException();
+        }
+
+    /**
+     * Determine the "into" type of the explicit class, iff the type is an explicit class identity
+     * and the format of the class is "mixin".
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant getExplicitClassInto()
         {
         throw new IllegalStateException();
         }

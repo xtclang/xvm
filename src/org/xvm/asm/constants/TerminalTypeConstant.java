@@ -491,6 +491,48 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant getExplicitClassInto()
+        {
+        Constant       constId = getDefiningConstant();
+        ClassStructure structMixin;
+        switch (constId.getFormat())
+            {
+            case Class:
+                // get the class referred to and return its format
+                structMixin = (ClassStructure) ((ClassConstant) constId).getComponent();
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                structMixin = (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
+                break;
+
+            default:
+                throw new IllegalStateException("no class format for: " + constId);
+            }
+
+        if (structMixin == null || structMixin.getFormat() != Component.Format.MIXIN)
+            {
+            throw new IllegalStateException("mixin=" + structMixin);
+            }
+
+        Contribution contribInto = structMixin.findContribution(Composition.Into);
+        if (contribInto != null)
+            {
+            return contribInto.getTypeConstant();
+            }
+
+        Contribution contribExtends = structMixin.findContribution(Composition.Extends);
+        if (contribExtends != null)
+            {
+            return contribExtends.getTypeConstant().getExplicitClassInto();
+            }
+
+        return getConstantPool().typeObject();
+        }
+
+    @Override
     public boolean isConstant()
         {
         Constant constant = getDefiningConstant();
