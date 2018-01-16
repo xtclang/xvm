@@ -252,6 +252,10 @@ public interface Constants
      * from {3} of the unspecified type.
      */
     public static final String VE_TYPE_PARAM_CONTRIB_NO_SPEC         = "VERIFY-35";
+    /**
+     * {0} contains a property {1} which collides with a type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_COLLISION      = "VERIFY-36";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

@@ -33,21 +33,26 @@ public class TypeInfo
      * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
-     * @param mapProperties        the properties of the type
-     * @param mapMethods           the methods of the type
+     * @param mapProperties        the public and protected properties of the type
+     * @param mapScopedProperties  the various scoped properties of the type
+     * @param mapMethods           the public and protected methods of the type
+     * @param mapScopedMethods     the various scoped methods of the type
      */
     public TypeInfo(TypeConstant type, Format format, Map<String, ParamInfo> mapTypeParams,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
-            Map<String, PropertyInfo> mapProperties, Map<SignatureConstant, MethodInfo> mapMethods)
+            Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
+            Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods)
         {
         assert type != null;
         assert mapTypeParams != null;
         assert listmapClassChain != null;
         assert listmapDefaultChain != null;
         assert mapProperties != null;
+        assert mapScopedProperties != null;
         assert mapMethods != null;
+        assert mapScopedMethods != null;
 
         m_type                  = type;
         m_format                = format;
@@ -58,7 +63,9 @@ public class TypeInfo
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
         m_mapProperties         = mapProperties;
+        m_mapScopedProperties   = mapScopedProperties;
         m_mapMethods            = mapMethods;
+        m_mapScopedMethods      = mapScopedMethods;
         }
 
     /**
@@ -179,7 +186,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the properties for this type
+     * @return all of the non-scoped properties for this type
      */
     public Map<String, PropertyInfo> getProperties()
         {
@@ -187,11 +194,27 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the methods for this type
+     * @return all of the scoped properties for this type
+     */
+    Map<PropertyConstant, PropertyInfo> getScopedProperties()
+        {
+        return m_mapScopedProperties;
+        }
+
+    /**
+     * @return all of the non-scoped methods for this type
      */
     public Map<SignatureConstant, MethodInfo> getMethods()
         {
         return m_mapMethods;
+        }
+
+    /**
+     * @return all of the scoped methods for this type
+     */
+    Map<MethodConstant, MethodInfo> getScopedMethods()
+        {
+        return m_mapScopedMethods;
         }
 
     /**
@@ -485,9 +508,19 @@ public class TypeInfo
     private final Map<String, PropertyInfo> m_mapProperties;
 
     /**
+     * The scoped properties for this type.
+     */
+    private Map<PropertyConstant, PropertyInfo> m_mapScopedProperties;
+
+    /**
      * The methods of the type.
      */
     private final Map<SignatureConstant, MethodInfo> m_mapMethods;
+
+    /**
+     * The scoped methods for this type.
+     */
+    private Map<MethodConstant, MethodInfo> m_mapScopedMethods;
 
     /**
      * A cached type resolver.
