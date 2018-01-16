@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ import org.xvm.asm.constants.*;
 
 import org.xvm.type.Decimal;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
@@ -2607,4 +2609,10 @@ public class ConstantPool
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
     private transient ArrayConstant     m_valVoid;
+
+    public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
+            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP,
+            getConstantPool().typeObject(), null, getConstantPool().typeObject(),
+            new ListMap<>(), new ListMap<>(),
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
     }

@@ -563,10 +563,14 @@ public abstract class TypeConstant
         {
         if (m_typeinfo == null)
             {
+            m_typeinfo = getConstantPool().EMPTY_TYPEINFO;
             validate(errs);
             m_typeinfo = buildTypeInfo(errs);
-// TODO remove
-System.out.println(m_typeinfo);
+            }
+        else if (m_typeinfo == getConstantPool().EMPTY_TYPEINFO)
+            {
+            // TODO this will be an exception
+            System.out.println("*** ensureTypeInfo(" + getValueString() + ") -> infinite recursion");
             }
 
         return m_typeinfo;
@@ -589,6 +593,7 @@ System.out.println(m_typeinfo);
         // load the class structure for the type
         IdentityConstant constId;
         ClassStructure   struct;
+        ConstantPool     pool = getConstantPool();
         try
             {
             // TODO Property, Register, and auto-narrowing types?
@@ -598,10 +603,7 @@ System.out.println(m_typeinfo);
         catch (Exception e)
             {
             System.err.println("** Unable to get underlying class for " + getValueString());
-            return new TypeInfo(this, Component.Format.INTERFACE, Collections.EMPTY_MAP,
-                    getConstantPool().typeObject(), null, getConstantPool().typeObject(),
-                    new ListMap<>(), new ListMap<>(),
-                    Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+            return pool.EMPTY_TYPEINFO;
             // TODO CP throw new IllegalStateException("Unable to get underlying class for " + getValueString(), e);
             }
 
@@ -611,7 +613,6 @@ System.out.println(m_typeinfo);
         TypeResolver           resolver      = new TypeResolver(mapTypeParams, errs);
 
         // obtain the type parameters encoded in this type constant
-        ConstantPool   pool        = getConstantPool();
         TypeConstant[] atypeParams = getParamTypesArray();
         int            cTypeParams = atypeParams.length;
         boolean        fTuple      = isTuple();
@@ -1300,7 +1301,7 @@ System.out.println(m_typeinfo);
                 {
                 // determine whether the property is accessible, whether the property is read-only,
                 // and whether the property has a field:
-                // - a property on an interface with "@RO" is read-only
+                // - a property on an interface with "@RO" is read-only TODO
                 // - a property with "@Override" does NOT have a field (at this level); i.e. it
                 //   defers to its super TODO
                 // - if the type access is public or protected, the property could be read-only
@@ -1309,7 +1310,7 @@ System.out.println(m_typeinfo);
                 //   have a field, and is read-only TODO
                 // - a property that overrides get and set and does not call super does not
                 //   have a field TODO
-                // - if the type access is struct, then only include the property if it has a field TODO
+                // - if the type access is struct, then only include the property if it has a field
                 // - it is an error for a property with a field to have a set that does not call
                 //   super TODO
                 PropertyStructure prop = (PropertyStructure) child;
@@ -1320,7 +1321,7 @@ System.out.println(m_typeinfo);
                     }
 
                 Access           accessRef    = prop.getAccess();
-                Access           accessVar    = prop.getAccess(); // TODO property access needs to be split between Ref and Var
+                Access           accessVar    = prop.getVarAccess();
                 boolean          fRO          = false;
                 List<Annotation> listPropAnno = null;
                 List<Annotation> listRefAnno  = null;
@@ -1381,6 +1382,12 @@ System.out.println(m_typeinfo);
                         }
                     }
 
+                // if the type access is struct, then only include the property if it has a field
+                if (access == Access.STRUCT && !fReqField)
+                    {
+                    continue;
+                    }
+
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
                         listRefAnno  == null ? null : listRefAnno.toArray(Annotation.NO_ANNOTATIONS),
@@ -1428,6 +1435,27 @@ System.out.println(m_typeinfo);
             PropertyConstant                     propDelegate,
             ErrorListener                        errs)
         {
+        // process properties
+        for (Entry<String, PropertyInfo> entry : mapAddProps.entrySet())
+            {
+            if (mapProps.putIfAbsent(entry.getKey(), entry.getValue()) == null)
+                {
+                continue;
+                }
+
+            // TODO merge property info
+            }
+
+        for (Entry<PropertyConstant, PropertyInfo> entry : mapAddScopedProps.entrySet())
+            {
+            if (mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue()) == null)
+                {
+                continue;
+                }
+
+            // TODO merge property info
+            }
+
         // first find the "super" chains of each of the existing methods
         Set<SignatureConstant> setSuperMethods = new HashSet<>();
         for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
