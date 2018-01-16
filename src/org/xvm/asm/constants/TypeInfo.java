@@ -33,21 +33,26 @@ public class TypeInfo
      * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
-     * @param mapProperties        the properties of the type
-     * @param mapMethods           the methods of the type
+     * @param mapProperties        the public and protected properties of the type
+     * @param mapScopedProperties  the various scoped properties of the type
+     * @param mapMethods           the public and protected methods of the type
+     * @param mapScopedMethods     the various scoped methods of the type
      */
     public TypeInfo(TypeConstant type, Format format, Map<String, ParamInfo> mapTypeParams,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
-            Map<String, PropertyInfo> mapProperties, Map<SignatureConstant, MethodInfo> mapMethods)
+            Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
+            Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods)
         {
         assert type != null;
         assert mapTypeParams != null;
         assert listmapClassChain != null;
         assert listmapDefaultChain != null;
         assert mapProperties != null;
+        assert mapScopedProperties != null;
         assert mapMethods != null;
+        assert mapScopedMethods != null;
 
         m_type                  = type;
         m_format                = format;
@@ -58,7 +63,9 @@ public class TypeInfo
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
         m_mapProperties         = mapProperties;
+        m_mapScopedProperties   = mapScopedProperties;
         m_mapMethods            = mapMethods;
+        m_mapScopedMethods      = mapScopedMethods;
         }
 
     /**
@@ -179,7 +186,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the properties for this type
+     * @return all of the non-scoped properties for this type
      */
     public Map<String, PropertyInfo> getProperties()
         {
@@ -187,11 +194,27 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the methods for this type
+     * @return all of the scoped properties for this type
+     */
+    Map<PropertyConstant, PropertyInfo> getScopedProperties()
+        {
+        return m_mapScopedProperties;
+        }
+
+    /**
+     * @return all of the non-scoped methods for this type
      */
     public Map<SignatureConstant, MethodInfo> getMethods()
         {
         return m_mapMethods;
+        }
+
+    /**
+     * @return all of the scoped methods for this type
+     */
+    Map<MethodConstant, MethodInfo> getScopedMethods()
+        {
+        return m_mapScopedMethods;
         }
 
     /**
@@ -386,49 +409,145 @@ public class TypeInfo
         StringBuilder sb = new StringBuilder();
 
         sb.append("TypeInfo: ")
-          .append(m_type.getValueString());
+          .append(m_type.getValueString())
+          .append(" (format=")
+          .append(m_format)
+          .append(")");
 
-        sb.append("\n- Parameters (")
-                .append(m_mapTypeParams.size())
-                .append(')');
-        int i = 0;
-        for (Entry<String, ParamInfo> entry : m_mapTypeParams.entrySet())
+        if (!m_mapTypeParams.isEmpty())
             {
-            sb.append("\n  [")
-              .append(i++)
-              .append("] ")
-              .append(entry.getKey())
-              .append("=")
-              .append(entry.getValue());
-            }
-
-        sb.append("\n- Class Chain (")
-                .append(m_listmapClassChain.size())
-                .append(')');
-        i = 0;
-        for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
-            {
-            sb.append("\n  [")
-              .append(i++)
-              .append("] ")
-              .append(entry.getKey().getValueString());
-
-            if (entry.getValue())
+            sb.append("\n- Parameters (")
+              .append(m_mapTypeParams.size())
+              .append(')');
+            int i = 0;
+            for (Entry<String, ParamInfo> entry : m_mapTypeParams.entrySet())
                 {
-                sb.append(" (Anchored)");
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey())
+                  .append("=")
+                  .append(entry.getValue());
                 }
             }
 
-        sb.append("\n- Default Chain (")
-                .append(m_listmapDefaultChain.size())
-                .append(')');
-        i = 0;
-        for (IdentityConstant constId : m_listmapDefaultChain.keySet())
+        if (m_typeInto != null)
             {
-            sb.append("\n  [")
-              .append(i++)
-              .append("] ")
-              .append(constId.getValueString());
+            sb.append("\n- Into: ")
+              .append(m_typeInto.getValueString());
+            }
+        if (m_typeRebases != null)
+            {
+            sb.append("\n- Rebases: ")
+              .append(m_typeRebases.getValueString());
+            }
+        if (m_typeExtends != null)
+            {
+            sb.append("\n- Extends: ")
+              .append(m_typeExtends.getValueString());
+            }
+
+        if (!m_listmapClassChain.isEmpty())
+            {
+            sb.append("\n- Class Chain (")
+              .append(m_listmapClassChain.size())
+              .append(')');
+            int i = 0;
+            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey().getValueString());
+    
+                if (entry.getValue())
+                    {
+                    sb.append(" (Anchored)");
+                    }
+                }
+            }
+
+        if (!m_listmapDefaultChain.isEmpty())
+            {
+            sb.append("\n- Default Chain (")
+              .append(m_listmapDefaultChain.size())
+              .append(')');
+            int i = 0;
+            for (IdentityConstant constId : m_listmapDefaultChain.keySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(constId.getValueString());
+                }
+            }
+
+        if (!m_mapProperties.isEmpty())
+            {
+            sb.append("\n- Properties (")
+              .append(m_mapProperties.size())
+              .append(')');
+            int i = 0;
+            for (Entry<String, PropertyInfo> entry : m_mapProperties.entrySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey())
+                  .append("=")
+                  .append(entry.getValue());
+                }
+            }
+
+        if (!m_mapScopedProperties.isEmpty())
+            {
+            sb.append("\n- Scoped Properties (")
+              .append(m_mapScopedProperties.size())
+              .append(')');
+            int i = 0;
+            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapScopedProperties.entrySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey().getValueString())
+                  .append("=")
+                  .append(entry.getValue());
+                }
+            }
+
+        if (!m_mapMethods.isEmpty())
+            {
+            sb.append("\n- Methods (")
+              .append(m_mapMethods.size())
+              .append(')');
+            int i = 0;
+            for (Entry<SignatureConstant, MethodInfo> entry : m_mapMethods.entrySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey().getValueString())
+                  .append("=")
+                  .append(entry.getValue());
+                }
+            }
+
+        if (!m_mapScopedMethods.isEmpty())
+            {
+            sb.append("\n- Scoped Methods (")
+              .append(m_mapScopedMethods.size())
+              .append(')');
+            int i = 0;
+            for (Entry<MethodConstant, MethodInfo> entry : m_mapScopedMethods.entrySet())
+                {
+                sb.append("\n  [")
+                  .append(i++)
+                  .append("] ")
+                  .append(entry.getKey().getValueString())
+                  .append("=")
+                  .append(entry.getValue());
+                }
             }
 
         return sb.toString();
@@ -485,9 +604,19 @@ public class TypeInfo
     private final Map<String, PropertyInfo> m_mapProperties;
 
     /**
+     * The scoped properties for this type.
+     */
+    private Map<PropertyConstant, PropertyInfo> m_mapScopedProperties;
+
+    /**
      * The methods of the type.
      */
     private final Map<SignatureConstant, MethodInfo> m_mapMethods;
+
+    /**
+     * The scoped methods for this type.
+     */
+    private Map<MethodConstant, MethodInfo> m_mapScopedMethods;
 
     /**
      * A cached type resolver.

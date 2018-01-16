@@ -5,6 +5,12 @@ module Ecstasy.xtclang.org
     const Class {}
     interface Const {}
 
+    package types
+        {
+        interface Property {}
+        interface Method {}
+        }
+
     typedef Tuple<> Void;
 
 //    class Object
@@ -112,11 +118,12 @@ module Ecstasy.xtclang.org
 
     package annotations
         {
-        mixin AutoConversion {}
-        mixin ReadOnly {}
-        mixin Operator(String? token = null) {}
-        mixin Override {}
+        mixin AutoConversion into Method {}
+        mixin ReadOnly into Property {}
+        mixin Operator(String? token = null) into Method {}
+        mixin Override into Property | Method {}
         mixin InjectedRef<RefType> into Ref<RefType> {}
         mixin LazyVar<RefType> into Var<RefType> {}
+        mixin UncheckedInt into Int64 {}
         }
     }

@@ -21,6 +21,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -600,7 +601,7 @@ System.out.println(m_typeinfo);
             return new TypeInfo(this, Component.Format.INTERFACE, Collections.EMPTY_MAP,
                     getConstantPool().typeObject(), null, getConstantPool().typeObject(),
                     new ListMap<>(), new ListMap<>(),
-                    Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+                    Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
             // TODO CP throw new IllegalStateException("Unable to get underlying class for " + getValueString(), e);
             }
 
@@ -709,7 +710,7 @@ System.out.println(m_typeinfo);
                     if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                                constId.getPathString(), typeMixin.getValueString());
+                                typeMixin.getValueString());
                         continue;
                         }
 
@@ -764,7 +765,7 @@ System.out.println(m_typeinfo);
             if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        constId.getPathString(), typeMixin.getValueString());
+                        typeMixin.getValueString());
                 continue NextContrib;
                 }
 
@@ -1184,65 +1185,246 @@ System.out.println(m_typeinfo);
         Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
         for (Contribution contrib : listProcess)
             {
-            Map<String           , PropertyInfo> mapContribProperties;
+            Map<String           , PropertyInfo> mapContribProps;
+            Map<PropertyConstant , PropertyInfo> mapContribScopedProps;
             Map<SignatureConstant, MethodInfo  > mapContribMethods;
+            Map<MethodConstant   , MethodInfo  > mapContribScopedMethods;
+
             Composition composition = contrib.getComposition();
             if (composition == Composition.Equal)
                 {
-                // add the properties and methods from "struct"
-                // if this is an interface, then these are "abstract" or "default" methods
-                // otherwise these are added to the primary chain
-                mapContribProperties = new HashMap<>();
-                mapContribMethods    = new HashMap<>();
-                for (Entry<String, Component> entryChild : struct.ensureChildByNameMap().entrySet())
-                    {
-                    String    sName = entryChild.getKey();
-                    Component child = entryChild.getValue();
-                    if (child instanceof MultiMethodStructure)
-                        {
-                        for (MethodStructure structMethod : child.getMethodByConstantMap().values())
-                            {
-                            SignatureConstant constSig = structMethod.getIdentityConstant()
-                                    .getSignature().resolveGenericTypes(resolver);
-                            assert constSig != null;
-                            MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
-                                    structMethod.isAbstract()                ? Implementation.Declared :
-                                    formatInfo == Component.Format.INTERFACE ? Implementation.Default  :
-                                    structMethod.isNative()                  ? Implementation.Native   :
-                                                                               Implementation.Explicit  );
-                            mapContribMethods.put(constSig, new MethodInfo(constSig, body));
-                            }
-                        }
-                    else if (child instanceof PropertyStructure)
-                        {
-                        // TODO mapContribProperties.put(sName, new PropertyInfo(constId, (PropertyStructure) child));
-                        }
-                    }
+                mapContribProps         = new HashMap<>();
+                mapContribScopedProps   = new HashMap<>();
+                mapContribMethods       = new HashMap<>();
+                mapContribScopedMethods = new HashMap<>();
+                createMemberInfo(constId, struct, formatInfo, resolver,
+                        mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
                 }
             else
                 {
                 TypeInfo infoContrib = contrib.getTypeConstant().getTypeInfo();
-                mapContribProperties = infoContrib.getProperties();
-                mapContribMethods    = infoContrib.getMethods();
+                mapContribProps         = infoContrib.getProperties();
+                mapContribScopedProps   = infoContrib.getScopedProperties();
+                mapContribMethods       = infoContrib.getMethods();
+                mapContribScopedMethods = infoContrib.getScopedMethods();
                 }
 
-            contributeMembers(mapProps, mapMethods,
-                    composition, mapContribProperties, mapContribMethods,
-                    contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null,
-                    errs);
+            contributeMemberInfo(mapProps, mapScopedProps, mapMethods, mapScopedMethods,
+                    composition, mapContribProps, mapContribScopedProps, mapContribMethods, mapContribScopedMethods,
+                    contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null, errs);
             }
 
-        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto, listmapClassChain, listmapDefaultChain, mapProps, mapMethods);
+        // verify that properties exist for each of the type parameters
+        for (ParamInfo param : mapTypeParams.values())
+            {
+            String       sParam = param.getName();
+            PropertyInfo prop   = mapProps.get(sParam);
+            if (prop == null)
+                {
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
+                        this.getValueString(), sParam);
+                }
+            else if (!prop.isTypeParam() || !prop.isRO() || !prop.getType().equals(
+                    pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
+                {
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
+                        this.getValueString(), sParam);
+                }
+            }
+
+        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto,
+                listmapClassChain, listmapDefaultChain,
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods);
         }
 
-    protected void contributeMembers(
-            Map<String, PropertyInfo>          mapProperties,
-            Map<SignatureConstant, MethodInfo> mapMethods,
-            Composition                        compAdd,
-            Map<String, PropertyInfo>          mapAddProperties,
-            Map<SignatureConstant, MethodInfo> mapAddMethods,
-            PropertyConstant                   propDelegate,
-            ErrorListener                      errs)
+    /**
+     * Generate the members of the "this" class of "this" type.
+     *
+     * @param constId           the identity of the class
+     * @param struct            the class structure
+     * @param formatInfo        the format of the resulting TypeInfo
+     * @param resolver          the GenericTypeResolver that uses the known type parameters
+     * @param mapProps          the public and protected properties of the class
+     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
+     * @param mapMethods        the public and protected methods of the class
+     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
+     *                          nested methods, etc.)
+     * @param errs              the error list to log any errors to
+     */
+    protected void createMemberInfo(
+            IdentityConstant                     constId,
+            ClassStructure                       struct,
+            Component.Format                     formatInfo,
+            ParamInfo.TypeResolver               resolver,
+            Map<String           , PropertyInfo> mapProps,
+            Map<PropertyConstant , PropertyInfo> mapScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapMethods,
+            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
+            ErrorListener                        errs)
+        {
+        ConstantPool pool = getConstantPool();
+
+        // determine the desired amount of access to expose the members of "struct"
+        Access access = getAccess();
+
+        // add the properties and methods from "struct"
+        // if this is an interface, then these are "abstract" or "default" methods
+        // otherwise these are added to the primary chain
+        for (Entry<String, Component> entryChild : struct.ensureChildByNameMap().entrySet())
+            {
+            String    sName = entryChild.getKey();
+            Component child = entryChild.getValue();
+            if (child instanceof MultiMethodStructure)
+                {
+                for (MethodStructure structMethod : child.getMethodByConstantMap().values())
+                    {
+                    SignatureConstant constSig = structMethod.getIdentityConstant()
+                            .getSignature().resolveGenericTypes(resolver);
+                    assert constSig != null;
+                    MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
+                            structMethod.isAbstract()                ? Implementation.Declared :
+                            formatInfo == Component.Format.INTERFACE ? Implementation.Default  :
+                            structMethod.isNative()                  ? Implementation.Native   :
+                                                                       Implementation.Explicit  );
+                    mapMethods.put(constSig, new MethodInfo(constSig, body));
+
+                    for (Component grandchild : structMethod.children())
+                        {
+                        // TODO any children of the method structure (into the "scoped" bucket)
+                        System.out.println("** skipping method " + sName + " child " + grandchild.getIdentityConstant().getValueString());
+                        }
+                    }
+                }
+            else if (child instanceof PropertyStructure)
+                {
+                // determine whether the property is accessible, whether the property is read-only,
+                // and whether the property has a field:
+                // - a property on an interface with "@RO" is read-only
+                // - a property with "@Override" does NOT have a field (at this level); i.e. it
+                //   defers to its super TODO
+                // - if the type access is public or protected, the property could be read-only
+                //   because there is access to the Ref, but not the Var (e.g. "public/private")
+                // - a property that overrides get (but not set) and does not call super does not
+                //   have a field, and is read-only TODO
+                // - a property that overrides get and set and does not call super does not
+                //   have a field TODO
+                // - if the type access is struct, then only include the property if it has a field TODO
+                // - it is an error for a property with a field to have a set that does not call
+                //   super TODO
+                PropertyStructure prop = (PropertyStructure) child;
+                if (prop.isTypeParameter())
+                    {
+                    mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
+                    continue;
+                    }
+
+                Access           accessRef    = prop.getAccess();
+                Access           accessVar    = prop.getAccess(); // TODO property access needs to be split between Ref and Var
+                boolean          fRO          = false;
+                List<Annotation> listPropAnno = null;
+                List<Annotation> listRefAnno  = null;
+                boolean          fCustomCode  = false;
+                boolean          fReqField    = false;
+                if (accessRef != Access.STRUCT)
+                    {
+                    if (access.ordinal() < accessRef.ordinal())
+                        {
+                        // the property is not accessible at all
+                        continue;
+                        }
+
+                    fRO = access.ordinal() < accessVar.ordinal();
+                    }
+
+                // sort annotations into Ref/Var annotations and Property annotations
+                for (Contribution contrib : prop.getContributionsAsList())
+                    {
+                    if (contrib.getComposition() == Composition.Annotation)
+                        {
+                        Annotation   annotation = contrib.getAnnotation();
+                        Constant     constMixin = annotation.getAnnotationClass();
+                        TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+                        TypeInfo     infoMixin  = typeMixin.ensureTypeInfo(errs);
+                        if (infoMixin.getFormat() != Component.Format.MIXIN)
+                            {
+                            log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                                    typeMixin.getValueString());
+                            continue;
+                            }
+
+                        TypeConstant typeInto = infoMixin.getInto();
+                        if (!typeInto.isIntoPropertyType())
+                            {
+                            log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
+                                    sName, constId.getValueString(), typeMixin.getValueString());
+                            continue;
+                            }
+
+                        if (typeInto.isA(pool.typeRef()))
+                            {
+                            if (listRefAnno == null)
+                                {
+                                listRefAnno = new ArrayList<>();
+                                }
+                            listRefAnno.add(annotation);
+                            }
+                        else
+                            {
+                            if (listPropAnno == null)
+                                {
+                                listPropAnno = new ArrayList<>();
+                                }
+                            listPropAnno.add(annotation);
+                            }
+                        }
+                    }
+
+                PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
+                        listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        fCustomCode, fReqField);
+                mapProps.put(sName, propinfo);
+
+                for (Component grandchild : child.children())
+                    {
+                    // TODO any children of the property structure (into the "scoped" bucket)
+                    System.out.println("** skipping property " + sName + " child " +
+                            grandchild.getIdentityConstant().getValueString());
+                    }
+                }
+            }
+        }
+
+    /**
+     * Generate the members of the "this" class of "this" type.
+     *
+     * @param mapProps             the public and protected properties of the class
+     * @param mapScopedProps       the scoped properties (e.g. properties inside a method)
+     * @param mapMethods           the public and protected methods of the class
+     * @param mapScopedMethods     the scoped methods (e.g. private methods, methods of a property,
+     *                             nested methods, etc.)
+     * @param compAdd              the form of composition that is adding the various members
+     * @param mapAddProps          the public and protected properties to add
+     * @param mapAddScopedProps    the scoped properties (e.g. properties inside a method) to add
+     * @param mapAddMethods        the public and protected methods to add
+     * @param mapAddScopedMethods  the scoped methods (e.g. private methods, methods of a property,
+     *                             nested methods, etc.) to add
+     * @param propDelegate         the property providing the reference for the delegation, if the
+     *                             composition is a delegation
+     * @param errs                 the error list to log any errors to
+     */
+    protected void contributeMemberInfo(
+            Map<String           , PropertyInfo> mapProps,
+            Map<PropertyConstant , PropertyInfo> mapScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapMethods,
+            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
+            Composition                          compAdd,
+            Map<String           , PropertyInfo> mapAddProps,
+            Map<PropertyConstant , PropertyInfo> mapAddScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapAddMethods,
+            Map<MethodConstant   , MethodInfo  > mapAddScopedMethods,
+            PropertyConstant                     propDelegate,
+            ErrorListener                        errs)
         {
         // first find the "super" chains of each of the existing methods
         Set<SignatureConstant> setSuperMethods = new HashSet<>();
@@ -1610,6 +1792,36 @@ System.out.println(m_typeinfo);
     public Component.Format getExplicitClassFormat()
         {
         throw new IllegalStateException();
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a class to signify
+     *         that the mix-in applies to the meta-data of the class and is not actually mixed into
+     *         the class functionality itself
+     */
+    public boolean isIntoClassType()
+        {
+        return equals(getConstantPool().typeClass());
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a property, which
+     *         means that the mix-in applies to the meta-data of the property or to the Ref/Var
+     *         instance used for the property
+     */
+    public boolean isIntoPropertyType()
+        {
+        ConstantPool pool = getConstantPool();
+        return equals(pool.typeProperty()) || isA(pool.typeRef());
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a method, which
+     *         means that the mix-in applies to the meta-data of the method
+     */
+    public boolean isIntoMethodType()
+        {
+        return equals(getConstantPool().typeMethod());
         }
 
     /**

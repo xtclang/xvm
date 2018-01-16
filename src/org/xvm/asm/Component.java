@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -38,7 +37,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
-import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -459,7 +457,17 @@ public abstract class Component
      */
     public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
-        addContribution(new Contribution(new Annotation(constType, aconstParam)));
+        addAnnotation(new Annotation(constType, aconstParam));
+        }
+
+    /**
+     * Add an annotation.
+     *
+     * @param annotation  the Annotation
+     */
+    public void addAnnotation(Annotation annotation)
+        {
+        addContribution(new Contribution(annotation));
         }
 
     /**
@@ -526,6 +534,20 @@ public abstract class Component
 
         list.add(contrib);
         markModified();
+        }
+
+    /**
+     * Remove a contribution from the list of contributions.
+     *
+     * @param contrib  the contribution to remove from the list
+     */
+    protected void removeContribution(Contribution contrib)
+        {
+        List<Contribution> list = m_listContribs;
+        if (list != null)
+            {
+            list.remove(contrib);
+            }
         }
 
     /**
@@ -897,14 +919,18 @@ public abstract class Component
      * Create and register a PropertyStructure with the specified name.
      *
      * @param fStatic    true if the property is marked as static
-     * @param access     the accessibility of the property to create
+     * @param accessRef  the "Ref" accessibility of the property to create
+     * @param accessRef  the "Var" accessibility of the property to create
      * @param constType  the type of the property to create
      * @param sName      the simple (unqualified) property name to create
      */
-    public PropertyStructure createProperty(boolean fStatic, Access access, TypeConstant constType, String sName)
+    public PropertyStructure createProperty(boolean fStatic, Access accessRef, Access accessVar,
+            TypeConstant constType, String sName)
         {
         assert sName != null;
-        assert access != null;
+        assert accessRef != null;
+        assert accessVar != null;
+        assert accessRef.ordinal() <= accessVar.ordinal();
         assert constType != null;
 
         if (!isClassContainer())
@@ -922,10 +948,12 @@ public abstract class Component
         //             + "\" because a child with that name already exists: " + component);
         //     }
 
-        int               nFlags  = Format.PROPERTY.ordinal() | access.FLAGS;
+        int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS;
+
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(),
                 sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
+        struct.setVarAccess(accessVar);
         struct.setType(constType);
         addChild(struct);
 
@@ -1842,12 +1870,8 @@ public abstract class Component
             final List<Contribution> listThatContribs = that.m_listContribs;
             final int cThisContribs = listThisContribs == null ? 0 : listThisContribs.size();
             final int cThatContribs = listThatContribs == null ? 0 : listThatContribs.size();
-            if (cThisContribs != cThatContribs || (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)))
-                {
-                return  false;
-                }
-
-            return true;
+            return !(cThisContribs != cThatContribs ||
+                    (cThisContribs > 0 && !listThisContribs.equals(listThatContribs)));
             }
 
         return false;
@@ -2925,6 +2949,7 @@ public abstract class Component
         private boolean m_fWeakMatch;
         }
 
+
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
     public enum ResolutionResult {UNKNOWN, RESOLVED, DEFERRED, ERROR}
@@ -2973,7 +2998,7 @@ public abstract class Component
     public static final int ABSTRACT_BIT     = 0x0400, ABSTRACT_SHIFT   = 10;
     public static final int STATIC_BIT       = 0x0800, STATIC_SHIFT     = 11;
     public static final int SYNTHETIC_BIT    = 0x1000, SYNTHETIC_SHIFT  = 12;
-    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT   = 13;
+    public static final int COND_RET_BIT     = 0x2000, COND_RET_SHIFT = 13;
 
 
     // ----- fields --------------------------------------------------------------------------------

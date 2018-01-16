@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 
 
 /**
@@ -59,6 +61,23 @@ public class Annotation
         return CHILD_FIELDS;
         }
 
+    public org.xvm.asm.Annotation buildAnnotation(ConstantPool pool)
+        {
+        Constant         constClass = getType().getIdentityConstant();
+        List<Expression> args       = getArguments();
+        Constant[]       aconstArgs = null;
+        if (args != null && !args.isEmpty())
+            {
+            int cArgs = args.size();
+            aconstArgs = new Constant[cArgs];
+            for (int iArg = 0; iArg < cArgs; ++iArg)
+                {
+                // TODO this is wrong ... we're not ready at this stage to resolve all constants
+                aconstArgs[iArg] = args.get(iArg).toConstant();
+                }
+            }
+        return new org.xvm.asm.Annotation(constClass, aconstArgs);
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

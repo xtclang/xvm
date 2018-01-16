@@ -150,7 +150,7 @@ public class Annotation
      */
     public boolean containsUnresolved()
         {
-        if (m_constClass.containsUnresolved())
+        if (getAnnotationClass().containsUnresolved())
             {
             return true;
             }

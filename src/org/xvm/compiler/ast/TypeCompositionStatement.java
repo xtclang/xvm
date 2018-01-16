@@ -662,7 +662,7 @@ public class TypeCompositionStatement
                                     pool.clzType(), null, constType);
 
                             // create the property and mark it as synthetic
-                            component.createProperty(false, Access.PUBLIC, constPropType, sParam)
+                            component.createProperty(false, Access.PUBLIC, Access.PUBLIC, constPropType, sParam)
                                     .setSynthetic(true);
                             }
                         }

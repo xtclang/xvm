@@ -230,13 +230,13 @@ public class RegisterConstant
         {
         if (fReEntry)
             {
-            return 0;
+            return m_iReg;
             }
 
         fReEntry = true;
         try
             {
-            return fReEntry ? 0 : m_constMethod.hashCode() + m_iReg;
+            return m_constMethod.hashCode() + m_iReg;
             }
         finally
             {

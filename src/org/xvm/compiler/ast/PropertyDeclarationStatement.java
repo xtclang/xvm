@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -12,11 +14,14 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Component;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -57,6 +62,11 @@ public class PropertyDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public String getName()
+        {
+        return name.getValue().toString();
+        }
+
     /**
      * @return true iff the property is declared as static
      */
@@ -93,6 +103,60 @@ public class PropertyDeclarationStatement
                 : access;
         }
 
+    public Access getVarAccess()
+        {
+        if (modifiers != null && !modifiers.isEmpty())
+            {
+            Access access = null;
+            for (Token modifier : modifiers)
+                {
+                switch (modifier.getId())
+                    {
+                    case PUBLIC:
+                        if (access == null)
+                            {
+                            access = Access.PUBLIC;
+                            }
+                        else
+                            {
+                            return Access.PUBLIC;
+                            }
+                        break;
+
+                    case PROTECTED:
+                        if (access == null)
+                            {
+                            access = Access.PROTECTED;
+                            }
+                        else
+                            {
+                            return Access.PROTECTED;
+                            }
+                        break;
+
+                    case PRIVATE:
+                        if (access == null)
+                            {
+                            access = Access.PRIVATE;
+                            }
+                        else
+                            {
+                            return Access.PRIVATE;
+                            }
+                        break;
+
+                    }
+                }
+
+            if (access != null)
+                {
+                return access;
+                }
+            }
+
+        return getDefaultAccess();
+        }
+
     @Override
     protected Field[] getChildFields()
         {
@@ -117,17 +181,28 @@ public class PropertyDeclarationStatement
                 // duplicates is deferred, since it is possible (thanks to the complexity of
                 // conditionals) to have multiple components occupying the same location within the
                 // namespace at this point in the compilation
-                // if (container.getProperty(sName) != null) ...
+                // TODO if (container.getProperty(sName) != null) ...
 
-                ConstantPool      pool      = pool();
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
-                        isStatic(), getDefaultAccess(), constType, sName);
+                        isStatic(), getDefaultAccess(), getVarAccess(), constType, sName);
                 setComponent(prop);
 
                 // introduce the unresolved type constant to the type expression, so that when the
                 // type expression resolves, it can resolve the unresolved type constant
                 type.setTypeConstant(constType);
+
+                // the annotations either have to be registered on the type or on the property, so
+                // register them on the property for now (they'll get sorted out later after we
+                // can resolve the types to figure out what the annotation targets actually are)
+                if (annotations != null)
+                    {
+                    ConstantPool pool = pool();
+                    for (Annotation annotation : annotations)
+                        {
+                        prop.addAnnotation(annotation.buildAnnotation(pool));
+                        }
+                    }
                 }
             else
                 {
@@ -136,6 +211,21 @@ public class PropertyDeclarationStatement
             }
 
         super.registerStructures(errs);
+        }
+
+    @Override
+    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getStage().ordinal() < Stage.Resolved.ordinal())
+            {
+            super.resolveNames(listRevisit, errs);
+            }
+
+        PropertyStructure struct = (PropertyStructure) getComponent();
+        if (!struct.resolveAnnotations())
+            {
+            listRevisit.add(this);
+            }
         }
 
 

@@ -252,6 +252,22 @@ public interface Constants
      * from {3} of the unspecified type.
      */
     public static final String VE_TYPE_PARAM_CONTRIB_NO_SPEC         = "VERIFY-35";
+    /**
+     * {0} contains a property {1} which collides with a type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_COLLISION      = "VERIFY-36";
+    /**
+     * {0} missing a property {1} for the type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_MISSING        = "VERIFY-37";
+    /**
+     * {0} has a misconfigured property {1} for the type parameter of the same name.
+     */
+    public static final String VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE   = "VERIFY-38";
+    /**
+     * The {0} property on {1} is annotated by {2}, which is an incompatible mixin for a property.
+     */
+    public static final String VE_PROPERTY_ANNOTATION_INCOMPATIBLE   = "VERIFY-39";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------
