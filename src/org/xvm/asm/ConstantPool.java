@@ -1055,6 +1055,7 @@ public class ConstantPool
                 sClz = "Override";
                 break;
 
+            case "ReadOnly":
             case "RO":
                 sPkg = "annotations";
                 sClz = "ReadOnly";
@@ -1062,7 +1063,7 @@ public class ConstantPool
 
             case "Soft":
                 sPkg = "annotations";
-                sClz = "ReadOnly";
+                sClz = "SoftVar";
                 break;
 
             case "Watch":
@@ -1717,6 +1718,8 @@ public class ConstantPool
     public ClassConstant     clzFrame()         {ClassConstant     c = m_clzFrame;        if (c == null) {m_clzFrame        = c = (ClassConstant) getImplicitlyImportedIdentity("StackFrame" );} return c;}
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
+    public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"         );} return c;}
+    public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"   );} return c;}
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
@@ -2300,6 +2303,8 @@ public class ConstantPool
         m_clzFrame        = null;
         m_clzAuto         = null;
         m_clzOp           = null;
+        m_clzRO           = null;
+        m_clzOverride     = null;
         m_clzUnchecked    = null;
         m_typeObject      = null;
         m_typeRef         = null;
@@ -2555,6 +2560,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzFrame;
     private transient ClassConstant     m_clzAuto;
     private transient ClassConstant     m_clzOp;
+    private transient ClassConstant     m_clzRO;
+    private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzUnchecked;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeRef;

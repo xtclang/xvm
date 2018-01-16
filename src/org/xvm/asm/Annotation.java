@@ -245,14 +245,13 @@ public class Annotation
         boolean fHalt = super.validate(errlist);
 
         // it must be a mixin type
-        Constant constClass = getAnnotationClass();
-        if (!(constClass instanceof ClassConstant
-                && ((ClassConstant) constClass).getComponent().getFormat() == Format.MIXIN))
+        if (getAnnotationType().getExplicitClassFormat() != Format.MIXIN)
             {
-            fHalt |= log(errlist, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN, constClass.getValueString());
+            fHalt |= log(errlist, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                    getAnnotationClass().getValueString());
             }
 
-        // TODO validate the parameters against the mixin definition
+        // TODO validate the parameters against the mixin definition (_after_ we fix the 'TODO' problem with collecting annotation parameters)
 
         return fHalt;
         }

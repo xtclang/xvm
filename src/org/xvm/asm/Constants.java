@@ -268,6 +268,10 @@ public interface Constants
      * The {0} property on {1} is annotated by {2}, which is an incompatible mixin for a property.
      */
     public static final String VE_PROPERTY_ANNOTATION_INCOMPATIBLE   = "VERIFY-39";
+    /**
+     * The {0} property on {1} is annotated by the ReadOnly mix-in, which is only used for properties declared on an interface.
+     */
+    public static final String VE_PROPERTY_RO_IGNORED                = "VERIFY-40";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

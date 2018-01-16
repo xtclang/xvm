@@ -1264,10 +1264,11 @@ public abstract class TypeConstant
             Map<MethodConstant   , MethodInfo  > mapScopedMethods,
             ErrorListener                        errs)
         {
-        ConstantPool pool = getConstantPool();
-
-        // determine the desired amount of access to expose the members of "struct"
-        Access access = getAccess();
+        ConstantPool pool       = getConstantPool();
+        boolean      fInterface = formatInfo == Component.Format.INTERFACE;
+        boolean      fMixin     = formatInfo == Component.Format.MIXIN;
+        boolean      fClass     = !fInterface & !fMixin;
+        Access       access     = getAccess();
 
         // add the properties and methods from "struct"
         // if this is an interface, then these are "abstract" or "default" methods
@@ -1284,10 +1285,10 @@ public abstract class TypeConstant
                             .getSignature().resolveGenericTypes(resolver);
                     assert constSig != null;
                     MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
-                            structMethod.isAbstract()                ? Implementation.Declared :
-                            formatInfo == Component.Format.INTERFACE ? Implementation.Default  :
-                            structMethod.isNative()                  ? Implementation.Native   :
-                                                                       Implementation.Explicit  );
+                            structMethod.isAbstract() ? Implementation.Declared :
+                            fInterface                ? Implementation.Default  :
+                            structMethod.isNative()   ? Implementation.Native   :
+                                                        Implementation.Explicit  );
                     mapMethods.put(constSig, new MethodInfo(constSig, body));
 
                     for (Component grandchild : structMethod.children())
@@ -1299,9 +1300,18 @@ public abstract class TypeConstant
                 }
             else if (child instanceof PropertyStructure)
                 {
+                PropertyStructure prop = (PropertyStructure) child;
+                if (prop.isTypeParameter())
+                    {
+                    mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
+                    continue;
+                    }
+
                 // determine whether the property is accessible, whether the property is read-only,
                 // and whether the property has a field:
+                // - a property on an interface does not have a field TODO
                 // - a property on an interface with "@RO" is read-only TODO
+                // - a property NOT on an interface with "@RO" is a warning
                 // - a property with "@Override" does NOT have a field (at this level); i.e. it
                 //   defers to its super TODO
                 // - if the type access is public or protected, the property could be read-only
@@ -1313,13 +1323,6 @@ public abstract class TypeConstant
                 // - if the type access is struct, then only include the property if it has a field
                 // - it is an error for a property with a field to have a set that does not call
                 //   super TODO
-                PropertyStructure prop = (PropertyStructure) child;
-                if (prop.isTypeParameter())
-                    {
-                    mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
-                    continue;
-                    }
-
                 Access           accessRef    = prop.getAccess();
                 Access           accessVar    = prop.getVarAccess();
                 boolean          fRO          = false;
@@ -1339,6 +1342,8 @@ public abstract class TypeConstant
                     }
 
                 // sort annotations into Ref/Var annotations and Property annotations
+                boolean fHasRO       = false;
+                boolean fHasOverride = false;
                 for (Contribution contrib : prop.getContributionsAsList())
                     {
                     if (contrib.getComposition() == Composition.Annotation)
@@ -1361,6 +1366,20 @@ public abstract class TypeConstant
                             log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
                                     sName, constId.getValueString(), typeMixin.getValueString());
                             continue;
+                            }
+
+                        if (constMixin.equals(pool.clzRO()))
+                            {
+                            fHasRO = true;
+                            if (!fInterface)
+                                {
+                                log(errs, Severity.WARNING, VE_PROPERTY_RO_IGNORED,
+                                        sName, constId.getValueString());
+                                }
+                            }
+                        else if (constMixin.equals(pool.clzOverride()))
+                            {
+                            fHasOverride = true;
                             }
 
                         if (typeInto.isA(pool.typeRef()))
@@ -1390,7 +1409,7 @@ public abstract class TypeConstant
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno.toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno.toArray (Annotation.NO_ANNOTATIONS),
                         fCustomCode, fReqField);
                 mapProps.put(sName, propinfo);
 
