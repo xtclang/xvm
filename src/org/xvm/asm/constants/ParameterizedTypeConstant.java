@@ -144,6 +144,12 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant getExplicitClassInto()
+        {
+        return getUnderlyingType().getExplicitClassInto();
+        }
+
+    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal = m_constType;
