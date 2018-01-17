@@ -246,9 +246,7 @@ public class CallChain
         @Override
         protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
             {
-            ObjectHandle.ExceptionHandle hException =
-                    hThis.getTemplate().setFieldValue(hThis, f_property, hArg);
-            return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+            return hThis.getTemplate().setFieldValue(frame, hThis, f_property, hArg);
             }
         }
     }

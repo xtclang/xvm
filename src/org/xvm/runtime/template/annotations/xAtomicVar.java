@@ -175,10 +175,10 @@ public class xAtomicVar
             }
 
         @Override
-        protected ExceptionHandle setInternal(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
             m_atomic.set(handle);
-            return null;
+            return Op.R_NEXT;
             }
 
         @Override

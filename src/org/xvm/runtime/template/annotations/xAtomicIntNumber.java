@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.Op;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -131,7 +132,7 @@ public class xAtomicIntNumber
             }
 
         @Override
-        protected ExceptionHandle setInternal(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
             long lValue = ((JavaLong) handle).getValue();
             if (m_atomicValue == null)
@@ -139,7 +140,7 @@ public class xAtomicIntNumber
                 m_atomicValue = new AtomicLong(lValue);
                 }
             m_atomicValue.set(lValue);
-            return null;
+            return Op.R_NEXT;
             }
 
         @Override

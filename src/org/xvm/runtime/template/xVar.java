@@ -6,8 +6,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -46,8 +44,7 @@ public class xVar
         switch (method.getName())
             {
             case "set":
-                ObjectHandle.ExceptionHandle hException = hThis.set(hArg);
-                return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+                return hThis.set(frame, hArg);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }

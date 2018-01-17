@@ -231,14 +231,13 @@ public class xFutureVar
                 }
             else
                 {
-                // wait for the completion;
-                // the service is responsible for timing out
+                // wait for the completion; the service is responsible for timing out
                 return Op.R_BLOCK;
                 }
             }
 
         @Override
-        protected ExceptionHandle setInternal(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
             if (handle instanceof FutureHandle)
                 {
@@ -246,27 +245,29 @@ public class xFutureVar
                 // "handle" is a synthetic or dynamic one (see Frame.assignValue)
                 if (m_future != null)
                     {
-                    return xException.makeHandle("FutureVar has already been assigned");
+                    return frame.raiseException(
+                        xException.makeHandle("FutureVar has already been assigned"));
                     }
 
                 FutureHandle that = (FutureHandle) handle;
                 this.m_future = that.m_future;
-                return null;
+                return Op.R_NEXT;
                 }
 
             if (m_future == null)
                 {
                 m_future = CompletableFuture.completedFuture(handle);
-                return null;
+                return Op.R_NEXT;
                 }
 
             if (m_future.isDone())
                 {
-                return xException.makeHandle("FutureVar has already been set");
+                return frame.raiseException(
+                    xException.makeHandle("FutureVar has already been set"));
                 }
 
             m_future.complete(handle);
-            return null;
+            return Op.R_NEXT;
             }
 
         @Override

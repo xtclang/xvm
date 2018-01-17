@@ -79,9 +79,10 @@ public class xInjectedRef
             }
 
         @Override
-        protected ExceptionHandle setInternal(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
-            return xException.makeHandle("InjectedRef cannot be re-assigned");
+            return frame.raiseException(
+                xException.makeHandle("InjectedRef cannot be re-assigned"));
             }
 
         @Override

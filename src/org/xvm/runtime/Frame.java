@@ -499,10 +499,7 @@ public class Frame
                     break;
 
                 case VAR_DYNAMIC_REF:
-                    {
-                    ExceptionHandle hException = ((RefHandle) f_ahVar[nVar]).set(hValue);
-                    return hException == null ? Op.R_NEXT : raiseException(hException);
-                    }
+                    return ((RefHandle) f_ahVar[nVar]).set(this, hValue);
 
                 default:
                     throw new IllegalStateException();
@@ -750,15 +747,17 @@ public class Frame
                         info.m_nStyle = VAR_STANDARD;
                         continue;
 
-                    case Op.R_EXCEPTION:
-                        info.m_nStyle = VAR_STANDARD;
-                        return Op.R_EXCEPTION;
+                    case Op.R_CALL:
+                        throw new IllegalStateException("Injected ref's get() must be fully native");
 
                     case Op.R_BLOCK:
                         return Op.R_BLOCK;
 
+                    case Op.R_EXCEPTION:
+                        info.m_nStyle = VAR_STANDARD;
+                        return Op.R_EXCEPTION;
+
                     default:
-                        // future cannot return R_CALL
                         throw new IllegalStateException();
                     }
                 }
@@ -836,18 +835,19 @@ public class Frame
                 switch (((RefHandle) hValue).get(this, RET_LOCAL))
                     {
                     case Op.R_NEXT:
-                        hValue = getFrameLocal();
-                        break;
+                        return getFrameLocal();
 
-                    case Op.R_EXCEPTION:
-                        throw m_hException.getException();
+                    case Op.R_CALL:
+                        throw new IllegalStateException("Future's get() must be fully native");
 
                     case Op.R_BLOCK:
                         info.m_nStyle = VAR_WAITING;
                         return null;
 
+                    case Op.R_EXCEPTION:
+                        throw m_hException.getException();
+
                     default:
-                        // future cannot return R_CALL
                         throw new IllegalStateException();
                     }
                 }

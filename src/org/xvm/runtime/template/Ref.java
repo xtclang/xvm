@@ -70,6 +70,9 @@ public class Ref
                                 frameCaller.getFrameLocal().getType().getTypeHandle()));
                         return Op.R_CALL;
 
+                    case Op.R_BLOCK:
+                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
 
@@ -105,6 +108,9 @@ public class Ref
                                 xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isService())));
                         return Op.R_CALL;
 
+                    case Op.R_BLOCK:
+                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
 
@@ -125,6 +131,9 @@ public class Ref
                                 xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isConst())));
                         return Op.R_CALL;
 
+                    case Op.R_BLOCK:
+                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
+
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
 
@@ -144,6 +153,9 @@ public class Ref
                             frameCaller.assignValue(iReturn,
                                 xBoolean.makeHandle(!frame.getFrameLocal().isMutable())));
                         return Op.R_CALL;
+
+                    case Op.R_BLOCK:
+                        return frame.raiseException(xException.makeHandle("Unassigned reference"));
 
                     case Op.R_EXCEPTION:
                         return Op.R_EXCEPTION;
@@ -260,8 +272,6 @@ public class Ref
             {
             super(clazz);
 
-            assert hTarget instanceof GenericHandle;
-
             m_hDelegate = hTarget;
             m_sName = sPropName;
             m_fMutable = true;
@@ -308,11 +318,8 @@ public class Ref
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return m_hDelegate != null;
-
                 case REF_PROPERTY:
-                    return m_hDelegate != null &&
-                        ((GenericHandle) m_hDelegate).m_mapFields.get(m_sName) != null;
+                    return m_hDelegate != null;
 
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).isAssigned();
@@ -335,7 +342,10 @@ public class Ref
                     return getInternal(frame, iReturn);
 
                 case REF_PROPERTY:
-                    throw new IllegalStateException();
+                    return m_hDelegate == null
+                        ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+                        : m_hDelegate.getTemplate().getPropertyValue(
+                        frame, m_hDelegate, m_sName, iReturn);
 
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).get(frame, iReturn);
@@ -352,29 +362,29 @@ public class Ref
                 : frame.assignValue(iReturn, m_hDelegate);
             }
 
-        public ExceptionHandle set(ObjectHandle handle)
+        public int set(Frame frame, ObjectHandle handle)
             {
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return setInternal(handle);
+                    return setInternal(frame, handle);
 
                 case REF_PROPERTY:
                     throw new IllegalStateException();
 
                 case REF_REF:
-                    return ((RefHandle) m_hDelegate).set(handle);
+                    return ((RefHandle) m_hDelegate).set(frame, handle);
 
                 default: // assertion m_iVar >= 0
                     m_frame.f_ahVar[m_iVar] = handle;
-                    return null;
+                    return Op.R_NEXT;
                 }
             }
 
-        protected ExceptionHandle setInternal(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
             m_hDelegate = handle;
-            return null;
+            return Op.R_NEXT;
             }
 
         // dereference the Ref from a register-bound to a handle-bound
@@ -412,7 +422,7 @@ public class Ref
             }
 
         @Override
-        public int get(Frame frame, int iReturn)
+        protected int getInternal(Frame frame, int iReturn)
             {
             try
                 {
@@ -426,10 +436,11 @@ public class Ref
             }
 
         @Override
-        public ExceptionHandle set(ObjectHandle handle)
+        protected int setInternal(Frame frame, ObjectHandle handle)
             {
-            return ((IndexSupport) f_hTarget.getTemplate()).
+            ExceptionHandle hException = ((IndexSupport) f_hTarget.getTemplate()).
                     assignArrayValue(f_hTarget, f_lIndex, handle);
+            return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }
 
         @Override
