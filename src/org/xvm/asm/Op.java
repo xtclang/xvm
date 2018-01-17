@@ -1304,6 +1304,11 @@ public abstract class Op
      */
     public static final int A_SUPER = -11;
 
+    /**
+     * Pre-defined argument: a target for local invocation
+     */
+    public static final int A_THIS = -12;
+
 
     // ----- return values from the Op.process() method --------------------------------------------
 

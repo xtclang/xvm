@@ -298,6 +298,13 @@ public class Frame
                     }
                 return f_hTarget;
 
+            case Op.A_THIS:
+                if (f_hThis == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hThis;
+
             case Op.A_PUBLIC:
                 if (f_hThis == null)
                     {
@@ -317,7 +324,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hThis;
+                return f_hThis.ensureAccess(Access.PRIVATE);
 
             case Op.A_STRUCT:
                 if (f_hThis == null)
@@ -1483,7 +1490,7 @@ public class Frame
                 MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
                 TypeConstant typeRet = constMethod.getRawReturns()[iRet];
 
-                return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_PRIVATE
+                return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_THIS
                     // a static method (function) resolution or "this" target
                     ? typeRet.resolveGenerics(frame.getGenericsResolver())
                     // a target type-based resolution
@@ -1513,7 +1520,7 @@ public class Frame
                 }
 
             // "local property" or a literal constant
-            TypeConstant typeArray = nTargetReg == Op.A_PRIVATE
+            TypeConstant typeArray = nTargetReg == Op.A_THIS
                 ? frame.getThis().getType() // "this" is an array
                 : frame.getLocalType(nTargetReg);
             if (typeArray.isParamsSpecified())
@@ -1548,7 +1555,7 @@ public class Frame
             TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
-            return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_PRIVATE
+            return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_THIS
                 // a static method (function) resolution or "this" target
                 ? typeTuple.resolveGenerics(frame.getGenericsResolver())
                 // a target type-based resolution

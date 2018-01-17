@@ -136,6 +136,7 @@ public class Register
             case Op.A_MODULE:
             case Op.A_TYPE:
             case Op.A_SUPER:
+            case Op.A_THIS:
                 return true;
 
             default:
@@ -255,6 +256,9 @@ public class Register
 
             case Op.A_SUPER:
                 return "super";
+
+            case Op.A_THIS:
+                return "this";
 
             default:
                 return "#" + nReg;

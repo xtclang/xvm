@@ -52,7 +52,7 @@ public class xTestService extends Service
                     adapter.ensureValueConstantId("# in TestService.counter.set #")),
             new X_Print(0),
             new Call_10(Op.A_SUPER, 0),
-            new Invoke_01(Op.A_PRIVATE, adapter.getMethodConstId("Object", "to"), 1), // next register #1
+            new Invoke_01(Op.A_THIS, adapter.getMethodConstId("Object", "to"), 1), // next register #1
             new X_Print(1),
             new Return_0(),
             });
