@@ -317,7 +317,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hThis.ensureAccess(Access.PRIVATE);
+                return f_hThis;
 
             case Op.A_STRUCT:
                 if (f_hThis == null)
@@ -1007,6 +1007,25 @@ public class Frame
         }
 
     /**
+     * Introduce a new standard variable that has a return type of the specified method
+     * in the context of the specified target.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nTargetId    if positive, the register number holding a target (handle);
+     *                      otherwise a constant id pointing to local property holding the target
+     * @param constMethod  the method constant whose return type needs to be resolved in the context
+     *                      of the target class
+     * @param iRet         the index of the return value
+     */
+    public void introduceReturnVar(int nTargetId, MethodConstant constMethod, int iRet)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), getReturnValueResolver(iRet));
+        }
+
+    /**
      * Introduce a new standard variable that has a return type of a Tuple of the
      * specified method return types in the context of the specified target.
      *
@@ -1040,7 +1059,8 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable of the Ref<ElementType> for the specified array variable.
+     * Introduce a new standard variable of the Ref&lt;ElementType&gt; for the specified array
+     * variable.
      *
      * Note: this method increments the "nextVar" index.
      *
@@ -1446,13 +1466,45 @@ public class Frame
      */
     interface VarTypeResolver
         {
-        TypeConstant resolve(Frame frame, int nTargetReg, int iTypeId);
+        TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId);
         }
+
+    protected static VarTypeResolver getReturnValueResolver(int iRet)
+        {
+        int cMax = RETURN_RESOLVERS.length;
+        VarTypeResolver resolver = iRet < cMax ? RETURN_RESOLVERS[iRet] : null;
+
+        if (resolver == null)
+            {
+            resolver = (frame, nTargetReg, nMethodId) ->
+                {
+                ConstantPool pool = frame.f_context.f_pool;
+
+                MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
+                TypeConstant typeRet = constMethod.getRawReturns()[iRet];
+
+                return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_PRIVATE
+                    // a static method (function) resolution or "this" target
+                    ? typeRet.resolveGenerics(frame.getGenericsResolver())
+                    // a target type-based resolution
+                    : typeRet.resolveGenerics(frame.getLocalType(nTargetReg));
+                };
+
+            if (iRet < cMax)
+                {
+                RETURN_RESOLVERS[iRet] = resolver;
+                }
+            }
+        return resolver;
+        }
+
+    // cached single return value resolvers
+    protected static final VarTypeResolver[] RETURN_RESOLVERS = new VarTypeResolver[2];
 
     protected static final VarTypeResolver ARRAY_ELEMENT_RESOLVER = new VarTypeResolver()
         {
         @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int nTypeId)
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             if (nTargetReg >= 0)
                 {
@@ -1461,7 +1513,9 @@ public class Frame
                 }
 
             // "local property" or a literal constant
-            TypeConstant typeArray = frame.getConstant(nTargetReg).getRefType();
+            TypeConstant typeArray = nTargetReg == Op.A_PRIVATE
+                ? frame.getThis().getType() // "this" is an array
+                : frame.getLocalType(nTargetReg);
             if (typeArray.isParamsSpecified())
                 {
                 TypeConstant constElType = typeArray.getParamTypesArray()[0];
@@ -1474,7 +1528,7 @@ public class Frame
     protected static final VarTypeResolver ARRAY_ELEMENT_REF_RESOLVER = new VarTypeResolver()
         {
         @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int nTypeId)
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
             return frame.f_context.f_pool.ensureParameterizedTypeConstant(Ref.TYPE, typeEl);
@@ -1486,16 +1540,16 @@ public class Frame
         // nTargetReg - the target register (or property)
         // nMethodId  - the MethodConstant id
         @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int nMethodId)
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             ConstantPool pool = frame.f_context.f_pool;
 
-            MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
+            MethodConstant constMethod = (MethodConstant) pool.getConstant(iAuxId);
             TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
-            return nTargetReg == Op.A_FRAME
-                // a static method (function) resolution
+            return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_PRIVATE
+                // a static method (function) resolution or "this" target
                 ? typeTuple.resolveGenerics(frame.getGenericsResolver())
                 // a target type-based resolution
                 : typeTuple.resolveGenerics(frame.getLocalType(nTargetReg));

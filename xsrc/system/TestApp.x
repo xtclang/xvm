@@ -262,6 +262,7 @@ class TestApp
             Void set(Int c)
                 {
                 print("In counter.set");
+                print(to<String>());
                 super(c);
                 }
             }

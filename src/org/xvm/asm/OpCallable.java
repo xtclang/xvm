@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 
@@ -130,6 +129,7 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
+    // check if a register for the return property value needs to be allocated
     protected void checkReturnRegister(Frame frame, PropertyStructure property)
         {
         assert !isMultiReturn();
@@ -140,16 +140,18 @@ public abstract class OpCallable extends Op
             }
         }
 
+    // check if a register for the return value needs to be allocated
     protected void checkReturnRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceVar(method.getIdentityConstant().getSignature().getRawReturns()[0]);
+            frame.introduceReturnVar(Op.A_FRAME, method.getIdentityConstant(), 0);
             }
         }
 
+    // check if a register for the return Tuple value needs to be allocated
     protected void checkReturnTupleRegister(Frame frame, MethodStructure method)
         {
         assert !isMultiReturn();
@@ -160,18 +162,19 @@ public abstract class OpCallable extends Op
             }
         }
 
+    // check if any registers for the return values need to be allocated
     protected void checkReturnRegisters(Frame frame, MethodStructure method)
         {
         assert isMultiReturn();
 
+        MethodConstant constMethod = method.getIdentityConstant();
+
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
-            TypeConstant[] aRetType = method.getIdentityConstant().getSignature().getRawReturns();
-
             if (frame.isNextRegister(anRet[i]))
                 {
-                frame.introduceVar(aRetType[i]);
+                frame.introduceReturnVar(Op.A_FRAME, constMethod, i);
                 }
             }
         }

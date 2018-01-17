@@ -52,6 +52,8 @@ public class xTestService extends Service
                     adapter.ensureValueConstantId("# in TestService.counter.set #")),
             new X_Print(0),
             new Call_10(Op.A_SUPER, 0),
+            new Invoke_01(Op.A_PRIVATE, adapter.getMethodConstId("Object", "to"), 1), // next register #1
+            new X_Print(1),
             new Return_0(),
             });
 
@@ -73,7 +75,7 @@ public class xTestService extends Service
         MethodStructure mtIncrement = ensureMethodStructure("increment", VOID, INT);
         mtIncrement.setOps(new Op[]
             {
-            new X_Print(adapter.ensureValueConstantId("# in TestService.increment #")),
+            new X_Print(adapter.ensureValueConstantId("\n# in TestService.increment #")),
             new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0), // next register #0
             new Return_1(0),
             });
@@ -120,7 +122,7 @@ public class xTestService extends Service
         mtTo.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId(
-                "\n# in TestService.to<String>() #")),
+                "# in TestService.to<String>() #")),
             new Call_01(Op.A_SUPER, 0), // next register #0
             new GP_Add(0, adapter.ensureValueConstantId(": counter2="), 0),
             new Invoke_01(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
