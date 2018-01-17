@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -239,6 +241,7 @@ public class AnnotatedTypeConstant
     @Override
     public boolean validate(ErrorListener errs)
         {
+        boolean fBad  = false;
         boolean fHalt = false;
 
         if (!isValidated())
@@ -247,10 +250,11 @@ public class AnnotatedTypeConstant
 
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
-            TypeConstant type = (TypeConstant) m_constType.simplify();
-            if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
+            TypeConstant typeNext = (TypeConstant) m_constType.simplify();
+            if (!(typeNext instanceof AnnotatedTypeConstant || typeNext.isExplicitClassIdentity(true)))
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, type.getValueString());
+                fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeNext.getValueString());
+                fBad   = true;
                 }
 
             // validate the annotation itself
@@ -258,13 +262,31 @@ public class AnnotatedTypeConstant
 
             // make sure that this annotation is not repeated
             Constant constClass = m_annotation.getAnnotationClass();
-            while (type instanceof AnnotatedTypeConstant)
+            while (typeNext instanceof AnnotatedTypeConstant)
                 {
-                if (((AnnotatedTypeConstant) type).m_annotation.getAnnotationClass().equals(constClass))
+                if (((AnnotatedTypeConstant) typeNext).m_annotation.getAnnotationClass().equals(constClass))
                     {
                     fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, constClass.getValueString());
+                    fBad   = true;
+                    break;
                     }
-                type = ((AnnotatedTypeConstant) type).m_constType;
+
+                typeNext = ((AnnotatedTypeConstant) typeNext).m_constType;
+                }
+
+            // verify that the underlying type can be annotated by this annotation
+            TypeConstant typeMixin = m_annotation.getAnnotationType();
+            if (!fBad && !fHalt && typeMixin.isExplicitClassIdentity(false)
+                    && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN)
+                {
+                TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                if (!m_constType.isA(typeInto))
+                    {
+                    fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                            m_constType.getValueString(),
+                            constClass.getValueString(),
+                            typeInto.getValueString());
+                    }
                 }
             }
 

@@ -302,8 +302,7 @@ module Test
 
     class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
         {
-        public/private @Unchecked String s;                    // TODO should fail
-        @Override @RO @Lazy @Unchecked Int x;
+        public/private @Override @RO @Lazy @Unchecked Int x;
 
         Void bar();
         @Auto Int size();
@@ -322,7 +321,7 @@ module Test
 
     Int foo()
         {
-        MyMap<Object, Object> map;
+        MyMap2<Object, Object> map;
         return map;
         }
     }
