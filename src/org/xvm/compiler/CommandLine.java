@@ -1407,7 +1407,7 @@ public class CommandLine
      */
     public static void out(Object o)
         {
-        System.out.println(o);
+        System.err.println(o);
         }
 
     /**

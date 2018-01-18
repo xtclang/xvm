@@ -4,6 +4,6 @@
  *   declaration on its super-type will cause a compile-time error;
  */
 mixin Override
-        into Method
+        into Method | Property
     {
     }

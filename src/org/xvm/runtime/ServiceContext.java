@@ -258,7 +258,7 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++nOps > 10)
+                if (++nOps > 20)
                     {
                     fiber.setStatus(FiberStatus.Paused);
                     return frame;
