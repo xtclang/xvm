@@ -701,8 +701,7 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        PropertyCallChain chain = hTarget.getComposition().
-            getPropertyGetterChain(sPropName);
+        CallChain chain = hTarget.getComposition().getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
@@ -774,7 +773,7 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        PropertyCallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
         PropertyStructure property = chain.getProperty();
 
         if (!hTarget.isMutable())

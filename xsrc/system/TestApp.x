@@ -326,11 +326,11 @@ class TestApp
             }
         print(ri.get());
 
-        TestClass t = new TestClass("before");
-        Var<String> rp = &t.prop1;
+        TestClass tc = new TestClass("before");
+        Var<String> rp = &tc.prop1;
         print(rp);
         rp.set("after");
-        print(t);
+        print(tc);
 
         TestService svc = new TestService();
         ri = &svc.counter;

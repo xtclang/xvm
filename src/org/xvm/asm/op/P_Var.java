@@ -17,8 +17,8 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xVar;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -114,11 +114,13 @@ public class P_Var
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
-            TypeComposition clzRef = Ref.INSTANCE.ensureParameterizedClass(constProperty.getRefType());
+            // TODO: this needs to use the TypeInfo to create the correct TypeComposition
+            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(
+                constProperty.getRefType().resolveGenerics(hTarget.getType()));
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(clzRef.getType());
+                frame.introduceResolvedVar(clzRef.getType());
                 }
 
             if (isProperty(hTarget))

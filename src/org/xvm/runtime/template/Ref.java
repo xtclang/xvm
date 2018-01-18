@@ -240,11 +240,11 @@ public class Ref
         // indicates that the m_hDelegate field holds a referent
         private static final int REF_REFERENT = -1;
 
-        // indicates that the m_hDelegate field holds a property target
-        private static final int REF_PROPERTY = -2;
-
         // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
-        private static final int REF_REF = -3;
+        private static final int REF_REF = -2;
+
+        // indicates that the m_hDelegate field holds a property target
+        private static final int REF_PROPERTY = -3;
 
         /**
          * Create an unassigned RefHandle for a given clazz.
@@ -272,9 +272,11 @@ public class Ref
             {
             super(clazz);
 
+            assert hTarget != null;
+
             m_hDelegate = hTarget;
             m_sName = sPropName;
-            m_fMutable = true;
+            m_fMutable = hTarget.isMutable();
             m_iVar = REF_PROPERTY;
             }
 
@@ -341,14 +343,12 @@ public class Ref
                 case REF_REFERENT:
                     return getInternal(frame, iReturn);
 
-                case REF_PROPERTY:
-                    return m_hDelegate == null
-                        ? frame.raiseException(xException.makeHandle("Unassigned reference"))
-                        : m_hDelegate.getTemplate().getPropertyValue(
-                        frame, m_hDelegate, m_sName, iReturn);
-
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).get(frame, iReturn);
+
+                case REF_PROPERTY:
+                    return m_hDelegate.getTemplate().getPropertyValue(
+                        frame, m_hDelegate, m_sName, iReturn);
 
                 default: // assertion m_iVar >= 0
                     return frame.assignValue(iReturn, m_frame.f_ahVar[m_iVar]);
@@ -369,11 +369,12 @@ public class Ref
                 case REF_REFERENT:
                     return setInternal(frame, handle);
 
-                case REF_PROPERTY:
-                    throw new IllegalStateException();
-
                 case REF_REF:
                     return ((RefHandle) m_hDelegate).set(frame, handle);
+
+                case REF_PROPERTY:
+                    return m_hDelegate.getTemplate().setPropertyValue(
+                        frame, m_hDelegate, m_sName, handle);
 
                 default: // assertion m_iVar >= 0
                     m_frame.f_ahVar[m_iVar] = handle;
@@ -400,9 +401,21 @@ public class Ref
         @Override
         public String toString()
             {
-            return super.toString() +
-                    (m_iVar >= 0 ? ("-> " + m_frame.f_ahVar[m_iVar])
-                                 : (m_hDelegate == null ? "" : m_hDelegate.toString()));
+            String s = super.toString();
+            switch (m_iVar)
+                {
+                case REF_REFERENT:
+                    return m_hDelegate == null ? s : s + m_hDelegate;
+
+                case REF_REF:
+                    return s + "--> " + m_hDelegate;
+
+                case REF_PROPERTY:
+                    return s + "-> " + m_hDelegate.getComposition() + "#" + m_sName;
+
+                default:
+                    return s + "-> " + m_frame.f_ahVar[m_iVar];
+                }
             }
         }
 
