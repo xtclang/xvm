@@ -1309,8 +1309,8 @@ public abstract class TypeConstant
 
                 // determine whether the property is accessible, whether the property is read-only,
                 // and whether the property has a field:
-                // - a property on an interface does not have a field TODO
-                // - a property on an interface with "@RO" is read-only TODO
+                // - a property on an interface does not have a field
+                // - a property on an interface with "@RO" is read-only
                 // - a property NOT on an interface with "@RO" is a warning
                 // - a property with "@Override" does NOT have a field (at this level); i.e. it
                 //   defers to its super TODO
@@ -1329,7 +1329,7 @@ public abstract class TypeConstant
                 List<Annotation> listPropAnno = null;
                 List<Annotation> listRefAnno  = null;
                 boolean          fCustomCode  = false;
-                boolean          fReqField    = false;
+                boolean          fField       = false;
                 if (accessRef != Access.STRUCT)
                     {
                     if (access.ordinal() < accessRef.ordinal())
@@ -1368,20 +1368,6 @@ public abstract class TypeConstant
                             continue;
                             }
 
-                        if (constMixin.equals(pool.clzRO()))
-                            {
-                            fHasRO = true;
-                            if (!fInterface)
-                                {
-                                log(errs, Severity.WARNING, VE_PROPERTY_RO_IGNORED,
-                                        sName, constId.getValueString());
-                                }
-                            }
-                        else if (constMixin.equals(pool.clzOverride()))
-                            {
-                            fHasOverride = true;
-                            }
-
                         if (typeInto.isA(pool.typeRef()))
                             {
                             if (listRefAnno == null)
@@ -1398,19 +1384,116 @@ public abstract class TypeConstant
                                 }
                             listPropAnno.add(annotation);
                             }
+
+                        fHasRO       |= constMixin.equals(pool.clzRO());
+                        fHasOverride |= constMixin.equals(pool.clzOverride());
                         }
                     }
 
+                // check the methods to see if get() and set() call super
+// TODO - need to verify that we are actually creating all of the inner structures, e.g. methods in properties, nested classes, etc.
+                MethodStructure methodGet    = null;
+                MethodStructure methodSet    = null;
+                MethodStructure methodBadGet = null;
+                MethodStructure methodBadSet = null;
+                for (MethodStructure method : prop.getMethodByConstantMap().values())
+                    {
+                    if (method.isPotentialGetter())
+                        {
+                        if (method.isGetter(prop.getType(), resolver))
+                            {
+                            if (methodGet != null)
+                                {
+                                throw new IllegalStateException(); // TODO log error
+                                }
+                            methodGet = method;
+                            }
+                        else
+                            {
+                            methodBadGet = method;
+                            }
+                        }
+                    else if (method.isPotentialSetter())
+                        {
+                        if (method.isSetter(prop.getType(), resolver))
+                            {
+                            if (methodSet != null)
+                                {
+                                throw new IllegalStateException(); // TODO log error
+                                }
+                            methodSet = method;
+                            }
+                        else
+                            {
+                            methodBadSet = method;
+                            }
+                        }
+
+                    // regardless of what the code does, there is custom code in the property
+                    fCustomCode = true;
+                    }
+
+                // check for incorrect get/set method declarations
+                if (methodBadGet != null && methodGet == null)
+                    {
+                    throw new IllegalStateException(); // TODO log error
+                    }
+                if (methodBadSet != null && methodSet == null)
+                    {
+                    throw new IllegalStateException(); // TODO log error
+                    }
+
+                boolean fGetSupers = methodGet != null && methodGet.usesSuper();
+                boolean fSetSupers = methodSet != null && methodSet.usesSuper();
+
+                if (fInterface)
+                    {
+                    fRO    = fHasRO;
+                    fField = false;
+                    }
+                else if (methodGet == null && methodSet == null)
+                    {
+                    // TODO @RO should make this as if it were an abstract "get()" declaration
+                    fRO    = false;
+//                    fField =
+                    }
+                else if (methodGet != null && methodSet != null)
+                    {
+
+                    // if the get and set do NOT call super, then there is no field
+                    if (!fGetSupers && !fSetSupers)
+                        {
+                        fField = false;
+                        }
+
+                    // if the get and set do call super, then there is a field, unless @Override
+                    // is specified, in which case there is no field
+                    // TODO
+
+                    // otherwise, set is not allowed to call super if get does not call super
+
+                    if (fHasRO)
+                        {
+                        log(errs, Severity.WARNING, VE_PROPERTY_RO_IGNORED,
+                                sName, constId.getValueString());
+                        }
+                    }
+                else if (methodGet != null)
+                    {
+                    // if it calls super, then there's a field (and , otherwise it is read-only (which
+                    // if @RO is specified, it should match
+                    }
+
                 // if the type access is struct, then only include the property if it has a field
-                if (access == Access.STRUCT && !fReqField)
+                if (access == Access.STRUCT && !fField)
                     {
                     continue;
                     }
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno.toArray (Annotation.NO_ANNOTATIONS),
-                        fCustomCode, fReqField);
+                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        fCustomCode, fField);
                 mapProps.put(sName, propinfo);
 
                 for (Component grandchild : child.children())

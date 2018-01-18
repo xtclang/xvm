@@ -1008,17 +1008,20 @@ public abstract class Component
      * @param returnTypes  the return values of the method
      * @param sName        the method name, or null if the name is unknown
      * @param paramTypes   the parameters for the method
+     * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
      * @return a new MethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
-            Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes)
+            Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes,
+            boolean fUsesSuper)
         {
         assert sName != null;
         assert access != null;
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
-        return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes);
+        return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
+                fUsesSuper);
         }
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName)

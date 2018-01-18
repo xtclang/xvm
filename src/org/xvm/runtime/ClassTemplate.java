@@ -1007,7 +1007,8 @@ public abstract class ClassTemplate
                     methodSuper.getAccess(), null,
                     methodSuper.getReturns().toArray(new Parameter[methodSuper.getReturnCount()]),
                     sName,
-                    methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]));
+                    methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]),
+                    true);
             }
         return method;
         }

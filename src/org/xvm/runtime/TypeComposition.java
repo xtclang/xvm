@@ -552,7 +552,7 @@ public class TypeComposition
                         {
                         list.add(method);
 
-                        if (!method.isSuperCalled())
+                        if (!method.usesSuper())
                             {
                             break nextInChain;
                             }
@@ -603,7 +603,7 @@ public class TypeComposition
 
                     list.add(method);
 
-                    if (!method.isSuperCalled())
+                    if (!method.usesSuper())
                         {
                         break;
                         }

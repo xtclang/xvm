@@ -83,6 +83,20 @@ public abstract class Expression
     {
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected boolean usesSuper()
+        {
+        for (AstNode node : children())
+            {
+            if (!(node instanceof ComponentStatement) && node.usesSuper())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
     /**
      * @return this expression, converted to a type expression
      */

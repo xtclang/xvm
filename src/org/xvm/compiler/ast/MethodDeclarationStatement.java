@@ -172,7 +172,9 @@ public class MethodDeclarationStatement
 
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
-                MethodStructure method = container.createMethod(fFunction, access, aAnnotations, aReturns, sName, aParams);
+                boolean fUsesSuper = !fFunction && access != Access.PRIVATE && usesSuper();
+                MethodStructure method = container.createMethod(
+                        fFunction, access, aAnnotations, aReturns, sName, aParams, fUsesSuper);
                 setComponent(method);
 
                 // "finally" continuation for constructors
@@ -181,7 +183,7 @@ public class MethodDeclarationStatement
                     assert fConstructor;
 
                     MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE,
-                            null, aReturns, "finally", aParams);
+                            null, aReturns, "finally", aParams, false);
                     this.methodFinally = methodFinally;
                     }
                 }
@@ -237,6 +239,12 @@ public class MethodDeclarationStatement
         }
 
     @Override
+    protected boolean usesSuper()
+        {
+        return body != null && body.usesSuper();
+        }
+
+    @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (getComponent() == null)
@@ -245,11 +253,6 @@ public class MethodDeclarationStatement
             String    sName     = getName();
             if (container.isMethodContainer())
                 {
-                boolean      fConstructor = keyword != null && keyword.getId() == Id.CONSTRUCT;
-                boolean      fFunction    = isStatic(modifiers) || fConstructor;
-                Access       access       = getDefaultAccess();
-                ConstantPool pool         = container.getConstantPool();
-
                 if (returns == null && container instanceof PropertyStructure)
                     {
                     // this is a short-hand property method
@@ -264,7 +267,8 @@ public class MethodDeclarationStatement
                         return;
                         }
 
-                    int cReturns = methodSuper.getReturnCount();
+                    ConstantPool            pool     = container.getConstantPool();
+                    int                     cReturns = methodSuper.getReturnCount();
                     org.xvm.asm.Parameter[] aReturns = new org.xvm.asm.Parameter[cReturns];
                     for (int i = 0; i < cReturns; i++)
                         {
@@ -282,11 +286,11 @@ public class MethodDeclarationStatement
                                 }
 
                             if (constReturn.getFormat() == Constant.Format.Property
-                                  && ((PropertyConstant) constReturn).getName().equals("RefType"))
+                                    && ((PropertyConstant) constReturn).getName().equals("RefType"))
                                 {
                                 // replace the RefType with the actual property type
                                 param = new org.xvm.asm.Parameter(pool,
-                                    property.getType(), param.getName(), null, true, i, false);
+                                        property.getType(), param.getName(), null, true, i, false);
                                 }
                             }
                         aReturns[i] = param;
@@ -296,7 +300,7 @@ public class MethodDeclarationStatement
 
                     // the parameters were already matched; no need to re-check
                     MethodStructure method = container.createMethod(
-                            fFunction, access, null, aReturns, sName, aParams);
+                            false, Access.PUBLIC, null, aReturns, sName, aParams, usesSuper());
                     setComponent(method);
                     }
                 }
