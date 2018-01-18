@@ -86,6 +86,16 @@ public class PropertyInfo
         }
 
     /**
+     * @return this property as it would appear on a class (not on an interface)
+     */
+    public PropertyInfo finalizeNonInterfaceProperty()
+        {
+        return hasField() || isCustomLogic() || getRefAnnotations().length > 0
+                ? this
+                : new PropertyInfo(m_constParent, m_sName, m_type, false, m_aPropAnno, m_aRefAnno, m_fCustom, true);
+        }
+
+    /**
      * @return the container of the property; null iff the peropty is a public or protected property
      *         of the type itself
      */
@@ -96,7 +106,7 @@ public class PropertyInfo
 
     /**
      * @return the property name
-     */
+     */                                 s
     public String getName()
         {
         return m_sName;

@@ -1502,18 +1502,15 @@ public abstract class TypeConstant
                     fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
                     }
 
-                // if the type access is struct, then only include the property if it has a field
-                if (access == Access.STRUCT && !fField)
+                // if the type access is struct, then only include the property if it has a field;
+                // note that just because this property itself does not have a field, that does NOT
+                // imply that it couldn't contain other properties that themselves DO have fields
+                if (access != Access.STRUCT || fField)
                     {
-                    continue;
+                    PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
+                            toArray(listPropAnno), toArray(listRefAnno), fCustomCode, fField);
+                    mapProps.put(sName, propinfo);
                     }
-
-                PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
-                        listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno .toArray(
-                                Annotation.NO_ANNOTATIONS),
-                        fCustomCode, fField);
-                mapProps.put(sName, propinfo);
 
                 for (Component grandchild : child.children())
                     {
@@ -1523,6 +1520,13 @@ public abstract class TypeConstant
                     }
                 }
             }
+        }
+
+    private Annotation[] toArray(List<Annotation> list)
+        {
+        return list == null || list.size() == 0
+                ? Annotation.NO_ANNOTATIONS
+                : list.toArray(new Annotation[list.size()]);
         }
 
     /**
@@ -1561,6 +1565,9 @@ public abstract class TypeConstant
             {
             if (mapProps.putIfAbsent(entry.getKey(), entry.getValue()) == null)
                 {
+                // note that if this is a "implements" composition, that the property will not have
+                // a field at this point, but that will be resolved once all of the compositions
+                // have been applied
                 continue;
                 }
 
@@ -1618,6 +1625,31 @@ public abstract class TypeConstant
 //            }
 //            TypeConstant typeContrib = contrib.getTypeConstant();
 //            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+        }
+
+    protected void finalizeMemberInfo(
+            IdentityConstant                     constId,
+            ClassStructure                       struct,
+            Component.Format                     formatInfo,
+            ParamInfo.TypeResolver               resolver,
+            Map<String           , PropertyInfo> mapProps,
+            Map<PropertyConstant , PropertyInfo> mapScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapMethods,
+            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
+            ErrorListener                        errs)
+        {
+        // process properties
+        if (formatInfo != Component.Format.INTERFACE)
+            {
+            for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
+                {
+                PropertyInfo propinfo = entry.getValue();
+                if (!propinfo.hasField())
+                    {
+                    // TODO figure out how to know if this prop came from an interface and needs a field
+                    }
+                }
+            }
         }
 
 
