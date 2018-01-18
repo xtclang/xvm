@@ -1312,7 +1312,7 @@ public abstract class TypeConstant
                 boolean          fRO          = false;
                 boolean          fField       = false;
                 Access           accessRef    = prop.getAccess();
-                Access           accessVar    = prop.getVarAccess();        // TODO mark's question about "public/private @RO ..."
+                Access           accessVar    = prop.getVarAccess();
                 List<Annotation> listPropAnno = null;
                 List<Annotation> listRefAnno  = null;
                 boolean          fCustomCode  = false;
@@ -2078,16 +2078,8 @@ public abstract class TypeConstant
 
         if (!m_fValidated)
             {
-            // TODO push down
-            if (isModifyingType())
-                {
-                fHalt |= getUnderlyingType().validate(errlist);
-                }
-            if (isRelationalType())
-                {
-                fHalt |= getUnderlyingType2().validate(errlist);
-                }
             fHalt |= super.validate(errlist);
+            fHalt |= isModifyingType() && getUnderlyingType().validate(errlist);
             m_fValidated = true;
             }
 

@@ -5,8 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -14,14 +12,12 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Component;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;

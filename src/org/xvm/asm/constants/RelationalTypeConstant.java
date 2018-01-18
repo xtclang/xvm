@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Op;
 
@@ -421,6 +422,12 @@ public abstract class RelationalTypeConstant
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType1));
         writePackedLong(out, indexOf(m_constType2));
+        }
+
+    @Override
+    public boolean validate(ErrorListener errlist)
+        {
+        return !isValidated() && (super.validate(errlist) | getUnderlyingType2().validate(errlist));
         }
 
 
