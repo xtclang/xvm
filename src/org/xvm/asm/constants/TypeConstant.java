@@ -1312,11 +1312,11 @@ public abstract class TypeConstant
                 boolean          fRO          = false;
                 boolean          fField       = false;
                 Access           accessRef    = prop.getAccess();
-                Access           accessVar    = prop.getVarAccess();
+                Access           accessVar    = prop.getVarAccess();        // TODO mark's question about "public/private @RO ..."
                 List<Annotation> listPropAnno = null;
                 List<Annotation> listRefAnno  = null;
                 boolean          fCustomCode  = false;
-                if (accessRef != Access.STRUCT)
+                if (access != Access.STRUCT)
                     {
                     if (access.ordinal() < accessRef.ordinal())
                         {
@@ -1477,15 +1477,7 @@ public abstract class TypeConstant
                     // determine if the get explicitly calls super, or explicitly blocks super
                     boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
                     boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
-                    boolean fGetBlocksSuper = methodGet != null && !fGetSupers && !methodGet.isAbstract();
-
-                    // we assume a field if @Inject is not specified, @RO is not specified,
-                    // @Override is not specified, and get() doesn't block going to its super
-                    fField |= !fHasInject && !fHasRO && !fHasOverride && !fGetBlocksSuper;
-
-                    // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
-                    // super and no set() (or Var-implying annotations)
-                    fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
+                    boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
 
                     if (fHasRO && (fSetSupers || fHasVarAnno))
                         {
@@ -1500,6 +1492,14 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
                                 getValueString(), sName);
                         }
+
+                    // we assume a field if @Inject is not specified, @RO is not specified,
+                    // @Override is not specified, and get() doesn't block going to its super
+                    fField |= !fHasInject && !fHasRO && !fHasOverride && !fGetBlocksSuper;
+
+                    // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
+                    // super and no set() (or Var-implying annotations)
+                    fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
                     }
 
                 // if the type access is struct, then only include the property if it has a field
