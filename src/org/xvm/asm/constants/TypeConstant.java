@@ -1510,7 +1510,8 @@ public abstract class TypeConstant
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno .toArray(
+                                Annotation.NO_ANNOTATIONS),
                         fCustomCode, fField);
                 mapProps.put(sName, propinfo);
 
@@ -2077,7 +2078,16 @@ public abstract class TypeConstant
 
         if (!m_fValidated)
             {
-            fHalt       |= super.validate(errlist);
+            // TODO push down
+            if (isModifyingType())
+                {
+                fHalt |= getUnderlyingType().validate(errlist);
+                }
+            if (isRelationalType())
+                {
+                fHalt |= getUnderlyingType2().validate(errlist);
+                }
+            fHalt |= super.validate(errlist);
             m_fValidated = true;
             }
 
