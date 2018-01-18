@@ -495,7 +495,7 @@ public class CommandLine
             }
         catch (CompilerException e)
             {
-            System.out.println(errlist.getErrors());
+            System.err.println(errlist.getErrors());
             deferred.add("xtc: An exception occurred parsing \"" + file + "\": " + e);
             }
         catch (IOException e)
@@ -791,14 +791,14 @@ public class CommandLine
             {
             for (String s : deferred)
                 {
-                out(s);
+                err(s);
                 }
             }
 
         // determine if the errors are bad enough to quit
         if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
             {
-            out("xtc: Terminating.");
+            err("xtc: Terminating.");
             System.exit(1);
             throw new IllegalStateException();
             }
@@ -815,11 +815,11 @@ public class CommandLine
             ErrorList errs = (ErrorList) compiler.getErrorListener();
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
-                out("xtc: Errors in " + compiler.getModule().getName());
+                err("xtc: Errors in " + compiler.getModule().getName());
                 int i = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    out(" [" + (i++) + "] " + err);
+                    err(" [" + (i++) + "] " + err);
                     }
 
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
@@ -1233,11 +1233,11 @@ public class CommandLine
             {
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
-                out("xtc: Errors in " + descriptiveName());
+                err("xtc: Errors in " + descriptiveName());
                 int i = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    out(" [" + (i++) + "] " + err);
+                    err(" [" + (i++) + "] " + err);
                     }
 
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
@@ -1406,6 +1406,22 @@ public class CommandLine
      * Print the String value of some object to the terminal.
      */
     public static void out(Object o)
+        {
+        System.out.println(o);
+        }
+
+    /**
+     * Print a blank line to the terminal.
+     */
+    public static void err()
+        {
+        err("");
+        }
+
+    /**
+     * Print the String value of some object to the terminal.
+     */
+    public static void err(Object o)
         {
         System.err.println(o);
         }
