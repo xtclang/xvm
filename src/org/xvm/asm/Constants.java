@@ -305,7 +305,7 @@ public interface Constants
      */
     public static final String VE_PROPERTY_READONLY_NOT_VAR          = "VERIFY-48";
     /**
-     * {0} contains an @RO property {1} that has a "set()" that uses "super", or a Var annotation.
+     * {0} contains an @Inject property {1} that has a "set()" that uses "super", or a Var annotation.
      */
     public static final String VE_PROPERTY_INJECT_NOT_VAR            = "VERIFY-49";
 
