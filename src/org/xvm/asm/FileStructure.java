@@ -801,8 +801,20 @@ public class FileStructure
         dumpChildren(out, sIndent);
         }
 
+    @Override
+    public ErrorListener getErrorListener()
+        {
+        return m_errs == null ? ErrorListener.RUNTIME : m_errs;
+        }
 
-    // ----- Object methods ----------------------------------------------------
+    @Override
+    public void setErrorListener(ErrorListener errs)
+        {
+        m_errs = errs;
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int hashCode()
@@ -889,4 +901,6 @@ public class FileStructure
      * specification that the binary was assembled with. Otherwise, it is the current version.
      */
     private int nMinorVer;
+
+    private transient ErrorListener m_errs;
     }
