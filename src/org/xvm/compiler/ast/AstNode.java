@@ -191,6 +191,14 @@ public abstract class AstNode
         }
 
     /**
+     * @return true iff this AstNode (or an AstNode that it contains) references "super"
+     */
+    protected boolean usesSuper()
+        {
+        return false;
+        }
+
+    /**
      * @return the constant pool
      */
     protected ConstantPool pool()

@@ -62,10 +62,11 @@ public class MethodStructure
      * @param annotations  an array of Annotations
      * @param aReturns     an array of Parameters representing the "out" values
      * @param aParams      an array of Parameters representing the "in" values
+     * @param fUsesSuper   true indicates that the method is known to reference "super"
      */
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
             ConditionalConstant condition,
-            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams)
+            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams, boolean fUsesSuper)
         {
         this(xsParent, nFlags, constId, condition);
 
@@ -91,6 +92,7 @@ public class MethodStructure
                 }
             }
         m_cTypeParams = cTypeParams;
+        m_FUsesSuper  = fUsesSuper;
         }
 
 
@@ -300,6 +302,7 @@ public class MethodStructure
         resetRuntimeInfo();
         m_fAbstract   = false;
         m_fNative     = false;
+        m_FUsesSuper  = null;
         m_aconstLocal = null;
         m_abOps       = null;
         m_code = code = new Code();
@@ -344,6 +347,7 @@ public class MethodStructure
         m_code        = new Code(aop);
         m_fAbstract   = false;
         m_fNative     = false;
+        m_FUsesSuper  = null;
         markModified();
         }
 
@@ -464,6 +468,68 @@ public class MethodStructure
         }
 
     /**
+     * Determine if this method might act as a {@code Ref.get()}, aka a "getter".
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value
+     */
+    public boolean isPotentialGetter()
+        {
+        return getName().equals("get")
+                && getAccess() == Access.PUBLIC
+                && getReturnCount() == 1 && getParamCount() == 0
+                && !isFunction() && !isConditionalReturn();
+        }
+
+    /**
+     * Determine if this method is declared in a way that it could act as a {@code Ref.get()} for
+     * the specified type.
+     *
+     * @param type      the RefType of the reference
+     * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
+     *                  and the types in the signature if necessary
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value of the specified type
+     */
+    public boolean isGetter(TypeConstant type, GenericTypeResolver resolver)
+        {
+        return isPotentialGetter() && (getReturn(0).getType().equals(type) || resolver != null &&
+                getReturn(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
+        }
+
+    /**
+     * Determine if this method might act as a {@code Ref.set()}, aka a "setter".
+     *
+     * @return true iff this method is a public method (not function) named "set" that takes one
+     *         parameter and returns no value
+     */
+    public boolean isPotentialSetter()
+        {
+        return getName().equals("set")
+                && getAccess() == Access.PUBLIC
+                && getReturnCount() == 0 && getParamCount() == 1
+                && !isFunction() && !isConditionalReturn();
+        }
+
+    /**
+     * Determine if this method is declared in a way that it could act as a {@code Ref.set()} for
+     * the specified type.
+     *
+     * @param type      the RefType of the reference
+     * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
+     *                  and the types in the signature if necessary
+     *
+     * @return true iff this method is a public method (not function) named "set" that takes one
+     *         parameter of the specified type and returns no value
+     */
+    public boolean isSetter(TypeConstant type, GenericTypeResolver resolver)
+        {
+        return isPotentialSetter() && (getParam(0).getType().equals(type) || resolver != null &&
+                    getParam(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
+        }
+
+    /**
      * @deprecated
      */
     public MethodStructure getConstructFinally()
@@ -484,10 +550,20 @@ public class MethodStructure
     /**
      * Indicates whether or not this method contains a call to its super.
      */
-    public boolean isSuperCalled()
+    public boolean usesSuper()
         {
-        // TODO: the compiler would supply this information
-        return getAccess() != Access.PRIVATE;
+        if (m_FUsesSuper != null)
+            {
+            return m_FUsesSuper;
+            }
+
+        Code code = ensureCode();
+        if (code == null)
+            {
+            return false;
+            }
+
+        return m_FUsesSuper = code.usesSuper();
         }
 
     /**
@@ -1368,6 +1444,11 @@ public class MethodStructure
      * structure; it exists only to support the prototype interpreter implementation.
      */
     private transient boolean m_fNative;
+
+    /**
+     * Cached information about whether this method uses its super.
+     */
+    private transient Boolean m_FUsesSuper;
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a

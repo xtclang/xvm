@@ -38,6 +38,20 @@ public abstract class Statement
     {
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    protected boolean usesSuper()
+        {
+        for (AstNode node : children())
+            {
+            if (!(node instanceof ComponentStatement) && node.usesSuper())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
     /**
      * @return the label corresponding to the beginning of the Statement
      */
@@ -83,6 +97,7 @@ public abstract class Statement
         {
         Label getContinueLabel();
         }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

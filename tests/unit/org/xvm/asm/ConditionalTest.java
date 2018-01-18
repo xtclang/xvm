@@ -84,7 +84,8 @@ public class ConditionalTest
         ModuleStructure     module = file.getModule();
         ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util", null);
         PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util", null);
-        MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC, null, new Parameter[]{}, "foo", new Parameter[]{});
+        MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC, null, new Parameter[]{}, "foo", new Parameter[]{},
+                true);
 
         // module is both v1 and v2
         module.setCondition(condVB);

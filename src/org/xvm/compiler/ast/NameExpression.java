@@ -21,6 +21,7 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
 
@@ -50,6 +51,19 @@ public class NameExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected boolean usesSuper()
+        {
+        for (Token token : names)
+            {
+            if (token.getId() == Id.SUPER)
+                {
+                return true;
+                }
+            }
+        return false;
+        }
 
     @Override
     public boolean validateCondition(ErrorListener errs)
