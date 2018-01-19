@@ -31,7 +31,8 @@ public class PropertyInfo
      *                       underlying Ref/Var implementation
      */
     public PropertyInfo(Constant constParent, String sName, TypeConstant type, boolean fRO,
-            Annotation[] aPropAnno, Annotation[] aRefAnno, boolean fCustomCode, boolean fReqField)
+            Annotation[] aPropAnno, Annotation[] aRefAnno, boolean fCustomCode, boolean fReqField,
+            boolean fAbstract)
         {
         assert sName != null;
         assert type != null;
@@ -82,17 +83,8 @@ public class PropertyInfo
                 this.getPropertyAnnotations(),              // property annotations NOT inherited
                 mergeAnnotations(this.getRefAnnotations(), that.getRefAnnotations()),
                 this.isCustomLogic() | that.isCustomLogic(),// custom logic if either is custom
-                this.hasField() | that.hasField());         // field present if either has field
-        }
-
-    /**
-     * @return this property as it would appear on a class (not on an interface)
-     */
-    public PropertyInfo finalizeNonInterfaceProperty()
-        {
-        return hasField() || isCustomLogic() || getRefAnnotations().length > 0
-                ? this
-                : new PropertyInfo(m_constParent, m_sName, m_type, false, m_aPropAnno, m_aRefAnno, m_fCustom, true);
+                this.hasField() | that.hasField(),          // field present if either has field
+                this.isAbstract() & that.isAbstract());     // field present if either has field
         }
 
     /**
@@ -106,7 +98,7 @@ public class PropertyInfo
 
     /**
      * @return the property name
-     */                                 s
+     */
     public String getName()
         {
         return m_sName;
@@ -167,6 +159,14 @@ public class PropertyInfo
     public boolean isCustomLogic()
         {
         return m_fCustom;
+        }
+
+    /**
+     * @return true iff the property is abstract, which means that it comes from an interface
+     */
+    public boolean isAbstract()
+        {
+        return m_fAbstract;
         }
 
     @Override
@@ -286,4 +286,9 @@ public class PropertyInfo
      * True iff the property requires a field.
      */
     private boolean m_fField;
+
+    /**
+     * True iff the property is abstract, such as when it is on an interface.
+     */
+    private boolean m_fAbstract;
     }

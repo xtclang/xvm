@@ -1234,6 +1234,9 @@ public abstract class TypeConstant
                 }
             }
 
+        finalizeMemberInfo(constId, struct, formatInfo, resolver,
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+
         return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto,
                 listmapClassChain, listmapDefaultChain,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods);
@@ -1266,8 +1269,6 @@ public abstract class TypeConstant
         {
         ConstantPool pool       = getConstantPool();
         boolean      fInterface = formatInfo == Component.Format.INTERFACE;
-        boolean      fMixin     = formatInfo == Component.Format.MIXIN;
-        boolean      fClass     = !fInterface & !fMixin;
         Access       access     = getAccess();
 
         // add the properties and methods from "struct"
@@ -1308,9 +1309,10 @@ public abstract class TypeConstant
                     }
 
                 // determine whether the property is accessible, whether the property is read-only,
-                // and whether the property has a field
+                // whether the property has a field, and whether the property is "abstract"
                 boolean          fRO          = false;
                 boolean          fField       = false;
+                boolean          fAbstract    = false;
                 Access           accessRef    = prop.getAccess();
                 Access           accessVar    = prop.getVarAccess();
                 List<Annotation> listPropAnno = null;
@@ -1332,6 +1334,7 @@ public abstract class TypeConstant
                 boolean fHasVarAnno  = false;
                 boolean fHasInject   = false;
                 boolean fHasRO       = false;
+                boolean fHasAbstract = false;
                 boolean fHasOverride = false;
                 for (Contribution contrib : prop.getContributionsAsList())
                     {
@@ -1378,6 +1381,7 @@ public abstract class TypeConstant
                             listPropAnno.add(annotation);
 
                             fHasRO       |= constMixin.equals(pool.clzRO());
+                            fHasAbstract |= constMixin.equals(pool.clzAbstract());
                             fHasOverride |= constMixin.equals(pool.clzOverride());
                             }
                         }
@@ -1469,8 +1473,9 @@ public abstract class TypeConstant
                                 getValueString(), sName);
                         }
 
-                    fRO    |= fHasRO;
-                    fField  = false;
+                    fRO      |= fHasRO;
+                    fField    = false;
+                    fAbstract = true;
                     }
                 else
                     {
@@ -1495,20 +1500,24 @@ public abstract class TypeConstant
 
                     // we assume a field if @Inject is not specified, @RO is not specified,
                     // @Override is not specified, and get() doesn't block going to its super
-                    fField |= !fHasInject && !fHasRO && !fHasOverride && !fGetBlocksSuper;
+                    fField = !fHasInject && !fHasRO && !fHasAbstract && !fHasOverride && !fGetBlocksSuper;
 
                     // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
                     // super and no set() (or Var-implying annotations)
                     fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
+
+                    // it is possible to explicitly declare a property as abstract; this is unusual,
+                    // but it does mean that we have to defer the field decision
+                    fAbstract |= fHasAbstract;
                     }
 
                 // if the type access is struct, then only include the property if it has a field;
                 // note that just because this property itself does not have a field, that does NOT
                 // imply that it couldn't contain other properties that themselves DO have fields
-                if (access != Access.STRUCT || fField)
+                if (access != Access.STRUCT | fField)
                     {
                     PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
-                            toArray(listPropAnno), toArray(listRefAnno), fCustomCode, fField);
+                            toArray(listPropAnno), toArray(listRefAnno), fCustomCode, fField, fAbstract);
                     mapProps.put(sName, propinfo);
                     }
 
@@ -1638,15 +1647,33 @@ public abstract class TypeConstant
             Map<MethodConstant   , MethodInfo  > mapScopedMethods,
             ErrorListener                        errs)
         {
+        // go through the members to determine if this is abstract
+        boolean fAbstract = formatInfo == Component.Format.INTERFACE
+                // TODO "or the type itself was annotated with @Abstract"
+                || mapProps.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
+                || mapScopedProps.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
+                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
+                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract());
+
         // process properties
-        if (formatInfo != Component.Format.INTERFACE)
+        if (formatInfo != Component.Format.INTERFACE) // TODO ... and not abstract
             {
             for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
                 {
                 PropertyInfo propinfo = entry.getValue();
-                if (!propinfo.hasField())
+                if (!propinfo.isAbstract())
                     {
-                    // TODO figure out how to know if this prop came from an interface and needs a field
+                    // TODO this has to figure out whether or not the property needs a field
+                    entry.setValue(new PropertyInfo(
+                            propinfo.getParent(),
+                            propinfo.getName(),
+                            propinfo.getType(),
+                            false,
+                            propinfo.getPropertyAnnotations(),
+                            propinfo.getRefAnnotations(),
+                            propinfo.isCustomLogic(),
+                            propinfo.hasField(),
+                            false));
                     }
                 }
             }
