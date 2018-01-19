@@ -106,7 +106,7 @@ public class PropertyInfo
 
     /**
      * @return the property name
-     */                                 s
+     */
     public String getName()
         {
         return m_sName;
