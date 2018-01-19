@@ -69,10 +69,10 @@ public class TypeComposition
     private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
 
     // cached property getter call chain (the top-most method first)
-    private Map<String, PropertyCallChain> m_mapGetters = new HashMap<>();
+    private Map<String, CallChain> m_mapGetters = new HashMap<>();
 
     // cached property setter call chain (the top-most method first)
-    private Map<String, PropertyCallChain> m_mapSetters = new HashMap<>();
+    private Map<String, CallChain> m_mapSetters = new HashMap<>();
 
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
@@ -366,7 +366,7 @@ public class TypeComposition
 
             TypeComposition clzInto = f_template.f_templates.resolveClass(typeInto);
 
-            addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
+            addNoDupes(clzInto.collectDeclaredCallChain(true), list, set);
             }
 
         // 1.3
@@ -521,6 +521,7 @@ public class TypeComposition
     // retrieve the call chain for the specified method
     public CallChain getMethodCallChain(SignatureConstant constSignature, Access access)
         {
+        // TODO: this will be replaced whit the TypeInfo
         // we only cache the PUBLIC access chains; all others are only cached at the op-code level
         return access == Access.PUBLIC
             ? m_mapMethods.computeIfAbsent(constSignature, sig -> collectMethodCallChain(sig, access))
@@ -571,19 +572,21 @@ public class TypeComposition
         return new CallChain(list);
         }
 
-    public PropertyCallChain getPropertyGetterChain(String sProperty)
+    public CallChain getPropertyGetterChain(String sProperty)
         {
+        // TODO: this will be replaced whit the TypeInfo
         return m_mapGetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, true));
         }
 
-    public PropertyCallChain getPropertySetterChain(String sProperty)
+    public CallChain getPropertySetterChain(String sProperty)
         {
+        // TODO: this will be replaced whit the TypeInfo
         return m_mapSetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, false));
         }
 
-    protected PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
+    protected CallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
         PropertyStructure propertyBase = null;
         List<MethodStructure> list = new ArrayList<>();
@@ -602,11 +605,6 @@ public class TypeComposition
                     MethodStructure method = mms.methods().get(0);
 
                     list.add(method);
-
-                    if (!method.usesSuper())
-                        {
-                        break;
-                        }
                     }
 
                 if (template.isStateful())

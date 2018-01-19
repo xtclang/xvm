@@ -16,7 +16,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -66,7 +65,7 @@ public class Service
 
         ServiceHandle hService = makeHandle(context, clazz, clazz.getType());
 
-        setFieldValue(hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
+        setFieldValue(frame, hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
 
         return hService;
         }
@@ -207,7 +206,8 @@ public class Service
         }
 
     @Override
-    public ExceptionHandle setFieldValue(ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
+    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyStructure property,
+                             ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -216,7 +216,7 @@ public class Service
 
         if (context == null || context == contextCurrent || isAtomic(property))
             {
-            return super.setFieldValue(hTarget, property, hValue);
+            return super.setFieldValue(frame, hTarget, property, hValue);
             }
 
         throw new IllegalStateException("Invalid context");

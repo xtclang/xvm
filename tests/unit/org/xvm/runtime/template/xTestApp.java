@@ -335,7 +335,7 @@ public class xTestApp extends xModule
             .add(new Invoke_01(1, adapter.getMethodConstId("Ref", "get"), 2)) // next register #2
             .add(new X_Print(2))
             .add(new Invoke_10(1, adapter.getMethodConstId("Var", "set"),
-                    adapter.ensureValueConstantId("bye")))
+                adapter.ensureValueConstantId("bye")))
             .add(new X_Print(0))
 
             .add(new Var_N(adapter.getClassTypeConstId("Var<Int64>"),
@@ -349,8 +349,7 @@ public class xTestApp extends xModule
             .add(new MoveVar(4, 5))
             .add(new MoveVar(4, 3))
 
-            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"),
-                6)) // next register #6
+            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 6)) // next register #6
             .add(new X_Print(6))
 
             .add(new Invoke_10(3, adapter.getMethodConstId("Var", "set"),
@@ -361,9 +360,41 @@ public class xTestApp extends xModule
             .add(new X_Print(5))
             .add(new Exit())
 
-            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"),
-                4)) // next register #4
+            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 4)) // next register #4
             .add(new X_Print(4))
+
+            .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestClass"),
+                adapter.ensureValueConstantId("tc")))  // #5 (tc)
+            .add(new New_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
+                adapter.ensureValueConstantId("before"), 5))
+
+            .add(new Var_N(adapter.getClassTypeConstId("Var<String>"),
+                adapter.ensureValueConstantId("rp")))  // #6 (rp)
+            .add(new P_Var(adapter.getPropertyConstId("TestApp.TestClass", "prop1"), 5, 6))
+            .add(new X_Print(6))
+
+            .add(new Invoke_10(6, adapter.getMethodConstId("Var", "set"),
+                adapter.ensureValueConstantId("after")))
+            .add(new X_Print(5))
+
+            .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestService"),
+                adapter.ensureValueConstantId("svc")))  // #7 (svc)
+            .add(new New_1(adapter.getMethodConstId("TestApp.TestService", "construct"),
+                adapter.ensureValueConstantId(48), 7))
+
+            .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter"), 7, 3))
+
+            .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 8)) // next register #8
+            .add(new X_Print(8))
+
+            .add(new Var_N(adapter.getClassTypeConstId("annotations.AtomicIntNumber"),
+                adapter.ensureValueConstantId("ari")))  // #9 (ari)
+            .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 7, 9))
+            .add(new X_Print(9))
+
+            .add(new Invoke_N0(9, adapter.getMethodConstId("annotations.AtomicVar", "replace"),
+                new int[] {adapter.ensureValueConstantId(5), adapter.ensureValueConstantId(6)}))
+            .add(new X_Print(9))
 
             .add(new Return_0());
 

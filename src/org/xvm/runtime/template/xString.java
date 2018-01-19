@@ -15,6 +15,7 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.Ref.RefHandle;
 
 /**
  * TODO:
@@ -161,6 +162,22 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+    @Override
+    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+        {
+        if (sPropName.equals("size"))
+            {
+            if (fRO)
+                {
+                TypeComposition clzRef = Ref.INSTANCE.ensureParameterizedClass(hTarget.getType());
+                return new RefHandle(clzRef, hTarget, sPropName);
+                }
+            throw new IllegalStateException("Read-only property : String.size");
+            }
+        throw new IllegalStateException("Unknown property : String." + sPropName);
+        }
+
+
     // ----- comparison support -----
 
     @Override
@@ -171,7 +188,7 @@ public class xString
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
+            xBoolean.makeHandle(h1.getValue().equals(h2.getValue())));
         }
 
     @Override
@@ -182,14 +199,14 @@ public class xString
         StringHandle h2 = (StringHandle) hValue2;
 
         return frame.assignValue(iReturn,
-                xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
+            xOrdered.makeHandle(h1.getValue().compareTo(h2.getValue())));
         }
 
     @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
-                xInt64.makeHandle(((StringHandle) hTarget).getValue().hashCode()));
+            xInt64.makeHandle(((StringHandle) hTarget).getValue().hashCode()));
         }
 
     @Override

@@ -326,18 +326,20 @@ class TestApp
             }
         print(ri.get());
 
-        TestClass t = new TestClass("before");
-        Var<String> rp = &t.prop1;
+        TestClass tc = new TestClass("before");
+        Var<String> rp = &tc.prop1;
         print(rp);
         rp.set("after");
-        print(t);
+        print(tc);
 
         TestService svc = new TestService();
         ri = &svc.counter;
-        print(ri.get());
+        ri.get();
+        print(ri);
 
         AtomicVar<Int> ari = &svc.counter2;
-        print(ari.replace(1, 2));
+        ari.replace(5, 6);
+        print(ari);
         }
 
     static String lambda_2(Var<Int> i)

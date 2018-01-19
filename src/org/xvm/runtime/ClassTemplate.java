@@ -22,14 +22,13 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.CallChain.PropertyCallChain;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.Const;
 import org.xvm.runtime.template.Enum;
 import org.xvm.runtime.template.Enum.EnumHandle;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
+import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.Service;
 import org.xvm.runtime.template.collections.xTuple;
@@ -40,6 +39,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.xVar;
 
 
 /**
@@ -702,8 +702,7 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        PropertyCallChain chain = hTarget.getComposition().
-            getPropertyGetterChain(sPropName);
+        CallChain chain = hTarget.getComposition().getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
@@ -720,7 +719,7 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
-    public int getFieldValue(Frame frame, ObjectHandle hTarget,
+    protected int getFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, int iReturn)
         {
         if (property == null)
@@ -762,12 +761,9 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
-        if (isRef(property))
-            {
-            return ((RefHandle) hValue).get(frame, Frame.RET_LOCAL);
-            }
-
-        return frame.assignValue(iReturn, hValue);
+        return isRef(property)
+            ? ((RefHandle) hValue).get(frame, iReturn)
+            : frame.assignValue(iReturn, hValue);
         }
 
     // set a property value
@@ -778,45 +774,40 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        PropertyCallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
         PropertyStructure property = chain.getProperty();
 
-        ExceptionHandle hException = null;
         if (!hTarget.isMutable())
             {
-            hException = xException.makeHandle("Immutable object: " + hTarget);
+            return frame.raiseException(
+                xException.makeHandle("Immutable object: " + hTarget));
             }
-        else if (isCalculated(property))
+
+        if (isCalculated(property))
             {
-            hException = xException.makeHandle("Read-only property: " + property.getName());
+            return frame.raiseException(
+                xException.makeHandle("Read-only property: " + property.getName()));
             }
 
-        if (hException == null)
+        if (isNativeSetter(property))
             {
-            if (isNativeSetter(property))
-                {
-                return invokeNativeSet(frame, hTarget, property, hValue);
-                }
-
-            MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
-            if (method == null)
-                {
-                hException = setFieldValue(hTarget, property, hValue);
-                }
-            else
-                {
-                ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
-                ahVar[0] = hValue;
-
-                return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
-                }
+            return invokeNativeSet(frame, hTarget, property, hValue);
             }
 
-        return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+        MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
+        if (method == null)
+            {
+            return setFieldValue(frame, hTarget, property, hValue);
+            }
+
+        ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
+        ahVar[0] = hValue;
+
+        return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
-    public ExceptionHandle setFieldValue(ObjectHandle hTarget,
-                                         PropertyStructure property, ObjectHandle hValue)
+    protected int setFieldValue(Frame frame, ObjectHandle hTarget,
+                             PropertyStructure property, ObjectHandle hValue)
         {
         if (property == null)
             {
@@ -829,11 +820,39 @@ public abstract class ClassTemplate
 
         if (isRef(property))
             {
-            return ((RefHandle) hThis.m_mapFields.get(property.getName())).set(hValue);
+            return ((RefHandle) hThis.m_mapFields.get(property.getName())).set(frame, hValue);
             }
 
         hThis.m_mapFields.put(property.getName(), hValue);
-        return null;
+        return Op.R_NEXT;
+        }
+
+    // create a property ref for the specified target and property
+    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+        {
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        if (!hThis.m_mapFields.containsKey(sPropName))
+            {
+            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + sPropName);
+            }
+
+        // TODO: this is an overkill; we should get the property in an easier way
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
+        PropertyStructure property = chain.getProperty();
+
+        if (isRef(property))
+            {
+            return ((RefHandle) hThis.m_mapFields.get(sPropName));
+            }
+
+        TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());
+
+        TypeComposition clzRef = fRO
+            ? Ref.INSTANCE.ensureParameterizedClass(typeReferent)
+            : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
+
+        return new RefHandle(clzRef, hThis, sPropName);
         }
 
     // ----- support for equality and comparison ------

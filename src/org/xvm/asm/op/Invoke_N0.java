@@ -102,6 +102,8 @@ public class Invoke_N0
 
             if (isProperty(hTarget))
                 {
+                // we won't know the number of method vars until later,
+                // will have to resize the arg array then
                 ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
                 if (ahArg == null)
                     {

@@ -125,9 +125,22 @@ public class Var_DN
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {
                 // prime the injection (fail fast)
-                if (hRef.get(frame, Frame.RET_UNUSED) == R_EXCEPTION)
+                switch (hRef.get(frame, Frame.RET_UNUSED))
                     {
-                    return R_EXCEPTION;
+                    case R_NEXT:
+                        break;
+
+                    case R_CALL:
+                        throw new IllegalStateException("Injected ref's get() must be fully native");
+
+                    case R_BLOCK:
+                        throw new IllegalStateException("Injected ref's get() must be synchronous");
+
+                    case R_EXCEPTION:
+                        return R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
                     }
 
                 m_ref = hRef;

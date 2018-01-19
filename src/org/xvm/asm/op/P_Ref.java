@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
-
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
@@ -23,37 +22,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * P_VAR PROPERTY, rvalue-target, lvalue ; move Var-to-property to destination
+ * P_REF PROPERTY, rvalue-target, lvalue ; move Ref-to-property to destination
  */
-public class P_Var
+public class P_Ref
         extends OpProperty
     {
     /**
-     * Construct a P_VAR op.
-     *
-     * @param nPropId  the property to get
-     * @param nTarget  the target object
-     * @param nRet     the location to store the result
-     *
-     * @deprecated
-     */
-    public P_Var(int nPropId, int nTarget, int nRet)
-        {
-        super(null);
-
-        m_nPropId = nPropId;
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
-     * Construct a P_VAR op based on the specified arguments.
+     * Construct a P_REF op based on the specified arguments.
      *
      * @param constProperty  the property constant
      * @param argTarget      the target Argument
      * @param argReturn      the return Argument
      */
-    public P_Var(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    public P_Ref(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
         super(constProperty);
 
@@ -67,7 +48,7 @@ public class P_Var
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public P_Var(DataInput in, Constant[] aconst)
+    public P_Ref(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -95,7 +76,7 @@ public class P_Var
     @Override
     public int getOpCode()
         {
-        return OP_P_VAR;
+        return OP_P_REF;
         }
 
     @Override
@@ -129,7 +110,7 @@ public class P_Var
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
         RefHandle hRef = hTarget.getTemplate().
-            createPropertyRef(hTarget, constProperty.getName(), false);
+            createPropertyRef(hTarget, constProperty.getName(), true);
 
         if (frame.isNextRegister(m_nRetValue))
             {
@@ -143,12 +124,6 @@ public class P_Var
     public void simulate(Scope scope)
         {
         checkNextRegister(scope, m_argReturn);
-
-        // TODO: remove when deprecated construction is removed
-        if (scope.isNextRegister(m_nRetValue))
-            {
-            scope.allocVar();
-            }
         }
 
     @Override
