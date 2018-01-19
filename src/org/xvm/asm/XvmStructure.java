@@ -464,7 +464,39 @@ public abstract class XvmStructure
     protected boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam)
         {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        return (errs == null ? ErrorListener.RUNTIME : errs).log(sev, sCode, aoParam, this);
+        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+        }
+
+
+    /**
+     * Make sure that an error listener is returned to use.
+     *
+     * @param  errs  an error listener, or null
+     *
+     * @return the error listener passed in, if it was not null, otherwise the previously specified
+     *         error listener, otherwise the runtime error listener
+     */
+    public ErrorListener ensureErrorListener(ErrorListener errs)
+        {
+        return errs == null ? getErrorListener() : errs;
+        }
+
+    /**
+     * @return the error listener, if provided, otherwise the runtime error listener
+     */
+    public ErrorListener getErrorListener()
+        {
+        return m_xsParent.getErrorListener();
+        }
+
+    /**
+     * Specify an error listener.
+     *
+     * @param errs  the error listener
+     */
+    public void setErrorListener(ErrorListener errs)
+        {
+        m_xsParent.setErrorListener(errs);
         }
 
 

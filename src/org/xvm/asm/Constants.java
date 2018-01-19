@@ -269,9 +269,45 @@ public interface Constants
      */
     public static final String VE_PROPERTY_ANNOTATION_INCOMPATIBLE   = "VERIFY-39";
     /**
-     * The {0} property on {1} is annotated by the ReadOnly mix-in, which is only used for properties declared on an interface.
+     * The "get()" method on the {1} property on {0} is ambiguous.
      */
-    public static final String VE_PROPERTY_RO_IGNORED                = "VERIFY-40";
+    public static final String VE_PROPERTY_GET_AMBIGUOUS             = "VERIFY-40";
+    /**
+     * The "get()" method on the {1} property on {0} does not match the property type.
+     */
+    public static final String VE_PROPERTY_GET_INCOMPATIBLE          = "VERIFY-41";
+    /**
+     * The "set()" method on the {1} property on {0} is ambiguous.
+     */
+    public static final String VE_PROPERTY_SET_AMBIGUOUS             = "VERIFY-42";
+    /**
+     * The "set()" method on the {1} property on {0} does not match the property type.
+     */
+    public static final String VE_PROPERTY_SET_INCOMPATIBLE          = "VERIFY-43";
+    /**
+     * Interface {0} contains an illegal property declaration for {1}: Interface properties cannot include an implementation.
+     */
+    public static final String VE_INTERFACE_PROPERTY_IMPLEMENTED     = "VERIFY-44";
+    /**
+     * Interface {0} contains an illegal property declaration for {1}: Interface properties cannot include Ref or Var annotations.
+     */
+    public static final String VE_INTERFACE_PROPERTY_ANNOTATED       = "VERIFY-45";
+    /**
+     * Interface {0} contains an illegal property declaration for {1}: Interface properties must not specify @Inject.
+     */
+    public static final String VE_INTERFACE_PROPERTY_INJECTED        = "VERIFY-46";
+    /**
+     * Interface {0} contains an illegal property declaration for {1}: Interface properties must not specify @Override.
+     */
+    public static final String VE_INTERFACE_PROPERTY_OVERRIDDEN      = "VERIFY-47";
+    /**
+     * {0} contains an @RO property {1} that has a "set()" that uses "super", or a Var annotation.
+     */
+    public static final String VE_PROPERTY_READONLY_NOT_VAR          = "VERIFY-48";
+    /**
+     * {0} contains an @Inject property {1} that has a "set()" that uses "super", or a Var annotation.
+     */
+    public static final String VE_PROPERTY_INJECT_NOT_VAR            = "VERIFY-49";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

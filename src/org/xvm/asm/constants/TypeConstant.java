@@ -551,7 +551,7 @@ public abstract class TypeConstant
      */
     public TypeInfo getTypeInfo()
         {
-        return ensureTypeInfo(ErrorListener.RUNTIME);
+        return ensureTypeInfo(getErrorListener());
         }
 
     /**
@@ -1308,29 +1308,15 @@ public abstract class TypeConstant
                     }
 
                 // determine whether the property is accessible, whether the property is read-only,
-                // and whether the property has a field:
-                // - a property on an interface does not have a field
-                // - a property on an interface with "@RO" is read-only
-                // - a property NOT on an interface with "@RO" is a warning
-                // - a property with "@Override" does NOT have a field (at this level); i.e. it
-                //   defers to its super TODO
-                // - if the type access is public or protected, the property could be read-only
-                //   because there is access to the Ref, but not the Var (e.g. "public/private")
-                // - a property that overrides get (but not set) and does not call super does not
-                //   have a field, and is read-only TODO
-                // - a property that overrides get and set and does not call super does not
-                //   have a field TODO
-                // - if the type access is struct, then only include the property if it has a field
-                // - it is an error for a property with a field to have a set that does not call
-                //   super TODO
+                // and whether the property has a field
+                boolean          fRO          = false;
+                boolean          fField       = false;
                 Access           accessRef    = prop.getAccess();
                 Access           accessVar    = prop.getVarAccess();
-                boolean          fRO          = false;
                 List<Annotation> listPropAnno = null;
                 List<Annotation> listRefAnno  = null;
                 boolean          fCustomCode  = false;
-                boolean          fField       = false;
-                if (accessRef != Access.STRUCT)
+                if (access != Access.STRUCT)
                     {
                     if (access.ordinal() < accessRef.ordinal())
                         {
@@ -1342,6 +1328,9 @@ public abstract class TypeConstant
                     }
 
                 // sort annotations into Ref/Var annotations and Property annotations
+                boolean fHasRefAnno  = false;
+                boolean fHasVarAnno  = false;
+                boolean fHasInject   = false;
                 boolean fHasRO       = false;
                 boolean fHasOverride = false;
                 for (Contribution contrib : prop.getContributionsAsList())
@@ -1375,6 +1364,10 @@ public abstract class TypeConstant
                                 listRefAnno = new ArrayList<>();
                                 }
                             listRefAnno.add(annotation);
+
+                            fHasRefAnno   = true;
+                            fHasVarAnno  |= typeInto.isA(pool.typeVar());
+                            fHasInject   |= constMixin.equals(pool.clzInject());
                             }
                         else
                             {
@@ -1383,15 +1376,14 @@ public abstract class TypeConstant
                                 listPropAnno = new ArrayList<>();
                                 }
                             listPropAnno.add(annotation);
-                            }
 
-                        fHasRO       |= constMixin.equals(pool.clzRO());
-                        fHasOverride |= constMixin.equals(pool.clzOverride());
+                            fHasRO       |= constMixin.equals(pool.clzRO());
+                            fHasOverride |= constMixin.equals(pool.clzOverride());
+                            }
                         }
                     }
 
                 // check the methods to see if get() and set() call super
-// TODO - need to verify that we are actually creating all of the inner structures, e.g. methods in properties, nested classes, etc.
                 MethodStructure methodGet    = null;
                 MethodStructure methodSet    = null;
                 MethodStructure methodBadGet = null;
@@ -1404,7 +1396,8 @@ public abstract class TypeConstant
                             {
                             if (methodGet != null)
                                 {
-                                throw new IllegalStateException(); // TODO log error
+                                log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
+                                        getValueString(), sName);
                                 }
                             methodGet = method;
                             }
@@ -1419,7 +1412,8 @@ public abstract class TypeConstant
                             {
                             if (methodSet != null)
                                 {
-                                throw new IllegalStateException(); // TODO log error
+                                log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
+                                        getValueString(), sName);
                                 }
                             methodSet = method;
                             }
@@ -1430,58 +1424,82 @@ public abstract class TypeConstant
                         }
 
                     // regardless of what the code does, there is custom code in the property
-                    fCustomCode = true;
+                    fCustomCode = !method.isAbstract();
                     }
 
                 // check for incorrect get/set method declarations
                 if (methodBadGet != null && methodGet == null)
                     {
-                    throw new IllegalStateException(); // TODO log error
+                    log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE,
+                            getValueString(), sName);
                     }
                 if (methodBadSet != null && methodSet == null)
                     {
-                    throw new IllegalStateException(); // TODO log error
+                    log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE,
+                            getValueString(), sName);
                     }
-
-                boolean fGetSupers = methodGet != null && methodGet.usesSuper();
-                boolean fSetSupers = methodSet != null && methodSet.usesSuper();
 
                 if (fInterface)
                     {
-                    fRO    = fHasRO;
-                    fField = false;
-                    }
-                else if (methodGet == null && methodSet == null)
-                    {
-                    // TODO @RO should make this as if it were an abstract "get()" declaration
-                    fRO    = false;
-//                    fField =
-                    }
-                else if (methodGet != null && methodSet != null)
-                    {
-
-                    // if the get and set do NOT call super, then there is no field
-                    if (!fGetSupers && !fSetSupers)
+                    if (fCustomCode)
                         {
-                        fField = false;
+                        // interface is not allowed to implement a property
+                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
+                                getValueString(), sName);
                         }
 
-                    // if the get and set do call super, then there is a field, unless @Override
-                    // is specified, in which case there is no field
-                    // TODO
-
-                    // otherwise, set is not allowed to call super if get does not call super
-
-                    if (fHasRO)
+                    if (fHasRefAnno)
                         {
-                        log(errs, Severity.WARNING, VE_PROPERTY_RO_IGNORED,
-                                sName, constId.getValueString());
+                        // interface is not allowed to specify ref/var annotations
+                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ANNOTATED,
+                                getValueString(), sName);
                         }
+
+                    if (fHasInject)
+                        {
+                        // interface is not allowed to use @Inject
+                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_INJECTED,
+                                getValueString(), sName);
+                        }
+
+                    if (fHasOverride)
+                        {
+                        // interface is not allowed to use @Override
+                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
+                                getValueString(), sName);
+                        }
+
+                    fRO    |= fHasRO;
+                    fField  = false;
                     }
-                else if (methodGet != null)
+                else
                     {
-                    // if it calls super, then there's a field (and , otherwise it is read-only (which
-                    // if @RO is specified, it should match
+                    // determine if the get explicitly calls super, or explicitly blocks super
+                    boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
+                    boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
+                    boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
+
+                    if (fHasRO && (fSetSupers || fHasVarAnno))
+                        {
+                        // the @RO conflicts with the annotations that require a Var
+                        log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
+                                getValueString(), sName);
+                        }
+
+                    if (fHasInject && (fSetSupers || fHasVarAnno))
+                        {
+                        // the @Inject conflicts with the annotations that require a Var
+                        log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
+                                getValueString(), sName);
+                        }
+
+                    // we assume a field if @Inject is not specified, @RO is not specified,
+                    // @Override is not specified, and get() doesn't block going to its super
+                    fField |= !fHasInject && !fHasRO && !fHasOverride && !fGetBlocksSuper;
+
+                    // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
+                    // super and no set() (or Var-implying annotations)
+                    fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
                     }
 
                 // if the type access is struct, then only include the property if it has a field
@@ -1492,7 +1510,8 @@ public abstract class TypeConstant
 
                 PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
                         listPropAnno == null ? null : listPropAnno.toArray(Annotation.NO_ANNOTATIONS),
-                        listRefAnno  == null ? null : listRefAnno .toArray(Annotation.NO_ANNOTATIONS),
+                        listRefAnno  == null ? null : listRefAnno .toArray(
+                                Annotation.NO_ANNOTATIONS),
                         fCustomCode, fField);
                 mapProps.put(sName, propinfo);
 
@@ -2059,7 +2078,8 @@ public abstract class TypeConstant
 
         if (!m_fValidated)
             {
-            fHalt       |= super.validate(errlist);
+            fHalt |= super.validate(errlist);
+            fHalt |= isModifyingType() && getUnderlyingType().validate(errlist);
             m_fValidated = true;
             }
 

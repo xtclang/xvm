@@ -1042,7 +1042,12 @@ public class ConstantPool
 
             case "Obscure":
                 sPkg = "annotations";
-                sClz = "ObscuringRef";
+                sClz = "ObscuringVar";
+                break;
+
+            case "Unassigned":
+                sPkg = "annotations";
+                sClz = "UnassignedVar";
                 break;
 
             case "Op":
@@ -1055,7 +1060,6 @@ public class ConstantPool
                 sClz = "Override";
                 break;
 
-            case "ReadOnly":
             case "RO":
                 sPkg = "annotations";
                 sClz = "ReadOnly";
@@ -1068,12 +1072,12 @@ public class ConstantPool
 
             case "Watch":
                 sPkg = "annotations";
-                sClz = "WatchRef";
+                sClz = "WatchVar";
                 break;
 
             case "Weak":
                 sPkg = "annotations";
-                sClz = "WeakRef";
+                sClz = "WeakVar";
                 break;
 
             case "Unchecked":
@@ -1719,8 +1723,11 @@ public class ConstantPool
     public ClassConstant     clzAuto()          {ClassConstant     c = m_clzAuto;         if (c == null) {m_clzAuto         = c = (ClassConstant) getImplicitlyImportedIdentity("Auto"       );} return c;}
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
     public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"         );} return c;}
+    public ClassConstant     clzInject()        {ClassConstant     c = m_clzInject;       if (c == null) {m_clzInject       = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"     );} return c;}
     public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"   );} return c;}
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
+    public ClassConstant     clzObscure()       {ClassConstant     c = m_clzObscure;      if (c == null) {m_clzObscure      = c = (ClassConstant) getImplicitlyImportedIdentity("Obscure"    );} return c;}
+    public ClassConstant     clzUnassigned()    {ClassConstant     c = m_clzUnassigned;   if (c == null) {m_clzUnassigned   = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned" );} return c;}
 
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
@@ -2304,8 +2311,11 @@ public class ConstantPool
         m_clzAuto         = null;
         m_clzOp           = null;
         m_clzRO           = null;
+        m_clzInject       = null;
         m_clzOverride     = null;
         m_clzUnchecked    = null;
+        m_clzObscure      = null;
+        m_clzUnassigned   = null;
         m_typeObject      = null;
         m_typeRef         = null;
         m_typeVar         = null;
@@ -2561,8 +2571,11 @@ public class ConstantPool
     private transient ClassConstant     m_clzAuto;
     private transient ClassConstant     m_clzOp;
     private transient ClassConstant     m_clzRO;
+    private transient ClassConstant     m_clzInject;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzUnchecked;
+    private transient ClassConstant     m_clzObscure;
+    private transient ClassConstant     m_clzUnassigned;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeRef;
     private transient TypeConstant      m_typeVar;

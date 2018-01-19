@@ -1,16 +1,16 @@
 /**
- * The WatchRef ({@code @Watch}) mixin is used to create event notifications whenever the value of
+ * The WatchVar ({@code @Watch}) mixin is used to create event notifications whenever the value of
  * the reference changes.
  *
  *   @Watch(n -> console.print("new value=" + n)) Int n = 0;
  */
-mixin WatchRef<RefType>
-        into Ref<RefType>
+mixin WatchVar<RefType>
+        into Var<RefType>
     {
     /**
      * Construct a watchable reference.
      */
-    construct WatchRef()
+    construct WatchVar()
         {
         }
 
@@ -18,7 +18,7 @@ mixin WatchRef<RefType>
      * Construct a watchable reference that invokes the specified notification when the value of the
      * reference changes.
      */
-    construct WatchRef(function Void () | function Void (RefType) notify)
+    construct WatchVar(function Void () | function Void (RefType) notify)
         {
         notifies.add(normalize(notify));
         }
@@ -39,7 +39,7 @@ mixin WatchRef<RefType>
         }
 
     /**
-     * Add the specified notification function to the list of notifications that this WatchRef
+     * Add the specified notification function to the list of notifications that this WatchVar
      * is configured to deliver.
      */
     Void addWatch(function Void () | function Void (RefType) notify)
@@ -48,7 +48,7 @@ mixin WatchRef<RefType>
         }
 
     /**
-     * Remove the specified notification function from the list of notifications that this WatchRef
+     * Remove the specified notification function from the list of notifications that this WatchVar
      * is configured to deliver.
      */
     Void removeWatch(function Void () | function Void (RefType) notify)

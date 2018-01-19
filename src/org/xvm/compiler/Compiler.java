@@ -88,7 +88,8 @@ public class Compiler
             }
 
         m_struct = m_module.createModuleStructure(m_errs);
-        m_stage = Stage.Registered;
+        m_struct.setErrorListener(m_errs);
+        m_stage  = Stage.Registered;
         return m_struct;
         }
 
@@ -212,6 +213,7 @@ public class Compiler
 
         m_module.generateCode(m_errs);
         m_struct.validate(m_errs);
+        m_struct.setErrorListener(null);
         }
 
 
