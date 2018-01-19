@@ -401,7 +401,7 @@ public abstract class ClassTemplate
     // @return an immutable handle or null if this type doesn't take that constant
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return null;
+        throw new IllegalStateException("Invalid op for " + f_sName);
         }
 
     // return a handle with this:struct access
@@ -719,7 +719,7 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
-    protected int getFieldValue(Frame frame, ObjectHandle hTarget,
+    public int getFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, int iReturn)
         {
         if (property == null)
