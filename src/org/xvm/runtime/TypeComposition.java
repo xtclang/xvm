@@ -366,7 +366,7 @@ public class TypeComposition
 
             TypeComposition clzInto = f_template.f_templates.resolveClass(typeInto);
 
-            addNoDupes(clzInto.collectDeclaredCallChain(false), list, set);
+            addNoDupes(clzInto.collectDeclaredCallChain(true), list, set);
             }
 
         // 1.3

@@ -4,13 +4,16 @@ package org.xvm.runtime.template.annotations;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ClassStructure;
-
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
 import org.xvm.runtime.template.Ref;
@@ -55,6 +58,67 @@ public class xAtomicIntNumber
         //    @Op Void shiftRightAssign(Int count)
         //    @Op Void shiftAllRightAssign(Int count)
         // TODO: all native
+
+        markNativeMethod("replace", new String[]{"Int64", "Int64"}, new String[] {"Boolean"});
+        markNativeMethod("replaceFailed", new String[]{"Int64", "Int64"}, null);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        AtomicIntRefHandle hThis = (AtomicIntRefHandle) hTarget;
+
+        switch (ahArg.length)
+            {
+            case 2:
+                switch (method.getName())
+                    {
+                    case "replace":
+                        {
+                        long lExpect = ((JavaLong) ahArg[0]).getValue();
+                        long lNew = ((JavaLong) ahArg[1]).getValue();
+                        AtomicLong atomic = hThis.m_atomicValue;
+
+                        return frame.assignValue(iReturn, xBoolean.makeHandle(
+                            atomic.compareAndSet(lExpect, lNew)));
+                        }
+                    }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        AtomicIntRefHandle hThis = (AtomicIntRefHandle) hTarget;
+
+        switch (ahArg.length)
+            {
+            case 2:
+                switch (method.getName())
+                    {
+                    case "replaceFailed":
+                        {
+                        long lExpect = ((JavaLong) ahArg[0]).getValue();
+                        long lNew = ((JavaLong) ahArg[1]).getValue();
+                        AtomicLong atomic = hThis.m_atomicValue;
+
+                        long lOld;
+                        while ((lOld = atomic.get()) == lExpect)
+                            {
+                            if (atomic.compareAndSet(lExpect, lNew))
+                                {
+                                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                                }
+                            }
+                        return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(lOld));
+                        }
+                    }
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     @Override

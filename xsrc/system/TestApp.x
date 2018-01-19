@@ -334,10 +334,12 @@ class TestApp
 
         TestService svc = new TestService();
         ri = &svc.counter;
-        print(ri.get());
+        ri.get();
+        print(ri);
 
         AtomicVar<Int> ari = &svc.counter2;
-        print(ari.replace(1, 2));
+        ari.replace(5, 6);
+        print(ari);
         }
 
     static String lambda_2(Var<Int> i)

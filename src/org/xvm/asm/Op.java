@@ -756,6 +756,8 @@ public abstract class Op
             case OP_L_SET:       return new L_Set       (in, aconst);
             case OP_P_GET:       return new P_Get       (in, aconst);
             case OP_P_SET:       return new P_Set       (in, aconst);
+            case OP_P_VAR:       return new P_Var       (in, aconst);
+            case OP_P_REF:       return new P_Ref       (in, aconst);
 
             case OP_PIP_INCA:    return new PIP_PostInc (in, aconst);
             case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
@@ -899,6 +901,8 @@ public abstract class Op
             case OP_L_SET:       return "L_SET";
             case OP_P_GET:       return "P_GET";
             case OP_P_SET:       return "P_SET";
+            case OP_P_VAR:       return "P_VAR";
+            case OP_P_REF:       return "P_REF";
             case OP_IP_INC:      return "IP_INC";
             case OP_IP_INCA:     return "IP_INCA";
             case OP_IP_INCB:     return "IP_INCB";

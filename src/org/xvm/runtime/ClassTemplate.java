@@ -22,13 +22,13 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.CallChain.PropertyCallChain;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.Const;
 import org.xvm.runtime.template.Enum;
 import org.xvm.runtime.template.Enum.EnumHandle;
 import org.xvm.runtime.template.Function.FullyBoundHandle;
+import org.xvm.runtime.template.Ref;
 import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.Service;
 import org.xvm.runtime.template.collections.xTuple;
@@ -39,6 +39,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.xVar;
 
 
 /**
@@ -718,7 +719,7 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
-    public int getFieldValue(Frame frame, ObjectHandle hTarget,
+    protected int getFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, int iReturn)
         {
         if (property == null)
@@ -805,7 +806,7 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
-    public int setFieldValue(Frame frame, ObjectHandle hTarget,
+    protected int setFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, ObjectHandle hValue)
         {
         if (property == null)
@@ -824,6 +825,34 @@ public abstract class ClassTemplate
 
         hThis.m_mapFields.put(property.getName(), hValue);
         return Op.R_NEXT;
+        }
+
+    // create a property ref for the specified target and property
+    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+        {
+        GenericHandle hThis = (GenericHandle) hTarget;
+
+        if (!hThis.m_mapFields.containsKey(sPropName))
+            {
+            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + sPropName);
+            }
+
+        // TODO: this is an overkill; we should get the property in an easier way
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
+        PropertyStructure property = chain.getProperty();
+
+        if (isRef(property))
+            {
+            return ((RefHandle) hThis.m_mapFields.get(sPropName));
+            }
+
+        TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());
+
+        TypeComposition clzRef = fRO
+            ? Ref.INSTANCE.ensureParameterizedClass(typeReferent)
+            : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
+
+        return new RefHandle(clzRef, hThis, sPropName);
         }
 
     // ----- support for equality and comparison ------

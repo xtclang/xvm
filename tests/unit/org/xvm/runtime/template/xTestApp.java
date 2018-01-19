@@ -387,8 +387,15 @@ public class xTestApp extends xModule
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 8)) // next register #8
             .add(new X_Print(8))
 
-            .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 7, 9)) // next register #9
-            .add(new X_Print(9)) // TODO: should be an AtomicRef
+            .add(new Var_N(adapter.getClassTypeConstId("annotations.AtomicIntNumber"),
+                adapter.ensureValueConstantId("ari")))  // #9 (ari)
+            .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 7, 9))
+            .add(new X_Print(9))
+
+            .add(new Invoke_N0(9, adapter.getMethodConstId("annotations.AtomicVar", "replace"),
+                new int[] {adapter.ensureValueConstantId(5), adapter.ensureValueConstantId(6)}))
+            .add(new X_Print(9))
+
             .add(new Return_0());
 
         // --- testArray()
