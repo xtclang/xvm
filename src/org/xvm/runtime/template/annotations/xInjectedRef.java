@@ -39,7 +39,6 @@ public class xInjectedRef
         {
         // TODO: how to inherit this from Ref?
         markNativeMethod("get", VOID, new String[]{"RefType"});
-        markNativeMethod("set", new String[]{"RefType"}, VOID);
         }
 
     @Override

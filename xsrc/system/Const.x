@@ -24,32 +24,7 @@ interface Const
         }
 
     /**
-     * Represent the value of the Const as a String. By default, this method recursively
-     * decomposes the Const into a tree of its constituent values.
-     * <p>
-     * This is particularly useful for debugging, log messages, and other diagnosis
-     * features.
-     */
-    String to<String>()
-        {
-        TODO -- native
-        }
-
-    /**
      * TODO
      */
-    Byte[] to<Byte[]>()
-        {
-        Property[] fields = meta.struct.to<Property[]>();
-        TODO use meta.struct
-        }
-
-    /**
-     * TODO
-     */
-    @Lazy Int hash.get()
-        {
-        Ref[] fields = meta.struct.to<Property[]>();
-        TODO use meta.struct
-        }
+    Byte[] to<Byte[]>();
     }

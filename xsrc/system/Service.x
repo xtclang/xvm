@@ -70,7 +70,7 @@ interface Service()
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
      */
-    @Atomic String serviceName.get()
+    String serviceName.get()
         {
         return meta.class_.to<String>();
         }
@@ -89,7 +89,7 @@ interface Service()
     /**
      * Determine if the service is still running.
      */
-    @RO @Atomic StatusIndicator statusIndicator;
+    @RO StatusIndicator statusIndicator;
 
     /**
      * Obtain the named ContextToken using its name.
@@ -108,7 +108,7 @@ interface Service()
     /**
      * The current CriticalSection for the service, if any.
      */
-    @RO @Atomic CriticalSection? criticalSection;
+    @RO CriticalSection? criticalSection;
 
     /**
      * Optional re-entrancy settings for a service:
@@ -137,13 +137,13 @@ interface Service()
      * An attempt to set this from outside of the service when the service is processing will likely
      * result in an exception for the caller.
      */
-    @Atomic Reentrancy reentrancy;
+    Reentrancy reentrancy;
 
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
      * service is subject to.
      */
-    @RO @Atomic Timeout? incomingTimeout;
+    @RO Timeout? incomingTimeout;
 
     /**
      * The current Timeout that will be used by the service when it invokes other services.
@@ -151,7 +151,7 @@ interface Service()
      * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
      * Timeout.
      */
-    @RO @Atomic Timeout? timeout.get()
+    @RO Timeout? timeout.get()
         {
         return super() ?: incomingTimeout;
         }
@@ -159,7 +159,7 @@ interface Service()
     /**
      * The wall-clock uptime for the service.
      */
-    @RO @Atomic Duration upTime;
+    @RO Duration upTime;
 
     /**
      * The amount of time that this service has consumed the CPU.
@@ -168,7 +168,7 @@ interface Service()
      * tracking the CPU time is too significant to accept in relation to the service's actual CPU
      * time.
      */
-    @RO @Atomic Duration cpuTime;
+    @RO Duration cpuTime;
 
     /**
      * Determine if there is currently any _visible_ contention for the service. A service is
@@ -180,7 +180,7 @@ interface Service()
      * contention visible exceeds the cost of the contention itself, in which case such contention
      * may not be visible.
      */
-    @RO @Atomic Boolean contended;
+    @RO Boolean contended;
 
     /**
      * If the service maintains a backlog to manage pending requests, determine the depth of that
@@ -190,7 +190,7 @@ interface Service()
      * it is possible that a service does not maintain a formal backlog, and thus the value of this
      * property may not correctly reflect the presence and/or amount of contention.
      */
-    @RO @Atomic Int backlogDepth;
+    @RO Int backlogDepth;
 
     /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
@@ -223,12 +223,12 @@ interface Service()
      * This is the memory footprint of the service, including memory that might not be being fully
      * utilized at the moment.
      */
-    @RO @Atomic Int bytesReserved;
+    @RO Int bytesReserved;
 
     /**
      * This is the amount of memory that the service currently has allocated for stuff.
      */
-    @RO @Atomic Int bytesAllocated;
+    @RO Int bytesAllocated;
 
     /**
      * Request the service to look for objects that are no longer used and reclaim their memory.
