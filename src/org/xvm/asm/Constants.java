@@ -308,6 +308,14 @@ public interface Constants
      * {0} contains an @Inject property {1} that has a "set()" that uses "super", or a Var annotation.
      */
     public static final String VE_PROPERTY_INJECT_NOT_VAR            = "VERIFY-49";
+    /**
+     * {0} contains an @RO property {1} that does not have a "get()" and is not annotated with "@Abstract", "@Override", or "@Inject".
+     */
+    public static final String VE_PROPERTY_READONLY_NO_SPEC          = "VERIFY-50";
+    /**
+     * {0} contains an @Override property {1}, but no property declaration exists to override.
+     */
+    public static final String VE_PROPERTY_OVERRIDE_NO_SPEC          = "VERIFY-51";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

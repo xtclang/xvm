@@ -1,14 +1,17 @@
 package org.xvm.asm.constants;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
@@ -28,6 +31,7 @@ public class TypeInfo
      * @param type                 the type that the TypeInfo represents
      * @param format               the Format of the type; Interface is the "type" catch-all
      * @param mapTypeParams        the collected type parameters for the type
+     * @param aannoClass           the annotations for the type that mix into "Class"
      * @param typeExtends          the type that is extended
      * @param typeRebases          the type that is rebased onto
      * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
@@ -38,7 +42,8 @@ public class TypeInfo
      * @param mapMethods           the public and protected methods of the type
      * @param mapScopedMethods     the various scoped methods of the type
      */
-    public TypeInfo(TypeConstant type, Format format, Map<String, ParamInfo> mapTypeParams,
+    public TypeInfo(TypeConstant type, Format format,
+            Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
@@ -57,6 +62,7 @@ public class TypeInfo
         m_type                  = type;
         m_format                = format;
         m_mapTypeParams         = mapTypeParams;
+        m_aannoClass            = validateAnnotations(aannoClass);
         m_typeExtends           = typeExtends;
         m_typeRebases           = typeRebases;
         m_typeInto              = typeInto;
@@ -156,6 +162,14 @@ public class TypeInfo
     public Map<String, ParamInfo> getTypeParams()
         {
         return m_mapTypeParams;
+        }
+
+    /**
+     * @return the type annotations that had an "into" clause of "Class"
+     */
+    public Annotation[] getClassAnnotations()
+        {
+        return m_aannoClass;
         }
 
     /**
@@ -554,6 +568,76 @@ public class TypeInfo
         }
 
 
+    // ----- internal helpers ----------------------------------------------------------------------
+
+    public static Annotation[] validateAnnotations(Annotation[] annotations)
+        {
+        if (annotations == null)
+            {
+            return Annotation.NO_ANNOTATIONS;
+            }
+
+        for (Annotation annotation : annotations)
+            {
+            if (annotation == null)
+                {
+                throw new IllegalStateException("null annotation");
+                }
+            }
+
+        return annotations;
+        }
+
+    public static Annotation[] mergeAnnotations(Annotation[] anno1, Annotation[] anno2)
+        {
+        if (anno1.length == 0)
+            {
+            return anno2;
+            }
+
+        if (anno2.length == 0)
+            {
+            return anno1;
+            }
+
+        ArrayList<Annotation> list = new ArrayList<>();
+        Set<Constant> setPresent = new HashSet<>();
+        appendAnnotations(list, anno1, setPresent);
+        appendAnnotations(list, anno2, setPresent);
+        return list.toArray(new Annotation[list.size()]);
+        }
+
+    public static void appendAnnotations(ArrayList<Annotation> list, Annotation[] aAnno, Set<Constant> setPresent)
+        {
+        for (Annotation anno : aAnno)
+            {
+            if (setPresent.add(anno.getAnnotationClass()))
+                {
+                list.add(anno);
+                }
+            }
+        }
+
+    public static boolean containsAnnotation(Annotation[] annotations, String sName)
+        {
+        if (annotations == null || annotations.length == 0)
+            {
+            return false;
+            }
+
+        IdentityConstant clzFind = annotations[0].getConstantPool().getImplicitlyImportedIdentity(sName);
+        for (Annotation annotation : annotations)
+            {
+            if (annotation.getAnnotationClass().equals(clzFind))
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -571,6 +655,11 @@ public class TypeInfo
      * The type parameters for this TypeInfo.
      */
     private final Map<String, ParamInfo> m_mapTypeParams;
+
+    /**
+     * The class annotations.
+     */
+    private final Annotation[] m_aannoClass;
 
     /**
      * The type that is extended. The term "extends" has slightly different meanings for mixins and

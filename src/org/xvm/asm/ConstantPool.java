@@ -1188,14 +1188,13 @@ public class ConstantPool
      * @param constParent    specifies the module, package, class, multi-method, method, or property
      *                       that contains the method
      * @param sName          the method name
-     * @param access         the method accessibility
      * @param aconstParams   the invocation parameters for the method
      * @param aconstReturns  the return values from the method
      *
      * @return the MethodConstant
      */
     public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName,
-            Access access, TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
+            TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
         {
         assert constParent != null;
 
@@ -1219,7 +1218,7 @@ public class ConstantPool
                         + " is not a Module, Package, Class, Method, or Property");
             }
 
-        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod,
                 aconstParams, aconstReturns));
         }
 
@@ -1228,11 +1227,10 @@ public class ConstantPool
      *
      * @param constParent  the constant identifying the parent of the method
      * @param constSig     the signature of the method
-     * @param access       the method accessibility
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig, Access access)
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig)
         {
         assert constParent != null;
         assert constSig    != null;
@@ -1257,7 +1255,7 @@ public class ConstantPool
                         + " is not a Module, Package, Class, Method, or Property");
             }
 
-        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access, constSig));
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, constSig));
         }
 
     /**
@@ -2634,7 +2632,7 @@ public class ConstantPool
     private transient ArrayConstant     m_valVoid;
 
     public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
-            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP,
+            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             new ListMap<>(), new ListMap<>(),
             Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
