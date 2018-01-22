@@ -1685,6 +1685,8 @@ public abstract class TypeConstant
         Set<SignatureConstant> setSuperMethods = new HashSet<>();
         for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
             {
+            findSuperMethod(entry.getKey(), mapAddMethods)
+            mapAddMethods
             // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
             // mapMethods.put(entry.getKey(), )
             }
@@ -1694,34 +1696,20 @@ public abstract class TypeConstant
             {
             if (!setSuperMethods.contains(entry.getKey()))
                 {
-                // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
                 mapMethods.put(entry.getKey(), entry.getValue());
                 }
             }
+        }
 
-//        switch (compAdd)
-//            {
-//            case Equal:
-//                break;
-//
-//            case Implements:
-//                // each property/method in the contrib type need to be declared abstract/default
-//                // TODO need a way to say "use just the abstract/default part"
-//                break;
-//
-//            case Delegates:
-//                // each property/method in the contrib type need to be delegated (in the primary call chains)
-//                // TODO
-//                break;
-//
-//            case Into:
-//                // each property/method in the contrib type need to be declared "implicit"
-//                // TODO
-//                break;
-//
-//            }
-//            TypeConstant typeContrib = contrib.getTypeConstant();
-//            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+    protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
+        {
+        String sName = constSig.getName();
+        List<SignatureConstant> listMatches = null;
+        for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+
+            }
+        return null;
         }
 
 
