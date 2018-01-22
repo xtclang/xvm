@@ -78,20 +78,7 @@ public class Container
             }
         Utils.registerGlobalSignatures(f_pool);
 
-        f_templates.getTemplate("Object");
-
-        // the native interfaces are pseudo-classes (also with INSTANCE static variable)
-        f_templates.initNativeInterfaces();
-
-        // every native class that has an INSTANCE static variable may need to be here
-        f_templates.getTemplate("String");
-        f_templates.getTemplate("Boolean");
-        f_templates.getTemplate("Module");
-        f_templates.getTemplate("Class");
-        f_templates.getTemplate("Type");
-        f_templates.getTemplate("Ordered");
-        f_templates.getTemplate("types.Method");
-        f_templates.getTemplate("types.Property");
+        f_templates.initNativeClasses();
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,

@@ -452,6 +452,10 @@ class TestApp
         Color c = Blue;
         print(c);
         print(c.ordinal);
+
+        c = Green;
+        print(c);
+        print(c.ordinal);
         }
 
     mixin Formatter(String prefix) into Object

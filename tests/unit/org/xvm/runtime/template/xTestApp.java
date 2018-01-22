@@ -12,6 +12,10 @@ import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.template.TestApp.xTestClass;
+import org.xvm.runtime.template.TestApp.xTestClass2;
+import org.xvm.runtime.template.TestApp.xTestService;
+
 /**
  * A test class.
  */
@@ -33,9 +37,9 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
-        f_templates.getTemplate("TestApp.TestClass");
-        f_templates.getTemplate("TestApp.TestClass2");
-        f_templates.getTemplate("TestApp.TestService");
+        f_templates.getTemplate("TestApp.TestClass").initDeclared();
+        f_templates.getTemplate("TestApp.TestClass2").initDeclared();
+        f_templates.getTemplate("TestApp.TestService").initDeclared();
 
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
@@ -627,13 +631,19 @@ public class xTestApp extends xModule
             .add(new X_Print(4))
 
             .add(new Var_I(adapter.getClassTypeConstId("Int64"),
-                    adapter.ensureValueConstantId(42))) // #5
+                adapter.ensureValueConstantId(42))) // #5
             .add(new P_Get(adapter.getPropertyConstId("Const", "hash"), 5, 5))
             .add(new X_Print(5))
 
             .add(new Var_IN(adapter.getClassTypeConstId("TestApp.Color"),
-                    adapter.ensureValueConstantId("c"),
-                    adapter.ensureEnumConstId("TestApp.Color.Blue"))) // #6
+                adapter.ensureValueConstantId("c"),
+                adapter.ensureEnumConstId("TestApp.Color.Blue"))) // #6
+            .add(new X_Print(6))
+
+            .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
+            .add(new X_Print(4))
+
+            .add(new Move(adapter.ensureEnumConstId("TestApp.Color.Red"), 6))
             .add(new X_Print(6))
 
             .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
