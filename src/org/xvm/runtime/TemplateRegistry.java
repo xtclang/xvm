@@ -38,9 +38,6 @@ public class TemplateRegistry
     public final Container f_container;
     public final Adapter f_adapter;
 
-    // native templates
-    private final Map<String, Class> f_mapTemplateClasses = new HashMap<>();
-
     // cache - TypeConstant by name (only for core classes)
     private final Map<String, TypeConstant> f_mapTemplatesByName = new ConcurrentHashMap<>();
 
@@ -53,58 +50,20 @@ public class TemplateRegistry
         {
         f_container = container;
         f_adapter = container.f_adapter;
-
-        loadNativeTemplates();
         }
 
-    private void loadNativeTemplates()
+    protected void loadNativeTemplates()
         {
         Class clzObject = xObject.class;
         URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
         String sRoot = url.getFile();
 
         File dirNative = new File(sRoot, "org/xvm/runtime/template");
-        scanNativeDirectory(dirNative, "");
-        }
+        Map<String, Class> mapTemplateClasses = new HashMap<>();
+        scanNativeDirectory(dirNative, "", mapTemplateClasses);
 
-    // sPackage is either empty or ends with a dot
-    private void scanNativeDirectory(File dirNative, String sPackage)
-        {
-        for (String sName : dirNative.list())
-            {
-            if (sName.endsWith(".class"))
-                {
-                if (sName.startsWith("x") && !sName.contains("$"))
-                    {
-                    String sSimpleName = sName.substring(1, sName.length() - 6);
-                    String sQualifiedName = sPackage + sSimpleName;
-                    String sClass = "org.xvm.runtime.template." + sPackage + "x" + sSimpleName;
-
-                    try
-                        {
-                        f_mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
-                        }
-                    catch (ClassNotFoundException e)
-                        {
-                        throw new IllegalStateException("Cannot load " + sClass, e);
-                        }
-                    }
-                }
-            else
-                {
-                File dir = new File(dirNative, sName);
-                if (dir.isDirectory())
-                    {
-                    scanNativeDirectory(dir, sPackage.isEmpty() ? sName + '.' : sPackage + sName + '.');
-                    }
-                }
-            }
-        }
-
-    // see Container.start()
-    protected void initNativeClasses()
-        {
         ConstantPool pool = f_container.f_pool;
+        ModuleStructure module = f_container.f_module;
 
         // the native interfaces are pseudo-classes (also with INSTANCE static variable)
         storeNativeTemplate(new xObject(this, (ClassStructure) pool.clzObject().getComponent(), true));
@@ -114,8 +73,7 @@ public class TemplateRegistry
         storeNativeTemplate(new Service(this, (ClassStructure) pool.clzService().getComponent(), true));
         storeNativeTemplate(new Ref(this, (ClassStructure) pool.clzRef().getComponent(), true));
 
-        ModuleStructure module = f_container.f_module;
-        for (Map.Entry<String, Class> entry : f_mapTemplateClasses.entrySet())
+        for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet())
             {
             ClassStructure structClass = (ClassStructure) module.getChildByPath(entry.getKey());
             if (structClass == null)
@@ -139,10 +97,11 @@ public class TemplateRegistry
                 }
             }
 
-        ClassTemplate templateTest = null;
-
+        // clone the map since the loop below can add to it
         Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
 
+        // temporary test class processing
+        ClassTemplate templateTest = null;
         for (ClassTemplate template : setTemplates)
             {
             // TEMPORARY; exclude the test
@@ -160,6 +119,41 @@ public class TemplateRegistry
                 }
             }
         templateTest.initDeclared();
+        }
+
+    // sPackage is either empty or ends with a dot
+    private void scanNativeDirectory(File dirNative, String sPackage, Map<String, Class> mapTemplateClasses)
+        {
+        for (String sName : dirNative.list())
+            {
+            if (sName.endsWith(".class"))
+                {
+                if (sName.startsWith("x") && !sName.contains("$"))
+                    {
+                    String sSimpleName = sName.substring(1, sName.length() - 6);
+                    String sQualifiedName = sPackage + sSimpleName;
+                    String sClass = "org.xvm.runtime.template." + sPackage + "x" + sSimpleName;
+
+                    try
+                        {
+                        mapTemplateClasses.put(sQualifiedName, Class.forName(sClass));
+                        }
+                    catch (ClassNotFoundException e)
+                        {
+                        throw new IllegalStateException("Cannot load " + sClass, e);
+                        }
+                    }
+                }
+            else
+                {
+                File dir = new File(dirNative, sName);
+                if (dir.isDirectory())
+                    {
+                    scanNativeDirectory(dir, sPackage.isEmpty() ? sName + '.' : sPackage + sName + '.',
+                        mapTemplateClasses);
+                    }
+                }
+            }
         }
 
     protected void storeNativeTemplate(ClassTemplate template)

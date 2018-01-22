@@ -78,7 +78,7 @@ public class Container
             }
         Utils.registerGlobalSignatures(f_pool);
 
-        f_templates.initNativeClasses();
+        f_templates.loadNativeTemplates();
 
         m_contextMain = createServiceContext("main");
         Service.makeHandle(m_contextMain,
