@@ -302,7 +302,11 @@ module Test
 
     class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
         {
-        public/private @Override @RO @Lazy @Unchecked Int x;
+        public/private @Override @RO @Lazy @Unchecked Int x
+            {
+            Int get() {return 0;}
+            Void set(Int n) {}      // TODO note "void" with lower case "v" caused an awful error
+            }
 
         Void bar();
         @Auto Int size();

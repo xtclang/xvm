@@ -680,8 +680,9 @@ public abstract class TypeConstant
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
-        List<Contribution> listProcess = new ArrayList<>();
-        Component.Format   formatInfo  = struct.getFormat();
+        List<Contribution> listProcess    = new ArrayList<>();
+        List<Annotation>   listClassAnnos = new ArrayList<>();
+        Component.Format   formatInfo     = struct.getFormat();
 
         // glue any annotations from the type constant onto the front of the contribution list
         // (and remember the type of the annotated class)
@@ -715,8 +716,16 @@ public abstract class TypeConstant
                         continue;
                         }
 
-                    // the mixin has to be able to apply to the remainder of the type constant chain
+                    // the annotation could be a mixin "into Class", which means that it's a
+                    // non-virtual, compile-time mixin (like @Abstract)
                     TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                    if (typeInto.isIntoClassType())
+                        {
+                        listClassAnnos.add(annotation);
+                        continue;
+                        }
+
+                    // the mixin has to be able to apply to the remainder of the type constant chain
                     if (!typeClass.getUnderlyingType().isA(typeInto))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
@@ -743,14 +752,14 @@ public abstract class TypeConstant
         List<Contribution> listContribs = struct.getContributionsAsList();
         int                cContribs    = listContribs.size();
         int                iContrib     = 0;
-        NextContrib: for ( ; iContrib < cContribs; ++iContrib)
+        for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
             Contribution contrib = listContribs.get(iContrib);
             if (contrib.getComposition() != Composition.Annotation)
                 {
                 // ... all done processing annotations; move to the next stage
-                break NextContrib;
+                break;
                 }
 
             // has to be an explicit class identity
@@ -759,7 +768,7 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                         constId.getPathString(), typeMixin.getValueString());
-                continue NextContrib;
+                continue;
                 }
 
             // has to be a mixin
@@ -767,18 +776,26 @@ public abstract class TypeConstant
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                         typeMixin.getValueString());
-                continue NextContrib;
+                continue;
+                }
+
+            // the annotation could be a mixin "into Class", which means that it's a
+            // non-virtual, compile-time mixin (like @Abstract)
+            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            if (typeInto.isIntoClassType())
+                {
+                listClassAnnos.add(contrib.getAnnotation());
+                continue;
                 }
 
             // the mixin has to apply to this type
-            TypeConstant typeInto = typeMixin.getExplicitClassInto();
             if (!typeClass.isA(typeInto)) // note: not 100% correct because the presence of this mixin may affect the answer
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                         typeClass.getValueString(),
                         typeMixin.getValueString(),
                         typeInto.getValueString());
-                continue NextContrib;
+                continue;
                 }
 
             listProcess.add(contrib);
@@ -1177,6 +1194,11 @@ public abstract class TypeConstant
                 }
             }
 
+        // determine if the type is explicitly abstract
+        Annotation[] aannoClass = listClassAnnos.toArray(new Annotation[listClassAnnos.size()]);
+        boolean      fAbstract  = formatInfo == Component.Format.INTERFACE
+                || TypeInfo.containsAnnotation(aannoClass, "Abstract");
+
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
         Map<String           , PropertyInfo> mapProps         = new HashMap<>();
@@ -1234,7 +1256,73 @@ public abstract class TypeConstant
                 }
             }
 
-        return new TypeInfo(this, formatInfo, mapTypeParams, typeExtends, typeRebase, typeInto,
+        // go through the members to determine if this is abstract
+        if (!fAbstract)
+            {
+            fAbstract = mapProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
+                || mapScopedProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
+                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
+                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract());
+            }
+
+        for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
+            {
+            PropertyInfo propinfo = entry.getValue();
+            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
+                    && propinfo.isOverride())
+                {
+                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+                        getValueString(), propinfo.getName());
+
+                // erase the "override" flag, now that we've reported it
+                entry.setValue(propinfo = propinfo.specifyOverride(false));
+                }
+
+            if (!fAbstract && propinfo.isAbstract())
+                {
+                // determine whether or not the property needs a field
+                boolean fField;
+                if (propinfo.isExplicitInject() || propinfo.isExplicitOverride())
+                    {
+                    // injection does not use a field, and override can defer the choice
+                    fField = false;
+                    }
+                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
+                    {
+                    // no logic implies that there is an underlying field
+                    fField = true;
+                    }
+                else
+                    {
+                    // determine if get() blocks the super call to the field
+                    MethodInfo methodinfo = mapScopedMethods.get(propinfo.getGetterId());
+                    fField = true;
+                    if (methodinfo != null)
+                        {
+                        for (MethodBody body : methodinfo.getChain())
+                            {
+                            if (body.getImplementation() == Implementation.Property)
+                                {
+                                break;
+                                }
+
+                            if (body.blocksSuper())
+                                {
+                                fField = false;
+                                break;
+                                }
+                            }
+                        }
+                    }
+
+                // erase the "abstract" flag, and store the result of the field-is-required
+                // calculation
+                entry.setValue(propinfo = propinfo.specifyField(fField));
+                }
+            }
+
+        return new TypeInfo(this, formatInfo, mapTypeParams, aannoClass,
+                typeExtends, typeRebase, typeInto,
                 listmapClassChain, listmapDefaultChain,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods);
         }
@@ -1266,8 +1354,6 @@ public abstract class TypeConstant
         {
         ConstantPool pool       = getConstantPool();
         boolean      fInterface = formatInfo == Component.Format.INTERFACE;
-        boolean      fMixin     = formatInfo == Component.Format.MIXIN;
-        boolean      fClass     = !fInterface & !fMixin;
         Access       access     = getAccess();
 
         // add the properties and methods from "struct"
@@ -1303,14 +1389,15 @@ public abstract class TypeConstant
                 PropertyStructure prop = (PropertyStructure) child;
                 if (prop.isTypeParameter())
                     {
-                    mapProps.put(sName, new PropertyInfo(resolver.parameters.get(sName)));
+                    mapProps.put(sName, new PropertyInfo(prop.getIdentityConstant(), resolver.parameters.get(sName)));
                     continue;
                     }
 
                 // determine whether the property is accessible, whether the property is read-only,
-                // and whether the property has a field
+                // whether the property has a field, and whether the property is "abstract"
                 boolean          fRO          = false;
                 boolean          fField       = false;
+                boolean          fAbstract    = false;
                 Access           accessRef    = prop.getAccess();
                 Access           accessVar    = prop.getVarAccess();
                 List<Annotation> listPropAnno = null;
@@ -1332,6 +1419,7 @@ public abstract class TypeConstant
                 boolean fHasVarAnno  = false;
                 boolean fHasInject   = false;
                 boolean fHasRO       = false;
+                boolean fHasAbstract = false;
                 boolean fHasOverride = false;
                 for (Contribution contrib : prop.getContributionsAsList())
                     {
@@ -1378,6 +1466,7 @@ public abstract class TypeConstant
                             listPropAnno.add(annotation);
 
                             fHasRO       |= constMixin.equals(pool.clzRO());
+                            fHasAbstract |= constMixin.equals(pool.clzAbstract());
                             fHasOverride |= constMixin.equals(pool.clzOverride());
                             }
                         }
@@ -1469,8 +1558,9 @@ public abstract class TypeConstant
                                 getValueString(), sName);
                         }
 
-                    fRO    |= fHasRO;
-                    fField  = false;
+                    fRO      |= fHasRO;
+                    fField    = false;
+                    fAbstract = true;
                     }
                 else
                     {
@@ -1486,6 +1576,12 @@ public abstract class TypeConstant
                                 getValueString(), sName);
                         }
 
+                    if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
+                        {
+                        log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
+                                getValueString(), sName);
+                        }
+
                     if (fHasInject && (fSetSupers || fHasVarAnno))
                         {
                         // the @Inject conflicts with the annotations that require a Var
@@ -1495,20 +1591,26 @@ public abstract class TypeConstant
 
                     // we assume a field if @Inject is not specified, @RO is not specified,
                     // @Override is not specified, and get() doesn't block going to its super
-                    fField |= !fHasInject && !fHasRO && !fHasOverride && !fGetBlocksSuper;
+                    fField = !fHasInject && !fHasRO && !fHasAbstract && !fHasOverride && !fGetBlocksSuper;
 
                     // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
                     // super and no set() (or Var-implying annotations)
                     fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
+
+                    // it is possible to explicitly declare a property as abstract; this is unusual,
+                    // but it does mean that we have to defer the field decision
+                    fAbstract = fHasAbstract;
                     }
 
                 // if the type access is struct, then only include the property if it has a field;
                 // note that just because this property itself does not have a field, that does NOT
                 // imply that it couldn't contain other properties that themselves DO have fields
-                if (access != Access.STRUCT || fField)
+                if (access != Access.STRUCT | fField)
                     {
-                    PropertyInfo propinfo = new PropertyInfo(null, sName, prop.getType(), fRO,
-                            toArray(listPropAnno), toArray(listRefAnno), fCustomCode, fField);
+                    PropertyInfo propinfo = new PropertyInfo(prop.getIdentityConstant(),
+                            prop.getType().resolveGenerics(resolver),
+                            fRO, toArray(listPropAnno), toArray(listRefAnno),
+                            fCustomCode, fField, fAbstract, fHasOverride);
                     mapProps.put(sName, propinfo);
                     }
 
@@ -1625,31 +1727,6 @@ public abstract class TypeConstant
 //            }
 //            TypeConstant typeContrib = contrib.getTypeConstant();
 //            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
-        }
-
-    protected void finalizeMemberInfo(
-            IdentityConstant                     constId,
-            ClassStructure                       struct,
-            Component.Format                     formatInfo,
-            ParamInfo.TypeResolver               resolver,
-            Map<String           , PropertyInfo> mapProps,
-            Map<PropertyConstant , PropertyInfo> mapScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapMethods,
-            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
-            ErrorListener                        errs)
-        {
-        // process properties
-        if (formatInfo != Component.Format.INTERFACE)
-            {
-            for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
-                {
-                PropertyInfo propinfo = entry.getValue();
-                if (!propinfo.hasField())
-                    {
-                    // TODO figure out how to know if this prop came from an interface and needs a field
-                    }
-                }
-            }
         }
 
 

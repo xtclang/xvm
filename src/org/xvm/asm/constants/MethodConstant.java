@@ -12,7 +12,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -40,7 +39,6 @@ public class MethodConstant
         {
         super(pool);
         m_iParent = readMagnitude(in);
-        m_access  = Access.valueOf(readIndex(in));
         m_iSig    = readMagnitude(in);
         }
 
@@ -49,11 +47,9 @@ public class MethodConstant
      *
      * @param pool         the ConstantPool that will contain this Constant
      * @param constParent  specifies the MultiMethodConstant that contains this method
-     * @param access       the accessibility of the method, public/private etc.
      * @param constSig     the method signature constant
      */
-    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
-                          SignatureConstant constSig)
+    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, SignatureConstant constSig)
         {
         super(pool);
 
@@ -62,18 +58,12 @@ public class MethodConstant
             throw new IllegalArgumentException("parent required");
             }
 
-        if (access == null)
-            {
-            throw new IllegalArgumentException("access specifier required");
-            }
-
         if (constSig == null)
             {
             throw new IllegalArgumentException("signature required");
             }
 
         m_constParent = constParent;
-        m_access      = access;
         m_constSig    = constSig;
         }
 
@@ -82,27 +72,17 @@ public class MethodConstant
      *
      * @param pool         the ConstantPool that will contain this Constant
      * @param constParent  specifies the MultiMethodConstant that contains this method
-     * @param access       the accessibility of the method, public/private etc.
      * @param params       the param types
      * @param returns      the return types
      */
-    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, Access access,
+    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
             TypeConstant[] params, TypeConstant[] returns)
         {
-        this(pool, constParent, access,
-                pool.ensureSignatureConstant(constParent.getName(), params, returns));
+        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns));
         }
 
 
     // ----- type-specific functionality -----------------------------------------------------------
-
-    /**
-     * @return the method's accessibility
-     */
-    public Access getAccess()
-        {
-        return m_access;
-        }
 
     /**
      * @return the method's signature constant
@@ -216,11 +196,7 @@ public class MethodConstant
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
-            n = this.m_access.compareTo(that.m_access);
-            if (n == 0)
-                {
-                n = this.m_constSig.compareTo(that.m_constSig);
-                }
+            n = this.m_constSig.compareTo(that.m_constSig);
             }
         return n;
         }
@@ -228,7 +204,7 @@ public class MethodConstant
     @Override
     public String getValueString()
         {
-        return m_access.KEYWORD + ' ' + m_constSig.getValueString();
+        return m_constSig.getValueString();
         }
 
 
@@ -257,7 +233,6 @@ public class MethodConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_access.ordinal());
         writePackedLong(out, m_constSig.getPosition());
         }
 
@@ -265,7 +240,6 @@ public class MethodConstant
     public String getDescription()
         {
         return "name=" + getName()
-                + ", access=" + getAccess()
                 + ", signature=" + getSignature().getValueString();
         }
 
@@ -275,7 +249,7 @@ public class MethodConstant
     @Override
     public int hashCode()
         {
-        return (m_constParent.hashCode() * 17 + m_access.ordinal()) * 3 + m_constSig.hashCode();
+        return m_constParent.hashCode() * 17 + m_constSig.hashCode();
         }
 
 
@@ -292,11 +266,6 @@ public class MethodConstant
      * method.
      */
     private int m_iSig;
-
-    /**
-     * The accessibility of the method.
-     */
-    private Access m_access;
 
     /**
      * The constant that represents the parent of this method.

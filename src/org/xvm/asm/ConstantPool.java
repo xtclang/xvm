@@ -1188,14 +1188,13 @@ public class ConstantPool
      * @param constParent    specifies the module, package, class, multi-method, method, or property
      *                       that contains the method
      * @param sName          the method name
-     * @param access         the method accessibility
      * @param aconstParams   the invocation parameters for the method
      * @param aconstReturns  the return values from the method
      *
      * @return the MethodConstant
      */
     public MethodConstant ensureMethodConstant(IdentityConstant constParent, String sName,
-            Access access, TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
+            TypeConstant[] aconstParams, TypeConstant[] aconstReturns)
         {
         assert constParent != null;
 
@@ -1219,7 +1218,7 @@ public class ConstantPool
                         + " is not a Module, Package, Class, Method, or Property");
             }
 
-        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access,
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod,
                 aconstParams, aconstReturns));
         }
 
@@ -1228,11 +1227,10 @@ public class ConstantPool
      *
      * @param constParent  the constant identifying the parent of the method
      * @param constSig     the signature of the method
-     * @param access       the method accessibility
      *
      * @return the MethodConstant
      */
-    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig, Access access)
+    public MethodConstant ensureMethodConstant(IdentityConstant constParent, SignatureConstant constSig)
         {
         assert constParent != null;
         assert constSig    != null;
@@ -1257,7 +1255,7 @@ public class ConstantPool
                         + " is not a Module, Package, Class, Method, or Property");
             }
 
-        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, access, constSig));
+        return (MethodConstant) register(new MethodConstant(this, constMultiMethod, constSig));
         }
 
     /**
@@ -1724,6 +1722,7 @@ public class ConstantPool
     public ClassConstant     clzOp()            {ClassConstant     c = m_clzOp;           if (c == null) {m_clzOp           = c = (ClassConstant) getImplicitlyImportedIdentity("Op"         );} return c;}
     public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"         );} return c;}
     public ClassConstant     clzInject()        {ClassConstant     c = m_clzInject;       if (c == null) {m_clzInject       = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"     );} return c;}
+    public ClassConstant     clzAbstract()      {ClassConstant     c = m_clzAbstract;     if (c == null) {m_clzAbstract     = c = (ClassConstant) getImplicitlyImportedIdentity("Abstract"   );} return c;}
     public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"   );} return c;}
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
     public ClassConstant     clzObscure()       {ClassConstant     c = m_clzObscure;      if (c == null) {m_clzObscure      = c = (ClassConstant) getImplicitlyImportedIdentity("Obscure"    );} return c;}
@@ -2312,6 +2311,7 @@ public class ConstantPool
         m_clzOp           = null;
         m_clzRO           = null;
         m_clzInject       = null;
+        m_clzAbstract     = null;
         m_clzOverride     = null;
         m_clzUnchecked    = null;
         m_clzObscure      = null;
@@ -2572,6 +2572,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzOp;
     private transient ClassConstant     m_clzRO;
     private transient ClassConstant     m_clzInject;
+    private transient ClassConstant     m_clzAbstract;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzUnchecked;
     private transient ClassConstant     m_clzObscure;
@@ -2631,7 +2632,7 @@ public class ConstantPool
     private transient ArrayConstant     m_valVoid;
 
     public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
-            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP,
+            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             new ListMap<>(), new ListMap<>(),
             Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);

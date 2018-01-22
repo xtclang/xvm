@@ -3,7 +3,6 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
-import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
 
@@ -100,6 +99,40 @@ public class MethodBody
         }
 
     /**
+     * @return true if this method is known to call "super",the next body in the chain
+     */
+    public boolean usesSuper()
+        {
+        return m_impl == Implementation.Explicit && getMethodStructure().usesSuper();
+        }
+
+    /**
+     * @return true if this method blocks a super call from getting to the next body in the chain
+     */
+    public boolean blocksSuper()
+        {
+        switch (m_impl)
+            {
+            case Implicit:
+            case Declared:
+                return false;
+
+            case Default:
+            case Delegating:
+            case Property:
+            case Native:
+                return true;
+
+            case Explicit:
+                MethodStructure structMethod = getMethodStructure();
+                return !structMethod.isAbstract() && !structMethod.usesSuper();
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * @return the PropertyConstant of the property that provides the reference to delegate this
      *         method to
      */
@@ -192,7 +225,7 @@ public class MethodBody
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or the
      * methods of {@code Object} in the context of an interface, for example</li>
      * <li><b>Declared</b> - the method body represents a declared but non-implemented method</li>
-     * <li><b>Default</b> - the method body is a default implemention from an interface</li>
+     * <li><b>Default</b> - the method body is a default implementation from an interface</li>
      * <li><b>Delegating</b> - the method body is implemented by delegating the method call</li>
      * <li><b>Property</b> - the method body represents access to a property's underlying field,
      * which occurs when a property's method is overridden and calls {@code super()}</li>
