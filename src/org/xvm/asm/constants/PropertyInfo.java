@@ -74,6 +74,11 @@ public class PropertyInfo
         {
         if (this.isTypeParam() || that.isTypeParam())
             {
+            if (this.isTypeParam() && that.isTypeParam() && this.getType().isA(that.getType()))
+                {
+                return this;
+                }
+
             throw new IllegalStateException(
                     "cannot combine PropertyInfo objects if either represents a type parameter");
             }
