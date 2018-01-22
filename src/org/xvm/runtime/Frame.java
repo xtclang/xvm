@@ -18,11 +18,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.Function;
-import org.xvm.runtime.template.Function.FullyBoundHandle;
-import org.xvm.runtime.template.Ref;
-import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FullyBoundHandle;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -289,7 +289,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return Function.makeHandle(m_chain, m_nDepth).bind(0, hThis);
+                return xFunction.makeHandle(m_chain, m_nDepth).bind(0, hThis);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)
@@ -1538,7 +1538,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
-            return frame.f_context.f_pool.ensureParameterizedTypeConstant(Ref.TYPE, typeEl);
+            return frame.f_context.f_pool.ensureParameterizedTypeConstant(xRef.TYPE, typeEl);
             }
         };
 

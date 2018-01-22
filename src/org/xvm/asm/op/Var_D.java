@@ -13,7 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**

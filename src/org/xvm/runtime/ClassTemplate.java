@@ -8,6 +8,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -24,22 +25,22 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
-import org.xvm.runtime.template.Const;
-import org.xvm.runtime.template.Enum;
-import org.xvm.runtime.template.Enum.EnumHandle;
-import org.xvm.runtime.template.Function.FullyBoundHandle;
-import org.xvm.runtime.template.Ref;
-import org.xvm.runtime.template.Ref.RefHandle;
-import org.xvm.runtime.template.Service;
-import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
-
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xVar;
+
+import org.xvm.runtime.template.collections.xTuple;
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -52,13 +53,12 @@ public abstract class ClassTemplate
 
     public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
 
-    public final ClassTemplate f_templateSuper;
-    public final ClassTemplate f_templateCategory; // a native category
+    protected final ClassStructure f_structSuper;
 
-    public final boolean f_fService; // is this a service
+    protected ClassTemplate m_templateSuper;
+    protected ClassTemplate f_templateCategory; // a native category
 
     protected TypeComposition m_clazzCanonical; // public non-parameterized class
-
 
     // ----- caches ------
 
@@ -74,50 +74,83 @@ public abstract class ClassTemplate
 
         // calculate the parents (inheritance and "native")
         ClassStructure structSuper = null;
-        ClassTemplate templateSuper = null;
-        ClassTemplate templateCategory = null;
-        boolean fService = false;
 
         Contribution contribExtend = structClass.findContribution(Composition.Extends);
-        if (contribExtend == null)
-            {
-            if (!f_sName.equals("Object"))
-                {
-                templateSuper = xObject.INSTANCE;
-                }
-            }
-        else
+        if (contribExtend != null)
             {
             IdentityConstant idExtend = (IdentityConstant) contribExtend.
                 getTypeConstant().getDefiningConstant();
 
             structSuper = (ClassStructure) idExtend.getComponent();
-            templateSuper = f_templates.getTemplate(structSuper.getIdentityConstant());
-            fService = templateSuper.isService();
             }
 
-        if (structSuper == null || structClass.getFormat() != structSuper.getFormat())
+        f_structSuper = structSuper;
+        }
+
+    /**
+     * Initialize properties, methods and functions declared at the "top" layer.
+     *
+     * @return false if the initialization could not be completed due to a non-initialized dependency
+     */
+    public void initDeclared()
+        {
+        }
+
+    /**
+     * @return a super template; null only for Object
+     */
+    public ClassTemplate getSuper()
+        {
+        ClassTemplate templateSuper = m_templateSuper;
+        if (templateSuper == null)
             {
-            switch (structClass.getFormat())
+            if (f_structSuper == null)
                 {
-                case SERVICE:
-                    templateCategory = Service.INSTANCE;
-                    fService = true;
-                    break;
-
-                case CONST:
-                    templateCategory = Const.INSTANCE;
-                    break;
-
-                case ENUM:
-                    templateCategory = Enum.INSTANCE;
-                    break;
+                if (f_sName.equals("Object"))
+                    {
+                    return null;
+                    }
+                templateSuper = m_templateSuper = xObject.INSTANCE;
+                }
+            else
+                {
+                templateSuper = m_templateSuper =
+                    f_templates.getTemplate(f_structSuper.getCanonicalType());
                 }
             }
+        return templateSuper;
+        }
 
-        f_templateSuper = templateSuper;
-        f_templateCategory = templateCategory;
-        f_fService = fService;
+    /**
+     * @return a category template
+     */
+    public ClassTemplate getTemplateCategory()
+        {
+        ClassTemplate templateCategory = f_templateCategory;
+        if (templateCategory == null)
+            {
+            templateCategory = xObject.INSTANCE;
+
+            if (f_structSuper == null || f_struct.getFormat() != f_structSuper.getFormat())
+                {
+                switch (f_struct.getFormat())
+                    {
+                    case SERVICE:
+                        templateCategory = xService.INSTANCE;
+                        break;
+
+                    case CONST:
+                        templateCategory = xConst.INSTANCE;
+                        break;
+
+                    case ENUM:
+                        templateCategory = xEnum.INSTANCE;
+                        break;
+                    }
+                }
+            f_templateCategory = templateCategory;
+            }
+        return templateCategory;
         }
 
     /**
@@ -184,30 +217,14 @@ public abstract class ClassTemplate
                 (type) -> new TypeComposition(this, typeInception, type));
         }
 
-    public ClassTemplate getSuper()
-        {
-        return f_templateSuper;
-        }
-
     public boolean isService()
         {
-        return f_fService;
+        return f_struct.getFormat() == Format.SERVICE;
         }
 
     public boolean isConst()
         {
-        switch (f_struct.getFormat())
-            {
-            case PACKAGE:
-            case CONST:
-            case ENUM:
-            case ENUMVALUE:
-            case MODULE:
-                return true;
-
-            default:
-                return false;
-            }
+        return f_struct.isConst();
         }
 
     // should we generate fields for this class
@@ -354,7 +371,7 @@ public abstract class ClassTemplate
                 {
                 return method;
                 }
-            template = template.f_templateSuper;
+            template = template.m_templateSuper;
             }
         while (template != null);
         return null;
@@ -380,15 +397,6 @@ public abstract class ClassTemplate
         }
 
     // ---- OpCode support: construction and initialization -----
-
-    /**
-     * Initialize properties, methods and functions declared at the "top" layer.
-     *
-     * TODO: remove; should be called from constructors
-     */
-    public void initDeclared()
-        {
-        }
 
     // create an unassigned RefHandle for the specified class
     // sName is an optional ref name
@@ -463,7 +471,7 @@ public abstract class ClassTemplate
 
     protected boolean isConstructImmutable()
         {
-        return this instanceof Const;
+        return this instanceof xConst;
         }
 
     // ----- OpCode support ------
@@ -849,7 +857,7 @@ public abstract class ClassTemplate
         TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
-            ? Ref.INSTANCE.ensureParameterizedClass(typeReferent)
+            ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
             : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
 
         return new RefHandle(clzRef, hThis, sPropName);

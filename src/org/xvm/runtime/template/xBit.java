@@ -17,7 +17,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xBit
-        extends Const
+        extends xConst
     {
     public xBit(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

@@ -19,22 +19,22 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Enum.EnumHandle;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
  * TODO:
  */
-public class Const
+public class xConst
         extends ClassTemplate
     {
-    public static Const INSTANCE;
+    public static xConst INSTANCE;
 
     // name of the synthetic property for cached hash value
     public static final String PROP_HASH = "@hash";
 
-    public Const(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 

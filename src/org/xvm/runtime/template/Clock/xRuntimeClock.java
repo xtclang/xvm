@@ -15,8 +15,8 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Function.FunctionHandle;
-import org.xvm.runtime.template.Function.NativeMethodHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template.xFunction.NativeMethodHandle;
 
 
 /**

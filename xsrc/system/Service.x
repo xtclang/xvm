@@ -70,10 +70,7 @@ interface Service()
      * defaults to the name of the service class. This property is intended as a means to help
      * diagnose faults, and to provide runtime manageability information.
      */
-    String serviceName.get()
-        {
-        return meta.class_.to<String>();
-        }
+    @RO String serviceName;
 
     /**
      * A service exposes its status through a status indicator:
@@ -151,10 +148,7 @@ interface Service()
      * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
      * Timeout.
      */
-    @RO Timeout? timeout.get()
-        {
-        return super() ?: incomingTimeout;
-        }
+    @RO Timeout? timeout;
 
     /**
      * The wall-clock uptime for the service.
@@ -289,7 +283,6 @@ interface Service()
      */
     Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
-    @Override
     immutable Service to<immutable Service>()
         {
         throw new UnsupportedOperationException();

@@ -16,14 +16,14 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.Ref;
+import org.xvm.runtime.template.xRef;
 
 
 /**
  * TODO:
  */
 public class xAtomicIntNumber
-        extends Ref
+        extends xRef
     {
     public static xAtomicIntNumber INSTANCE;
 

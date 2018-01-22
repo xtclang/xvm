@@ -2,7 +2,6 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.ConstantPool;
@@ -18,7 +17,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xBoolean
-        extends Enum
+        extends xEnum
     {
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;

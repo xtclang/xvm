@@ -10,7 +10,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.Ref.IndexedRefHandle;
+import org.xvm.runtime.template.xRef.IndexedRefHandle;
 
 
 /**
@@ -40,7 +40,7 @@ public interface IndexSupport
             TypeConstant typeEl = getElementType(hTarget, lIndex);
 
             TypeComposition clzRef = fReadOnly
-                ? Ref.INSTANCE.ensureParameterizedClass(typeEl)
+                ? xRef.INSTANCE.ensureParameterizedClass(typeEl)
                 : xVar.INSTANCE.ensureParameterizedClass(typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);

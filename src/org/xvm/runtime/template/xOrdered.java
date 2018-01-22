@@ -12,7 +12,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xOrdered
-        extends Enum
+        extends xEnum
     {
     public static EnumHandle LESSER;
     public static EnumHandle EQUAL;

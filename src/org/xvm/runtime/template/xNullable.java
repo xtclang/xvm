@@ -4,8 +4,8 @@ package org.xvm.runtime.template;
 import java.util.Collections;
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -14,7 +14,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xNullable
-        extends Enum
+        extends xEnum
     {
     public static NullHandle NULL;
 

@@ -21,7 +21,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Function.FunctionHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 
@@ -29,12 +29,12 @@ import org.xvm.runtime.template.annotations.xFutureVar;
 /**
  * TODO:
  */
-public class Service
+public class xService
         extends ClassTemplate
     {
-    public static Service INSTANCE;
+    public static xService INSTANCE;
 
-    public Service(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
@@ -75,7 +75,7 @@ public class Service
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
-            Function.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
+            xFunction.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -83,7 +83,7 @@ public class Service
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
-            Function.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
+            xFunction.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override

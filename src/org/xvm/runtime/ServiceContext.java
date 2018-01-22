@@ -15,16 +15,17 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Fiber.FiberStatus;
+
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.Service;
-import org.xvm.runtime.template.Service.PropertyOperation;
-import org.xvm.runtime.template.Service.PropertyOperation10;
-import org.xvm.runtime.template.Service.PropertyOperation01;
-import org.xvm.runtime.template.Service.PropertyOperation11;
-import org.xvm.runtime.template.Service.ServiceHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xService.PropertyOperation;
+import org.xvm.runtime.template.xService.PropertyOperation10;
+import org.xvm.runtime.template.xService.PropertyOperation01;
+import org.xvm.runtime.template.xService.PropertyOperation11;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 
 /**
@@ -599,7 +600,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
-                    Service service = (Service) frame.f_context.f_templates.getTemplate(constClass);
+                    xService service = (xService) frame.f_context.f_templates.getTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }

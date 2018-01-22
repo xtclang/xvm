@@ -22,12 +22,10 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.Const;
-import org.xvm.runtime.template.Enum;
-import org.xvm.runtime.template.Function;
-import org.xvm.runtime.template.Ref;
-import org.xvm.runtime.template.Service;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xService;
 
 
 /**
@@ -39,7 +37,7 @@ public class TemplateRegistry
     public final Adapter f_adapter;
 
     // cache - TypeConstant by name (only for core classes)
-    private final Map<String, TypeConstant> f_mapTemplatesByName = new ConcurrentHashMap<>();
+    private final Map<String, TypeConstant> f_mapTypesByName = new ConcurrentHashMap<>();
 
     // cache - ClassTemplates by type
     private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
@@ -65,13 +63,12 @@ public class TemplateRegistry
         ConstantPool pool = f_container.f_pool;
         ModuleStructure module = f_container.f_module;
 
-        // the native interfaces are pseudo-classes (also with INSTANCE static variable)
+        // we need a number of INSTANCE static variables to be set up right away
+        // (they are used by the ClassTemplate constructor)
         storeNativeTemplate(new xObject(this, (ClassStructure) pool.clzObject().getComponent(), true));
-        storeNativeTemplate(new Enum(this, (ClassStructure) pool.clzEnum().getComponent(), true));
-        storeNativeTemplate(new Const(this, (ClassStructure) pool.clzConst().getComponent(), true));
-        storeNativeTemplate(new Function(this, (ClassStructure) pool.clzFunction().getComponent(), true));
-        storeNativeTemplate(new Service(this, (ClassStructure) pool.clzService().getComponent(), true));
-        storeNativeTemplate(new Ref(this, (ClassStructure) pool.clzRef().getComponent(), true));
+        storeNativeTemplate(new xEnum(this, (ClassStructure) pool.clzEnum().getComponent(), true));
+        storeNativeTemplate(new xConst(this, (ClassStructure) pool.clzConst().getComponent(), true));
+        storeNativeTemplate(new xService(this, (ClassStructure) pool.clzService().getComponent(), true));
 
         for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet())
             {
@@ -83,6 +80,13 @@ public class TemplateRegistry
                 // (see xArray.initDeclared() for an example)
                 continue;
                 }
+
+            if (f_mapTemplatesByType.containsKey(structClass.getCanonicalType()))
+                {
+                // already loaded - one of the "base" ones
+                continue;
+                }
+
             Class<ClassTemplate> clz = entry.getValue();
 
             try
@@ -100,25 +104,22 @@ public class TemplateRegistry
         // clone the map since the loop below can add to it
         Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
 
-        // temporary test class processing
-        ClassTemplate templateTest = null;
         for (ClassTemplate template : setTemplates)
             {
-            // TEMPORARY; exclude the test
             if (template.f_sName.startsWith("TestApp"))
                 {
-                // defer the initialization until after the core classes
-                if (template.f_sName.equals("TestApp"))
-                    {
-                    templateTest = template;
-                    }
+                // TODO: remove - test classes
+                continue;
                 }
-            else
-                {
-                template.initDeclared();
-                }
+
+            template.initDeclared();
             }
-        templateTest.initDeclared();
+
+        // TODO: remove - test classes
+        getTemplate("TestApp.TestService").initDeclared();
+        getTemplate("TestApp.TestClass2").initDeclared();
+        getTemplate("TestApp.TestClass").initDeclared();
+        getTemplate("TestApp").initDeclared();
         }
 
     // sPackage is either empty or ends with a dot
@@ -170,7 +171,7 @@ public class TemplateRegistry
 
     public void registerNativeTemplate(TypeConstant type, ClassTemplate template)
         {
-        f_mapTemplatesByType.put(type, template);
+        f_mapTemplatesByType.putIfAbsent(type, template);
         }
 
     // ----- templates and structures -----
@@ -192,7 +193,7 @@ public class TemplateRegistry
         {
         try
             {
-            return f_mapTemplatesByName.computeIfAbsent(sName, s ->
+            return f_mapTypesByName.computeIfAbsent(sName, s ->
                 getClassStructure(s).getIdentityConstant().asTypeConstant());
             }
         catch (NullPointerException e)
@@ -256,11 +257,11 @@ public class TemplateRegistry
                 {
                 case ENUMVALUE:
                     // no need to call initDeclared() for the values
-                    template = new Enum(this, structClass, false);
+                    template = new xEnum(this, structClass, false);
                     break;
 
                 case ENUM:
-                    template = new Enum(this, structClass, false);
+                    template = new xEnum(this, structClass, false);
                     template.initDeclared();
                     break;
 
@@ -271,11 +272,11 @@ public class TemplateRegistry
                     break;
 
                 case SERVICE:
-                    template = new Service(this, structClass, false);
+                    template = new xService(this, structClass, false);
                     break;
 
                 case CONST:
-                    template = new Const(this, structClass, false);
+                    template = new xConst(this, structClass, false);
                     break;
 
                 default:

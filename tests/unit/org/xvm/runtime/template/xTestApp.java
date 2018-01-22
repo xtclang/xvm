@@ -12,10 +12,6 @@ import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.TestApp.xTestClass;
-import org.xvm.runtime.template.TestApp.xTestClass2;
-import org.xvm.runtime.template.TestApp.xTestService;
-
 /**
  * A test class.
  */
@@ -37,10 +33,6 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
-        f_templates.getTemplate("TestApp.TestClass").initDeclared();
-        f_templates.getTemplate("TestApp.TestClass2").initDeclared();
-        f_templates.getTemplate("TestApp.TestService").initDeclared();
-
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
         MethodStructure func = ensureMethodStructure("getIntValue", null, null);

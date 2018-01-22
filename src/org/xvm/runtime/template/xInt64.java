@@ -21,7 +21,7 @@ import org.xvm.runtime.template.collections.xIntArray;
  * TODO:
  */
 public class xInt64
-        extends Const
+        extends xConst
     {
     public static xInt64 INSTANCE;
 

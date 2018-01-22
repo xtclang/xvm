@@ -6,7 +6,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**

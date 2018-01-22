@@ -15,13 +15,13 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 /**
  * TODO:
  */
 public class xString
-        extends Const
+        extends xConst
     {
     public static xString INSTANCE;
 
@@ -169,7 +169,7 @@ public class xString
             {
             if (fRO)
                 {
-                TypeComposition clzRef = Ref.INSTANCE.ensureParameterizedClass(hTarget.getType());
+                TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(hTarget.getType());
                 return new RefHandle(clzRef, hTarget, sPropName);
                 }
             throw new IllegalStateException("Read-only property : String.size");

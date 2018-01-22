@@ -10,13 +10,13 @@ import org.xvm.asm.op.*;
 import org.xvm.runtime.Adapter;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.Service;
+import org.xvm.runtime.template.xService;
 
 
 /**
  * A test service.
  */
-public class xTestService extends Service
+public class xTestService extends xService
     {
     private final Adapter adapter;
 

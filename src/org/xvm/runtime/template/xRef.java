@@ -18,13 +18,13 @@ import org.xvm.runtime.TemplateRegistry;
 /**
  * TODO:
  */
-public class Ref
+public class xRef
         extends ClassTemplate
     {
-    public static Ref INSTANCE;
+    public static xRef INSTANCE;
     public static TypeConstant TYPE;
 
-    public Ref(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 

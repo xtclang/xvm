@@ -15,8 +15,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Function;
-import org.xvm.runtime.template.Function.FunctionHandle;
+import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -131,11 +131,11 @@ public class FBind
                     {
                     throw new IllegalStateException();
                     }
-                hFunction = Function.makeHandle(chain, frame.m_nDepth + 1);
+                hFunction = xFunction.makeHandle(chain, frame.m_nDepth + 1);
                 }
             else if (m_nFunctionId < 0)
                 {
-                hFunction = Function.makeHandle(getMethodStructure(frame));
+                hFunction = xFunction.makeHandle(getMethodStructure(frame));
                 }
             else
                 {

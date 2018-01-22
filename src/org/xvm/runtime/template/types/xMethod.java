@@ -17,7 +17,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.Enum;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xString;
 
 
@@ -30,7 +30,7 @@ public class xMethod
     public static xMethod INSTANCE;
     public static TypeConstant TYPE;
 
-    public static Enum ACCESS;
+    public static xEnum ACCESS;
 
     public xMethod(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -51,7 +51,7 @@ public class xMethod
         markNativeGetter("access");
         markNativeGetter("property");
 
-        ACCESS = (Enum) f_templates.getTemplate(f_sName + ".Access");
+        ACCESS = (xEnum) f_templates.getTemplate(f_sName + ".Access");
         }
 
     @Override

@@ -27,7 +27,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
@@ -390,8 +390,8 @@ public class TypeComposition
             }
 
         // 1.4
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
+        ClassTemplate templateCategory = f_template.getTemplateCategory();
+        if (templateCategory != xObject.INSTANCE)
             {
             // all categories are non-generic
             list.add(templateCategory.ensureCanonicalClass());
@@ -632,8 +632,8 @@ public class TypeComposition
             return property;
             }
 
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
+        ClassTemplate templateCategory = f_template.getTemplateCategory();
+        if (templateCategory != xObject.INSTANCE)
             {
             property = templateCategory.getProperty(sPropName);
             if (property != null)

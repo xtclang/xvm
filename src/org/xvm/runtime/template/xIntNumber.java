@@ -21,6 +21,5 @@ public class xIntNumber
     @Override
     public void initDeclared()
         {
-
         }
     }

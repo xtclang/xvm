@@ -20,8 +20,8 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.Service;
-import org.xvm.runtime.template.Function;
+import org.xvm.runtime.template.xService;
+import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xModule.ModuleHandle;
 
 
@@ -81,9 +81,9 @@ public class Container
         f_templates.loadNativeTemplates();
 
         m_contextMain = createServiceContext("main");
-        Service.makeHandle(m_contextMain,
-                Service.INSTANCE.ensureCanonicalClass(),
-                Service.INSTANCE.getCanonicalType());
+        xService.makeHandle(m_contextMain,
+            xService.INSTANCE.ensureCanonicalClass(),
+            xService.INSTANCE.getCanonicalType());
 
         initResources();
 
@@ -102,7 +102,7 @@ public class Container
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
             m_hApp = app.createConstHandle(null, app.f_struct.getIdentityConstant());
 
-            m_contextMain.callLater(Function.makeHandle(mtRun), Utils.OBJECTS_NONE);
+            m_contextMain.callLater(xFunction.makeHandle(mtRun), Utils.OBJECTS_NONE);
             }
         catch (Exception e)
             {
@@ -121,7 +121,7 @@ public class Container
             ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
-                Service.makeHandle(createServiceContext("RuntimeClock"),
+                xService.makeHandle(createServiceContext("RuntimeClock"),
                     templateRTClock.ensureCanonicalClass(), typeClock);
 
             f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
@@ -136,7 +136,7 @@ public class Container
             ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
-                Service.makeHandle(createServiceContext("Console"),
+                xService.makeHandle(createServiceContext("Console"),
                     templateRTConsole.ensureCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
