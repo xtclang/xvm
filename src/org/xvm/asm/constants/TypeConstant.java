@@ -1261,7 +1261,7 @@ public abstract class TypeConstant
             {
             fAbstract = mapProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
                 || mapScopedProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
-                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
+                || mapMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
                 || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract());
             }
 
@@ -1665,25 +1665,20 @@ public abstract class TypeConstant
         // process properties
         for (Entry<String, PropertyInfo> entry : mapAddProps.entrySet())
             {
-            if (mapProps.putIfAbsent(entry.getKey(), entry.getValue()) == null)
+            PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
+            if (propinfo != null)
                 {
-                // note that if this is a "implements" composition, that the property will not have
-                // a field at this point, but that will be resolved once all of the compositions
-                // have been applied
-                continue;
+                mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
                 }
-
-            // TODO merge property info
             }
 
         for (Entry<PropertyConstant, PropertyInfo> entry : mapAddScopedProps.entrySet())
             {
-            if (mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue()) == null)
+            PropertyInfo propinfo = mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue());
+            if (propinfo != null)
                 {
-                continue;
+                mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
                 }
-
-            // TODO merge property info
             }
 
         // first find the "super" chains of each of the existing methods
