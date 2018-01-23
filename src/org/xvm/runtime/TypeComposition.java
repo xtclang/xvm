@@ -78,16 +78,6 @@ public class TypeComposition
     private Map<String, ObjectHandle> m_mapFields;
 
     /**
-     * Construct the TypeComposition for a given "inception" type.
-     *
-     * @param template       the ClassTemplate
-     * @param typeInception  the "inception type"
-     */
-    public TypeComposition(ClassTemplate template, TypeConstant typeInception)
-        {
-        this(template, typeInception, typeInception);
-        }
-    /**
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
      *
      * The guarantees for the inception type are:
@@ -99,24 +89,11 @@ public class TypeComposition
      * @param typeInception  the "origin type"
      * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
      */
-    public TypeComposition(ClassTemplate template, TypeConstant typeInception, TypeConstant typeRevealed)
+    protected TypeComposition(ClassTemplate template, TypeConstant typeInception, TypeConstant typeRevealed)
         {
         f_template = template;
         f_typeInception = typeInception;
         f_typeRevealed = typeRevealed;
-
-        assert typeInception.isSingleDefiningConstant();
-        assert ((IdentityConstant) typeInception.getDefiningConstant()).getComponent() == template.f_struct;
-        assert typeInception.getAccess() == Access.PUBLIC;
-
-        if (typeInception.isParamsSpecified())
-            {
-            ClassStructure struct = template.f_struct;
-            assert typeInception.getParamTypesArray().length ==
-                        struct.getTypeParams().size() ||
-                   struct.getIdentityConstant().equals(
-                       struct.getConstantPool().clzTuple());
-            }
         }
 
     /**
