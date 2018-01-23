@@ -418,6 +418,21 @@ public interface OpSupport
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn);
 
 
+    // ----- to<String>() support ------------------------------------------------------------------
+
+    /**
+     * Build a String handle for a human readable representation of the target handle.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target
+     * @param iReturn    the register id to place a String result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn);
+
+
     // ----- array operations ----------------------------------------------------------------------
 
     /**

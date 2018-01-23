@@ -221,6 +221,11 @@ public abstract class ClassTemplate
         return f_struct.isStatic();
         }
 
+    protected boolean isConstructImmutable()
+        {
+        return this instanceof xConst;
+        }
+
     public PropertyStructure getProperty(String sPropName)
         {
         return (PropertyStructure) f_struct.getChild(sPropName);
@@ -397,19 +402,7 @@ public abstract class ClassTemplate
             (type) -> new TypeComposition(this, typeInception, type));
         }
 
-    // return a handle with this:struct access
-    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
-        {
-        assert clazz.getTemplate() == this &&
-             (f_struct.getFormat() == Component.Format.CLASS ||
-              f_struct.getFormat() == Component.Format.CONST);
-
-        return new GenericHandle(clazz);
-        }
-
-    // invoke the default constructors, then the specified constructor,
-    // then finalizers; change this:struct handle to this:public
-    // return one of the Op.R_ values
+    @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
@@ -454,12 +447,15 @@ public abstract class ClassTemplate
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
         }
 
-    protected boolean isConstructImmutable()
+    // return a handle with this:struct access
+    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return this instanceof xConst;
-        }
+        assert clazz.getTemplate() == this &&
+             (f_struct.getFormat() == Component.Format.CLASS ||
+              f_struct.getFormat() == Component.Format.CONST);
 
-    // ----- OpCode support ------
+        return new GenericHandle(clazz);
+        }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method,
@@ -788,17 +784,13 @@ public abstract class ClassTemplate
             }
         }
 
-    // build the String representation of the target handle
-    // returns R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }
 
-    // ----- Op-code support: array operations -----
-
-    // get a handle to an array for the specified class
-    // returns R_NEXT or R_EXCEPTION
+    @Override
     public int createArrayStruct(Frame frame, TypeConstant typeEl,
                                  long cCapacity, int iReturn)
         {
