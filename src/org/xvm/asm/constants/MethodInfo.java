@@ -1,8 +1,12 @@
 package org.xvm.asm.constants;
 
 
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constants.Access;
+
 import org.xvm.asm.constants.MethodBody.Implementation;
+
+import org.xvm.util.ListMap;
 
 
 /**
@@ -79,7 +83,10 @@ public class MethodInfo
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo appendChain(MethodInfo that)
+    public MethodInfo appendChain(MethodInfo that,
+            ListMap<IdentityConstant, Boolean> listmapClassChain,
+            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            Composition composition)
         {
         assert !isFunction();
 

@@ -208,6 +208,60 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(constThisClass);
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = null;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(constThisClass);
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == null)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                }
+            }
+
+        return constOriginal == constResolved && aconstResolved == null
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
+        }
+
+    @Override
+    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveEverything(resolver, constThisClass);
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = null;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.resolveEverything(resolver, constThisClass);
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == null)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                }
+            }
+
+        return constOriginal == constResolved && aconstResolved == null
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
+        }
+
+    @Override
     public TypeConstant normalizeParameters()
         {
         TypeConstant constOriginal = m_constType;

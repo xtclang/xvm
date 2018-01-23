@@ -462,6 +462,45 @@ public abstract class TypeConstant
         }
 
     /**
+     * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
+     * any auto-narrowing portion with an explicit class identity.
+     *
+     * @param constThisClass  the explicit "this" class identity
+     *
+     * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(constThisClass);
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(constResolved);
+        }
+
+    /**
+     * If this type has any portions that are typedefs, generic types, or auto-narrowing, then
+     * replace those parts with fully resolved, actual types.
+     *
+     * @param  resolver       the generic type resolver
+     * @param constThisClass  the explicit "this" class identity
+     *
+     * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveEverything(resolver, constThisClass);
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(constResolved);
+        }
+
+    /**
      * @return this same type, but with the number of parameters equal to the number of
      *         formal parameters for every parameterized type
      */
@@ -1233,9 +1272,45 @@ public abstract class TypeConstant
                 mapContribScopedMethods = infoContrib.getScopedMethods();
                 }
 
-            contributeMemberInfo(mapProps, mapScopedProps, mapMethods, mapScopedMethods,
-                    composition, mapContribProps, mapContribScopedProps, mapContribMethods, mapContribScopedMethods,
-                    contrib.getComposition() == Composition.Delegates ? contrib.getDelegatePropertyConstant() : null, errs);
+            // process properties
+            // TODO access
+            for (Entry<String, PropertyInfo> entry : mapContribProps.entrySet())
+                {
+                PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
+                if (propinfo != null)
+                    {
+                    mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
+                    }
+                }
+
+            for (Entry<PropertyConstant, PropertyInfo> entry : mapContribScopedProps.entrySet())
+                {
+                PropertyInfo propinfo = mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue());
+                if (propinfo != null)
+                    {
+                    mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
+                    }
+                }
+
+            // first find the "super" chains of each of the existing methods
+            Set<SignatureConstant> setSuperMethods = new HashSet<>();
+            for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+                {
+                // findSuperMethod(entry.getKey(), mapContribMethods)
+                // mapContribMethods
+                // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
+                // mapMethods.put(entry.getKey(), )
+                }
+
+            // sweep over the remaining chains
+            // TODO access
+            for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                {
+                if (!setSuperMethods.contains(entry.getKey()))
+                    {
+                    mapMethods.put(entry.getKey(), entry.getValue());
+                    }
+                }
             }
 
         // verify that properties exist for each of the type parameters
@@ -1631,97 +1706,15 @@ public abstract class TypeConstant
                 : list.toArray(new Annotation[list.size()]);
         }
 
-    /**
-     * Generate the members of the "this" class of "this" type.
-     *
-     * @param mapProps             the public and protected properties of the class
-     * @param mapScopedProps       the scoped properties (e.g. properties inside a method)
-     * @param mapMethods           the public and protected methods of the class
-     * @param mapScopedMethods     the scoped methods (e.g. private methods, methods of a property,
-     *                             nested methods, etc.)
-     * @param compAdd              the form of composition that is adding the various members
-     * @param mapAddProps          the public and protected properties to add
-     * @param mapAddScopedProps    the scoped properties (e.g. properties inside a method) to add
-     * @param mapAddMethods        the public and protected methods to add
-     * @param mapAddScopedMethods  the scoped methods (e.g. private methods, methods of a property,
-     *                             nested methods, etc.) to add
-     * @param propDelegate         the property providing the reference for the delegation, if the
-     *                             composition is a delegation
-     * @param errs                 the error list to log any errors to
-     */
-    protected void contributeMemberInfo(
-            Map<String           , PropertyInfo> mapProps,
-            Map<PropertyConstant , PropertyInfo> mapScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapMethods,
-            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
-            Composition                          compAdd,
-            Map<String           , PropertyInfo> mapAddProps,
-            Map<PropertyConstant , PropertyInfo> mapAddScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapAddMethods,
-            Map<MethodConstant   , MethodInfo  > mapAddScopedMethods,
-            PropertyConstant                     propDelegate,
-            ErrorListener                        errs)
+    protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
         {
-        // process properties
-        for (Entry<String, PropertyInfo> entry : mapAddProps.entrySet())
-            {
-            PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
-            if (propinfo != null)
-                {
-                mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
-                }
-            }
-
-        for (Entry<PropertyConstant, PropertyInfo> entry : mapAddScopedProps.entrySet())
-            {
-            PropertyInfo propinfo = mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue());
-            if (propinfo != null)
-                {
-                mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
-                }
-            }
-
-        // first find the "super" chains of each of the existing methods
-        Set<SignatureConstant> setSuperMethods = new HashSet<>();
+        String sName = constSig.getName();
+        List<SignatureConstant> listMatches = null;
         for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
             {
-            // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
-            // mapMethods.put(entry.getKey(), )
-            }
 
-        // sweep over the remaining chains
-        for (Entry<SignatureConstant, MethodInfo> entry : mapAddMethods.entrySet())
-            {
-            if (!setSuperMethods.contains(entry.getKey()))
-                {
-                // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
-                mapMethods.put(entry.getKey(), entry.getValue());
-                }
             }
-
-//        switch (compAdd)
-//            {
-//            case Equal:
-//                break;
-//
-//            case Implements:
-//                // each property/method in the contrib type need to be declared abstract/default
-//                // TODO need a way to say "use just the abstract/default part"
-//                break;
-//
-//            case Delegates:
-//                // each property/method in the contrib type need to be delegated (in the primary call chains)
-//                // TODO
-//                break;
-//
-//            case Into:
-//                // each property/method in the contrib type need to be declared "implicit"
-//                // TODO
-//                break;
-//
-//            }
-//            TypeConstant typeContrib = contrib.getTypeConstant();
-//            TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+        return null;
         }
 
 

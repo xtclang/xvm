@@ -231,7 +231,10 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant resolveTypedefs()
         {
-        return (TypeConstant) simplify();
+        Constant constId = getDefiningConstant();
+        return constId instanceof TypedefConstant
+                ? getTypedefTypeConstant((TypedefConstant) constId).resolveTypedefs()
+                : this;
         }
 
     @Override
@@ -241,6 +244,47 @@ public class TerminalTypeConstant
         return constId instanceof PropertyConstant
             ? resolver.resolveGenericType((PropertyConstant) constId)
             : this;
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case ThisClass:
+                return getConstantPool().ensureTerminalTypeConstant(constThisClass);
+
+            case ParentClass:
+                return getConstantPool().ensureTerminalTypeConstant(constThisClass.getParentConstant());
+
+            case ChildClass:
+                ConstantPool pool = getConstantPool();
+                return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(constThisClass,
+                        ((ChildClassConstant) constant).getName()));
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                return this;
+            }
+        }
+
+    @Override
+    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
+        {
+        // resolve typedefs, generic types, and auto-narrowing types
+        TypeConstant typeOriginal = this;
+        TypeConstant typeResolved = typeOriginal.resolveTypedefs()
+                                                .resolveGenerics(resolver)
+                                                .resolveAutoNarrowing(constThisClass);
+
+        // the fact that there are no more changes from resolving the type constant indicates that
+        // we're done; otherwise, keep repeating the resolution process, until there are no changes
+        return typeResolved == typeOriginal
+                ? typeOriginal
+                : typeResolved.resolveEverything(resolver, constThisClass);
         }
 
     @Override
