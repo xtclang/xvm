@@ -237,6 +237,14 @@ public class SignatureConstant
             ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
         }
 
+    // TODO methods like "is substitutable for" given:
+    // - calling type (for auto-narrowing)
+    // - this type (for auto-narrowing)
+    // - name
+    // - min# >= 0 ret values
+    // - optional list of required ret types
+    // - # params, types of params
+    // TODO is there a diff between normal invokes and "super()"?
 
     // ----- Constant methods ----------------------------------------------------------------------
 
