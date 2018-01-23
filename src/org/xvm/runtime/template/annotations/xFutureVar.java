@@ -18,11 +18,11 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Enum;
-import org.xvm.runtime.template.Enum.EnumHandle;
-import org.xvm.runtime.template.Function.FunctionHandle;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xVar;
 
@@ -58,7 +58,7 @@ public class xFutureVar
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
 
-        Enum enumCompletion = (Enum) f_templates.getTemplate("annotations.FutureVar.Completion");
+        xEnum enumCompletion = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");

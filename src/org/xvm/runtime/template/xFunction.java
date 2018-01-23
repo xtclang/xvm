@@ -20,7 +20,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Service.ServiceHandle;
+import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -28,12 +28,12 @@ import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 /**
  * TODO:
  */
-public class Function
+public class xFunction
         extends ClassTemplate
     {
-    public static Function INSTANCE;
+    public static xFunction INSTANCE;
 
-    public Function(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFunction(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
@@ -263,9 +263,9 @@ public class Function
     public static class NativeMethodHandle
             extends FunctionHandle
         {
-        final protected Service.NativeOperation f_op;
+        final protected xService.NativeOperation f_op;
 
-        public NativeMethodHandle(Service.NativeOperation op)
+        public NativeMethodHandle(xService.NativeOperation op)
             {
             super(INSTANCE.ensureCanonicalClass(), null);
 

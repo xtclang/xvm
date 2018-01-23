@@ -88,6 +88,25 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff this class is a Const
+     */
+    public boolean isConst()
+        {
+        switch (getFormat())
+            {
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+            case MODULE:
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
+    /**
      * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
      * a corresponding value of the type constraint for the parameter.
      *

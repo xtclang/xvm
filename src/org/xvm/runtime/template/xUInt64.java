@@ -10,7 +10,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xUInt64
-        extends Const
+        extends xConst
     {
     public xUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

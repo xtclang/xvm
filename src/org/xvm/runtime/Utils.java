@@ -11,8 +11,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.Const;
-import org.xvm.runtime.template.Function;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
@@ -113,13 +113,13 @@ public abstract class Utils
      *
      * @return a FullyBoundHandle representing the finalizer
      */
-    public static Function.FullyBoundHandle makeFinalizer(MethodStructure constructor,
+    public static xFunction.FullyBoundHandle makeFinalizer(MethodStructure constructor,
                                           ObjectHandle hStruct, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = constructor.getConstructFinally();
 
-        return methodFinally == null ? Function.FullyBoundHandle.NO_OP :
-                Function.makeHandle(methodFinally).bindAll(hStruct, ahArg);
+        return methodFinally == null ? xFunction.FullyBoundHandle.NO_OP :
+                xFunction.makeHandle(methodFinally).bindAll(hStruct, ahArg);
         }
 
 
@@ -134,7 +134,7 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            Const template = (Const) clzConst.getTemplate(); // should we get it from method?
+            xConst template = (xConst) clzConst.getTemplate(); // should we get it from method?
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 

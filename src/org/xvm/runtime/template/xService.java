@@ -21,7 +21,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Function.FunctionHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 
@@ -29,12 +29,12 @@ import org.xvm.runtime.template.annotations.xFutureVar;
 /**
  * TODO:
  */
-public class Service
+public class xService
         extends ClassTemplate
     {
-    public static Service INSTANCE;
+    public static xService INSTANCE;
 
-    public Service(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
@@ -47,6 +47,7 @@ public class Service
     @Override
     public void initDeclared()
         {
+        markNativeGetter("serviceName");
         markNativeMethod("yield", VOID);
         markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
@@ -61,13 +62,7 @@ public class Service
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        ServiceContext context = frame.f_context;
-
-        ServiceHandle hService = makeHandle(context, clazz, clazz.getType());
-
-        setFieldValue(frame, hService, clazz.getProperty("serviceName"), xString.makeHandle(f_sName));
-
-        return hService;
+        return makeHandle(frame.f_context, clazz, clazz.getType());
         }
 
     @Override
@@ -75,7 +70,7 @@ public class Service
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invoke1(frame, chain, hTarget, ahVar, iReturn) :
-            Function.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
+            xFunction.makeAsyncHandle(chain, 0).call1(frame, hTarget, ahVar, iReturn);
         }
 
     @Override
@@ -83,7 +78,7 @@ public class Service
         {
         return frame.f_context == ((ServiceHandle) hTarget).m_context ?
             super.invokeN(frame, chain, hTarget, ahVar, aiReturn) :
-            Function.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
+            xFunction.makeAsyncHandle(chain, 0).callN(frame, hTarget, ahVar, aiReturn);
         }
 
     @Override
@@ -129,6 +124,18 @@ public class Service
         }
 
     @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        switch (property.getName())
+            {
+            case "serviceName":
+                return frame.assignValue(iReturn,
+                    xString.makeHandle(hTarget.getTemplate().f_sName));
+            }
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        }
+
+    @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName,
                             int iReturn)
         {
@@ -150,7 +157,8 @@ public class Service
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+        if (frame.f_context == hService.m_context ||
+                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
             {
             return super.invokePostInc(frame, hTarget, sPropName, iReturn);
             }
@@ -166,7 +174,8 @@ public class Service
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+        if (frame.f_context == hService.m_context ||
+                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
             {
             return super.getPropertyValue(frame, hTarget, sPropName, iReturn);
             }
@@ -195,7 +204,8 @@ public class Service
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+        if (frame.f_context == hService.m_context ||
+                isAtomic(hTarget.getComposition().getPropertySetterChain(sPropName)))
             {
             return super.setPropertyValue(frame, hTarget, sPropName, hValue);
             }
@@ -251,7 +261,8 @@ public class Service
 
     // ----- ObjectHandle -----
 
-    public static ServiceHandle makeHandle(ServiceContext context, TypeComposition clz, TypeConstant type)
+    public static ServiceHandle makeHandle(ServiceContext context,
+                                           TypeComposition clz, TypeConstant type)
         {
         ServiceHandle hService = new ServiceHandle(clz.maskAs(type), context);
         context.setService(hService);

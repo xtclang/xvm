@@ -33,10 +33,6 @@ public class xTestApp extends xModule
     @Override
     public void initDeclared()
         {
-        f_templates.getTemplate("TestApp.TestClass");
-        f_templates.getTemplate("TestApp.TestClass2");
-        f_templates.getTemplate("TestApp.TestService");
-
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
         MethodStructure func = ensureMethodStructure("getIntValue", null, null);
@@ -150,7 +146,7 @@ public class xTestApp extends xModule
         MethodStructure ftTestService = ensureMethodStructure("testService", VOID);
         ftTestService.createCode()
             .add(new X_Print(
-                    adapter.ensureValueConstantId("\n# in TestApp.testService() #")))
+                adapter.ensureValueConstantId("\n# in TestApp.testService() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestService"),
                 adapter.ensureValueConstantId("svc")))     // #0
             .add(new New_1(adapter.getMethodConstId("TestApp.TestService", "construct"),
@@ -205,8 +201,8 @@ public class xTestApp extends xModule
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
                 adapter.ensureValueConstantId("e"), +3))
             .add(new Invoke_11(0,
-                    adapter.getMethodConstId("TestApp.TestService", "exceptional"),
-                    adapter.ensureValueConstantId(0), 1))
+                adapter.getMethodConstId("TestApp.TestService", "exceptional"),
+                adapter.ensureValueConstantId(0), 1))
             .add(new GuardEnd(+4))
             .add(new CatchStart()) // #8 (e)
             .add(new X_Print(8))
@@ -215,7 +211,7 @@ public class xTestApp extends xModule
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
                 adapter.ensureValueConstantId("e"), +3))
             .add(new Invoke_10(4, adapter.getMethodConstId("annotations.FutureVar", "set"),
-                    adapter.ensureValueConstantId(99)))
+                adapter.ensureValueConstantId(99)))
             .add(new GuardEnd(+4))
             .add(new CatchStart()) // #8 (e)
             .add(new X_Print(8))
@@ -232,11 +228,15 @@ public class xTestApp extends xModule
                     adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
             .add(new X_Print(8))
 
-            .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #5
+            .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #9
             .add(new X_Print(9))
 
             .add(new Invoke_00(Op.A_SERVICE,
                 adapter.getMethodConstId("TestApp.TestService", "yield")))
+
+            .add(new P_Get(adapter.getPropertyConstId("Service", "serviceName"),
+                0, 10)) // next register #10
+            .add(new X_Print(10))
 
             .add(new Invoke_10(0,
                 adapter.getMethodConstId("TestApp.TestService", "exceptional"),
@@ -627,13 +627,19 @@ public class xTestApp extends xModule
             .add(new X_Print(4))
 
             .add(new Var_I(adapter.getClassTypeConstId("Int64"),
-                    adapter.ensureValueConstantId(42))) // #5
+                adapter.ensureValueConstantId(42))) // #5
             .add(new P_Get(adapter.getPropertyConstId("Const", "hash"), 5, 5))
             .add(new X_Print(5))
 
             .add(new Var_IN(adapter.getClassTypeConstId("TestApp.Color"),
-                    adapter.ensureValueConstantId("c"),
-                    adapter.ensureEnumConstId("TestApp.Color.Blue"))) // #6
+                adapter.ensureValueConstantId("c"),
+                adapter.ensureEnumConstId("TestApp.Color.Blue"))) // #6
+            .add(new X_Print(6))
+
+            .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
+            .add(new X_Print(4))
+
+            .add(new Move(adapter.ensureEnumConstId("TestApp.Color.Red"), 6))
             .add(new X_Print(6))
 
             .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))

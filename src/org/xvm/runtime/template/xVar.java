@@ -4,7 +4,6 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -15,7 +14,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xVar
-        extends Ref
+        extends xRef
     {
     public static xVar INSTANCE;
 

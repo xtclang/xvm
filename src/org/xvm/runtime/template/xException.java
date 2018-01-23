@@ -20,7 +20,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xException
-        extends Const
+        extends xConst
     {
     public static xException INSTANCE;
 

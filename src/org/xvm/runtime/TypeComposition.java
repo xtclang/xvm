@@ -27,7 +27,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.Ref.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
@@ -69,10 +69,10 @@ public class TypeComposition
     private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
 
     // cached property getter call chain (the top-most method first)
-    private Map<String, CallChain> m_mapGetters = new HashMap<>();
+    private Map<String, PropertyCallChain> m_mapGetters = new HashMap<>();
 
     // cached property setter call chain (the top-most method first)
-    private Map<String, CallChain> m_mapSetters = new HashMap<>();
+    private Map<String, PropertyCallChain> m_mapSetters = new HashMap<>();
 
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
@@ -390,8 +390,8 @@ public class TypeComposition
             }
 
         // 1.4
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
+        ClassTemplate templateCategory = f_template.getTemplateCategory();
+        if (templateCategory != xObject.INSTANCE)
             {
             // all categories are non-generic
             list.add(templateCategory.ensureCanonicalClass());
@@ -572,21 +572,21 @@ public class TypeComposition
         return new CallChain(list);
         }
 
-    public CallChain getPropertyGetterChain(String sProperty)
+    public PropertyCallChain getPropertyGetterChain(String sProperty)
         {
         // TODO: this will be replaced whit the TypeInfo
         return m_mapGetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, true));
         }
 
-    public CallChain getPropertySetterChain(String sProperty)
+    public PropertyCallChain getPropertySetterChain(String sProperty)
         {
         // TODO: this will be replaced whit the TypeInfo
         return m_mapSetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, false));
         }
 
-    protected CallChain collectPropertyCallChain(String sPropName, boolean fGetter)
+    protected PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
         PropertyStructure propertyBase = null;
         List<MethodStructure> list = new ArrayList<>();
@@ -632,8 +632,8 @@ public class TypeComposition
             return property;
             }
 
-        ClassTemplate templateCategory = f_template.f_templateCategory;
-        if (templateCategory != null)
+        ClassTemplate templateCategory = f_template.getTemplateCategory();
+        if (templateCategory != xObject.INSTANCE)
             {
             property = templateCategory.getProperty(sPropName);
             if (property != null)

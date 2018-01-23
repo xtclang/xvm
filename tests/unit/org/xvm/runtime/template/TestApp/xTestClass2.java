@@ -34,12 +34,11 @@ public class xTestClass2 extends ClassTemplate
 
         construct.setOps(new Op[]
             { // #0 = i; #1 = s
-            new X_Print(
+                new X_Print(
                     adapter.ensureValueConstantId("# in constructor: TestClass2 #")),
-            new L_Set(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
-            new Construct_1(adapter.getMethodConstId("TestApp.TestClass", "construct"),
-                    1),
-            new Return_0(),
+                new L_Set(adapter.getPropertyConstId("TestApp.TestClass2", "prop2"), 0),
+                new Construct_1(adapter.getMethodConstId("TestApp.TestClass", "construct"), 1),
+                new Return_0(),
             });
         construct.setConstructFinally(ftFinally);
 

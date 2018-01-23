@@ -22,15 +22,15 @@ import org.xvm.runtime.TemplateRegistry;
 /**
  * A template for the base of all Enum classes
  */
-public class Enum
-        extends Const
+public class xEnum
+        extends xConst
     {
-    public static Enum INSTANCE;
+    public static xEnum INSTANCE;
 
     protected List<String> m_listNames;
     protected List<EnumHandle> m_listHandles;
 
-    public Enum(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xEnum(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -75,8 +75,8 @@ public class Enum
             {
             IdentityConstant constClass = ((SingletonConstant) constant).getValue();
 
-            Enum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
-                (Enum) getSuper() : this;
+            xEnum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
+                (xEnum) getSuper() : this;
 
             return template.getEnumByName(constClass.getName());
             }

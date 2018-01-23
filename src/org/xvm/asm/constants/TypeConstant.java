@@ -1334,10 +1334,10 @@ public abstract class TypeConstant
         // go through the members to determine if this is abstract
         if (!fAbstract)
             {
-            fAbstract = mapProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
-                || mapScopedProps.entrySet().stream().anyMatch(e -> e.getValue().isExplicitAbstract())
-                || mapMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract())
-                || mapScopedMethods.entrySet().stream().anyMatch(e -> e.getValue().isAbstract());
+            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
+                || mapScopedProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
+                || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract)
+                || mapScopedMethods.values().stream().anyMatch(MethodInfo::isAbstract);
             }
 
         for (Entry<String, PropertyInfo> entry : mapProps.entrySet())

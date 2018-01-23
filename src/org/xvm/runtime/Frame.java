@@ -18,11 +18,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.Function;
-import org.xvm.runtime.template.Function.FullyBoundHandle;
-import org.xvm.runtime.template.Ref;
-import org.xvm.runtime.template.Ref.RefHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FullyBoundHandle;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -289,7 +289,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return Function.makeHandle(m_chain, m_nDepth).bind(0, hThis);
+                return xFunction.makeHandle(m_chain, m_nDepth).bind(0, hThis);
 
             case Op.A_TARGET:
                 if (f_hTarget == null)
@@ -777,7 +777,9 @@ public class Frame
     public TypeConstant getArgumentType(int iArg)
         {
         return iArg >= 0
-                ? getVarInfo(iArg).getType()
+            ? getVarInfo(iArg).getType()
+            : iArg == Op.A_THIS
+                ? f_hThis.getType()            // "this" is always resolved
                 : getConstant(iArg).getType(); // a constant cannot be generic
         }
 
@@ -786,8 +788,10 @@ public class Frame
         {
         return iArg >= 0
             ? getVarInfo(iArg).getType().resolveGenerics(getGenericsResolver())
-            // "local property"
-            : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
+            : iArg == Op.A_THIS
+                ? f_hThis.getType()
+                // "local property"
+                : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
         }
 
     // same as getArgumentClass, but treats the negative ids as "local-property" references
@@ -1048,6 +1052,24 @@ public class Frame
         int nVar = f_anNextVar[m_iScope]++;
 
         f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), TUPLE_RESOLVER);
+        }
+
+    /**
+     * Introduce a new standard variable that has a type of the specified property in the context
+     * of the specified target.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nTargetId  if positive, the register number holding a target (handle);
+     *                     otherwise a constant id pointing to local property holding the target
+     * @param constProp  the property constant whose type needs to be resolved in the context
+     *                     of the target class
+     */
+    public void introducePropertyVar(int nTargetId, PropertyConstant constProp)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nTargetId, constProp.getPosition(), PROPERTY_RESOLVER);
         }
 
     /**
@@ -1538,14 +1560,14 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
-            return frame.f_context.f_pool.ensureParameterizedTypeConstant(Ref.TYPE, typeEl);
+            return frame.f_context.f_pool.ensureParameterizedTypeConstant(xRef.TYPE, typeEl);
             }
         };
 
     protected static final VarTypeResolver TUPLE_RESOLVER = new VarTypeResolver()
         {
         // nTargetReg - the target register (or property)
-        // nMethodId  - the MethodConstant id
+        // nAuxId  - the MethodConstant id
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
@@ -1560,6 +1582,25 @@ public class Frame
                 ? typeTuple.resolveGenerics(frame.getGenericsResolver())
                 // a target type-based resolution
                 : typeTuple.resolveGenerics(frame.getLocalType(nTargetReg));
+            }
+        };
+
+    protected static final VarTypeResolver PROPERTY_RESOLVER = new VarTypeResolver()
+        {
+        // nTargetReg - the target register (or property)
+        // nAuxId  - the PropertyConstant id
+        @Override
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
+            {
+            ConstantPool pool = frame.f_context.f_pool;
+
+            PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
+            TypeConstant typeTarget = frame.getLocalType(nTargetReg);
+
+            return typeTarget.isGenericType(constProperty.getName())
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                    constProperty.asTypeConstant().resolveGenerics(typeTarget))
+                : constProperty.getRefType().resolveGenerics(typeTarget);
             }
         };
     }

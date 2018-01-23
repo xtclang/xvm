@@ -22,6 +22,8 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.xObject;
+
 import org.xvm.util.Handy;
 
 
@@ -180,8 +182,8 @@ public class Adapter
                 return method;
                 }
 
-            ClassTemplate templateCategory = template.f_templateCategory;
-            if (templateCategory != null)
+            ClassTemplate templateCategory = template.getTemplateCategory();
+            if (templateCategory != xObject.INSTANCE)
                 {
                 method = templateCategory.getDeclaredMethod(sMethName, atArg, atRet);
                 if (method != null)

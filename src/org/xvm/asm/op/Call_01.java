@@ -15,7 +15,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.Function.FunctionHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -106,7 +106,10 @@ public class Call_01
                 {
                 // it's a super() call for the property's field access
                 // the return type must be identical to the property type
-                checkReturnRegister(frame, chain.getProperty());
+                if (frame.isNextRegister(m_nRetValue))
+                    {
+                    frame.introduceVar(chain.getProperty().getType());
+                    }
                 }
             else
                 {

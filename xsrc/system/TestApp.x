@@ -198,6 +198,8 @@ class TestApp
 
         this:service.yield();
 
+        print(svc.serviceName);
+
         // unhandled exception
         svc.exceptional(0);
         }
@@ -450,6 +452,10 @@ class TestApp
         Int i = 42; print(i.hash); // print(42.hash);
 
         Color c = Blue;
+        print(c);
+        print(c.ordinal);
+
+        c = Green;
         print(c);
         print(c.ordinal);
         }

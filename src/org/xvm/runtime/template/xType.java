@@ -71,7 +71,7 @@ public class xType
 
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return new TypeHandle(INSTANCE.ensureCanonicalClass(), type);
+        return new TypeHandle(INSTANCE.ensureParameterizedClass(type));
         }
 
     // most of the time the TypeHandle is based on the underlying DataType (Type);
@@ -79,18 +79,14 @@ public class xType
     public static class TypeHandle
             extends ObjectHandle
         {
-        protected TypeConstant m_type;
-
-        protected TypeHandle(TypeComposition clazz, TypeConstant type)
+        protected TypeHandle(TypeComposition clazz)
             {
             super(clazz);
-
-            m_type = type;
             }
 
         protected TypeConstant getDataType()
             {
-            return m_type;
+            return m_clazz.getType().getParamTypesArray()[0];
             }
         }
     }

@@ -3,6 +3,7 @@ package org.xvm.runtime.template.collections;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -21,7 +22,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.Function.FunctionHandle;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
 
 
@@ -41,14 +42,19 @@ public class xArray
         if (fInstance)
             {
             INSTANCE = this;
-
-            new xIntArray(f_templates, f_struct, true); // TODO: how to do it right?
             }
         }
 
     @Override
     public void initDeclared()
         {
+        xIntArray template = new xIntArray(f_templates, f_struct, true);
+        template.initDeclared();
+
+        ConstantPool pool = f_templates.f_container.f_pool;
+        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
+        f_templates.registerNativeTemplate(type, template); // Array<Int>
+
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
         markNativeMethod("elementAt", INT, new String[] {"Ref<ElementType>"});

@@ -2,9 +2,9 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -17,7 +17,7 @@ import org.xvm.runtime.TemplateRegistry;
  * TODO:
  */
 public class xBoolean
-        extends Enum
+        extends xEnum
     {
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
@@ -41,11 +41,12 @@ public class xBoolean
         {
         markNativeMethod("to", VOID, STRING);
 
-        if (f_struct.getFormat() == Component.Format.ENUM)
-            {
-            FALSE = new BooleanHandle(ensureCanonicalClass(), false);
-            TRUE = new BooleanHandle(ensureCanonicalClass(), true);
-            }
+        ConstantPool pool = f_templates.f_container.f_pool;
+        f_templates.registerNativeTemplate(pool.typeTrue(), this);
+        f_templates.registerNativeTemplate(pool.typeFalse(), this);
+
+        FALSE = new BooleanHandle(ensureCanonicalClass(), false);
+        TRUE = new BooleanHandle(ensureCanonicalClass(), true);
         }
 
     @Override
