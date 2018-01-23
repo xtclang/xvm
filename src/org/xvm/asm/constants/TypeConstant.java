@@ -465,7 +465,8 @@ public abstract class TypeConstant
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
      * any auto-narrowing portion with an explicit class identity.
      *
-     * @param constThisClass  the explicit "this" class identity
+     * @param constThisClass  the explicit "this" class identity; null implies the "declaration
+     *                        level class" for the auto-narrowing type
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
@@ -608,8 +609,7 @@ public abstract class TypeConstant
             }
         else if (m_typeinfo == getConstantPool().EMPTY_TYPEINFO)
             {
-            // TODO this will be an exception
-            System.out.println("*** ensureTypeInfo(" + getValueString() + ") -> infinite recursion");
+            throw new IllegalStateException("recursive TypeInfo request for " + getValueString());
             }
 
         return m_typeinfo;
@@ -624,26 +624,23 @@ public abstract class TypeConstant
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        if (!isSingleDefiningConstant())
+        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
+        if (typeResolved != this)
             {
-            return ((TypeConstant) simplify()).buildTypeInfo(errs);
+            return typeResolved.buildTypeInfo(errs);
             }
 
         // load the class structure for the type
         IdentityConstant constId;
         ClassStructure   struct;
-        ConstantPool     pool = getConstantPool();
         try
             {
-            // TODO Property, Register, and auto-narrowing types?
-            constId = (IdentityConstant) ((TypeConstant) simplify()).getDefiningConstant();
-            struct  = (ClassStructure) constId.getComponent();
+            constId = (IdentityConstant) getDefiningConstant();
+            struct  = (ClassStructure)   constId.getComponent();
             }
         catch (Exception e)
             {
-            System.err.println("** Unable to get underlying class for " + getValueString());
-            return pool.EMPTY_TYPEINFO;
-            // TODO CP throw new IllegalStateException("Unable to get underlying class for " + getValueString(), e);
+            throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
         // we're going to build a map from name to param info, including whatever parameters are
@@ -848,6 +845,7 @@ public abstract class TypeConstant
         TypeConstant typeInto    = null;
         TypeConstant typeExtends = null;
         TypeConstant typeRebase  = null;
+        ConstantPool pool        = getConstantPool();
         switch (struct.getFormat())
             {
             case MODULE:
@@ -1238,6 +1236,10 @@ public abstract class TypeConstant
         boolean      fAbstract  = formatInfo == Component.Format.INTERFACE
                 || TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
+        // determine what access to request from contributions
+        Access accessThis    = getAccess();
+        Access accessContrib = accessThis == Access.STRUCT ? Access.STRUCT : Access.PROTECTED;
+
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
         Map<String           , PropertyInfo> mapProps         = new HashMap<>();
@@ -1260,11 +1262,34 @@ public abstract class TypeConstant
                 mapContribScopedMethods = new HashMap<>();
 
                 createMemberInfo(constId, struct, formatInfo, resolver,
-                        mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+                        mapContribProps, mapContribScopedProps,
+                        mapContribMethods, mapContribScopedMethods, errs);
                 }
             else
                 {
-                TypeInfo infoContrib = contrib.getTypeConstant().ensureTypeInfo(errs);
+                TypeConstant typeContrib = contrib.getTypeConstant();
+                switch (composition)
+                    {
+                    case Annotation:
+                    case Extends:
+                    case Incorporates:
+                    case RebasesOnto:
+                        // if we're building "public" or "protected", then this will be protected
+                        assert !typeContrib.isAccessSpecified();
+                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, accessContrib);
+                        break;
+
+                    case Into:
+                        if (!typeContrib.isAccessSpecified() && typeContrib.isSingleDefiningConstant())
+                        // if we're building "public" or "protected", then this will be protected
+                        break;
+                    }
+
+                if (!typeContrib.isAccessSpecified())
+                    {
+                    // TODO
+                    }
+                TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
 
                 mapContribProps         = infoContrib.getProperties();
                 mapContribScopedProps   = infoContrib.getScopedProperties();
@@ -1303,10 +1328,9 @@ public abstract class TypeConstant
                 }
 
             // sweep over the remaining chains
-            // TODO access
             for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
                 {
-                if (!setSuperMethods.contains(entry.getKey()))
+                if (!setSuperMethods.contains(entry.getKey()) && entry.getValue().getAccess())
                     {
                     mapMethods.put(entry.getKey(), entry.getValue());
                     }
@@ -1395,6 +1419,8 @@ public abstract class TypeConstant
                 entry.setValue(propinfo = propinfo.specifyField(fField));
                 }
             }
+
+        // TODO erase protected methods if the access of "this" is public
 
         return new TypeInfo(this, formatInfo, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,

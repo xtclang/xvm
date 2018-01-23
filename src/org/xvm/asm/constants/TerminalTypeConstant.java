@@ -253,15 +253,19 @@ public class TerminalTypeConstant
         switch (constant.getFormat())
             {
             case ThisClass:
-                return getConstantPool().ensureTerminalTypeConstant(constThisClass);
+                return constThisClass == null
+                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                        : constThisClass.asTypeConstant();
 
             case ParentClass:
-                return getConstantPool().ensureTerminalTypeConstant(constThisClass.getParentConstant());
+                return constThisClass == null
+                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                        : constThisClass.getParentConstant().asTypeConstant();
 
             case ChildClass:
-                ConstantPool pool = getConstantPool();
-                return pool.ensureTerminalTypeConstant(pool.ensureClassConstant(constThisClass,
-                        ((ChildClassConstant) constant).getName()));
+                return constThisClass == null
+                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                        : constThisClass.ensureChild(((ChildClassConstant) constant).getName()).asTypeConstant();
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -291,6 +295,40 @@ public class TerminalTypeConstant
     public TypeConstant normalizeParameters()
         {
         return this;
+        }
+
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return super.buildTypeInfo(errs);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).buildTypeInfo(errs);
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constant).buildTypeInfo(errs);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constant).buildTypeInfo(errs);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                        .buildTypeInfo(errs);
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
         }
 
     @Override

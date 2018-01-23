@@ -129,6 +129,23 @@ public abstract class IdentityConstant
     /**
      * @return a TypeConstant for this class
      */
+    public ClassConstant ensureChild(String sName)
+        {
+        switch (getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return getConstantPool().ensureClassConstant(this, sName);
+
+            default:
+                throw new IllegalStateException("not a class type: " + this);
+            }
+        }
+
+    /**
+     * @return a TypeConstant for this class
+     */
     public TypeConstant asTypeConstant()
         {
         switch (getFormat())
