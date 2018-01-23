@@ -106,7 +106,10 @@ public class Call_01
                 {
                 // it's a super() call for the property's field access
                 // the return type must be identical to the property type
-                checkReturnRegister(frame, chain.getProperty());
+                if (frame.isNextRegister(m_nRetValue))
+                    {
+                    frame.introduceVar(chain.getProperty().getType());
+                    }
                 }
             else
                 {

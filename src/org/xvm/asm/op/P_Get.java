@@ -108,11 +108,10 @@ public class P_Get
                 }
 
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-            String sProperty = constProperty.getName();
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVar(constProperty.getRefType());
+                frame.introducePropertyVar(m_nTarget, constProperty);
                 }
 
             if (isProperty(hTarget))
@@ -120,12 +119,12 @@ public class P_Get
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     hTarget.getTemplate().getPropertyValue(
-                        frame, ahTarget[0], sProperty, m_nRetValue);
+                        frame, ahTarget[0], constProperty.getName(), m_nRetValue);
 
                 return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
             return hTarget.getTemplate().getPropertyValue(
-                frame, hTarget, sProperty, m_nRetValue);
+                frame, hTarget, constProperty.getName(), m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

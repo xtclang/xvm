@@ -129,17 +129,6 @@ public abstract class OpCallable extends Op
         return m_function = (MethodStructure) constFunction.getComponent();
         }
 
-    // check if a register for the return property value needs to be allocated
-    protected void checkReturnRegister(Frame frame, PropertyStructure property)
-        {
-        assert !isMultiReturn();
-
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceVar(property.getType());
-            }
-        }
-
     // check if a register for the return value needs to be allocated
     protected void checkReturnRegister(Frame frame, MethodStructure method)
         {

@@ -214,7 +214,7 @@ public abstract class ClassTemplate
             : typeActual.normalizeParameters();
 
         return m_mapCompositions.computeIfAbsent(typeMask,
-                (type) -> new TypeComposition(this, typeInception, type));
+            (type) -> new TypeComposition(this, typeInception, type));
         }
 
     public boolean isService()
@@ -687,8 +687,8 @@ public abstract class ClassTemplate
     // return R_NEXT, R_CALL or R_EXCEPTION
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return new Utils.IncDec(Utils.IncDec.PRE_INC, this,
-            hTarget, sPropName, iReturn).doNext(frame);
+        return new Utils.IncDec(Utils.IncDec.PRE_INC,
+            this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
     // place the property value into the specified frame register and increment it
@@ -946,6 +946,11 @@ public abstract class ClassTemplate
         {
         PropertyInfo info = property.getInfo();
         return info != null && info.m_fInjectable;
+        }
+
+    protected boolean isAtomic(CallChain.PropertyCallChain chain)
+        {
+        return isAtomic(chain.getProperty());
         }
 
     protected boolean isAtomic(PropertyStructure property)

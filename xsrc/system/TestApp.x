@@ -198,6 +198,8 @@ class TestApp
 
         this:service.yield();
 
+        print(svc.serviceName);
+
         // unhandled exception
         svc.exceptional(0);
         }
