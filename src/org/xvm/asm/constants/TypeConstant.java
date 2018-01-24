@@ -21,7 +21,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -242,16 +241,7 @@ public abstract class TypeConstant
      */
      public boolean isGenericType(String sName)
         {
-        // TODO: use the type info when done
-        if (isSingleDefiningConstant())
-            {
-            ClassStructure clz = (ClassStructure)
-                ((ClassConstant) getDefiningConstant()).getComponent();
-            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
-            return type != null;
-            }
-
-        return false;
+        return getTypeInfo().getTypeParams().containsKey(sName);
         }
 
     /**
@@ -263,18 +253,15 @@ public abstract class TypeConstant
      */
     public TypeConstant getGenericParamType(String sName)
         {
-        // TODO: use the type info when done
         if (isSingleDefiningConstant())
             {
-            ClassStructure clz = (ClassStructure)
-                ((ClassConstant) getDefiningConstant()).getComponent();
-            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
-            if (type == null)
+            ParamInfo param = getTypeInfo().getTypeParams().get(sName);
+            if (param == null)
                 {
                 throw new IllegalArgumentException(
-                    "Invalid formal name: " + sName + " for " + this);
+                    "Invalid formal name: " + sName + " for " + getValueString());
                 }
-            return type;
+            return param.getActualType();
             }
 
         throw new UnsupportedOperationException();
@@ -350,7 +337,6 @@ public abstract class TypeConstant
         IdentityConstant constId = getConstantPool().getImplicitlyImportedIdentity(sName);
         if (constId == null)
             {
-            // TODO could just take the name as is (including qualified notation) and assume it's an Ecstasy class
             throw new IllegalArgumentException("no such implicit name: " + sName);
             }
 
@@ -362,7 +348,6 @@ public abstract class TypeConstant
      */
     public String getEcstasyClassName()
         {
-        // TODO might require additional checks
         return isSingleDefiningConstant()
                     && getDefiningConstant() instanceof ClassConstant
                     && ((ClassConstant) getDefiningConstant()).getModuleConstant().isEcstasyModule()
