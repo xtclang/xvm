@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import java.util.List;
 
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 
@@ -112,7 +111,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getTemplate().
+            return hThis.getOpSupport().
                     invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
             }
 
@@ -139,7 +138,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getTemplate().
+            return hThis.getOpSupport().
                     invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
             }
 
@@ -169,9 +168,9 @@ public class CallChain
         if (Adapter.isNative(methodSuper))
             {
             return fReturnTuple
-                ? hThis.getTemplate().
+                ? hThis.getOpSupport().
                     invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
-                : hThis.getTemplate().
+                : hThis.getOpSupport().
                     invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
             }
 
@@ -195,7 +194,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getTemplate().
+            return hThis.getOpSupport().
                     invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
             }
 
@@ -240,13 +239,13 @@ public class CallChain
         @Override
         protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
             {
-            return hThis.getTemplate().getFieldValue(frame, hThis, f_property, iReturn);
+            return hThis.getOpSupport().getFieldValue(frame, hThis, f_property, iReturn);
             }
 
         @Override
         protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
             {
-            return hThis.getTemplate().setFieldValue(frame, hThis, f_property, hArg);
+            return hThis.getOpSupport().setFieldValue(frame, hThis, f_property, hArg);
             }
         }
     }

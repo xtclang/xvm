@@ -80,7 +80,7 @@ public class I_Var
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
         return template.makeRef(frame, hTarget, hIndex.getValue(), false, m_nRetValue);
         }

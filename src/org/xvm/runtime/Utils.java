@@ -134,12 +134,12 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            xConst template = (xConst) clzConst.getTemplate(); // should we get it from method?
+            xConst template = (xConst) clzConst.getTemplate();
             return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
+        return clzConst.getSupport().invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
     // ----- to<String> support -----
@@ -153,11 +153,11 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            return clzValue.getTemplate().buildStringValue(frame, hValue, Frame.RET_LOCAL);
+            return clzValue.getSupport().buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+        return clzValue.getSupport().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 
 
@@ -238,11 +238,11 @@ public abstract class Utils
                         break;
 
                     case Increment:
-                        iResult = hValueOld.getTemplate().invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        iResult = hValueOld.getOpSupport().invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
                         break;
 
                     case Decrement:
-                        iResult = hValueOld.getTemplate().invokePrev(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        iResult = hValueOld.getOpSupport().invokePrev(frameCaller, hValueOld, Frame.RET_LOCAL);
                         break;
 
                     case AssignOld:
@@ -314,7 +314,7 @@ public abstract class Utils
                 ObjectHandle hThis = frameCaller.getThis();
                 String sProp = ((PropertyHandle) handle).m_property.getName();
 
-                switch (hThis.getTemplate().getPropertyValue(
+                switch (hThis.getOpSupport().getPropertyValue(
                     frameCaller, hThis, sProp, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
@@ -379,7 +379,7 @@ public abstract class Utils
                     ObjectHandle hThis = frameCaller.getThis();
                     String sProp = ((PropertyHandle) handle).m_property.getName();
 
-                    switch (hThis.getTemplate().getPropertyValue(
+                    switch (hThis.getOpSupport().getPropertyValue(
                         frameCaller, hThis, sProp, Frame.RET_LOCAL))
                         {
                         case Op.R_NEXT:

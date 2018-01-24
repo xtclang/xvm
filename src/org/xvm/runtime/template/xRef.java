@@ -100,12 +100,12 @@ public class xRef
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isService()));
+                            xBoolean.makeHandle(frame.getFrameLocal().getComposition().isService()));
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isService())));
+                                xBoolean.makeHandle(frame.getFrameLocal().getComposition().isService())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -123,12 +123,12 @@ public class xRef
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isConst()));
+                            xBoolean.makeHandle(frame.getFrameLocal().getComposition().isConst()));
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.getFrameLocal().getTemplate().isConst())));
+                                xBoolean.makeHandle(frame.getFrameLocal().getComposition().isConst())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -347,7 +347,7 @@ public class xRef
                     return ((RefHandle) m_hDelegate).get(frame, iReturn);
 
                 case REF_PROPERTY:
-                    return m_hDelegate.getTemplate().getPropertyValue(
+                    return m_hDelegate.getOpSupport().getPropertyValue(
                         frame, m_hDelegate, m_sName, iReturn);
 
                 default: // assertion m_iVar >= 0
@@ -373,7 +373,7 @@ public class xRef
                     return ((RefHandle) m_hDelegate).set(frame, handle);
 
                 case REF_PROPERTY:
-                    return m_hDelegate.getTemplate().setPropertyValue(
+                    return m_hDelegate.getOpSupport().setPropertyValue(
                         frame, m_hDelegate, m_sName, handle);
 
                 default: // assertion m_iVar >= 0
@@ -440,7 +440,7 @@ public class xRef
             try
                 {
                 return frame.assignValue(iReturn,
-                    ((IndexSupport) f_hTarget.getTemplate()).extractArrayValue(f_hTarget, f_lIndex));
+                    ((IndexSupport) f_hTarget.getOpSupport()).extractArrayValue(f_hTarget, f_lIndex));
                 }
             catch (ExceptionHandle.WrapperException e)
                 {
@@ -451,7 +451,7 @@ public class xRef
         @Override
         protected int setInternal(Frame frame, ObjectHandle handle)
             {
-            ExceptionHandle hException = ((IndexSupport) f_hTarget.getTemplate()).
+            ExceptionHandle hException = ((IndexSupport) f_hTarget.getOpSupport()).
                     assignArrayValue(f_hTarget, f_lIndex, handle);
             return hException == null ? Op.R_NEXT : frame.raiseException(hException);
             }

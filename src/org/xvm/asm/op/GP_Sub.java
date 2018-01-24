@@ -49,6 +49,6 @@ public class GP_Sub
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getTemplate().invokeSub(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getOpSupport().invokeSub(frame, hTarget, hArg, m_nRetValue);
         }
     }

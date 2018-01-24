@@ -244,7 +244,7 @@ public class TemplateRegistry
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
         return f_mapTemplatesByType.computeIfAbsent(constClass.asTypeConstant(), type ->
-        {
+            {
             Component struct = constClass.getComponent();
             ClassStructure structClass = (ClassStructure) struct;
             if (structClass == null)
@@ -301,6 +301,6 @@ public class TemplateRegistry
     // using the specified actual type parameters
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        return getTemplate(typeActual).ensureClass(typeActual);
+        return typeActual.getOpSupport(this).ensureClass(typeActual, typeActual);
         }
     }

@@ -15,6 +15,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -120,9 +121,7 @@ public class NewG_1
                 }
 
             TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
-            ClassTemplate template = clzTarget.getTemplate();
-
-            assert constructor.getParent().getParent() == template.f_struct;
+            OpSupport support = clzTarget.getSupport();
 
             if (frame.isNextRegister(m_nRetValue))
                 {
@@ -132,12 +131,12 @@ public class NewG_1
             if (isProperty(ahVar[0]))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+                    support.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
                 return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
                 }
 
-            return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+            return support.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

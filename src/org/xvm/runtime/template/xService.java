@@ -130,7 +130,7 @@ public class xService
             {
             case "serviceName":
                 return frame.assignValue(iReturn,
-                    xString.makeHandle(hTarget.getTemplate().f_sName));
+                    xString.makeHandle(hTarget.getComposition().getTemplate().f_sName));
             }
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }

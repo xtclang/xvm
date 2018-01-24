@@ -68,7 +68,7 @@ public class IP_Inc
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.getTemplate().invokeNext(frame, hTarget, m_nTarget);
+        return hTarget.getOpSupport().invokeNext(frame, hTarget, m_nTarget);
         }
 
     @Override
@@ -76,7 +76,7 @@ public class IP_Inc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePostInc(
+        return hTarget.getOpSupport().invokePostInc(
             frame, hTarget, sProperty, Frame.RET_UNUSED);
         }
     }

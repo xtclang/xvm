@@ -377,6 +377,12 @@ public abstract class ClassTemplate
     // ---- OpSupport implementation -----
 
     @Override
+    public ClassTemplate getTemplate()
+        {
+        return this;
+        }
+
+    @Override
     public TypeConstant getCanonicalType()
         {
         return f_struct.getCanonicalType();
@@ -385,7 +391,6 @@ public abstract class ClassTemplate
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
         {
-        assert typeActual.isSingleDefiningConstant();
         assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
         assert typeActual.getAccess() == Access.PUBLIC;
 

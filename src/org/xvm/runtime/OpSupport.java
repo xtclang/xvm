@@ -17,6 +17,11 @@ import org.xvm.runtime.template.xRef.RefHandle;
 public interface OpSupport
     {
     /**
+     * Obtain an underlying ClassTemplate for this {@link OpSupport}
+     */
+    ClassTemplate getTemplate();
+
+    /**
      * Obtain a canonical type that is represented by this {@link OpSupport} object
      *
      * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
@@ -44,6 +49,7 @@ public interface OpSupport
         {
         throw new IllegalStateException("Invalid op for " + this);
         }
+
 
     // ----- invocations ---------------------------------------------------------------------------
 
@@ -124,6 +130,7 @@ public interface OpSupport
         {
         return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
         }
+
 
     // ----- various built-in operations -----------------------------------------------------------
 
@@ -251,6 +258,7 @@ public interface OpSupport
         {
         throw new IllegalStateException("Invalid op for " + this);
         }
+
 
     // ----- property operations -------------------------------------------------------------------
 

@@ -20,6 +20,7 @@ import org.xvm.asm.Op.Prefix;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -35,6 +36,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public class MethodStructure
         extends Component
+        implements GenericTypeResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -706,6 +708,27 @@ public class MethodStructure
         return true;
         }
 
+
+    // ----- GenericTypeResolver interface ---------------------------------------------------------
+
+    @Override
+    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+        {
+        assert isFunction();
+
+        String sName = constProperty.getName();
+        for (int i = 0, c = getParamCount(); i < c; i++)
+            {
+            Parameter param = getParam(i);
+            if (param.isTypeParameter() && sName.equals(param.getName()))
+                {
+                return param.getType();
+                }
+            }
+
+        throw new IllegalArgumentException(
+            "Invalid formal name: " + sName + " for " + this);
+        }
 
     // ----- Component methods ---------------------------------------------------------------------
 

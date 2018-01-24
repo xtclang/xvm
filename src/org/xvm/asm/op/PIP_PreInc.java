@@ -70,7 +70,7 @@ public class PIP_PreInc
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return hTarget.getTemplate().invokePreInc(
+        return hTarget.getOpSupport().invokePreInc(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
     }

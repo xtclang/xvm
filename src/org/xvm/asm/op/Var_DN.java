@@ -120,7 +120,7 @@ public class Var_DN
             {
             TypeComposition clz = frame.resolveClass(m_nType);
 
-            hRef = clz.getTemplate().createRefHandle(clz, sName);
+            hRef = clz.getSupport().createRefHandle(clz, sName);
 
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {

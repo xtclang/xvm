@@ -82,7 +82,7 @@ public class xArray
             }
 
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
-        IndexSupport templateArray = (IndexSupport) hArray.getTemplate();
+        IndexSupport templateArray = (IndexSupport) hArray.getOpSupport();
 
         ObjectHeap heap = f_templates.f_container.f_heapGlobal;
 

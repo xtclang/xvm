@@ -20,6 +20,8 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
@@ -307,6 +309,12 @@ public abstract class RelationalTypeConstant
         }
 
     // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public OpSupport getOpSupport(TemplateRegistry registry)
+        {
+        throw new UnsupportedOperationException();
+        }
 
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)

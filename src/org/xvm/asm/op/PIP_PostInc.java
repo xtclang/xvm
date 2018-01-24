@@ -70,7 +70,7 @@ public class PIP_PostInc
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return hTarget.getTemplate().invokePostInc(
+        return hTarget.getOpSupport().invokePostInc(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
     }

@@ -72,7 +72,7 @@ public class I_Get
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
         try
             {
