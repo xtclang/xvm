@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Op;
@@ -22,13 +21,6 @@ public interface OpSupport
     ClassTemplate getTemplate();
 
     /**
-     * Obtain a canonical type that is represented by this {@link OpSupport} object
-     *
-     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
-     */
-    TypeConstant getCanonicalType();
-
-    /**
      * Produce a TypeComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
@@ -37,48 +29,8 @@ public interface OpSupport
      */
     TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask);
 
-    /**
-     * Create an object handle for the specified constant.
-     *
-     * @param frame     the current frame
-     * @param constant  the constant
-     *
-     * @return the corresponding {@link ObjectHandle}
-     */
-    default ObjectHandle createConstHandle(Frame frame, Constant constant)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
 
     // ----- invocations ---------------------------------------------------------------------------
-
-    /**
-     * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
-     *
-     * The following steps are to be performed:
-     * <ul>
-     *   <li>Invoke the default constructors for the inheritance chain starting at the base;
-     *   <li>Invoke the specified constructor, potentially calling some super constructors
-     *       passing "this:struct" as a target
-     *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
-     *       "this:private" as a target
-     * </ul>
-     *
-     * @param frame        the current frame
-     * @param constructor  the MethodStructure for the constructor
-     * @param clazz        the target class
-     * @param ahVar        the construction parameters
-     * @param iReturn      the register id to place the created handle into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    default int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
 
     /**
      * Invoke a method with zero or one return value on the specified target.

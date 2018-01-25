@@ -60,8 +60,20 @@ public class xService
         }
 
     @Override
-    public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
+    public int construct(Frame frame, MethodStructure constructor,
+                         TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
+        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
+
+        CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
+
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfService));
+        }
+
+    @Override
+    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
+        {
+        // called via constructSync()
         return makeHandle(frame.f_context, clazz, clazz.getType());
         }
 
@@ -230,17 +242,6 @@ public class xService
             }
 
         throw new IllegalStateException("Invalid context");
-        }
-
-    @Override
-    public int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
-        {
-        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
-
-        CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
-
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfService));
         }
 
     @Override

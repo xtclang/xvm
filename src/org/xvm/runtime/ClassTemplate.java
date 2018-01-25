@@ -9,6 +9,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -94,6 +95,16 @@ public abstract class ClassTemplate
      */
     public void initDeclared()
         {
+        }
+
+    /**
+     * Obtain a canonical type that is represented by this {@link OpSupport} object
+     *
+     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
+     */
+    public TypeConstant getCanonicalType()
+        {
+        return f_struct.getCanonicalType();
         }
 
     /**
@@ -379,40 +390,42 @@ public abstract class ClassTemplate
         return f_struct.toString();
         }
 
-    // ---- OpSupport implementation -----
+    // ----- constructions  ------------------------------------------------------------------------
 
-    @Override
-    public ClassTemplate getTemplate()
+    /**
+     * Create an object handle for the specified constant.
+     *
+     * @param frame     the current frame
+     * @param constant  the constant
+     *
+     * @return the corresponding {@link ObjectHandle}
+     */
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return this;
+        throw new IllegalStateException("Invalid op for " + this);
         }
 
-    @Override
-    public TypeConstant getCanonicalType()
-        {
-        return f_struct.getCanonicalType();
-        }
-
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
-        {
-        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
-        assert typeActual.getAccess() == Access.PUBLIC;
-
-        int cActual = typeActual.getParamTypes().size();
-        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
-
-        TypeConstant typeInception = cActual == cFormal
-            ? typeActual
-            : typeActual.normalizeParameters();
-
-        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
-
-        return m_mapCompositions.computeIfAbsent(typeMask,
-            (type) -> new TypeComposition(this, typeInception, type));
-        }
-
-    @Override
+    /**
+     * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
+     *
+     * The following steps are to be performed:
+     * <ul>
+     *   <li>Invoke the default constructors for the inheritance chain starting at the base;
+     *   <li>Invoke the specified constructor, potentially calling some super constructors
+     *       passing "this:struct" as a target
+     *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
+     *       "this:private" as a target
+     * </ul>
+     *
+     * @param frame        the current frame
+     * @param constructor  the MethodStructure for the constructor
+     * @param clazz        the target class
+     * @param ahVar        the construction parameters
+     * @param iReturn      the register id to place the created handle into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
@@ -457,7 +470,14 @@ public abstract class ClassTemplate
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
         }
 
-    // return a handle with this:struct access
+    /**
+     * Create an ObjectHandle for the specified clazz.
+     *
+     * @param frame  the current frame
+     * @param clazz  the TypeComposition for the newly created handle
+     *
+     * @return the newly allocated handle
+     */
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         assert clazz.getTemplate() == this &&
@@ -465,6 +485,34 @@ public abstract class ClassTemplate
               f_struct.getFormat() == Component.Format.CONST);
 
         return new GenericHandle(clazz);
+        }
+
+
+    // ---- OpSupport implementation -----
+
+    @Override
+    public ClassTemplate getTemplate()
+        {
+        return this;
+        }
+
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
+        {
+        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
+        assert typeActual.getAccess() == Access.PUBLIC;
+
+        int cActual = typeActual.getParamTypes().size();
+        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
+
+        TypeConstant typeInception = cActual == cFormal
+            ? typeActual
+            : typeActual.normalizeParameters();
+
+        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
+
+        return m_mapCompositions.computeIfAbsent(typeMask,
+            (type) -> new TypeComposition(this, typeInception, type));
         }
 
     @Override

@@ -110,7 +110,7 @@ public class NewG_0
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
-        return clzTarget.getSupport().
+        return clzTarget.getTemplate().
             construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
         }
 
