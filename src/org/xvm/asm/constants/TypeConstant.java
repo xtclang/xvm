@@ -609,13 +609,29 @@ public abstract class TypeConstant
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
+        // resolve the type to make sure that typedefs etc. are removed from the equation
         TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
         if (typeResolved != this)
             {
             return typeResolved.buildTypeInfo(errs);
             }
 
-        // load the class structure for the type
+        // the raw type-info has to be built as either ":private" or ":struct", so delegate the
+        // building for ":public" to ":private", and then strip out the non-accessible members
+        ConstantPool pool   = getConstantPool();
+        Access       access = getAccess();
+        if (access == Access.PUBLIC)
+            {
+            assert !isAccessSpecified();
+            return pool.ensureAccessTypeConstant(this, Access.PRIVATE)
+                    .ensureTypeInfo(errs).limitAccess(access);
+            }
+        assert access == Access.STRUCT || access == Access.PRIVATE;
+
+        // this implementation only deals with modifying (not including immutable) and terminal type
+        // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
+        // names); in other words, there must be an identity constant and a component structure
+        // available for the type
         IdentityConstant constId;
         ClassStructure   struct;
         try
@@ -623,7 +639,7 @@ public abstract class TypeConstant
             constId = (IdentityConstant) getDefiningConstant();
             struct  = (ClassStructure)   constId.getComponent();
             }
-        catch (Exception e)
+        catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
@@ -631,17 +647,91 @@ public abstract class TypeConstant
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
         Map<String, ParamInfo> mapTypeParams = new HashMap<>();
-        TypeResolver           resolver      = new TypeResolver(mapTypeParams, errs);
+        TypeResolver resolver = createInitialTypeResolver(constId, struct, mapTypeParams, errs);
+
+        // walk through each of the contributions, starting from the implied contributions that are
+        // represented by annotations in this type constant itself, followed by the annotations in
+        // the class structure, followed by the class structure (as its own pseudo-contribution),
+        // followed by the remaining contributions
+        List<Contribution> listProcess    = new ArrayList<>();
+        List<Annotation>   listClassAnnos = new ArrayList<>();
+        TypeConstant[]     atypeSpecial   = createContributionList(
+                constId, struct, listProcess, listClassAnnos, resolver, errs);
+        TypeConstant typeInto    = atypeSpecial[0];
+        TypeConstant typeExtends = atypeSpecial[1];
+        TypeConstant typeRebase  = atypeSpecial[2];
+
+        // 1) build the "potential call chains" (basically, the order in which we would search for
+        //    methods to call in a virtual manner)
+        // 2) collect all of the type parameter data from the various contributions
+        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
+        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
+        createCallChains(constId, struct, mapTypeParams, listProcess, listmapClassChain, listmapDefaultChain, errs);
+
+        // determine if the type is explicitly abstract
+        Annotation[] aannoClass = listClassAnnos.toArray(new Annotation[listClassAnnos.size()]);
+        boolean      fAbstract  = struct.getFormat() == Component.Format.INTERFACE
+                || TypeInfo.containsAnnotation(aannoClass, "Abstract");
+
+        // next, we need to process the list of contributions in order, asking each for its
+        // properties and methods, and collecting all of them
+        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
+        Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
+        collectMemberInfo(constId, struct, resolver, listProcess,
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+
+        // go through the members to determine if this is abstract
+        if (!fAbstract)
+            {
+            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
+                    || mapScopedProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
+                    || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract)
+                    || mapScopedMethods.values().stream().anyMatch(MethodInfo::isAbstract);
+            }
+
+        // make final determinations as to what fields are required, etc.
+        finalizeMemberInfo(constId, struct, fAbstract,
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+
+        // validate the type parameters against the properties for the same
+        checkTypeParameterProperties(mapTypeParams, mapProps, errs);
+
+        // TODO add fAbstract
+        return new TypeInfo(this, struct.getFormat(), mapTypeParams, aannoClass,
+                typeExtends, typeRebase, typeInto,
+                listmapClassChain, listmapDefaultChain,
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods);
+        }
+
+    /**
+     * Populate the type parameter map with the type parameters of this type (not counting any
+     * further contributions), and create a GenericTypeResolver based on that type parameter map.
+     *
+     * @param constId        the identity constant of the class that the type is based on
+     * @param struct         the structure of the class that the type is based on
+     * @param mapTypeParams  the map of type parameters
+     * @param errs           the error list to log to
+     *
+     * @return a generic type resolver based on the (mutable) contents of the passed map
+     */
+    private TypeResolver createInitialTypeResolver(
+            IdentityConstant       constId,
+            ClassStructure         struct,
+            Map<String, ParamInfo> mapTypeParams,
+            ErrorListener          errs)
+        {
+        TypeResolver resolver = new TypeResolver(mapTypeParams, errs);
 
         // obtain the type parameters encoded in this type constant
         TypeConstant[] atypeParams = getParamTypesArray();
         int            cTypeParams = atypeParams.length;
-        boolean        fTuple      = isTuple();
 
         // obtain the type parameters declared by the class
         List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
         int                                       cClassParams    = listClassParams.size();
-        if (fTuple)
+        if (isTuple())
             {
             // warning: turtles
             ParamInfo param = new ParamInfo("ElementTypes", this, this);
@@ -697,14 +787,31 @@ public abstract class TypeConstant
                 }
             }
 
-        // walk through each of the contributions, starting from the implied contributions that are
-        // represented by annotations in this type constant itself, followed by the annotations in
-        // the class structure, followed by the class structure (as its own pseudo-contribution),
-        // followed by the remaining contributions
-        List<Contribution> listProcess    = new ArrayList<>();
-        List<Annotation>   listClassAnnos = new ArrayList<>();
-        Component.Format   formatInfo     = struct.getFormat();
+        return resolver;
+        }
 
+    /**
+     * Fill in the passed list of contributions to process, and also collect a list of all the
+     * annotations.
+     *
+     * @param constId         the identity constant of the class that the type is based on
+     * @param struct          the structure of the class that the type is based on
+     * @param listProcess     a list of contributions, which will be filled by this method in the
+     *                        order that they should be processed
+     * @param listClassAnnos  a list of annotations, which will be filled by this method
+     * @param resolver        the GenericTypeResolver for the type
+     * @param errs            the error list to log to
+     *
+     * @return an array containing the "into", "extends" and "rebase" types
+     */
+    private TypeConstant[] createContributionList(
+            IdentityConstant    constId,
+            ClassStructure      struct,
+            List<Contribution>  listProcess,
+            List<Annotation>    listClassAnnos,
+            GenericTypeResolver resolver,
+            ErrorListener       errs)
+        {
         // glue any annotations from the type constant onto the front of the contribution list
         // (and remember the type of the annotated class)
         TypeConstant typeClass = this;
@@ -908,7 +1015,7 @@ public abstract class TypeConstant
                 // format)
                 typeRebase = struct.getRebaseType();
                 }
-            break;
+                break;
 
             case MIXIN:
                 {
@@ -965,7 +1072,7 @@ public abstract class TypeConstant
                     typeInto = pool.typeObject();
                     }
                 }
-            break;
+                break;
 
             case INTERFACE:
                 // an interface implies the set of methods present in Object
@@ -1044,9 +1151,10 @@ public abstract class TypeConstant
                         }
 
                     // the mixin must be compatible with this type, as specified by its "into"
-                    // clause
+                    // clause; note: not 100% correct because the presence of this mixin may affect
+                    // the answer, so this requires an eventual fix
                     TypeConstant typeRequire = typeContrib.getExplicitClassInto();
-                    if (typeRequire != null && !this.isA(typeRequire)) // note: not 100% correct because the presence of this mixin may affect the answer
+                    if (typeRequire != null && !this.isA(typeRequire))
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                                 constId.getPathString(),
@@ -1123,11 +1231,30 @@ public abstract class TypeConstant
             listProcess.add(new Contribution(Composition.Into, typeInto));
             }
 
-        // 1) build the "potential call chains" (basically, the order in which we would search for
-        //    methods to call in a virtual manner)
-        // 2) collect all of the type parameter data from the various contributions
-        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
-        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
+        return new TypeConstant[] {typeInto, typeExtends, typeRebase};
+        }
+
+    /**
+     * Build the "potential call chain" from the list of contributions.
+     *
+     * @param constId              the identity constant of the class that the type is based on
+     * @param struct               the structure of the class that the type is based on
+     * @param mapTypeParams        the type parameters for the type, further added to by this method
+     * @param listProcess          the list of contributions, in the order that they are intended to
+     *                             be processed
+     * @param listmapClassChain    the potential call chain
+     * @param listmapDefaultChain  the potential default call chain
+     * @param errs                 the error list to log errors to
+     */
+    private void createCallChains(
+            IdentityConstant                   constId,
+            ClassStructure                     struct,
+            Map<String, ParamInfo>             mapTypeParams,
+            List<Contribution>                 listProcess,
+            ListMap<IdentityConstant, Boolean> listmapClassChain,
+            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            ErrorListener                      errs)
+        {
         for (Contribution contrib : listProcess)
             {
             Composition compContrib = contrib.getComposition();
@@ -1139,7 +1266,7 @@ public abstract class TypeConstant
                     assert !listmapDefaultChain.containsKey(constId);
 
                     // append self to the call chain
-                    if (formatInfo == Component.Format.INTERFACE)
+                    if (struct.getFormat() == Component.Format.INTERFACE)
                         {
                         listmapDefaultChain.put(constId, true);
                         }
@@ -1215,22 +1342,35 @@ public abstract class TypeConstant
                     throw new IllegalStateException("composition=" + compContrib);
                 }
             }
+        }
 
-        // determine if the type is explicitly abstract
-        Annotation[] aannoClass = listClassAnnos.toArray(new Annotation[listClassAnnos.size()]);
-        boolean      fAbstract  = formatInfo == Component.Format.INTERFACE
-                || TypeInfo.containsAnnotation(aannoClass, "Abstract");
-
-        // determine what access to request from contributions
-        Access accessThis    = getAccess();
-        Access accessContrib = accessThis == Access.STRUCT ? Access.STRUCT : Access.PROTECTED;
-
-        // next, we need to process the list of contributions in order, asking each for its
-        // properties and methods, and collecting all of them
-        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
-        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
-        Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
+    /**
+     * Collect the properties and methods (including scoped properties and method) for this type.
+     *
+     * @param constId           the identity of the class
+     * @param struct            the class structure
+     * @param resolver          the GenericTypeResolver that uses the known type parameters
+     * @param listProcess       the list of contributions in the order that they should be processed
+     * @param mapProps          the public and protected properties of the class
+     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
+     * @param mapMethods        the public and protected methods of the class
+     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
+     *                          nested methods, etc.)
+     * @param errs              the error list to log any errors to
+     */
+    private void collectMemberInfo(
+            IdentityConstant                     constId,
+            ClassStructure                       struct,
+            ParamInfo.TypeResolver               resolver,
+            List<Contribution>                   listProcess,
+            Map<String           , PropertyInfo> mapProps,
+            Map<PropertyConstant , PropertyInfo> mapScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapMethods,
+            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
+            ErrorListener                        errs)
+        {
+        ConstantPool pool      = getConstantPool();
+        Access       accessReq = getAccess() == Access.STRUCT ? Access.STRUCT : Access.PROTECTED;
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProps;
@@ -1246,7 +1386,7 @@ public abstract class TypeConstant
                 mapContribMethods       = new HashMap<>();
                 mapContribScopedMethods = new HashMap<>();
 
-                createMemberInfo(constId, struct, formatInfo, resolver,
+                createMemberInfo(constId, struct, resolver,
                         mapContribProps, mapContribScopedProps,
                         mapContribMethods, mapContribScopedMethods, errs);
                 }
@@ -1261,12 +1401,15 @@ public abstract class TypeConstant
                     case RebasesOnto:
                         // if we're building "public" or "protected", then this will be protected
                         assert !typeContrib.isAccessSpecified();
-                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, accessContrib);
+                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, accessReq);
                         break;
 
                     case Into:
                         if (!typeContrib.isAccessSpecified() && typeContrib.isSingleDefiningConstant())
-                        // if we're building "public" or "protected", then this will be protected
+                            {
+                            // if we're building "public" or "protected", then this will be protected
+                            // TODO
+                            }
                         break;
                     }
 
@@ -1315,102 +1458,12 @@ public abstract class TypeConstant
             // sweep over the remaining chains
             for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
                 {
-                if (!setSuperMethods.contains(entry.getKey()) && entry.getValue().getAccess())
+                if (!setSuperMethods.contains(entry.getKey()))
                     {
                     mapMethods.put(entry.getKey(), entry.getValue());
                     }
                 }
             }
-
-        // verify that properties exist for each of the type parameters
-        for (ParamInfo param : mapTypeParams.values())
-            {
-            String       sParam = param.getName();
-            PropertyInfo prop   = mapProps.get(sParam);
-            if (prop == null)
-                {
-                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
-                        this.getValueString(), sParam);
-                }
-            else if (!prop.isTypeParam() || !prop.isRO() || !prop.getType().equals(
-                    pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
-                {
-                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
-                        this.getValueString(), sParam);
-                }
-            }
-
-        // go through the members to determine if this is abstract
-        if (!fAbstract)
-            {
-            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
-                || mapScopedProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
-                || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract)
-                || mapScopedMethods.values().stream().anyMatch(MethodInfo::isAbstract);
-            }
-
-        for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
-            {
-            PropertyInfo propinfo = entry.getValue();
-            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
-                    && propinfo.isOverride())
-                {
-                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-                        getValueString(), propinfo.getName());
-
-                // erase the "override" flag, now that we've reported it
-                entry.setValue(propinfo = propinfo.specifyOverride(false));
-                }
-
-            if (!fAbstract && propinfo.isAbstract())
-                {
-                // determine whether or not the property needs a field
-                boolean fField;
-                if (propinfo.isExplicitInject() || propinfo.isExplicitOverride())
-                    {
-                    // injection does not use a field, and override can defer the choice
-                    fField = false;
-                    }
-                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
-                    {
-                    // no logic implies that there is an underlying field
-                    fField = true;
-                    }
-                else
-                    {
-                    // determine if get() blocks the super call to the field
-                    MethodInfo methodinfo = mapScopedMethods.get(propinfo.getGetterId());
-                    fField = true;
-                    if (methodinfo != null)
-                        {
-                        for (MethodBody body : methodinfo.getChain())
-                            {
-                            if (body.getImplementation() == Implementation.Property)
-                                {
-                                break;
-                                }
-
-                            if (body.blocksSuper())
-                                {
-                                fField = false;
-                                break;
-                                }
-                            }
-                        }
-                    }
-
-                // erase the "abstract" flag, and store the result of the field-is-required
-                // calculation
-                entry.setValue(propinfo = propinfo.specifyField(fField));
-                }
-            }
-
-        // TODO erase protected methods if the access of "this" is public
-
-        return new TypeInfo(this, formatInfo, mapTypeParams, aannoClass,
-                typeExtends, typeRebase, typeInto,
-                listmapClassChain, listmapDefaultChain,
-                mapProps, mapScopedProps, mapMethods, mapScopedMethods);
         }
 
     /**
@@ -1418,7 +1471,6 @@ public abstract class TypeConstant
      *
      * @param constId           the identity of the class
      * @param struct            the class structure
-     * @param formatInfo        the format of the resulting TypeInfo
      * @param resolver          the GenericTypeResolver that uses the known type parameters
      * @param mapProps          the public and protected properties of the class
      * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
@@ -1427,10 +1479,9 @@ public abstract class TypeConstant
      *                          nested methods, etc.)
      * @param errs              the error list to log any errors to
      */
-    protected void createMemberInfo(
+    private void createMemberInfo(
             IdentityConstant                     constId,
             ClassStructure                       struct,
-            Component.Format                     formatInfo,
             ParamInfo.TypeResolver               resolver,
             Map<String           , PropertyInfo> mapProps,
             Map<PropertyConstant , PropertyInfo> mapScopedProps,
@@ -1439,7 +1490,7 @@ public abstract class TypeConstant
             ErrorListener                        errs)
         {
         ConstantPool pool       = getConstantPool();
-        boolean      fInterface = formatInfo == Component.Format.INTERFACE;
+        boolean      fInterface = struct.getFormat() == Component.Format.INTERFACE;
         Access       access     = getAccess();
 
         // add the properties and methods from "struct"
@@ -1710,6 +1761,119 @@ public abstract class TypeConstant
             }
         }
 
+    /**
+     * TODO
+     *
+     * @param constId           the identity of the class
+     * @param struct            the class structure
+     * @param fAbstract         TODO
+     * @param mapProps          the public and protected properties of the class
+     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
+     * @param mapMethods        the public and protected methods of the class
+     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
+     *                          nested methods, etc.)
+     * @param errs              the error list to log any errors to
+     */
+    private void finalizeMemberInfo(
+            IdentityConstant                     constId,
+            ClassStructure                       struct,
+            boolean                              fAbstract,
+            Map<String           , PropertyInfo> mapProps,
+            Map<PropertyConstant , PropertyInfo> mapScopedProps,
+            Map<SignatureConstant, MethodInfo  > mapMethods,
+            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
+            ErrorListener                        errs)
+        {
+        Component.Format formatInfo = struct.getFormat();
+        for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
+            {
+            PropertyInfo propinfo = entry.getValue();
+            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
+                    && propinfo.isOverride())
+                {
+                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+                        getValueString(), propinfo.getName());
+
+                // erase the "override" flag, now that we've reported it
+                entry.setValue(propinfo = propinfo.specifyOverride(false));
+                }
+
+            if (!fAbstract && propinfo.isAbstract())
+                {
+                // determine whether or not the property needs a field
+                boolean fField;
+                if (propinfo.isExplicitInject() || propinfo.isExplicitOverride())
+                    {
+                    // injection does not use a field, and override can defer the choice
+                    fField = false;
+                    }
+                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
+                    {
+                    // no logic implies that there is an underlying field
+                    fField = true;
+                    }
+                else
+                    {
+                    // determine if get() blocks the super call to the field
+                    MethodInfo methodinfo = mapScopedMethods.get(propinfo.getGetterId());
+                    fField = true;
+                    if (methodinfo != null)
+                        {
+                        for (MethodBody body : methodinfo.getChain())
+                            {
+                            if (body.getImplementation() == Implementation.Property)
+                                {
+                                break;
+                                }
+
+                            if (body.blocksSuper())
+                                {
+                                fField = false;
+                                break;
+                                }
+                            }
+                        }
+                    }
+
+                // erase the "abstract" flag, and store the result of the field-is-required
+                // calculation
+                entry.setValue(propinfo = propinfo.specifyField(fField));
+                }
+            }
+        }
+
+    /**
+     * Verify that properties exist for each of the type parameters.
+     *
+     * @param mapTypeParams  the map containing all of the type parameters
+     * @param mapProps       the public and protected properties of the class
+     * @param errs           the error list to log any errors to
+     */
+    private void checkTypeParameterProperties(
+            Map<String, ParamInfo>    mapTypeParams,
+            Map<String, PropertyInfo> mapProps,
+            ErrorListener             errs)
+        {
+        ConstantPool pool       = getConstantPool();
+        for (ParamInfo param : mapTypeParams.values())
+            {
+            String sParam = param.getName();
+            PropertyInfo prop = mapProps.get(sParam);
+            if (prop == null)
+                {
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
+                        this.getValueString(), sParam);
+                }
+            else if (!prop.isTypeParam() || !prop.isRO() || !prop.getType().equals(
+                    pool.ensureParameterizedTypeConstant(pool.typeType(),
+                            param.getConstraintType())))
+                {
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
+                        this.getValueString(), sParam);
+                }
+            }
+        }
+
     private Annotation[] toArray(List<Annotation> list)
         {
         return list == null || list.size() == 0
@@ -1717,6 +1881,7 @@ public abstract class TypeConstant
                 : list.toArray(new Annotation[list.size()]);
         }
 
+// TODO
     protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
         {
         String sName = constSig.getName();

@@ -112,6 +112,20 @@ public class AccessTypeConstant
         return getConstantPool().ensureAccessTypeConstant(type, m_access);
         }
 
+    @Override
+    protected TypeInfo buildTypeInfo(ErrorListener errs)
+        {
+        // since the immutable modifier is not allowed, it can be assumed that the first
+        // TypeConstant in the chain is the access type constant
+        Access access = m_access;
+        if (access == Access.PUBLIC || access == Access.PROTECTED)
+            {
+            return getConstantPool().ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE)
+                    .ensureTypeInfo(errs).limitAccess(access);
+            }
+
+        return super.buildTypeInfo(errs);
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 

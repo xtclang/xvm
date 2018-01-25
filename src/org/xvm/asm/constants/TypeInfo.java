@@ -12,6 +12,7 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
@@ -72,6 +73,12 @@ public class TypeInfo
         m_mapScopedProperties   = mapScopedProperties;
         m_mapMethods            = mapMethods;
         m_mapScopedMethods      = mapScopedMethods;
+        }
+
+    public TypeInfo limitAccess(Access access)
+        {
+        // TODO
+        return this;
         }
 
     /**
@@ -473,7 +480,7 @@ public class TypeInfo
                   .append(i++)
                   .append("] ")
                   .append(entry.getKey().getValueString());
-    
+
                 if (entry.getValue())
                     {
                     sb.append(" (Anchored)");
