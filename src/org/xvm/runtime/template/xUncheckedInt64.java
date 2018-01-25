@@ -3,7 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -11,6 +11,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xIntArray;
 
@@ -18,12 +19,12 @@ import org.xvm.runtime.template.collections.xIntArray;
 /**
  * TODO:
  */
-public class xInt64
-        extends xUncheckedInt64
+public class xUncheckedInt64
+        extends xConst
     {
-    public static xInt64 INSTANCE;
+    public static xUncheckedInt64 INSTANCE;
 
-    public xInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUncheckedInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -56,6 +57,7 @@ public class xInt64
             return frame.raiseException(xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
+        // TODO: use xUncheckedIntArray
         return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
         }
 
@@ -64,14 +66,8 @@ public class xInt64
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 + l2;
 
-        if (((l1 ^ lr) & (l2 ^ lr)) < 0)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeHandle(l1 + l2));
         }
 
     @Override
@@ -79,14 +75,8 @@ public class xInt64
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 - l2;
 
-        if (((l1 ^ lr) & (l2 ^ lr)) < 0)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeHandle(l1 - l2));
         }
 
     @Override
@@ -94,21 +84,8 @@ public class xInt64
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 * l2;
 
-        long a1 = Math.abs(l1);
-        long a2 = Math.abs(l2);
-        if (((a1 | a2) >>> 31 != 0))
-            {
-            // see Math.multiplyExact()
-           if (((l2 != 0) && (lr / l2 != l1)) ||
-               (l1 == Long.MIN_VALUE && l2 == -1))
-               {
-               return overflow(frame);
-               }
-            }
-
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeHandle(l1 * l2));
         }
 
     @Override
@@ -116,9 +93,8 @@ public class xInt64
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 / l2;
 
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeHandle(l1 / l2));
         }
 
     @Override
@@ -126,20 +102,14 @@ public class xInt64
         {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 % l2;
 
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeHandle(l1 % l2));
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
-
-        if (l == Integer.MIN_VALUE)
-            {
-            return overflow(frame);
-            }
 
         return frame.assignValue(iReturn, makeHandle(-l));
         }
@@ -149,11 +119,6 @@ public class xInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (l == Integer.MIN_VALUE)
-            {
-            return overflow(frame);
-            }
-
         return frame.assignValue(iReturn, makeHandle(l - 1));
         }
 
@@ -162,19 +127,59 @@ public class xInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        if (l == Integer.MAX_VALUE)
-            {
-            return overflow(frame);
-            }
-
-        return frame.assignValue(iReturn, makeHandle(l+1));
+        return frame.assignValue(iReturn, makeHandle(l + 1));
         }
 
-    // ----- helpers -----
-
-    protected int overflow(Frame frame)
+    @Override
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
-        return frame.raiseException(xException.makeHandle("Int overflow"));
+        JavaLong hThis = (JavaLong) hTarget;
+
+        switch (property.getName())
+            {
+            case "hash":
+                return frame.assignValue(iReturn, hThis);
+            }
+
+        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        }
+
+    @Override
+    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, hTarget);
+        }
+
+    // ----- comparison support -----
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue() == h2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz,
+                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        JavaLong h1 = (JavaLong) hValue1;
+        JavaLong h2 = (JavaLong) hValue2;
+
+        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
+        }
+
+    // ----- Object methods -----
+
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(l)));
         }
 
     public static JavaLong makeHandle(long lValue)

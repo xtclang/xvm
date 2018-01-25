@@ -21,7 +21,7 @@ public class I_Var
         extends OpIndex
     {
     /**
-     * Construct an I_REF op.
+     * Construct an I_VAR op.
      *
      * @param nTarget  the target array
      * @param nIndex   the index of the value in the array
