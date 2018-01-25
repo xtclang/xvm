@@ -2632,7 +2632,7 @@ public class ConstantPool
     private transient ArrayConstant     m_valVoid;
 
     public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
-            typeObject(), Component.Format.INTERFACE, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
+            typeObject(), null, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             new ListMap<>(), new ListMap<>(),
             Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);

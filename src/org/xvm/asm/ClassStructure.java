@@ -88,6 +88,71 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff this class is a module, package, or class whose immediate parent is a module
+     *         or package
+     */
+    public boolean isTopLevel()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+                return true;
+
+            case INTERFACE:
+            case CLASS:
+            case ENUM:
+            case MIXIN:
+            case CONST:
+            case SERVICE:
+                {
+                Format format = getParent().getFormat();
+                return format == Format.MODULE || format == Format.PACKAGE;
+                }
+
+            case ENUMVALUE:
+                // enum values are always a child of an enum
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return true iff this class is a child class, which means that it is nested under a class
+     */
+    public boolean isChild()
+        {
+        switch (getFormat())
+            {
+            case INTERFACE:
+            case MODULE:
+            case PACKAGE:
+            case MIXIN:
+            case ENUM:
+                return false;
+
+            case CLASS:
+            case CONST:
+            case SERVICE:
+                {
+                Format format = getParent().getFormat();
+                // neither a top-level class nor a local class inside a method are considered child
+                // classes
+                return format != Format.MODULE && format != Format.PACKAGE && format != Format.METHOD;
+                }
+
+            case ENUMVALUE:
+                // enum values are always a child of an enum
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
      * @return true iff this class is a Const
      */
     public boolean isConst()
@@ -259,6 +324,7 @@ public class ClassStructure
             ? listActual
             : resolveType(listActual).getParamTypes();
         }
+
 
     // ----- component methods ---------------------------------------------------------------------
 

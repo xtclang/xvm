@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
@@ -30,7 +31,8 @@ public class TypeInfo
      * Construct a TypeInfo.
      *
      * @param type                 the type that the TypeInfo represents
-     * @param format               the Format of the type; Interface is the "type" catch-all
+     * @param struct               the structure that underlies the type, or null if there is none
+     * @param fAbstract            true if the type is abstract
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
      * @param typeExtends          the type that is extended
@@ -43,7 +45,7 @@ public class TypeInfo
      * @param mapMethods           the public and protected methods of the type
      * @param mapScopedMethods     the various scoped methods of the type
      */
-    public TypeInfo(TypeConstant type, Format format,
+    public TypeInfo(TypeConstant type, ClassStructure struct, boolean fAbstract,
             Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
@@ -61,7 +63,8 @@ public class TypeInfo
         assert mapScopedMethods != null;
 
         m_type                  = type;
-        m_format                = format;
+        m_struct                = struct;
+        m_fAbstract             = fAbstract;
         m_mapTypeParams         = mapTypeParams;
         m_aannoClass            = validateAnnotations(aannoClass);
         m_typeExtends           = typeExtends;
@@ -75,10 +78,20 @@ public class TypeInfo
         m_mapScopedMethods      = mapScopedMethods;
         }
 
+    /**
+     * Create a new TypeInfo that represents a more limited (public or protected) access to the
+     * members of this private type.
+     *
+     * @param access  the desired access, either PUBLIC or PROTECTED
+     *
+     * @return a new TypeInfo
+     */
     public TypeInfo limitAccess(Access access)
         {
-        // TODO
-        return this;
+        assert m_type.getAccess() == Access.PRIVATE;
+        assert access == Access.PROTECTED ||  access == Access.PUBLIC;
+
+        return this; // TODO
         }
 
     /**
@@ -155,12 +168,93 @@ public class TypeInfo
         }
 
     /**
+     * @return the ClassStructure, or null if none is available; a non-abstract type will always
+     *         have a ClassStructure
+     */
+    public ClassStructure getClassStructure()
+        {
+        return m_struct;
+        }
+
+    /**
      * @return the format of the topmost structure that the TypeConstant refers to, or
      *         {@code INTERFACE} for any non-class / non-mixin type (such as a difference type)
      */
     public Format getFormat()
         {
-        return m_format;
+        return m_struct == null ? Format.INTERFACE : m_struct.getFormat();
+        }
+
+    /**
+     * @return true iff this type is abstract, which is always true for an interface, and may be
+     *         true for a class or mixin
+     */
+    public boolean isAbstract()
+        {
+        return m_fAbstract;
+        }
+
+    /**
+     * @return true iff this type is static (a static global type is a singleton; a static local
+     *         type does not hold a reference to its parent)
+     */
+    public boolean isStatic()
+        {
+        return m_struct != null && m_struct.isStatic();
+        }
+
+    /**
+     * @return true if this type represents a singleton instance of a class
+     */
+    public boolean isSingleton()
+        {
+        return m_struct != null && m_struct.isSingleton();
+        }
+
+    /**
+     * @return true iff this is a class type, which is not an interface type or a mixin type
+     */
+    public boolean isClass()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case CLASS:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+            case SERVICE:
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
+    /**
+     * @return true iff this is a type that can be instantiated
+     */
+    public boolean isNewable()
+        {
+        return !isAbstract() && !isSingleton() && isClass();
+        }
+
+    /**
+     * @return true iff this class is considered to be "top level"
+     */
+    public boolean isTopLevel()
+        {
+        return m_struct != null && m_struct.isTopLevel();
+        }
+
+    /**
+     * @return true iff this class is scoped within another class, such that it requires a parent
+     *         reference in order to be instantiated
+     */
+    public boolean isChild()
+        {
+        return m_struct != null && m_struct.isChild();
         }
 
     /**
@@ -432,7 +526,7 @@ public class TypeInfo
         sb.append("TypeInfo: ")
           .append(m_type.getValueString())
           .append(" (format=")
-          .append(m_format)
+          .append(getFormat())
           .append(")");
 
         if (!m_mapTypeParams.isEmpty())
@@ -653,10 +747,15 @@ public class TypeInfo
     private final TypeConstant m_type;
 
     /**
-     * The Format of the type. In some cases, such as a difference type, or a "private interface",
-     * the format is considered to be an interface, because it is not (and can not be) a class.
+     * The ClassStructure of the type, if the type is based on a ClassStructure.
      */
-    private final Format m_format;
+    private final ClassStructure m_struct;
+
+    /**
+     * Whether this type is abstract, which is always true for an interface, and may be true for a
+     * class or mixin.
+     */
+    private final boolean m_fAbstract;
 
     /**
      * The type parameters for this TypeInfo.
@@ -702,7 +801,7 @@ public class TypeInfo
     /**
      * The scoped properties for this type.
      */
-    private Map<PropertyConstant, PropertyInfo> m_mapScopedProperties;
+    private final Map<PropertyConstant, PropertyInfo> m_mapScopedProperties;
 
     /**
      * The methods of the type.
@@ -712,7 +811,7 @@ public class TypeInfo
     /**
      * The scoped methods for this type.
      */
-    private Map<MethodConstant, MethodInfo> m_mapScopedMethods;
+    private final Map<MethodConstant, MethodInfo> m_mapScopedMethods;
 
     /**
      * A cached type resolver.

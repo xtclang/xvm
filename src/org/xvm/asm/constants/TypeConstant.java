@@ -618,15 +618,24 @@ public abstract class TypeConstant
 
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
-        ConstantPool pool   = getConstantPool();
-        Access       access = getAccess();
-        if (access == Access.PUBLIC)
+        switch(getAccess())
             {
-            assert !isAccessSpecified();
-            return pool.ensureAccessTypeConstant(this, Access.PRIVATE)
-                    .ensureTypeInfo(errs).limitAccess(access);
+            case STRUCT:
+                return buildStructInfo(errs);
+
+            case PRIVATE:
+                // this is the one type that actually gets built by this method
+                break;
+
+            case PROTECTED:
+                // this should have been handled by the AccessTypeConstant
+                throw new IllegalStateException();
+
+            case PUBLIC:
+                assert !isAccessSpecified();
+                return getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
+                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC);
             }
-        assert access == Access.STRUCT || access == Access.PRIVATE;
 
         // this implementation only deals with modifying (not including immutable) and terminal type
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
@@ -698,11 +707,31 @@ public abstract class TypeConstant
         // validate the type parameters against the properties for the same
         checkTypeParameterProperties(mapTypeParams, mapProps, errs);
 
-        // TODO add fAbstract
-        return new TypeInfo(this, struct.getFormat(), mapTypeParams, aannoClass,
+        return new TypeInfo(this, struct, fAbstract,
+                mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
                 listmapClassChain, listmapDefaultChain,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods);
+        }
+
+    /**
+     * Create a TypeInfo for this struct of this type.
+     *
+     * @param errs  the error list to log any errors to
+     *
+     * @return a new TypeInfo representing the struct of this TypeConstant
+     */
+    private TypeInfo buildStructInfo(ErrorListener errs)
+        {
+        // this is a helper method that only supports being called on AccessTypeConstant of STRUCT
+        assert getAccess() == Access.STRUCT;
+        assert this instanceof AccessTypeConstant;
+
+        ConstantPool pool = getConstantPool();
+        TypeInfo infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
+
+        // TODO use the private to get the "potential call chain" and then use that to build the set of fields & functions
+        return infoPri; // TODO
         }
 
     /**
@@ -1466,6 +1495,18 @@ public abstract class TypeConstant
             }
         }
 
+    // TODO
+    protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
+        {
+        String sName = constSig.getName();
+        List<SignatureConstant> listMatches = null;
+        for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+            {
+
+            }
+        return null;
+        }
+
     /**
      * Generate the members of the "this" class of "this" type.
      *
@@ -1879,18 +1920,6 @@ public abstract class TypeConstant
         return list == null || list.size() == 0
                 ? Annotation.NO_ANNOTATIONS
                 : list.toArray(new Annotation[list.size()]);
-        }
-
-// TODO
-    protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
-        {
-        String sName = constSig.getName();
-        List<SignatureConstant> listMatches = null;
-        for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
-            {
-
-            }
-        return null;
         }
 
 
