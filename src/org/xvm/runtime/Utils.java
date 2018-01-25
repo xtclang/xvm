@@ -11,8 +11,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
@@ -153,7 +155,7 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            return clzValue.getSupport().buildStringValue(frame, hValue, Frame.RET_LOCAL);
+            return clzValue.getTemplate().buildStringValue(frame, hValue, Frame.RET_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
@@ -449,6 +451,82 @@ public abstract class Utils
         private int index = -1;
         private boolean fBlock;
         }
+
+    // ----- comparison support -----
+
+    public static int callEqualsSequence(Frame frame, TypeConstant type1, TypeConstant type2,
+                                         ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xBoolean.TRUE);
+            }
+
+        switch (type1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
+            {
+            case Op.R_NEXT:
+                return completeEquals(frame, type2, hValue1, hValue2, iReturn);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    completeEquals(frameCaller, type2, hValue1, hValue2, iReturn));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    protected static int completeEquals(Frame frame, TypeConstant type2,
+                                        ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ObjectHandle hResult = frame.getFrameLocal();
+        return hResult == xBoolean.FALSE
+            ? frame.assignValue(iReturn, hResult)
+            : type2.callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    public static int callCompareSequence(Frame frame, TypeConstant type1, TypeConstant type2,
+                                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        if (hValue1 == hValue2)
+            {
+            return frame.assignValue(iReturn, xOrdered.EQUAL);
+            }
+
+        switch (type1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
+            {
+            case Op.R_NEXT:
+                return completeCompare(frame, type2, hValue1, hValue2, iReturn);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    completeCompare(frameCaller, type2, hValue1, hValue2, iReturn));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Completion of the callCompare implementation.
+     */
+    protected static int completeCompare(Frame frame, TypeConstant type2,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ObjectHandle hResult = frame.getFrameLocal();
+        return hResult != xOrdered.EQUAL
+            ? frame.assignValue(iReturn, hResult)
+            : type2.callCompare(frame, hValue1, hValue2, iReturn);
+        }
+
 
     // ----- toString support -----
 

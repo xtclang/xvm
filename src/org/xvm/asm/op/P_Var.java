@@ -128,7 +128,7 @@ public class P_Var
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        RefHandle hRef = hTarget.getOpSupport().
+        RefHandle hRef = hTarget.getComposition().getTemplate().
             createPropertyRef(hTarget, constProperty.getName(), false);
 
         if (frame.isNextRegister(m_nRetValue))

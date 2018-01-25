@@ -177,7 +177,7 @@ public class TypeComposition
             throw new IllegalArgumentException("Type " + f_typeRevealed + " cannot be widened to " + type);
             }
 
-        return f_support.ensureClass(f_typeInception, type);
+        return f_template.ensureClass(f_typeInception, type);
         }
 
     /**
@@ -199,7 +199,7 @@ public class TypeComposition
             throw new IllegalArgumentException("Type " + f_typeInception + " cannot be revealed as " + type);
             }
 
-        return f_support.ensureClass(f_typeInception, type);
+        return f_template.ensureClass(f_typeInception, type);
         }
 
     public ObjectHandle ensureOrigin(ObjectHandle handle)
@@ -210,7 +210,7 @@ public class TypeComposition
 
         // struct is not "revealable"
         return typeInception == f_typeRevealed|| isStruct()
-            ? handle : handle.cloneAs(f_support.ensureClass(typeInception, typeInception));
+            ? handle : handle.cloneAs(f_template.ensureClass(typeInception, typeInception));
         }
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
@@ -244,7 +244,7 @@ public class TypeComposition
             }
 
         return typeCurrent.equals(typeTarget) ?
-            handle : handle.cloneAs(f_support.ensureClass(f_typeInception, typeTarget));
+            handle : handle.cloneAs(f_template.ensureClass(f_typeInception, typeTarget));
         }
 
     public boolean isStruct()

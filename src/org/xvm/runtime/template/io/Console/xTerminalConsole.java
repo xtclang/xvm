@@ -49,7 +49,8 @@ public class xTerminalConsole
             {
             case "print": // Object o
                 {
-                int iResult = hArg.getOpSupport().buildStringValue(frame, hArg, Frame.RET_LOCAL);
+                int iResult = hArg.getComposition().getTemplate().
+                    buildStringValue(frame, hArg, Frame.RET_LOCAL);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -65,7 +66,8 @@ public class xTerminalConsole
 
             case "println": // Object o
                 {
-                int iResult = hArg.getOpSupport().buildStringValue(frame, hArg, Frame.RET_LOCAL);
+                int iResult = hArg.getComposition().getTemplate().
+                    buildStringValue(frame, hArg, Frame.RET_LOCAL);
                 switch (iResult)
                     {
                     case Op.R_NEXT:

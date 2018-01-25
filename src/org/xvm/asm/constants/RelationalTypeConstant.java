@@ -16,15 +16,13 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.Utils;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -105,24 +103,24 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean isImmutabilitySpecified()
         {
-        return getUnderlyingType().isImmutabilitySpecified()
-                && getUnderlyingType2().isImmutabilitySpecified();
+        return m_constType1.isImmutabilitySpecified()
+                && m_constType2.isImmutabilitySpecified();
         }
 
     @Override
     public boolean isAccessSpecified()
         {
-        return getUnderlyingType().isAccessSpecified()
-            && getUnderlyingType2().isAccessSpecified()
-            && getUnderlyingType().getAccess() == getUnderlyingType2().getAccess();
+        return m_constType1.isAccessSpecified()
+            && m_constType2.isAccessSpecified()
+            && m_constType1.getAccess() == m_constType2.getAccess();
         }
 
     @Override
     public Access getAccess()
         {
-        Access access = getUnderlyingType().getAccess();
+        Access access = m_constType1.getAccess();
 
-        if (getUnderlyingType().getAccess() != access)
+        if (m_constType1.getAccess() != access)
             {
             throw new UnsupportedOperationException("relational access mismatch");
             }
@@ -133,22 +131,22 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
-        return getUnderlyingType().extendsClass(constClass)
-            || getUnderlyingType2().extendsClass(constClass);
+        return m_constType1.extendsClass(constClass)
+            || m_constType2.extendsClass(constClass);
         }
 
     @Override
     public boolean isClassType()
         {
-        return getUnderlyingType().isClassType()
-            || getUnderlyingType2().isClassType();
+        return m_constType1.isClassType()
+            || m_constType2.isClassType();
         }
 
     @Override
     public boolean isSingleUnderlyingClass()
         {
-        return getUnderlyingType().isSingleUnderlyingClass()
-             ^ getUnderlyingType2().isSingleUnderlyingClass();
+        return m_constType1.isSingleUnderlyingClass()
+             ^ m_constType2.isSingleUnderlyingClass();
         }
 
     @Override
@@ -156,18 +154,18 @@ public abstract class RelationalTypeConstant
         {
         assert isClassType() && isSingleUnderlyingClass();
 
-        IdentityConstant clz = getUnderlyingType().getSingleUnderlyingClass();
+        IdentityConstant clz = m_constType1.getSingleUnderlyingClass();
         if (clz == null)
             {
-            clz = getUnderlyingType2().getSingleUnderlyingClass();
+            clz = m_constType2.getSingleUnderlyingClass();
             }
         return clz;
         }
 
     public Set<IdentityConstant> underlyingClasses()
         {
-        Set<IdentityConstant> set = getUnderlyingType().underlyingClasses();
-        Set<IdentityConstant> set2 = getUnderlyingType2().underlyingClasses();
+        Set<IdentityConstant> set = m_constType1.underlyingClasses();
+        Set<IdentityConstant> set2 = m_constType2.underlyingClasses();
         if (set.isEmpty())
             {
             set = set2;
@@ -189,22 +187,22 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean isAutoNarrowing()
         {
-        return getUnderlyingType().isAutoNarrowing()
-            && getUnderlyingType2().isAutoNarrowing();
+        return m_constType1.isAutoNarrowing()
+            && m_constType2.isAutoNarrowing();
         }
 
     @Override
     public boolean isConstant()
         {
-        return getUnderlyingType().isConstant()
-            && getUnderlyingType2().isConstant();
+        return m_constType1.isConstant()
+            && m_constType2.isConstant();
         }
 
     @Override
     public boolean isOnlyNullable()
         {
-        return getUnderlyingType().isOnlyNullable()
-            && getUnderlyingType2().isOnlyNullable();
+        return m_constType1.isOnlyNullable()
+            && m_constType2.isOnlyNullable();
         }
 
     @Override
@@ -220,8 +218,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant resolveTypedefs()
         {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.resolveTypedefs();
         TypeConstant constResolved2 = constOriginal2.resolveTypedefs();
 
@@ -233,8 +231,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant resolveGenerics(GenericTypeResolver resolver)
         {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
         TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
 
@@ -246,8 +244,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
         {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(constThisClass);
         TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(constThisClass);
 
@@ -259,8 +257,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
         {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.resolveEverything(resolver, constThisClass);
         TypeConstant constResolved2 = constOriginal2.resolveEverything(resolver, constThisClass);
 
@@ -272,8 +270,8 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant normalizeParameters()
         {
-        TypeConstant constOriginal1 = getUnderlyingType();
-        TypeConstant constOriginal2 = getUnderlyingType2();
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
         TypeConstant constResolved1 = constOriginal1.normalizeParameters();
         TypeConstant constResolved2 = constOriginal2.normalizeParameters();
 
@@ -297,16 +295,16 @@ public abstract class RelationalTypeConstant
     public boolean producesFormalType(String sTypeName, Access access,
                                       List<TypeConstant> listParams)
         {
-        return getUnderlyingType().producesFormalType(sTypeName, access, listParams)
-            || getUnderlyingType2().producesFormalType(sTypeName, access, listParams);
+        return m_constType1.producesFormalType(sTypeName, access, listParams)
+            || m_constType2.producesFormalType(sTypeName, access, listParams);
         }
 
     @Override
     public boolean consumesFormalType(String sTypeName, Access access,
                                       List<TypeConstant> listParams)
         {
-        return getUnderlyingType().consumesFormalType(sTypeName, access, listParams)
-            || getUnderlyingType2().consumesFormalType(sTypeName, access, listParams);
+        return m_constType1.consumesFormalType(sTypeName, access, listParams)
+            || m_constType2.consumesFormalType(sTypeName, access, listParams);
         }
 
     // ----- run-time support ----------------------------------------------------------------------
@@ -320,75 +318,15 @@ public abstract class RelationalTypeConstant
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xBoolean.TRUE);
-            }
-
-        switch (getUnderlyingType().callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
-            {
-            case Op.R_NEXT:
-                return completeEquals(frame, hValue1, hValue2, iReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
-                    completeEquals(frameCaller, hValue1, hValue2, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
-    /**
-     * Completion of the callEquals implementation.
-     */
-    protected int completeEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        ObjectHandle hResult = frame.getFrameLocal();
-        return hResult == xBoolean.FALSE
-            ? frame.assignValue(iReturn, hResult)
-            : getUnderlyingType2().callEquals(frame, hValue1, hValue2, iReturn);
+        return Utils.callEqualsSequence(frame,
+            m_constType1, m_constType2, hValue1, hValue2, iReturn);
         }
 
     @Override
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        if (hValue1 == hValue2)
-            {
-            return frame.assignValue(iReturn, xOrdered.EQUAL);
-            }
-
-        switch (getUnderlyingType().callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
-            {
-            case Op.R_NEXT:
-                return completeCompare(frame, hValue1, hValue2, iReturn);
-
-            case Op.R_CALL:
-                frame.m_frameNext.setContinuation(frameCaller ->
-                    completeCompare(frameCaller, hValue1, hValue2, iReturn));
-                return Op.R_CALL;
-
-            case Op.R_EXCEPTION:
-                return Op.R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
-    /**
-     * Completion of the callCompare implementation.
-     */
-    protected int completeCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        ObjectHandle hResult = frame.getFrameLocal();
-        return hResult != xOrdered.EQUAL
-            ? frame.assignValue(iReturn, hResult)
-            : getUnderlyingType2().callCompare(frame, hValue1, hValue2, iReturn);
+        return Utils.callCompareSequence(frame,
+            m_constType1, m_constType2, hValue1, hValue2, iReturn);
         }
 
 
@@ -462,7 +400,7 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean validate(ErrorListener errlist)
         {
-        return !isValidated() && (super.validate(errlist) | getUnderlyingType2().validate(errlist));
+        return !isValidated() && (super.validate(errlist) | m_constType2.validate(errlist));
         }
 
 

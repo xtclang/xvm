@@ -3,7 +3,9 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -40,11 +42,21 @@ public class xUncheckedInt64
     public void initDeclared()
         {
         markNativeMethod("to", VOID, STRING);
+        markNativeMethod("abs", VOID, INT);
+
+        // @Op methods
+        markNativeMethod("add", INT, INT);
+        markNativeMethod("sub", INT, INT);
+        markNativeMethod("mul", INT, INT);
+        markNativeMethod("div", INT, INT);
+        markNativeMethod("mod", INT, INT);
+        markNativeMethod("neg", VOID, INT);
         }
 
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
+        // TODO: assert IntConstant.getFormat() == UncheckedInt
         return constant instanceof IntConstant ? new JavaLong(ensureCanonicalClass(),
                 (((IntConstant) constant).getValue().getLong())) : null;
         }
@@ -59,6 +71,50 @@ public class xUncheckedInt64
 
         // TODO: use xUncheckedIntArray
         return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "add":
+                return invokeAdd(frame, hTarget, hArg, iReturn);
+
+            case "sub":
+                return invokeSub(frame, hTarget, hArg, iReturn);
+
+            case "mul":
+                return invokeMul(frame, hTarget, hArg, iReturn);
+
+            case "div":
+                return invokeDiv(frame, hTarget, hArg, iReturn);
+
+            case "mod":
+                return invokeMod(frame, hTarget, hArg, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "abs":
+                {
+                long l = ((JavaLong) hTarget).getValue();
+                return frame.assignValue(iReturn, l >= 0 ? hTarget : makeHandle(-l));
+                }
+
+            case "neg":
+                return invokeNeg(frame, hTarget, iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
