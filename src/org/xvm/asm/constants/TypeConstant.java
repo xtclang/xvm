@@ -618,7 +618,7 @@ public abstract class TypeConstant
 
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
-        switch(getAccess())
+        switch (getAccess())
             {
             case STRUCT:
                 return buildStructInfo(errs);
@@ -710,7 +710,7 @@ public abstract class TypeConstant
         return new TypeInfo(this, struct, fAbstract,
                 mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
-                listmapClassChain, listmapDefaultChain,
+                listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods);
         }
 
@@ -727,11 +727,62 @@ public abstract class TypeConstant
         assert getAccess() == Access.STRUCT;
         assert this instanceof AccessTypeConstant;
 
-        ConstantPool pool = getConstantPool();
-        TypeInfo infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
+        // start by copying all the fields and functions from the private type of this
+        ConstantPool                         pool             = getConstantPool();
+        TypeInfo                             infoPri          = pool.ensureAccessTypeConstant(
+                getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
+        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
 
-        // TODO use the private to get the "potential call chain" and then use that to build the set of fields & functions
-        return infoPri; // TODO
+        for (Map.Entry<String, PropertyInfo> entry : infoPri.getProperties().entrySet())
+            {
+            if (entry.getValue().hasField())
+                {
+                mapProps.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getScopedProperties().entrySet())
+            {
+            if (entry.getValue().hasField())
+                {
+                mapScopedProps.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+        for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getScopedMethods().entrySet())
+            {
+            if (entry.getValue().isFunction())
+                {
+                mapScopedMethods.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+        // now go through all of the contributions and "vacuum" any fields from those contributions
+        // that were not visible to (i.e. from within) the private form of this type
+        for (Contribution contrib : infoPri.getContributionList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                case Incorporates:
+                case Extends:
+                case RebasesOnto:
+                    // obtain the private type of the contribution and copy any missing field data
+                    // from it
+                    TypeConstant typeContrib = contrib.getTypeConstant();
+                    assert !typeContrib.isAccessSpecified();
+                    TypeInfo infoContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT).ensureTypeInfo(errs);
+                    // TODO copy anything that I'm missing
+                }
+            }
+
+        return new TypeInfo(this, infoPri.getClassStructure(), infoPri.isAbstract(),
+                infoPri.getTypeParams(), infoPri.getClassAnnotations(),
+                infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
+                infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
+                mapProps, mapScopedProps, Collections.EMPTY_MAP, mapScopedMethods);
         }
 
     /**

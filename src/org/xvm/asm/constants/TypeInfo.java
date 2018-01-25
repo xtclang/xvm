@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.Set;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
@@ -38,6 +40,7 @@ public class TypeInfo
      * @param typeExtends          the type that is extended
      * @param typeRebases          the type that is rebased onto
      * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
+     * @param listProcess
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
      * @param mapProperties        the public and protected properties of the type
@@ -48,6 +51,7 @@ public class TypeInfo
     public TypeInfo(TypeConstant type, ClassStructure struct, boolean fAbstract,
             Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
+            List<Contribution>                 listProcess,
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
             Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
@@ -70,6 +74,7 @@ public class TypeInfo
         m_typeExtends           = typeExtends;
         m_typeRebases           = typeRebases;
         m_typeInto              = typeInto;
+        m_listProcess           = listProcess;
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
         m_mapProperties         = mapProperties;
@@ -254,7 +259,7 @@ public class TypeInfo
      */
     public boolean isChild()
         {
-        return m_struct != null && m_struct.isChild();
+        return isClass() && m_struct != null && m_struct.isChild();
         }
 
     /**
@@ -298,6 +303,30 @@ public class TypeInfo
     public TypeConstant getInto()
         {
         return m_typeInto;
+        }
+
+    /**
+     * @return the list of contributions that made up this TypeInfo
+     */
+    public List<Contribution> getContributionList()
+        {
+        return m_listProcess;
+        }
+
+    /**
+     * @return the potential call chain of classes
+     */
+    public ListMap<IdentityConstant, Boolean> getClassChain()
+        {
+        return m_listmapClassChain;
+        }
+
+    /**
+     * @return the potential default call chain of interfaces
+     */
+    public ListMap<IdentityConstant, Boolean> getDefaultChain()
+        {
+        return m_listmapDefaultChain;
         }
 
     /**
@@ -782,6 +811,11 @@ public class TypeInfo
      * For mixins, the type that is mixed into. For interfaces, this is always Object.
      */
     private final TypeConstant m_typeInto;
+
+    /**
+     * The list of contributions that made up this TypeInfo.
+     */
+    private final List<Contribution> m_listProcess;
 
     /**
      * The potential call chain of classes.

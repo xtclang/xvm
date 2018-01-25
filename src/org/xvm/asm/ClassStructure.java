@@ -120,6 +120,8 @@ public class ClassStructure
         }
 
     /**
+     * Note: A child class is a class that is instantiated using the "NEWC_*" op codes.
+     *
      * @return true iff this class is a child class, which means that it is nested under a class
      */
     public boolean isChild()
