@@ -49,6 +49,6 @@ public class GP_Mul
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getTemplate().invokeMul(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getOpSupport().invokeMul(frame, hTarget, hArg, m_nRetValue);
         }
     }

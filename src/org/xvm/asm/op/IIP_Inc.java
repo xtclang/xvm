@@ -72,7 +72,7 @@ public class IIP_Inc
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
         return template.invokePreInc(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
         }

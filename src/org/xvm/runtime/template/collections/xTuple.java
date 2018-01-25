@@ -89,7 +89,7 @@ public class xTuple
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
         ObjectHandle hSequence = ahVar[0];
-        IndexSupport support = (IndexSupport) hSequence.getTemplate();
+        IndexSupport support = (IndexSupport) hSequence.getOpSupport();
 
         ObjectHandle[] ahValue;
 

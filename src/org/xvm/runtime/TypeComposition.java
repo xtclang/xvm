@@ -13,6 +13,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -20,7 +21,6 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -31,15 +31,18 @@ import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
- * TypeComposition represents a fully resolved class (e.g. ArrayList<String>).
- *
- * NOTE: methods that rely on the associated ClassTemplate must be overridden by
- *       the extended classes (UnionComposition, InterComposition and ConstComposition)
+ * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
+ * @Range Interval<Date>).
  */
 public class TypeComposition
     {
     /**
-     * The underlying class template.
+     * The underlying {@link OpSupport} for the inception type.
+     */
+    private final OpSupport f_support;
+
+    /**
+     * The {@link ClassTemplate} for the defining class (or Tuple) of the inception type.
      */
     private final ClassTemplate f_template;
 
@@ -81,23 +84,34 @@ public class TypeComposition
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
      *
      * The guarantees for the inception type are:
-     *  - it has to be a class (TypeConstant.isClass()) or a native template
+     *  - it has to be a class (TypeConstant.isClass())
      *  - it cannot be abstract
-     *  - the only modifying types that are allowed are Annotation*, Parameterized?
+     *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
+     *    a ParameterizedTypeConstant
      *
-     * @param template       the ClassTemplate
+     * @param support        the OpSupport implementation for the inception type
      * @param typeInception  the "origin type"
      * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
      */
-    protected TypeComposition(ClassTemplate template, TypeConstant typeInception, TypeConstant typeRevealed)
+    protected TypeComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
         {
-        f_template = template;
+        assert typeInception.isSingleDefiningConstant();
+
+        f_support = support;
+        f_template = support.getTemplate();
         f_typeInception = typeInception;
         f_typeRevealed = typeRevealed;
         }
 
     /**
-     * @return the template for the inception type of this class
+     * @return the OpSupport for the inception type of this TypeComposition
+     */
+    public OpSupport getSupport()
+        {
+        return f_support;
+        }
+    /**
+     * @return the template for the defining class (can be Tuple) for the inception type
      */
     public ClassTemplate getTemplate()
         {
@@ -192,9 +206,11 @@ public class TypeComposition
         {
         assert handle.getComposition() == this;
 
+        TypeConstant typeInception = f_typeInception;
+
         // struct is not "revealable"
-        return f_typeRevealed == f_typeInception || isStruct()
-            ? handle : handle.cloneAs(f_template.ensureClass(f_typeInception));
+        return typeInception == f_typeRevealed|| isStruct()
+            ? handle : handle.cloneAs(f_template.ensureClass(typeInception, typeInception));
         }
 
     public ObjectHandle ensureAccess(ObjectHandle handle, Access access)
@@ -242,6 +258,24 @@ public class TypeComposition
     public boolean isGenericType(String sName)
         {
         return f_typeRevealed.isGenericType(sName);
+        }
+
+    /**
+     * @return true iff the inception type represents a service
+     */
+    public boolean isService()
+        {
+        TypeConstant type = f_typeInception;
+        return type.getSingleUnderlyingClass().getComponent().getFormat() == Format.SERVICE;
+        }
+
+    /**
+     * @return true iff the inception type represents a const
+     */
+    public boolean isConst()
+        {
+        TypeConstant type = f_typeInception;
+        return ((ClassStructure) type.getSingleUnderlyingClass().getComponent()).isConst();
         }
 
     /**
@@ -680,7 +714,7 @@ public class TypeComposition
     @Override
     public int hashCode()
         {
-        return f_template.f_sName.hashCode();
+        return f_typeRevealed.hashCode();
         }
 
     @Override

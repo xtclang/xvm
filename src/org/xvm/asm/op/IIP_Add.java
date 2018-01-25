@@ -73,14 +73,14 @@ public class IIP_Add
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
         long lIndex = hIndex.getValue();
 
         try
             {
             ObjectHandle hCurrent = template.extractArrayValue(hTarget, lIndex);
 
-            switch (hCurrent.getTemplate().invokeAdd(frame, hCurrent, hValue, Frame.RET_LOCAL))
+            switch (hCurrent.getOpSupport().invokeAdd(frame, hCurrent, hValue, Frame.RET_LOCAL))
                 {
                 case R_NEXT:
                     {

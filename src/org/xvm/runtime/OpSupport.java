@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Op;
@@ -17,62 +16,12 @@ import org.xvm.runtime.template.xRef.RefHandle;
 public interface OpSupport
     {
     /**
-     * Obtain a canonical type that is represented by this {@link OpSupport} object
-     *
-     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
+     * Obtain an underlying ClassTemplate for this {@link OpSupport}
      */
-    TypeConstant getCanonicalType();
+    ClassTemplate getTemplate();
 
-    /**
-     * Produce a TypeComposition for this type using the specified actual (inception) type
-     * and the revealed (mask) type.
-     *
-     * Note: the passed actual type should be fully resolved (no formal parameters)
-     * Note2: the following should always hold true: typeActual.getOpSupport() == this;
-     */
-    TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask);
-
-    /**
-     * Create an object handle for the specified constant.
-     *
-     * @param frame     the current frame
-     * @param constant  the constant
-     *
-     * @return the corresponding {@link ObjectHandle}
-     */
-    default ObjectHandle createConstHandle(Frame frame, Constant constant)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
 
     // ----- invocations ---------------------------------------------------------------------------
-
-    /**
-     * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
-     *
-     * The following steps are to be performed:
-     * <ul>
-     *   <li>Invoke the default constructors for the inheritance chain starting at the base;
-     *   <li>Invoke the specified constructor, potentially calling some super constructors
-     *       passing "this:struct" as a target
-     *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
-     *       "this:private" as a target
-     * </ul>
-     *
-     * @param frame        the current frame
-     * @param constructor  the MethodStructure for the constructor
-     * @param clazz        the target class
-     * @param ahVar        the construction parameters
-     * @param iReturn      the register id to place the created handle into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    default int construct(Frame frame, MethodStructure constructor,
-                         TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
 
     /**
      * Invoke a method with zero or one return value on the specified target.
@@ -124,6 +73,7 @@ public interface OpSupport
         {
         return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
         }
+
 
     // ----- various built-in operations -----------------------------------------------------------
 
@@ -252,6 +202,7 @@ public interface OpSupport
         throw new IllegalStateException("Invalid op for " + this);
         }
 
+
     // ----- property operations -------------------------------------------------------------------
 
     /**
@@ -349,89 +300,6 @@ public interface OpSupport
      *         or {@link Op#R_BLOCK} values
      */
     default int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
-
-    // ----- Ref operations ------------------------------------------------------------------------
-
-    /**
-     * Create a Ref or Var for the specified referent class.
-     *
-     * Most commonly, the returned handle is an uninitialized Var, but
-     * in the case of InjectedRef, it's an initialized [read-only] Ref.
-     *
-     * @param clazz  the referent class
-     * @param sName  an optional Ref name
-     *
-     * @return the corresponding {@link RefHandle}
-     */
-    default RefHandle createRefHandle(TypeComposition clazz, String sName)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
-    /**
-     * Create a property Ref or Var for the specified target and property.
-     *
-     * @param hTarget    the target handle
-     * @param sPropName  the property name
-     * @param fRO        true if the
-     *
-     * @return the corresponding {@link RefHandle}
-     */
-    default RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
-
-    // ----- support for equality and comparison ---------------------------------------------------
-
-    /**
-     * Compare for equality two object handles that both belong to the specified class.
-     *
-     * @param frame      the current frame
-     * @param hValue1    the first value
-     * @param hValue2    the second value
-     * @param iReturn    the register id to place a Boolean result into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn);
-
-    /**
-     * Compare for order two object handles that both belong to the specified class.
-     *
-     * @param frame      the current frame
-     * @param hValue1    the first value
-     * @param hValue2    the second value
-     * @param iReturn    the register id to place an Ordered result into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    int callCompare(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn);
-
-
-    // ----- array operations ----------------------------------------------------------------------
-
-    /**
-     * Create a one dimensional array for a specified type and arity.
-     *
-     * @param frame      the current frame
-     * @param typeEl     the array type
-     * @param cCapacity  the array size
-     * @param iReturn    the register id to place the array handle into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    default int createArrayStruct(Frame frame, TypeConstant typeEl, long cCapacity, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + this);
         }

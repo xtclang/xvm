@@ -29,7 +29,10 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
@@ -1002,6 +1005,30 @@ public class TerminalTypeConstant
         }
 
     // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public OpSupport getOpSupport(TemplateRegistry registry)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                return registry.getTemplate((IdentityConstant) constant);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).getOpSupport(registry);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return registry.getTemplate(((PseudoConstant) constant).getDeclarationLevelClass());
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+        }
 
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)

@@ -121,8 +121,6 @@ public class NewG_N
             TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
             ClassTemplate template = clzTarget.getTemplate();
 
-            assert constructor.getParent().getParent() == template.f_struct;
-
             if (frame.isNextRegister(m_nRetValue))
                 {
                 frame.introduceResolvedVar(clzTarget.getType());

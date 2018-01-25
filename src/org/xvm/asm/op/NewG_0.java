@@ -11,6 +11,7 @@ import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -102,10 +103,6 @@ public class NewG_0
         MethodStructure constructor = getMethodStructure(frame);
         TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
 
-        ClassTemplate template = clzTarget.getTemplate();
-
-        assert constructor.getParent().getParent() == template.f_struct;
-
         if (frame.isNextRegister(m_nRetValue))
             {
             frame.introduceResolvedVar(clzTarget.getType());
@@ -113,7 +110,8 @@ public class NewG_0
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
-        return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
+        return clzTarget.getTemplate().
+            construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
         }
 
     @Override

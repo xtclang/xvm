@@ -162,8 +162,8 @@ public class Invoke_TT
         checkReturnTupleRegister(frame, method);
 
         return chain.isNative()
-            ? hTarget.getTemplate().invokeNativeT(frame, method, hTarget, ahArg, m_nRetValue)
-            : hTarget.getTemplate().invokeT(frame, chain, hTarget,
+            ? hTarget.getOpSupport().invokeNativeT(frame, method, hTarget, ahArg, m_nRetValue)
+            : hTarget.getOpSupport().invokeT(frame, chain, hTarget,
                 Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 

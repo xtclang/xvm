@@ -85,11 +85,11 @@ public class ObjectHandle
         }
 
     /**
-     * @return the template for the actual type of this handle
+     * @return the OpSupport for the inception type of this handle
      */
-    public ClassTemplate getTemplate()
+    public OpSupport getOpSupport()
         {
-        return m_clazz.getTemplate();
+        return m_clazz.getSupport();
         }
 
     /**

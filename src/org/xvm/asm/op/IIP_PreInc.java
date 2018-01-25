@@ -68,7 +68,7 @@ public class IIP_PreInc
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle.JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
         return template.invokePreInc(frame, hTarget, hIndex.getValue(), m_nRetValue);
         }

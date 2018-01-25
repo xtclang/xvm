@@ -9,10 +9,17 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.runtime.AnnotationSupport;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -153,6 +160,29 @@ public class AnnotatedTypeConstant
         {
         // TODO this is wrong, but the annotations aren't being applied correctly right now, so defer ...
         return m_constType.unwrapForCongruence();
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    @Override
+    public OpSupport getOpSupport(TemplateRegistry registry)
+        {
+        return new AnnotationSupport(m_constType.getOpSupport(registry), m_annotation);
+        }
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return Utils.callEqualsSequence(frame,
+            m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return Utils.callCompareSequence(frame,
+            m_annotation.getAnnotationType(), m_constType, hValue1, hValue2, iReturn);
         }
 
 

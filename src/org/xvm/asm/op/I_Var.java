@@ -21,7 +21,7 @@ public class I_Var
         extends OpIndex
     {
     /**
-     * Construct an I_REF op.
+     * Construct an I_VAR op.
      *
      * @param nTarget  the target array
      * @param nIndex   the index of the value in the array
@@ -80,7 +80,7 @@ public class I_Var
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
         {
-        IndexSupport template = (IndexSupport) hTarget.getTemplate();
+        IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
         return template.makeRef(frame, hTarget, hIndex.getValue(), false, m_nRetValue);
         }

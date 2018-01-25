@@ -217,8 +217,7 @@ public class TemplateRegistry
     public ClassTemplate getTemplate(String sName)
         {
         // for core classes only
-        TypeConstant type = getTypeConstant(sName);
-        return type == null ? null : getTemplate(type);
+        return getTemplate(getTypeConstant(sName));
         }
 
     // obtain a ClassTemplate for the specified type
@@ -244,7 +243,7 @@ public class TemplateRegistry
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
         return f_mapTemplatesByType.computeIfAbsent(constClass.asTypeConstant(), type ->
-        {
+            {
             Component struct = constClass.getComponent();
             ClassStructure structClass = (ClassStructure) struct;
             if (structClass == null)
@@ -298,9 +297,8 @@ public class TemplateRegistry
         }
 
     // produce a TypeComposition based on the specified TypeConstant
-    // using the specified actual type parameters
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        return getTemplate(typeActual).ensureClass(typeActual);
+        return typeActual.getOpSupport(this).getTemplate().ensureClass(typeActual, typeActual);
         }
     }

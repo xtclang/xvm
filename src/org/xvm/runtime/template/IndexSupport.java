@@ -61,7 +61,7 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.getTemplate().
+            return hValue.getOpSupport().
                     invokePreInc(frame, hValue, null, iReturn);
             }
         catch (ExceptionHandle.WrapperException e)

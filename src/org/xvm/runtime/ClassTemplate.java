@@ -9,6 +9,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -97,6 +98,16 @@ public abstract class ClassTemplate
         }
 
     /**
+     * Obtain a canonical type that is represented by this {@link OpSupport} object
+     *
+     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
+     */
+    public TypeConstant getCanonicalType()
+        {
+        return f_struct.getCanonicalType();
+        }
+
+    /**
      * @return a super template; null only for Object
      */
     public ClassTemplate getSuper()
@@ -181,13 +192,36 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a TypeComposition for this template using the specified actual type.
-     *
-     * Note: the passed actual type should be fully resolved (no formal parameters)
+     * Produce a TypeComposition for this template using the specified actual (inception) type.
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
         return ensureClass(typeActual, typeActual);
+        }
+
+    /**
+     * Produce a TypeComposition for this type using the specified actual (inception) type
+     * and the revealed (mask) type.
+     *
+     * Note: the passed actual type should be fully resolved (no formal parameters)
+     * Note2: the following should always hold true: typeActual.getOpSupport() == this;
+     */
+    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
+        {
+        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
+        assert typeActual.getAccess() == Access.PUBLIC;
+
+        int cActual = typeActual.getParamTypes().size();
+        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
+
+        TypeConstant typeInception = cActual == cFormal
+            ? typeActual
+            : typeActual.normalizeParameters();
+
+        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
+
+        return m_mapCompositions.computeIfAbsent(typeMask,
+            (type) -> new TypeComposition(this, typeInception, type));
         }
 
     public boolean isService()
@@ -219,6 +253,16 @@ public abstract class ClassTemplate
     public boolean isSingleton()
         {
         return f_struct.isStatic();
+        }
+
+    protected boolean isConstructImmutable()
+        {
+        return this instanceof xConst;
+        }
+
+    protected ClassTemplate getChildTemplate(String sName)
+        {
+        return f_templates.getTemplate(f_sName + '.' + sName);
         }
 
     public PropertyStructure getProperty(String sPropName)
@@ -369,47 +413,42 @@ public abstract class ClassTemplate
         return f_struct.toString();
         }
 
-    // ---- OpSupport implementation -----
+    // ----- constructions  ------------------------------------------------------------------------
 
-    @Override
-    public TypeConstant getCanonicalType()
+    /**
+     * Create an object handle for the specified constant.
+     *
+     * @param frame     the current frame
+     * @param constant  the constant
+     *
+     * @return the corresponding {@link ObjectHandle}
+     */
+    public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return f_struct.getCanonicalType();
+        throw new IllegalStateException("Invalid op for " + this);
         }
 
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
-        {
-        assert typeActual.isSingleDefiningConstant();
-        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
-        assert typeActual.getAccess() == Access.PUBLIC;
-
-        int cActual = typeActual.getParamTypes().size();
-        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
-
-        TypeConstant typeInception = cActual == cFormal
-            ? typeActual
-            : typeActual.normalizeParameters();
-
-        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
-
-        return m_mapCompositions.computeIfAbsent(typeMask,
-            (type) -> new TypeComposition(this, typeInception, type));
-        }
-
-    // return a handle with this:struct access
-    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
-        {
-        assert clazz.getTemplate() == this &&
-             (f_struct.getFormat() == Component.Format.CLASS ||
-              f_struct.getFormat() == Component.Format.CONST);
-
-        return new GenericHandle(clazz);
-        }
-
-    // invoke the default constructors, then the specified constructor,
-    // then finalizers; change this:struct handle to this:public
-    // return one of the Op.R_ values
+    /**
+     * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
+     *
+     * The following steps are to be performed:
+     * <ul>
+     *   <li>Invoke the default constructors for the inheritance chain starting at the base;
+     *   <li>Invoke the specified constructor, potentially calling some super constructors
+     *       passing "this:struct" as a target
+     *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
+     *       "this:private" as a target
+     * </ul>
+     *
+     * @param frame        the current frame
+     * @param constructor  the MethodStructure for the constructor
+     * @param clazz        the target class
+     * @param ahVar        the construction parameters
+     * @param iReturn      the register id to place the created handle into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
@@ -454,12 +493,31 @@ public abstract class ClassTemplate
         return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
         }
 
-    protected boolean isConstructImmutable()
+    /**
+     * Create an ObjectHandle for the specified clazz.
+     *
+     * @param frame  the current frame
+     * @param clazz  the TypeComposition for the newly created handle
+     *
+     * @return the newly allocated handle
+     */
+    protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return this instanceof xConst;
+        assert clazz.getTemplate() == this &&
+             (f_struct.getFormat() == Component.Format.CLASS ||
+              f_struct.getFormat() == Component.Format.CONST);
+
+        return new GenericHandle(clazz);
         }
 
-    // ----- OpCode support ------
+
+    // ---- OpSupport implementation ---------------------------------------------------------------
+
+    @Override
+    public ClassTemplate getTemplate()
+        {
+        return this;
+        }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method,
@@ -710,7 +768,34 @@ public abstract class ClassTemplate
         return Op.R_NEXT;
         }
 
-    @Override
+
+    // ----- Ref operations ------------------------------------------------------------------------
+
+    /**
+     * Create a Ref or Var for the specified referent class.
+     *
+     * Most commonly, the returned handle is an uninitialized Var, but
+     * in the case of InjectedRef, it's an initialized [read-only] Ref.
+     *
+     * @param clazz  the referent class
+     * @param sName  an optional Ref name
+     *
+     * @return the corresponding {@link RefHandle}
+     */
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+        {
+        throw new IllegalStateException("Invalid op for " + this);
+        }
+
+    /**
+     * Create a property Ref or Var for the specified target and property.
+     *
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param fRO        true if the
+     *
+     * @return the corresponding {@link RefHandle}
+     */
     public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
@@ -738,7 +823,46 @@ public abstract class ClassTemplate
         return new RefHandle(clzRef, hThis, sPropName);
         }
 
-    @Override
+
+    // ----- array operations ----------------------------------------------------------------------
+
+    /**
+     * Create a one dimensional array for a specified type and arity.
+     *
+     * @param frame      the current frame
+     * @param typeEl     the array type
+     * @param cCapacity  the array size
+     * @param iReturn    the register id to place the array handle into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int createArrayStruct(Frame frame, TypeConstant typeEl,
+                                 long cCapacity, int iReturn)
+        {
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
+            {
+            return frame.raiseException(
+                xException.makeHandle("Invalid array size: " + cCapacity));
+            }
+
+        return frame.assignValue(iReturn, xArray.makeHandle(typeEl, cCapacity));
+        }
+
+
+    // ----- support for equality and comparison ---------------------------------------------------
+
+    /**
+     * Compare for equality two object handles that both belong to the specified class.
+     *
+     * @param frame      the current frame
+     * @param hValue1    the first value
+     * @param hValue2    the second value
+     * @param iReturn    the register id to place a Boolean result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -760,7 +884,17 @@ public abstract class ClassTemplate
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
-    @Override
+    /**
+     * Compare for order two object handles that both belong to the specified class.
+     *
+     * @param frame      the current frame
+     * @param hValue1    the first value
+     * @param hValue2    the second value
+     * @param iReturn    the register id to place an Ordered result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int callCompare(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -769,7 +903,7 @@ public abstract class ClassTemplate
         if (functionCompare != null)
             {
             return frame.call1(functionCompare, null,
-                    new ObjectHandle[]{hValue1, hValue2}, iReturn);
+                new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
         // only Const and Enum classes have automatic implementations
@@ -788,28 +922,24 @@ public abstract class ClassTemplate
             }
         }
 
-    // build the String representation of the target handle
-    // returns R_NEXT, R_CALL or R_EXCEPTION
+
+    // ----- to<String>() support ------------------------------------------------------------------
+
+    /**
+     * Build a String handle for a human readable representation of the target handle.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target
+     * @param iReturn    the register id to place a String result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, xString.makeHandle(hTarget.toString()));
         }
 
-    // ----- Op-code support: array operations -----
-
-    // get a handle to an array for the specified class
-    // returns R_NEXT or R_EXCEPTION
-    public int createArrayStruct(Frame frame, TypeConstant typeEl,
-                                 long cCapacity, int iReturn)
-        {
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(
-                    xException.makeHandle("Invalid array size: " + cCapacity));
-            }
-
-        return frame.assignValue(iReturn, xArray.makeHandle(typeEl, cCapacity));
-        }
 
     // ----- to be replaced when the structure support is added
 

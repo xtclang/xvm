@@ -38,7 +38,12 @@ public class ObjectHeap
 
             ClassTemplate template = f_templates.getTemplate(type); // must exist
 
-            return template.createConstHandle(frame, constValue);
+            ObjectHandle hValue = template.createConstHandle(frame, constValue);
+            if (hValue == null)
+                {
+                throw new IllegalStateException("Invalid constant " + constValue);
+                }
+            return hValue;
             });
         }
 

@@ -34,6 +34,8 @@ import org.xvm.asm.constants.ParamInfo.TypeResolver;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
@@ -2352,6 +2354,14 @@ public abstract class TypeConstant
 
 
     // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * @return an {@link OpSupport} instance for this type in the context of the specified registry
+     */
+    public OpSupport getOpSupport(TemplateRegistry registry)
+        {
+        return getUnderlyingType().getOpSupport(registry);
+        }
 
     /**
      * @return a handle for the Type object represented by this TypeConstant

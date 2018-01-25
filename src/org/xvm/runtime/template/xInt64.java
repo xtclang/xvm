@@ -3,7 +3,6 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -11,7 +10,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xIntArray;
@@ -21,7 +19,7 @@ import org.xvm.runtime.template.collections.xIntArray;
  * TODO:
  */
 public class xInt64
-        extends xConst
+        extends xUncheckedInt64
     {
     public static xInt64 INSTANCE;
 
@@ -40,7 +38,7 @@ public class xInt64
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, STRING);
+        super.initDeclared();
         }
 
     @Override
@@ -64,140 +62,124 @@ public class xInt64
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 + l2;
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() + hThat.getValue());
-        return frame.assignValue(iReturn, hResult);
+        if (((l1 ^ lr) & (l2 ^ lr)) < 0)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(lr));
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 - l2;
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() - hThat.getValue());
-        return frame.assignValue(iReturn, hResult);
+        if (((l1 ^ lr) & (l2 ^ lr)) < 0)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(lr));
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 * l2;
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() * hThat.getValue());
-        return frame.assignValue(iReturn, hResult);
+        long a1 = Math.abs(l1);
+        long a2 = Math.abs(l2);
+        if (((a1 | a2) >>> 31 != 0))
+            {
+            // see Math.multiplyExact()
+           if (((l2 != 0) && (lr / l2 != l1)) ||
+               (l1 == Long.MIN_VALUE && l2 == -1))
+               {
+               return overflow(frame);
+               }
+            }
+
+        return frame.assignValue(iReturn, makeHandle(lr));
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 / l2;
 
-        ObjectHandle hResult = makeHandle(hThis.getValue() / hThat.getValue());
-        return frame.assignValue(iReturn, hResult);
+        return frame.assignValue(iReturn, makeHandle(lr));
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
-        JavaLong hThat = (JavaLong) hArg;
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+        long lr = l1 % l2;
 
-        ObjectHandle hResult = makeHandle(hThis.getValue() % hThat.getValue());
-        return frame.assignValue(iReturn, hResult);
+        return frame.assignValue(iReturn, makeHandle(lr));
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
+        long l = ((JavaLong) hTarget).getValue();
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(-hThis.getValue());
-        return frame.assignValue(iReturn, hResult);
+        if (l == Integer.MIN_VALUE)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(-l));
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
+        long l = ((JavaLong) hTarget).getValue();
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() - 1);
-        return frame.assignValue(iReturn, hResult);
+        if (l == Integer.MIN_VALUE)
+            {
+            return overflow(frame);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(l - 1));
         }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        JavaLong hThis = (JavaLong) hTarget;
+        long l = ((JavaLong) hTarget).getValue();
 
-        // TODO: check overflow
-        ObjectHandle hResult = makeHandle(hThis.getValue() + 1);
-        return frame.assignValue(iReturn, hResult);
-        }
-
-    @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
-        {
-        JavaLong hThis = (JavaLong) hTarget;
-
-        switch (property.getName())
+        if (l == Integer.MAX_VALUE)
             {
-            case "hash":
-                return frame.assignValue(iReturn, hThis);
+            return overflow(frame);
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return frame.assignValue(iReturn, makeHandle(l+1));
         }
 
-    @Override
-    public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
+    // ----- helpers -----
+
+    protected int overflow(Frame frame)
         {
-        return frame.assignValue(iReturn, hTarget);
-        }
-
-    // ----- comparison support -----
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn, xBoolean.makeHandle(h1.getValue() == h2.getValue()));
-        }
-
-    @Override
-    public int callCompare(Frame frame, TypeComposition clazz,
-                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        JavaLong h1 = (JavaLong) hValue1;
-        JavaLong h2 = (JavaLong) hValue2;
-
-        return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
-        }
-
-    // ----- Object methods -----
-
-    @Override
-    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        JavaLong hThis = (JavaLong) hTarget;
-        return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(hThis.getValue())));
+        return frame.raiseException(xException.makeHandle("Int overflow"));
         }
 
     public static JavaLong makeHandle(long lValue)
         {
-        // TODO: create a cache of common values
+        // TODO: use a cache of common values
         return new JavaLong(INSTANCE.ensureCanonicalClass(), lValue);
         }
     }

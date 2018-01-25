@@ -49,6 +49,6 @@ public class GP_Mod
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getTemplate().invokeMod(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getOpSupport().invokeMod(frame, hTarget, hArg, m_nRetValue);
         }
     }

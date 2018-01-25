@@ -63,7 +63,7 @@ public class IP_PreInc
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getTemplate().invokeNext(frame, hTarget, Frame.RET_LOCAL))
+        switch (hTarget.getOpSupport().invokeNext(frame, hTarget, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 {
@@ -94,6 +94,6 @@ public class IP_PreInc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, sProperty, m_nRetValue);
+        return hTarget.getOpSupport().invokePreInc(frame, hTarget, sProperty, m_nRetValue);
         }
     }

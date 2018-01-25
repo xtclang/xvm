@@ -417,31 +417,7 @@ public class Frame
 
     public GenericTypeResolver getGenericsResolver()
         {
-        if (f_hThis == null)
-            {
-            return new GenericTypeResolver()
-                {
-                @Override
-                public TypeConstant resolveGenericType(PropertyConstant constProperty)
-                    {
-                    String sName = constProperty.getName();
-                    for (int i = 0, c = f_function.getParamCount(); i < c; i++)
-                        {
-                        Parameter param = f_function.getParam(i);
-                        if (param.isTypeParameter())
-                            {
-                            if (sName.equals(param.getName()))
-                                {
-                                return param.getType();
-                                }
-                            }
-                        }
-                    throw new IllegalArgumentException(
-                        "Invalid formal name: " + sName + " for " + f_function);
-                    }
-                };
-            }
-        return f_hThis.getType();
+        return f_hThis == null ? f_function : f_hThis.getType();
         }
 
     public ObjectHandle getFrameLocal()
@@ -525,7 +501,7 @@ public class Frame
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
-                    return hThis.getTemplate().setPropertyValue(
+                    return hThis.getOpSupport().setPropertyValue(
                             this, hThis, constProperty.getName(), hValue);
                     }
                 catch (ClassCastException e)

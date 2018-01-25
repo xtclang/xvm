@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Constants.Access;
+
 import org.xvm.asm.constants.MethodConstant;
 
 import org.xvm.runtime.CallChain;
@@ -126,16 +128,16 @@ public abstract class OpInvocable extends Op
 
         MethodConstant constMethod = (MethodConstant) frame.getConstant(m_nMethodId);
 
-        m_clazz = hTarget.getComposition();
+        TypeComposition clazz = m_clazz = hTarget.getComposition();
 
-        Constants.Access access = constMethod.getComponent().getAccess();
-        if (access == Constants.Access.PRIVATE)
+        Access access = constMethod.getComponent().getAccess();
+        if (access == Access.PRIVATE)
             {
             m_chain = new CallChain((MethodStructure) constMethod.getComponent());
             }
         else
             {
-            m_chain = m_clazz.getMethodCallChain(constMethod.getSignature(), access);
+            m_chain = clazz.getMethodCallChain(constMethod.getSignature(), access);
             }
 
         return m_chain;
