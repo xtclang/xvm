@@ -31,10 +31,8 @@ import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
- * TypeComposition represents a fully resolved class (e.g. ArrayList<String>).
- *
- * NOTE: methods that rely on the associated ClassTemplate must be overridden by
- *       the extended classes (UnionComposition, InterComposition and ConstComposition)
+ * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
+ * @Range Interval<Date>).
  */
 public class TypeComposition
     {

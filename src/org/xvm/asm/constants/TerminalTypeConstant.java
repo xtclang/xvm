@@ -32,6 +32,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 

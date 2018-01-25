@@ -21,7 +21,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -35,9 +34,9 @@ import org.xvm.asm.constants.ParamInfo.TypeResolver;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
+
 import org.xvm.runtime.template.xType;
 import org.xvm.runtime.template.xType.TypeHandle;
 
