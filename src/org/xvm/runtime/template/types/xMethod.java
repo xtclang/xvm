@@ -51,7 +51,7 @@ public class xMethod
         markNativeGetter("access");
         markNativeGetter("property");
 
-        ACCESS = (xEnum) f_templates.getTemplate(f_sName + ".Access");
+        ACCESS = (xEnum) getChildTemplate("Access");
         }
 
     @Override

@@ -58,7 +58,7 @@ public class xFutureVar
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
 
-        xEnum enumCompletion = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
+        xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");

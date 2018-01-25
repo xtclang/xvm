@@ -37,12 +37,12 @@ import org.xvm.runtime.template.xRef.RefHandle;
 public class TypeComposition
     {
     /**
-     * The underlying {@link OpSupport}.
+     * The underlying {@link OpSupport} for the inception type.
      */
     private final OpSupport f_support;
 
     /**
-     * The underlying {@link ClassTemplate}.
+     * The {@link ClassTemplate} for the defining class (or Tuple) of the inception type.
      */
     private final ClassTemplate f_template;
 
@@ -104,14 +104,14 @@ public class TypeComposition
         }
 
     /**
-     * @return the OpSupport for the inception type of this class
+     * @return the OpSupport for the inception type of this TypeComposition
      */
     public OpSupport getSupport()
         {
         return f_support;
         }
     /**
-     * @return the template for the inception type of this class
+     * @return the template for the defining class (can be Tuple) for the inception type
      */
     public ClassTemplate getTemplate()
         {

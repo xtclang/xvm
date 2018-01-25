@@ -217,8 +217,7 @@ public class TemplateRegistry
     public ClassTemplate getTemplate(String sName)
         {
         // for core classes only
-        TypeConstant type = getTypeConstant(sName);
-        return type == null ? null : getTemplate(type);
+        return getTemplate(getTypeConstant(sName));
         }
 
     // obtain a ClassTemplate for the specified type

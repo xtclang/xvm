@@ -226,6 +226,11 @@ public abstract class ClassTemplate
         return this instanceof xConst;
         }
 
+    protected ClassTemplate getChildTemplate(String sName)
+        {
+        return f_templates.getTemplate(f_sName + '.' + sName);
+        }
+
     public PropertyStructure getProperty(String sPropName)
         {
         return (PropertyStructure) f_struct.getChild(sPropName);
