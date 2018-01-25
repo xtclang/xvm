@@ -276,13 +276,17 @@ public class ParameterizedTypeConstant
         int cFormal = clzThis.isParameterized() ? clzThis.getTypeParams().size() : 0;
         if (cParams != cFormal)
             {
-            if (cParams < cFormal)
+            if (isTuple())
+                {
+                // keep as is
+                }
+            else if (cParams < cFormal)
                 {
                 List<TypeConstant> listTypes = clzThis.normalizeParameters(Arrays.asList(aconstParams));
                 aconstParams = listTypes.toArray(new TypeConstant[listTypes.size()]);
                 fDiff = true;
                 }
-            else if (!clzThis.getIdentityConstant().equals(getConstantPool().clzTuple()))
+            else
                 {
                 throw new IllegalArgumentException(
                     "Too many parameters specified: " + this + " for " + clzThis);

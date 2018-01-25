@@ -9,7 +9,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -47,6 +46,7 @@ import org.xvm.runtime.template.collections.xArray;
  * ClassTemplate represents a run-time class.
  */
 public abstract class ClassTemplate
+        implements OpSupport
     {
     public final TemplateRegistry f_templates;
     public final ClassStructure f_struct;
@@ -154,14 +154,6 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain the canonical type for this template.
-     */
-    public TypeConstant getCanonicalType()
-        {
-        return f_struct.getCanonicalType();
-        }
-
-    /**
      * Obtain the canonical class for this template.
      */
     public TypeComposition ensureCanonicalClass()
@@ -196,25 +188,6 @@ public abstract class ClassTemplate
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
         return ensureClass(typeActual, typeActual);
-        }
-
-    /**
-     * Produce a TypeComposition for this template using the specified actual (inception) type
-     * and the revealed (mask) type.
-     *
-     * Note: the passed actual type should be fully resolved (no formal parameters)
-     */
-    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
-        {
-        int cActual = typeActual.getParamTypes().size();
-        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
-
-        TypeConstant typeInception = cActual == cFormal
-            ? typeActual
-            : typeActual.normalizeParameters();
-
-        return m_mapCompositions.computeIfAbsent(typeMask,
-            (type) -> new TypeComposition(this, typeInception, type));
         }
 
     public boolean isService()
@@ -396,20 +369,32 @@ public abstract class ClassTemplate
         return f_struct.toString();
         }
 
-    // ---- OpCode support: construction and initialization -----
+    // ---- OpSupport implementation -----
 
-    // create an unassigned RefHandle for the specified class
-    // sName is an optional ref name
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    @Override
+    public TypeConstant getCanonicalType()
         {
-        throw new IllegalStateException("Invalid op for " + f_sName);
+        return f_struct.getCanonicalType();
         }
 
-    // assign (Int i = 5;)
-    // @return an immutable handle or null if this type doesn't take that constant
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
         {
-        throw new IllegalStateException("Invalid op for " + f_sName);
+        assert typeActual.isSingleDefiningConstant();
+        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
+        assert typeActual.getAccess() == Access.PUBLIC;
+
+        int cActual = typeActual.getParamTypes().size();
+        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
+
+        TypeConstant typeInception = cActual == cFormal
+            ? typeActual
+            : typeActual.normalizeParameters();
+
+        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
+
+        return m_mapCompositions.computeIfAbsent(typeMask,
+            (type) -> new TypeComposition(this, typeInception, type));
         }
 
     // return a handle with this:struct access
@@ -476,48 +461,7 @@ public abstract class ClassTemplate
 
     // ----- OpCode support ------
 
-    // invoke with a zero or one return value
-    // return R_CALL or R_BLOCK
-    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-        {
-        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
-        }
-
-    // invoke with return value of Tuple
-    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
-        {
-        return frame.invokeT(chain, 0, hTarget, ahVar, iReturn);
-        }
-
-    // invoke with more than one return value
-    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
-        {
-        return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
-        }
-
-    // invokeNative property "get" operation
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Unknown property getter: (" + f_sName + ")." + property.getName());
-        }
-
-    // invokeNative property "set" operation
-    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
-        {
-        throw new IllegalStateException("Unknown property setter: (" + f_sName + ")." + property.getName());
-        }
-
-    // invokeNative with exactly one argument and zero or one return value
-    // place the result into the specified frame register
-    // return R_NEXT or R_CALL
-    public int invokeNative1(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
-        }
-
-    // invokeNative with zero or more than one arguments and zero or one return values
-    // return one of the Op.R_ values
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
@@ -616,93 +560,22 @@ public abstract class ClassTemplate
             }
         }
 
-    // invokeNative with zero or more arguments and more than one return values
-    // return one of the Op.R_ values
-    public int invokeNativeNN(Frame frame, MethodStructure method,
-                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
-        {
-        throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
-        }
 
-    // Add operation; place the result into the specified frame register
-    // return one of the Op.R_ values
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Sub operation; place the result into the specified frame register
-    // return one of the Op.R_ values
-    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Mul operation; place the result into the specified frame register
-    // return one of the Op.R_ values
-    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Div operation; place the result into the specified frame register
-    // return one of the Op.R_ values
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Mod operation; place the result into the specified frame register
-    // return one of the Op.R_ values
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Neg operation
-    // return one of the Op.R_ values
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Next operation (Sequential)
-    // return either R_NEXT or R_EXCEPTION
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // Prev operation (Sequential)
-    // return either R_NEXT or R_EXCEPTION
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + f_sName);
-        }
-
-    // ---- OpCode support: register or property operations -----
-
-
-    // increment the property value and place the result into the specified frame register
-    // return R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         return new Utils.IncDec(Utils.IncDec.PRE_INC,
             this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
-    // place the property value into the specified frame register and increment it
-    // return R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         return new Utils.IncDec(Utils.IncDec.POST_INC,
             this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
-    // ----- OpCode support: property operations -----
-
-    // get a property value into the specified register
-    // return R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         if (sPropName == null)
@@ -727,6 +600,7 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
+    @Override
     public int getFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, int iReturn)
         {
@@ -774,7 +648,7 @@ public abstract class ClassTemplate
             : frame.assignValue(iReturn, hValue);
         }
 
-    // set a property value
+    @Override
     public int setPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
         if (sPropName == null)
@@ -814,7 +688,8 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
-    protected int setFieldValue(Frame frame, ObjectHandle hTarget,
+    @Override
+    public int setFieldValue(Frame frame, ObjectHandle hTarget,
                              PropertyStructure property, ObjectHandle hValue)
         {
         if (property == null)
@@ -835,7 +710,7 @@ public abstract class ClassTemplate
         return Op.R_NEXT;
         }
 
-    // create a property ref for the specified target and property
+    @Override
     public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
@@ -863,10 +738,7 @@ public abstract class ClassTemplate
         return new RefHandle(clzRef, hThis, sPropName);
         }
 
-    // ----- support for equality and comparison ------
-
-    // compare for equality two object handles that both belong to the specified class
-    // return R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
@@ -888,8 +760,7 @@ public abstract class ClassTemplate
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
-    // compare for order two object handles that both belong to the specified class
-    // return R_NEXT, R_CALL or R_EXCEPTION
+    @Override
     public int callCompare(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
