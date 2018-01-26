@@ -1791,12 +1791,13 @@ public abstract class TypeConstant
                                 getValueString(), sName);
                         }
 
-                    if (fHasOverride)
-                        {
-                        // interface is not allowed to use @Override
-                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
-                                getValueString(), sName);
-                        }
+// TODO review
+//                    if (fHasOverride)
+//                        {
+//                        // interface is not allowed to use @Override
+//                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
+//                                getValueString(), sName);
+//                        }
 
                     fRO      |= fHasRO;
                     fField    = false;

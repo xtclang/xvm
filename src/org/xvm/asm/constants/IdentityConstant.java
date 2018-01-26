@@ -127,7 +127,7 @@ public abstract class IdentityConstant
         }
 
     /**
-     * @return a TypeConstant for this class
+     * @return the ClassConstant that would respresent a child class of the specified name
      */
     public ClassConstant ensureChild(String sName)
         {
