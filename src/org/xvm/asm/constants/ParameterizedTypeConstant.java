@@ -540,19 +540,17 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
-        return super.consumesFormalType(sTypeName, access, getParamTypes());
+        return super.checkConsumption(sTypeName, access, getParamTypes());
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
-        return super.producesFormalType(sTypeName, access, getParamTypes());
+        return super.checkProduction(sTypeName, access, getParamTypes());
         }
 
     @Override

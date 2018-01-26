@@ -11,7 +11,6 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -588,8 +587,7 @@ public class MethodStructure
         {
         for (Parameter param : getParams())
             {
-            if (param.getType().consumesFormalType(sTypeName,
-                    Access.PUBLIC, Collections.EMPTY_LIST))
+            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
                 {
                 return true;
                 }
@@ -597,8 +595,7 @@ public class MethodStructure
 
         for (Parameter param : getReturns())
             {
-            if (param.getType().producesFormalType(sTypeName,
-                    Access.PUBLIC, Collections.EMPTY_LIST))
+            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
                 {
                 return true;
                 }
@@ -619,8 +616,7 @@ public class MethodStructure
         {
         for (Parameter param : getParams())
             {
-            if (param.getType().producesFormalType(sTypeName,
-                    Access.PUBLIC, Collections.EMPTY_LIST))
+            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC))
                 {
                 return true;
                 }
@@ -628,8 +624,7 @@ public class MethodStructure
 
         for (Parameter param : getReturns())
             {
-            if (param.getType().consumesFormalType(sTypeName,
-                    Access.PUBLIC, Collections.EMPTY_LIST))
+            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC))
                 {
                 return true;
                 }
@@ -644,8 +639,7 @@ public class MethodStructure
      * @param sigThat   the signature of the matching method (resolved)
      * @param resolver  the generic type resolver
      */
-    public boolean isSubstitutableFor(SignatureConstant sigThat,
-                                      GenericTypeResolver resolver)
+    public boolean isSubstitutableFor(SignatureConstant sigThat, GenericTypeResolver resolver)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)

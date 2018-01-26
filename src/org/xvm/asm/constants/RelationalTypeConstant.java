@@ -292,19 +292,19 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return m_constType1.producesFormalType(sTypeName, access, listParams)
-            || m_constType2.producesFormalType(sTypeName, access, listParams);
+        assert listParams.isEmpty();
+        return Usage.valueOf(m_constType1.producesFormalType(sTypeName, access)
+                          || m_constType2.producesFormalType(sTypeName, access));
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return m_constType1.consumesFormalType(sTypeName, access, listParams)
-            || m_constType2.consumesFormalType(sTypeName, access, listParams);
+        assert listParams.isEmpty();
+        return Usage.valueOf(m_constType1.consumesFormalType(sTypeName, access)
+                          || m_constType2.consumesFormalType(sTypeName, access));
         }
 
     // ----- run-time support ----------------------------------------------------------------------

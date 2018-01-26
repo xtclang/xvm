@@ -2102,53 +2102,36 @@ public abstract class TypeConstant
             return Relation.IS_A;
             }
 
-        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
-        Relation relation;
-        if (mapRelations == null)
-            {
-            // TODO: this is not thread safe
-            mapRelations = m_mapRelations = new HashMap<>();
-            relation = null;
-            }
-        else
-            {
-            relation = mapRelations.get(thatLeft);
-            }
+        // TODO: not thread safe
+        Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
+        Relation relation = mapRelations.get(thatLeft);
 
         if (relation == null)
             {
             mapRelations.put(thatLeft, Relation.IN_PROGRESS);
-            }
-        else
-            {
-            if (relation == Relation.IN_PROGRESS)
+            try
                 {
-                // we are in recursion; the answer is "no"
-                mapRelations.put(thatLeft, Relation.INCOMPATIBLE);
-                }
-            return relation;
-            }
+                List<ContributionChain> chains = this.collectContributions(thatLeft,
+                    new ArrayList<>(), new ArrayList<>());
 
-        try
-            {
-            List<ContributionChain> chains = this.collectContributions(thatLeft,
-                new ArrayList<>(), new ArrayList<>());
-            if (chains.isEmpty())
-                {
-                mapRelations.put(thatLeft, relation = Relation.INCOMPATIBLE);
-                }
-            else
-                {
-                relation = validate(this, thatLeft, chains);
+                relation = chains.isEmpty()
+                    ? Relation.INCOMPATIBLE
+                    : validate(this, thatLeft, chains);
+
                 mapRelations.put(thatLeft, relation);
                 }
-            return relation;
+            catch (RuntimeException | Error e)
+                {
+                mapRelations.remove(thatLeft);
+                throw e;
+                }
             }
-        catch (RuntimeException | Error e)
+        else if (relation == Relation.IN_PROGRESS)
             {
-            mapRelations.remove(thatLeft);
-            throw e;
+            // we are in recursion; the answer is "incompatible"
+            mapRelations.put(thatLeft, relation = Relation.INCOMPATIBLE);
             }
+        return relation;
         }
 
     /**
@@ -2272,23 +2255,100 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this type consumes a formal type with the specified name in context
+     * Determine if this type consumes a formal type with the specified name in a context
+     * of the given TypeComposition and access policy.
+     *
+     * @param sTypeName   the formal type name
+     * @param access      the access level to limit the check to
+     *
+     * @return true iff this type is a consumer of the specified formal type
+     */
+    public boolean consumesFormalType(String sTypeName, Access access)
+        {
+        Map<String, Usage> mapUsage = ensureConsumesMap();
+
+        // TODO: not thread safe
+        Usage usage = mapUsage.get(sTypeName);
+        if (usage == null)
+            {
+            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
+            try
+                {
+                usage = checkConsumption(sTypeName, access, Collections.EMPTY_LIST);
+                }
+            catch (RuntimeException | Error e)
+                {
+                mapUsage.remove(sTypeName);
+                throw e;
+                }
+
+            mapUsage.put(sTypeName, usage);
+            }
+        else if (usage == Usage.IN_PROGRESS)
+            {
+            // we are in recursion; the answer is "no"
+            mapUsage.put(sTypeName, usage = Usage.NO);
+            }
+
+        return usage == Usage.YES;
+        }
+
+    /**
+     * Calculate the consumption usage for the specified formal type in a context
      * of the given TypeComposition and access policy.
      *
      * @param sTypeName   the formal type name
      * @param access      the access level to limit the check to
      * @param listParams  the list of actual generic parameters
      *
-     * @return true iff this type is a consumer of the specified formal type
+     * @return {@link Usage#YES} if this type consumes the formal type; {@link Usage#NO} otherwise
      */
-    public boolean consumesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().consumesFormalType(sTypeName, access, listParams);
+        return getUnderlyingType().checkConsumption(sTypeName, access, listParams);
+        }
+
+   /**
+     * Determine if this type produces a formal type with the specified name in a context
+     * of the given TypeComposition and access policy.
+     *
+     * @param sTypeName   the formal type name
+     * @param access      the access level to limit the check to
+     *
+     * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
+     */
+    public boolean producesFormalType(String sTypeName, Access access)
+        {
+        Map<String, Usage> mapUsage = ensureProducesMap();
+
+        // TODO: not thread safe
+        Usage usage = mapUsage.get(sTypeName);
+        if (usage == null)
+            {
+            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
+            try
+                {
+                usage = checkProduction(sTypeName, access, Collections.EMPTY_LIST);
+                }
+            catch (RuntimeException | Error e)
+                {
+                mapUsage.remove(sTypeName);
+                throw e;
+                }
+
+            mapUsage.put(sTypeName, usage);
+            }
+        else if (usage == Usage.IN_PROGRESS)
+            {
+            // we are in recursion; the answer is "no"
+            mapUsage.put(sTypeName, usage = Usage.NO);
+            }
+
+        return usage == Usage.YES;
         }
 
     /**
-     * Determine if this type produces a formal type with the specified name in context
+     * Determine if this type produces a formal type with the specified name in a context
      * of the given TypeComposition and access policy.
      *
      * @param sTypeName   the formal type name
@@ -2297,10 +2357,9 @@ public abstract class TypeConstant
      *
      * @return true iff this type is a producer of the specified formal type
      */
-    public boolean producesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return getUnderlyingType().producesFormalType(sTypeName, access, listParams);
+        return getUnderlyingType().checkProduction(sTypeName, access, listParams);
         }
 
     /**
@@ -2581,12 +2640,58 @@ public abstract class TypeConstant
         }
 
 
+    // ----- helpers -------------------------------------------------------------------------------
+
+    private Map<TypeConstant, Relation> ensureRelationMap()
+        {
+        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
+        if (mapRelations == null)
+            {
+            mapRelations = m_mapRelations = new HashMap<>();
+            }
+        return mapRelations;
+        }
+
+    private Map<String, Usage> ensureConsumesMap()
+        {
+        Map<String, Usage> mapConsumes = m_mapConsumes;
+        if (mapConsumes == null)
+            {
+            mapConsumes = m_mapConsumes = new HashMap<>();
+            }
+        return mapConsumes;
+        }
+
+    private Map<String, Usage> ensureProducesMap()
+        {
+        Map<String, Usage> mapProduces = m_mapProduces;
+        if (mapProduces == null)
+            {
+            mapProduces = m_mapProduces = new HashMap<>();
+            }
+        return mapProduces;
+        }
+
+
     // -----fields ---------------------------------------------------------------------------------
 
     /**
      * Relationship options.
      */
     public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+
+    /**
+     * Consumption/production options.
+     */
+    public enum Usage
+        {
+        IN_PROGRESS, YES, NO;
+
+        public static Usage valueOf(boolean f)
+            {
+            return f ? YES : NO;
+            }
+        }
 
     /**
      * Keeps track of whether the TypeConstant has been validated.
@@ -2602,6 +2707,16 @@ public abstract class TypeConstant
      * A cache of "isA" responses.
      */
     private Map<TypeConstant, Relation> m_mapRelations;
+
+    /**
+     * A cache of "consumes" responses.
+     */
+    private Map<String, Usage> m_mapConsumes;
+
+    /**
+     * A cache of "produces" responses.
+     */
+    private Map<String, Usage> m_mapProduces;
 
     /**
      * Cached TypeHandle.
