@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -748,6 +749,50 @@ public class TypeInfo
         }
 
 
+    // ----- deferred TypeInfo creation ------------------------------------------------------------
+
+    boolean isComplete()
+        {
+        // TODO
+        return true;
+        }
+
+    boolean isPlaceHolder()
+        {
+        return this == m_type.getType().getConstantPool().EMPTY_TYPEINFO;
+        }
+
+    void addDeferred(TypeConstant type)
+        {
+        // make sure that this is the ConstantPool.EMPTY_TYPEINFO
+        assert isPlaceHolder();
+
+        List<TypeConstant> list = m_listDeferred;
+        if (list == null)
+            {
+            m_listDeferred = list = new ArrayList<>();
+            }
+        list.add(type);
+        }
+
+    boolean hasDeferred()
+        {
+        return m_listDeferred != null;
+        }
+
+    List<TypeConstant> takeDeferred()
+        {
+        List<TypeConstant> list = m_listDeferred;
+        if (list == null)
+            {
+            return Collections.EMPTY_LIST;
+            }
+
+        m_listDeferred = null;
+        return list;
+        }
+
+
     // ----- internal helpers ----------------------------------------------------------------------
 
     public static Annotation[] validateAnnotations(Annotation[] annotations)
@@ -909,4 +954,7 @@ public class TypeInfo
     private transient Set<MethodConstant> m_setOp;
     private transient TypeConstant        m_typeAuto;
     private transient MethodConstant      m_methodAuto;
+
+    // a special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt
+    private transient List<TypeConstant>  m_listDeferred;
     }

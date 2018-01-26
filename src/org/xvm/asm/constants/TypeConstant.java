@@ -634,9 +634,8 @@ public abstract class TypeConstant
         {
         if (m_typeinfo == null)
             {
-            m_typeinfo = getConstantPool().EMPTY_TYPEINFO;
-            validate(errs);
-            m_typeinfo = buildTypeInfo(errs);
+            // TODO in progress
+            forceBuild(errs);
             }
         else if (m_typeinfo == getConstantPool().EMPTY_TYPEINFO)
             {
@@ -644,6 +643,41 @@ public abstract class TypeConstant
             }
 
         return m_typeinfo;
+        }
+
+    // TODO in progress
+    private void forceBuild(ErrorListener errs)
+        {
+        // store the place-holder to signify that this type is busy building a TypeInfo
+        TypeInfo typePlaceholder = getConstantPool().EMPTY_TYPEINFO;
+        if (m_typeinfo == null)
+            {
+            m_typeinfo = typePlaceholder;
+            }
+
+        // before building the TypeInfo for this type, remember whether or not it already has
+        // any "deferred types" for building TypeInfos
+        boolean fDeferredBefore = typePlaceholder.hasDeferred();
+
+        // build the TypeInfo for this type
+        validate(errs);
+        m_typeinfo = buildTypeInfo(errs);
+
+        if (!fDeferredBefore && typePlaceholder.hasDeferred())
+            {
+            // some types were deferred while we were busy building the TypeInfo for this type,
+            // and we're responsible now for re-building them now that we've built a temporary
+            // TypeInfo that can be used
+            for (TypeConstant typeDeferred : typePlaceholder.takeDeferred())
+                {
+                typeDeferred.forceBuild(errs);
+                }
+
+            // finish by rebuilding this TypeInfo, since it obviously depends on the types that
+            // just got re-built
+            this.m_typeinfo = this.buildTypeInfo(errs);
+            assert !typePlaceholder.hasDeferred();
+            }
         }
 
     /**
@@ -1505,7 +1539,6 @@ public abstract class TypeConstant
             ErrorListener                        errs)
         {
         ConstantPool pool      = getConstantPool();
-        Access       accessReq = getAccess() == Access.STRUCT ? Access.STRUCT : Access.PROTECTED;
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProps;
