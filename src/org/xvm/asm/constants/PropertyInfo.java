@@ -79,13 +79,26 @@ public class PropertyInfo
         {
         if (this.isTypeParam() || that.isTypeParam())
             {
-            if (this.isTypeParam() && that.isTypeParam() && this.getType().isA(that.getType()))
+            if (this.isTypeParam() ^ that.isTypeParam())
+                {
+                throw new IllegalStateException(
+                        "cannot combine PropertyInfo objects if either represents a type parameter");
+                }
+
+            if (this.getType().isA(that.getType()))
                 {
                 return this;
                 }
-
-            throw new IllegalStateException(
-                    "cannot combine PropertyInfo objects if either represents a type parameter");
+            else if (that.getType().isA(this.getType()))
+                {
+                return that;
+                }
+            else
+                {
+                throw new IllegalStateException("incompatible type params: "
+                    + this.getType().getValueString() + ", "
+                    + that.getType().getValueString()); // TODO
+                }
             }
 
         assert this.getName().equals(that.getName());
