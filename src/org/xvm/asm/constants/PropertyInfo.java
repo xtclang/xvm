@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 
 
 /**
@@ -34,6 +35,7 @@ public class PropertyInfo
 
         m_constId   = constId;
         m_type      = type;
+        m_paraminfo = null;
         m_fRO       = fRO;
         m_aPropAnno = TypeInfo.validateAnnotations(aPropAnno);
         m_aRefAnno  = TypeInfo.validateAnnotations(aRefAnno);
@@ -44,10 +46,10 @@ public class PropertyInfo
         }
 
     /**
-     * TODO
+     * Construct a PropertyInfo that represents the specified type parameter.
      *
-     * @param constId
-     * @param param
+     * @param constId  the identity of this property
+     * @param param    the type parameter information
      */
     public PropertyInfo(PropertyConstant constId, ParamInfo param)
         {
@@ -61,14 +63,17 @@ public class PropertyInfo
         m_aRefAnno  = Annotation.NO_ANNOTATIONS;
         m_fCustom   = false;
         m_fField    = false;
+        m_fAbstract = false;
+        m_fOverride = false;
         }
 
     /**
-     * TODO
+     * Combine the information in this PropertyInfo with the information from a super type's
+     * PropertyInfo.
      *
-     * @param that
+     * @param that  a super-type's PropertyInfo
      *
-     * @return
+     * @return a PropertyInfo representing the combined information
      */
     public PropertyInfo combineWithSuper(PropertyInfo that)
         {
@@ -96,6 +101,25 @@ public class PropertyInfo
                 this.m_fField | that.m_fField,          // field present if either has field
                 this.m_fAbstract,                       // abstract if the top one is abstract
                 that.m_fOverride);                      // override if the bottom one is override
+        }
+
+    /**
+     * Create a new PropertyInfo that represents a more limited (public or protected) access to the
+     * members of this property that is on the private type.
+     *
+     * @param access  the desired access, either PUBLIC or PROTECTED
+     *
+     * @return a PropertyInfo to use, or null if the PropertyInfo would not be present on the type
+     *         with the specified access
+     */
+    public PropertyInfo limitAccess(Access access)
+        {
+        // TODO this property is either a Var or a Ref on the private type (i.e. this PropertyInfo)
+        //      determine if the same property would be a Var, a Ref, or absent from the type with the specified access
+        //      - if absent, return null
+        //      - if the same as on the private type, then return this
+        //      - otherwise private type must be Var and we need to create a Ref (@RO) of the same
+        return this;
         }
 
     /**
@@ -308,51 +332,51 @@ public class PropertyInfo
     /**
      * The property's identity constant.
      */
-    private PropertyConstant m_constId;
+    private final PropertyConstant m_constId;
 
     /**
      * Type of the property, including any annotations on the type.
      */
-    private TypeConstant m_type;
+    private final TypeConstant m_type;
 
     /**
      * Type parameter information.
      */
-    private ParamInfo m_paraminfo;
+    private final ParamInfo m_paraminfo;
 
     /**
      * True iff the property is a Ref; false iff the property is a Var.
      */
-    private boolean m_fRO;
+    private final boolean m_fRO;
 
     /**
      * An array of non-virtual annotations on the property declaration itself
      */
-    private Annotation[] m_aPropAnno;
+    private final Annotation[] m_aPropAnno;
 
     /**
      * An array of annotations that apply to the Ref/Var of the property.
      */
-    private Annotation[] m_aRefAnno;
+    private final Annotation[] m_aRefAnno;
 
     /**
      * True to indicate that the property has custom code that overrides the underlying Ref/Var
      * implementation.
      */
-    private boolean m_fCustom;
+    private final boolean m_fCustom;
 
     /**
      * True iff the property requires a field.
      */
-    private boolean m_fField;
+    private final boolean m_fField;
 
     /**
      * True iff the property is abstract, such as when it is on an interface.
      */
-    private boolean m_fAbstract;
+    private final boolean m_fAbstract;
 
     /**
      * True iff the property's last contribution specifies "@Override".
      */
-    private boolean m_fOverride;
+    private final boolean m_fOverride;
     }

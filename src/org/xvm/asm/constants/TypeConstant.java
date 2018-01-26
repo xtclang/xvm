@@ -771,12 +771,21 @@ public abstract class TypeConstant
                 case Incorporates:
                 case Extends:
                 case RebasesOnto:
-                    // obtain the private type of the contribution and copy any missing field data
-                    // from it
+                    {
+                    // obtain the struct type of the contribution and copy any missing fields from it
                     TypeConstant typeContrib = contrib.getTypeConstant();
                     assert !typeContrib.isAccessSpecified();
                     TypeInfo infoContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT).ensureTypeInfo(errs);
-                    // TODO copy anything that I'm missing
+                    assert mapProps.keySet().containsAll(infoContrib.getProperties().keySet());
+                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getScopedProperties().entrySet())
+                        {
+                        if (!mapScopedProps.containsKey(entry.getKey()))
+                            {
+                            mapScopedProps.put(entry.getKey(), entry.getValue());
+                            }
+                        }
+                    }
+                    break;
                 }
             }
 
@@ -1483,7 +1492,7 @@ public abstract class TypeConstant
                     case RebasesOnto:
                         // if we're building "public" or "protected", then this will be protected
                         assert !typeContrib.isAccessSpecified();
-                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, accessReq);
+                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED);
                         break;
 
                     case Into:

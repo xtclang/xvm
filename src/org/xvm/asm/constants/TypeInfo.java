@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +97,56 @@ public class TypeInfo
         assert m_type.getAccess() == Access.PRIVATE;
         assert access == Access.PROTECTED ||  access == Access.PUBLIC;
 
-        return this; // TODO
+        TypeConstant typeNew = m_type.getUnderlyingType();
+        if (access == Access.PROTECTED)
+            {
+            typeNew = m_type.getConstantPool().ensureAccessTypeConstant(typeNew, Access.PROTECTED);
+            }
+
+        Map<String           , PropertyInfo> mapProperties       = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapScopedProperties = new HashMap<>();
+        Map<SignatureConstant, MethodInfo  > mapMethods          = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapScopedMethods    = new HashMap<>();
+
+        for (Entry<String, PropertyInfo> entry : m_mapProperties.entrySet())
+            {
+            PropertyInfo propertyInfo = entry.getValue().limitAccess(access);
+            if (propertyInfo != null)
+                {
+                mapProperties.put(entry.getKey(), propertyInfo);
+                }
+            }
+
+        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapScopedProperties.entrySet())
+            {
+            PropertyInfo propertyInfo = entry.getValue().limitAccess(access);
+            if (propertyInfo != null)
+                {
+                mapScopedProperties.put(entry.getKey(), propertyInfo);
+                }
+            }
+
+        for (Entry<SignatureConstant, MethodInfo> entry : m_mapMethods.entrySet())
+            {
+            if (entry.getValue().getAccess().compareTo(access) <= 0)
+                {
+                mapMethods.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+        for (Entry<MethodConstant, MethodInfo> entry : m_mapScopedMethods.entrySet())
+            {
+            if (entry.getValue().getAccess().compareTo(access) <= 0)
+                {
+                mapScopedMethods.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+        return new TypeInfo(typeNew, m_struct, m_fAbstract,
+                m_mapTypeParams, m_aannoClass,
+                m_typeExtends, m_typeRebases, m_typeInto,
+                m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
+                mapProperties, mapScopedProperties, mapMethods, mapScopedMethods);
         }
 
     /**
