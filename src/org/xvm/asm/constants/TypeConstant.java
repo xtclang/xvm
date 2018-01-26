@@ -1910,11 +1910,13 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO
+     * This step is used to finalize the processing for all of the member information that has been
+     * collected. For example, some decisions are deferred until the information is all present,
+     * such as whether a field is required for a property that may or may not need one.
      *
      * @param constId           the identity of the class
      * @param struct            the class structure
-     * @param fAbstract         TODO
+     * @param fAbstract         true if the type is abstract
      * @param mapProps          the public and protected properties of the class
      * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
      * @param mapMethods        the public and protected methods of the class
@@ -2022,6 +2024,13 @@ public abstract class TypeConstant
             }
         }
 
+    /**
+     * Helper to turn a list into an array of annotations.
+     *
+     * @param list  the list of annotations; may be null or empty
+     *
+     * @return an array of annotations; never null
+     */
     private Annotation[] toArray(List<Annotation> list)
         {
         return list == null || list.size() == 0
