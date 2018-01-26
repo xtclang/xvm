@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.List;
-
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -617,7 +615,7 @@ public abstract class Expression
         {
         TypeConstant typeImplicit = getImplicitType();
         return typeImplicit.isA(typeThat)
-                || typeImplicit.getTypeInfo().findConversion(typeThat) != null;
+                || typeImplicit.ensureTypeInfo().findConversion(typeThat) != null;
         }
 
     /**
@@ -714,7 +712,7 @@ public abstract class Expression
         TypeConstant typeIn = argIn.getRefType();
         if (!typeIn.equals(typeOut) && !typeIn.isA(typeOut))
             {
-            MethodConstant constConv = typeIn.getTypeInfo().findConversion(typeOut);
+            MethodConstant constConv = typeIn.ensureTypeInfo().findConversion(typeOut);
             if (constConv == null)
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);

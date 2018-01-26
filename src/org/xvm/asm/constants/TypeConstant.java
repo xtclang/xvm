@@ -243,7 +243,23 @@ public abstract class TypeConstant
      */
      public boolean isGenericType(String sName)
         {
-        return getTypeInfo().getTypeParams().containsKey(sName);
+        TypeInfo info = getTypeInfo();
+        if (info != null)
+            {
+            return info.getTypeParams().containsKey(sName);
+            }
+
+        // because isA() uses this method, there is a chicken-and-egg problem, so instead of
+        // materializing the TypeInfo at this point, just answer the question without it
+        if (isSingleDefiningConstant())
+            {
+            ClassStructure clz = (ClassStructure)
+                    ((ClassConstant) getDefiningConstant()).getComponent();
+            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
+            return type != null;
+            }
+
+        return false;
         }
 
     /**
@@ -257,13 +273,29 @@ public abstract class TypeConstant
         {
         if (isSingleDefiningConstant())
             {
-            ParamInfo param = getTypeInfo().getTypeParams().get(sName);
-            if (param == null)
+            TypeInfo info = getTypeInfo();
+            if (info != null)
+                {
+                ParamInfo param = info.getTypeParams().get(sName);
+                if (param == null)
+                    {
+                    throw new IllegalArgumentException(
+                            "Invalid formal name: " + sName + " for " + getValueString());
+                    }
+                return param.getActualType();
+                }
+
+            // because isA() uses this method, there is a chicken-and-egg problem, so instead of
+            // materializing the TypeInfo at this point, just answer the question without it
+            ClassStructure clz = (ClassStructure)
+                    ((ClassConstant) getDefiningConstant()).getComponent();
+            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
+            if (type == null)
                 {
                 throw new IllegalArgumentException(
-                    "Invalid formal name: " + sName + " for " + getValueString());
+                        "Invalid formal name: " + sName + " for " + this);
                 }
-            return param.getActualType();
+            return type;
             }
 
         throw new UnsupportedOperationException();
@@ -572,11 +604,23 @@ public abstract class TypeConstant
         }
 
     /**
+     * Obtain all of the information about this type, if it has already been assembled.
+     *
+     * @return the flattened TypeInfo that represents the resolved type of this TypeConstant, or
+     *         null if it hasn't already been created
+     */
+    protected TypeInfo getTypeInfo()
+        {
+        TypeInfo info = m_typeinfo;
+        return info == getConstantPool().EMPTY_TYPEINFO ? null : info;
+        }
+
+    /**
      * Obtain all of the information about this type, resolved from its recursive composition.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
-    public TypeInfo getTypeInfo()
+    public TypeInfo ensureTypeInfo()
         {
         return ensureTypeInfo(getErrorListener());
         }
@@ -2233,7 +2277,7 @@ public abstract class TypeConstant
 
     public MethodConstant getConverterTo(TypeConstant that)
         {
-        return this.getTypeInfo().findConversion(that);
+        return this.ensureTypeInfo().findConversion(that);
         }
 
     /**

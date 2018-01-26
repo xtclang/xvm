@@ -85,7 +85,7 @@ public class AnnotationSupport
      */
     protected CallChain getOpChain(String sOp)
         {
-        TypeInfo info = f_annotation.getAnnotationType().getTypeInfo();
+        TypeInfo info = f_annotation.getAnnotationType().ensureTypeInfo();
         // TODO: use the TypeInfo to get the chain
         return null;
         }
