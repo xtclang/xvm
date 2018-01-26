@@ -874,8 +874,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
@@ -883,7 +882,7 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case Property: // Property does not consume
-                return false;
+                return Usage.NO;
 
             case Class:
                 {
@@ -902,35 +901,35 @@ public class TerminalTypeConstant
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.consumesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                    if (constParam.consumesFormalType(sTypeName, access)
                             && clzThis.producesFormalType(sFormal, access, listParams)
                         ||
-                        constParam.producesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                        constParam.producesFormalType(sTypeName, access)
                             && clzThis.consumesFormalType(sFormal, access, listParams))
                         {
-                        return true;
+                        return Usage.YES;
                         }
                     }
-                return false;
+                return Usage.NO;
                 }
 
             case Typedef:
                 assert listParams.isEmpty();
 
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    consumesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+                return Usage.valueOf(getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    consumesFormalType(sTypeName, access));
 
             case Register:
                 assert listParams.isEmpty();
 
-                return getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    consumesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+                return Usage.valueOf(getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    consumesFormalType(sTypeName, access));
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 // TODO: is that right?
-                return false;
+                return Usage.NO;
 
             default:
                 throw new IllegalStateException();
@@ -938,18 +937,18 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkProduction(String sTypeName, Access access,
+                                 List<TypeConstant> listParams)
         {
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
             case Module:
             case Package:
-                return false;
+                return Usage.NO;
 
             case Property:
-                return ((PropertyConstant) constIdThis).getName().equals(sTypeName);
+                return Usage.valueOf(((PropertyConstant) constIdThis).getName().equals(sTypeName));
 
             case Class:
                 {
@@ -968,36 +967,36 @@ public class TerminalTypeConstant
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.producesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                    if (constParam.producesFormalType(sTypeName, access)
                             && clzThis.producesFormalType(sFormal, access, listParams)
                         ||
-                        constParam.consumesFormalType(sTypeName, access, Collections.EMPTY_LIST)
+                        constParam.consumesFormalType(sTypeName, access)
                             && clzThis.consumesFormalType(sFormal, access, listParams))
                         {
-                        return true;
+                        return Usage.YES;
                         }
                     }
 
-                return false;
+                return Usage.NO;
                 }
 
             case Typedef:
                 assert listParams.isEmpty();
 
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    producesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+                return Usage.valueOf(getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    producesFormalType(sTypeName, access));
 
             case Register:
                 assert listParams.isEmpty();
 
-                return getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    producesFormalType(sTypeName, access, Collections.EMPTY_LIST);
+                return Usage.valueOf(getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    producesFormalType(sTypeName, access));
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 // TODO: is that right?
-                return false;
+                return Usage.NO;
 
             default:
                 throw new IllegalStateException();

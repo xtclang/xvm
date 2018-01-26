@@ -129,6 +129,10 @@ class TestCompiler<TestType1 extends Number,
             T t;
             return t;
             }
+
+        // self-referencing methods don't contribute to consumption/production
+        P<T> self();
+        P!<T> self2();
         }
 
     class P2<T2>
@@ -143,6 +147,10 @@ class TestCompiler<TestType1 extends Number,
     interface C<T>
         {
         Void consume(T value);
+
+        // self-referencing methods don't contribute to consumption/production
+        C<T> self();
+        C!<T> self2();
         }
 
     interface C2<T2>

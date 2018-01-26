@@ -728,16 +728,14 @@ public class ClassStructure
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if ((methodGet == null || methodGet.isAccessible(access))
-                        && constType.consumesFormalType(sName,
-                                Access.PUBLIC, Collections.EMPTY_LIST))
+                        && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getSetter(property);
                 if ((methodSet == null || methodSet.isAccessible(access))
-                        && constType.producesFormalType(sName,
-                                Access.PUBLIC, Collections.EMPTY_LIST))
+                        && constType.producesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
@@ -798,10 +796,10 @@ public class ClassStructure
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.producesFormalType(sName, access, Collections.EMPTY_LIST)
+                    if (constParam.producesFormalType(sName, access)
                             && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false)
                         ||
-                        constParam.consumesFormalType(sName, access, Collections.EMPTY_LIST)
+                        constParam.consumesFormalType(sName, access)
                             && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false))
                         {
                         return true;
@@ -813,7 +811,7 @@ public class ClassStructure
                 // the only contributions of relation type could be delegations and implementations
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
-                if (typeContrib.consumesFormalType(sName, access, new ArrayList<>()))
+                if (typeContrib.consumesFormalType(sName, access))
                     {
                     return true;
                     }
@@ -870,16 +868,14 @@ public class ClassStructure
 
                 MethodStructure methodGet = Adapter.getGetter(property);
                 if ((methodGet == null || methodGet.isAccessible(access)
-                        && constType.producesFormalType(sName,
-                                Access.PUBLIC, Collections.EMPTY_LIST)))
+                        && constType.producesFormalType(sName, Access.PUBLIC)))
                     {
                     return true;
                     }
 
                 MethodStructure methodSet = Adapter.getSetter(property);
                 if ((methodSet == null || methodSet.isAccessible(access))
-                        && constType.consumesFormalType(sName,
-                                Access.PUBLIC, Collections.EMPTY_LIST))
+                        && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
@@ -940,10 +936,10 @@ public class ClassStructure
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.producesFormalType(sName, access, Collections.EMPTY_LIST)
+                    if (constParam.producesFormalType(sName, access)
                             && clzContrib.producesFormalTypeImpl(sFormal, access, listContribActual, false)
                         ||
-                        constParam.consumesFormalType(sName, access, Collections.EMPTY_LIST)
+                        constParam.consumesFormalType(sName, access)
                             && clzContrib.consumesFormalTypeImpl(sFormal, access, listContribActual, false))
                         {
                         return true;
@@ -955,7 +951,7 @@ public class ClassStructure
                 // the only contributions of relation type could be delegations and implementations
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
-                if (typeContrib.producesFormalType(sName, access, new ArrayList<>()))
+                if (typeContrib.producesFormalType(sName, access))
                     {
                     return true;
                     }

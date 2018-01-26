@@ -150,17 +150,15 @@ public class AccessTypeConstant
         }
 
     @Override
-    public boolean consumesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return super.consumesFormalType(sTypeName, m_access, listParams);
+        return super.checkConsumption(sTypeName, m_access, listParams);
         }
 
     @Override
-    public boolean producesFormalType(String sTypeName, Access access,
-                                      List<TypeConstant> listParams)
+    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
-        return super.producesFormalType(sTypeName, m_access, listParams);
+        return super.checkProduction(sTypeName, m_access, listParams);
         }
 
     @Override
