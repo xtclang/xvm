@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 
 import java.util.Comparator;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -642,6 +643,32 @@ public abstract class Constant
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * Add a TypeConstant that needs its TypeInfo to be built or rebuilt.
+     *
+     * @param type  the TypeConstant to defer the building of a TypeInfo for
+     */
+    protected void addDeferredTypeInfo(TypeConstant type)
+        {
+        getConstantPool().addDeferredTypeInfo(type);
+        }
+
+    /**
+     * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
+     */
+    protected boolean hasDeferredTypeInfo()
+        {
+        return getConstantPool().hasDeferredTypeInfo();
+        }
+
+    /**
+     * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
+     */
+    protected List<TypeConstant> takeDeferredTypeInfo()
+        {
+        return getConstantPool().takeDeferredTypeInfo();
         }
 
 

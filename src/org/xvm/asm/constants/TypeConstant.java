@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -32,6 +34,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
 
+import org.xvm.asm.constants.TypeInfo.Progress;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
@@ -604,18 +607,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Obtain all of the information about this type, if it has already been assembled.
-     *
-     * @return the flattened TypeInfo that represents the resolved type of this TypeConstant, or
-     *         null if it hasn't already been created
-     */
-    protected TypeInfo getTypeInfo()
-        {
-        TypeInfo info = m_typeinfo;
-        return info.isPlaceHolder() ? null : info;
-        }
-
-    /**
      * Obtain all of the information about this type, resolved from its recursive composition.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
@@ -634,53 +625,170 @@ public abstract class TypeConstant
      */
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
-        TypeInfo info = m_typeinfo;
+        TypeInfo info = getTypeInfo();
+        if (isComplete(info))
+            {
+            return info;
+            }
+
+        // validate this TypeConstant (necessary before we build the TypeInfo)
         if (info == null)
             {
-            // TODO in progress
-            forceBuild(errs);
+            validate(errs);
             }
-        else if (info.isPlaceHolder())
+
+        // this is where things get very, very complicated. this method is responsible for returning
+        // a "completed" TypeInfo, but there are (theoretically) lots of threads trying to do the
+        // same or similar thing at the same time, and any one thread can end up in a recursive
+        // situation in which to complete the TypeInfo for type X, it has to get the TypeInfo for
+        // type Y, and do build that, it has to get the TypeInfo for type X. this is a catch-22!
+        // so what we do to avoid this is to have two layers of requests:
+        // 1) the requests from the outside (naive) world come to ensureTypeInfo(), and those
+        //    requests *must* be responded to with a "completed" TypeInfo
+        // 2) internal requests, like the ones causing the catch-22, can be responded to with an
+        //    incomplete TypeInfo, which is sufficient to build the dependent TypeInfo, but which
+        //    in turn must be completed once the dependent (which is also a depended-upon) TypeInfo
+        //    is complete
+
+        // there is a place-holder that signifies that a type is busy building a TypeInfo;
+        // mark the type as having its TypeInfo building "in progress"
+        setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
+
+        // since this can only be used "from the outside", there should be no deferred TypeInfo
+        // objects at this point
+        assert !hasDeferredTypeInfo();
+
+        // build the TypeInfo for this type
+        info = buildTypeInfo(errs);
+        setTypeInfo(info);
+
+        if (hasDeferredTypeInfo())
             {
-            throw new IllegalStateException("recursive TypeInfo request for " + getValueString());
+            // any downstream TypeInfo that could not be completed during the building of
+            // this TypeInfo is considered to be "deferred", but now that we've built
+            // something (even if it isn't complete), we should be able to complete the
+            // deferred TypeInfo building
+            for (TypeConstant typeDeferred : takeDeferredTypeInfo())
+                {
+                if (typeDeferred != this)
+                    {
+                    // if there's something wrong with this logic, we'll end up with infinite
+                    // recursion, so be very careful about what can allow a TypeInfo to be built
+                    // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
+                    // be incomplete for the second time)
+                    typeDeferred.ensureTypeInfo(errs);
+                    }
+                }
+            }
+
+        if (!isComplete(info))
+            {
+            // now that all those other deferred types are done building, rebuild this if necessary
+            info = buildTypeInfo(errs);
+            assert isComplete(info);
+            }
+        return info;
+        }
+
+    /**
+     * Build the TypeInfo, but if necessary, return an incomplete TypeInfo, or even worse, null.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return a TypeInfo that may or may not be complete, or may be null if it's impossible to
+     *         build the TypeInfo at this point due to recursion
+     */
+    protected TypeInfo ensureTypeInfoInternal(ErrorListener errs)
+        {
+        TypeInfo info = getTypeInfo();
+        if (info == null)
+            {
+            setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
+            info = buildTypeInfo(errs);
+            setTypeInfo(info);
+            if (!info.isComplete())
+                {
+                addDeferredTypeInfo(this);
+                }
+            return info;
+            }
+
+        if (info.isPlaceHolder())
+            {
+            // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
+            // is even more complicated, because it could be being built by a different thread, so
+            // always add it to the deferred list _on this thread_ so that we will force the rebuild
+            // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
+            // to preemptively duplicate its work on this thread, so we don't have to "wait" for
+            // the other thread)
+            addDeferredTypeInfo(this);
+            return null;
             }
 
         return info;
         }
 
-    // TODO in progress
-    private void forceBuild(ErrorListener errs)
+    /**
+     * Obtain the TypeInfo associated with this type.
+     *
+     * @return one of: null, a place-holder TypeInfo (if the TypeInfo is currently being built), an
+     *         "incomplete" TypeInfo, or a finished TypeInfo
+     */
+    protected TypeInfo getTypeInfo()
         {
-        // store the place-holder to signify that this type is busy building a TypeInfo
-        TypeInfo typePlaceholder = getConstantPool().TYPEINFO_PLACEHOLDER;
-        if (m_typeinfo == null)
+        return s_typeinfo.get(this);
+        }
+
+    /**
+     * Store the specified TypeInfo for this type. Note that this is a "one way" setter, in that
+     * the setter only stores the value if it is "better than" the existing value.
+     *
+     * @param info  the new TypeInfo
+     */
+    protected void setTypeInfo(TypeInfo info)
+        {
+        TypeInfo infoOld;
+        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this)))
             {
-            m_typeinfo = typePlaceholder;
-            }
-
-        // before building the TypeInfo for this type, remember whether or not it already has
-        // any "deferred types" for building TypeInfos
-        boolean fDeferredBefore = typePlaceholder.hasDeferred();
-
-        // build the TypeInfo for this type
-        validate(errs);
-        m_typeinfo = buildTypeInfo(errs);
-
-        if (!fDeferredBefore && typePlaceholder.hasDeferred())
-            {
-            // some types were deferred while we were busy building the TypeInfo for this type,
-            // and we're responsible now for re-building them now that we've built a temporary
-            // TypeInfo that can be used
-            for (TypeConstant typeDeferred : typePlaceholder.takeDeferred())
+            if (s_typeinfo.compareAndSet(this, infoOld, info))
                 {
-                typeDeferred.forceBuild(errs);
+                return;
                 }
-
-            // finish by rebuilding this TypeInfo, since it obviously depends on the types that
-            // just got re-built
-            this.m_typeinfo = this.buildTypeInfo(errs);
-            assert !typePlaceholder.hasDeferred();
             }
+        }
+
+    /**
+     * Rank is null, place-holder, incomplete, complete.
+     *
+     * @param info  a TypeInfo
+     *
+     * @return the rank of the TypeInfo
+     */
+    private static int rankTypeInfo(TypeInfo info)
+        {
+        if (info == null)
+            {
+            return 0;
+            }
+
+        if (info.isPlaceHolder())
+            {
+            return 1;
+            }
+
+        return info.isIncomplete()
+                ? 2
+                : 3;
+        }
+
+    /**
+     * @param info  the TypeInfo to evaluate
+     *
+     * @return true iff the passed TypeInfo is non-null, not the place-holder, and not incomplete
+     */
+    private static boolean isComplete(TypeInfo info)
+        {
+        return rankTypeInfo(info) == 3;
         }
 
     /**
@@ -758,7 +866,8 @@ public abstract class TypeConstant
         // 2) collect all of the type parameter data from the various contributions
         ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
-        createCallChains(constId, struct, mapTypeParams, listProcess, listmapClassChain, listmapDefaultChain, errs);
+        boolean fComplete = createCallChains(constId, struct, mapTypeParams,
+                listProcess, listmapClassChain, listmapDefaultChain, errs);
 
         // determine if the type is explicitly abstract
         Annotation[] aannoClass = listClassAnnos.toArray(new Annotation[listClassAnnos.size()]);
@@ -771,7 +880,7 @@ public abstract class TypeConstant
         Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
         Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
         Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
-        collectMemberInfo(constId, struct, resolver, listProcess,
+        fComplete &= collectMemberInfo(constId, struct, resolver, listProcess,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
 
         // go through the members to determine if this is abstract
@@ -794,7 +903,8 @@ public abstract class TypeConstant
                 mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapScopedProps, mapMethods, mapScopedMethods);
+                mapProps, mapScopedProps, mapMethods, mapScopedMethods,
+                fComplete ? Progress.Complete : Progress.Incomplete);
         }
 
     /**
@@ -844,6 +954,7 @@ public abstract class TypeConstant
 
         // now go through all of the contributions and "vacuum" any fields from those contributions
         // that were not visible to (i.e. from within) the private form of this type
+        boolean fIncomplete = false;
         for (Contribution contrib : infoPri.getContributionList())
             {
             switch (contrib.getComposition())
@@ -856,13 +967,21 @@ public abstract class TypeConstant
                     // obtain the struct type of the contribution and copy any missing fields from it
                     TypeConstant typeContrib = contrib.getTypeConstant();
                     assert !typeContrib.isAccessSpecified();
-                    TypeInfo infoContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT).ensureTypeInfo(errs);
-                    assert mapProps.keySet().containsAll(infoContrib.getProperties().keySet());
-                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getScopedProperties().entrySet())
+                    TypeInfo infoContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT)
+                            .ensureTypeInfoInternal(errs);
+                    if (infoContrib == null)
                         {
-                        if (!mapScopedProps.containsKey(entry.getKey()))
+                        fIncomplete = true;
+                        }
+                    else
+                        {
+                        assert mapProps.keySet().containsAll(infoContrib.getProperties().keySet());
+                        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getScopedProperties().entrySet())
                             {
-                            mapScopedProps.put(entry.getKey(), entry.getValue());
+                            if (!mapScopedProps.containsKey(entry.getKey()))
+                                {
+                                mapScopedProps.put(entry.getKey(), entry.getValue());
+                                }
                             }
                         }
                     }
@@ -874,7 +993,8 @@ public abstract class TypeConstant
                 infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapScopedProps, Collections.EMPTY_MAP, mapScopedMethods);
+                mapProps, mapScopedProps, Collections.EMPTY_MAP, mapScopedMethods,
+                fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
     /**
@@ -1418,7 +1538,7 @@ public abstract class TypeConstant
      * @param listmapDefaultChain  the potential default call chain
      * @param errs                 the error list to log errors to
      */
-    private void createCallChains(
+    private boolean createCallChains(
             IdentityConstant                   constId,
             ClassStructure                     struct,
             Map<String, ParamInfo>             mapTypeParams,
@@ -1427,6 +1547,7 @@ public abstract class TypeConstant
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
             ErrorListener                      errs)
         {
+        boolean fIncomplete = false;
         for (Contribution contrib : listProcess)
             {
             Composition compContrib = contrib.getComposition();
@@ -1460,7 +1581,14 @@ public abstract class TypeConstant
                     {
                     // append to the call chain
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
-                    TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+                    TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                    if (infoContrib == null)
+                        {
+                        // skip this one (it has been deferred)
+                        fIncomplete = true;
+                        break;
+                        }
+
                     infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
 
                     // collect type parameters
@@ -1514,6 +1642,8 @@ public abstract class TypeConstant
                     throw new IllegalStateException("composition=" + compContrib);
                 }
             }
+
+        return !fIncomplete;
         }
 
     /**
@@ -1530,7 +1660,7 @@ public abstract class TypeConstant
      *                          nested methods, etc.)
      * @param errs              the error list to log any errors to
      */
-    private void collectMemberInfo(
+    private boolean collectMemberInfo(
             IdentityConstant                     constId,
             ClassStructure                       struct,
             ParamInfo.TypeResolver               resolver,
@@ -1541,7 +1671,8 @@ public abstract class TypeConstant
             Map<MethodConstant   , MethodInfo  > mapScopedMethods,
             ErrorListener                        errs)
         {
-        ConstantPool pool      = getConstantPool();
+        ConstantPool pool        = getConstantPool();
+        boolean      fIncomplete = false;
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProps;
@@ -1588,7 +1719,12 @@ public abstract class TypeConstant
                     {
                     // TODO
                     }
-                TypeInfo     infoContrib = typeContrib.ensureTypeInfo(errs);
+
+                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                if (infoContrib == null)
+                    {
+                    fIncomplete = true;
+                    }
 
                 mapContribProps         = infoContrib.getProperties();
                 mapContribScopedProps   = infoContrib.getScopedProperties();
@@ -1635,6 +1771,8 @@ public abstract class TypeConstant
                     }
                 }
             }
+
+        return !fIncomplete;
         }
 
     // TODO
@@ -2105,7 +2243,7 @@ public abstract class TypeConstant
             return Relation.IS_A;
             }
 
-        // TODO: not thread safe
+        // warning: threadunsafe
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
         Relation relation = mapRelations.get(thatLeft);
 
@@ -2270,7 +2408,7 @@ public abstract class TypeConstant
         {
         Map<String, Usage> mapUsage = ensureConsumesMap();
 
-        // TODO: not thread safe
+        // warning: threadunsafe
         Usage usage = mapUsage.get(sTypeName);
         if (usage == null)
             {
@@ -2324,7 +2462,7 @@ public abstract class TypeConstant
         {
         Map<String, Usage> mapUsage = ensureProducesMap();
 
-        // TODO: not thread safe
+        // warning: threadunsafe
         Usage usage = mapUsage.get(sTypeName);
         if (usage == null)
             {
@@ -2379,6 +2517,14 @@ public abstract class TypeConstant
         return isA(that) || getConverterTo(that) != null;
         }
 
+    /**
+     * Find a method on "this" type that converts from "this" type to "that" type.
+     *
+     * @param that  the type to convert to
+     *
+     * @return the MethodConstant that performs the desired conversion, or null if none exists (or
+     *         multiple ambiguous answers exist)
+     */
     public MethodConstant getConverterTo(TypeConstant that)
         {
         return this.ensureTypeInfo().findConversion(that);
@@ -2681,7 +2827,7 @@ public abstract class TypeConstant
     /**
      * Relationship options.
      */
-    public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE};
+    public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE}
 
     /**
      * Consumption/production options.
@@ -2704,7 +2850,9 @@ public abstract class TypeConstant
     /**
      * The resolved information about the type, its properties, and its methods.
      */
-    private transient TypeInfo m_typeinfo;
+    private transient volatile TypeInfo m_typeinfo;
+    private static AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
+            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
 
     /**
      * A cache of "isA" responses.
