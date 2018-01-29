@@ -104,8 +104,7 @@ public class MethodStructure
      */
     public boolean isFunction()
         {
-        // TODO
-        return false;
+        return isStatic();
         }
 
     /**
@@ -466,6 +465,54 @@ public class MethodStructure
             resetRuntimeInfo();
             }
         m_fNative = fNative;
+        }
+
+    /**
+     * Determine if this method might act as a property initializer. For example, in the property
+     * declaration:
+     * <p/>
+     * <code><pre>
+     *     Int MB = KB * KB;
+     * </pre></code>
+     * <p/>
+     * ... the value of the property could be compiled as an initializer function named "=":
+     * <p/>
+     * <code><pre>
+     *     Int MB
+     *       {
+     *       Int "="()
+     *         {
+     *         return KB * KB;
+     *         }
+     *       }
+     * </pre></code>
+     *
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value
+     */
+    public boolean isPotentialInitializer()
+        {
+        return getName().equals("=")
+                && getReturnCount() == 1 && getParamCount() == 0
+                && isFunction() && !isConditionalReturn();
+        }
+
+    /**
+     * Determine if this method is declared in a way that it could act as a property initializer for
+     * the specified type.
+     *
+     * @param type      the RefType of the reference
+     * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
+     *                  and the types in the signature if necessary
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value of the specified type
+     */
+    public boolean isInitializer(TypeConstant type, GenericTypeResolver resolver)
+        {
+        return isPotentialInitializer() && (getReturn(0).getType().equals(type) || resolver != null &&
+                getReturn(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
         }
 
     /**

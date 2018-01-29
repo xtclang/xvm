@@ -1812,7 +1812,6 @@ public abstract class TypeConstant
         {
         ConstantPool pool       = getConstantPool();
         boolean      fInterface = struct.getFormat() == Component.Format.INTERFACE;
-        Access       access     = getAccess();
 
         // add the properties and methods from "struct"
         // if this is an interface, then these are "abstract" or "default" methods
@@ -1851,227 +1850,7 @@ public abstract class TypeConstant
                     continue;
                     }
 
-                // determine whether the property is accessible, whether the property is read-only,
-                // whether the property has a field, and whether the property is "abstract"
-                boolean          fRO          = false;
-                boolean          fField       = false;
-                boolean          fAbstract    = false;
-                Access           accessRef    = prop.getAccess();
-                Access           accessVar    = prop.getVarAccess();
-                List<Annotation> listPropAnno = null;
-                List<Annotation> listRefAnno  = null;
-                boolean          fCustomCode  = false;
-                if (access != Access.STRUCT)
-                    {
-                    if (access.ordinal() < accessRef.ordinal())
-                        {
-                        // the property is not accessible at all
-                        continue;
-                        }
-
-                    fRO = access.ordinal() < accessVar.ordinal();
-                    }
-
-                // sort annotations into Ref/Var annotations and Property annotations
-                boolean fHasRefAnno  = false;
-                boolean fHasVarAnno  = false;
-                boolean fHasInject   = false;
-                boolean fHasRO       = false;
-                boolean fHasAbstract = false;
-                boolean fHasOverride = false;
-                for (Contribution contrib : prop.getContributionsAsList())
-                    {
-                    if (contrib.getComposition() == Composition.Annotation)
-                        {
-                        Annotation   annotation = contrib.getAnnotation();
-                        Constant     constMixin = annotation.getAnnotationClass();
-                        TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
-
-                        if (!typeMixin.isExplicitClassIdentity(true)
-                                || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                            {
-                            log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                                    typeMixin.getValueString());
-                            continue;
-                            }
-
-                        TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                        if (!typeInto.isIntoPropertyType())
-                            {
-                            log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
-                                    sName, constId.getValueString(), typeMixin.getValueString());
-                            continue;
-                            }
-
-                        if (typeInto.isA(pool.typeRef()))
-                            {
-                            if (listRefAnno == null)
-                                {
-                                listRefAnno = new ArrayList<>();
-                                }
-                            listRefAnno.add(annotation);
-
-                            fHasRefAnno   = true;
-                            fHasVarAnno  |= typeInto.isA(pool.typeVar());
-                            fHasInject   |= constMixin.equals(pool.clzInject());
-                            }
-                        else
-                            {
-                            if (listPropAnno == null)
-                                {
-                                listPropAnno = new ArrayList<>();
-                                }
-                            listPropAnno.add(annotation);
-
-                            fHasRO       |= constMixin.equals(pool.clzRO());
-                            fHasAbstract |= constMixin.equals(pool.clzAbstract());
-                            fHasOverride |= constMixin.equals(pool.clzOverride());
-                            }
-                        }
-                    }
-
-                // check the methods to see if get() and set() call super
-                MethodStructure methodGet    = null;
-                MethodStructure methodSet    = null;
-                MethodStructure methodBadGet = null;
-                MethodStructure methodBadSet = null;
-                for (MethodStructure method : prop.getMethodByConstantMap().values())
-                    {
-                    if (method.isPotentialGetter())
-                        {
-                        if (method.isGetter(prop.getType(), resolver))
-                            {
-                            if (methodGet != null)
-                                {
-                                log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
-                                        getValueString(), sName);
-                                }
-                            methodGet = method;
-                            }
-                        else
-                            {
-                            methodBadGet = method;
-                            }
-                        }
-                    else if (method.isPotentialSetter())
-                        {
-                        if (method.isSetter(prop.getType(), resolver))
-                            {
-                            if (methodSet != null)
-                                {
-                                log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
-                                        getValueString(), sName);
-                                }
-                            methodSet = method;
-                            }
-                        else
-                            {
-                            methodBadSet = method;
-                            }
-                        }
-
-                    // regardless of what the code does, there is custom code in the property
-                    fCustomCode = !method.isAbstract();
-                    }
-
-                // check for incorrect get/set method declarations
-                if (methodBadGet != null && methodGet == null)
-                    {
-                    log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE,
-                            getValueString(), sName);
-                    }
-                if (methodBadSet != null && methodSet == null)
-                    {
-                    log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE,
-                            getValueString(), sName);
-                    }
-
-                if (fInterface)
-                    {
-                    if (fCustomCode)
-                        {
-                        // interface is not allowed to implement a property
-                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
-                                getValueString(), sName);
-                        }
-
-                    if (fHasRefAnno)
-                        {
-                        // interface is not allowed to specify ref/var annotations
-                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ANNOTATED,
-                                getValueString(), sName);
-                        }
-
-                    if (fHasInject)
-                        {
-                        // interface is not allowed to use @Inject
-                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_INJECTED,
-                                getValueString(), sName);
-                        }
-
-// TODO review
-//                    if (fHasOverride)
-//                        {
-//                        // interface is not allowed to use @Override
-//                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
-//                                getValueString(), sName);
-//                        }
-
-                    fRO      |= fHasRO;
-                    fField    = false;
-                    fAbstract = true;
-                    }
-                else
-                    {
-                    // determine if the get explicitly calls super, or explicitly blocks super
-                    boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
-                    boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
-                    boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
-
-                    if (fHasRO && (fSetSupers || fHasVarAnno))
-                        {
-                        // the @RO conflicts with the annotations that require a Var
-                        log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
-                                getValueString(), sName);
-                        }
-
-                    if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
-                        {
-                        log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
-                                getValueString(), sName);
-                        }
-
-                    if (fHasInject && (fSetSupers || fHasVarAnno))
-                        {
-                        // the @Inject conflicts with the annotations that require a Var
-                        log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
-                                getValueString(), sName);
-                        }
-
-                    // we assume a field if @Inject is not specified, @RO is not specified,
-                    // @Override is not specified, and get() doesn't block going to its super
-                    fField = !fHasInject && !fHasRO && !fHasAbstract && !fHasOverride && !fGetBlocksSuper;
-
-                    // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
-                    // super and no set() (or Var-implying annotations)
-                    fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
-
-                    // it is possible to explicitly declare a property as abstract; this is unusual,
-                    // but it does mean that we have to defer the field decision
-                    fAbstract = fHasAbstract;
-                    }
-
-                // if the type access is struct, then only include the property if it has a field;
-                // note that just because this property itself does not have a field, that does NOT
-                // imply that it couldn't contain other properties that themselves DO have fields
-                if (access != Access.STRUCT | fField)
-                    {
-                    PropertyInfo propinfo = new PropertyInfo(prop.getIdentityConstant(),
-                            prop.getType().resolveGenerics(resolver),
-                            fRO, toArray(listPropAnno), toArray(listRefAnno),
-                            fCustomCode, fField, fAbstract, fHasOverride);
-                    mapProps.put(sName, propinfo);
-                    }
+                mapProps.put(sName, createPropertyInfo(prop, constId, fInterface, resolver, errs));
 
                 for (Component grandchild : child.children())
                     {
@@ -2081,6 +1860,247 @@ public abstract class TypeConstant
                     }
                 }
             }
+        }
+
+    /**
+     * Create the PropertyInfo for the specified property.
+     *
+     * @param prop        the PropertyStructure
+     * @param constId     the identity of the containing structure (used only for error messages)
+     * @param fInterface  true if the type is an interface, not a class or mixin
+     * @param resolver    the GenericTypeResolver that uses the known type parameters
+     * @param errs        the error list to log any errors to
+     *
+     * @return a new PropertyInfo for the passed PropertyStructure
+     */
+    private PropertyInfo createPropertyInfo(
+            PropertyStructure       prop,
+            IdentityConstant        constId,
+            boolean                 fInterface,
+            ParamInfo.TypeResolver  resolver,
+            ErrorListener           errs)
+        {
+        ConstantPool     pool         = getConstantPool();
+        String           sName        = prop.getName();
+        List<Annotation> listPropAnno = null;
+        List<Annotation> listRefAnno  = null;
+
+        // sort annotations into Ref/Var annotations and Property annotations
+        boolean fHasRefAnno  = false;
+        boolean fHasVarAnno  = false;
+        boolean fHasInject   = false;
+        boolean fHasRO       = false;
+        boolean fHasAbstract = false;
+        boolean fHasOverride = false;
+        for (Contribution contrib : prop.getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                Annotation   annotation = contrib.getAnnotation();
+                Constant     constMixin = annotation.getAnnotationClass();
+                TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+
+                if (!typeMixin.isExplicitClassIdentity(true)
+                        || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                    {
+                    log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                            typeMixin.getValueString());
+                    continue;
+                    }
+
+                TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                if (!typeInto.isIntoPropertyType())
+                    {
+                    log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
+                            sName, constId.getValueString(), typeMixin.getValueString());
+                    continue;
+                    }
+
+                if (typeInto.isA(pool.typeRef()))
+                    {
+                    if (listRefAnno == null)
+                        {
+                        listRefAnno = new ArrayList<>();
+                        }
+                    listRefAnno.add(annotation);
+
+                    fHasRefAnno   = true;
+                    fHasVarAnno  |= typeInto.isA(pool.typeVar());
+                    fHasInject   |= constMixin.equals(pool.clzInject());
+                    }
+                else
+                    {
+                    if (listPropAnno == null)
+                        {
+                        listPropAnno = new ArrayList<>();
+                        }
+                    listPropAnno.add(annotation);
+
+                    fHasRO       |= constMixin.equals(pool.clzRO());
+                    fHasAbstract |= constMixin.equals(pool.clzAbstract());
+                    fHasOverride |= constMixin.equals(pool.clzOverride());
+                    }
+                }
+            }
+
+        // check the methods to see if get() and set() call super
+        MethodStructure methodInit   = null;
+        MethodStructure methodGet    = null;
+        MethodStructure methodSet    = null;
+        MethodStructure methodBadGet = null;
+        MethodStructure methodBadSet = null;
+        boolean         fCustomCode  = false;
+        for (MethodStructure method : prop.getMethodByConstantMap().values())
+            {
+            if (method.isPotentialInitializer())
+                {
+                if (methodInit == null && method.isInitializer(prop.getType(), resolver))
+                    {
+                    methodInit = method;
+                    }
+                else
+                    {
+                    // TODO log error
+                    throw new IllegalStateException();
+                    }
+
+                // an initializer is not counted as custom code
+                continue;
+                }
+
+            if (method.isPotentialGetter())
+                {
+                if (method.isGetter(prop.getType(), resolver))
+                    {
+                    if (methodGet != null)
+                        {
+                        log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
+                                getValueString(), sName);
+                        }
+                    methodGet = method;
+                    }
+                else
+                    {
+                    methodBadGet = method;
+                    }
+                }
+            else if (method.isPotentialSetter())
+                {
+                if (method.isSetter(prop.getType(), resolver))
+                    {
+                    if (methodSet != null)
+                        {
+                        log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
+                                getValueString(), sName);
+                        }
+                    methodSet = method;
+                    }
+                else
+                    {
+                    methodBadSet = method;
+                    }
+                }
+
+            // regardless of what the code does, there is custom code in the property
+            fCustomCode = !method.isAbstract();
+            }
+
+        // check for incorrect get/set method declarations
+        if (methodBadGet != null && methodGet == null)
+            {
+            log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE,
+                    getValueString(), sName);
+            }
+        if (methodBadSet != null && methodSet == null)
+            {
+            log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE,
+                    getValueString(), sName);
+            }
+
+// TODO from here
+        Access           accessRef    = prop.getAccess();
+        Access           accessVar    = prop.getVarAccess();
+        boolean          fRW          = accessVar != null;
+        boolean          fRO          = false;
+        boolean          fField       = false;
+        boolean          fAbstract    = false;
+        boolean          fStatic      = prop.isStatic();
+        if (fStatic)
+            {
+            // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
+            // TODO
+            }
+        else if (fInterface)
+            {
+            if (fCustomCode)
+                {
+                // interface is not allowed to implement a property
+                log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
+                        getValueString(), sName);
+                }
+
+            if (fHasRefAnno)
+                {
+                // interface is not allowed to specify ref/var annotations
+                log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ANNOTATED,
+                        getValueString(), sName);
+                }
+
+            if (fHasInject)
+                {
+                // interface is not allowed to use @Inject
+                log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_INJECTED,
+                        getValueString(), sName);
+                }
+
+            fRO      |= fHasRO;
+            fField    = false;
+            fAbstract = true;
+            }
+        else
+            {
+            // determine if the get explicitly calls super, or explicitly blocks super
+            boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
+            boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
+            boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
+
+            if (fHasRO && (fSetSupers || fHasVarAnno))
+                {
+                // the @RO conflicts with the annotations that require a Var
+                log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
+                        getValueString(), sName);
+                }
+
+            if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
+                {
+                log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
+                        getValueString(), sName);
+                }
+
+            if (fHasInject && (fSetSupers || fHasVarAnno))
+                {
+                // the @Inject conflicts with the annotations that require a Var
+                log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
+                        getValueString(), sName);
+                }
+
+            // we assume a field if @Inject is not specified, @RO is not specified,
+            // @Override is not specified, and get() doesn't block going to its super
+            fField = !fHasInject && !fHasRO && !fHasAbstract && !fHasOverride && !fGetBlocksSuper;
+
+            // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
+            // super and no set() (or Var-implying annotations)
+            fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
+
+            // it is possible to explicitly declare a property as abstract; this is unusual,
+            // but it does mean that we have to defer the field decision
+            fAbstract = fHasAbstract;
+            }
+
+        return new PropertyInfo(prop.getIdentityConstant(),
+                prop.getType().resolveGenerics(resolver),
+                fRO, toArray(listPropAnno), toArray(listRefAnno),
+                fCustomCode, fField, fAbstract, fHasOverride);
         }
 
     /**
@@ -2121,6 +2141,14 @@ public abstract class TypeConstant
                 // erase the "override" flag, now that we've reported it
                 entry.setValue(propinfo = propinfo.specifyOverride(false));
                 }
+
+// TODO review
+//                    if (fHasOverride)
+//                        {
+//                        // interface is not allowed to use @Override
+//                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
+//                                getValueString(), sName);
+//                        }
 
             if (!fAbstract && propinfo.isAbstract())
                 {

@@ -99,7 +99,7 @@ public class PropertyDeclarationStatement
                 : access;
         }
 
-    public Access getVarAccess()
+    public Access getAccess2()
         {
         if (modifiers != null && !modifiers.isEmpty())
             {
@@ -143,14 +143,9 @@ public class PropertyDeclarationStatement
 
                     }
                 }
-
-            if (access != null)
-                {
-                return access;
-                }
             }
 
-        return getDefaultAccess();
+        return null;
         }
 
     @Override
@@ -173,6 +168,8 @@ public class PropertyDeclarationStatement
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
+                // TODO sanity checks on the declaration of the property e.g. no "private/public", no "public/private static", no "static abstract", etc.
+
                 // another property by the same name should not already exist, but the check for
                 // duplicates is deferred, since it is possible (thanks to the complexity of
                 // conditionals) to have multiple components occupying the same location within the
@@ -181,7 +178,7 @@ public class PropertyDeclarationStatement
 
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
-                        isStatic(), getDefaultAccess(), getVarAccess(), constType, sName);
+                        isStatic(), getDefaultAccess(), getAccess2(), constType, sName);
                 setComponent(prop);
 
                 // introduce the unresolved type constant to the type expression, so that when the
