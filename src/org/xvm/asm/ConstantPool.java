@@ -2631,7 +2631,7 @@ public class ConstantPool
     private transient SingletonConstant m_valNull;
     private transient ArrayConstant     m_valVoid;
 
-    public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
+    public final TypeInfo TYPEINFO_PLACEHOLDER = new TypeInfo(
             typeObject(), null, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),

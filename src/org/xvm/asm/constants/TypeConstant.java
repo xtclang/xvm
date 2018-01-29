@@ -612,7 +612,7 @@ public abstract class TypeConstant
     protected TypeInfo getTypeInfo()
         {
         TypeInfo info = m_typeinfo;
-        return info == getConstantPool().EMPTY_TYPEINFO ? null : info;
+        return info.isPlaceHolder() ? null : info;
         }
 
     /**
@@ -628,28 +628,31 @@ public abstract class TypeConstant
     /**
      * Obtain all of the information about this type, resolved from its recursive composition.
      *
+     * @param errs  the error list to log errors to
+     *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo(ErrorListener errs)
         {
-        if (m_typeinfo == null)
+        TypeInfo info = m_typeinfo;
+        if (info == null)
             {
             // TODO in progress
             forceBuild(errs);
             }
-        else if (m_typeinfo == getConstantPool().EMPTY_TYPEINFO)
+        else if (info.isPlaceHolder())
             {
             throw new IllegalStateException("recursive TypeInfo request for " + getValueString());
             }
 
-        return m_typeinfo;
+        return info;
         }
 
     // TODO in progress
     private void forceBuild(ErrorListener errs)
         {
         // store the place-holder to signify that this type is busy building a TypeInfo
-        TypeInfo typePlaceholder = getConstantPool().EMPTY_TYPEINFO;
+        TypeInfo typePlaceholder = getConstantPool().TYPEINFO_PLACEHOLDER;
         if (m_typeinfo == null)
             {
             m_typeinfo = typePlaceholder;

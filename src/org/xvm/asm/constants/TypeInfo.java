@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -759,12 +758,12 @@ public class TypeInfo
 
     boolean isPlaceHolder()
         {
-        return this == m_type.getType().getConstantPool().EMPTY_TYPEINFO;
+        return this == m_type.getType().getConstantPool().TYPEINFO_PLACEHOLDER;
         }
 
     void addDeferred(TypeConstant type)
         {
-        // make sure that this is the ConstantPool.EMPTY_TYPEINFO
+        // make sure that this is the ConstantPool.TYPEINFO_PLACEHOLDER
         assert isPlaceHolder();
 
         List<TypeConstant> list = m_listDeferred;
