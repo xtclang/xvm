@@ -33,8 +33,8 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
-
 import org.xvm.asm.constants.TypeInfo.Progress;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OpSupport;
