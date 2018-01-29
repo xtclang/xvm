@@ -728,6 +728,11 @@ public abstract class Op
             case OP_IS_GT:       return new IsGt        (in, aconst);
             case OP_IS_GTE:      return new IsGte       (in, aconst);
             case OP_IS_NOT:      return new IsNot       (in, aconst);
+            case OP_IS_TYPE:     return new IsType      (in, aconst);
+            case OP_IS_NTYPE:    return new IsNType     (in, aconst);
+            case OP_IS_SVC:      return new IsService   (in, aconst);
+            case OP_IS_CONST:    return new IsConst     (in, aconst);
+            case OP_IS_IMMT:     return new IsImmutable (in, aconst);
 
             case OP_VAR:         return new Var         (in, aconst);
             case OP_VAR_I:       return new Var_I       (in, aconst);
@@ -885,6 +890,11 @@ public abstract class Op
             case OP_IS_GT:       return "IS_GT";
             case OP_IS_GTE:      return "IS_GTE";
             case OP_IS_NOT:      return "IS_NOT";
+            case OP_IS_TYPE:     return "IS_TYPE";
+            case OP_IS_NTYPE:    return "IS_NTYPE";
+            case OP_IS_SVC:      return "IS_SVC";
+            case OP_IS_CONST:    return "IS_CONST";
+            case OP_IS_IMMT:     return "IS_IMMUT";
             case OP_VAR:         return "VAR";
             case OP_VAR_I:       return "VAR_I";
             case OP_VAR_N:       return "VAR_N";

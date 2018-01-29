@@ -57,7 +57,7 @@
  JMP_COND   COND, addr
  JMP_NCOND  COND, addr
 +JMP_INT    rvalue, #:(addr), addr-default          ; if value equals (0,1,2,...), jump to address, otherwise default
- JMP_VAL    rvalue, #:(CONST, addr), addr-default   ; if value equals a constant, jump to address, otherwise default
++JMP_VAL    rvalue, #:(CONST, addr), addr-default   ; if value equals a constant, jump to address, otherwise default
 
 // Boolean checks
 // - rvalues support a local-property mode
@@ -73,11 +73,11 @@
 +IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
 +IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
 +IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
- IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
- IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
- IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
- IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
- IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
++IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
++IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
++IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
++IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
++IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
 
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode

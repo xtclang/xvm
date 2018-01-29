@@ -11,22 +11,21 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xNullable;
 
 
 /**
- * IS_NULL rvalue, lvalue-return ; T == null -> Boolean
+ * IS_SVC rvalue, lvalue-return ; (T is a service) -> Boolean
  */
-public class IsNull
+public class IsService
         extends OpTest
     {
     /**
-     * Construct an IS_NULL op based on the specified arguments.
+     * Construct an IS_SVC op based on the specified arguments.
      *
      * @param arg        the value Argument
      * @param argReturn  the location to store the Boolean result
      */
-     public IsNull(Argument arg, Argument argReturn)
+     public IsService(Argument arg, Argument argReturn)
         {
         super(arg, argReturn);
         }
@@ -37,7 +36,7 @@ public class IsNull
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IsNull(DataInput in, Constant[] aconst)
+    public IsService(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -46,12 +45,13 @@ public class IsNull
     @Override
     public int getOpCode()
         {
-        return OP_IS_NULL;
+        return OP_IS_SVC;
         }
 
     @Override
     protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
         {
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue == xNullable.NULL));
+        return frame.assignValue(m_nRetValue,
+            xBoolean.makeHandle(hValue.getComposition().isService()));
         }
     }
