@@ -95,9 +95,10 @@ public class PropertyInfo
                 }
             else
                 {
+                // TODO ultimately, if we discover that such a thing can ever happen, could we "merge" or union the types?
                 throw new IllegalStateException("incompatible type params: "
                     + this.getType().getValueString() + ", "
-                    + that.getType().getValueString()); // TODO
+                    + that.getType().getValueString());
                 }
             }
 

@@ -14,6 +14,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -22,6 +23,7 @@ import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.*;
 
+import org.xvm.asm.constants.TypeInfo.Progress;
 import org.xvm.type.Decimal;
 
 import org.xvm.util.ListMap;
@@ -2478,6 +2480,57 @@ public class ConstantPool
         }
 
 
+    // ----- TypeInfo helpers ----------------------------------------------------------------------
+
+    /**
+     * Add a TypeConstant that needs its TypeInfo to be built or rebuilt.
+     *
+     * @param type  the TypeConstant to defer the building of a TypeInfo for
+     */
+    void addDeferredTypeInfo(TypeConstant type)
+        {
+        assert type != null;
+
+        List<TypeConstant> list = m_tlolistDeferred.get();
+        if (list == null)
+            {
+            list = new ArrayList<>();
+            m_tlolistDeferred.set(list);
+            }
+
+        if (!list.contains(type))
+            {
+            list.add(type);
+            }
+        }
+
+    /**
+     * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
+     */
+    boolean hasDeferredTypeInfo()
+        {
+        return m_tlolistDeferred.get() != null;
+        }
+
+    /**
+     * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
+     */
+    List<TypeConstant> takeDeferredTypeInfo()
+        {
+        List<TypeConstant> list = m_tlolistDeferred.get();
+        if (list == null)
+            {
+            list = Collections.EMPTY_LIST;
+            }
+        else
+            {
+            m_tlolistDeferred.set(null);
+            }
+
+        return list;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -2631,9 +2684,19 @@ public class ConstantPool
     private transient SingletonConstant m_valNull;
     private transient ArrayConstant     m_valVoid;
 
-    public final TypeInfo EMPTY_TYPEINFO = new TypeInfo(
+    /**
+     * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
+     */
+    public final TypeInfo TYPEINFO_PLACEHOLDER = new TypeInfo(
             typeObject(), null, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP, Collections.EMPTY_MAP);
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+            Progress.Building);
+
+    /**
+     * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
+     */
+    private final ThreadLocal<List<TypeConstant>> m_tlolistDeferred = new ThreadLocal<>();
     }

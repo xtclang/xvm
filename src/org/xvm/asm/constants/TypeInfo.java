@@ -48,6 +48,7 @@ public class TypeInfo
      * @param mapScopedProperties  the various scoped properties of the type
      * @param mapMethods           the public and protected methods of the type
      * @param mapScopedMethods     the various scoped methods of the type
+     * @param progress             the Progress for this TypeInfo
      */
     public TypeInfo(TypeConstant type, ClassStructure struct, boolean fAbstract,
             Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
@@ -56,8 +57,10 @@ public class TypeInfo
             ListMap<IdentityConstant, Boolean> listmapClassChain,
             ListMap<IdentityConstant, Boolean> listmapDefaultChain,
             Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
-            Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods)
+            Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods,
+            Progress progress)
         {
+        assert progress != null && progress != Progress.Absent;
         assert type != null;
         assert mapTypeParams != null;
         assert listmapClassChain != null;
@@ -82,6 +85,7 @@ public class TypeInfo
         m_mapScopedProperties   = mapScopedProperties;
         m_mapMethods            = mapMethods;
         m_mapScopedMethods      = mapScopedMethods;
+        m_progress              = progress;
         }
 
     /**
@@ -146,7 +150,7 @@ public class TypeInfo
                 m_mapTypeParams, m_aannoClass,
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
-                mapProperties, mapScopedProperties, mapMethods, mapScopedMethods);
+                mapProperties, mapScopedProperties, mapMethods, mapScopedMethods, m_progress);
         }
 
     /**
@@ -748,6 +752,29 @@ public class TypeInfo
         }
 
 
+    // ----- deferred TypeInfo creation ------------------------------------------------------------
+
+    Progress getProgress()
+        {
+        return m_progress;
+        }
+
+    boolean isPlaceHolder()
+        {
+        return m_progress == Progress.Building;
+        }
+
+    boolean isIncomplete()
+        {
+        return m_progress == Progress.Incomplete;
+        }
+
+    boolean isComplete()
+        {
+        return m_progress == Progress.Complete;
+        }
+
+
     // ----- internal helpers ----------------------------------------------------------------------
 
     public static Annotation[] validateAnnotations(Annotation[] annotations)
@@ -819,6 +846,13 @@ public class TypeInfo
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    public enum Progress {Absent, Building, Incomplete, Complete}
+
+    /**
+     * Represents the completeness of the TypeInfo.
+     */
+    private final Progress m_progress;
 
     /**
      * The data type that this TypeInfo represents.
