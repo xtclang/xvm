@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.collections;
 
 
+import java.util.Arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -404,6 +405,18 @@ public class xArray
             super(clzArray);
 
             m_ahValue = new ObjectHandle[(int) cCapacity];
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return Arrays.hashCode(m_ahValue);
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return Arrays.equals(m_ahValue, ((GenericArrayHandle) obj).m_ahValue);
             }
 
         @Override

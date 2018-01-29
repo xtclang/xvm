@@ -63,7 +63,7 @@ public abstract class OpCondJump
     protected OpCondJump(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nArg  = readPackedInt(in);
+        m_nArg = readPackedInt(in);
         if (isBinaryOp())
             {
             m_nArg2 = readPackedInt(in);

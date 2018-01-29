@@ -14,6 +14,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.xException;
+
 
 /**
  * CAST rvalue-src, lvalue-dest
@@ -61,11 +63,12 @@ public class MoveCast
                 return R_REPEAT;
                 }
 
-            // TODO: cast implementation
             TypeConstant typeFrom = hValue.getType();
             TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
 
-            return frame.assignValue(m_nToValue, hValue);
+            return typeFrom.isA(typeTo)
+                ? frame.assignValue(m_nToValue, hValue)
+                : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
             }
         catch (ExceptionHandle.WrapperException e)
             {

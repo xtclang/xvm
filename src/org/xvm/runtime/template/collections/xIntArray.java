@@ -172,6 +172,18 @@ public class xIntArray
             }
 
         @Override
+        public int hashCode()
+            {
+            return Arrays.hashCode(m_alValue);
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return Arrays.equals(m_alValue, ((IntArrayHandle) obj).m_alValue);
+            }
+
+        @Override
         public String toString()
             {
             return super.toString() + (m_fFixed ? "fixed" : "capacity=" + m_alValue.length)

@@ -1,35 +1,34 @@
 package org.xvm.asm.op;
 
+
 import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpTest;
+import org.xvm.asm.Op;
+import org.xvm.asm.OpCondJump;
 
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xBoolean;
-
 
 /**
- * IS_TYPE  rvalue, rvalue-type, lvalue-return ; T instanceof Type -> Boolean
+ * JMP_TYPE rvalue, rvalue-type, addr ; jump if type of the value is “instanceof" specified type
  */
-public class IsType
-        extends OpTest
+public class JumpType
+        extends OpCondJump
     {
     /**
-     * Construct an IS_TYPE op based on the specified arguments.
+     * Construct a JMP_TYPE op.
      *
-     * @param arg1       the value Argument
-     * @param arg2       the type Argument
-     * @param argReturn  the location to store the Boolean result
+     * @param arg1  the first argument to compare
+     * @param arg2  the second argument to compare
+     * @param op    the op to conditionally jump to
      */
-    public IsType(Argument arg1, Argument arg2, Argument argReturn)
+    public JumpType(Argument arg1, Argument arg2, Op op)
         {
-        super(arg1, arg2, argReturn);
+        super(arg1, arg2, op);
         }
 
     /**
@@ -38,7 +37,7 @@ public class IsType
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IsType(DataInput in, Constant[] aconst)
+    public JumpType(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -47,13 +46,12 @@ public class IsType
     @Override
     public int getOpCode()
         {
-        return OP_IS_TYPE;
+        return OP_JMP_TYPE;
         }
 
     @Override
     protected boolean isBinaryOp()
         {
-        // while technically this op is not binary, we could re-use all the base logic
         return true;
         }
 
@@ -62,15 +60,15 @@ public class IsType
         {
         // while this Op has two arguments and is marked as a BinaryOp, the processing
         // is identical to the UnaryOp
-        return processUnaryOp(frame);
+        return processUnaryOp(frame, iPC);
         }
 
     @Override
-    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
         {
         TypeConstant type     = hValue.getType();
-        TypeConstant typeTest = frame.resolveType(m_nValue2);
+        TypeConstant typeTest = frame.resolveType(m_nArg2);
 
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(type.isA(typeTest)));
+        return type.isA(typeTest) ? iPC + m_ofJmp : iPC + 1;
         }
     }
