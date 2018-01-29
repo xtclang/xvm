@@ -13,8 +13,10 @@ import org.xvm.util.ListMap;
  * Runtime operates on Object handles holding the struct references or the values themselves
  * for the following types:
  *  Bit, Boolean, Char, Int, UInt, Nullable.Null, and optionally for some Tuples
+ *
+ * Note, that the equals() and hashCode() methods should be only for immutable handles.
  */
-public class ObjectHandle
+public abstract class ObjectHandle
         implements Cloneable
     {
     protected TypeComposition m_clazz;
@@ -106,6 +108,19 @@ public class ObjectHandle
         }
 
     @Override
+    public int hashCode()
+        {
+        throw new UnsupportedOperationException(getClass() + " cannot be used as a constant");
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        throw new UnsupportedOperationException(getClass() + " cannot be used as a constant");
+        }
+
+
+    @Override
     public String toString()
         {
         return "(" + m_clazz + ") ";
@@ -129,6 +144,18 @@ public class ObjectHandle
         public ObjectHandle getField(String sName)
             {
             return m_mapFields.get(sName);
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return m_mapFields.hashCode();
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return m_mapFields.equals(((GenericHandle) obj).m_mapFields);
             }
         }
 
@@ -200,6 +227,12 @@ public class ObjectHandle
         public long getValue()
             {
             return m_lValue;
+            }
+
+        @Override
+        public int hashCode()
+            {
+            return Long.hashCode(m_lValue);
             }
 
         @Override

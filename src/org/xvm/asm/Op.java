@@ -714,6 +714,8 @@ public abstract class Op
             case OP_JMP_GTE:     return new JumpGte     (in, aconst);
             case OP_JMP_TYPE:    return new JumpType    (in, aconst);
             case OP_JMP_NTYPE:   return new JumpNType   (in, aconst);
+            case OP_JMP_INT:     return new JumpInt     (in, aconst);
+            case OP_JMP_VAL:     return new JumpVal     (in, aconst);
 
             case OP_IS_ZERO:     return new IsZero      (in, aconst);
             case OP_IS_NZERO:    return new IsNotZero   (in, aconst);
@@ -870,6 +872,8 @@ public abstract class Op
             case OP_JMP_GTE:     return "JMP_GTE";
             case OP_JMP_TYPE:    return "JMP_TYPE";
             case OP_JMP_NTYPE:   return "JMP_NTYPE";
+            case OP_JMP_INT:     return "JMP_INT";
+            case OP_JMP_VAL:     return "JMP_VAL";
             case OP_IS_ZERO:     return "IS_ZERO";
             case OP_IS_NZERO:    return "IS_NZERO";
             case OP_IS_NULL:     return "IS_NULL";

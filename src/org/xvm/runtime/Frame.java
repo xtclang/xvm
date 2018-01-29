@@ -691,7 +691,7 @@ public class Frame
         return Op.R_EXCEPTION;
         }
 
-    private ObjectHandle getConstHandle(int iArg)
+    public ObjectHandle getConstHandle(int iArg)
         {
         ObjectHandle hValue = f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
         if (hValue == null)

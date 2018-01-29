@@ -53,7 +53,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeHandle(clazz, null, null);
+        return makeMutableHandle(clazz, null, null);
         }
 
     // ---- ObjectHandle helpers -----
@@ -65,18 +65,19 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeHandle(INSTANCE.ensureCanonicalClass(), null, null);
+        ExceptionHandle hException = makeMutableHandle(INSTANCE.ensureCanonicalClass(), null, null);
 
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 
         INSTANCE.setFieldValue(frame, hException,
             INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
 
+        hException.makeImmutable();
         return hException;
         }
 
-    private static ExceptionHandle makeHandle(TypeComposition clazz,
-                                              ExceptionHandle hCause, Throwable eCause)
+    private static ExceptionHandle makeMutableHandle(TypeComposition clazz,
+                                                     ExceptionHandle hCause, Throwable eCause)
         {
         ExceptionHandle hException = new ExceptionHandle(clazz, true, eCause);
 
