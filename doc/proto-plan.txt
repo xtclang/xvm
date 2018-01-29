@@ -110,8 +110,6 @@
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$
 
-- allow a next register for Call_* and Invoke_* (DEFERRED)
-
 - TemplateRegistry and TypeComposition could be mutated by different threads
     (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
 
