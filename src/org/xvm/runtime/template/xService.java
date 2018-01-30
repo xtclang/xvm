@@ -148,8 +148,7 @@ public class xService
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName,
-                            int iReturn)
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
@@ -177,6 +176,39 @@ public class xService
 
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePostInc);
+
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+            {
+            return super.invokePreDec(frame, hTarget, sPropName, iReturn);
+            }
+
+        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+                frame, sPropName, this::invokePreDec);
+
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context ||
+                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
+            {
+            return super.invokePostDec(frame, hTarget, sPropName, iReturn);
+            }
+
+        CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
+                frame, sPropName, this::invokePostDec);
 
         return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
         }

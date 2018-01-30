@@ -145,6 +145,32 @@ public class xAtomicIntNumber
         }
 
     @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.decrementAndGet()));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndDecrement()));
+        }
+
+    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;

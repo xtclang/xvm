@@ -25,6 +25,8 @@ public class PIP_PostInc
      * @param nPropId  the property to increment
      * @param nTarget  the object on which the property exists
      * @param nRet     the location to store the post-incremented value
+     *
+     * @deprecated
      */
     public PIP_PostInc(int nPropId, int nTarget, int nRet)
         {
@@ -70,7 +72,7 @@ public class PIP_PostInc
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return hTarget.getOpSupport().invokePostInc(
+        return hTarget.getTemplate().invokePostInc(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
     }

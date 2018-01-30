@@ -177,8 +177,8 @@ public class Invoke_NN
     protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
         return chain.isNative()
-             ? hTarget.getOpSupport().invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
-             : hTarget.getOpSupport().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+             ? hTarget.getTemplate().invokeNativeNN(frame, chain.getTop(), hTarget, ahVar, m_anRetValue)
+             : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
     private int[] m_anArgValue;

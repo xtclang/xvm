@@ -152,8 +152,8 @@ public class Invoke_1T
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? hTarget.getOpSupport().invokeNativeT(frame, method, hTarget, ahVar, m_nRetValue)
-            : hTarget.getOpSupport().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
+            ? hTarget.getTemplate().invokeNativeT(frame, method, hTarget, ahVar, m_nRetValue)
+            : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override

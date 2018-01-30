@@ -88,6 +88,6 @@ public class IP_PostInc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getOpSupport().invokePostInc(frame, hTarget, sProperty, m_nRetValue);
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, m_nRetValue);
         }
     }

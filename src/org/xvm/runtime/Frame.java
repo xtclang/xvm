@@ -9,7 +9,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -501,7 +500,7 @@ public class Frame
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
-                    return hThis.getOpSupport().setPropertyValue(
+                    return hThis.getTemplate().setPropertyValue(
                             this, hThis, constProperty.getName(), hValue);
                     }
                 catch (ClassCastException e)

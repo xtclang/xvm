@@ -159,8 +159,8 @@
 // - the rvalue-target supports the "local property" mode
 // - the lvalue return value can be a register or a local-property indicator (PROPERTY)
 // - lvalue return values can specify the "next register" to allocate
- PIP_INC     PROPERTY, rvalue-target                 ; in-place increment; no result
- PIP_DEC     PROPERTY, rvalue-target                 ; in-place decrement; no result
++PIP_INC     PROPERTY, rvalue-target                 ; in-place increment; no result
++PIP_DEC     PROPERTY, rvalue-target                 ; in-place decrement; no result
 +PIP_INCA    PROPERTY, rvalue-target, lvalue         ; T++ -> T
  PIP_DECA    PROPERTY, rvalue-target, lvalue         ; T-- -> T
 +PIP_INCB    PROPERTY, rvalue-target, lvalue         ; ++T -> T

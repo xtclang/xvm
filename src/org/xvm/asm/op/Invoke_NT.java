@@ -173,8 +173,8 @@ public class Invoke_NT
     protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
         return chain.isNative()
-             ? hTarget.getOpSupport().invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
-             : hTarget.getOpSupport().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
+             ? hTarget.getTemplate().invokeNativeT(frame, chain.getTop(), hTarget, ahVar, m_nRetValue)
+             : hTarget.getTemplate().invokeT(frame, chain, hTarget, ahVar, m_nRetValue);
         }
 
     @Override
