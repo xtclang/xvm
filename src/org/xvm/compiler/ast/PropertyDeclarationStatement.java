@@ -3,15 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.*;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -76,7 +75,7 @@ public class PropertyDeclarationStatement
             }
 
         List<Token> list = modifiers;
-        if (list != null && list.isEmpty())
+        if (list != null && !list.isEmpty())
             {
             for (Token token : list)
                 {
@@ -179,6 +178,10 @@ public class PropertyDeclarationStatement
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
                         isStatic(), getDefaultAccess(), getAccess2(), constType, sName);
+                if (value != null)
+                    {
+                    prop.indicateInitialValue();
+                    }
                 setComponent(prop);
 
                 // introduce the unresolved type constant to the type expression, so that when the
@@ -209,15 +212,55 @@ public class PropertyDeclarationStatement
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < Stage.Resolved.ordinal())
+        if (getStage().compareTo(Stage.Resolved) < 0)
             {
             super.resolveNames(listRevisit, errs);
             }
 
-        PropertyStructure struct = (PropertyStructure) getComponent();
-        if (!struct.resolveAnnotations())
+        PropertyStructure prop = (PropertyStructure) getComponent();
+        if (!prop.resolveAnnotations())
             {
             listRevisit.add(this);
+            return;
+            }
+
+        if (prop.hasInitialValue())
+            {
+            TypeConstant type = prop.getType();
+            if (type.containsUnresolved())
+                {
+                listRevisit.add(this);
+                return;
+                }
+
+            // the initial value has to be resolved; we have to decide either to use the expression
+            // to create a constant value or an initializer function
+            boolean fConstantValue = false;
+            if (value.isConstant())
+                {
+                Code code = new Code();
+                Constant constValue = value.generateConstant(code, type, errs);
+                if (!code.hasOps())
+                    {
+                    prop.setInitialValue(constValue);
+                    fConstantValue = true;
+                    }
+                }
+
+            if (!fConstantValue)
+                {
+                // clear the "has initial value" setting
+                prop.setInitialValue(null);
+
+                // create an initializer function
+                MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                        org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                        new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
+                        "=", Parameter.NO_PARAMS, false);
+
+                // wrap it with a pretend function in the AST tree
+                initializer = new MethodDeclarationStatement(methodInit, value);
+                }
             }
         }
 
@@ -247,7 +290,7 @@ public class PropertyDeclarationStatement
             }
 
         sb.append(type)
-          .append(' ')
+                .append(' ')
           .append(name.getValue());
 
         return sb.toString();
@@ -316,6 +359,8 @@ public class PropertyDeclarationStatement
     protected StatementBlock     body;
     protected Token              doc;
 
+    protected transient MethodDeclarationStatement initializer;
+
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body");
+            "condition", "annotations", "type", "value", "body", "initializer");
     }

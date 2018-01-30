@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -71,6 +72,31 @@ public class MethodDeclarationStatement
         this.body         = body;
         this.continuation = continuation;
         this.doc          = doc;
+        }
+
+    public MethodDeclarationStatement(MethodStructure struct, Expression expr)
+        {
+        super(expr.getStartPosition(), expr.getEndPosition());
+
+        // store off the method structure that we will generate code into
+        setComponent(struct);
+
+        // grab a body from the expression, if it has one, otherwise make one
+        if (expr instanceof ImplicitLambdaExpression && ((ImplicitLambdaExpression) expr).params.isEmpty())
+            {
+            this.body = ((ImplicitLambdaExpression) expr).body;
+            }
+        else if (expr instanceof ExplicitLambdaExpression && ((ExplicitLambdaExpression) expr).params.isEmpty())
+            {
+            this.body = ((ExplicitLambdaExpression) expr).body;
+            }
+        else
+            {
+            // turn "<expr>" into the statement block "{ return <expr>; }"
+            Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
+            ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
+            this.body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+            }
         }
 
 

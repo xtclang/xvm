@@ -185,6 +185,43 @@ public class PropertyStructure
                 : m_type.getConstantPool().typeObject();
         }
 
+    public void indicateInitialValue()
+        {
+        m_fHasValue = true;
+        }
+
+    /**
+     * This is a temporary value that is used as a place-holder until the property's actual value is
+     * available.
+     *
+     * @return true iff the Property is known to have a value, even if the value has not yet been
+     *         determined
+     */
+    public boolean hasInitialValue()
+        {
+        return m_fHasValue;
+        }
+
+    /**
+     * @return the Constant representing the initial value of the property, or null if the property
+     *         is not initialized using a Constant value, for example, if the property gets its
+     *         initial value from an initializer function, from a constructor, etc.
+     */
+    public Constant getInitialValue()
+        {
+        return m_constVal;
+        }
+
+    /**
+     * @param constVal  the value for the property, or null if an initializer function is going to
+     *                  be used to provide the intial value for the property
+     */
+    public void setInitialValue(Constant constVal)
+        {
+        m_fHasValue = false;
+        m_constVal  = constVal;
+        }
+
     /**
      * @return the transient property info
      */
@@ -359,6 +396,9 @@ public class PropertyStructure
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        // the value should have already been resolved by this point
+        assert !m_fHasValue;
+
         super.registerConstants(pool);
 
         m_type = (TypeConstant) pool.register(m_type);
@@ -407,6 +447,11 @@ public class PropertyStructure
      * The initial value of the property, if it is a "static property" initialized to a constant.
      */
     private Constant m_constVal;
+
+    /**
+     * Indicates that the property has a value, even if it hasn't been determined yet.
+     */
+    private transient boolean  m_fHasValue;
 
 
     // ----- TEMPORARY -----------------------------------------------------------------------------
