@@ -310,6 +310,11 @@ module Test
 
         Void bar();
         @Auto Int size();
+
+        // TODO should be an error: static Int x = 0;
+
+        static Int y = 0;
+        static Int z = () -> y;
         }
 
     mixin M2 into MyMap2 extends M {}

@@ -49,6 +49,23 @@ public class ImplicitLambdaExpression
         }
 
 
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        // there has to be one or more return statements in the lambda, but it can only be treated
+        // as a constant if the entire lambda is just one return statement
+        if (body.stmts.size() == 1 && body.stmts.get(0) instanceof ReturnStatement)
+            {
+            List<Expression> exprs = ((ReturnStatement) body.stmts.get(0)).exprs;
+            return exprs.size() == 1 && exprs.get(0).isConstant();
+            }
+
+        return false;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString()

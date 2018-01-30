@@ -1949,60 +1949,75 @@ public abstract class TypeConstant
         MethodStructure methodSet    = null;
         MethodStructure methodBadGet = null;
         MethodStructure methodBadSet = null;
+        boolean         fStatic      = prop.isStatic();
         boolean         fCustomCode  = false;
-        for (MethodStructure method : prop.getMethodByConstantMap().values())
+        for (Component child : prop.getChildByNameMap().values())
             {
-            if (method.isPotentialInitializer())
+            if (child instanceof MultiMethodStructure)
                 {
-                if (methodInit == null && method.isInitializer(prop.getType(), resolver))
+                for (MethodStructure method : child.getMethodByConstantMap().values())
                     {
-                    methodInit = method;
-                    }
-                else
-                    {
-                    // TODO log error
-                    throw new IllegalStateException();
-                    }
-
-                // an initializer is not counted as custom code
-                continue;
-                }
-
-            if (method.isPotentialGetter())
-                {
-                if (method.isGetter(prop.getType(), resolver))
-                    {
-                    if (methodGet != null)
+                    if (method.isPotentialInitializer())
                         {
-                        log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
-                                getValueString(), sName);
-                        }
-                    methodGet = method;
-                    }
-                else
-                    {
-                    methodBadGet = method;
-                    }
-                }
-            else if (method.isPotentialSetter())
-                {
-                if (method.isSetter(prop.getType(), resolver))
-                    {
-                    if (methodSet != null)
-                        {
-                        log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
-                                getValueString(), sName);
-                        }
-                    methodSet = method;
-                    }
-                else
-                    {
-                    methodBadSet = method;
-                    }
-                }
+                        if (methodInit == null && method.isInitializer(prop.getType(), resolver))
+                            {
+                            methodInit = method;
+                            }
+                        else
+                            {
+                            // there can only be one initializer function, and it must exactly match a very
+                            // specific signature
+                            todoLogError("duplicate initializer function");
+                            }
 
-            // regardless of what the code does, there is custom code in the property
-            fCustomCode = !method.isAbstract();
+                        // an initializer is not counted as custom code
+                        continue;
+                        }
+
+                    if (prop.isStatic())
+                        {
+                        // the only method allowed under a static property is the initializer
+                        todoLogError("static property cannot have custom code");
+                        continue;
+                        }
+
+                    if (method.isPotentialGetter())
+                        {
+                        if (method.isGetter(prop.getType(), resolver))
+                            {
+                            if (methodGet != null)
+                                {
+                                log(errs, Severity.ERROR, VE_PROPERTY_GET_AMBIGUOUS,
+                                        getValueString(), sName);
+                                }
+                            methodGet = method;
+                            }
+                        else
+                            {
+                            methodBadGet = method;
+                            }
+                        }
+                    else if (method.isPotentialSetter())
+                        {
+                        if (method.isSetter(prop.getType(), resolver))
+                            {
+                            if (methodSet != null)
+                                {
+                                log(errs, Severity.ERROR, VE_PROPERTY_SET_AMBIGUOUS,
+                                        getValueString(), sName);
+                                }
+                            methodSet = method;
+                            }
+                        else
+                            {
+                            methodBadSet = method;
+                            }
+                        }
+
+                    // regardless of what the code does, there is custom code in the property
+                    fCustomCode = !method.isAbstract();
+                    }
+                }
             }
 
         // check for incorrect get/set method declarations
@@ -2017,18 +2032,52 @@ public abstract class TypeConstant
                     getValueString(), sName);
             }
 
-// TODO from here
-        Access           accessRef    = prop.getAccess();
-        Access           accessVar    = prop.getVarAccess();
-        boolean          fRW          = accessVar != null;
-        boolean          fRO          = false;
-        boolean          fField       = false;
-        boolean          fAbstract    = false;
-        boolean          fStatic      = prop.isStatic();
+        // check access flags
+        Access accessRef = prop.getAccess();
+        Access accessVar = prop.getVarAccess();
+        if (accessRef == Access.STRUCT | accessVar == Access.STRUCT)
+            {
+            todoLogError("property can not be declared with STRUCT access");
+            }
+        else  if (accessVar != null && accessRef.compareTo(accessVar) > 0)
+            {
+            todoLogError("property REF access cannot be more limited than VAR access");
+            }
+
+        boolean fRW       = accessVar != null;
+        boolean fRO       = false;
+        boolean fField    = false;
+        boolean fAbstract = false;
         if (fStatic)
             {
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
-            // TODO
+            if (!prop.hasInitialValue() && (prop.getInitialValue() == null) == (methodInit == null))
+                {
+                if (methodInit == null)
+                    {
+                    // it is an error for a static property to not have an initial value
+                    todoLogError("static property requires an initial value or an initializer");
+                    }
+                else
+                    {
+                    // it is an error for a static property to have both an initial value that is
+                    // specified by a constant and by an initializer function
+                    todoLogError("static property has both an initial value and an initializer");
+                    }
+                }
+
+            if (fHasAbstract)
+                {
+                // it is an error for a static property to be annotated by "@Abstract"
+                todoLogError("static property cannot be annotated with @Abstract");
+                }
+
+            if (accessVar != null)
+                {
+                // it is an error for a static property to have both reader and writer access
+                // specified, e.g. "public/private"
+                todoLogError("static property cannot be declared as a read/write property");
+                }
             }
         else if (fInterface)
             {
@@ -2092,13 +2141,21 @@ public abstract class TypeConstant
             // super and no set() (or Var-implying annotations)
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
+            fRW |= fHasVarAnno | fSetSupers;
+            if (fRO && fRW)
+                {
+                todoLogError("property is declared in a manner that implies both RO and RW");
+                fRO = false;
+                }
+
             // it is possible to explicitly declare a property as abstract; this is unusual,
             // but it does mean that we have to defer the field decision
             fAbstract = fHasAbstract;
             }
 
+        // TODO add fStatic, fRW, initial value/initializer
         return new PropertyInfo(prop.getIdentityConstant(),
-                prop.getType().resolveGenerics(resolver),
+                prop.getType().resolveGenerics(resolver), // TODO do we want to resolve auto-narrowing as well?
                 fRO, toArray(listPropAnno), toArray(listRefAnno),
                 fCustomCode, fField, fAbstract, fHasOverride);
         }

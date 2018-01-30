@@ -947,7 +947,7 @@ public abstract class Component
         //             + "\" because a child with that name already exists: " + component);
         //     }
 
-        int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS;
+        int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS | (fStatic ? STATIC_BIT : 0);
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
         PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null, accessVar, constType);
         addChild(struct);

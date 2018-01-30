@@ -285,7 +285,7 @@ public class MethodStructure
         Code code = m_code;
         if (code == null)
             {
-            m_code = code = new Code();
+            m_code = code = new Code(this);
             }
         return code;
         }
@@ -305,7 +305,7 @@ public class MethodStructure
         m_FUsesSuper  = null;
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code = code = new Code();
+        m_code = code = new Code(this);
 
         markModified();
 
@@ -344,7 +344,7 @@ public class MethodStructure
         resetRuntimeInfo();
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code        = new Code(aop);
+        m_code        = new Code(this, aop);
         m_fAbstract   = false;
         m_fNative     = false;
         m_FUsesSuper  = null;
@@ -1035,28 +1035,39 @@ public class MethodStructure
     /**
      * The Code class represents the op codes that make up a method's behavior.
      */
-    public class Code
+    public static class Code
         {
         // ----- constructors -----------------------------------------------------------------
+
+        public Code()
+            {
+            this(null);
+            }
 
         /**
          * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
          * it was itself disassembled; otherwise this starts empty and allows ops to be added.
          */
-        Code()
+        Code(MethodStructure method)
             {
-            byte[] abOps = m_abOps;
-            if (abOps != null)
+            f_method = method;
+
+            if (method != null)
                 {
-                try
+                byte[] abOps = method.m_abOps;
+                if (abOps != null)
                     {
-                    m_aop = abOps.length == 0
-                            ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
-                    }
-                catch (IOException e)
-                    {
-                    throw new RuntimeException(e);
+                    try
+                        {
+                        m_aop = abOps.length == 0
+                                ? Op.NO_OPS
+                                : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)),
+                                        method.getLocalConstants());
+                        }
+                    catch (IOException e)
+                        {
+                        throw new RuntimeException(e);
+                        }
                     }
                 }
             }
@@ -1066,14 +1077,17 @@ public class MethodStructure
          *
          * @param aop   array of ops
          */
-        Code(Op[] aop)
+        Code(MethodStructure method, Op[] aop)
             {
-            m_aop = aop;
+            f_method = method;
+            m_aop    = aop;
             calcVars();
             }
 
-        Code(Code wrappee)
+        Code(MethodStructure method, Code wrappee)
             {
+            f_method = method;
+            assert wrappee != null;
             }
 
         // ----- Code methods -----------------------------------------------------------------
@@ -1213,22 +1227,24 @@ public class MethodStructure
             return m_aop;
             }
 
-        // ----- helpers for building Ops -----------------------------------------------------
-
         /**
-         * @return the ConstantPool
+         * @return true iff there are any ops in the code
          */
-        public ConstantPool getConstantPool()
+        public boolean hasOps()
             {
-            return MethodStructure.this.getConstantPool();
+            return m_listOps != null && !m_listOps.isEmpty()
+                || f_method != null && f_method.m_abOps != null && f_method.m_abOps.length > 0;
             }
+
+
+        // ----- helpers for building Ops -----------------------------------------------------
 
         /**
          * @return the enclosing MethodStructure
          */
         public MethodStructure getMethodStructure()
             {
-            return MethodStructure.this;
+            return f_method;
             }
 
         /**
@@ -1259,13 +1275,13 @@ public class MethodStructure
          * An implementation of Code that delegates most functionality to a "real" Code object, but
          * silently ignores any attempt to actually change the code.
          */
-        class BlackHole
+        static class BlackHole
                 extends Code
             {
             BlackHole(Code wrappee)
                 {
-                super(wrappee);
-                assert wrappee == Code.this;
+                super(wrappee.f_method, wrappee);
+                f_wrappee = wrappee;
                 }
 
             @Override
@@ -1277,13 +1293,13 @@ public class MethodStructure
             @Override
             public Register lastRegister()
                 {
-                return Code.this.lastRegister();
+                return f_wrappee.lastRegister();
                 }
 
             @Override
             public int addressOf(Op op)
                 {
-                return Code.this.addressOf(op);
+                return f_wrappee.addressOf(op);
                 }
 
             @Override
@@ -1303,13 +1319,15 @@ public class MethodStructure
                 {
                 return this;
                 }
+
+            Code f_wrappee;
             }
 
         // ----- internal ---------------------------------------------------------------------
 
         protected void ensureAppending()
             {
-            if (m_abOps != null)
+            if (f_method != null && f_method.m_abOps != null)
                 {
                 throw new IllegalStateException("not appendable");
                 }
@@ -1325,7 +1343,7 @@ public class MethodStructure
             Op[] aop = ensureOps();
             if (aop != null)
                 {
-                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
+                Op.ConstantRegistry registry = new Op.ConstantRegistry(f_method.getConstantPool());
                 for (Op op : aop)
                     {
                     op.registerConstants(registry);
@@ -1335,14 +1353,14 @@ public class MethodStructure
 
         protected void ensureAssembled()
             {
-            if (m_abOps == null)
+            if (f_method.m_abOps == null)
                 {
                 // build the local constant array
                 Op[] aop = ensureOps();
 
                 // assemble the ops into bytes
-                Scope scope = createInitialScope();
-                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
+                Scope scope = f_method.createInitialScope();
+                Op.ConstantRegistry registry = new Op.ConstantRegistry(f_method.getConstantPool());
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 DataOutputStream outData = new DataOutputStream(outBytes);
                 try
@@ -1361,11 +1379,11 @@ public class MethodStructure
                     throw new IllegalStateException(e);
                     }
 
-                m_abOps       = outBytes.toByteArray();
-                m_aconstLocal = registry.getConstantArray();
-                m_cVars       = scope.getMaxVars();
-                m_cScopes     = scope.getMaxDepth();
-                markModified();
+                f_method.m_abOps       = outBytes.toByteArray();
+                f_method.m_aconstLocal = registry.getConstantArray();
+                f_method.m_cVars       = scope.getMaxVars();
+                f_method.m_cScopes     = scope.getMaxDepth();
+                f_method.markModified();
                 }
             }
 
@@ -1376,9 +1394,8 @@ public class MethodStructure
                 {
                 if (m_listOps == null)
                     {
-                    MethodStructure method = MethodStructure.this;
                     throw new UnsupportedOperationException("Method \""
-                            + method.getIdentityConstant().getPathString()
+                            + f_method.getIdentityConstant().getPathString()
                             + "\" is neither native nor compiled");
                     }
                 m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
@@ -1388,21 +1405,24 @@ public class MethodStructure
 
         protected void calcVars()
             {
-            if (m_cScopes == 0)
+            if (f_method.m_cScopes == 0)
                 {
-                Scope scope = createInitialScope();
+                Scope scope = f_method.createInitialScope();
 
                 for (Op op : getAssembledOps())
                     {
                     op.simulate(scope);
                     }
 
-                m_cVars   = scope.getMaxVars();
-                m_cScopes = scope.getMaxDepth();
+                f_method.m_cVars   = scope.getMaxVars();
+                f_method.m_cScopes = scope.getMaxDepth();
                 }
             }
 
+
         // ----- fields -----------------------------------------------------------------------
+
+        private final MethodStructure f_method;
 
         /**
          * List of ops being assembled.
@@ -1446,7 +1466,7 @@ public class MethodStructure
     /**
      * Empty array of Parameters.
      */
-    public static final Parameter[] NO_PARAMS = new Parameter[0];
+    public static final Parameter[] NO_PARAMS = Parameter.NO_PARAMS;
 
     /**
      * Empty array of Ops.

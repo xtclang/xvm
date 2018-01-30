@@ -991,15 +991,6 @@ public class Parser
                     return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
                             annotations, null, conditional, Collections.singletonList(type), null, name);
                     }
-                else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
-                        && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
-                    {
-                    // "static" modifier and "=" means it's a constant
-                    expect(Id.ASN);
-                    Expression value = parseExpression();
-                    expect(Id.SEMICOLON);
-                    return new ConstantDeclaration(modifiers.get(0), type, name, value, doc);
-                    }
                 else
                     {
                     if (fInMethod && modifiers == null)
@@ -2786,7 +2777,7 @@ s     *
                 if (match(Id.R_PAREN) != null)
                     {
                     // Void lambda
-                    return new ExplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
+                    return new ImplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
