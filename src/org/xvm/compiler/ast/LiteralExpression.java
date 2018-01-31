@@ -78,6 +78,12 @@ public class LiteralExpression
         }
 
     @Override
+    public boolean isConstant()
+        {
+        return true;
+        }
+
+    @Override
     public Constant toConstant()
         {
         // the LiteralExpression produces literal constants:

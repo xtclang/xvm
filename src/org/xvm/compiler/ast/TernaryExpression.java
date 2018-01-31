@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
+
 
 /**
  * A ternary expression is the "a ? b : c" expression.
@@ -38,6 +40,50 @@ public class TernaryExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        if (!cond.isConstant())
+            {
+            return false;
+            }
+
+        Constant constant = cond.toConstant();
+        if (constant == pool().valTrue())
+            {
+            return exprThen.isConstant();
+            }
+        else if (constant == pool().valFalse())
+            {
+            return exprElse.isConstant();
+            }
+        else
+            {
+            return false;
+            }
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        Constant constant = cond.toConstant();
+        if (constant == pool().valTrue())
+            {
+            return exprThen.toConstant();
+            }
+        else if (constant == pool().valFalse())
+            {
+            return exprElse.toConstant();
+            }
+        else
+            {
+            return super.toConstant();
+            }
         }
 
 

@@ -14,19 +14,35 @@ import static org.xvm.util.Handy.indentLines;
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
  * names only.
  */
-public class ImplicitLambdaExpression
+public class LambdaExpression
         extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ImplicitLambdaExpression(List<Expression> params, Token operator, StatementBlock body, long lStartPos)
+    /**
+     *
+     * @param params     either a list of Expression objects or a list of Parameter objects
+     * @param operator
+     * @param body
+     * @param lStartPos
+     */
+    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos)
         {
-        this.params    = params;
+        if (!params.isEmpty() && params.get(0) instanceof Expression)
+            {
+            assert params.stream().allMatch(Expression.class::isInstance);
+            this.paramNames = params;
+            }
+        else
+            {
+            assert params.stream().allMatch(org.xvm.asm.Parameter.class::isInstance);
+            this.params = params;
+            }
+
         this.operator  = operator;
         this.body      = body;
         this.lStartPos = lStartPos;
         }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -74,7 +90,7 @@ public class ImplicitLambdaExpression
 
         sb.append('(');
         boolean first = true;
-        for (Expression param : params)
+        for (Object param : (params == null ? paramNames : params))
             {
             if (first)
                 {
@@ -125,10 +141,12 @@ public class ImplicitLambdaExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Expression> params;
+    protected List<Parameter>  params;
+    protected List<Expression> paramNames;
     protected Token            operator;
     protected StatementBlock   body;
     protected long             lStartPos;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ImplicitLambdaExpression.class, "params", "body");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(LambdaExpression.class, "params", "body");
     }

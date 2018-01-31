@@ -54,7 +54,7 @@ public class AnnotatedTypeConstant
         }
 
     /**
-     * Construct a constant whose value is a data type.
+     * Construct a constant whose value is an annotated data type.
      *
      * @param pool         the ConstantPool that will contain this Constant
      * @param constClass   the class of the annotation
@@ -82,6 +82,31 @@ public class AnnotatedTypeConstant
             }
 
         m_annotation = new Annotation(constClass, aconstParam);
+        m_constType  = constType;
+        }
+
+    /**
+     * Construct a constant whose value is an annotated data type.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param annotation   the annotation
+     * @param constType    the type being annotated
+     */
+    public AnnotatedTypeConstant(ConstantPool pool, Annotation annotation, TypeConstant constType)
+        {
+        super(pool);
+
+        if (annotation == null)
+            {
+            throw new IllegalArgumentException("annotation required");
+            }
+
+        if (constType == null)
+            {
+            throw new IllegalArgumentException("annotated type required");
+            }
+
+        m_annotation = annotation;
         m_constType  = constType;
         }
 

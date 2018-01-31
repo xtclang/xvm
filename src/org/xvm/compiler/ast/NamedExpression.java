@@ -44,6 +44,11 @@ public class NamedExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    @Override
+    public boolean isConstant()
+        {
+        return expr.isConstant();
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------
