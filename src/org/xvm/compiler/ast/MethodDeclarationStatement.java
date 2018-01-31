@@ -82,13 +82,9 @@ public class MethodDeclarationStatement
         setComponent(struct);
 
         // grab a body from the expression, if it has one, otherwise make one
-        if (expr instanceof ImplicitLambdaExpression && ((ImplicitLambdaExpression) expr).params.isEmpty())
+        if (expr instanceof LambdaExpression && ((LambdaExpression) expr).params.isEmpty())
             {
-            this.body = ((ImplicitLambdaExpression) expr).body;
-            }
-        else if (expr instanceof ExplicitLambdaExpression && ((ExplicitLambdaExpression) expr).params.isEmpty())
-            {
-            this.body = ((ExplicitLambdaExpression) expr).body;
+            this.body = ((LambdaExpression) expr).body;
             }
         else
             {
@@ -333,6 +329,16 @@ public class MethodDeclarationStatement
             }
 
         super.resolveNames(listRevisit, errs);
+
+        if (getComponent() instanceof MethodStructure)
+            {
+            // sort out which annotations go on the method, and which belong to the return type
+            if (!((MethodStructure) getComponent()).resolveAnnotations())
+                {
+                listRevisit.add(this);
+                return;
+                }
+            }
         }
 
     /**

@@ -45,6 +45,16 @@ public class MapExpression
         }
 
 
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        // TODO
+        return false;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override

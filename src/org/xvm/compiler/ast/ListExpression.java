@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import org.xvm.asm.Constant;
+import org.xvm.asm.constants.TypeConstant;
 
 
 /**
@@ -59,6 +61,59 @@ public class ListExpression
     // ----- compilation ---------------------------------------------------------------------------
 
 
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        // TODO lots of error checking required
+
+        if (type != null)
+            {
+            return type.getImplicitType();
+            }
+
+        TypeConstant typeArray = pool().typeArray();
+
+        ElementsAllSameType: if (!exprs.isEmpty())
+            {
+            TypeConstant typeElement = exprs.get(0).getImplicitType();
+            for (Expression expr : exprs)
+                {
+                if (!typeElement.equals(expr.getImplicitType()))
+                    {
+                    break ElementsAllSameType;
+                    }
+                }
+            typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
+            }
+
+        return typeArray;
+        }
+
+    @Override
+    public boolean isConstant()
+        {
+        for (Expression expr : exprs)
+            {
+            if (!expr.isConstant())
+                {
+                return false;
+                }
+            }
+
+        return type == null || type.isConstant();
+        }
+
+    @Override
+    public Constant toConstant()
+        {
+        int        cConsts = exprs.size();
+        Constant[] aConsts = new Constant[cConsts];
+        for (int i = 0; i < cConsts; ++i)
+            {
+            aConsts[i] = exprs.get(i).toConstant();
+            }
+        return pool().ensureArrayConstant(getImplicitType(), aConsts);
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

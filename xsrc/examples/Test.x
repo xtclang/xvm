@@ -304,8 +304,8 @@ module Test
         {
         public/private @Override @RO @Lazy @Unchecked Int x
             {
-            Int get() {return 0;}
-            Void set(Int n) {}      // TODO note "void" with lower case "v" caused an awful error
+            @Unchecked Int get() {return 0;}
+            Void set(@Unchecked Int n) {}      // TODO note "void" with lower case "v" caused an awful error
             }
 
         Void bar();

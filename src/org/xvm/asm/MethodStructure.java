@@ -30,8 +30,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents a method. TODO or a function
- * TODO annotations - there might be method annotations that belong to the return type and not the method itself e.g. "@Unsafe Int foo()"
+ * An XVM Structure that represents a method or a function.
  */
 public class MethodStructure
         extends Component
@@ -154,6 +153,95 @@ public class MethodStructure
             }
 
         return null;
+        }
+
+    /**
+     * @return true if the annotations have been resolved; false if this method has to be called
+     *         later in order to resolve annotations
+     */
+    public boolean resolveAnnotations()
+        {
+        if (getReturnCount() == 0)
+            {
+            return true;
+            }
+
+        int cMove = 0;
+        for (Annotation annotation : m_aAnnotations)
+            {
+            if (annotation.containsUnresolved())
+                {
+                return false;
+                }
+
+            if (!annotation.getAnnotationType().getExplicitClassInto().isIntoMethodType())
+                {
+                ++cMove;
+                }
+            }
+        if (cMove == 0)
+            {
+            return true;
+            }
+
+        Annotation[] aAll  = m_aAnnotations;
+        int          cAll  = aAll.length;
+        if (cMove == cAll)
+            {
+            addReturnAnnotations(aAll);
+            m_aAnnotations = Annotation.NO_ANNOTATIONS;
+            return true;
+            }
+
+        int          cKeep = cAll - cMove;
+        Annotation[] aKeep = new Annotation[cKeep];
+        Annotation[] aMove = new Annotation[cMove];
+        int          iKeep = 0;
+        int          iMove = 0;
+        for (Annotation annotation : m_aAnnotations)
+            {
+            if (annotation.getAnnotationType().getExplicitClassInto().isIntoMethodType())
+                {
+                aKeep[iKeep++] = annotation;
+                }
+            else
+                {
+                aMove[iMove++] = annotation;
+                }
+            }
+
+        addReturnAnnotations(aMove);
+        m_aAnnotations = aKeep;
+        return true;
+        }
+
+    /**
+     * @param annotations  the annotations to add to the return type (or the first non-conditional
+     *                     return type, if there are multiple return types)
+     */
+    private void addReturnAnnotations(Annotation[] annotations)
+        {
+        assert m_aReturns != null;
+        assert m_aReturns.length > 0;
+
+        // determine which return value to modify (i.e. not the "conditional" value)
+        int       iRet = 0;
+        Parameter ret  = m_aReturns[iRet];
+        if (ret.isConditionalReturn())
+            {
+            ret = m_aReturns[++iRet];
+            }
+
+        assert !ret.isConditionalReturn();
+        assert iRet == ret.getIndex();
+
+        TypeConstant type = ret.getType();
+        ConstantPool pool = getConstantPool();
+        for (int i = annotations.length - 1; i >= 0; --i)
+            {
+            type = pool.ensureAnnotatedTypeConstant(annotations[i], type);
+            }
+        m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
         }
 
     /**

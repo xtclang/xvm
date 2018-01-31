@@ -214,7 +214,7 @@ public class ErrorList
          */
         public String getMessage()
             {
-            return MessageFormat.format(RESOURCES.getString(getCode()), getParams());
+            return getCode() + ": " + MessageFormat.format(RESOURCES.getString(getCode()), getParams());
             }
 
         /**

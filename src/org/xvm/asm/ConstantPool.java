@@ -1608,12 +1608,26 @@ public class ConstantPool
      * @param aconstParam  the parameters for the annotation
      * @param constType    the type being annotated
      *
-     * @return
+     * @return an annotated type constant
      */
     public AnnotatedTypeConstant ensureAnnotatedTypeConstant(Constant constClass,
             Constant[] aconstParam, TypeConstant constType)
         {
         return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, constClass, aconstParam, constType));
+        }
+
+    /**
+     * Given the specified annotation, obtain a type that represents the annotated form of the
+     * specified type.
+     *
+     * @param annotation   the annotation
+     * @param constType    the type being annotated
+     *
+     * @return an annotated type constant
+     */
+    public AnnotatedTypeConstant ensureAnnotatedTypeConstant(Annotation annotation, TypeConstant constType)
+        {
+        return (AnnotatedTypeConstant) register(new AnnotatedTypeConstant(this, annotation, constType));
         }
 
     /**

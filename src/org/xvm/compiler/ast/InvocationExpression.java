@@ -90,6 +90,13 @@ public class InvocationExpression
 
     // TODO getValueCount() - could be any #?
 
+    @Override
+    public boolean isConstant()
+        {
+        // assume all invocations can have side effects
+        return false;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

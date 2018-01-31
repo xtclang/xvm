@@ -235,19 +235,17 @@ public class PropertyDeclarationStatement
 
             // the initial value has to be resolved; we have to decide either to use the expression
             // to create a constant value or an initializer function
-            boolean fConstantValue = false;
-            if (value.isConstant())
+            if (value.isCompletable() && value.isConstant())
                 {
-                Code code = new Code();
-                Constant constValue = value.generateConstant(code, type, errs);
-                if (!code.hasOps())
+                Constant constValue = value.toConstant();
+                if (constValue.containsUnresolved() || constValue.getType().containsUnresolved())
                     {
-                    prop.setInitialValue(constValue);
-                    fConstantValue = true;
+                    listRevisit.add(this);
+                    return;
                     }
+                prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
                 }
-
-            if (!fConstantValue)
+            else
                 {
                 // clear the "has initial value" setting
                 prop.setInitialValue(null);

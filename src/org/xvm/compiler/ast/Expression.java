@@ -339,7 +339,7 @@ public abstract class Expression
      */
     public boolean isConstant()
         {
-        return true;
+        return true;    // TODO shouldn't this default to false?
         }
 
     /**
