@@ -436,7 +436,7 @@ public class MethodDeclarationStatement
         }
 
     @Override
-    protected void generateCode(ErrorListener errs)
+    public void generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
         MethodStructure method = (MethodStructure) getComponent();
         if (body == null)
@@ -505,7 +505,7 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.generateCode(errs);
+        super.generateCode(listRevisit, errs);
         }
 
 

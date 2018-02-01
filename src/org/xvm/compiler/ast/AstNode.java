@@ -44,7 +44,7 @@ public abstract class AstNode
      */
     public AstNode getParent()
         {
-        return parent;
+        return m_parent;
         }
 
     /**
@@ -54,7 +54,7 @@ public abstract class AstNode
      */
     protected void setParent(AstNode parent)
         {
-        this.parent = parent;
+        this.m_parent = parent;
         }
 
     /**
@@ -127,16 +127,50 @@ public abstract class AstNode
      */
     public Stage getStage()
         {
-        return stage;
+        return m_stage;
         }
 
     /**
-     * @param stage the updated compilation stage for this node
+     * Test if the node has reached the specified stage.
+     *
+     * @param stage  the compilation stage to test for
+     *
+     * @return true if the node has already reached or passed the specified stage
      */
-    void setStage(Stage stage)
+    protected boolean alreadyReached(Stage stage)
         {
-        assert stage.ordinal() >= this.stage.ordinal();
-        this.stage = stage;
+        assert stage != null;
+        return getStage().compareTo(stage) >= 0;
+        }
+
+    /**
+     * Verify that the node has reached the specified stage.
+     *
+     * @param stage  the stage that the node must have already reached
+     *
+     * @throws IllegalStateException  if the node has not reached the specified stage
+     */
+    protected void ensureReached(Stage stage)
+        {
+        if (!alreadyReached(stage))
+            {
+            throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
+            }
+        }
+
+    /**
+     * Update the stage to the specified stage, if the specified stage is later than the current
+     * stage.
+     *
+     * @param stage  the suggested stage
+     */
+    protected void setStage(Stage stage)
+        {
+        // stage is a "one way" attribute
+        if (stage != null && stage.compareTo(m_stage) > 0)
+            {
+            m_stage = stage;
+            }
         }
 
     /**
@@ -269,15 +303,17 @@ public abstract class AstNode
      */
     protected void registerStructures(ErrorListener errs)
         {
-        stage = Stage.Registered;
+        setStage(Stage.Registering);
 
         for (AstNode node : children())
             {
-            if (node.stage.ordinal() < Stage.Registered.ordinal())
+            if (!node.alreadyReached(Stage.Registered))
                 {
                 node.registerStructures(errs);
                 }
             }
+
+        setStage(Stage.Registered);
         }
 
     /**
@@ -303,31 +339,32 @@ public abstract class AstNode
      *
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
-     * @param errs         the error list to log any errors etc. to
+     * @param errs         the error list to log any errors to
      */
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        assert stage.ordinal() <= Stage.Resolved.ordinal();
+        setStage(Stage.Resolving);
 
         // if this node is a NameResolver, then make sure it resolves itself first
         boolean fResolved = true;
-        if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
+        if (this instanceof NameResolver.NameResolving && !alreadyReached(Stage.Resolved))
             {
             NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
             if (resolver != null)
                 {
-                boolean fFirstTime = resolver.isFirstTime();
+                boolean fRevisiting = !resolver.isFirstTime();
                 if (resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
                     {
+                    fResolved = false;
+
                     // the first time through the recursive descent of AST nodes, we need to visit
                     // every node. subsequent visits are only to the nodes that registered
                     // themselves for re-visits due to their inability to resolve themselves fully
                     // in previous visits
-                    if (!fFirstTime)
+                    if (fRevisiting)
                         {
                         return;
                         }
-                    fResolved = false;
                     }
                 }
             }
@@ -336,13 +373,13 @@ public abstract class AstNode
         // resolve things on requests from children
         if (fResolved)
             {
-            stage = Stage.Resolved;
+            setStage(Stage.Resolved);
             }
 
         for (AstNode node : children())
             {
             // don't visit children that have already successfully resolved
-            if (node.stage.ordinal() < Stage.Resolved.ordinal())
+            if (!node.alreadyReached(Stage.Resolved))
                 {
                 node.resolveNames(listRevisit, errs);
                 }
@@ -352,18 +389,48 @@ public abstract class AstNode
     /**
      * Third logical compiler pass. This pass is responsible for resolving names and structures
      * within methods. To accomplish this, this pass must be able to resolve type names, which is
-     * why the first pass was necessarily a separate pass.
+     * why the second pass was necessarily a separate pass.
      *
-     * @param errs  the error list to log any errors etc. to
+     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     *                     pass
+     * @param errs         the error list to log any errors to
      */
-    protected void generateCode(ErrorListener errs)
+    public void validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
-        stage = Stage.CodeGen;
+        // TODO this (or perhaps MethodDeclarationStatement sub-class) has to get everything "caught up" to this point!
+
+        setStage(Stage.Validating);
 
         for (AstNode node : children())
             {
-            node.generateCode(errs);
+            // don't visit children that have already successfully resolved
+            if (!node.alreadyReached(Stage.Validated))
+                {
+                node.validateExpressions(listRevisit, errs);
+                }
             }
+
+        setStage(Stage.Validated);
+        }
+
+    /**
+     * Fourth logical compiler pass. Emits the resulting, finished structures.
+     *
+     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     *                     pass
+     * @param errs         the error list to log any errors to
+     */
+    public void generateCode(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        ensureReached(Stage.Validated);
+        setStage(Stage.Emitting);
+
+        for (AstNode node : children())
+            {
+            node.generateCode(listRevisit, errs);
+            }
+
+        setStage(Stage.Emitted);
         }
 
 
@@ -412,7 +479,7 @@ public abstract class AstNode
         // for all other components (that don't override this method because they know more about
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
-        return stage.ordinal() >= Stage.Resolved.ordinal();
+        return alreadyReached(Stage.Resolved);
         }
 
 
@@ -869,10 +936,10 @@ public abstract class AstNode
     /**
      * The stage of compilation.
      */
-    private Stage stage = Stage.Initial;
+    private Stage m_stage = Stage.Initial;
 
     /**
      * The parent of this AstNode.
      */
-    private AstNode parent;
+    private AstNode m_parent;
     }

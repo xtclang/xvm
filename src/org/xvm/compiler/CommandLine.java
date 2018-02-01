@@ -680,7 +680,7 @@ public class CommandLine
         // something couldn't get resolved; must be a bug in the compiler
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.reportUnresolvableNames();
+            compiler.logRemainingDeferredAsErrors();
             }
         }
 
@@ -767,10 +767,10 @@ public class CommandLine
                 out("Compiler: " + compiler);
                 out();
                 out("Module:");
-                out(compiler.getModule());
+                out(compiler.getModuleStatement());
                 out();
                 out("Module dump:");
-                compiler.getModule().dump();
+                compiler.getModuleStatement().dump();
                 out();
                 out("File Structure:");
                 out(compiler.getFileStructure().toDebugString());
@@ -815,7 +815,7 @@ public class CommandLine
             ErrorList errs = (ErrorList) compiler.getErrorListener();
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
-                err("xtc: Errors in " + compiler.getModule().getName());
+                err("xtc: Errors in " + compiler.getModuleStatement().getName());
                 int i = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {

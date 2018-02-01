@@ -11,6 +11,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
+
 
 /**
  * An annotated type expression is a type expression preceded with an annotation.
@@ -107,8 +109,10 @@ public class AnnotatedTypeExpression
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+        if (!alreadyReached(Stage.Resolved))
             {
+            setStage(Stage.Resolving);
+
             // resolve the annotation and sub-type
             annotation.resolveNames(listRevisit, errs);
             type.resolveNames(listRevisit, errs);
