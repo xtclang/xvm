@@ -10,6 +10,8 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
+
 
 /**
  * An array type expression is a type expression followed by an array indicator. Because an array
@@ -80,8 +82,10 @@ public class ArrayTypeExpression
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+        if (!alreadyReached(Stage.Resolved))
             {
+            setStage(Stage.Resolving);
+
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
 

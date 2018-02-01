@@ -245,9 +245,9 @@ public class NamedTypeExpression
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        boolean fWasResolved = getStage().ordinal() >= Stage.Resolved.ordinal();
+        boolean fWasResolved = alreadyReached(Stage.Resolved);
         super.resolveNames(listRevisit, errs);
-        boolean fIsResolved  = getStage().ordinal() >= Stage.Resolved.ordinal();
+        boolean fIsResolved  = alreadyReached(Stage.Resolved);
 
         if (fIsResolved && !fWasResolved)
             {

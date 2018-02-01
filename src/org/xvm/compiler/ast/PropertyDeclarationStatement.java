@@ -210,58 +210,59 @@ public class PropertyDeclarationStatement
         }
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().compareTo(Stage.Resolved) < 0)
+        if (!alreadyReached(Stage.Validated))
             {
-            super.resolveNames(listRevisit, errs);
-            }
+            setStage(Stage.Validating);
 
-        PropertyStructure prop = (PropertyStructure) getComponent();
-        if (!prop.resolveAnnotations())
-            {
-            listRevisit.add(this);
-            return;
-            }
-
-        if (prop.hasInitialValue())
-            {
-            TypeConstant type = prop.getType();
-            if (type.containsUnresolved())
+            PropertyStructure prop = (PropertyStructure) getComponent();
+            if (!prop.resolveAnnotations())
                 {
                 listRevisit.add(this);
                 return;
                 }
 
-            // the initial value has to be resolved; we have to decide either to use the expression
-            // to create a constant value or an initializer function
-            if (value.isCompletable() && value.isConstant())
+            if (prop.hasInitialValue())
                 {
-                Constant constValue = value.toConstant();
-                if (constValue.containsUnresolved() || constValue.getType().containsUnresolved())
+                TypeConstant type = prop.getType();
+                if (type.containsUnresolved())
                     {
                     listRevisit.add(this);
                     return;
                     }
-                prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
-                }
-            else
-                {
-                // clear the "has initial value" setting
-                prop.setInitialValue(null);
 
-                // create an initializer function
-                MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
-                        org.xvm.asm.Annotation.NO_ANNOTATIONS,
-                        new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                        "=", Parameter.NO_PARAMS, false);
+                // the initial value has to be resolved; we have to decide either to use the expression
+                // to create a constant value or an initializer function
+                if (value.isCompletable() && value.isConstant())
+                    {
+                    Constant constValue = value.toConstant();
+                    if (constValue.containsUnresolved() || constValue.getType().containsUnresolved())
+                        {
+                        listRevisit.add(this);
+                        return;
+                        }
+                    prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
+                    }
+                else
+                    {
+                    // clear the "has initial value" setting
+                    prop.setInitialValue(null);
 
-                // wrap it with a pretend function in the AST tree
-                initializer = new MethodDeclarationStatement(methodInit, value);
+                    // create an initializer function
+                    MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                            org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                            new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
+                            "=", Parameter.NO_PARAMS, false);
+
+                    // wrap it with a pretend function in the AST tree
+                    initializer = new MethodDeclarationStatement(methodInit, value);
+                    }
                 }
+
+            super.validateExpressions(listRevisit, errs);
             }
         }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 

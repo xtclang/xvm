@@ -681,12 +681,14 @@ public abstract class TypeConstant
                 }
             }
 
+        // now that all those other deferred types are done building, rebuild this if necessary
         if (!isComplete(info))
             {
-            // now that all those other deferred types are done building, rebuild this if necessary
             info = buildTypeInfo(errs);
             assert isComplete(info);
+            setTypeInfo(info);
             }
+
         return info;
         }
 

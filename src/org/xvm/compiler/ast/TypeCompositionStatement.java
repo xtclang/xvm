@@ -1178,10 +1178,10 @@ public class TypeCompositionStatement
         }
 
     @Override
-    public void generateCode(ErrorListener errs)
+    public void generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
         // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
-        super.generateCode(errs);
+        super.generateCode(listRevisit, errs);
         }
 
     private void disallowTypeParams(ErrorListener errs)

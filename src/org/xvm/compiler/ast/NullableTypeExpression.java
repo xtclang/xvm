@@ -9,7 +9,7 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 
 
 /**
@@ -68,8 +68,10 @@ public class NullableTypeExpression
     @Override
     public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < Compiler.Stage.Resolved.ordinal())
+        if (!alreadyReached(Stage.Resolved))
             {
+            setStage(Stage.Resolving);
+
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
 
