@@ -665,10 +665,10 @@ public class Compiler
     public enum Stage
         {
         Initial,
-        Loading,
-        Loaded,
         Registering,
         Registered,
+        Loading,
+        Loaded,
         Resolving,
         Resolved,
         Validating,
