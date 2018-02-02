@@ -157,7 +157,7 @@ public class PropertyDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this property
         if (getComponent() == null)
@@ -206,11 +206,11 @@ public class PropertyDeclarationStatement
                 }
             }
 
-        super.registerStructures(errs);
+        return super.registerStructures(errs);
         }
 
     @Override
-    public void validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Validated))
             {
@@ -220,7 +220,7 @@ public class PropertyDeclarationStatement
             if (!prop.resolveAnnotations())
                 {
                 listRevisit.add(this);
-                return;
+                return this;
                 }
 
             if (prop.hasInitialValue())
@@ -229,7 +229,7 @@ public class PropertyDeclarationStatement
                 if (type.containsUnresolved())
                     {
                     listRevisit.add(this);
-                    return;
+                    return this;
                     }
 
                 // the initial value has to be resolved; we have to decide either to use the expression
@@ -240,7 +240,7 @@ public class PropertyDeclarationStatement
                     if (constValue.containsUnresolved() || constValue.getType().containsUnresolved())
                         {
                         listRevisit.add(this);
-                        return;
+                        return this;
                         }
                     prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
                     }
@@ -259,9 +259,9 @@ public class PropertyDeclarationStatement
                     initializer = new MethodDeclarationStatement(methodInit, value);
                     }
                 }
-
-            super.validateExpressions(listRevisit, errs);
             }
+
+        return super.validateExpressions(listRevisit, errs);
         }
 
     // ----- debugging assistance ------------------------------------------------------------------

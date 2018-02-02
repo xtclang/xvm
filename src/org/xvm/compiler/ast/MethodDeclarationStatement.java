@@ -120,11 +120,17 @@ public class MethodDeclarationStatement
         return CHILD_FIELDS;
         }
 
+    @Override
+    protected boolean usesSuper()
+        {
+        return body != null && body.usesSuper();
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this method
         if (getComponent() == null)
@@ -158,7 +164,7 @@ public class MethodDeclarationStatement
                             }
                         // it's a "short hand" property method; stop right here
                         // will continue resolution in resolveNames() below
-                        return;
+                        return this;
                         }
 
                     if (fConstructor)
@@ -216,58 +222,11 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.registerStructures(errs);
-        }
-
-    protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
-        {
-        org.xvm.asm.Annotation[] aAnnotations = org.xvm.asm.Annotation.NO_ANNOTATIONS;
-        if (annotations != null)
-            {
-            int cAnnotations = annotations.size();
-            aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
-            for (int i = 0; i < cAnnotations; ++i)
-                {
-                aAnnotations[i] = annotations.get(i).buildAnnotation(pool);
-                }
-            }
-
-        return aAnnotations;
-        }
-
-    protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool)
-        {
-        // build array of parameters
-        int cTypes  = typeParams == null ? 0 : typeParams.size();
-        int cParams = cTypes + params.size();
-        org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
-        for (int i = 0; i < cTypes; ++i)
-            {
-            Parameter param = typeParams.get(i);
-            TypeExpression exprType  = param.getType();
-            TypeConstant constType = pool.ensureClassTypeConstant(pool.clzType(), null,
-                    exprType == null
-                            ? pool.typeObject()
-                            : exprType.ensureTypeConstant());
-            aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
-            }
-        for (int i = cTypes; i < cParams; ++i)
-            {
-            Parameter param = params.get(i-cTypes);
-            aParams[i] = new org.xvm.asm.Parameter(pool, param.getType().ensureTypeConstant(),
-                    param.getName(), /* TODO how to do value? */ null, false, i, false);
-            }
-        return aParams;
+        return super.registerStructures(errs);
         }
 
     @Override
-    protected boolean usesSuper()
-        {
-        return body != null && body.usesSuper();
-        }
-
-    @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (getComponent() == null)
             {
@@ -286,7 +245,7 @@ public class MethodDeclarationStatement
                     if (methodSuper == null)
                         {
                         listRevisit.add(this);
-                        return;
+                        return this;
                         }
 
                     ConstantPool            pool     = container.getConstantPool();
@@ -304,7 +263,7 @@ public class MethodDeclarationStatement
                                 {
                                 // mot yet resolved; come back later
                                 listRevisit.add(this);
-                                return;
+                                return this;
                                 }
 
                             if (constReturn.getFormat() == Constant.Format.Property
@@ -336,107 +295,15 @@ public class MethodDeclarationStatement
             if (!((MethodStructure) getComponent()).resolveAnnotations())
                 {
                 listRevisit.add(this);
-                return;
-                }
-            }
-        }
-
-    /**
-     * Find a method on the Ref class or any of the annotations that matches the specified
-     * name and parameters of a "short-hand" property method declaration.
-     *
-     * @param property     the property structure
-     * @param annotations  the annotations on the property
-     * @param sMethName    the method name
-     * @param params       the parameters
-     * @param errs         the error listener
-     *
-     * @return the matching methods structure of null if none is found
-     */
-    protected MethodStructure findRefMethod(PropertyStructure property, List<Annotation> annotations,
-                                            String sMethName, List<Parameter> params, ErrorListener errs)
-        {
-        ConstantPool pool = property.getConstantPool();
-
-        ClassStructure clzRef = (ClassStructure) pool.clzRef().getComponent();
-        if (clzRef == null)
-            {
-            // no class for "Ref" yet; come back later
-            return null;
-            }
-
-        MethodStructure method = findMethod(pool, clzRef, sMethName, params);
-        if (method == null)
-            {
-            if (annotations != null)
-                {
-                for (Iterator<Annotation> iter = annotations.iterator(); iter.hasNext();)
-                    {
-                    Annotation annotation = iter.next();
-
-                    String        sAnnotation = annotation.getType().getName();
-                    ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
-                    if (constClass == null)
-                        {
-                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, '@' + sAnnotation);
-                        iter.remove();
-                        continue;
-                        }
-
-                    ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
-                    if (clzMixin == null)
-                        {
-                        // no class for the annotation yet; come back later
-                        continue;
-                        }
-
-                    method = findMethod(pool, clzMixin, sMethName, params);
-                    if (method != null)
-                        {
-                        break;
-                        }
-                    }
+                return this;
                 }
             }
 
-        return method;
-        }
-
-    /**
-     * Find a method on the specified ClassStructure that matches the specified name and parameters.
-     *
-     * @param pool        the constant pool
-     * @param clz         the class structure
-     * @param sMethName   the method name
-     * @param parameters  the parameters
-     *
-     * @return the matching method structure
-     */
-    protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
-                                         String sMethName, List<Parameter> parameters)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) clz.getChild(sMethName);
-        if (mms != null)
-            {
-            for (Component c : mms.children())
-                {
-                MethodStructure method = (MethodStructure) c;
-
-                if (parameters.size() != method.getParamCount())
-                    {
-                    continue;
-                    }
-
-                // TODO: compare the ast.Parameters (parameters) with asm.Parameters (method)
-                return method;
-                }
-            }
-        // TODO: check the contributions (super, mixin, etc.)
-        return null;
+        return this;
         }
 
     @Override
-    public void generateCode(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
         MethodStructure method = (MethodStructure) getComponent();
         if (body == null)
@@ -505,7 +372,145 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.generateCode(listRevisit, errs);
+        return super.generateCode(listRevisit, errs);
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
+        {
+        org.xvm.asm.Annotation[] aAnnotations = org.xvm.asm.Annotation.NO_ANNOTATIONS;
+        if (annotations != null)
+            {
+            int cAnnotations = annotations.size();
+            aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
+            for (int i = 0; i < cAnnotations; ++i)
+                {
+                aAnnotations[i] = annotations.get(i).buildAnnotation(pool);
+                }
+            }
+
+        return aAnnotations;
+        }
+
+    protected org.xvm.asm.Parameter[] buildParameters(ConstantPool pool)
+        {
+        // build array of parameters
+        int cTypes  = typeParams == null ? 0 : typeParams.size();
+        int cParams = cTypes + params.size();
+        org.xvm.asm.Parameter[] aParams = new org.xvm.asm.Parameter[cParams];
+        for (int i = 0; i < cTypes; ++i)
+            {
+            Parameter param = typeParams.get(i);
+            TypeExpression exprType  = param.getType();
+            TypeConstant constType = pool.ensureClassTypeConstant(pool.clzType(), null,
+                    exprType == null
+                            ? pool.typeObject()
+                            : exprType.ensureTypeConstant());
+            aParams[i] = new org.xvm.asm.Parameter(pool, constType, param.getName(), null, false, i, true);
+            }
+        for (int i = cTypes; i < cParams; ++i)
+            {
+            Parameter param = params.get(i-cTypes);
+            aParams[i] = new org.xvm.asm.Parameter(pool, param.getType().ensureTypeConstant(),
+                    param.getName(), /* TODO how to do value? */ null, false, i, false);
+            }
+        return aParams;
+        }
+
+    /**
+     * Find a method on the Ref class or any of the annotations that matches the specified
+     * name and parameters of a "short-hand" property method declaration.
+     *
+     * @param property     the property structure
+     * @param annotations  the annotations on the property
+     * @param sMethName    the method name
+     * @param params       the parameters
+     * @param errs         the error listener
+     *
+     * @return the matching methods structure of null if none is found
+     */
+    protected MethodStructure findRefMethod(PropertyStructure property, List<Annotation> annotations,
+            String sMethName, List<Parameter> params, ErrorListener errs)
+        {
+        ConstantPool pool = property.getConstantPool();
+
+        ClassStructure clzRef = (ClassStructure) pool.clzRef().getComponent();
+        if (clzRef == null)
+            {
+            // no class for "Ref" yet; come back later
+            return null;
+            }
+
+        MethodStructure method = findMethod(pool, clzRef, sMethName, params);
+        if (method == null)
+            {
+            if (annotations != null)
+                {
+                for (Iterator<Annotation> iter = annotations.iterator(); iter.hasNext();)
+                    {
+                    Annotation annotation = iter.next();
+
+                    String        sAnnotation = annotation.getType().getName();
+                    ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
+                    if (constClass == null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, '@' + sAnnotation);
+                        iter.remove();
+                        continue;
+                        }
+
+                    ClassStructure clzMixin = (ClassStructure) constClass.getComponent();
+                    if (clzMixin == null)
+                        {
+                        // no class for the annotation yet; come back later
+                        continue;
+                        }
+
+                    method = findMethod(pool, clzMixin, sMethName, params);
+                    if (method != null)
+                        {
+                        break;
+                        }
+                    }
+                }
+            }
+
+        return method;
+        }
+
+    /**
+     * Find a method on the specified ClassStructure that matches the specified name and parameters.
+     *
+     * @param pool        the constant pool
+     * @param clz         the class structure
+     * @param sMethName   the method name
+     * @param parameters  the parameters
+     *
+     * @return the matching method structure
+     */
+    protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
+            String sMethName, List<Parameter> parameters)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) clz.getChild(sMethName);
+        if (mms != null)
+            {
+            for (Component c : mms.children())
+                {
+                MethodStructure method = (MethodStructure) c;
+
+                if (parameters.size() != method.getParamCount())
+                    {
+                    continue;
+                    }
+
+                // TODO: compare the ast.Parameters (parameters) with asm.Parameters (method)
+                return method;
+                }
+            }
+        // TODO: check the contributions (super, mixin, etc.)
+        return null;
         }
 
 

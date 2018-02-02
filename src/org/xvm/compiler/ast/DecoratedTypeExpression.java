@@ -79,7 +79,7 @@ public class DecoratedTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Resolved))
             {
@@ -90,9 +90,9 @@ public class DecoratedTypeExpression
 
             // store off a type constant for this type expression
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

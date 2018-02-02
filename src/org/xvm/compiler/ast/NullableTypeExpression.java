@@ -66,7 +66,7 @@ public class NullableTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Resolved))
             {
@@ -77,9 +77,9 @@ public class NullableTypeExpression
 
             // obtain and store off the Nullable form of the sub-type
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

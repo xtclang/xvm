@@ -66,7 +66,7 @@ public class TypedefStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this method
         if (getComponent() == null)
@@ -88,7 +88,7 @@ public class TypedefStatement
                 }
             }
 
-        super.registerStructures(errs);
+        return super.registerStructures(errs);
         }
 
 

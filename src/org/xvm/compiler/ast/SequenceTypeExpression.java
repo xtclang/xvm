@@ -70,7 +70,7 @@ public class SequenceTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Resolved))
             {
@@ -81,9 +81,9 @@ public class SequenceTypeExpression
 
             // store off the type that is an array of the sub-type
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

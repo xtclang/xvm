@@ -9,6 +9,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
@@ -108,19 +109,21 @@ public class ImportStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         if (cond != null)
             {
             log(errs, Severity.WARNING, Compiler.CONDITIONAL_IMPORT);
             }
-        super.registerStructures(errs);
+        return super.registerStructures(errs);
         }
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        // check if the alieas name is an unhideable name
+        setStage(Stage.Resolving);
+
+        // check if the alias name is an unhideable name
         Component component = resolveParentBySimpleName(getAliasName());
         if (component != null)
             {
@@ -136,7 +139,7 @@ public class ImportStatement
             }
         ((StatementBlock) parent).registerImport(this, errs);
 
-        super.resolveNames(listRevisit, errs);
+        return super.resolveNames(listRevisit, errs);
         }
 
 

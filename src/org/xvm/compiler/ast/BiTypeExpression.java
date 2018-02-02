@@ -88,7 +88,7 @@ public class BiTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Resolved))
             {
@@ -99,9 +99,9 @@ public class BiTypeExpression
             type2.resolveNames(listRevisit, errs);
 
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

@@ -208,7 +208,7 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Resolving);
-            m_stmtModule.resolveNames(getDeferred(), m_errs);
+            m_stmtModule = (TypeCompositionStatement) m_stmtModule.resolveNames(getDeferred(), m_errs);
             }
         else
             {
@@ -216,7 +216,11 @@ public class Compiler
             // last time, and recurse down
             for (AstNode node : takeDeferred())
                 {
-                node.resolveNames(getDeferred(), m_errs);
+                AstNode nodeNew = node.resolveNames(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
                 }
             }
 
@@ -263,7 +267,7 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Validating);
-            m_stmtModule.validateExpressions(getDeferred(), m_errs);
+            m_stmtModule = (TypeCompositionStatement) m_stmtModule.validateExpressions(getDeferred(), m_errs);
             }
         else
             {
@@ -271,7 +275,11 @@ public class Compiler
             // validated last time, and recurse down
             for (AstNode node : takeDeferred())
                 {
-                node.validateExpressions(getDeferred(), m_errs);
+                AstNode nodeNew = node.validateExpressions(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
                 }
             }
 
@@ -314,7 +322,7 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Emitting);
-            m_stmtModule.generateCode(getDeferred(), m_errs);
+            m_stmtModule = m_stmtModule.generateCode(getDeferred(), m_errs);
             }
         else
             {
@@ -322,7 +330,11 @@ public class Compiler
             // validated last time, and recurse down
             for (AstNode node : takeDeferred())
                 {
-                node.generateCode(getDeferred(), m_errs);
+                AstNode nodeNew = node.generateCode(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
                 }
             }
 
@@ -692,7 +704,7 @@ public class Compiler
      * The TypeCompositionStatement for the module being compiled. This is an object returned from
      * the Parser, or one assembled from multiple objects returned from the Parser.
      */
-    private final TypeCompositionStatement m_stmtModule;
+    private TypeCompositionStatement m_stmtModule;
 
     /**
      * The ErrorListener to report errors to.
