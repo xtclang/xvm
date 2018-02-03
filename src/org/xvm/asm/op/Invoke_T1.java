@@ -161,8 +161,8 @@ public class Invoke_T1
         checkReturnRegister(frame, method);
 
         return chain.isNative()
-            ? hTarget.getOpSupport().invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
-            : hTarget.getOpSupport().invoke1(frame, chain, hTarget,
+            ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
+            : hTarget.getTemplate().invoke1(frame, chain, hTarget,
             Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 

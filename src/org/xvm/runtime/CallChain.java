@@ -111,7 +111,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getOpSupport().
+            return hThis.getTemplate().
                     invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
             }
 
@@ -138,7 +138,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getOpSupport().
+            return hThis.getTemplate().
                     invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
             }
 
@@ -168,10 +168,8 @@ public class CallChain
         if (Adapter.isNative(methodSuper))
             {
             return fReturnTuple
-                ? hThis.getOpSupport().
-                    invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
-                : hThis.getOpSupport().
-                    invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
+                ? hThis.getTemplate().invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
+                : hThis.getTemplate().invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
@@ -194,8 +192,7 @@ public class CallChain
 
         if (Adapter.isNative(methodSuper))
             {
-            return hThis.getOpSupport().
-                    invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
+            return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
             }
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
@@ -239,13 +236,13 @@ public class CallChain
         @Override
         protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
             {
-            return hThis.getOpSupport().getFieldValue(frame, hThis, f_property, iReturn);
+            return hThis.getTemplate().getFieldValue(frame, hThis, f_property, iReturn);
             }
 
         @Override
         protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
             {
-            return hThis.getOpSupport().setFieldValue(frame, hThis, f_property, hArg);
+            return hThis.getTemplate().setFieldValue(frame, hThis, f_property, hArg);
             }
         }
     }

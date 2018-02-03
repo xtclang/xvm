@@ -161,8 +161,8 @@ public class Invoke_N0
     protected int complete(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar)
         {
         return chain.isNative()
-             ? hTarget.getOpSupport().invokeNativeN(frame, chain.getTop(), hTarget, ahVar, Frame.RET_UNUSED)
-             : hTarget.getOpSupport().invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
+             ? hTarget.getTemplate().invokeNativeN(frame, chain.getTop(), hTarget, ahVar, Frame.RET_UNUSED)
+             : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
     @Override

@@ -99,7 +99,7 @@ public class L_Get
             frame.introducePropertyVar(A_THIS, constProperty);
             }
 
-        return hTarget.getOpSupport().getPropertyValue(
+        return hTarget.getTemplate().getPropertyValue(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
 

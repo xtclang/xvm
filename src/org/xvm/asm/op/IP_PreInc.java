@@ -94,6 +94,6 @@ public class IP_PreInc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getOpSupport().invokePreInc(frame, hTarget, sProperty, m_nRetValue);
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, sProperty, m_nRetValue);
         }
     }

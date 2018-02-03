@@ -141,7 +141,7 @@ public abstract class Utils
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzConst.getSupport().invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
+        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
         }
 
     // ----- to<String> support -----
@@ -159,7 +159,7 @@ public abstract class Utils
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzValue.getSupport().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 
 
@@ -170,6 +170,8 @@ public abstract class Utils
         {
         public enum Step {Get, Increment, Decrement, AssignOld, AssignNew, Set}
 
+        public static Step[] INC = {Step.Get, Step.Increment, Step.AssignNew};
+        public static Step[] DEC = {Step.Get, Step.Decrement, Step.AssignNew};
         public static Step[] PRE_INC = {Step.Get, Step.Increment, Step.AssignNew, Step.Set};
         public static Step[] POST_INC = {Step.Get, Step.Increment, Step.AssignOld, Step.Set};
         public static Step[] PRE_DEC = {Step.Get, Step.Decrement, Step.AssignNew, Step.Set};
@@ -316,7 +318,7 @@ public abstract class Utils
                 ObjectHandle hThis = frameCaller.getThis();
                 String sProp = ((PropertyHandle) handle).m_property.getName();
 
-                switch (hThis.getOpSupport().getPropertyValue(
+                switch (hThis.getTemplate().getPropertyValue(
                     frameCaller, hThis, sProp, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
@@ -381,7 +383,7 @@ public abstract class Utils
                     ObjectHandle hThis = frameCaller.getThis();
                     String sProp = ((PropertyHandle) handle).m_property.getName();
 
-                    switch (hThis.getOpSupport().getPropertyValue(
+                    switch (hThis.getTemplate().getPropertyValue(
                         frameCaller, hThis, sProp, Frame.RET_LOCAL))
                         {
                         case Op.R_NEXT:

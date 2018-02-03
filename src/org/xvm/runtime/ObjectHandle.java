@@ -87,6 +87,14 @@ public abstract class ObjectHandle
         }
 
     /**
+     * @return the underlying template for this handle
+     */
+    public ClassTemplate getTemplate()
+        {
+        return m_clazz.getTemplate();
+        }
+
+    /**
      * @return the OpSupport for the inception type of this handle
      */
     public OpSupport getOpSupport()

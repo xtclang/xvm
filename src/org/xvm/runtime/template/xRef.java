@@ -347,7 +347,7 @@ public class xRef
                     return ((RefHandle) m_hDelegate).get(frame, iReturn);
 
                 case REF_PROPERTY:
-                    return m_hDelegate.getOpSupport().getPropertyValue(
+                    return m_hDelegate.getTemplate().getPropertyValue(
                         frame, m_hDelegate, m_sName, iReturn);
 
                 default: // assertion m_iVar >= 0
@@ -373,7 +373,7 @@ public class xRef
                     return ((RefHandle) m_hDelegate).set(frame, handle);
 
                 case REF_PROPERTY:
-                    return m_hDelegate.getOpSupport().setPropertyValue(
+                    return m_hDelegate.getTemplate().setPropertyValue(
                         frame, m_hDelegate, m_sName, handle);
 
                 default: // assertion m_iVar >= 0

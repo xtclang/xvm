@@ -158,8 +158,8 @@ public class Invoke_1N
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? hTarget.getOpSupport().invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
-            : hTarget.getOpSupport().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
+            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahVar, m_anRetValue)
+            : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
     private int m_nArgValue;

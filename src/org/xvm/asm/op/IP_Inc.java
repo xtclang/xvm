@@ -76,7 +76,7 @@ public class IP_Inc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getOpSupport().invokePostInc(
+        return hTarget.getTemplate().invokePostInc(
             frame, hTarget, sProperty, Frame.RET_UNUSED);
         }
     }

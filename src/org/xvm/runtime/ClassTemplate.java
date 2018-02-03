@@ -413,6 +413,14 @@ public abstract class ClassTemplate
         return f_struct.toString();
         }
 
+    // ---- OpSupport implementation ---------------------------------------------------------------
+
+    @Override
+    public ClassTemplate getTemplate()
+        {
+        return this;
+        }
+
     // ----- constructions  ------------------------------------------------------------------------
 
     /**
@@ -511,15 +519,87 @@ public abstract class ClassTemplate
         }
 
 
-    // ---- OpSupport implementation ---------------------------------------------------------------
+    // ----- invocations ---------------------------------------------------------------------------
 
-    @Override
-    public ClassTemplate getTemplate()
+    /**
+     * Invoke a method with zero or one return value on the specified target.
+     *
+     * @param frame    the current frame
+     * @param chain    the CallChain representing the target method
+     * @param hTarget  the target handle
+     * @param ahVar    the invocation parameters
+     * @param iReturn  the register id to place the result of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
+    public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget,
+                        ObjectHandle[] ahVar, int iReturn)
         {
-        return this;
+        return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
-    @Override
+    /**
+     * Invoke a method with a return value of Tuple.
+     *
+     * @param frame    the current frame
+     * @param chain    the CallChain representing the target method
+     * @param hTarget  the target handle
+     * @param ahVar    the invocation parameters
+     * @param iReturn  the register id to place the result of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
+    public int invokeT(Frame frame, CallChain chain, ObjectHandle hTarget,
+                        ObjectHandle[] ahVar, int iReturn)
+        {
+        return frame.invokeT(chain, 0, hTarget, ahVar, iReturn);
+        }
+
+    /**
+     * Invoke a method with more than one return value.
+     *
+     * @param frame     the current frame
+     * @param chain     the CallChain representing the target method
+     * @param hTarget   the target handle
+     * @param ahVar     the invocation parameters
+     * @param aiReturn  the array of register ids to place the results of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
+    public int invokeN(Frame frame, CallChain chain, ObjectHandle hTarget,
+                        ObjectHandle[] ahVar, int[] aiReturn)
+        {
+        return frame.invokeN(chain, 0, hTarget, ahVar, aiReturn);
+        }
+
+    /**
+     * Invoke a native method with exactly one argument and zero or one return value.
+     *
+     * @param frame    the current frame
+     * @param method   the target method
+     * @param hTarget  the target handle
+     * @param hArg     the invocation arguments
+     * @param iReturn  the register id to place the result of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
+    public int invokeNative1(Frame frame, MethodStructure method,
+                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        throw new IllegalStateException("Unknown method: " + method + " on " + this);
+        }
+
+    /**
+     * Invoke a native method with zero or more than one argument and zero or one return value.
+     *
+     * @param frame    the current frame
+     * @param method   the target method
+     * @param hTarget  the target handle
+     * @param ahArg    the invocation arguments
+     * @param iReturn  the register id to place the result of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
@@ -539,8 +619,17 @@ public abstract class ClassTemplate
         throw new IllegalStateException("Unknown method: (" + f_sName + ")." + method);
         }
 
-    // invokeNative with zero or more arguments and a Tuple return value
-    // return one of the Op.R_ values
+    /**
+     * Invoke a native method with any number of argument and return value of a Tuple.
+     *
+     * @param frame    the current frame
+     * @param method   the target method
+     * @param hTarget  the target handle
+     * @param ahArg    the invocation arguments
+     * @param iReturn  the register id to place the resulting Tuple into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
     public int invokeNativeT(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
@@ -618,22 +707,37 @@ public abstract class ClassTemplate
             }
         }
 
-
-    @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    /**
+     * Invoke a native method with any number of arguments and more than one return value.
+     *
+     * @param frame     the current frame
+     * @param method    the target method
+     * @param hTarget   the target handle
+     * @param ahArg     the invocation arguments
+     * @param aiReturn  the array of register ids to place the results of invocation into
+     *
+     * @return one of the {@link Op#R_CALL}, {@link Op#R_EXCEPTION}, or {@link Op#R_BLOCK} values
+     */
+    public int invokeNativeNN(Frame frame, MethodStructure method,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        return new Utils.IncDec(Utils.IncDec.PRE_INC,
-            this, hTarget, sPropName, iReturn).doNext(frame);
+        throw new IllegalStateException("Unknown method: " + method + " on " + this);
         }
 
-    @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
-        {
-        return new Utils.IncDec(Utils.IncDec.POST_INC,
-            this, hTarget, sPropName, iReturn).doNext(frame);
-        }
 
-    @Override
+    // ----- property operations -------------------------------------------------------------------
+
+    /**
+     * Retrieve a property value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         if (sPropName == null)
@@ -658,9 +762,19 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
         }
 
-    @Override
+    /**
+     * Retrieve a field value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param property   the PropertyStructure representing the property
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int getFieldValue(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, int iReturn)
+                              PropertyStructure property, int iReturn)
         {
         if (property == null)
             {
@@ -706,8 +820,19 @@ public abstract class ClassTemplate
             : frame.assignValue(iReturn, hValue);
         }
 
-    @Override
-    public int setPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    /**
+     * Set a property value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hValue     the new value
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int setPropertyValue(Frame frame, ObjectHandle hTarget,
+                                 String sPropName, ObjectHandle hValue)
         {
         if (sPropName == null)
             {
@@ -746,9 +871,19 @@ public abstract class ClassTemplate
         return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
         }
 
-    @Override
+    /**
+     * Set a field value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param property   the PropertyStructure representing the property
+     * @param hValue     the new value
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     public int setFieldValue(Frame frame, ObjectHandle hTarget,
-                             PropertyStructure property, ObjectHandle hValue)
+                              PropertyStructure property, ObjectHandle hValue)
         {
         if (property == null)
             {
@@ -766,6 +901,106 @@ public abstract class ClassTemplate
 
         hThis.m_mapFields.put(property.getName(), hValue);
         return Op.R_NEXT;
+        }
+
+    /**
+     * Invoke a native property "get" operation.
+     *
+     * @param frame     the current frame
+     * @param property  the PropertyStructure representing the property
+     * @param hTarget   the target handle
+     * @param iReturn   the register id to place the result of invocation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+        {
+        throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
+        }
+
+    /**
+     * Invoke a native property "set" operation.
+     *
+     * @param frame     the current frame
+     * @param property  the PropertyStructure representing the property
+     * @param hTarget   the target handle
+     * @param hValue    the new property value
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
+        {
+        throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
+        }
+
+    /**
+     * Increment the property value and retrieve the new value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        return iReturn == Frame.RET_UNUSED
+            ? new Utils.IncDec(Utils.IncDec.INC, this, hTarget, sPropName, iReturn).doNext(frame)
+            : new Utils.IncDec(Utils.IncDec.PRE_INC, this, hTarget, sPropName, iReturn).doNext(frame);
+        }
+
+    /**
+     * Retrieve the property value and then increment it.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        return new Utils.IncDec(Utils.IncDec.POST_INC, this, hTarget, sPropName, iReturn).doNext(frame);
+        }
+
+    /**
+     * Decrement the property value and retrieve the new value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        return iReturn == Frame.RET_UNUSED
+            ? new Utils.IncDec(Utils.IncDec.DEC, this, hTarget, sPropName, iReturn).doNext(frame)
+            : new Utils.IncDec(Utils.IncDec.PRE_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
+        }
+
+    /**
+     * Retrieve the property value and then decrement it.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param iReturn    the register id to place the results of operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+        {
+        return new Utils.IncDec(Utils.IncDec.POST_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
 

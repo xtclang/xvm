@@ -25,6 +25,8 @@ public class PIP_PreInc
      * @param nPropId  the property to increment
      * @param nTarget  the object on which the property exists
      * @param nRet     the location to store the pre-incremented value
+     *
+     * @deprecated
      */
     public PIP_PreInc(int nPropId, int nTarget, int nRet)
         {
@@ -70,7 +72,7 @@ public class PIP_PreInc
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        return hTarget.getOpSupport().invokePreInc(
+        return hTarget.getTemplate().invokePreInc(
                 frame, hTarget, constProperty.getName(), m_nRetValue);
         }
     }

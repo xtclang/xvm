@@ -768,6 +768,8 @@ public abstract class Op
             case OP_P_VAR:       return new P_Var       (in, aconst);
             case OP_P_REF:       return new P_Ref       (in, aconst);
 
+            case OP_PIP_INC:     return new PIP_Inc     (in, aconst);
+            case OP_PIP_DEC:     return new PIP_Dec     (in, aconst);
             case OP_PIP_INCA:    return new PIP_PostInc (in, aconst);
             case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
 
@@ -922,10 +924,17 @@ public abstract class Op
             case OP_P_VAR:       return "P_VAR";
             case OP_P_REF:       return "P_REF";
             case OP_IP_INC:      return "IP_INC";
+            case OP_IP_DEC:      return "IP_DEC";
             case OP_IP_INCA:     return "IP_INCA";
+            case OP_IP_DECA:     return "IP_DECA";
             case OP_IP_INCB:     return "IP_INCB";
+            case OP_IP_DECB:     return "IP_DECB";
+            case OP_PIP_INC:     return "PIP_INC";
+            case OP_PIP_DEC:     return "PIP_DEC";
             case OP_PIP_INCA:    return "PIP_INCA";
+            case OP_PIP_DECA:    return "PIP_DECA";
             case OP_PIP_INCB:    return "PIP_INCB";
+            case OP_PIP_DECB:    return "PIP_DECB";
             case OP_I_GET:       return "I_GET";
             case OP_I_SET:       return "I_SET";
             case OP_I_VAR:       return "I_VAR";

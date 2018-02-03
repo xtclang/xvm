@@ -107,13 +107,13 @@ public class L_Set
             if (isProperty(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-                Frame.Continuation stepNext = frameCaller -> hTarget.getOpSupport().
+                Frame.Continuation stepNext = frameCaller -> hTarget.getTemplate().
                     setPropertyValue(frameCaller, hTarget, sProperty, ahValue[0]);
 
                 return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
                 }
 
-            return hTarget.getOpSupport().setPropertyValue(frame, hTarget, sProperty, hValue);
+            return hTarget.getTemplate().setPropertyValue(frame, hTarget, sProperty, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

@@ -98,7 +98,7 @@ public class AnnotationSupport
         int cVars = chain.getTop().getMaxVars();
         ObjectHandle[] ahVar = new ObjectHandle[cVars];
 
-        return f_support.invoke1(frame, chain, hTarget, ahVar, iReturn);
+        return getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn);
         }
 
     // natural invocation with one arg
@@ -111,7 +111,7 @@ public class AnnotationSupport
         ObjectHandle[] ahVar = new ObjectHandle[cVars];
         ahVar[0] = hArg;
 
-        return f_support.invoke1(frame, chain, hTarget, ahVar, iReturn);
+        return getTemplate().invoke1(frame, chain, hTarget, ahVar, iReturn);
         }
 
 
