@@ -201,7 +201,6 @@ public class Compiler
             setStage(Stage.Loaded);
             }
 
-
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
         // in one pass, then store it off in a list to tackle next time
         if (!alreadyReached(Stage.Resolving))

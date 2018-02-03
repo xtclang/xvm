@@ -226,22 +226,14 @@ public class PropertyDeclarationStatement
             if (prop.hasInitialValue())
                 {
                 TypeConstant type = prop.getType();
-                if (type.containsUnresolved())
-                    {
-                    listRevisit.add(this);
-                    return this;
-                    }
+                assert !type.containsUnresolved();
 
                 // the initial value has to be resolved; we have to decide either to use the expression
                 // to create a constant value or an initializer function
                 if (value.isCompletable() && value.isConstant())
                     {
                     Constant constValue = value.toConstant();
-                    if (constValue.containsUnresolved() || constValue.getType().containsUnresolved())
-                        {
-                        listRevisit.add(this);
-                        return this;
-                        }
+                    assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
                     prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
                     }
                 else

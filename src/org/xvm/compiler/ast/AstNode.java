@@ -6,6 +6,7 @@ import java.io.StringWriter;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -20,8 +21,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.compiler.*;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Source;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -319,6 +320,7 @@ public abstract class AstNode
      */
     protected AstNode registerStructures(ErrorListener errs)
         {
+        ensureReached(Stage.Initial);
         setStage(Stage.Registering);
 
         ChildIterator children = children();
@@ -335,7 +337,6 @@ public abstract class AstNode
             }
 
         setStage(Stage.Registered);
-
         return this;
         }
 
@@ -427,26 +428,105 @@ public abstract class AstNode
      */
     public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
-        // TODO this (or perhaps MethodDeclarationStatement sub-class) has to get everything "caught up" to this point!
-
+        ensureReached(Stage.Resolved);
         setStage(Stage.Validating);
 
-        ChildIterator children = children();
-        for (AstNode node : children)
+        // it's possible that there are children whose stages have been deferred until this point;
+        // quick scan children to determine oldest stage, and if any stages were deferred, then
+        // recreate the various compiler stages here
+        Stage stageOldest = null;
+        for (AstNode node : children())
             {
-            // don't visit children that have already successfully resolved
-            if (!node.alreadyReached(Stage.Validated))
+            Stage stage = node.getStage();
+            if (stageOldest == null)
                 {
-                AstNode nodeNew = node.validateExpressions(listRevisit, errs);
-                if (node != nodeNew)
+                stageOldest = stage;
+                }
+            else if (stage.compareTo(stageOldest) < 0)
+                {
+                stageOldest = stage;
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Registered) < 0)
+            {
+            // compiler stage 1: generateInitialFileStructure()
+            ChildIterator children = children();
+            for (AstNode node : children)
+                {
+                if (!node.alreadyReached(Stage.Registered))
                     {
-                    children.replaceWith(nodeNew);
+                    AstNode nodeNew = node.registerStructures(errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
+                    }
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Resolved) < 0)
+            {
+            // compiler stage 2: resolveNames()
+            List<AstNode> listDeferred = new ArrayList<>();
+            ChildIterator children     = children();
+            for (AstNode node : children)
+                {
+                if (node.alreadyReached(Stage.Registered) && !node.alreadyReached(Stage.Resolved))
+                    {
+                    AstNode nodeNew = node.resolveNames(listDeferred, errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
+                    }
+                }
+
+            for (int cTries = 20; !listDeferred.isEmpty() && cTries > 0; --cTries)
+                {
+                List listDeferredAgain = new ArrayList<>();
+                for (AstNode node : listDeferred)
+                    {
+                    AstNode nodeNew = node.resolveNames(listDeferredAgain, errs);
+                    if (node != nodeNew)
+                        {
+                        node.getParent().replaceChild(node, nodeNew);
+                        }
+                    }
+                listDeferred = listDeferredAgain;
+                }
+
+            if (!listDeferred.isEmpty())
+                {
+                for (AstNode node : listDeferred)
+                    {
+                    node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
+                            node.getComponent().getIdentityConstant().toString());
+                    }
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Validated) < 0)
+            {
+            ChildIterator children = children();
+            for (AstNode node : children)
+                {
+                // don't visit children that have already successfully validated, and since it's
+                // possible that some children just got registered and resolved in this stage, don't
+                // try to validate any child that isn't caught up to this stage
+                // (see MethodDeclarationStatement.validateExpressions())
+                if (node.alreadyReached(Stage.Resolved) && !node.alreadyReached(Stage.Validated))
+                    {
+                    AstNode nodeNew = node.validateExpressions(listRevisit, errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
                     }
                 }
             }
 
         setStage(Stage.Validated);
-
         return this;
         }
 
@@ -778,8 +858,15 @@ public abstract class AstNode
                 {
                 try
                     {
-                    fields[i] = clzTry.getDeclaredField(names[i]);
-                    assert fields[i] != null;
+                    Field field = clzTry.getDeclaredField(names[i]);
+                    assert field != null;
+                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class))
+                        {
+                        throw new IllegalStateException("unsupported field type "
+                                + field.getType().getSimpleName() + " on field "
+                                + clzTry.getSimpleName() + '.' + names[i]);
+                        }
+                    fields[i] = field;
                     continue NextField;
                     }
                 catch (NoSuchFieldException e)

@@ -396,11 +396,7 @@ public class PropertyStructure
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        // the value should have already been resolved by this point
-        assert !m_fHasValue;
-
         super.registerConstants(pool);
-
         m_type = (TypeConstant) pool.register(m_type);
         }
 
@@ -408,6 +404,9 @@ public class PropertyStructure
     protected void assemble(DataOutput out)
     throws IOException
         {
+        // the value should have already been resolved by this point
+        assert !m_fHasValue;
+
         super.assemble(out);
 
         out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());

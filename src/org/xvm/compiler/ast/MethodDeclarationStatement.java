@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -287,7 +289,8 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.resolveNames(listRevisit, errs);
+        AstNode nodeResult = super.resolveNames(listRevisit, errs);
+        assert nodeResult == this;
 
         if (getComponent() instanceof MethodStructure)
             {
@@ -305,69 +308,75 @@ public class MethodDeclarationStatement
     @Override
     public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
-        MethodStructure method = (MethodStructure) getComponent();
-        if (body == null)
+        ensureReached(Stage.Validated);
+        if (!alreadyReached(Stage.Emitted))
             {
-            // it's abstract
-            method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
-            }
-        else
-            {
-            Code code = method.createCode();
-            String sPath = method.getIdentityConstant().getPathString();
-            try
+            setStage(Stage.Emitting);
+
+            MethodStructure method = (MethodStructure) getComponent();
+            if (body == null)
                 {
-                ErrorList errList = (ErrorList) errs; // TODO: temporary
-                errList.clear();
-
-                body.compileMethod(code, errs);
-
-                // TODO: temporary
-                if (errList.getErrors().isEmpty())
-                    {
-                    if (sPath.startsWith("Test"))
-                        {
-                        if (sPath.contains("ExpectedFailure"))
-                            {
-                            System.err.println("Compilation should have failed: " + sPath);
-                            }
-                        else
-                            {
-                            System.out.println("Successfully compiled: " + sPath);
-                            }
-                        }
-                    }
-                else
-                    {
-                    if (sPath.startsWith("Test"))
-                        {
-                        if (sPath.contains("ExpectedFailure"))
-                            {
-                            System.out.println("Successfully failed compilation: " + sPath);
-                            }
-                        else
-                            {
-                            System.err.println("Compilation error: " + sPath);
-                            errList.getErrors().forEach(System.err::println);
-                            }
-                        }
-
-                    if (System.getProperty("GG") != null)
-                        {
-                        errList.clear();
-                        method.setNative(true);
-                        }
-                    }
+                // it's abstract
+                method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
                 }
-            catch (UnsupportedOperationException e) // TODO temporary
+            else
                 {
-                String sMsg = e.getMessage();
-                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                        + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
-                method.setNative(true);
-                if (sPath.startsWith("TestCompiler"))
+                Code code = method.createCode();
+                String sPath = method.getIdentityConstant().getPathString();
+                try
                     {
-                    System.err.println("Compilation error: " + sPath + " " + sMsg);
+                    ErrorList errList = (ErrorList) errs; // TODO: temporary
+                    errList.clear();
+
+                    body.compileMethod(code, errs);
+
+                    // TODO: temporary
+                    if (errList.getErrors().isEmpty())
+                        {
+                        if (sPath.startsWith("Test"))
+                            {
+                            if (sPath.contains("ExpectedFailure"))
+                                {
+                                System.err.println("Compilation should have failed: " + sPath);
+                                }
+                            else
+                                {
+                                System.out.println("Successfully compiled: " + sPath);
+                                }
+                            }
+                        }
+                    else
+                        {
+                        if (sPath.startsWith("Test"))
+                            {
+                            if (sPath.contains("ExpectedFailure"))
+                                {
+                                System.out.println("Successfully failed compilation: " + sPath);
+                                }
+                            else
+                                {
+                                System.err.println("Compilation error: " + sPath);
+                                errList.getErrors().forEach(System.err::println);
+                                }
+                            }
+
+                        if (System.getProperty("GG") != null)
+                            {
+                            errList.clear();
+                            method.setNative(true);
+                            }
+                        }
+                    }
+                catch (UnsupportedOperationException e) // TODO temporary
+                    {
+                    String sMsg = e.getMessage();
+                    log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
+                            + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
+                    method.setNative(true);
+                    if (sPath.startsWith("TestCompiler"))
+                        {
+                        System.err.println("Compilation error: " + sPath + " " + sMsg);
+                        }
                     }
                 }
             }

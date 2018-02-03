@@ -134,12 +134,17 @@ public class CommandLine
         checkCompilerErrors();
         checkTerminalFailure();
 
-        // syntax check
+        // dependency resolution
         resolveDependencies();
         checkCompilerErrors();
         checkTerminalFailure();
 
-        // dependency resolution
+        // expression resolution
+        validateExpressions();
+        checkCompilerErrors();
+        checkTerminalFailure();
+
+        // assembling the actual code
         generateCode();
         checkCompilerErrors();
         checkTerminalFailure();
@@ -684,13 +689,57 @@ public class CommandLine
             }
         }
 
+    /**
+     * Resolve dependencies, both within and among modules, including among multiple modules that
+     * are being compiled at the same time.
+     */
+    protected void validateExpressions()
+        {
+        int cTries = 0;
+        do
+            {
+            boolean fDone = true;
+            for (Compiler compiler : modulesByName.values())
+                {
+                fDone &= compiler.validateExpressions();
+                }
+            if (fDone)
+                {
+                return;
+                }
+            }
+        while (++cTries < 0x3F);
+
+        // something couldn't get resolved; must be a bug in the compiler
+        for (Compiler compiler : modulesByName.values())
+            {
+            compiler.logRemainingDeferredAsErrors();
+            }
+        }
+
     /*** After names/dependencies are resolved, generate the actual code.
      */
     protected void generateCode()
         {
+        int cTries = 0;
+        do
+            {
+            boolean fDone = true;
+            for (Compiler compiler : modulesByName.values())
+                {
+                fDone &= compiler.generateCode();
+                }
+            if (fDone)
+                {
+                return;
+                }
+            }
+        while (++cTries < 0x3F);
+
+        // something couldn't get resolved; must be a bug in the compiler
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.generateCode();
+            compiler.logRemainingDeferredAsErrors();
             }
         }
 
