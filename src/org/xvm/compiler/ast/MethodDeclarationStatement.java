@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -61,6 +60,8 @@ public class MethodDeclarationStatement
         {
         super(lStartPos, lEndPos);
 
+        assert name != null;
+
         this.condition    = condition;
         this.modifiers    = modifiers;
         this.annotations  = annotations;
@@ -76,6 +77,14 @@ public class MethodDeclarationStatement
         this.doc          = doc;
         }
 
+    /**
+     * Create a MethodDeclarationStatement that turns an expression into a MethodStructure. This is
+     * used, for example, by initializers.
+     *
+     * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
+     *                compile into
+     * @param expr    the Expression that the resulting method must evaluate as its one return value
+     */
     public MethodDeclarationStatement(MethodStructure struct, Expression expr)
         {
         super(expr.getStartPosition(), expr.getEndPosition());
@@ -102,9 +111,20 @@ public class MethodDeclarationStatement
 
     public String getName()
         {
-        return keyword == null
-                ? name.getValue().toString()
-                : keyword.getId().TEXT;
+        if (keyword != null)
+            {
+            return keyword.getId().TEXT;
+            }
+
+        if (name != null)
+            {
+            return name.getValue().toString();
+            }
+
+        MethodStructure struct = (MethodStructure) getComponent();
+        return struct == null
+                ? "???"
+                : struct.getName();
         }
 
     @Override
@@ -527,6 +547,14 @@ public class MethodDeclarationStatement
 
     public String toSignatureString()
         {
+        if (name == null)
+            {
+            MethodStructure struct = (MethodStructure) getComponent();
+            return struct == null
+                    ? "?()"
+                    : struct.getIdentityConstant().getValueString();
+            }
+
         StringBuilder sb = new StringBuilder();
 
         if (modifiers != null)

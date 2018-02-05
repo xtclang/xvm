@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
