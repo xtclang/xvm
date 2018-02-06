@@ -804,6 +804,12 @@ public class CommandLine
             out("xtc: dump modules:");
             for (Map.Entry<File, Node> entry : modules.entrySet())
                 {
+                if (modules.size() > 1 && entry.getValue().name().equals(Constants.ECSTASY_MODULE))
+                    {
+                    // skip the Ecstasy module if we're compiling multiple modules
+                    continue;
+                    }
+
                 out(entry.getValue());
                 }
             }
@@ -812,6 +818,12 @@ public class CommandLine
             out("xtc: dump modules by name:");
             for (Map.Entry<String, Compiler> entry : modulesByName.entrySet())
                 {
+                if (modulesByName.size() > 1 && entry.getKey().equals(Constants.ECSTASY_MODULE))
+                    {
+                    // skip the Ecstasy module if we're compiling multiple modules
+                    continue;
+                    }
+
                 Compiler compiler = entry.getValue();
                 out("Compiler: " + compiler);
                 out();

@@ -224,7 +224,7 @@ public class Compiler
             }
 
         // when there is nothing left deferred, the resolution stage is completed
-        boolean fDone = getDeferred().isEmpty();
+        boolean fDone = getDeferred().isEmpty() && !m_errs.isAbortDesired();
         if (fDone)
             {
             // force the reregistration of constants after the names are resolved to eliminate

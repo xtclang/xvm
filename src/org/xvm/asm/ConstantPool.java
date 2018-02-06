@@ -102,46 +102,45 @@ public class ConstantPool
         // with the type constant that the typedef refers to, removing a level of indirection
         constant = constant.simplify();
 
-        // check if the Constant is already registered
-        boolean fRegisterRecursively = false;
+        // constants that contain unresolved information need to be resolved before they are
+        // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
+        // experienced one or more name resolution errors, and so there could still be unresolved
+        // constants (just ignore them here; they should have been logged as errors already)
         if (constant.containsUnresolved())
             {
-            if (m_fRecurseReg)
+            return constant;
+            }
+
+        // check if the Constant is already registered
+        final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
+        final Constant constantOld = mapConstants.get(constant);
+        boolean fRegisterRecursively = false;
+        if (constantOld == null)
+            {
+            if (constant.getContaining() != this)
                 {
-                throw new IllegalStateException("unresolved constant: " + constant);
+                constant = constant.adoptedBy(this);
                 }
+
+            // add the Constant
+            constant.setPosition(m_listConst.size());
+            m_listConst.add(constant);
+            mapConstants.put(constant, constant);
+
+            // also allow the constant to be looked up by a locator
+            Object oLocator = constant.getLocator();
+            if (oLocator != null)
+                {
+                ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
+                }
+
+            // make sure that the recursively referenced constants are all
+            // registered (and that they are aware of their being referenced)
+            fRegisterRecursively = true;
             }
         else
             {
-            final HashMap<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
-            final Constant constantOld = mapConstants.get(constant);
-            if (constantOld == null)
-                {
-                if (constant.getContaining() != this)
-                    {
-                    constant = constant.adoptedBy(this);
-                    }
-
-                // add the Constant
-                constant.setPosition(m_listConst.size());
-                m_listConst.add(constant);
-                mapConstants.put(constant, constant);
-
-                // also allow the constant to be looked up by a locator
-                Object oLocator = constant.getLocator();
-                if (oLocator != null)
-                    {
-                    ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    }
-
-                // make sure that the recursively referenced constants are all
-                // registered (and that they are aware of their being referenced)
-                fRegisterRecursively = true;
-                }
-            else
-                {
-                constant = constantOld;
-                }
+            constant = constantOld;
             }
 
         if (m_fRecurseReg)

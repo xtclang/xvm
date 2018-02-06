@@ -2268,8 +2268,8 @@ public abstract class TypeConstant
         ConstantPool pool       = getConstantPool();
         for (ParamInfo param : mapTypeParams.values())
             {
-            String sParam = param.getName();
-            PropertyInfo prop = mapProps.get(sParam);
+            String       sParam = param.getName();
+            PropertyInfo prop   = mapProps.get(sParam);
             if (prop == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,

@@ -210,6 +210,12 @@ public class PropertyDeclarationStatement
         }
 
     @Override
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        return super.resolveNames(listRevisit, errs);
+        }
+
+    @Override
     public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Validated))
