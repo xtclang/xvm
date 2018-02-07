@@ -1741,7 +1741,7 @@ public abstract class TypeConstant
                 PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
                 if (propinfo != null)
                     {
-                    mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
+                    mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue(), errs));
                     }
                 }
 
@@ -1750,7 +1750,7 @@ public abstract class TypeConstant
                 PropertyInfo propinfo = mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue());
                 if (propinfo != null)
                     {
-                    mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue()));
+                    mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue(), errs));
                     }
                 }
 
@@ -1976,7 +1976,7 @@ public abstract class TypeConstant
                         continue;
                         }
 
-                    if (prop.isStatic())
+                    if (fStatic)
                         {
                         // the only method allowed under a static property is the initializer
                         todoLogError("static property cannot have custom code");
@@ -2017,7 +2017,7 @@ public abstract class TypeConstant
                         }
 
                     // regardless of what the code does, there is custom code in the property
-                    fCustomCode = !method.isAbstract();
+                    fCustomCode = !method.isAbstract() && !method.isStatic();
                     }
                 }
             }
@@ -2155,11 +2155,11 @@ public abstract class TypeConstant
             fAbstract = fHasAbstract;
             }
 
-        // TODO add fStatic, fRW, initial value/initializer
         return new PropertyInfo(prop.getIdentityConstant(),
                 prop.getType().resolveGenerics(resolver), // TODO do we want to resolve auto-narrowing as well?
-                fRO, toArray(listPropAnno), toArray(listRefAnno),
-                fCustomCode, fField, fAbstract, fHasOverride);
+                fRO, fRW, toArray(listPropAnno), toArray(listRefAnno),
+                fCustomCode, fField, fAbstract, fStatic, fHasOverride,
+                prop.getInitialValue(), methodInit.getIdentityConstant());
         }
 
     /**

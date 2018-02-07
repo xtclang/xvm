@@ -2,8 +2,10 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 
 
 /**
@@ -26,23 +28,28 @@ public class PropertyInfo
      * @param fAbstract
      * @param fTrailingOverride
      */
-    public PropertyInfo(PropertyConstant constId, TypeConstant type, boolean fRO,
+    public PropertyInfo(PropertyConstant constId, TypeConstant type, boolean fRO, boolean fRW,
             Annotation[] aPropAnno, Annotation[] aRefAnno, boolean fCustomCode, boolean fReqField,
-            boolean fAbstract, boolean fTrailingOverride)
+            boolean fAbstract, boolean fConstant, boolean fTrailingOverride,
+            Constant constInitVal, MethodConstant constInitFunc)
         {
         assert constId != null;
         assert type != null;
 
-        m_constId   = constId;
-        m_type      = type;
-        m_paraminfo = null;
-        m_fRO       = fRO;
-        m_aPropAnno = TypeInfo.validateAnnotations(aPropAnno);
-        m_aRefAnno  = TypeInfo.validateAnnotations(aRefAnno);
-        m_fCustom   = fCustomCode;
-        m_fField    = fReqField;
-        m_fAbstract = fAbstract;
-        m_fOverride = fTrailingOverride;
+        m_constId       = constId;
+        m_type          = type;
+        m_paraminfo     = null;
+        m_fRO           = fRO;
+        m_fRW           = fRW;
+        m_aPropAnno     = TypeInfo.validateAnnotations(aPropAnno);
+        m_aRefAnno      = TypeInfo.validateAnnotations(aRefAnno);
+        m_fCustom       = fCustomCode;
+        m_fField        = fReqField;
+        m_fAbstract     = fAbstract;
+        m_fConstant     = fConstant;
+        m_fOverride     = fTrailingOverride;
+        m_constInitVal  = constInitVal;
+        m_constInitFunc = constInitFunc;
         }
 
     /**
@@ -55,16 +62,20 @@ public class PropertyInfo
         {
         ConstantPool pool = constId.getConstantPool();
 
-        m_constId   = constId;
-        m_type      = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
-        m_paraminfo = param;
-        m_fRO       = true;
-        m_aPropAnno = Annotation.NO_ANNOTATIONS;
-        m_aRefAnno  = Annotation.NO_ANNOTATIONS;
-        m_fCustom   = false;
-        m_fField    = false;
-        m_fAbstract = false;
-        m_fOverride = false;
+        m_constId       = constId;
+        m_type          = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
+        m_paraminfo     = param;
+        m_fRO           = true;
+        m_fRW           = false;
+        m_aPropAnno     = Annotation.NO_ANNOTATIONS;
+        m_aRefAnno      = Annotation.NO_ANNOTATIONS;
+        m_fCustom       = false;
+        m_fField        = false;
+        m_fAbstract     = false;
+        m_fConstant     = false;
+        m_fOverride     = false;
+        m_constInitVal  = null;
+        m_constInitFunc = null;
         }
 
     /**
@@ -72,17 +83,23 @@ public class PropertyInfo
      * PropertyInfo.
      *
      * @param that  a super-type's PropertyInfo
+     * @param errs  the error list to log any conflicts to
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo combineWithSuper(PropertyInfo that)
+    public PropertyInfo combineWithSuper(PropertyInfo that, ErrorListener errs)
         {
+        assert that != null;
+        assert errs != null;
+        assert this.getName().equals(that.getName());
+
         if (this.isTypeParam() || that.isTypeParam())
             {
             if (this.isTypeParam() ^ that.isTypeParam())
                 {
-                throw new IllegalStateException(
+                todoLogError(
                         "cannot combine PropertyInfo objects if either represents a type parameter");
+                return this;
                 }
 
             if (this.getType().isA(that.getType()))
@@ -95,26 +112,47 @@ public class PropertyInfo
                 }
             else
                 {
-                // TODO ultimately, if we discover that such a thing can ever happen, could we "merge" or union the types?
-                throw new IllegalStateException("incompatible type params: "
-                    + this.getType().getValueString() + ", "
-                    + that.getType().getValueString());
+                // right now, this is treated as an error; theoretically, we could "merge" or union
+                // the types
+                todoLogError("incompatible type params for " + getName() + ": "
+                        + this.getType().getValueString() + ", "
+                        + that.getType().getValueString());
+                return this;
                 }
             }
 
-        assert this.getName().equals(that.getName());
-        assert this.m_type.isA(that.m_type);
+        // it is illegal to combine anything with a constant
+        if (this.m_fConstant || that.m_fConstant)
+            {
+            todoLogError("constant collision for " + getName());
+            }
+
+        // types must match
+        if (!this.m_type.isA(that.m_type))
+            {
+            todoLogError("type mismatch for " + getName() + ": "
+                    + this.getType().getValueString() + ", "
+                    + that.getType().getValueString());
+            }
+
+        // a non-abstract RO property combined with a RW property ... TODO
+
+        boolean fThisInit = this.m_constInitVal != null || this.m_constInitFunc != null;
 
         return new PropertyInfo(
                 this.m_constId,
                 this.m_type,
                 this.m_fRO & that.m_fRO,                // read-only Ref if both are read-only
+                this.m_fRW | that.m_fRW,                // read-write Ref if either is read-write
                 this.m_aPropAnno,                       // property annotations NOT inherited
                 TypeInfo.mergeAnnotations(this.m_aRefAnno, that.m_aRefAnno),
                 this.m_fCustom | that.m_fCustom,        // custom logic if either is custom
                 this.m_fField | that.m_fField,          // field present if either has field
                 this.m_fAbstract,                       // abstract if the top one is abstract
-                that.m_fOverride);                      // override if the bottom one is override
+                this.m_fConstant,                       // constant if the top one is constant (err)
+                that.m_fOverride,                       // override if the bottom one is override
+                fThisInit ? this.m_constInitVal  : that.m_constInitVal,
+                fThisInit ? this.m_constInitFunc : that.m_constInitFunc);
         }
 
     /**
@@ -145,8 +183,8 @@ public class PropertyInfo
      */
     public PropertyInfo specifyField(boolean fField)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_aPropAnno, m_aRefAnno,
-                m_fCustom, fField, false, m_fOverride);
+        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
+                m_fCustom, fField, false, m_fConstant, m_fOverride, m_constInitVal, m_constInitFunc);
         }
 
     /**
@@ -158,8 +196,8 @@ public class PropertyInfo
      */
     public PropertyInfo specifyOverride(boolean fOverride)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_aPropAnno, m_aRefAnno,
-                m_fCustom, m_fField, m_fAbstract, fOverride);
+        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
+                m_fCustom, m_fField, m_fAbstract, m_fConstant, fOverride, m_constInitVal, m_constInitFunc);
         }
 
     /**
@@ -340,6 +378,18 @@ public class PropertyInfo
         return sb.toString();
         }
 
+    /**
+     * Temporary helper for places in the code that have to log an error.
+     *
+     * @param s  a description of the error
+     *
+     * @return the method never returns; it always throws
+     */
+    private IllegalStateException todoLogError(String s)
+        {
+        throw new IllegalStateException(s);
+        }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -359,9 +409,14 @@ public class PropertyInfo
     private final ParamInfo m_paraminfo;
 
     /**
-     * True iff the property is a Ref; false iff the property is a Var.
+     * True iff the property is explicitly a Ref and not a Var.
      */
     private final boolean m_fRO;
+
+    /**
+     * True iff the property is explicitly a Var and not a Ref.
+     */
+    private final boolean m_fRW;
 
     /**
      * An array of non-virtual annotations on the property declaration itself
@@ -390,7 +445,15 @@ public class PropertyInfo
     private final boolean m_fAbstract;
 
     /**
+     * True iff the property is a constant value.
+     */
+    private final boolean m_fConstant;
+
+    /**
      * True iff the property's last contribution specifies "@Override".
      */
     private final boolean m_fOverride;
+
+    private final Constant m_constInitVal;
+    private final MethodConstant m_constInitFunc;
     }
