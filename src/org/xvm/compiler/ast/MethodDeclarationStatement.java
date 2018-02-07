@@ -13,6 +13,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorList.ErrorInfo;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -341,17 +342,15 @@ public class MethodDeclarationStatement
                 }
             else
                 {
-                Code code = method.createCode();
-                String sPath = method.getIdentityConstant().getPathString();
+                String    sPath    = method.getIdentityConstant().getPathString();
+                Code      code     = method.createCode();
+                ErrorList errsTemp = new ErrorList(10);
                 try
                     {
-                    ErrorList errList = (ErrorList) errs; // TODO: temporary
-                    errList.clear();
-
-                    body.compileMethod(code, errs);
+                    body.compileMethod(code, errsTemp);
 
                     // TODO: temporary
-                    if (errList.getErrors().isEmpty())
+                    if (errsTemp.getErrors().isEmpty())
                         {
                         if (sPath.startsWith("Test"))
                             {
@@ -376,19 +375,32 @@ public class MethodDeclarationStatement
                             else
                                 {
                                 System.err.println("Compilation error: " + sPath);
-                                errList.getErrors().forEach(System.err::println);
+                                errsTemp.getErrors().forEach(System.err::println);
                                 }
                             }
 
-                        if (System.getProperty("GG") != null)
+                        if (System.getProperty("GG") == null)
                             {
-                            errList.clear();
+                            // copy over errors
+                            for (ErrorInfo info : errsTemp.getErrors())
+                                {
+                                errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                                }
+                            }
+                        else
+                            {
                             method.setNative(true);
                             }
                         }
                     }
                 catch (UnsupportedOperationException e) // TODO temporary
                     {
+                    // copy over errors
+                    for (ErrorInfo info : errsTemp.getErrors())
+                        {
+                        errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                        }
+
                     String sMsg = e.getMessage();
                     log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
                             + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));

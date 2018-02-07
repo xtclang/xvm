@@ -91,25 +91,31 @@ module Test
 //    Tuple<Int> fnTupleInt();
 //    Tuple<Tuple> fnTupleTuple();
 //
-// problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
-    @Inject String option;        // TODO figure out where the @Inject ended up
-
-    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
-        {
-        return super.get();
-        }
-
-// problem: constructors are named after the class instead of "construct"
+//    // problem #10 - InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
+//    @Inject String option;
+//
+//    // problem #11 - sig is wrong (shows Void, should be String)
+//    @Inject String option2.get()
+//        {
+//        return super.get();
+//        }
+//
+//    // problem #12 - constructors are named after the class instead of "construct"
 //    class ConstructorTest
 //        {
 //        construct ConstructorTest(Int i) {}
 //        construct ConstructorTest(String s) {} finally {}
 //        }
-
+//
+//    // problem #13 - various return type tests, @Op tests, and conversion tests
 //    Void foo1()
 //        {
 //        }
-
+//
+//    String foo1MissingReturn() // note: this is supposed to generate an error
+//        {
+//        }
+//
 //    String foo1String()
 //        {
 //        return "hello" * 5;
@@ -119,11 +125,7 @@ module Test
 //        {
 //        return 'x' * 5;
 //        }
-
-//    String foo1MissingReturn()
-//        {
-//        }
-
+//
 //    Void foo2()
 //        {
 //        return;
@@ -147,13 +149,6 @@ module Test
 //        return i;
 //        }
 //
-//    Int foo2e()
-//        {
-//        Int i = 0;
-//        i += 1;
-//        return i;
-//        }
-//
 //    String foo3()
 //        {
 //        return "hello";
@@ -168,13 +163,22 @@ module Test
 //        {
 //        return "hello", 0;
 //        }
-
-// needs fix for isA: Tuple<String, Int>.isA(Tuple) == false
+//
+//    // problem #14 - TODO this still fails (AssignmentStatement#emit does not yet implement "+=")
+//    Int foo2e()
+//        {
+//        Int i = 0;
+//        i += 1;
+//        return i;
+//        }
+//
+//    // problem #15 - needs fix for isA: Tuple<String, Int>.isA(Tuple) == false
 //    (String, Int) foo5b()
 //        {
 //        return ("hello", 0);
 //        }
-
+//
+//    // problem #16 - conditional tests
 //    conditional String foo6()
 //        {
 //        return false;
@@ -184,12 +188,20 @@ module Test
 //        {
 //        return true, "hello";
 //        }
-
+//
+//    // problem #17 - operator +
 //    Int foo8(Int a, Int b)
 //        {
 //        return a + b;
 //        }
+//
+    // problem #18 - operator + and auto-conversion of IntLiteral to Int
+    Int foo8()
+        {
+        return 40 + 2;
+        }
 
+//    // problem #19 - while loops
 //    Int foo9(Iterator<Int> iter)
 //        {
 //        Int sum = 0;
@@ -206,10 +218,14 @@ module Test
 //
 //        return sum;
 //        }
-
-//    Test bar()
+//
+//    // problem #20 - "this", auto-narrowing types
+//    class C20
 //        {
-//        return this;
+//        C20 bar()
+//            {
+//            return this;
+//            }
 //        }
 
 //    class C
