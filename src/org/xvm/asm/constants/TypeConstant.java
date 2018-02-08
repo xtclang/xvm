@@ -2159,7 +2159,7 @@ public abstract class TypeConstant
                 prop.getType().resolveGenerics(resolver), // TODO do we want to resolve auto-narrowing as well?
                 fRO, fRW, toArray(listPropAnno), toArray(listRefAnno),
                 fCustomCode, fField, fAbstract, fStatic, fHasOverride,
-                prop.getInitialValue(), methodInit.getIdentityConstant());
+                prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant());
         }
 
     /**
