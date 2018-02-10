@@ -92,6 +92,16 @@
 
 + createConst() processing for Array
 
++ singleton initialization contracts
+    + singletons represented by constants (SingletonConstant)
+    + initialization during the frame construction based on a transient
+      "initialized" flag on the MethodStructure
+    - recursion control
+
+- ClassTemplate - check for @Op for Add, Sub, ...
+
+- Stack overflow
+
 - createConst() processing for Set, Map etc.
 
 - a test for auto-narrowing method invocation

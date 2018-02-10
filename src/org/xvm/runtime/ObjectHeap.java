@@ -1,12 +1,15 @@
 package org.xvm.runtime;
 
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -19,7 +22,7 @@ public class ObjectHeap
     public final TemplateRegistry f_templates;
     public final ConstantPool f_pool;
 
-    Map<Integer, ObjectHandle> m_mapConstants = new HashMap<>();
+    private Map<Integer, ObjectHandle> m_mapConstants = new ConcurrentHashMap<>();
 
     public ObjectHeap(ConstantPool pool, TemplateRegistry templates)
         {
@@ -30,27 +33,52 @@ public class ObjectHeap
     // nValueConstId -- "literal" (Int/String/etc.) Constant known by the ConstantPool
     public ObjectHandle ensureConstHandle(Frame frame, int nValueConstId)
         {
-        return m_mapConstants.computeIfAbsent(nValueConstId, nConstId ->
+        // we cannot use computeIfAbsent, since createConstHandle can be recursive,
+        // and ConcurrentHashMap is not recursion friendly
+        Map<Integer, ObjectHandle> mapConstants = m_mapConstants;
+        ObjectHandle hValue = mapConstants.get(nValueConstId);
+        if (hValue != null)
             {
-            Constant constValue = f_pool.getConstant(nConstId);
-
-            TypeConstant type = getConstType(constValue);
-
-            ClassTemplate template = f_templates.getTemplate(type); // must exist
-
-            ObjectHandle hValue = template.createConstHandle(frame, constValue);
-            if (hValue == null)
-                {
-                throw new IllegalStateException("Invalid constant " + constValue);
-                }
             return hValue;
-            });
+            }
+
+        hValue = createConstHandle(frame, nValueConstId);
+
+        ObjectHandle hValue0 = mapConstants.putIfAbsent(nValueConstId, hValue);
+
+        return hValue0 == null ? hValue : hValue0;
+        }
+
+    private ObjectHandle createConstHandle(Frame frame, int nValueConstId)
+        {
+        Constant constValue = f_pool.getConstant(nValueConstId);
+
+        if (constValue instanceof SingletonConstant)
+            {
+            ObjectHandle hValue = ((SingletonConstant) constValue).getHandle();
+            if (hValue != null)
+                {
+                return hValue;
+                }
+            System.out.println("unresolved " + constValue);
+            }
+
+        TypeConstant type = getConstType(constValue);
+
+        ClassTemplate template = f_templates.getTemplate(type); // must exist
+
+        ObjectHandle hValue = template.createConstHandle(frame, constValue);
+        if (hValue == null)
+            {
+            throw new IllegalStateException("Invalid constant " + constValue);
+            }
+        return hValue;
         }
 
     /**
      * Obtain a canonical type for the specified constant.
      */
-    public TypeConstant getConstType(Constant constValue)
+    protected TypeConstant getConstType(Constant constValue)
         {
         switch (constValue.getFormat())
             {
@@ -100,18 +128,11 @@ public class ObjectHeap
 
             case SingletonConst:
                 {
-                SingletonConstant constEnum = (SingletonConstant) constValue;
-                TypeConstant type = constEnum.getValue().asTypeConstant();
+                IdentityConstant constId = ((SingletonConstant) constValue).getValue();
 
-                ClassTemplate template = f_templates.getTemplate(constEnum.getValue());
+                assert ((ClassStructure) constId.getComponent()).isSingleton();
 
-                boolean fStatic = ((ClassStructure) type.getSingleUnderlyingClass().getComponent()).isStatic();
-                boolean fSingle = ((ClassStructure) type.getSingleUnderlyingClass().getComponent()).isSingleton();
-
-                assert type.isClassType() &&
-                    ((ClassStructure) type.getSingleUnderlyingClass().getComponent()).isStatic();
-
-                return type;
+                return constId.asTypeConstant();
                 }
 
             case Tuple:

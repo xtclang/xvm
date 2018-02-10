@@ -3,6 +3,8 @@ package org.xvm.runtime;
 
 import java.sql.Timestamp;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -16,6 +18,8 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xString.StringHandle;
+
+import org.xvm.runtime.template.annotations.xFutureVar;
 
 import org.xvm.runtime.template.types.xProperty.PropertyHandle;
 
@@ -31,42 +35,30 @@ public abstract class Utils
     public static SignatureConstant SIG_DEFAULT;
     public static SignatureConstant SIG_TO_STRING;
 
-    public static String formatArray(Object[] ao, String sOpen, String sClose, String sDelim)
-        {
-        if (ao == null || ao.length == 0)
-            {
-            return "";
-            }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(sOpen);
-
-        boolean fFirst = true;
-        for (Object o : ao)
-            {
-            if (fFirst)
-                {
-                fFirst = false;
-                }
-            else
-                {
-                sb.append(sDelim);
-                }
-            sb.append(o);
-            }
-        sb.append(sClose);
-        return sb.toString();
-        }
-
-    public static void log(String sMsg)
+    public static void log(Frame frame, String sMsg)
         {
         if (sMsg.charAt(0) == '\n')
             {
             System.out.println();
             sMsg = sMsg.substring(1);
             }
+
+        ServiceContext ctx;
+        long lFiberId;
+
+        if (frame == null)
+            {
+            ctx = ServiceContext.getCurrentContext();
+            lFiberId = -1;
+            }
+        else
+            {
+            ctx = frame.f_context;
+            lFiberId = frame.f_fiber.getId();
+            }
+
         System.out.println(new Timestamp(System.currentTimeMillis())
-            + " " + ServiceContext.getCurrentContext() + ": " + sMsg);
+            + " " + ctx + ", fiber " + lFiberId + ": " + sMsg);
         }
 
     public static void registerGlobalSignatures(ConstantPool pool)
@@ -613,4 +605,111 @@ public abstract class Utils
 
         private int index = -1;
         }
+
+    // ----- various run-time support -----
+
+    /**
+     * Create a pseudo frame that will wait on the specified future.
+     *
+     * @param frame     the caller frame
+     * @param cfResult  the CompletableFuture to wait for
+     * @param iReturn   the return register for the result
+     *
+     * @return a new frame
+     */
+    public static Frame createWaitFrame(Frame frame,
+                                        CompletableFuture<ObjectHandle> cfResult, int iReturn)
+        {
+        ObjectHandle[] ahFuture = new ObjectHandle[]{xFutureVar.makeHandle(cfResult)};
+
+        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, iReturn, null);
+
+        frameNext.f_aInfo[0] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
+
+        return frameNext;
+        }
+
+    /**
+     * Create a pseudo frame that will wait on multiple specified futures.
+     *
+     * @param frame     the caller frame
+     * @param cfResult  the CompletableFuture to wait for
+     * @param aiReturn  the return registers for the results
+     *
+     * @return a new frame
+     */
+    public static Frame createWaitFrame(Frame frame,
+                                        CompletableFuture<ObjectHandle[]> cfResult, int[] aiReturn)
+        {
+        int cReturns = aiReturn.length;
+
+        ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
+        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, Frame.RET_MULTI, aiReturn);
+
+        // create a pseudo frame to deal with the multiple waits
+        for (int i = 0; i < cReturns; i++)
+            {
+            int iResult = i;
+
+            CompletableFuture<ObjectHandle> cfReturn =
+                    cfResult.thenApply(ahResult -> ahResult[iResult]);
+
+            ahFuture[i] = xFutureVar.makeHandle(cfReturn);
+            frameNext.f_aInfo[i] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
+            }
+
+        return frameNext;
+        }
+
+    private static final Op[] GET_AND_RETURN = new Op[]
+        {
+        new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                try
+                    {
+                    int cValues = frame.f_ahVar.length;
+
+                    assert cValues > 0;
+
+                    if (cValues == 1)
+                        {
+                        assert frame.f_aiReturn == null;
+
+                        ObjectHandle hValue = frame.getArgument(0);
+                        if (hValue == null)
+                            {
+                            return R_REPEAT;
+                            }
+                        return frame.returnValue(hValue);
+                        }
+
+                    assert frame.f_iReturn == Frame.RET_MULTI;
+
+                    ObjectHandle[] ahValue = new ObjectHandle[cValues];
+                    for (int i = 0; i < cValues; i++)
+                        {
+                        ObjectHandle hValue = frame.getArgument(i);
+                        if (hValue == null)
+                            {
+                            return R_REPEAT;
+                            }
+                        ahValue[i] = hValue;
+                        }
+
+                    return frame.returnValues(ahValue);
+                    }
+                catch (ObjectHandle.ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
+                }
+
+            public String toString()
+                {
+                return "GetAndReturn";
+                }
+            }
+        };
     }

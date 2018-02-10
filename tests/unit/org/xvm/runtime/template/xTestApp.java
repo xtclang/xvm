@@ -6,6 +6,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.StringConstant;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
@@ -152,6 +154,9 @@ public class xTestApp extends xModule
             .add(new New_1(adapter.getMethodConstId("TestApp.TestService", "construct"),
                 adapter.ensureValueConstantId(48), 0))
             .add(new X_Print(0))
+
+            .add(new Invoke_00(0,
+                adapter.getMethodConstId("TestApp.TestService", "testConstant")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Int64"),
                 adapter.ensureValueConstantId("c")))        // #1 (c)
@@ -414,6 +419,7 @@ public class xTestApp extends xModule
         MethodStructure ftTestArray = ensureMethodStructure("testArray", VOID);
         ftTestArray.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testArray() #")))
+
             .add(new Var_N(adapter.getClassTypeConstId("collections.Array<Int64>"),
                 adapter.ensureValueConstantId("ai")))   // #0 (ai)
             .add(new NewG_1(adapter.getMethodConstId("collections.Array", "construct"),
@@ -474,11 +480,11 @@ public class xTestApp extends xModule
 
             Label labelFalse = new Label();
             code.add(new JumpFalse(var_i.getRegister(), labelFalse));
-            code.add(new Return_N(new int[] {
-                    adapter.ensureValueConstantId(true),
-                    adapter.ensureValueConstantId("positive")}));
+            code.add(new Return_N(new Op.Argument[] {
+                    adapter.ensureValueConstant(true),
+                    adapter.ensureValueConstant("positive")}));
             code.add(labelFalse);
-            code.add(new Return_1(adapter.ensureValueConstantId(false)));
+            code.add(new Return_1(adapter.ensureValueConstant(false)));
             }
 
         MethodStructure ftTestTuple = ensureMethodStructure("testTuple", VOID);
@@ -631,15 +637,15 @@ public class xTestApp extends xModule
             .add(new P_Get(adapter.getPropertyConstId("Const", "hash"), 5, 5))
             .add(new X_Print(5))
 
-            .add(new Var_IN(adapter.getClassTypeConstId("TestApp.Color"),
-                adapter.ensureValueConstantId("c"),
-                adapter.ensureEnumConstId("TestApp.Color.Blue"))) // #6
+            .add(new Var_IN(adapter.getClassType("TestApp.Color", this),
+                (StringConstant) adapter.ensureValueConstant("c"),
+                adapter.getSingletonConstant("TestApp.Color.Blue"))) // #6
             .add(new X_Print(6))
 
             .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))
             .add(new X_Print(4))
 
-            .add(new Move(adapter.ensureEnumConstId("TestApp.Color.Red"), 6))
+            .add(new Move(adapter.getSingletonConstId("TestApp.Color.Red"), 6))
             .add(new X_Print(6))
 
             .add(new P_Get(adapter.getPropertyConstId("Enum", "ordinal"), 6, 4))

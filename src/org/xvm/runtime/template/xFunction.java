@@ -15,14 +15,12 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.annotations.xFutureVar;
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 
 /**
@@ -513,24 +511,15 @@ public class xFunction
 
         private int assignResult(Frame frame, int iReturn, CompletableFuture<ObjectHandle> cfResult)
             {
-            FutureHandle hFuture = xFutureVar.makeHandle(cfResult);
             if (iReturn >= 0)
                 {
-                return frame.assignValue(iReturn, hFuture);
+                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
                 }
 
             // the return value is either a RET_LOCAL or a local property;
             // in either case there is no "VarInfo" to mark as "waiting", so we need to create
             // a pseudo frame to deal with the wait
-            Op[] aop = new Op[]{GET_AND_RETURN};
-
-            ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
-            Frame frameNext = frame.createNativeFrame(aop, ahFuture, iReturn, null);
-
-            frameNext.f_aInfo[0] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
-
-            frame.m_frameNext = frameNext;
-            return Op.R_CALL;
+            return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
             }
 
         @Override
@@ -564,25 +553,7 @@ public class xFunction
                 return assignResult(frame, aiReturn[0], cfReturn);
                 }
 
-            Op[] aop = new Op[]{GET_AND_RETURN};
-
-            ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
-            Frame frameNext = frame.createNativeFrame(aop, ahFuture, Frame.RET_MULTI, aiReturn);
-
-            // create a pseudo frame to deal with the multiple waits
-            for (int i = 0; i < cReturns; i++)
-                {
-                int iResult = i;
-
-                CompletableFuture<ObjectHandle> cfReturn =
-                        cfResult.thenApply(ahResult -> ahResult[iResult]);
-
-                ahFuture[i] = xFutureVar.makeHandle(cfReturn);
-                frameNext.f_aInfo[i] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
-                }
-
-            frame.m_frameNext = frameNext;
-            return Op.R_CALL;
+            return frame.call(Utils.createWaitFrame(frame, cfResult, aiReturn));
             }
         }
 
@@ -600,48 +571,4 @@ public class xFunction
         {
         return new FunctionHandle(INSTANCE.ensureCanonicalClass(), function);
         }
-
-    private static final Op GET_AND_RETURN = new Op()
-        {
-        public int process(Frame frame, int iPC)
-            {
-            try
-                {
-                int cValues = frame.f_ahVar.length;
-
-                assert cValues > 0;
-
-                if (cValues == 1)
-                    {
-                    assert frame.f_aiReturn == null;
-
-                    ObjectHandle hValue = frame.getArgument(0);
-                    if (hValue == null)
-                        {
-                        return R_REPEAT;
-                        }
-                    return frame.returnValue(hValue);
-                    }
-
-                assert frame.f_iReturn == Frame.RET_MULTI;
-
-                ObjectHandle[] ahValue = new ObjectHandle[cValues];
-                for (int i = 0; i < cValues; i++)
-                    {
-                    ObjectHandle hValue = frame.getArgument(i);
-                    if (hValue == null)
-                        {
-                        return R_REPEAT;
-                        }
-                    ahValue[i] = hValue;
-                    }
-
-                return frame.returnValues(ahValue);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
-            }
-        };
     }

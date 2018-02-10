@@ -433,7 +433,7 @@ public abstract class ClassTemplate
      */
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        throw new IllegalStateException("Invalid op for " + this);
+        return null;
         }
 
     /**
@@ -477,7 +477,8 @@ public abstract class ClassTemplate
         Frame.Continuation contAssign =
             frameCaller -> frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
-        Frame frameRC1 = frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
+        Frame frameRC1 = frame.ensureInitialized(constructor,
+            frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED));
 
         Frame frameDC0 = clazz.callDefaultConstructors(frame, hStruct, ahVar,
             frameCaller -> frameCaller.call(frameRC1));
@@ -791,7 +792,7 @@ public abstract class ClassTemplate
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
-        ObjectHandle hValue = hThis.m_mapFields.get(sName);
+        ObjectHandle hValue = hThis.getField(sName);
 
         if (hValue == null)
             {
@@ -801,14 +802,14 @@ public abstract class ClassTemplate
                 hValue = frame.f_context.f_container.getInjectable(sName, property.getType());
                 if (hValue != null)
                     {
-                    hThis.m_mapFields.put(sName, hValue);
+                    hThis.setField(sName, hValue);
                     return frame.assignValue(iReturn, hValue);
                     }
                 sErr = "Unknown injectable property ";
                 }
             else
                 {
-                sErr = hThis.m_mapFields.containsKey(sName) ?
+                sErr = hThis.containsField(sName) ?
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
@@ -892,14 +893,14 @@ public abstract class ClassTemplate
 
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        assert hThis.m_mapFields.containsKey(property.getName());
+        assert hThis.containsField(property.getName());
 
         if (isRef(property))
             {
-            return ((RefHandle) hThis.m_mapFields.get(property.getName())).set(frame, hValue);
+            return ((RefHandle) hThis.getField(property.getName())).set(frame, hValue);
             }
 
-        hThis.m_mapFields.put(property.getName(), hValue);
+        hThis.setField(property.getName(), hValue);
         return Op.R_NEXT;
         }
 
@@ -1035,7 +1036,7 @@ public abstract class ClassTemplate
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        if (!hThis.m_mapFields.containsKey(sPropName))
+        if (!hThis.containsField(sPropName))
             {
             throw new IllegalStateException("Unknown property: (" + f_sName + ")." + sPropName);
             }
@@ -1046,7 +1047,7 @@ public abstract class ClassTemplate
 
         if (isRef(property))
             {
-            return ((RefHandle) hThis.m_mapFields.get(sPropName));
+            return ((RefHandle) hThis.getField(sPropName));
             }
 
         TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());

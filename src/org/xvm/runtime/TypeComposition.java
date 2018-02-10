@@ -18,7 +18,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.SignatureConstant;
@@ -28,6 +27,8 @@ import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRef.RefHandle;
+
+import org.xvm.util.ListMap;
 
 
 /**
@@ -497,8 +498,8 @@ public class TypeComposition
             return null;
             }
 
-        Frame frameBase = frame.createFrame1(chain.getMethod(cMethods - 1),
-            hStruct, ahVar, Frame.RET_UNUSED);
+        MethodStructure method = chain.getMethod(cMethods - 1);
+        Frame frameBase = frame.createFrame1(method, hStruct, ahVar, Frame.RET_UNUSED);
 
         if (cMethods > 1)
             {
@@ -511,9 +512,14 @@ public class TypeComposition
                     int i = index--;
                     if(i > 0)
                         {
-                        frameCaller.call1(chain.getMethod(i), hStruct, ahVar, Frame.RET_UNUSED);
-                        frameCaller.m_frameNext.setContinuation(this);
-                        return Op.R_CALL;
+                        MethodStructure method = chain.getMethod(i);
+
+                        Frame frameNext =
+                            frameCaller.createFrame1(method, hStruct, ahVar, Frame.RET_UNUSED);
+                        frameNext.setContinuation(this);
+
+                        return frameCaller.call(
+                            frameCaller.ensureInitialized(method, frameNext));
                         }
                     else
                         {
@@ -526,7 +532,7 @@ public class TypeComposition
             {
             frameBase.setContinuation(continuation);
             }
-        return frameBase;
+        return frame.ensureInitialized(method, frameBase);
         }
 
     // retrieve the call chain for the specified method
@@ -666,49 +672,52 @@ public class TypeComposition
         }
 
     // create unassigned (with a null value) entries for all fields
-    protected void createFields(Map<String, ObjectHandle> mapFields)
+    protected Map<String, ObjectHandle> createFields()
         {
         Map mapCached = m_mapFields;
-        if (mapCached != null)
+        if (mapCached == null)
             {
-            mapFields.putAll(mapCached);
-            return;
-            }
+            m_mapFields = mapCached = new HashMap<>();
 
-        m_mapFields = mapCached = new HashMap<>();
-
-        for (TypeComposition clz : collectDeclaredCallChain(true))
-            {
-            ClassTemplate template = clz.getTemplate();
-
-            for (Component child : template.f_struct.children())
+            for (TypeComposition clz : collectDeclaredCallChain(true))
                 {
-                if (child instanceof PropertyStructure)
+                ClassTemplate template = clz.getTemplate();
+
+                for (Component child : template.f_struct.children())
                     {
-                    PropertyStructure prop = (PropertyStructure) child;
-
-                    RefHandle hRef = null;
-                    if (template.isRef(prop))
+                    if (child instanceof PropertyStructure)
                         {
-                        TypeComposition clzRef = template.getRefClass(prop);
+                        PropertyStructure prop = (PropertyStructure) child;
 
-                        hRef = clzRef.getTemplate().createRefHandle(clzRef, prop.getName());
-                        }
+                        RefHandle hRef = null;
+                        if (template.isRef(prop))
+                            {
+                            TypeComposition clzRef = template.getRefClass(prop);
 
-                    if (template.isCalculated(prop))
-                        {
-                        // compensate for the lack of "isDeclaredAtThisLevel" API
-                        mapCached.remove(prop.getName());
-                        }
-                    else
-                        {
-                        mapCached.put(prop.getName(), hRef);
+                            hRef = clzRef.getTemplate().createRefHandle(clzRef, prop.getName());
+                            }
+
+                        if (template.isCalculated(prop))
+                            {
+                            // compensate for the lack of "isDeclaredAtThisLevel" API
+                            mapCached.remove(prop.getName());
+                            }
+                        else
+                            {
+                            mapCached.put(prop.getName(), hRef);
+                            }
                         }
                     }
                 }
             }
 
+        if (mapCached.isEmpty())
+            {
+            return null;
+            }
+        Map<String, ObjectHandle> mapFields = new ListMap<>();
         mapFields.putAll(mapCached);
+        return mapFields;
         }
 
     @Override

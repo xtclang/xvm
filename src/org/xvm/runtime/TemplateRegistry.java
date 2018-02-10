@@ -106,7 +106,7 @@ public class TemplateRegistry
 
         for (ClassTemplate template : setTemplates)
             {
-            if (template.f_sName.startsWith("TestApp"))
+            if (template.f_sName.startsWith("Test"))
                 {
                 // TODO: remove - test classes
                 continue;
@@ -120,6 +120,7 @@ public class TemplateRegistry
         getTemplate("TestApp.TestClass2").initDeclared();
         getTemplate("TestApp.TestClass").initDeclared();
         getTemplate("TestApp").initDeclared();
+        getTemplate("TestPackage.Origin").initDeclared();
         }
 
     // sPackage is either empty or ends with a dot
@@ -255,10 +256,6 @@ public class TemplateRegistry
             switch (structClass.getFormat())
                 {
                 case ENUMVALUE:
-                    // no need to call initDeclared() for the values
-                    template = new xEnum(this, structClass, false);
-                    break;
-
                 case ENUM:
                     template = new xEnum(this, structClass, false);
                     template.initDeclared();

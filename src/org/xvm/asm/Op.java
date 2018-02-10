@@ -778,6 +778,10 @@ public abstract class Op
             case OP_I_VAR:       return new I_Var       (in, aconst);
             case OP_I_REF:       return new I_Ref       (in, aconst);
 
+            case OP_IIP_INC:     return new IIP_Inc     (in, aconst);
+            case OP_IIP_INCB:    return new IIP_PreInc  (in, aconst);
+            case OP_IIP_ADD:     return new IIP_Add     (in, aconst);
+
             case OP_CALL_00:     return new Call_00     (in, aconst);
             case OP_CALL_01:     return new Call_01     (in, aconst);
             case OP_CALL_0N:     return new Call_0N     (in, aconst);
@@ -939,6 +943,9 @@ public abstract class Op
             case OP_I_SET:       return "I_SET";
             case OP_I_VAR:       return "I_VAR";
             case OP_I_REF:       return "I_REF";
+            case OP_IIP_INC:     return "IIP_INC";
+            case OP_IIP_INCB:    return "IIP_INCB";
+            case OP_IIP_ADD:     return "IIP_ADD";
             case OP_CALL_00:     return "CALL_00";
             case OP_CALL_01:     return "CALL_01";
             case OP_CALL_0N:     return "CALL_0N";

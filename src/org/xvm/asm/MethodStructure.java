@@ -14,23 +14,36 @@ import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 
-import org.xvm.asm.Op.Prefix;
+import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
+import org.xvm.asm.Op.Prefix;
+
+import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHeap;
+import org.xvm.runtime.ServiceContext;
+import org.xvm.runtime.Utils;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xModule;
+import org.xvm.runtime.template.xNullable;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * An XVM Structure that represents a method. TODO or a function
+ * An XVM Structure that represents a method or a function.
  * TODO annotations - there might be method annotations that belong to the return type and not the method itself e.g. "@Unsafe Int foo()"
  */
 public class MethodStructure
@@ -350,6 +363,17 @@ public class MethodStructure
         m_fNative     = false;
         m_FUsesSuper  = null;
         markModified();
+
+        registerConstants(getConstantPool());
+        try
+            {
+            assemble(new DataOutputStream(new ByteArrayOutputStream()));
+            }
+        catch (IOException e)
+            {
+            throw new IllegalStateException(e);
+            }
+        m_code.calcVars();
         }
 
 
@@ -702,6 +726,135 @@ public class MethodStructure
         return true;
         }
 
+    /**
+     * Ensure that all the SingletonConstants are initialized.
+     *
+     * @param frame      the caller's frame
+     * @param frameNext  the frame to call after initialization is done; could be null if the
+     *                   initialization is performed on the "main" container service
+     */
+    public int ensureInitialized(Frame frame, Frame frameNext)
+        {
+        if (m_FInitialized == Boolean.TRUE)
+            {
+            return Op.R_NEXT;
+            }
+
+        boolean fMainContext = false;
+        for (Constant constant : getLocalConstants())
+            {
+            if (constant instanceof SingletonConstant)
+                {
+                SingletonConstant constSingleton = (SingletonConstant) constant;
+                ObjectHandle hValue = constSingleton.getHandle();
+                if (hValue != null)
+                    {
+                    continue;
+                    }
+
+                ServiceContext ctxCurr = frame.f_context;
+                if (!fMainContext)
+                    {
+                    ServiceContext ctxMain = ctxCurr.getMainContext();
+
+                    if (ctxCurr == ctxMain)
+                        {
+                        fMainContext = true;
+                        }
+                    else
+                        {
+                        assert frameNext != null;
+
+                        // we have at least one non-initialized singleton;
+                        // call the main service to initialize them all
+                        CompletableFuture<ObjectHandle> cfResult =
+                            ctxMain.sendConstantRequest(frame, this);
+
+                        // create a pseudo frame to deal with the wait
+                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Frame.RET_LOCAL);
+                        frameWait.setContinuation(
+                            frameCaller -> frameCaller.call(frameNext));
+
+                        return frame.call(frameWait);
+                        }
+                    }
+
+                // we are on the main context and can actually perform the initialization
+                IdentityConstant constValue = constSingleton.getValue();
+
+                ObjectHeap heap = ctxCurr.f_heapGlobal;
+                switch (constValue.getFormat())
+                    {
+                    case Module:
+                        hValue = xModule.INSTANCE.createConstHandle(frame, constValue);
+                        if (hValue == null)
+                            {
+                            return frame.raiseException(
+                                xException.makeHandle("unknown module: " + constValue.getValueString()));
+                            }
+                        break;
+
+                    case Package:
+                        throw new UnsupportedOperationException("not implemented"); // TODO
+
+                    case Property:
+                        {
+                        PropertyStructure property = (PropertyStructure)
+                            ((PropertyConstant) constValue).getComponent();
+                        // use property value or function to initialize
+                        throw new UnsupportedOperationException("not implemented"); // TODO
+                        }
+
+                    case Class:
+                        {
+                        ClassConstant constClz = (ClassConstant) constValue;
+                        ClassStructure clz = (ClassStructure) constClz.getComponent();
+
+                        ClassTemplate template = heap.f_templates.getTemplate(constClz);
+
+                        // the class must have a no-params constructor to call
+                        // or have a native constant initializza
+                        SignatureConstant sigConstruct = heap.f_pool.ensureSignatureConstant(
+                            "construct", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+                        MethodStructure constructor = clz.findMethod(sigConstruct);
+                        if (constructor == null)
+                            {
+                            hValue = template.createConstHandle(frame, constSingleton);
+                            if (hValue == null)
+                                {
+                                return frame.raiseException(
+                                    xException.makeHandle("Failed to create a constant: " + constSingleton));
+                                }
+                            constSingleton.setHandle(hValue);
+                            break;
+                            }
+
+                        template.construct(frame, constructor,
+                            template.ensureCanonicalClass(), Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                        frame.m_frameNext.setContinuation(frameCaller ->
+                            {
+                            constSingleton.setHandle(frameCaller.getFrameLocal());
+                            return ensureInitialized(frameCaller, null);
+                            });
+                        return Op.R_CALL;
+                        }
+
+                    default:
+                        throw new IllegalStateException("unexpected defining constant: " + constValue);
+                    }
+                }
+            }
+
+        // all is done;
+        // if on the main context, me are entitled to set the flag;
+        // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
+        // (since it's not volatile) they will simply repeat the "do nothing" loop
+        m_FInitialized = Boolean.TRUE;
+        return frameNext == null
+            ? frame.assignValue(0, xNullable.NULL)
+            : frame.call(frameNext);
+        }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
@@ -818,7 +971,7 @@ public class MethodStructure
 
     @Override
     protected void disassemble(DataInput in)
-    throws IOException
+            throws IOException
         {
         super.disassemble(in);
 
@@ -899,9 +1052,10 @@ public class MethodStructure
         // (2) otherwise, if the local constants are present (because we read them in), then make
         //     sure they're all registered;
         // (3) otherwise, assume there are no local constants
-        Code code = m_code;
-        if (code == null)
+        if (m_abOps != null)
             {
+            // we didn't disassemble the individual ops, but we are responsible for registering the
+            // constants that ops refer to
             Constant[] aconst = m_aconstLocal;
             if (aconst != null)
                 {
@@ -916,15 +1070,15 @@ public class MethodStructure
                     }
                 }
             }
-        else
+        else if (m_code != null)
             {
-            code.registerConstants();
+            m_code.registerConstants();
             }
         }
 
     @Override
     protected void assemble(DataOutput out)
-    throws IOException
+            throws IOException
         {
         super.assemble(out);
 
@@ -948,10 +1102,9 @@ public class MethodStructure
             writePackedLong(out, aconst[i].getPosition());
             }
 
-        Code code = m_code;
-        if (code != null)
+        if (m_abOps == null && m_code != null)
             {
-            code.ensureAssembled();
+            m_code.ensureAssembled();
             }
 
         // write out the bytes (if there are any)
@@ -1018,11 +1171,12 @@ public class MethodStructure
          * TODO remove when deprecated setOps() is removed
          *
          * @param aop   array of ops
+         *
+         * @deprecated
          */
         Code(Op[] aop)
             {
             m_aop = aop;
-            calcVars();
             }
 
         Code(Code wrappee)
@@ -1275,10 +1429,11 @@ public class MethodStructure
 
         protected void registerConstants()
             {
-            Op[] aop = ensureOps();
-            if (aop != null)
+            if (m_abOps == null)
                 {
-                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
+                assert m_registry == null;
+                Op.ConstantRegistry registry = m_registry = new Op.ConstantRegistry(getConstantPool());
+                Op[] aop = ensureOps();
                 for (Op op : aop)
                     {
                     op.registerConstants(registry);
@@ -1290,12 +1445,20 @@ public class MethodStructure
             {
             if (m_abOps == null)
                 {
+                // if the code has been modified without assembling the entire module, then the
+                // corresponding local constant registry hasn't been populated yet to be used by
+                // the modified code
+                if (m_registry == null)
+                    {
+                    registerConstants();
+                    }
+                assert m_registry != null;
+
                 // build the local constant array
                 Op[] aop = ensureOps();
 
                 // assemble the ops into bytes
                 Scope scope = createInitialScope();
-                Op.ConstantRegistry registry = new Op.ConstantRegistry(getConstantPool());
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 DataOutputStream outData = new DataOutputStream(outBytes);
                 try
@@ -1306,7 +1469,7 @@ public class MethodStructure
 
                         op.resolveAddress(this, i);
                         op.simulate(scope);
-                        op.write(outData, registry);
+                        op.write(outData, m_registry);
                         }
                     }
                 catch (IOException e)
@@ -1315,9 +1478,10 @@ public class MethodStructure
                     }
 
                 m_abOps       = outBytes.toByteArray();
-                m_aconstLocal = registry.getConstantArray();
                 m_cVars       = scope.getMaxVars();
                 m_cScopes     = scope.getMaxDepth();
+                m_aconstLocal = m_registry.getConstantArray();
+                m_registry    = null;
                 markModified();
                 }
             }
@@ -1427,14 +1591,19 @@ public class MethodStructure
     private Parameter[] m_aParams;
 
     /**
-     * The constants used by the Ops.
-     */
-    transient Constant[] m_aconstLocal;
-
-    /**
      * True iff the method has been marked as "abstract".
      */
     private boolean m_fAbstract;
+
+    /**
+     * The constants used by the Ops.
+     */
+    Constant[] m_aconstLocal;
+
+    /**
+     * The constant registry used while assembling the Ops.
+     */
+    transient Op.ConstantRegistry m_registry;
 
     /**
      * The yet-to-be-deserialized ops.
@@ -1466,6 +1635,12 @@ public class MethodStructure
      * Cached information about whether this method uses its super.
      */
     private transient Boolean m_FUsesSuper;
+
+    /**
+     * Cached information about whether any singleton constants used by this method have been
+     * fully initialized.
+     */
+    private transient Boolean m_FInitialized;
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a

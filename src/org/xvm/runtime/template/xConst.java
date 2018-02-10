@@ -430,7 +430,7 @@ public class xConst
                 }
 
             JavaLong hHash = xInt64.makeHandle(holder[0]);
-            hConst.m_mapFields.put(PROP_HASH, hHash);
+            hConst.setField(PROP_HASH, hHash);
 
             return frameCaller.assignValue(iReturn, hHash);
             }
