@@ -93,9 +93,25 @@ public class CallChain
         throw new IllegalStateException();
         }
 
-    public int invoke1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
+    // natural chain invocation with zero args and one return value
+    public int invoke(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return frame.invoke1(this, 0, hTarget, ahVar, iReturn);
+        assert !isNative();
+
+        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+
+        return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
+        }
+
+    // natural chain invocation with one arg and one return value
+    public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        assert !isNative();
+
+        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ahVar[0] = hArg;
+
+        return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
 
     public int callSuper01(Frame frame, int iReturn)

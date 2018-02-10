@@ -22,6 +22,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
@@ -411,14 +412,6 @@ public abstract class ClassTemplate
     public String toString()
         {
         return f_struct.toString();
-        }
-
-    // ---- OpSupport implementation ---------------------------------------------------------------
-
-    @Override
-    public ClassTemplate getTemplate()
-        {
-        return this;
         }
 
     // ----- constructions  ------------------------------------------------------------------------
@@ -1156,6 +1149,67 @@ public abstract class ClassTemplate
                 throw new IllegalStateException(
                         "No implementation for \"compare()\" function at " + f_sName);
             }
+        }
+
+
+    // ---- OpSupport implementation ---------------------------------------------------------------
+
+    @Override
+    public ClassTemplate getTemplate()
+        {
+        return this;
+        }
+
+    @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain("+").invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain("-").invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain("*").invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain("/").invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain("&").invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return getOpChain("neg").invoke(frame, hTarget, iReturn);
+        }
+
+    /**
+     * @return a call chain for the specified op or null if non exists
+     */
+    protected CallChain getOpChain(String sOp)
+        {
+        TypeInfo info = getCanonicalType().ensureTypeInfo();
+        // TODO: use the TypeInfo to get the chain
+        CallChain chain = null;
+
+        if (chain == null)
+            {
+            throw new IllegalStateException("Invalid op for " + this);
+            }
+        return chain;
         }
 
 

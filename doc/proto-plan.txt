@@ -98,9 +98,9 @@
       "initialized" flag on the MethodStructure
     + circular initialization check
 
-- ClassTemplate - check for @Op for Add, Sub, ...
++ ClassTemplate - check for @Op for Add, Sub, ...
 
-- Stack overflow
+- Stack overflow (fiber depth + frame depth within a fiber or cross-fiber frame depth)
 
 - createConst() processing for Set, Map etc.
 
