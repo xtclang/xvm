@@ -780,6 +780,15 @@ public class MethodStructure
                     }
 
                 // we are on the main context and can actually perform the initialization
+                if (m_FInitialized == Boolean.FALSE)
+                    {
+                    // this can only happen if we are called recursively
+                    assert frameNext == null;
+                    return frame.raiseException(xException.makeHandle("Circular initialization"));
+                    }
+
+                m_FInitialized = Boolean.FALSE;
+
                 IdentityConstant constValue = constSingleton.getValue();
 
                 ObjectHeap heap = ctxCurr.f_heapGlobal;

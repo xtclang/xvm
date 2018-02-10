@@ -96,7 +96,7 @@
     + singletons represented by constants (SingletonConstant)
     + initialization during the frame construction based on a transient
       "initialized" flag on the MethodStructure
-    - recursion control
+    + circular initialization check
 
 - ClassTemplate - check for @Op for Add, Sub, ...
 
