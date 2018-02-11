@@ -732,6 +732,8 @@ public class MethodStructure
      * @param frame      the caller's frame
      * @param frameNext  the frame to call after initialization is done; could be null if the
      *                   initialization is performed on the "main" container service
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int ensureInitialized(Frame frame, Frame frameNext)
         {
