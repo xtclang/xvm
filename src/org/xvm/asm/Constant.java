@@ -718,11 +718,12 @@ public abstract class Constant
         Duration,       // ISO8601 P[n]Y[n]M[n]DT[n]H[n]M[n]S | P[n]W format
         TimeInterval,   // ISO8601 datetime '/' datetime format
         Version,
-        SingletonConst,
-        SingletonService,
+        SingletonConst,   // identity constant for a Module, Package, an enum value or a static const
+        SingletonService, // identity constant of a Service class
+        ConstantValue,    // PropertyConstant that represents the value of a const or a service
         Tuple,
         Array,
-        UInt8Array,     // byte[]
+        UInt8Array,    // byte[]
         Set,
         MapEntry,
         Map,

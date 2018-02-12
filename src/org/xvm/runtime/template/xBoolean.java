@@ -2,10 +2,9 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constant;
-
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.constants.SingletonConstant;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -39,32 +38,24 @@ public class xBoolean
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, STRING);
-
-        ConstantPool pool = f_templates.f_container.f_pool;
-        f_templates.registerNativeTemplate(pool.typeTrue(), this);
-        f_templates.registerNativeTemplate(pool.typeFalse(), this);
-
-        FALSE = new BooleanHandle(ensureCanonicalClass(), false);
-        TRUE = new BooleanHandle(ensureCanonicalClass(), true);
-        }
-
-    @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
-        {
-        if (constant instanceof SingletonConstant)
+        if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            SingletonConstant constEnum = (SingletonConstant) constant;
-            switch (constEnum.getValue().getName())
-                {
-                case "False":
-                    return FALSE;
+            markNativeMethod("to", VOID, STRING);
 
-                case "True":
-                    return TRUE;
-                }
+            ConstantPool pool = f_templates.f_container.f_pool;
+            f_templates.registerNativeTemplate(pool.typeTrue(), this);
+            f_templates.registerNativeTemplate(pool.typeFalse(), this);
+
+            FALSE = new BooleanHandle(ensureCanonicalClass(), false);
+            TRUE = new BooleanHandle(ensureCanonicalClass(), true);
+
+            pool.valTrue().setHandle(TRUE);
+            pool.valFalse().setHandle(FALSE);
             }
-        return null;
+        else
+            {
+            getSuper(); // this will initialize all the handles
+            }
         }
 
     @Override

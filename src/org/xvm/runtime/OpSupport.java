@@ -28,10 +28,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "subtract" operation.
@@ -44,10 +41,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "multiply" operation.
@@ -60,10 +54,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "divide" operation.
@@ -76,10 +67,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "modulo" operation.
@@ -92,10 +80,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "negate" operation.
@@ -107,10 +92,7 @@ public interface OpSupport
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn);
 
     /**
      * Perform a "sequential next" operation.

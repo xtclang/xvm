@@ -145,6 +145,8 @@ class TestApp
         TestService svc = new TestService();
         print(svc);
 
+        svc.testConstant();
+
         Int c = svc.increment();
         print(c);
 
@@ -277,6 +279,12 @@ class TestApp
         Int increment()
             {
             return ++counter;
+            }
+
+        Void testConstant()
+            {
+            TestApp.Point origin = TestPackage.Origin;
+            print(origin);
             }
 
         static Void lambda_1(Var<Int> iRet, Int cDelay)
@@ -434,7 +442,22 @@ class TestApp
         Point br; // TODO: remove
         }
 
-    enum Color {Red, Green, Blue}
+    enum Color
+        {
+        Red(0), Green(256), Blue(256*256);
+
+        construct Color(Int i)
+            {
+            pix = i;
+            }
+
+        String to<String>()
+            {
+            return super() + " " + pix;
+            }
+
+        Int pix;
+        }
 
     static Void testConst()
         {

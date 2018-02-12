@@ -82,6 +82,8 @@ public class Frame
     protected Frame(Frame framePrev, MethodStructure function,
             ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
+        assert framePrev != null && function != null;
+
         f_context = framePrev.f_context;
         f_iId = f_context.m_iFrameCounter++;
         f_fiber = framePrev.f_fiber;
@@ -92,7 +94,7 @@ public class Frame
         f_adapter = f_context.f_templates.f_adapter;
 
         f_function = function;
-        f_aOp      = function == null ? Op.STUB : function.getOps();
+        f_aOp      = function.getOps();
 
         f_hTarget = hTarget;
         f_hThis   = hTarget == null ? null : hTarget.revealOrigin();
@@ -159,24 +161,56 @@ public class Frame
         }
 
     // create a new frame that returns zero or one value into the specified slot
-    public Frame createFrame1(MethodStructure template,
+    // Note: the returned frame needs to be "initialized" before called
+    public Frame createFrame1(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, template, hTarget, ahVar, iReturn, null);
+        return new Frame(this, method, hTarget, ahVar, iReturn, null);
         }
 
     // create a new frame that returns a Tuple value into the specified slot
-    public Frame createFrameT(MethodStructure template,
+    // Note: the returned frame needs to be "initialized" before called
+    public Frame createFrameT(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, template, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
+        return new Frame(this, method, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
         }
 
-    public Frame createFrameN(MethodStructure template,
+    // create a new frame that returns multiple values into the specified slots
+    // Note: the returned frame needs to be "initialized" before called
+    public Frame createFrameN(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, template, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
+        return new Frame(this, method, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
         }
+
+    // ensure that all the singleton constants are initialized for the specified method
+    public Frame ensureInitialized(MethodStructure method, Frame frameNext)
+        {
+        switch (method.ensureInitialized(this, frameNext))
+            {
+            case Op.R_NEXT:
+                return frameNext;
+
+            case Op.R_CALL:
+                return m_frameNext;
+
+            case Op.R_EXCEPTION:
+                assert m_hException != null;
+
+                // prime the new frame with an exception;
+                // it will be checked at the beginning of the frame execution
+                // (an alternative approach is to replace the function's Op[] with
+                //  a throwing stub)
+                frameNext.m_hException = m_hException;
+                m_hException = null;
+                return frameNext;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
 
     // create a new pseudo-frame on the same target
     public Frame createNativeFrame(Op[] aop, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
@@ -194,48 +228,63 @@ public class Frame
     // a convenience method; ahVar - prepared variables
     public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = createFrame1(method, hTarget, ahVar, iReturn);
+        m_frameNext = ensureInitialized(method,
+            createFrame1(method, hTarget, ahVar, iReturn));
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        m_frameNext = createFrameT(method, hTarget, ahVar, iReturn);
+        m_frameNext = ensureInitialized(method,
+            createFrameT(method, hTarget, ahVar, iReturn));
         return Op.R_CALL;
         }
 
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        m_frameNext = createFrameN(method, hTarget, ahVar, aiReturn);
+        m_frameNext = ensureInitialized(method,
+            createFrameN(method, hTarget, ahVar, aiReturn));
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int invoke1(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        Frame frameNext = m_frameNext = createFrame1(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        MethodStructure method = chain.getMethod(nDepth);
+
+        Frame frameNext = createFrame1(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
+
+        m_frameNext = ensureInitialized(method, frameNext);
         return Op.R_CALL;
         }
 
     // a convenience method; ahVar - prepared variables
     public int invokeT(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        Frame frameNext = m_frameNext = createFrameT(chain.getMethod(nDepth), hTarget, ahVar, iReturn);
+        MethodStructure method = chain.getMethod(nDepth);
+
+        Frame frameNext = createFrameT(method, hTarget, ahVar, iReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
+
+        m_frameNext = ensureInitialized(method, frameNext);
         return Op.R_CALL;
         }
 
     // a convenience method
     public int invokeN(CallChain chain, int nDepth, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        Frame frameNext = m_frameNext = createFrameN(chain.getMethod(nDepth), hTarget, ahVar, aiReturn);
+        MethodStructure method = chain.getMethod(nDepth);
+
+        Frame frameNext = createFrameN(method, hTarget, ahVar, aiReturn);
         frameNext.m_chain = chain;
         frameNext.m_nDepth = nDepth;
+
+        m_frameNext = ensureInitialized(method, frameNext);
         return Op.R_CALL;
         }
 
@@ -1110,6 +1159,8 @@ public class Frame
             }
         }
 
+    // set the specified continuation to be executed *after* any existing ones,
+    // but only if the previous continuations return normally (R_NEXT)
     public void setContinuation(Continuation continuation)
         {
         if (m_continuation == null)
@@ -1120,8 +1171,8 @@ public class Frame
             {
             Continuation[] holder = new Continuation[] {m_continuation};
 
-            // inject the new continuation before the existing one;
-            // if the previous continuation causes another call (R_CALL) and the callee has another
+            // inject the new continuation to be executed after the existing one;
+            // if the previous continuation causes another call (R_CALL) and the callee has
             // another continuation then we need to make sure to repeat the injection, proceeding
             // to the provided continuation only when the previous one returns normally (R_NEXT)
             m_continuation = new Continuation()

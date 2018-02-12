@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.xvm.asm.Constants;
 import org.xvm.asm.constants.TypeConstant;
@@ -138,7 +139,7 @@ public abstract class ObjectHandle
             extends ObjectHandle
         {
         // keyed by the property name
-        public Map<String, ObjectHandle> m_mapFields = new ListMap<>();
+        private Map<String, ObjectHandle> m_mapFields;
 
         public GenericHandle(TypeComposition clazz)
             {
@@ -146,24 +147,38 @@ public abstract class ObjectHandle
 
             m_fMutable = true;
 
-            clazz.createFields(m_mapFields);
+            m_mapFields = clazz.createFields();
+            }
+
+        public boolean containsField(String sName)
+            {
+            return m_mapFields != null && m_mapFields.containsKey(sName);
             }
 
         public ObjectHandle getField(String sName)
             {
-            return m_mapFields.get(sName);
+            return m_mapFields == null ? null : m_mapFields.get(sName);
+            }
+
+        public void setField(String sName, ObjectHandle hValue)
+            {
+            if (m_mapFields == null)
+                {
+                m_mapFields = new ListMap<>();
+                }
+            m_mapFields.put(sName, hValue);
             }
 
         @Override
         public int hashCode()
             {
-            return m_mapFields.hashCode();
+            return m_mapFields == null ? 0 : m_mapFields.hashCode();
             }
 
         @Override
         public boolean equals(Object obj)
             {
-            return m_mapFields.equals(((GenericHandle) obj).m_mapFields);
+            return Objects.equals(m_mapFields, ((GenericHandle) obj).m_mapFields);
             }
         }
 

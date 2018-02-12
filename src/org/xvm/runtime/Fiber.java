@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.xvm.asm.MethodStructure;
 
 
@@ -9,6 +10,8 @@ import org.xvm.asm.MethodStructure;
  */
 public class Fiber
     {
+    final long f_lId;
+
     final ServiceContext f_context;
 
     // the caller's fiber (null for original)
@@ -41,6 +44,8 @@ public class Fiber
      */
     public long m_ldtTimeout;
 
+    private static AtomicLong s_counter = new AtomicLong();
+
     enum FiberStatus
         {
         InitialNew, // a new fiber has not been scheduled for execution yet
@@ -55,6 +60,8 @@ public class Fiber
 
     public Fiber(ServiceContext context, ServiceContext.Message msgCall)
         {
+        f_lId = s_counter.getAndIncrement();
+
         f_context = context;
 
         Fiber fiberCaller = f_fiberCaller = msgCall.f_fiberCaller;
@@ -101,6 +108,11 @@ public class Fiber
                 fiberCaller = fiberCaller.f_fiberCaller;
                 }
             }
+        }
+
+    public long getId()
+        {
+        return f_lId;
         }
 
     public FiberStatus getStatus()
@@ -150,6 +162,6 @@ public class Fiber
     @Override
     public String toString()
         {
-        return "Fiber of " + f_context + ": " + m_status.name();
+        return "Fiber " + f_lId + " of " + f_context + ": " + m_status.name();
         }
     }

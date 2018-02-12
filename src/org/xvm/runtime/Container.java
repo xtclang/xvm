@@ -92,6 +92,7 @@ public class Container
             // xModule module = (xModule) f_templates.getTemplate(sModule);
             ClassTemplate app = f_templates.getTemplate(f_sAppName);
 
+            // should the application always be a service?
             MethodStructure mtRun = app.getDeclaredMethod("run", TemplateRegistry.VOID, TemplateRegistry.VOID);
             if (mtRun == null)
                 {
@@ -185,6 +186,11 @@ public class Container
     public ModuleHandle getModule()
         {
         return m_hModule;
+        }
+
+    public ServiceContext getMainContext()
+        {
+        return m_contextMain;
         }
 
     public boolean isIdle()

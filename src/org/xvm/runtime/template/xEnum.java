@@ -7,9 +7,9 @@ import java.util.List;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.runtime.Frame;
@@ -54,17 +54,26 @@ public class xEnum
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
+            ConstantPool pool = f_struct.getConstantPool();
             int cValues = 0;
             for (Component child : listAll)
                 {
                 if (child.getFormat() == Component.Format.ENUMVALUE)
                     {
                     listNames.add(child.getName());
-                    listHandles.add(new EnumHandle(ensureCanonicalClass(), cValues++));
+
+                    EnumHandle hValue = new EnumHandle(ensureCanonicalClass(), cValues++);
+                    listHandles.add(hValue);
+
+                    pool.ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
                     }
                 }
             m_listNames = listNames;
             m_listHandles = listHandles;
+            }
+        else // (f_struct.getFormat() == Component.Format.ENUMVALUE)
+            {
+            getSuper(); // this will initialize all handles
             }
         }
 
@@ -73,12 +82,7 @@ public class xEnum
         {
         if (constant instanceof SingletonConstant)
             {
-            IdentityConstant constClass = ((SingletonConstant) constant).getValue();
-
-            xEnum template = f_struct.getFormat() == Component.Format.ENUMVALUE ?
-                (xEnum) getSuper() : this;
-
-            return template.getEnumByName(constClass.getName());
+            return ((SingletonConstant) constant).getHandle();
             }
         return null;
         }

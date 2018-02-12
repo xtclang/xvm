@@ -1227,6 +1227,28 @@ public class ClassStructure
         }
 
 
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Helper method to find a method by signature.
+     */
+    public MethodStructure findMethod(SignatureConstant sig)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) getChild(sig.getName());
+        if (mms != null)
+            {
+            for (MethodStructure method : mms.methods())
+                {
+                if (method.getIdentityConstant().getSignature().equals(sig))
+                    {
+                    return method;
+                    }
+                }
+            }
+        return null;
+        }
+
+
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override

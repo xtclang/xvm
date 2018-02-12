@@ -20,6 +20,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xObject;
@@ -145,11 +146,15 @@ public class Adapter
         return fNullable ? pool.ensureNullableTypeConstant(constType) : constType;
         }
 
-    public int ensureEnumConstId(String sEnum)
+    public int getSingletonConstId(String sClass)
         {
-        ClassConstant constClass = f_container.f_templates.getClassConstant(sEnum);
-        return Op.CONSTANT_OFFSET -
-            f_container.f_pool.ensureSingletonConstConstant(constClass).getPosition();
+        return Op.CONSTANT_OFFSET - getSingletonConstant(sClass).getPosition();
+        }
+
+    public SingletonConstant getSingletonConstant(String sClass)
+        {
+        ClassConstant constClass = f_container.f_templates.getClassConstant(sClass);
+        return f_container.f_pool.ensureSingletonConstConstant(constClass);
         }
 
     // get a "relative" method constant id
@@ -277,7 +282,7 @@ public class Adapter
         return aType;
         }
 
-    protected Constant ensureValueConstant(Object oValue)
+    public Constant ensureValueConstant(Object oValue)
         {
         ConstantPool pool = f_container.f_pool;
         if (oValue instanceof Integer || oValue instanceof Long)

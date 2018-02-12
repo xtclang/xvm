@@ -66,7 +66,7 @@ public class X_Print
                 if (hValue == null)
                     {
                     sb.append("<waiting>...");
-                    Utils.log(sb.toString());
+                    Utils.log(frame, sb.toString());
                     return R_REPEAT;
                     }
 
@@ -104,7 +104,7 @@ public class X_Print
                     frame.m_frameNext.setContinuation(frameCaller->
                         {
                         sb.append(((xString.StringHandle) frameCaller.getFrameLocal()).getValue());
-                        Utils.log(sb.toString());
+                        Utils.log(frame, sb.toString());
                         return Op.R_NEXT;
                         });
                     return R_CALL;
@@ -129,7 +129,7 @@ public class X_Print
                 }
             }
 
-        Utils.log(sb.toString());
+        Utils.log(frame, sb.toString());
 
         return iPC + 1;
         }

@@ -96,6 +96,11 @@ public class ServiceContext
         return s_tloContext.get();
         }
 
+    public ServiceContext getMainContext()
+        {
+        return f_container.getMainContext();
+        }
+
     public ServiceHandle getService()
         {
         return m_hService;
@@ -281,7 +286,8 @@ public class ServiceContext
                     frame.m_frameNext = null;
                     frame = m_frameCurrent;
                     abOp = frame.f_aOp;
-                    iPC = 0;
+                    // a new frame can already be in the "exception" state
+                    iPC = frame.m_hException == null ? 0 : Op.R_EXCEPTION;
                     break;
 
                 case Op.R_BLOCK_RETURN:
@@ -501,6 +507,17 @@ public class ServiceContext
         addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, null, op));
         }
 
+    // send and asynchronous "constant initialization" message
+    public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
+                                                               MethodStructure method)
+        {
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+
+        addRequest(new ConstantInitializationRequest(frameCaller, method, future));
+
+        return future;
+        }
+
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
         sendInvoke1Request(null, hFunction, ahArg, 0);
@@ -510,7 +527,8 @@ public class ServiceContext
     public int callUnhandledExceptionHandler(Frame frame)
         {
         // TODO: call the handler (via invokeLater)
-        Utils.log("Unhandled exception: " + frame.m_hException + " " + frame.m_hException.m_mapFields);
+        // TODO: for the "main" context this should terminate the container
+        Utils.log(frame, "Unhandled exception: " + frame.m_hException);
         return Op.R_NEXT;
         }
 
@@ -658,7 +676,7 @@ public class ServiceContext
                         f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
                     }
 
-            public String toString()
+                public String toString()
                     {
                     return "Invoke1Request";
                     }
@@ -727,7 +745,7 @@ public class ServiceContext
                     return f_hFunction.callN(frame, context.getService(), f_ahArg, aiReturn);
                     }
 
-            public String toString()
+                public String toString()
                     {
                     return "InvokeNRequest";
                     }
@@ -788,7 +806,7 @@ public class ServiceContext
                             : ((PropertyOperation11) f_op).invoke(frame, context.m_hService, f_sPropName, f_hValue, 0);
                     }
 
-            public String toString()
+                public String toString()
                     {
                     return "PropertyOpRequest";
                     }
@@ -811,6 +829,58 @@ public class ServiceContext
                     sendResponse1(f_fiberCaller, frame0, f_future);
                     }
                 return Op.R_NEXT;
+                });
+
+            return frame0;
+            }
+        }
+
+    /**
+     * Represents a constant initialization request sent to the "main" container context.
+     */
+    public static class ConstantInitializationRequest
+            extends Message
+        {
+        private final MethodStructure f_method;
+        private final CompletableFuture<ObjectHandle> f_future;
+
+        public ConstantInitializationRequest(Frame frameCaller, MethodStructure method,
+                                             CompletableFuture<ObjectHandle> future)
+            {
+            super(frameCaller);
+
+            f_method = method;
+            f_future = future;
+            }
+
+        @Override
+        public Frame createFrame(ServiceContext context)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    return f_method.ensureInitialized(frame, null);
+                    }
+
+                public String toString()
+                    {
+                    return "StaticInitializationRequest";
+                    }
+                };
+
+            Frame frame0 = context.createServiceEntryFrame(this, 1,
+                    new Op[]{opCall, Return_0.INSTANCE});
+
+            frame0.setContinuation((_null) ->
+                {
+                if (frame0.m_hException == null)
+                    {
+                    sendResponse1(f_fiberCaller, frame0, f_future);
+                    return Op.R_NEXT;
+                    }
+                // this should terminate the container
+                return context.callUnhandledExceptionHandler(frame0);
                 });
 
             return frame0;

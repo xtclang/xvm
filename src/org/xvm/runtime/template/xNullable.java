@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import java.util.Collections;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.TypeComposition;
@@ -26,13 +27,22 @@ public class xNullable
     @Override
     public void initDeclared()
         {
-        ConstantPool pool = f_templates.f_container.f_pool;
-        f_templates.registerNativeTemplate(pool.typeNull(), this);
+        if (f_struct.getFormat() == Component.Format.ENUM)
+            {
+            ConstantPool pool = f_templates.f_container.f_pool;
+            f_templates.registerNativeTemplate(pool.typeNull(), this);
 
-        NULL = new NullHandle(ensureCanonicalClass());
+            NULL = new NullHandle(ensureCanonicalClass());
 
-        m_listNames = Collections.singletonList("Null");
-        m_listHandles = Collections.singletonList(NULL);
+            m_listNames = Collections.singletonList("Null");
+            m_listHandles = Collections.singletonList(NULL);
+
+            pool.valNull().setHandle(NULL);
+            }
+        else
+            {
+            getSuper(); // this will initialize all the handles
+            }
         }
 
     private static class NullHandle

@@ -5,6 +5,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.StringConstant;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
@@ -78,6 +80,17 @@ public class xTestService extends xService
             new X_Print(adapter.ensureValueConstantId("\n# in TestService.increment #")),
             new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0), // next register #0
             new Return_1(0),
+            });
+
+        MethodStructure mtTestConst = ensureMethodStructure("testConstant", VOID, VOID);
+        mtTestConst.setOps(new Op[]
+            {
+            new X_Print(adapter.ensureValueConstantId("\n# in TestService.testConstant #")),
+            new Var_IN(adapter.getClassType("TestApp.Point", this),
+                (StringConstant) adapter.ensureValueConstant("origin"),
+                adapter.getSingletonConstant("TestPackage.Origin")),  // #0
+            new X_Print(0),
+            new Return_0(),
             });
 
         MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",

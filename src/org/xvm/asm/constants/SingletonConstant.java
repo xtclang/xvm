@@ -10,6 +10,8 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.runtime.ObjectHandle;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -81,6 +83,29 @@ public class SingletonConstant
     public IdentityConstant getValue()
         {
         return m_constClass;
+        }
+
+
+    // ----- run-time support  ---------------------------------------------------------------------
+
+    /**
+     * @return an ObjectHandle representing this singleton value
+     */
+    public ObjectHandle getHandle()
+        {
+        return m_handle;
+        }
+
+    /**
+     * Set the handle for this singleton's value.
+     *
+     * @param handle  the corresponding handle
+     */
+    public void setHandle(ObjectHandle handle)
+        {
+        assert m_handle == null || m_handle == handle; // not re-settable
+
+        m_handle = handle;
         }
 
 
@@ -179,4 +204,9 @@ public class SingletonConstant
      * The IdentityConstant for the class of the singleton value.
      */
     private IdentityConstant m_constClass;
+
+    /**
+     * The ObjectHandle representing this singleton's value.
+     */
+    private transient ObjectHandle m_handle;
     }
