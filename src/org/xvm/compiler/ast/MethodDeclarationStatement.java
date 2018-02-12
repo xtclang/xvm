@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorList.ErrorInfo;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -23,6 +25,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -58,6 +61,8 @@ public class MethodDeclarationStatement
         {
         super(lStartPos, lEndPos);
 
+        assert name != null;
+
         this.condition    = condition;
         this.modifiers    = modifiers;
         this.annotations  = annotations;
@@ -73,14 +78,54 @@ public class MethodDeclarationStatement
         this.doc          = doc;
         }
 
+    /**
+     * Create a MethodDeclarationStatement that turns an expression into a MethodStructure. This is
+     * used, for example, by initializers.
+     *
+     * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
+     *                compile into
+     * @param expr    the Expression that the resulting method must evaluate as its one return value
+     */
+    public MethodDeclarationStatement(MethodStructure struct, Expression expr)
+        {
+        super(expr.getStartPosition(), expr.getEndPosition());
+
+        // store off the method structure that we will generate code into
+        setComponent(struct);
+
+        // grab a body from the expression, if it has one, otherwise make one
+        if (expr instanceof LambdaExpression && ((LambdaExpression) expr).params.isEmpty())
+            {
+            this.body = ((LambdaExpression) expr).body;
+            }
+        else
+            {
+            // turn "<expr>" into the statement block "{ return <expr>; }"
+            Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
+            ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
+            this.body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+            }
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
     public String getName()
         {
-        return keyword == null
-                ? name.getValue().toString()
-                : keyword.getId().TEXT;
+        if (keyword != null)
+            {
+            return keyword.getId().TEXT;
+            }
+
+        if (name != null)
+            {
+            return name.getValue().toString();
+            }
+
+        MethodStructure struct = (MethodStructure) getComponent();
+        return struct == null
+                ? "???"
+                : struct.getName();
         }
 
     @Override
@@ -98,11 +143,17 @@ public class MethodDeclarationStatement
         return CHILD_FIELDS;
         }
 
+    @Override
+    protected boolean usesSuper()
+        {
+        return body != null && body.usesSuper();
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this method
         if (getComponent() == null)
@@ -136,7 +187,7 @@ public class MethodDeclarationStatement
                             }
                         // it's a "short hand" property method; stop right here
                         // will continue resolution in resolveNames() below
-                        return;
+                        return this;
                         }
 
                     if (fConstructor)
@@ -194,8 +245,179 @@ public class MethodDeclarationStatement
                 }
             }
 
-        super.registerStructures(errs);
+        return super.registerStructures(errs);
         }
+
+    @Override
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (getComponent() == null)
+            {
+            Component container = getParent().getComponent();
+            String    sName     = getName();
+            if (container.isMethodContainer())
+                {
+                if (returns == null && container instanceof PropertyStructure)
+                    {
+                    // this is a short-hand property method
+                    PropertyStructure property = (PropertyStructure) container;
+                    List<Annotation> annotations =
+                        ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
+
+                    MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
+                    if (methodSuper == null)
+                        {
+                        listRevisit.add(this);
+                        return this;
+                        }
+
+                    ConstantPool            pool     = container.getConstantPool();
+                    int                     cReturns = methodSuper.getReturnCount();
+                    org.xvm.asm.Parameter[] aReturns = new org.xvm.asm.Parameter[cReturns];
+                    for (int i = 0; i < cReturns; i++)
+                        {
+                        org.xvm.asm.Parameter param = methodSuper.getReturn(i);
+                        TypeConstant type = param.getType();
+
+                        if (type.getFormat() == Constant.Format.TerminalType)
+                            {
+                            Constant constReturn = type.getDefiningConstant();
+                            if (constReturn.getFormat() == Constant.Format.UnresolvedName)
+                                {
+                                // mot yet resolved; come back later
+                                listRevisit.add(this);
+                                return this;
+                                }
+
+                            if (constReturn.getFormat() == Constant.Format.Property
+                                    && ((PropertyConstant) constReturn).getName().equals("RefType"))
+                                {
+                                // replace the RefType with the actual property type
+                                param = new org.xvm.asm.Parameter(pool,
+                                        property.getType(), param.getName(), null, true, i, false);
+                                }
+                            }
+                        aReturns[i] = param;
+                        }
+
+                    org.xvm.asm.Parameter[] aParams = buildParameters(pool);
+
+                    // the parameters were already matched; no need to re-check
+                    MethodStructure method = container.createMethod(
+                            false, Access.PUBLIC, null, aReturns, sName, aParams, usesSuper());
+                    setComponent(method);
+                    }
+                }
+            }
+
+        AstNode nodeResult = super.resolveNames(listRevisit, errs);
+        assert nodeResult == this;
+
+        if (getComponent() instanceof MethodStructure)
+            {
+            // sort out which annotations go on the method, and which belong to the return type
+            if (!((MethodStructure) getComponent()).resolveAnnotations())
+                {
+                listRevisit.add(this);
+                return this;
+                }
+            }
+
+        return this;
+        }
+
+    @Override
+    public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        ensureReached(Stage.Validated);
+        if (!alreadyReached(Stage.Emitted))
+            {
+            setStage(Stage.Emitting);
+
+            MethodStructure method = (MethodStructure) getComponent();
+            if (body == null)
+                {
+                // it's abstract
+                method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
+                }
+            else
+                {
+                String    sPath    = method.getIdentityConstant().getPathString();
+                Code      code     = method.createCode();
+                ErrorList errsTemp = new ErrorList(10);
+                try
+                    {
+                    body.compileMethod(code, errsTemp);
+
+                    // TODO: temporary
+                    if (errsTemp.getErrors().isEmpty())
+                        {
+                        if (sPath.startsWith("Test"))
+                            {
+                            if (sPath.contains("ExpectedFailure"))
+                                {
+                                System.err.println("Compilation should have failed: " + sPath);
+                                }
+                            else
+                                {
+                                System.out.println("Successfully compiled: " + sPath);
+                                }
+                            }
+                        }
+                    else
+                        {
+                        if (sPath.startsWith("Test"))
+                            {
+                            if (sPath.contains("ExpectedFailure"))
+                                {
+                                System.out.println("Successfully failed compilation: " + sPath);
+                                }
+                            else
+                                {
+                                System.err.println("Compilation error: " + sPath);
+                                errsTemp.getErrors().forEach(System.err::println);
+                                }
+                            }
+
+                        if (System.getProperty("GG") == null)
+                            {
+                            // copy over errors
+                            for (ErrorInfo info : errsTemp.getErrors())
+                                {
+                                errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                                }
+                            }
+                        else
+                            {
+                            method.setNative(true);
+                            }
+                        }
+                    }
+                catch (UnsupportedOperationException e) // TODO temporary
+                    {
+                    // copy over errors
+                    for (ErrorInfo info : errsTemp.getErrors())
+                        {
+                        errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                        }
+
+                    String sMsg = e.getMessage();
+                    log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
+                            + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
+                    method.setNative(true);
+                    if (sPath.startsWith("TestCompiler"))
+                        {
+                        System.err.println("Compilation error: " + sPath + " " + sMsg);
+                        }
+                    }
+                }
+            }
+
+        return super.generateCode(listRevisit, errs);
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
 
     protected org.xvm.asm.Annotation[] buildAnnotations(ConstantPool pool)
         {
@@ -238,77 +460,6 @@ public class MethodDeclarationStatement
         return aParams;
         }
 
-    @Override
-    protected boolean usesSuper()
-        {
-        return body != null && body.usesSuper();
-        }
-
-    @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (getComponent() == null)
-            {
-            Component container = getParent().getComponent();
-            String    sName     = getName();
-            if (container.isMethodContainer())
-                {
-                if (returns == null && container instanceof PropertyStructure)
-                    {
-                    // this is a short-hand property method
-                    PropertyStructure property = (PropertyStructure) container;
-                    List<Annotation> annotations =
-                        ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
-
-                    MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
-                    if (methodSuper == null)
-                        {
-                        listRevisit.add(this);
-                        return;
-                        }
-
-                    ConstantPool            pool     = container.getConstantPool();
-                    int                     cReturns = methodSuper.getReturnCount();
-                    org.xvm.asm.Parameter[] aReturns = new org.xvm.asm.Parameter[cReturns];
-                    for (int i = 0; i < cReturns; i++)
-                        {
-                        org.xvm.asm.Parameter param = methodSuper.getReturn(i);
-                        TypeConstant type = param.getType();
-
-                        if (type.getFormat() == Constant.Format.TerminalType)
-                            {
-                            Constant constReturn = type.getDefiningConstant();
-                            if (constReturn.getFormat() == Constant.Format.UnresolvedName)
-                                {
-                                // mot yet resolved; come back later
-                                listRevisit.add(this);
-                                return;
-                                }
-
-                            if (constReturn.getFormat() == Constant.Format.Property
-                                    && ((PropertyConstant) constReturn).getName().equals("RefType"))
-                                {
-                                // replace the RefType with the actual property type
-                                param = new org.xvm.asm.Parameter(pool,
-                                        property.getType(), param.getName(), null, true, i, false);
-                                }
-                            }
-                        aReturns[i] = param;
-                        }
-
-                    org.xvm.asm.Parameter[] aParams = buildParameters(pool);
-
-                    // the parameters were already matched; no need to re-check
-                    MethodStructure method = container.createMethod(
-                            false, Access.PUBLIC, null, aReturns, sName, aParams, usesSuper());
-                    setComponent(method);
-                    }
-                }
-            }
-
-        super.resolveNames(listRevisit, errs);
-        }
-
     /**
      * Find a method on the Ref class or any of the annotations that matches the specified
      * name and parameters of a "short-hand" property method declaration.
@@ -322,7 +473,7 @@ public class MethodDeclarationStatement
      * @return the matching methods structure of null if none is found
      */
     protected MethodStructure findRefMethod(PropertyStructure property, List<Annotation> annotations,
-                                            String sMethName, List<Parameter> params, ErrorListener errs)
+            String sMethName, List<Parameter> params, ErrorListener errs)
         {
         ConstantPool pool = property.getConstantPool();
 
@@ -381,7 +532,7 @@ public class MethodDeclarationStatement
      * @return the matching method structure
      */
     protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
-                                         String sMethName, List<Parameter> parameters)
+            String sMethName, List<Parameter> parameters)
         {
         MultiMethodStructure mms = (MultiMethodStructure) clz.getChild(sMethName);
         if (mms != null)
@@ -403,84 +554,19 @@ public class MethodDeclarationStatement
         return null;
         }
 
-    @Override
-    protected void generateCode(ErrorListener errs)
-        {
-        MethodStructure method = (MethodStructure) getComponent();
-        if (body == null)
-            {
-            // it's abstract
-            method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
-            }
-        else
-            {
-            Code code = method.createCode();
-            String sPath = method.getIdentityConstant().getPathString();
-            try
-                {
-                ErrorList errList = (ErrorList) errs; // TODO: temporary
-                errList.clear();
-
-                body.compileMethod(code, errs);
-
-                // TODO: temporary
-                if (errList.getErrors().isEmpty())
-                    {
-                    if (sPath.startsWith("Test"))
-                        {
-                        if (sPath.contains("ExpectedFailure"))
-                            {
-                            System.err.println("Compilation should have failed: " + sPath);
-                            }
-                        else
-                            {
-                            System.out.println("Successfully compiled: " + sPath);
-                            }
-                        }
-                    }
-                else
-                    {
-                    if (sPath.startsWith("Test"))
-                        {
-                        if (sPath.contains("ExpectedFailure"))
-                            {
-                            System.out.println("Successfully failed compilation: " + sPath);
-                            }
-                        else
-                            {
-                            System.err.println("Compilation error: " + sPath);
-                            errList.getErrors().forEach(System.err::println);
-                            }
-                        }
-
-                    if (System.getProperty("GG") != null)
-                        {
-                        errList.clear();
-                        method.setNative(true);
-                        }
-                    }
-                }
-            catch (UnsupportedOperationException e) // TODO temporary
-                {
-                String sMsg = e.getMessage();
-                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                        + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
-                method.setNative(true);
-                if (sPath.startsWith("TestCompiler"))
-                    {
-                    System.err.println("Compilation error: " + sPath + " " + sMsg);
-                    }
-                }
-            }
-
-        super.generateCode(errs);
-        }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString()
         {
+        if (name == null)
+            {
+            MethodStructure struct = (MethodStructure) getComponent();
+            return struct == null
+                    ? "?()"
+                    : struct.getIdentityConstant().getValueString();
+            }
+
         StringBuilder sb = new StringBuilder();
 
         if (modifiers != null)

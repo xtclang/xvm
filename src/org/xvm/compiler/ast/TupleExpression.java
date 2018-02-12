@@ -79,6 +79,12 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    public int getValueCount()
+        {
+        return getExpressions().size();
+        }
+
+    @Override
     protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;

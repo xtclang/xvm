@@ -6,6 +6,7 @@ import java.io.StringWriter;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -20,8 +21,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.compiler.*;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Source;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -33,7 +34,6 @@ import static org.xvm.util.Handy.indentLines;
  * Common base class for all statements and expressions.
  */
 public abstract class AstNode
-        implements Iterable<AstNode>
     {
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ public abstract class AstNode
      */
     public AstNode getParent()
         {
-        return parent;
+        return m_parent;
         }
 
     /**
@@ -54,7 +54,7 @@ public abstract class AstNode
      */
     protected void setParent(AstNode parent)
         {
-        this.parent = parent;
+        this.m_parent = parent;
         }
 
     /**
@@ -101,25 +101,42 @@ public abstract class AstNode
         }
 
     /**
-     * Return an Iterable that represents all of the child nodes of this node.
+     * Return an Iterable/Iterator that represents all of the child nodes of this node.
      *
      * @return an Iterable of child nodes (from whence an Iterator can be obtained)
      */
-    public Iterable<AstNode> children()
+    public ChildIterator children()
         {
-        return this;
+        Field[] fields = getChildFields();
+        return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
         }
 
+    /**
+     * Replace the specified child of this AstNode with a new child.
+     *
+     * @param nodeOld  the child to replace
+     * @param nodeNew  the new child
+     */
+    public void replaceChild(AstNode nodeOld, AstNode nodeNew)
+        {
+        ChildIterator children = children();
+        for (AstNode node : children)
+            {
+            if (node == nodeOld)
+                {
+                children.replaceWith(nodeNew);
+                return;
+                }
+            }
+        throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
+        }
+
+    /**
+     * @return an array of fields on this AstNode that contain references to child AstNodes
+     */
     protected Field[] getChildFields()
         {
         return NO_FIELDS;
-        }
-
-    @Override
-    public Iterator<AstNode> iterator()
-        {
-        Field[] fields = getChildFields();
-        return fields.length == 0 ? Collections.EMPTY_LIST.iterator() : new ChildIterator(fields);
         }
 
     /**
@@ -127,16 +144,50 @@ public abstract class AstNode
      */
     public Stage getStage()
         {
-        return stage;
+        return m_stage;
         }
 
     /**
-     * @param stage the updated compilation stage for this node
+     * Test if the node has reached the specified stage.
+     *
+     * @param stage  the compilation stage to test for
+     *
+     * @return true if the node has already reached or passed the specified stage
      */
-    void setStage(Stage stage)
+    protected boolean alreadyReached(Stage stage)
         {
-        assert stage.ordinal() >= this.stage.ordinal();
-        this.stage = stage;
+        assert stage != null;
+        return getStage().compareTo(stage) >= 0;
+        }
+
+    /**
+     * Verify that the node has reached the specified stage.
+     *
+     * @param stage  the stage that the node must have already reached
+     *
+     * @throws IllegalStateException  if the node has not reached the specified stage
+     */
+    protected void ensureReached(Stage stage)
+        {
+        if (!alreadyReached(stage))
+            {
+            throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
+            }
+        }
+
+    /**
+     * Update the stage to the specified stage, if the specified stage is later than the current
+     * stage.
+     *
+     * @param stage  the suggested stage
+     */
+    protected void setStage(Stage stage)
+        {
+        // stage is a "one way" attribute
+        if (stage != null && stage.compareTo(m_stage) > 0)
+            {
+            m_stage = stage;
+            }
         }
 
     /**
@@ -267,17 +318,26 @@ public abstract class AstNode
      *
      * @param errs    the error list to log any errors etc. to
      */
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
-        stage = Stage.Registered;
+        ensureReached(Stage.Initial);
+        setStage(Stage.Registering);
 
-        for (AstNode node : children())
+        ChildIterator children = children();
+        for (AstNode node : children)
             {
-            if (node.stage.ordinal() < Stage.Registered.ordinal())
+            if (!node.alreadyReached(Stage.Registered))
                 {
-                node.registerStructures(errs);
+                AstNode nodeNew = node.registerStructures(errs);
+                if (node != nodeNew)
+                    {
+                    children.replaceWith(nodeNew);
+                    }
                 }
             }
+
+        setStage(Stage.Registered);
+        return this;
         }
 
     /**
@@ -303,31 +363,32 @@ public abstract class AstNode
      *
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
-     * @param errs         the error list to log any errors etc. to
+     * @param errs         the error list to log any errors to
      */
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        assert stage.ordinal() <= Stage.Resolved.ordinal();
+        setStage(Stage.Resolving);
 
         // if this node is a NameResolver, then make sure it resolves itself first
         boolean fResolved = true;
-        if (this instanceof NameResolver.NameResolving && stage.ordinal() < Stage.Resolved.ordinal())
+        if (this instanceof NameResolver.NameResolving && !alreadyReached(Stage.Resolved))
             {
             NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
             if (resolver != null)
                 {
-                boolean fFirstTime = resolver.isFirstTime();
+                boolean fRevisiting = !resolver.isFirstTime();
                 if (resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
                     {
+                    fResolved = false;
+
                     // the first time through the recursive descent of AST nodes, we need to visit
                     // every node. subsequent visits are only to the nodes that registered
                     // themselves for re-visits due to their inability to resolve themselves fully
                     // in previous visits
-                    if (!fFirstTime)
+                    if (fRevisiting)
                         {
-                        return;
+                        return this;
                         }
-                    fResolved = false;
                     }
                 }
             }
@@ -336,34 +397,164 @@ public abstract class AstNode
         // resolve things on requests from children
         if (fResolved)
             {
-            stage = Stage.Resolved;
+            setStage(Stage.Resolved);
             }
 
-        for (AstNode node : children())
+        ChildIterator children = children();
+        for (AstNode node : children)
             {
             // don't visit children that have already successfully resolved
-            if (node.stage.ordinal() < Stage.Resolved.ordinal())
+            if (!node.alreadyReached(Stage.Resolved))
                 {
-                node.resolveNames(listRevisit, errs);
+                AstNode nodeNew = node.resolveNames(listRevisit, errs);
+                if (node != nodeNew)
+                    {
+                    children.replaceWith(nodeNew);
+                    }
                 }
             }
+
+        return this;
         }
 
     /**
-     * Third logical compiler pass. This pass is responsible for resolving names and structures
-     * within methods. To accomplish this, this pass must be able to resolve type names, which is
-     * why the first pass was necessarily a separate pass.
+     * Third logical compiler pass. This pass is responsible for resolving types, constant values,
+     * and structures within methods. To accomplish this, this pass must be able to resolve type
+     * names, which is why the second pass was necessarily a separate pass.
      *
-     * @param errs  the error list to log any errors etc. to
+     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     *                     pass
+     * @param errs         the error list to log any errors to
      */
-    protected void generateCode(ErrorListener errs)
+    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
-        stage = Stage.CodeGen;
+        ensureReached(Stage.Resolved);
+        setStage(Stage.Validating);
 
+        // it's possible that there are children whose stages have been deferred until this point;
+        // quick scan children to determine oldest stage, and if any stages were deferred, then
+        // recreate the various compiler stages here
+        Stage stageOldest = null;
         for (AstNode node : children())
             {
-            node.generateCode(errs);
+            Stage stage = node.getStage();
+            if (stageOldest == null)
+                {
+                stageOldest = stage;
+                }
+            else if (stage.compareTo(stageOldest) < 0)
+                {
+                stageOldest = stage;
+                }
             }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Registered) < 0)
+            {
+            // compiler stage 1: generateInitialFileStructure()
+            ChildIterator children = children();
+            for (AstNode node : children)
+                {
+                if (!node.alreadyReached(Stage.Registered))
+                    {
+                    AstNode nodeNew = node.registerStructures(errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
+                    }
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Resolved) < 0)
+            {
+            // compiler stage 2: resolveNames()
+            List<AstNode> listDeferred = new ArrayList<>();
+            ChildIterator children     = children();
+            for (AstNode node : children)
+                {
+                if (node.alreadyReached(Stage.Registered) && !node.alreadyReached(Stage.Resolved))
+                    {
+                    AstNode nodeNew = node.resolveNames(listDeferred, errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
+                    }
+                }
+
+            for (int cTries = 20; !listDeferred.isEmpty() && cTries > 0; --cTries)
+                {
+                List listDeferredAgain = new ArrayList<>();
+                for (AstNode node : listDeferred)
+                    {
+                    AstNode nodeNew = node.resolveNames(listDeferredAgain, errs);
+                    if (node != nodeNew)
+                        {
+                        node.getParent().replaceChild(node, nodeNew);
+                        }
+                    }
+                listDeferred = listDeferredAgain;
+                }
+
+            if (!listDeferred.isEmpty())
+                {
+                for (AstNode node : listDeferred)
+                    {
+                    node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
+                            node.getComponent().getIdentityConstant().toString());
+                    }
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Validated) < 0)
+            {
+            ChildIterator children = children();
+            for (AstNode node : children)
+                {
+                // don't visit children that have already successfully validated, and since it's
+                // possible that some children just got registered and resolved in this stage, don't
+                // try to validate any child that isn't caught up to this stage
+                // (see MethodDeclarationStatement.validateExpressions())
+                if (node.alreadyReached(Stage.Resolved) && !node.alreadyReached(Stage.Validated))
+                    {
+                    AstNode nodeNew = node.validateExpressions(listRevisit, errs);
+                    if (node != nodeNew)
+                        {
+                        children.replaceWith(nodeNew);
+                        }
+                    }
+                }
+            }
+
+        setStage(Stage.Validated);
+        return this;
+        }
+
+    /**
+     * Fourth logical compiler pass. Emits the resulting, finished structures.
+     *
+     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     *                     pass
+     * @param errs         the error list to log any errors to
+     */
+    public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        ensureReached(Stage.Validated);
+        setStage(Stage.Emitting);
+
+        ChildIterator children = children();
+        for (AstNode node : children)
+            {
+            AstNode nodeNew = node.generateCode(listRevisit, errs);
+            if (node != nodeNew)
+                {
+                children.replaceWith(nodeNew);
+                }
+            }
+
+        setStage(Stage.Emitted);
+
+        return this;
         }
 
 
@@ -412,7 +603,7 @@ public abstract class AstNode
         // for all other components (that don't override this method because they know more about
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
-        return stage.ordinal() >= Stage.Resolved.ordinal();
+        return alreadyReached(Stage.Resolved);
         }
 
 
@@ -667,8 +858,15 @@ public abstract class AstNode
                 {
                 try
                     {
-                    fields[i] = clzTry.getDeclaredField(names[i]);
-                    assert fields[i] != null;
+                    Field field = clzTry.getDeclaredField(names[i]);
+                    assert field != null;
+                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class))
+                        {
+                        throw new IllegalStateException("unsupported field type "
+                                + field.getType().getSimpleName() + " on field "
+                                + clzTry.getSimpleName() + '.' + names[i]);
+                        }
+                    fields[i] = field;
                     continue NextField;
                     }
                 catch (NoSuchFieldException e)
@@ -697,10 +895,55 @@ public abstract class AstNode
 
     // ----- inner class: ChildIterator ------------------------------------------------------------
 
-    protected final class ChildIterator
-            implements Iterator<AstNode>
+    /**
+     * Represents an Iterator that can also replace the most recently iterated element.
+     */
+    public interface ChildIterator
+            extends Iterable<AstNode>, Iterator<AstNode>
         {
-        protected ChildIterator(Field[] fields)
+        @Override
+        default Iterator<AstNode> iterator()
+            {
+            return this;
+            }
+
+        /**
+         * Replace the most recently returned node with the specified new node.
+         *
+         * @param nodeNew  the node to use as a replacement for the node most recently returned from
+         *                 the {@link #next()} method
+         */
+        default void replaceWith(AstNode nodeNew)
+            {
+            throw new IllegalStateException();
+            }
+
+        public static final ChildIterator EMPTY = new ChildIterator()
+            {
+            @Override
+            public boolean hasNext()
+                {
+                return false;
+                }
+
+            @Override
+            public AstNode next()
+                {
+                throw new NoSuchElementException();
+                }
+            };
+        }
+
+    protected final class ChildIteratorImpl
+            implements ChildIterator
+        {
+        /**
+         * Construct a ChildIterator that will iterate all of the children that are held in the
+         * specified fields, which are either AstNodes themselves, or are container types thereof.
+         *
+         * @param fields  an array of fields of the AstNode
+         */
+        protected ChildIteratorImpl(Field[] fields)
             {
             this.fields = fields;
             }
@@ -752,8 +995,9 @@ public abstract class AstNode
                     }
                 catch (NullPointerException e)
                     {
-                    throw new IllegalStateException("class=" + AstNode.this.getClass().getSimpleName()
-                            + ", field=" + iField);
+                    throw new IllegalStateException(
+                            "class=" + AstNode.this.getClass().getSimpleName()
+                                    + ", field=" + iField);
                     }
                 catch (IllegalAccessException e)
                     {
@@ -823,7 +1067,7 @@ public abstract class AstNode
             throw new IllegalStateException();
             }
 
-        public void replace(AstNode newChild)
+        public void replaceWith(AstNode newChild)
             {
             if (state == HAS_PREV)
                 {
@@ -856,23 +1100,26 @@ public abstract class AstNode
         private static final int HAS_PREV = 2;
 
         private Field[] fields;
-        private int     iField = -1;
-        private Object  value;
-        private int     state  = NOT_PREP;
+        private int iField = -1;
+        private Object value;
+        private int state = NOT_PREP;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
+    /**
+     * Constant empty array  of fields.
+     */
     protected static final Field[] NO_FIELDS = new Field[0];
 
     /**
      * The stage of compilation.
      */
-    private Stage stage = Stage.Initial;
+    private Stage m_stage = Stage.Initial;
 
     /**
      * The parent of this AstNode.
      */
-    private AstNode parent;
+    private AstNode m_parent;
     }

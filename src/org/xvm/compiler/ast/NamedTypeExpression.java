@@ -243,18 +243,18 @@ public class NamedTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        boolean fWasResolved = getStage().ordinal() >= Stage.Resolved.ordinal();
-        super.resolveNames(listRevisit, errs);
-        boolean fIsResolved  = getStage().ordinal() >= Stage.Resolved.ordinal();
+        boolean fWasResolved = alreadyReached(Stage.Resolved);
+        AstNode nodeNew = super.resolveNames(listRevisit, errs);
+        boolean fIsResolved  = alreadyReached(Stage.Resolved);
 
-        if (fIsResolved && !fWasResolved)
+        if (nodeNew == this && fIsResolved && !fWasResolved)
             {
             NameResolver resolver = m_resolver;
             if (resolver.getResult() == Result.ERROR)
                 {
-                return;
+                return this;
                 }
             assert resolver.getResult() == Result.RESOLVED;
 
@@ -271,6 +271,8 @@ public class NamedTypeExpression
 
             ensureTypeConstant();
             }
+
+        return nodeNew;
         }
 
     @Override

@@ -2,6 +2,7 @@ package org.xvm.compiler;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.ErrorListener;
@@ -26,28 +27,56 @@ public class Compiler
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public Compiler(ModuleRepository repos, TypeCompositionStatement module, ErrorListener listener)
+    /**
+     * Construct a module compiler.
+     *
+     * @param repos   the module repository
+     * @param stmtModule  the statement representing all of the code in the module
+     * @param errs    the error list to log any errors to during the various phases of compilation
+     */
+    public Compiler(ModuleRepository repos, TypeCompositionStatement stmtModule, ErrorListener errs)
         {
-        assert repos != null;
-        assert module != null;
-        assert listener != null;
-        assert module.getCategory().getId() == Token.Id.MODULE;
+        if (repos == null)
+            {
+            throw new IllegalArgumentException("repository required");
+            }
+        if (stmtModule == null)
+            {
+            throw new IllegalArgumentException("AST node for module required");
+            }
+        if (stmtModule.getCategory().getId() != Token.Id.MODULE)
+            {
+            throw new IllegalArgumentException("AST node for module is not a module statement");
+            }
+        if (errs == null)
+            {
+            errs = ErrorListener.RUNTIME;
+            }
 
-        m_repos  = repos;
-        m_module = module;
-        m_errs   = listener;
-        m_fRoot  = module.getName().equals("ecstasy.xtclang.org");
+        m_repos      = repos;
+        m_stmtModule = stmtModule;
+        m_errs       = errs;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the ModuleRepository that was supplied to the compiler
+     */
+    public ModuleRepository getRepository()
+        {
+        validateCompiler();
+        return m_repos;
+        }
+
+    /**
      * @return the TypeCompositionStatement for the module
      */
-    public TypeCompositionStatement getModule()
+    public TypeCompositionStatement getModuleStatement()
         {
-        return m_module;
+        validateCompiler();
+        return m_stmtModule;
         }
 
     /**
@@ -55,6 +84,7 @@ public class Compiler
      */
     public ErrorListener getErrorListener()
         {
+        validateCompiler();
         return m_errs;
         }
 
@@ -63,7 +93,30 @@ public class Compiler
      */
     public FileStructure getFileStructure()
         {
-        return m_struct;
+        validateCompiler();
+        return m_structFile;
+        }
+
+    /**
+     * @return the current stage of the compiler
+     */
+    public Stage getStage()
+        {
+        return m_stage;
+        }
+
+    /**
+     * Test if the compiler has reached the specified stage.
+     *
+     * @param stage  the compiler stage to test for
+     *
+     * @return true if the compiler has already reached or passed the specified stage
+     */
+    public boolean alreadyReached(Stage stage)
+        {
+        validateCompiler();
+        assert stage != null;
+        return getStage().compareTo(stage) >= 0;
         }
 
 
@@ -82,49 +135,52 @@ public class Compiler
      */
     public FileStructure generateInitialFileStructure()
         {
-        if (m_stage != Stage.Initial)
+        validateCompiler();
+
+        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        if (getStage() == Stage.Initial)
             {
-            throw new IllegalStateException("Stage=" + m_stage + " (expected: Initial)");
+            setStage(Stage.Registering);
+            m_structFile = m_stmtModule.createModuleStructure(m_errs);
+            m_structFile.setErrorListener(m_errs);
+            setStage(Stage.Registered);
             }
 
-        m_struct = m_module.createModuleStructure(m_errs);
-        m_struct.setErrorListener(m_errs);
-        m_stage  = Stage.Registered;
-        return m_struct;
+        return m_structFile;
         }
 
     /**
      * Second pass: Resolve all of the globally-visible dependencies and names. This pass does not
      * recurse into methods.
      * <p/>
-     * This method is uses the ModuleRepository.
+     * This method uses the ModuleRepository.
      * <p/>
      * Any error results are logged to the ErrorListener.
+     * <p/>
+     * The caller is responsible for calling this method until it returns true.
      *
-     * @return true iff all of the names have been resolved
+     * @return true iff the pass is complete; false indicates that this method MUST be called again
      */
     public boolean resolveNames()
         {
+        validateCompiler();
+        ensureReached(Stage.Registered);
+
         // idempotent: allow this to be called more than necessary without any errors/side-effects
-        if (m_stage == Stage.Resolved)
+        if (alreadyReached(Stage.Resolved))
             {
             return true;
             }
 
-        if (m_stage != Stage.Registered)
-            {
-            throw new IllegalStateException("Stage=" + m_stage + " (expected: Registered)");
-            }
-
-        if (m_listUnresolved == null)
+        if (!alreadyReached(Stage.Loaded))
             {
             // first time through, load any module dependencies
-            boolean fFatal = false;
-            for (String sModule : m_struct.moduleNames())
+            setStage(Stage.Loading);
+            for (String sModule : m_structFile.moduleNames())
                 {
-                if (!sModule.equals(m_struct.getModuleName()))
+                if (!sModule.equals(m_structFile.getModuleName()))
                     {
-                    ModuleStructure structFingerprint = m_struct.getModule(sModule);
+                    ModuleStructure structFingerprint = m_structFile.getModule(sModule);
                     assert structFingerprint.isFingerprint();
                     assert structFingerprint.getFingerprintOrigin() == null;
 
@@ -141,83 +197,265 @@ public class Compiler
                     structFingerprint.setFingerprintOrigin(structActual);
                     }
                 }
-            if (fFatal)
-                {
-                return false;
-                }
+
+            setStage(Stage.Loaded);
             }
 
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
         // in one pass, then store it off in a list to tackle next time
-        List<AstNode> listDeferred = new ArrayList<>();
-        if (m_listUnresolved == null)
+        if (!alreadyReached(Stage.Resolving))
             {
             // first time through: resolve starting from the module, and recurse down
-            m_module.resolveNames(listDeferred, m_errs);
+            setStage(Stage.Resolving);
+            m_stmtModule = (TypeCompositionStatement) m_stmtModule.resolveNames(getDeferred(), m_errs);
             }
         else
             {
             // second through n-th time through: resolve starting from whatever didn't get resolved
             // last time, and recurse down
-            for (AstNode node : m_listUnresolved)
+            for (AstNode node : takeDeferred())
                 {
-                node.resolveNames(listDeferred, m_errs);
+                AstNode nodeNew = node.resolveNames(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
                 }
             }
 
         // when there is nothing left deferred, the resolution stage is completed
-        boolean fResolved = listDeferred.isEmpty();
-        if (fResolved)
+        boolean fDone = getDeferred().isEmpty() && !m_errs.isAbortDesired();
+        if (fDone)
             {
             // force the reregistration of constants after the names are resolved to eliminate
             // cruft from earlier passes, such as Void return types
-            m_struct.reregisterConstants();
+            m_structFile.reregisterConstants();
 
-            m_listUnresolved = null;
-            m_stage          = Stage.Resolved;
+            setStage(Stage.Resolved);
+            }
+
+        return fDone;
+        }
+
+    /**
+     * Third pass: Resolve all types and constants. This does recurse to the full depth of the AST
+     * tree.
+     * <p/>
+     * This method uses the ModuleRepository.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
+     * <p/>
+     * The caller is responsible for calling this method until it returns true.
+     *
+     * @return true iff the pass is complete; false indicates that this method MUST be called again
+     */
+    public boolean validateExpressions()
+        {
+        validateCompiler();
+        ensureReached(Stage.Resolved);
+
+        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        if (alreadyReached(Stage.Validated))
+            {
+            return true;
+            }
+
+        // recursively resolve all of the unresolved global names, and if anything couldn't get done
+        // in one pass, then store it off in a list to tackle next time
+        if (!alreadyReached(Stage.Validating))
+            {
+            // first time through: resolve starting from the module, and recurse down
+            setStage(Stage.Validating);
+            m_stmtModule = (TypeCompositionStatement) m_stmtModule.validateExpressions(getDeferred(), m_errs);
             }
         else
             {
-            m_listUnresolved = listDeferred;
+            // second through n-th time through: validate starting from whatever didn't get
+            // validated last time, and recurse down
+            for (AstNode node : takeDeferred())
+                {
+                AstNode nodeNew = node.validateExpressions(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
+                }
             }
-        return fResolved;
+
+        // when there is nothing left deferred, the resolution stage is completed
+        boolean fDone = getDeferred().isEmpty();
+        if (fDone)
+            {
+            setStage(Stage.Validated);
+            }
+
+        return fDone;
+        }
+
+    /**
+     * This stage finishes the compilation by emitting any necessary code and any remaining
+     * structures.
+     * <p/>
+     * This method uses the ModuleRepository.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
+     * <p/>
+     * The caller is responsible for calling this method until it returns true.
+     *
+     * @return true iff the pass is complete; false indicates that this method MUST be called again
+     */
+    public boolean generateCode()
+        {
+        validateCompiler();
+        ensureReached(Stage.Validated);
+
+        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        if (alreadyReached(Stage.Emitted))
+            {
+            return true;
+            }
+
+        // recursively resolve all of the unresolved global names, and if anything couldn't get done
+        // in one pass, then store it off in a list to tackle next time
+        if (!alreadyReached(Stage.Emitting))
+            {
+            // first time through: resolve starting from the module, and recurse down
+            setStage(Stage.Emitting);
+            m_stmtModule = m_stmtModule.generateCode(getDeferred(), m_errs);
+            }
+        else
+            {
+            // second through n-th time through: validate starting from whatever didn't get
+            // validated last time, and recurse down
+            for (AstNode node : takeDeferred())
+                {
+                AstNode nodeNew = node.generateCode(getDeferred(), m_errs);
+                if (node != nodeNew)
+                    {
+                    node.getParent().replaceChild(node, nodeNew);
+                    }
+                }
+            }
+
+        // when there is nothing left deferred, the resolution stage is completed
+        boolean fDone = getDeferred().isEmpty();
+        if (fDone)
+            {
+            // do a final validation on the entire module structure
+            m_structFile.validate(m_errs);
+            m_structFile.setErrorListener(null);
+
+            setStage(Stage.Emitted);
+            }
+
+        return fDone;
         }
 
     /**
      * After a certain number of attempts to resolve names by invoking {@link #resolveNames}, this
      * method will report any unresolved names as fatal errors.
      */
-    public void reportUnresolvableNames()
+    public void logRemainingDeferredAsErrors()
         {
-        if (m_stage == Stage.Registered && m_listUnresolved != null && !m_listUnresolved.isEmpty())
+        for (AstNode node : getDeferred())
             {
-            for (AstNode node : m_listUnresolved)
-                {
-                node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
-                        node.getComponent().getIdentityConstant().toString());
-                }
+            node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
+                    node.getComponent().getIdentityConstant().toString());
             }
         }
 
     /**
-     * This stage actually finally recurses into the methods, compiling their bodies. This phase
-     * generates the code ops, but it also builds any nested structures that are found within the
-     * methods, including inner classes, lambdas, and so on.
+     * Discard the compiler. This invalidates the compiler; any further attempts to use the compiler
+     * will result in an exception.
      */
-    public void generateCode()
+    public void invalidate()
         {
-        if (m_stage != Stage.Resolved)
-            {
-            throw new IllegalStateException("Stage=" + m_stage + " (expected: Resolved)");
-            }
-
-        m_module.generateCode(m_errs);
-        m_struct.validate(m_errs);
-        m_struct.setErrorListener(null);
+        setStage(Stage.Discarded);
         }
 
 
-    // ----- constants ---------------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return "Compiler (Module=" + m_stmtModule.getName() + ", Stage=" + getStage() + ")";
+        }
+
+
+    // ----- internal helpers ----------------------------------------------------------------------
+
+    /**
+     * Verify that the compiler has not been invalidated.
+     *
+     * @throws IllegalStateException  if the compiler has been invalidated
+     */
+    private void validateCompiler()
+        {
+        if (getStage() == Stage.Discarded)
+            {
+            throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Verify that the compiler has reached the specified stage.
+     *
+     * @param stage  the stage that the compiler must have already reached
+     *
+     * @throws IllegalStateException  if the compiler has not reached the specified stage
+     */
+    private void ensureReached(Stage stage)
+        {
+        if (!alreadyReached(stage))
+            {
+            throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
+            }
+        }
+
+    /**
+     * Update the stage to the specified stage, if the specified stage is later than the current
+     * stage.
+     *
+     * @param stage  the suggested stage
+     */
+    private void setStage(Stage stage)
+        {
+        // stage is a "one way" attribute
+        if (stage != null && stage.compareTo(m_stage) > 0)
+            {
+            m_stage = stage;
+            }
+        }
+
+    /**
+     * @return the list of AST nodes that have been deferred for the current stage
+     */
+    private List<AstNode> getDeferred()
+        {
+        return m_listDeferred;
+        }
+
+    /**
+     * Take the list of whatever AST nodes were previously deferred. This resets the list of
+     * deferred nodes.
+     *
+     * @return the list of AST nodes that were previously deferred within the current stage
+     */
+    private List<AstNode> takeDeferred()
+        {
+        List<AstNode> listPrevious = m_listDeferred;
+        if (listPrevious.isEmpty())
+            {
+            return Collections.EMPTY_LIST;
+            }
+
+        m_listDeferred = new ArrayList<>();
+        return listPrevious;
+        }
+
+
+    // ----- constants -----------------------------------------------------------------------------
 
     /**
      * Unknown fatal error.
@@ -435,7 +673,21 @@ public class Compiler
     /**
      * The stages of compilation.
      */
-    public enum Stage {Initial, Registered, Resolved, CodeGen, };
+    public enum Stage
+        {
+        Initial,
+        Registering,
+        Registered,
+        Loading,
+        Loaded,
+        Resolving,
+        Resolved,
+        Validating,
+        Validated,
+        Emitting,
+        Emitted,
+        Discarded
+        };
 
     /**
      * Current compilation stage.
@@ -451,7 +703,7 @@ public class Compiler
      * The TypeCompositionStatement for the module being compiled. This is an object returned from
      * the Parser, or one assembled from multiple objects returned from the Parser.
      */
-    private final TypeCompositionStatement m_module;
+    private TypeCompositionStatement m_stmtModule;
 
     /**
      * The ErrorListener to report errors to.
@@ -461,16 +713,12 @@ public class Compiler
     /**
      * The FileStructure that this compiler is putting together in a series of passes.
      */
-    private FileStructure m_struct;
+    private FileStructure m_structFile;
 
     /**
-     * True if this is the compiler for the Ecstasy module itself.
+     * Within a compiler stage that may not complete in a single cass, this holds a list of AstNode
+     * objects that have explicitly registered themselves as needing to be revisited.
      */
-    private boolean m_fRoot;
-
-    /**
-     * After the compiler stage reaches Registered, but before it reaches Resolved, this holds a
-     * list of AstNode objects that need to be resolved.
-     */
-    private transient List<AstNode> m_listUnresolved;
+    private transient List<AstNode> m_listDeferred = new ArrayList<>();
+    ;
     }

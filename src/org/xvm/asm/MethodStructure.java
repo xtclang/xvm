@@ -44,7 +44,6 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * An XVM Structure that represents a method or a function.
- * TODO annotations - there might be method annotations that belong to the return type and not the method itself e.g. "@Unsafe Int foo()"
  */
 public class MethodStructure
         extends Component
@@ -117,8 +116,7 @@ public class MethodStructure
      */
     public boolean isFunction()
         {
-        // TODO
-        return false;
+        return isStatic();
         }
 
     /**
@@ -168,6 +166,95 @@ public class MethodStructure
             }
 
         return null;
+        }
+
+    /**
+     * @return true if the annotations have been resolved; false if this method has to be called
+     *         later in order to resolve annotations
+     */
+    public boolean resolveAnnotations()
+        {
+        if (getReturnCount() == 0)
+            {
+            return true;
+            }
+
+        int cMove = 0;
+        for (Annotation annotation : m_aAnnotations)
+            {
+            if (annotation.containsUnresolved())
+                {
+                return false;
+                }
+
+            if (!annotation.getAnnotationType().getExplicitClassInto().isIntoMethodType())
+                {
+                ++cMove;
+                }
+            }
+        if (cMove == 0)
+            {
+            return true;
+            }
+
+        Annotation[] aAll  = m_aAnnotations;
+        int          cAll  = aAll.length;
+        if (cMove == cAll)
+            {
+            addReturnAnnotations(aAll);
+            m_aAnnotations = Annotation.NO_ANNOTATIONS;
+            return true;
+            }
+
+        int          cKeep = cAll - cMove;
+        Annotation[] aKeep = new Annotation[cKeep];
+        Annotation[] aMove = new Annotation[cMove];
+        int          iKeep = 0;
+        int          iMove = 0;
+        for (Annotation annotation : m_aAnnotations)
+            {
+            if (annotation.getAnnotationType().getExplicitClassInto().isIntoMethodType())
+                {
+                aKeep[iKeep++] = annotation;
+                }
+            else
+                {
+                aMove[iMove++] = annotation;
+                }
+            }
+
+        addReturnAnnotations(aMove);
+        m_aAnnotations = aKeep;
+        return true;
+        }
+
+    /**
+     * @param annotations  the annotations to add to the return type (or the first non-conditional
+     *                     return type, if there are multiple return types)
+     */
+    private void addReturnAnnotations(Annotation[] annotations)
+        {
+        assert m_aReturns != null;
+        assert m_aReturns.length > 0;
+
+        // determine which return value to modify (i.e. not the "conditional" value)
+        int       iRet = 0;
+        Parameter ret  = m_aReturns[iRet];
+        if (ret.isConditionalReturn())
+            {
+            ret = m_aReturns[++iRet];
+            }
+
+        assert !ret.isConditionalReturn();
+        assert iRet == ret.getIndex();
+
+        TypeConstant type = ret.getType();
+        ConstantPool pool = getConstantPool();
+        for (int i = annotations.length - 1; i >= 0; --i)
+            {
+            type = pool.ensureAnnotatedTypeConstant(annotations[i], type);
+            }
+        m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
         }
 
     /**
@@ -299,7 +386,7 @@ public class MethodStructure
         Code code = m_code;
         if (code == null)
             {
-            m_code = code = new Code();
+            m_code = code = new Code(this);
             }
         return code;
         }
@@ -319,7 +406,7 @@ public class MethodStructure
         m_FUsesSuper  = null;
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code = code = new Code();
+        m_code = code = new Code(this);
 
         markModified();
 
@@ -358,7 +445,7 @@ public class MethodStructure
         resetRuntimeInfo();
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code        = new Code(aop);
+        m_code        = new Code(this, aop);
         m_fAbstract   = false;
         m_fNative     = false;
         m_FUsesSuper  = null;
@@ -490,6 +577,54 @@ public class MethodStructure
             resetRuntimeInfo();
             }
         m_fNative = fNative;
+        }
+
+    /**
+     * Determine if this method might act as a property initializer. For example, in the property
+     * declaration:
+     * <p/>
+     * <code><pre>
+     *     Int MB = KB * KB;
+     * </pre></code>
+     * <p/>
+     * ... the value of the property could be compiled as an initializer function named "=":
+     * <p/>
+     * <code><pre>
+     *     Int MB
+     *       {
+     *       Int "="()
+     *         {
+     *         return KB * KB;
+     *         }
+     *       }
+     * </pre></code>
+     *
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value
+     */
+    public boolean isPotentialInitializer()
+        {
+        return getName().equals("=")
+                && getReturnCount() == 1 && getParamCount() == 0
+                && isFunction() && !isConditionalReturn();
+        }
+
+    /**
+     * Determine if this method is declared in a way that it could act as a property initializer for
+     * the specified type.
+     *
+     * @param type      the RefType of the reference
+     * @param resolver  an optional GenericTypeResolver that is used to resolve the property type
+     *                  and the types in the signature if necessary
+     *
+     * @return true iff this method is a public method (not function) named "get" that takes no
+     *         parameters and returns a single value of the specified type
+     */
+    public boolean isInitializer(TypeConstant type, GenericTypeResolver resolver)
+        {
+        return isPotentialInitializer() && (getReturn(0).getType().equals(type) || resolver != null &&
+                getReturn(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
         }
 
     /**
@@ -1152,28 +1287,39 @@ public class MethodStructure
     /**
      * The Code class represents the op codes that make up a method's behavior.
      */
-    public class Code
+    public static class Code
         {
         // ----- constructors -----------------------------------------------------------------
+
+        public Code()
+            {
+            this(null);
+            }
 
         /**
          * Construct a Code object. This disassembles the bytes of code from the MethodStructure if
          * it was itself disassembled; otherwise this starts empty and allows ops to be added.
          */
-        Code()
+        Code(MethodStructure method)
             {
-            byte[] abOps = m_abOps;
-            if (abOps != null)
+            f_method = method;
+
+            if (method != null)
                 {
-                try
+                byte[] abOps = method.m_abOps;
+                if (abOps != null)
                     {
-                    m_aop = abOps.length == 0
-                            ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), m_aconstLocal);
-                    }
-                catch (IOException e)
-                    {
-                    throw new RuntimeException(e);
+                    try
+                        {
+                        m_aop = abOps.length == 0
+                                ? Op.NO_OPS
+                                : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)),
+                                        method.getLocalConstants());
+                        }
+                    catch (IOException e)
+                        {
+                        throw new RuntimeException(e);
+                        }
                     }
                 }
             }
@@ -1185,13 +1331,18 @@ public class MethodStructure
          *
          * @deprecated
          */
-        Code(Op[] aop)
+        Code(MethodStructure method, Op[] aop)
             {
             m_aop = aop;
+            f_method = method;
+            m_aop    = aop;
+            calcVars();
             }
 
-        Code(Code wrappee)
+        Code(MethodStructure method, Code wrappee)
             {
+            f_method = method;
+            assert wrappee != null;
             }
 
         // ----- Code methods -----------------------------------------------------------------
@@ -1331,22 +1482,24 @@ public class MethodStructure
             return m_aop;
             }
 
-        // ----- helpers for building Ops -----------------------------------------------------
-
         /**
-         * @return the ConstantPool
+         * @return true iff there are any ops in the code
          */
-        public ConstantPool getConstantPool()
+        public boolean hasOps()
             {
-            return MethodStructure.this.getConstantPool();
+            return m_listOps != null && !m_listOps.isEmpty()
+                || f_method != null && f_method.m_abOps != null && f_method.m_abOps.length > 0;
             }
+
+
+        // ----- helpers for building Ops -----------------------------------------------------
 
         /**
          * @return the enclosing MethodStructure
          */
         public MethodStructure getMethodStructure()
             {
-            return MethodStructure.this;
+            return f_method;
             }
 
         /**
@@ -1377,13 +1530,13 @@ public class MethodStructure
          * An implementation of Code that delegates most functionality to a "real" Code object, but
          * silently ignores any attempt to actually change the code.
          */
-        class BlackHole
+        static class BlackHole
                 extends Code
             {
             BlackHole(Code wrappee)
                 {
-                super(wrappee);
-                assert wrappee == Code.this;
+                super(wrappee.f_method, wrappee);
+                f_wrappee = wrappee;
                 }
 
             @Override
@@ -1395,13 +1548,13 @@ public class MethodStructure
             @Override
             public Register lastRegister()
                 {
-                return Code.this.lastRegister();
+                return f_wrappee.lastRegister();
                 }
 
             @Override
             public int addressOf(Op op)
                 {
-                return Code.this.addressOf(op);
+                return f_wrappee.addressOf(op);
                 }
 
             @Override
@@ -1421,13 +1574,15 @@ public class MethodStructure
                 {
                 return this;
                 }
+
+            Code f_wrappee;
             }
 
         // ----- internal ---------------------------------------------------------------------
 
         protected void ensureAppending()
             {
-            if (m_abOps != null)
+            if (f_method != null && f_method.m_abOps != null)
                 {
                 throw new IllegalStateException("not appendable");
                 }
@@ -1440,10 +1595,11 @@ public class MethodStructure
 
         protected void registerConstants()
             {
-            if (m_abOps == null)
+            if (f_method.m_abOps == null)
                 {
-                assert m_registry == null;
-                Op.ConstantRegistry registry = m_registry = new Op.ConstantRegistry(getConstantPool());
+                assert f_method.m_registry == null;
+                Op.ConstantRegistry registry = f_method.m_registry =
+                    new Op.ConstantRegistry(f_method.getConstantPool());
                 Op[] aop = ensureOps();
                 for (Op op : aop)
                     {
@@ -1454,22 +1610,24 @@ public class MethodStructure
 
         protected void ensureAssembled()
             {
-            if (m_abOps == null)
+            if (f_method.m_abOps == null)
                 {
                 // if the code has been modified without assembling the entire module, then the
                 // corresponding local constant registry hasn't been populated yet to be used by
                 // the modified code
-                if (m_registry == null)
+                if (f_method.m_registry == null)
                     {
                     registerConstants();
                     }
-                assert m_registry != null;
+                assert f_method.m_registry != null;
+
+                Op.ConstantRegistry registry = f_method.m_registry;
 
                 // build the local constant array
                 Op[] aop = ensureOps();
 
                 // assemble the ops into bytes
-                Scope scope = createInitialScope();
+                Scope scope = f_method.createInitialScope();
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
                 DataOutputStream outData = new DataOutputStream(outBytes);
                 try
@@ -1480,7 +1638,7 @@ public class MethodStructure
 
                         op.resolveAddress(this, i);
                         op.simulate(scope);
-                        op.write(outData, m_registry);
+                        op.write(outData, registry);
                         }
                     }
                 catch (IOException e)
@@ -1488,12 +1646,12 @@ public class MethodStructure
                     throw new IllegalStateException(e);
                     }
 
-                m_abOps       = outBytes.toByteArray();
-                m_cVars       = scope.getMaxVars();
-                m_cScopes     = scope.getMaxDepth();
-                m_aconstLocal = m_registry.getConstantArray();
-                m_registry    = null;
-                markModified();
+                f_method.m_abOps       = outBytes.toByteArray();
+                f_method.m_aconstLocal = registry.getConstantArray();
+                f_method.m_cVars       = scope.getMaxVars();
+                f_method.m_cScopes     = scope.getMaxDepth();
+                f_method.m_registry    = null;
+                f_method.markModified();
                 }
             }
 
@@ -1504,9 +1662,8 @@ public class MethodStructure
                 {
                 if (m_listOps == null)
                     {
-                    MethodStructure method = MethodStructure.this;
                     throw new UnsupportedOperationException("Method \""
-                            + method.getIdentityConstant().getPathString()
+                            + f_method.getIdentityConstant().getPathString()
                             + "\" is neither native nor compiled");
                     }
                 m_aop = aop = m_listOps.toArray(new Op[m_listOps.size()]);
@@ -1516,19 +1673,23 @@ public class MethodStructure
 
         protected void calcVars()
             {
-            if (m_cScopes == 0)
+            if (f_method.m_cScopes == 0)
                 {
-                Scope scope = createInitialScope();
+                Scope scope = f_method.createInitialScope();
 
                 for (Op op : getAssembledOps())
                     {
                     op.simulate(scope);
                     }
 
-                m_cVars   = scope.getMaxVars();
-                m_cScopes = scope.getMaxDepth();
+                f_method.m_cVars   = scope.getMaxVars();
+                f_method.m_cScopes = scope.getMaxDepth();
                 }
             }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        protected final MethodStructure f_method;
 
         // ----- fields -----------------------------------------------------------------------
 
@@ -1574,7 +1735,7 @@ public class MethodStructure
     /**
      * Empty array of Parameters.
      */
-    public static final Parameter[] NO_PARAMS = new Parameter[0];
+    public static final Parameter[] NO_PARAMS = Parameter.NO_PARAMS;
 
     /**
      * Empty array of Ops.

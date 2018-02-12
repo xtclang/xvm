@@ -1,0 +1,33 @@
+- test static property with value (both constant and init function)
+
+- verify that inner structs are getting created correctly:
+  - inner class
+  - class in a method
+  - method in a method
+  - lambda in a method
+  - static property in a method
+  - method in a property
+  - property in a property
+  - class in a property
+
+- auto conversion
+  - IntLiteral - > Int, ok
+  - IntLiteral[] -> Int[] ???
+  - Tuple(String, IntLiteral) -> Tuple(String, Int) ???
+
+- tests
+  - return 40 + 2
+  - "void" was messing up test (so was "int" for gene)
+
+- TypeInfo
+  - nested / scoped stuff
+  - methods
+  - constructors
+
+- Doc
+  - type system - no terminals - why it's completely different
+  - "free" objects, e.g. properties, array/tuple/function of this
+  - arrays of structs - how a handle could indicate type of "Person" vs. "Person as an array element"
+    (with any of them identifiable as: type="Person as an array element", array ref, index)
+  - arrays of columns vs. rows (SIMD opts) -- could just be two different types
+

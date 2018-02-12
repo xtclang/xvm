@@ -210,8 +210,8 @@ public abstract class Constant
         switch (type.getEcstasyClassName())
             {
             default:
-                // TODO this "throw" needs to be deleted once we verify that things are working
-                throw new IllegalStateException("unsupported constant type: " + type);
+                // TODO this needs to be deleted once we verify that things are working
+                System.out.println("** unsupported constant type: " + type);
                 // fall through
             case "Boolean":
                 return pool.valFalse();

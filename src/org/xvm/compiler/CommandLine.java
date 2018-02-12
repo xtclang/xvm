@@ -134,12 +134,17 @@ public class CommandLine
         checkCompilerErrors();
         checkTerminalFailure();
 
-        // syntax check
+        // dependency resolution
         resolveDependencies();
         checkCompilerErrors();
         checkTerminalFailure();
 
-        // dependency resolution
+        // expression resolution
+        validateExpressions();
+        checkCompilerErrors();
+        checkTerminalFailure();
+
+        // assembling the actual code
         generateCode();
         checkCompilerErrors();
         checkTerminalFailure();
@@ -680,7 +685,35 @@ public class CommandLine
         // something couldn't get resolved; must be a bug in the compiler
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.reportUnresolvableNames();
+            compiler.logRemainingDeferredAsErrors();
+            }
+        }
+
+    /**
+     * Resolve dependencies, both within and among modules, including among multiple modules that
+     * are being compiled at the same time.
+     */
+    protected void validateExpressions()
+        {
+        int cTries = 0;
+        do
+            {
+            boolean fDone = true;
+            for (Compiler compiler : modulesByName.values())
+                {
+                fDone &= compiler.validateExpressions();
+                }
+            if (fDone)
+                {
+                return;
+                }
+            }
+        while (++cTries < 0x3F);
+
+        // something couldn't get resolved; must be a bug in the compiler
+        for (Compiler compiler : modulesByName.values())
+            {
+            compiler.logRemainingDeferredAsErrors();
             }
         }
 
@@ -688,9 +721,25 @@ public class CommandLine
      */
     protected void generateCode()
         {
+        int cTries = 0;
+        do
+            {
+            boolean fDone = true;
+            for (Compiler compiler : modulesByName.values())
+                {
+                fDone &= compiler.generateCode();
+                }
+            if (fDone)
+                {
+                return;
+                }
+            }
+        while (++cTries < 0x3F);
+
+        // something couldn't get resolved; must be a bug in the compiler
         for (Compiler compiler : modulesByName.values())
             {
-            compiler.generateCode();
+            compiler.logRemainingDeferredAsErrors();
             }
         }
 
@@ -755,6 +804,12 @@ public class CommandLine
             out("xtc: dump modules:");
             for (Map.Entry<File, Node> entry : modules.entrySet())
                 {
+                if (modules.size() > 1 && entry.getValue().name().equals(Constants.ECSTASY_MODULE))
+                    {
+                    // skip the Ecstasy module if we're compiling multiple modules
+                    continue;
+                    }
+
                 out(entry.getValue());
                 }
             }
@@ -763,14 +818,20 @@ public class CommandLine
             out("xtc: dump modules by name:");
             for (Map.Entry<String, Compiler> entry : modulesByName.entrySet())
                 {
+                if (modulesByName.size() > 1 && entry.getKey().equals(Constants.ECSTASY_MODULE))
+                    {
+                    // skip the Ecstasy module if we're compiling multiple modules
+                    continue;
+                    }
+
                 Compiler compiler = entry.getValue();
                 out("Compiler: " + compiler);
                 out();
                 out("Module:");
-                out(compiler.getModule());
+                out(compiler.getModuleStatement());
                 out();
                 out("Module dump:");
-                compiler.getModule().dump();
+                compiler.getModuleStatement().dump();
                 out();
                 out("File Structure:");
                 out(compiler.getFileStructure().toDebugString());
@@ -815,7 +876,7 @@ public class CommandLine
             ErrorList errs = (ErrorList) compiler.getErrorListener();
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
-                err("xtc: Errors in " + compiler.getModule().getName());
+                err("xtc: Errors in " + compiler.getModuleStatement().getName());
                 int i = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {

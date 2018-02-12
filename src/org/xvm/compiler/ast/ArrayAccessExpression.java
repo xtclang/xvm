@@ -49,6 +49,15 @@ public class ArrayAccessExpression
         }
 
 
+    // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public boolean isConstant()
+        {
+        return false;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override

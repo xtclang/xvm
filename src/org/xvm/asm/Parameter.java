@@ -300,6 +300,11 @@ public class Parameter
     // ----- fields --------------------------------------------------------------------------------
 
     /**
+     * Empty array of Parameters.
+     */
+    public static final Parameter[] NO_PARAMS = new Parameter[0];
+
+    /**
      * During disassembly, this holds the index of the constant that specifies the type of this
      * parameter.
      */

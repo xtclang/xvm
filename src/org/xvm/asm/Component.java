@@ -929,8 +929,7 @@ public abstract class Component
         {
         assert sName != null;
         assert accessRef != null;
-        assert accessVar != null;
-        assert accessRef.ordinal() <= accessVar.ordinal();
+        assert accessVar == null || accessRef.ordinal() <= accessVar.ordinal();
         assert constType != null;
 
         if (!isClassContainer())
@@ -948,13 +947,9 @@ public abstract class Component
         //             + "\" because a child with that name already exists: " + component);
         //     }
 
-        int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS;
-
-        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(),
-                sName);
-        PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null);
-        struct.setVarAccess(accessVar);
-        struct.setType(constType);
+        int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS | (fStatic ? STATIC_BIT : 0);
+        PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
+        PropertyStructure struct  = new PropertyStructure(this, nFlags, constId, null, accessVar, constType);
         addChild(struct);
 
         return struct;

@@ -1,50 +1,35 @@
 module Test
     {
-    // this causes IllegalStateException:
-    //  t i = 0;
-    // Exception in thread "main" java.lang.IllegalStateException: unresolved constant: TerminalType{type=t}
-    // 	at org.xvm.asm.ConstantPool.register(ConstantPool.java:109)
-    // 	at org.xvm.asm.PropertyStructure.registerConstants(PropertyStructure.java:178)
-    // 	at org.xvm.asm.Component.registerChildConstants(Component.java:1401)
-    // 	at org.xvm.asm.Component.registerChildrenConstants(Component.java:1381)
-    // 	at org.xvm.asm.Component.registerChildConstants(Component.java:1405)
-    // 	at org.xvm.asm.Component.registerChildrenConstants(Component.java:1381)
-    // 	at org.xvm.asm.FileStructure.registerConstants(FileStructure.java:736)
-
 //    class Fubar
 //        {
-//        Int number;
-//        Int[] numbers;
-//        Object... params;
-//
-//// problem #1 - is the solution a SubstitutableTypeConstant that takes the place of each instance of "T"?
+//        // problem #1 - is the solution a SubstitutableTypeConstant that takes the place of each instance of "T"?
 //        <T> conditional T foo(T t)          // compiled as "(Boolean*, T) foo(Type<Object> T*, T t)"
 //            {
-//            return t;
+//            return True, t;
 //            }
 //
-//// problem #2 ".Type" resolution ... kind of like problem #2 ... hmmm ...
+//        // problem #2 ".Type" resolution ... kind of like problem #2 ... hmmm ...
 //        Fubar! fn(String s)
 //            {
 //            return this;
 //            }
 //        }
 //
-//    Void foo(Int i) {}
-//
-//// problem #3 - functions as types
+//    // problem #3 - functions as types
 //    (function (Int, Int) (String, String)) fn;
 //    function (Int, Int) (String, String) fn2;
 //    function (Int, Int) fn3(String, String).get()
 //        {
-//        return f;
+//        return fn2;
 //        }
 //
+//    // problem #4 - tuples weren't reporting themselves as having more than 1 value
 //    static (Int, Int) f(String a, String b)
 //        {
 //        return (0,0);
 //        }
 //
+//    // problem #5 - not sure what this problem was, but it compiles now (the T0D0 was an issue)
 //    interface List<ElementType>
 //        {
 //        ElementType first;
@@ -63,6 +48,7 @@ module Test
 //            }
 //        }
 //
+//    // problem #6
 //    class MyClass<MapType1 extends Map, MapType2 extends Map>
 //        {
 //        Void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
@@ -76,6 +62,7 @@ module Test
 //            }
 //        }
 //
+//    // problem #7 - conditional mixin
 //    mixin MyMixin<T>
 //        {
 //        // ...
@@ -87,6 +74,7 @@ module Test
 //        // TODO
 //        }
 //
+//    // problem #8 - typedefs
 //    typedef function Void Alarm();
 //
 //    class MyTest3
@@ -95,33 +83,39 @@ module Test
 //
 //        Alarm foo(Alarm alarm);
 //        }
-
-// problem: Void compiling to Tuple instead of being eliminated
+//
+//    // problem #9 - Void compiling to Tuple instead of being eliminated
 //    Void fnVoid();
 //    Tuple fnTupleNone();
 //    Tuple<> fnTupleEmpty();
 //    Tuple<Int> fnTupleInt();
 //    Tuple<Tuple> fnTupleTuple();
-
-// problem: InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
-//    @Inject String option;        // TODO figure out where the @Inject ended up
 //
-//    @Inject String option2.get()  // TODO sig is wrong (shows Void, should be String)
+//    // problem #10 - InjectedRef.RefType resolves in compilation to Ref.RefType (wrong!)
+//    @Inject String option;
+//
+//    // problem #11 - sig is wrong (shows Void, should be String)
+//    @Inject String option2.get()
 //        {
 //        return super.get();
 //        }
-
-// problem: constructors are named after the class instead of "construct"
+//
+//    // problem #12 - constructors are named after the class instead of "construct"
 //    class ConstructorTest
 //        {
 //        construct ConstructorTest(Int i) {}
 //        construct ConstructorTest(String s) {} finally {}
 //        }
-
+//
+//    // problem #13 - various return type tests, @Op tests, and conversion tests
 //    Void foo1()
 //        {
 //        }
-
+//
+//    String foo1MissingReturn() // note: this is supposed to generate an error
+//        {
+//        }
+//
 //    String foo1String()
 //        {
 //        return "hello" * 5;
@@ -131,11 +125,7 @@ module Test
 //        {
 //        return 'x' * 5;
 //        }
-
-//    String foo1MissingReturn()
-//        {
-//        }
-
+//
 //    Void foo2()
 //        {
 //        return;
@@ -159,13 +149,6 @@ module Test
 //        return i;
 //        }
 //
-//    Int foo2e()
-//        {
-//        Int i = 0;
-//        i += 1;
-//        return i;
-//        }
-//
 //    String foo3()
 //        {
 //        return "hello";
@@ -180,13 +163,22 @@ module Test
 //        {
 //        return "hello", 0;
 //        }
-
-// needs fix for isA: Tuple<String, Int>.isA(Tuple) == false
+//
+//    // problem #14 - TODO this still fails (AssignmentStatement#emit does not yet implement "+=")
+//    Int foo2e()
+//        {
+//        Int i = 0;
+//        i += 1;
+//        return i;
+//        }
+//
+//    // problem #15 - needs fix for isA: Tuple<String, Int>.isA(Tuple) == false
 //    (String, Int) foo5b()
 //        {
 //        return ("hello", 0);
 //        }
-
+//
+//    // problem #16 - conditional tests
 //    conditional String foo6()
 //        {
 //        return false;
@@ -196,12 +188,20 @@ module Test
 //        {
 //        return true, "hello";
 //        }
-
+//
+//    // problem #17 - operator +
 //    Int foo8(Int a, Int b)
 //        {
 //        return a + b;
 //        }
+//
+    // problem #18 - operator + and auto-conversion of IntLiteral to Int
+    Int foo8()
+        {
+        return 40 + 2;
+        }
 
+//    // problem #19 - while loops
 //    Int foo9(Iterator<Int> iter)
 //        {
 //        Int sum = 0;
@@ -218,10 +218,14 @@ module Test
 //
 //        return sum;
 //        }
-
-//    Test bar()
+//
+//    // problem #20 - "this", auto-narrowing types
+//    class C20
 //        {
-//        return this;
+//        C20 bar()
+//            {
+//            return this;
+//            }
 //        }
 
 //    class C
@@ -275,14 +279,14 @@ module Test
 //        return i;
 //        }
 
-    class Bob
-        {
-        @Auto Sam to<Sam>();
-        }
-    class Sam
-        {
-        }
-
+//    class Bob
+//        {
+//        @Auto Sam to<Sam>();
+//        }
+//    class Sam
+//        {
+//        }
+//
 //    Sam foo(Bob bob)
 //        {
 //        // assignment test
@@ -291,28 +295,33 @@ module Test
 //        // conversion on return test
 //        return bob;
 //        }
-
-    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
-        {
-        Void foo();
-        @Auto Int size();
-        }
-
-    mixin M into MyMap {}
-
-    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
-        {
-        public/private @Override @RO @Lazy @Unchecked Int x
-            {
-            Int get() {return 0;}
-            Void set(Int n) {}      // TODO note "void" with lower case "v" caused an awful error
-            }
-
-        Void bar();
-        @Auto Int size();
-        }
-
-    mixin M2 into MyMap2 extends M {}
+//
+//    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
+//        {
+//        Void foo();
+//        @Auto Int size();
+//        }
+//
+//    mixin M into MyMap {}
+//
+//    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
+//        {
+//        public/private @Override @RO @Lazy @Unchecked Int x
+//            {
+//            @Unchecked Int get() {return 0;}
+//            Void set(@Unchecked Int n) {}      // TODO note "void" with lower case "v" caused an awful error
+//            }
+//
+//        Void bar();
+//        @Auto Int size();
+//
+//        // TODO should be an error: static Int x = 0;
+//
+//        static Int y = 0;
+//        static Int z = () -> y;
+//        }
+//
+//    mixin M2 into MyMap2 extends M {}
 
 //    class B incorporates M {}
 
@@ -323,9 +332,9 @@ module Test
 //        return o;
 //        }
 
-    Int foo()
-        {
-        MyMap2<Object, Object> map;
-        return map;
-        }
+//    Int foo()
+//        {
+//        MyMap2<Object, Object> map;
+//        return map;
+//        }
     }

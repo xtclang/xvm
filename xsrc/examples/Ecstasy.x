@@ -93,7 +93,7 @@ module Ecstasy.xtclang.org
         interface Sequence<ElementType> {}
         class Array<ElementType> {}
 
-        interface Tuple // <ElementTypes extends Tuple<ElementTypes...>>
+        interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
             {
             }
 
@@ -114,6 +114,15 @@ module Ecstasy.xtclang.org
             extends Ref<RefType>
         {
         Void set(RefType value);
+        }
+
+    const Exception(String? text, Exception? cause = null)
+        {
+        }
+    const UnsupportedOperationException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        construct UnsupportedOperationException(String? text, Exception? cause) {} // TODO bug that this is necessary
         }
 
     package annotations

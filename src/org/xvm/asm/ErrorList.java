@@ -44,6 +44,13 @@ public class ErrorList
         return log(new ErrorInfo(severity, sCode, aoParam, xs));
         }
 
+    @Override
+    public boolean isAbortDesired()
+        {
+        return m_severity == Severity.FATAL || m_cMaxErrors > 0 &&
+                m_severity.compareTo(Severity.ERROR) >= 0 && m_cErrors >= m_cMaxErrors;
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -121,15 +128,12 @@ public class ErrorList
 
         // keep track of the number of serious errors; quit the process once
         // that number grows too large
-        if (severity.ordinal() >= Severity.ERROR.ordinal())
+        if (severity.compareTo(Severity.ERROR) >= 0)
             {
-            if (++m_cErrors >= m_cMaxErrors && m_cMaxErrors > 0)
-                {
-                return true;
-                }
+            ++m_cErrors;
             }
 
-        return false;
+        return isAbortDesired();
         }
 
 
@@ -214,7 +218,7 @@ public class ErrorList
          */
         public String getMessage()
             {
-            return MessageFormat.format(RESOURCES.getString(getCode()), getParams());
+            return getCode() + ": " + MessageFormat.format(RESOURCES.getString(getCode()), getParams());
             }
 
         /**

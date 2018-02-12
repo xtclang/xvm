@@ -264,13 +264,17 @@ public class TypeCompositionStatement
             throw new CompilerException("unable to create module with illegal name: " + sName);
             }
 
-        registerStructures(errs);
+        TypeCompositionStatement nodeResult = registerStructures(errs);
+        if (nodeResult != this)
+            {
+            throw new IllegalStateException("module cannot replace itself");
+            }
 
         return getComponent().getFileStructure();
         }
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected TypeCompositionStatement registerStructures(ErrorListener errs)
         {
         assert getComponent() == null;
 
@@ -405,7 +409,7 @@ public class TypeCompositionStatement
         if (component == null)
             {
             // must have been an error
-            return;
+            return this;
             }
 
         // documentation
@@ -1123,9 +1127,9 @@ public class TypeCompositionStatement
                 }
             }
 
-        super.registerStructures(errs);
+        TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
 
-        if (constructorParams != null && !constructorParams.isEmpty())
+        if (nodeNew == this && constructorParams != null && !constructorParams.isEmpty())
             {
             // if there are any constructor parameters, then that implies the existence both of
             // properties and of a constructor; make sure that those exist (and that there are no
@@ -1137,10 +1141,12 @@ public class TypeCompositionStatement
             // have all of its construction parameters available)
             // TODO verify that singletons have values for all constructor params
             }
+
+        return nodeNew;
         }
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
         if (getComponent().getFormat() == Format.PACKAGE)
             {
@@ -1174,14 +1180,14 @@ public class TypeCompositionStatement
                 }
             }
 
-        super.resolveNames(listRevisit, errs);
+        return super.resolveNames(listRevisit, errs);
         }
 
     @Override
-    public void generateCode(ErrorListener errs)
+    public TypeCompositionStatement generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
         // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
-        super.generateCode(errs);
+        return (TypeCompositionStatement) super.generateCode(listRevisit, errs);
         }
 
     private void disallowTypeParams(ErrorListener errs)

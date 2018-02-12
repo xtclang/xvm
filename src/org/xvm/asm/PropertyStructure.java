@@ -39,7 +39,29 @@ public class PropertyStructure
     protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
-        setVarAccess(getAccess());
+        }
+
+    /**
+     * Construct a PropertyStructure with the specified identity, access, and type.
+     *
+     * @param xsParent   the XvmStructure that contains this structure
+     * @param nFlags     the Component bit flags
+     * @param constId    the constant that specifies the identity of the Property
+     * @param condition  the optional condition for this PropertyStructure
+     * @param access2
+     * @param type
+     */
+    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition, Access access2, TypeConstant type)
+        {
+        this(xsParent, nFlags, constId, condition);
+        if (access2 != null)
+            {
+            setVarAccess(access2);
+            }
+        if (type != null)
+            {
+            setType(type);
+            }
         }
 
 
@@ -62,8 +84,12 @@ public class PropertyStructure
         }
 
     /**
-     * @return the access of the property as a Var, which may be more restricted than the access of
-     *         the property (as a Ref); note that this has no meaning if the property is read-only
+     * The "Var" access of the property, which may be more restricted than the access of the
+     * property (as a Ref). Null implies that the property does not have a "Var" access specified,
+     * which means either that the "Var" access is the same as the "Ref" access, or that there is
+     * no "Var" access.
+     *
+     * @return the access of the property as a Var if specified; otherwise null
      */
     public Access getVarAccess()
         {
@@ -72,7 +98,7 @@ public class PropertyStructure
 
     public void setVarAccess(Access access)
         {
-        assert access != null && access.ordinal() >= getAccess().ordinal();
+        assert access == null || access.ordinal() >= getAccess().ordinal();
         m_accessVar = access;
         }
 
@@ -89,7 +115,7 @@ public class PropertyStructure
      *
      * @param type  the type constant that indicates the property's type
      */
-    public void setType(TypeConstant type)
+    protected void setType(TypeConstant type)
         {
         assert type != null;
         m_type = type;
@@ -157,6 +183,43 @@ public class PropertyStructure
         return m_type.isParamsSpecified()
                 ? m_type.getParamTypesArray()[0]
                 : m_type.getConstantPool().typeObject();
+        }
+
+    public void indicateInitialValue()
+        {
+        m_fHasValue = true;
+        }
+
+    /**
+     * This is a temporary value that is used as a place-holder until the property's actual value is
+     * available.
+     *
+     * @return true iff the Property is known to have a value, even if the value has not yet been
+     *         determined
+     */
+    public boolean hasInitialValue()
+        {
+        return m_fHasValue;
+        }
+
+    /**
+     * @return the Constant representing the initial value of the property, or null if the property
+     *         is not initialized using a Constant value, for example, if the property gets its
+     *         initial value from an initializer function, from a constructor, etc.
+     */
+    public Constant getInitialValue()
+        {
+        return m_constVal;
+        }
+
+    /**
+     * @param constVal  the value for the property, or null if an initializer function is going to
+     *                  be used to provide the intial value for the property
+     */
+    public void setInitialValue(Constant constVal)
+        {
+        m_fHasValue = false;
+        m_constVal  = constVal;
         }
 
     /**
@@ -325,7 +388,8 @@ public class PropertyStructure
         {
         super.disassemble(in);
 
-        m_accessVar = Access.valueOf(in.readByte());
+        int nAccess = in.readByte();
+        m_accessVar = nAccess < 0 ? null : Access.valueOf(nAccess);
         m_type      = (TypeConstant) getConstantPool().getConstant(readIndex(in));
         }
 
@@ -333,7 +397,6 @@ public class PropertyStructure
     protected void registerConstants(ConstantPool pool)
         {
         super.registerConstants(pool);
-
         m_type = (TypeConstant) pool.register(m_type);
         }
 
@@ -341,9 +404,12 @@ public class PropertyStructure
     protected void assemble(DataOutput out)
     throws IOException
         {
+        // the value should have already been resolved by this point
+        assert !m_fHasValue;
+
         super.assemble(out);
 
-        out.writeByte(m_accessVar.ordinal());
+        out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());
         writePackedLong(out, m_type.getPosition());
         }
 
@@ -355,14 +421,10 @@ public class PropertyStructure
                 .append(getIdentityConstant().getValueString())
                 .append(", type=")
                 .append(m_type)
+                .append(", ")
+                .append("var-access=")
+                .append(m_accessVar)
                 .append(", ");
-
-        if (getAccess() != m_accessVar)
-            {
-            sb.append("var-access=")
-              .append(m_accessVar)
-              .append(", ");
-            }
 
         return sb.append(super.getDescription()).toString();
         }
@@ -379,6 +441,16 @@ public class PropertyStructure
      * The property type.
      */
     private TypeConstant m_type;
+
+    /**
+     * The initial value of the property, if it is a "static property" initialized to a constant.
+     */
+    private Constant m_constVal;
+
+    /**
+     * Indicates that the property has a value, even if it hasn't been determined yet.
+     */
+    private transient boolean  m_fHasValue;
 
 
     // ----- TEMPORARY -----------------------------------------------------------------------------

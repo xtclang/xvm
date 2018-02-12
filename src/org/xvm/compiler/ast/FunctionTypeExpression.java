@@ -10,6 +10,7 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 
@@ -94,10 +95,12 @@ public class FunctionTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+        if (!alreadyReached(Stage.Resolved))
             {
+            setStage(Stage.Resolving);
+
             for (TypeExpression type : returnValues)
                 {
                 type.resolveNames(listRevisit, errs);
@@ -109,9 +112,9 @@ public class FunctionTypeExpression
 
             // obtain and store off the Nullable form of the sub-type
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

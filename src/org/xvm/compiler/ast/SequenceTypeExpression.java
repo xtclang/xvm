@@ -10,6 +10,7 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 
@@ -69,18 +70,20 @@ public class SequenceTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < org.xvm.compiler.Compiler.Stage.Resolved.ordinal())
+        if (!alreadyReached(Stage.Resolved))
             {
+            setStage(Stage.Resolving);
+
             // resolve the sub-type
             type.resolveNames(listRevisit, errs);
 
             // store off the type that is an array of the sub-type
             ensureTypeConstant();
-
-            super.resolveNames(listRevisit, errs);
             }
+
+        return super.resolveNames(listRevisit, errs);
         }
 
 

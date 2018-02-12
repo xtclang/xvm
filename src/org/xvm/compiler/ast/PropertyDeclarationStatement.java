@@ -3,15 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.*;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -76,7 +75,7 @@ public class PropertyDeclarationStatement
             }
 
         List<Token> list = modifiers;
-        if (list != null && list.isEmpty())
+        if (list != null && !list.isEmpty())
             {
             for (Token token : list)
                 {
@@ -99,7 +98,7 @@ public class PropertyDeclarationStatement
                 : access;
         }
 
-    public Access getVarAccess()
+    public Access getAccess2()
         {
         if (modifiers != null && !modifiers.isEmpty())
             {
@@ -143,14 +142,9 @@ public class PropertyDeclarationStatement
 
                     }
                 }
-
-            if (access != null)
-                {
-                return access;
-                }
             }
 
-        return getDefaultAccess();
+        return null;
         }
 
     @Override
@@ -163,7 +157,7 @@ public class PropertyDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected void registerStructures(ErrorListener errs)
+    protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this property
         if (getComponent() == null)
@@ -173,6 +167,8 @@ public class PropertyDeclarationStatement
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
+                // TODO sanity checks on the declaration of the property e.g. no "private/public", no "public/private static", no "static abstract", etc.
+
                 // another property by the same name should not already exist, but the check for
                 // duplicates is deferred, since it is possible (thanks to the complexity of
                 // conditionals) to have multiple components occupying the same location within the
@@ -181,7 +177,11 @@ public class PropertyDeclarationStatement
 
                 TypeConstant      constType = type.ensureTypeConstant();
                 PropertyStructure prop      = container.createProperty(
-                        isStatic(), getDefaultAccess(), getVarAccess(), constType, sName);
+                        isStatic(), getDefaultAccess(), getAccess2(), constType, sName);
+                if (value != null)
+                    {
+                    prop.indicateInitialValue();
+                    }
                 setComponent(prop);
 
                 // introduce the unresolved type constant to the type expression, so that when the
@@ -206,24 +206,61 @@ public class PropertyDeclarationStatement
                 }
             }
 
-        super.registerStructures(errs);
+        return super.registerStructures(errs);
         }
 
     @Override
-    public void resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        if (getStage().ordinal() < Stage.Resolved.ordinal())
-            {
-            super.resolveNames(listRevisit, errs);
-            }
-
-        PropertyStructure struct = (PropertyStructure) getComponent();
-        if (!struct.resolveAnnotations())
-            {
-            listRevisit.add(this);
-            }
+        return super.resolveNames(listRevisit, errs);
         }
 
+    @Override
+    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        if (!alreadyReached(Stage.Validated))
+            {
+            setStage(Stage.Validating);
+
+            PropertyStructure prop = (PropertyStructure) getComponent();
+            if (!prop.resolveAnnotations())
+                {
+                listRevisit.add(this);
+                return this;
+                }
+
+            if (prop.hasInitialValue())
+                {
+                TypeConstant type = prop.getType();
+                assert !type.containsUnresolved();
+
+                // the initial value has to be resolved; we have to decide either to use the expression
+                // to create a constant value or an initializer function
+                if (value.isCompletable() && value.isConstant())
+                    {
+                    Constant constValue = value.toConstant();
+                    assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
+                    prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
+                    }
+                else
+                    {
+                    // clear the "has initial value" setting
+                    prop.setInitialValue(null);
+
+                    // create an initializer function
+                    MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                            org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                            new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
+                            "=", Parameter.NO_PARAMS, false);
+
+                    // wrap it with a pretend function in the AST tree
+                    initializer = new MethodDeclarationStatement(methodInit, value);
+                    }
+                }
+            }
+
+        return super.validateExpressions(listRevisit, errs);
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -250,7 +287,7 @@ public class PropertyDeclarationStatement
             }
 
         sb.append(type)
-          .append(' ')
+                .append(' ')
           .append(name.getValue());
 
         return sb.toString();
@@ -319,6 +356,8 @@ public class PropertyDeclarationStatement
     protected StatementBlock     body;
     protected Token              doc;
 
+    protected transient MethodDeclarationStatement initializer;
+
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body");
+            "condition", "annotations", "type", "value", "body", "initializer");
     }

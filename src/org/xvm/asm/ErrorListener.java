@@ -47,6 +47,14 @@ public interface ErrorListener
      */
     public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs);
 
+    /**
+     * @return true if the ErrorListener has decided to abort the process that reported the error
+     */
+    public default boolean isAbortDesired()
+        {
+        return false;
+        }
+
 
     // ----- inner classes -------------------------------------------------------------------------
 

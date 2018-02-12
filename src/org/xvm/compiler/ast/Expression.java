@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Arrays;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -339,7 +340,7 @@ public abstract class Expression
      */
     public boolean isConstant()
         {
-        return true;
+        return true;    // TODO shouldn't this default to false?
         }
 
     /**
@@ -525,6 +526,38 @@ public abstract class Expression
         }
 
     /**
+     * Generate the necessary code that discards the value of this expression.
+     * <p/>
+     * This method should be overridden by any expression that can produce better code than the
+     * default discarded-assignment code.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     */
+    public void generateVoid(Code code, ErrorListener errs)
+        {
+        checkDepth();
+
+        if (isConstant())
+            {
+            Constant constant = generateConstant(code, getImplicitType(), errs);
+            assert constant != null; // the constant is ignored
+            return;
+            }
+
+        if (isSingle())
+            {
+            generateAssignment(code, new Assignable(), errs);
+            }
+        else
+            {
+            Assignable[] asnVoid = new Assignable[getValueCount()];
+            Arrays.fill(asnVoid, new Assignable());
+            generateAssignments(code, asnVoid, errs);
+            }
+        }
+
+    /**
      * Generate the necessary code that assigns the value of this expression to the specified
      * L-Value, or generate an error if that is not possible.
      * <p/>
@@ -560,6 +593,12 @@ public abstract class Expression
         checkDepth();
 
         int cLVals = aLVal.length;
+        if (cLVals == 0)
+            {
+            generateVoid(code, errs);
+            return;
+            }
+
         if (cLVals == 1)
             {
             generateAssignment(code, aLVal[0], errs);

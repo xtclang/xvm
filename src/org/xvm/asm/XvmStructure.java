@@ -650,6 +650,18 @@ public abstract class XvmStructure
         return sIndent + "  ";
         }
 
+    /**
+     * Temporary helper for places in the code that have to log an error.
+     *
+     * @param s  a description of the error
+     *
+     * @return the method never returns; it always throws
+     */
+    protected IllegalStateException todoLogError(String s)
+        {
+        throw new IllegalStateException(s);
+        }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 

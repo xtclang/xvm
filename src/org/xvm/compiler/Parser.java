@@ -991,15 +991,6 @@ public class Parser
                     return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
                             annotations, null, conditional, Collections.singletonList(type), null, name);
                     }
-                else if (!fInMethod && peek().getId() == Id.ASN && modifiers != null
-                        && modifiers.size() == 1 && modifiers.get(0).getId() == Id.STATIC)
-                    {
-                    // "static" modifier and "=" means it's a constant
-                    expect(Id.ASN);
-                    Expression value = parseExpression();
-                    expect(Id.SEMICOLON);
-                    return new ConstantDeclaration(modifiers.get(0), type, name, value, doc);
-                    }
                 else
                     {
                     if (fInMethod && modifiers == null)
@@ -2663,7 +2654,7 @@ s     *
                 // test for single-param implicit lambda
                 if (peek().getId() == Id.LAMBDA)
                     {
-                    return new ImplicitLambdaExpression(Collections.singletonList(new NameExpression(
+                    return new LambdaExpression(Collections.singletonList(new NameExpression(
                             names, null, names.get(names.size()-1).getEndPosition())),
                             expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
@@ -2786,7 +2777,7 @@ s     *
                 if (match(Id.R_PAREN) != null)
                     {
                     // Void lambda
-                    return new ExplicitLambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
+                    return new LambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
@@ -2807,7 +2798,7 @@ s     *
 
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(exprs, expect(Id.LAMBDA),
+                            return new LambdaExpression(exprs, expect(Id.LAMBDA),
                                     parseLambdaBody(), tokLParen.getStartPosition());
                             }
 
@@ -2820,7 +2811,7 @@ s     *
                         expect(Id.R_PAREN);
                         if (peek().getId() == Id.LAMBDA)
                             {
-                            return new ImplicitLambdaExpression(Collections.singletonList(expr),
+                            return new LambdaExpression(Collections.singletonList(expr),
                                     expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
                             }
                         else
@@ -2843,7 +2834,7 @@ s     *
                             }
                         expect(Id.R_PAREN);
 
-                        return new ExplicitLambdaExpression(params, expect(Id.LAMBDA),
+                        return new LambdaExpression(params, expect(Id.LAMBDA),
                                 parseLambdaBody(), tokLParen.getStartPosition());
                         }
 
