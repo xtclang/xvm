@@ -255,6 +255,7 @@ public class PropertyDeclarationStatement
 
                     // wrap it with a pretend function in the AST tree
                     initializer = new MethodDeclarationStatement(methodInit, value);
+                    initializer.setParent(this);
                     }
                 }
             }

@@ -96,15 +96,17 @@ public class MethodDeclarationStatement
         // grab a body from the expression, if it has one, otherwise make one
         if (expr instanceof LambdaExpression && ((LambdaExpression) expr).params.isEmpty())
             {
-            this.body = ((LambdaExpression) expr).body;
+            body = ((LambdaExpression) expr).body;
             }
         else
             {
             // turn "<expr>" into the statement block "{ return <expr>; }"
             Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
             ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
-            this.body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+            body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
             }
+
+        body.setParent(this);
         }
 
 

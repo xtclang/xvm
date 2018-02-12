@@ -460,7 +460,7 @@ public class MethodStructure
             {
             throw new IllegalStateException(e);
             }
-        m_code.calcVars();
+        m_code.ensureAssembled();
         }
 
 
@@ -1333,10 +1333,10 @@ public class MethodStructure
          */
         Code(MethodStructure method, Op[] aop)
             {
-            m_aop = aop;
             f_method = method;
             m_aop    = aop;
-            calcVars();
+
+            ensureAssembled();
             }
 
         Code(MethodStructure method, Code wrappee)
@@ -1671,21 +1671,6 @@ public class MethodStructure
             return aop;
             }
 
-        protected void calcVars()
-            {
-            if (f_method.m_cScopes == 0)
-                {
-                Scope scope = f_method.createInitialScope();
-
-                for (Op op : getAssembledOps())
-                    {
-                    op.simulate(scope);
-                    }
-
-                f_method.m_cVars   = scope.getMaxVars();
-                f_method.m_cScopes = scope.getMaxDepth();
-                }
-            }
 
         // ----- fields -----------------------------------------------------------------------
 

@@ -384,7 +384,7 @@ public class PropertyStructure
 
     @Override
     protected void disassemble(DataInput in)
-    throws IOException
+            throws IOException
         {
         super.disassemble(in);
 
@@ -402,10 +402,10 @@ public class PropertyStructure
 
     @Override
     protected void assemble(DataOutput out)
-    throws IOException
+            throws IOException
         {
         // the value should have already been resolved by this point
-        assert !m_fHasValue;
+        // assert !m_fHasValue; TODO: re-introduce the assert
 
         super.assemble(out);
 
