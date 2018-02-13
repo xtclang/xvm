@@ -21,6 +21,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
+import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.util.ListMap;
 
@@ -53,9 +54,9 @@ public class TypeInfo
     public TypeInfo(TypeConstant type, ClassStructure struct, boolean fAbstract,
             Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
             TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
-            List<Contribution>                 listProcess,
-            ListMap<IdentityConstant, Boolean> listmapClassChain,
-            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            List<Contribution>                listProcess,
+            ListMap<IdentityConstant, Origin> listmapClassChain,
+            ListMap<IdentityConstant, Origin> listmapDefaultChain,
             Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
             Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods,
             Progress progress)
@@ -181,30 +182,34 @@ public class TypeInfo
      * @param composition          the composition of the contribution
      */
     public void contributeChains(
-            ListMap<IdentityConstant, Boolean> listmapClassChain,
-            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
+            ListMap<IdentityConstant, Origin> listmapClassChain,
+            ListMap<IdentityConstant, Origin> listmapDefaultChain,
             Composition composition)
         {
+        Origin originTrue  = m_type.new Origin(true);
+        Origin originFalse = m_type.new Origin(false);
         if (composition != Composition.Implements && composition != Composition.Delegates)
             {
             boolean fAnnotation = composition == Composition.Annotation;
-            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+            for (Entry<IdentityConstant, Origin> entry : m_listmapClassChain.entrySet())
                 {
-                IdentityConstant constId = entry.getKey();
-                boolean fYank = entry.getValue();
-
-                Boolean BAnchored = listmapClassChain.get(constId);
-                if (BAnchored == null)
+                IdentityConstant constId      = entry.getKey();
+                Origin           originThis   = entry.getValue();
+                Origin           originResult = originThis.isAnchored() & fAnnotation
+                                              ? originTrue
+                                              : originFalse;
+                Origin           originThat   = listmapClassChain.get(constId);
+                if (originThat == null)
                     {
                     // the identity does not already appear in the chain, so add it to the chain
-                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    listmapClassChain.put(constId, originResult);
                     }
-                else if (!BAnchored)
+                else if (!originThat.isAnchored())
                     {
                     // the identity in the chain is owned by this type, so remove it from its old
                     // location in the chain, and add it to the end
                     listmapClassChain.remove(constId);
-                    listmapClassChain.put(constId, fAnnotation & fYank);
+                    listmapClassChain.put(constId, originResult);
                     }
                 // else ... the identity in the chain was "yanked" from us, so we can't claim it;
                 // just leave it where it is in the chain
@@ -214,7 +219,7 @@ public class TypeInfo
         // append our defaults to the default chain (just the ones that are absent from the chain)
         for (IdentityConstant constId : m_listmapDefaultChain.keySet())
             {
-            listmapDefaultChain.putIfAbsent(constId, true);
+            listmapDefaultChain.putIfAbsent(constId, originTrue);
             }
         }
 
@@ -370,7 +375,7 @@ public class TypeInfo
     /**
      * @return the potential call chain of classes
      */
-    public ListMap<IdentityConstant, Boolean> getClassChain()
+    public ListMap<IdentityConstant, Origin> getClassChain()
         {
         return m_listmapClassChain;
         }
@@ -378,7 +383,7 @@ public class TypeInfo
     /**
      * @return the potential default call chain of interfaces
      */
-    public ListMap<IdentityConstant, Boolean> getDefaultChain()
+    public ListMap<IdentityConstant, Origin> getDefaultChain()
         {
         return m_listmapDefaultChain;
         }
@@ -651,14 +656,14 @@ public class TypeInfo
               .append(m_listmapClassChain.size())
               .append(')');
             int i = 0;
-            for (Entry<IdentityConstant, Boolean> entry : m_listmapClassChain.entrySet())
+            for (Entry<IdentityConstant, Origin> entry : m_listmapClassChain.entrySet())
                 {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ")
                   .append(entry.getKey().getValueString());
 
-                if (entry.getValue())
+                if (entry.getValue().isAnchored())
                     {
                     sb.append(" (Anchored)");
                     }
@@ -904,12 +909,12 @@ public class TypeInfo
     /**
      * The potential call chain of classes.
      */
-    private final ListMap<IdentityConstant, Boolean> m_listmapClassChain;
+    private final ListMap<IdentityConstant, Origin> m_listmapClassChain;
 
     /**
      * The potential default call chain of interfaces.
      */
-    private final ListMap<IdentityConstant, Boolean> m_listmapDefaultChain;
+    private final ListMap<IdentityConstant, Origin> m_listmapDefaultChain;
 
     /**
      * The properties of the type.

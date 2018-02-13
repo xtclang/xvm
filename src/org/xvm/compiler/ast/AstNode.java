@@ -317,6 +317,9 @@ public abstract class AstNode
      * </ul>
      *
      * @param errs    the error list to log any errors etc. to
+     *
+     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
+     *         for "this" node, if appropriate
      */
     protected AstNode registerStructures(ErrorListener errs)
         {
@@ -364,6 +367,9 @@ public abstract class AstNode
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
+     *
+     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
+     *         for "this" node, if appropriate
      */
     public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
@@ -425,6 +431,9 @@ public abstract class AstNode
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
+     *
+     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
+     *         for "this" node, if appropriate
      */
     public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
@@ -536,6 +545,9 @@ public abstract class AstNode
      * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
+     *
+     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
+     *         for "this" node, if appropriate
      */
     public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
         {
@@ -834,6 +846,8 @@ public abstract class AstNode
     // ----- internal -------------------------------------------------------------------
 
     /**
+     * TODO delete this method when done
+     *
      * @return nothing, because the method always throws
      * @throws UnsupportedOperationException this exception is always thrown by this method
      */

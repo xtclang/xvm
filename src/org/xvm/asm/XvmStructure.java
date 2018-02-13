@@ -652,6 +652,7 @@ public abstract class XvmStructure
 
     /**
      * Temporary helper for places in the code that have to log an error.
+     * TODO delete this method when done
      *
      * @param s  a description of the error
      *

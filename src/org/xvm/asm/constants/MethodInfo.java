@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Set;
+
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constants.Access;
 
@@ -83,10 +85,7 @@ public class MethodInfo
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo appendChain(MethodInfo that,
-            ListMap<IdentityConstant, Boolean> listmapClassChain,
-            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
-            Composition composition)
+    public MethodInfo appendChain(MethodInfo that, Composition composition)
         {
         assert !isFunction();
 
@@ -128,6 +127,18 @@ public class MethodInfo
             }
 
         return new MethodInfo(m_constSig, abody);
+        }
+
+    public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
+        {
+        // TODO
+        return this;
+        }
+
+    public SignatureConstant getSubSignature()
+        {
+        // TODO
+        return m_abody[m_abody.length-1].getMethodConstant().getSignature();
         }
 
     /**

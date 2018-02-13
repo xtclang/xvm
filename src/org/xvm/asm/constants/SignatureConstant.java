@@ -237,14 +237,111 @@ public class SignatureConstant
             ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
         }
 
-    // TODO methods like "is substitutable for" given:
-    // - calling type (for auto-narrowing)
-    // - this type (for auto-narrowing)
-    // - name
-    // - min# >= 0 ret values
-    // - optional list of required ret types
-    // - # params, types of params
-    // TODO is there a diff between normal invokes and "super()"?
+    /**
+     * Check if this signature could be called via the specified signature.
+     *
+     * @param that      the signature of the matching method (resolved)
+     * @param resolver  the generic type resolver
+     */
+    public boolean isSubstitutableFor(SignatureConstant that, GenericTypeResolver resolver)
+        {
+        /*
+         * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
+         *
+         * 1. for each _m1_ in _M1_, there exists an _m2_ in _M2_ for which all of the following hold
+         *    true:
+         *    1. _m1_ and _m2_ have the same name
+         *    2. _m1_ and _m2_ have the same number of parameters, and for each parameter type _p1_ of
+         *       _m1_ and _p2_ of _m2_, at least one of the following holds true:
+         *       1. _p1_ is assignable to _p2_
+         *       2. both _p1_ and _p2_ are (or are resolved from) the same type parameter, and both of
+         *          the following hold true:
+         *          1. _p2_ is assignable to _p1_
+         *          2. _T1_ produces _p1_
+         *    3. _m1_ and _m2_ have the same number of return values, and for each return type _r1_ of
+         *       _m1_ and _r2_ of _m2_, the following holds true:
+         *      1. _r2_ is assignable to _r1_
+         */
+
+        // Note, that rule 1.2.2 does not apply in our case (duck typing)
+
+        // number of param types and return values must match
+        // REVIEW consider relaxing this later, i.e. allow sub-classes to add return values
+        if (!this.getName().equals(that.getName())
+                || this.getRawParams().length != that.getRawParams().length
+                || this.getRawReturns().length != that.getRawReturns().length)
+            {
+            return false;
+            }
+
+        SignatureConstant sigM1 = that;
+        SignatureConstant sigM2 = resolver == null ? this : this.resolveGenericTypes(resolver);
+
+        TypeConstant[] aR1 = sigM1.getRawReturns();
+        TypeConstant[] aR2 = sigM2.getRawReturns();
+        for (int i = 0, c = aR1.length; i < c; i++)
+            {
+            if (!aR2[i].isA(aR1[i]))
+                {
+                return false;
+                }
+            }
+
+        TypeConstant[] aP1 = sigM1.getRawParams();
+        TypeConstant[] aP2 = sigM2.getRawParams();
+        for (int i = 0, c = aP1.length; i < c; i++)
+            {
+            if (!aP1[i].isA(aP2[i]))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
+     * Determine if this SignatureConstant is an unambiguously better fit as a "super" of the
+     * specified SignatureConstant when compared to another potential "super" SignatureConstant.
+     *
+     * @param that     the other potential "super" SignatureConstant
+     *
+     * @param sigSub   the SignatureConstant of the method that is calling super
+     * @param typeSub  the type within which the potential super call would occur
+     * @return true iff this signature is an unambiguously better "super" than that signature
+     */
+    public boolean isUnambiguouslyBetterSuperThan(SignatureConstant that, SignatureConstant sigSub,
+            TypeConstant typeSub)
+        {
+        // these assertions can eventually be removed
+        assert this.isSubstitutableFor(sigSub, typeSub);
+        assert that.isSubstitutableFor(sigSub, typeSub);
+
+        // TODO handle auto-narrowing
+
+        TypeConstant[] aThisParam = this.getRawParams();
+        TypeConstant[] aThatParam = that.getRawParams();
+        for (int i = 0, c = aThisParam.length; i < c; ++i)
+            {
+            if (!aThisParam[i].isA(aThatParam[i]))
+                {
+                return false;
+                }
+            }
+
+        TypeConstant[] aThisReturn = this.getRawReturns();
+        TypeConstant[] aThatReturn = that.getRawReturns();
+        for (int i = 0, c = aThisReturn.length; i < c; ++i)
+            {
+            if (!aThisReturn[i].isA(aThatReturn[i]))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

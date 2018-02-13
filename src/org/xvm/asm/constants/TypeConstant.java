@@ -493,7 +493,7 @@ public abstract class TypeConstant
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)  // TODO type not identity (or delete this if no longer used)
         {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(constThisClass);
@@ -866,8 +866,8 @@ public abstract class TypeConstant
         // 1) build the "potential call chains" (basically, the order in which we would search for
         //    methods to call in a virtual manner)
         // 2) collect all of the type parameter data from the various contributions
-        ListMap<IdentityConstant, Boolean> listmapClassChain   = new ListMap<>();
-        ListMap<IdentityConstant, Boolean> listmapDefaultChain = new ListMap<>();
+        ListMap<IdentityConstant, Origin> listmapClassChain   = new ListMap<>();
+        ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
         boolean fComplete = createCallChains(constId, struct, mapTypeParams,
                 listProcess, listmapClassChain, listmapDefaultChain, errs);
 
@@ -882,7 +882,8 @@ public abstract class TypeConstant
         Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
         Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
         Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
-        fComplete &= collectMemberInfo(constId, struct, resolver, listProcess,
+        fComplete &= collectMemberInfo(constId, struct, resolver,
+                listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
 
         // go through the members to determine if this is abstract
@@ -1157,6 +1158,8 @@ public abstract class TypeConstant
                         continue;
                         }
 
+                    // TODO check for duplicate mixin (not exact match!!! i.e. ignore params)
+
                     // apply annotation
                     listProcess.add(new Contribution(annotation));
                     break;
@@ -1219,6 +1222,8 @@ public abstract class TypeConstant
                         typeInto.getValueString());
                 continue;
                 }
+
+            // TODO check for duplicate mixin (not exact match!!! i.e. ignore params)
 
             listProcess.add(contrib);
             }
@@ -1458,6 +1463,8 @@ public abstract class TypeConstant
                         break;
                         }
 
+                    // TODO check for duplicate mixin (not exact match!!!)
+
                     listProcess.add(new Contribution(Composition.Incorporates, typeContrib));
                     }
                     break;
@@ -1483,6 +1490,8 @@ public abstract class TypeConstant
                         break;
                         }
 
+                    // TODO check for duplicate delegates
+
                     listProcess.add(new Contribution(typeContrib, contrib.getDelegatePropertyConstant()));
                     }
                     break;
@@ -1498,6 +1507,8 @@ public abstract class TypeConstant
                                 constId.getPathString());
                         break;
                         }
+
+                    // TODO check for duplicate implements
 
                     listProcess.add(new Contribution(Composition.Implements, typeContrib));
                     }
@@ -1541,15 +1552,17 @@ public abstract class TypeConstant
      * @param errs                 the error list to log errors to
      */
     private boolean createCallChains(
-            IdentityConstant                   constId,
-            ClassStructure                     struct,
-            Map<String, ParamInfo>             mapTypeParams,
-            List<Contribution>                 listProcess,
-            ListMap<IdentityConstant, Boolean> listmapClassChain,
-            ListMap<IdentityConstant, Boolean> listmapDefaultChain,
-            ErrorListener                      errs)
+            IdentityConstant                  constId,
+            ClassStructure                    struct,
+            Map<String, ParamInfo>            mapTypeParams,
+            List<Contribution>                listProcess,
+            ListMap<IdentityConstant, Origin> listmapClassChain,
+            ListMap<IdentityConstant, Origin> listmapDefaultChain,
+            ErrorListener                     errs)
         {
         boolean fIncomplete = false;
+
+        ConstantPool pool = getConstantPool();
         for (Contribution contrib : listProcess)
             {
             Composition compContrib = contrib.getComposition();
@@ -1561,14 +1574,10 @@ public abstract class TypeConstant
                     assert !listmapDefaultChain.containsKey(constId);
 
                     // append self to the call chain
-                    if (struct.getFormat() == Component.Format.INTERFACE)
-                        {
-                        listmapDefaultChain.put(constId, true);
-                        }
-                    else
-                        {
-                        listmapClassChain.put(constId, true);
-                        }
+                    (struct.getFormat() == Component.Format.INTERFACE
+                            ? listmapDefaultChain
+                            : listmapClassChain
+                        ).put(constId, new Origin(true));
 
                     // this type's type parameters were already collected
                     }
@@ -1655,6 +1664,8 @@ public abstract class TypeConstant
      * @param struct            the class structure
      * @param resolver          the GenericTypeResolver that uses the known type parameters
      * @param listProcess       the list of contributions in the order that they should be processed
+     * @param listmapClassChain    the potential call chain
+     * @param listmapDefaultChain  the potential default call chain
      * @param mapProps          the public and protected properties of the class
      * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
      * @param mapMethods        the public and protected methods of the class
@@ -1667,14 +1678,17 @@ public abstract class TypeConstant
             ClassStructure                       struct,
             ParamInfo.TypeResolver               resolver,
             List<Contribution>                   listProcess,
+            ListMap<IdentityConstant, Origin>    listmapClassChain,
+            ListMap<IdentityConstant, Origin>    listmapDefaultChain,
             Map<String           , PropertyInfo> mapProps,
             Map<PropertyConstant , PropertyInfo> mapScopedProps,
             Map<SignatureConstant, MethodInfo  > mapMethods,
             Map<MethodConstant   , MethodInfo  > mapScopedMethods,
             ErrorListener                        errs)
         {
-        ConstantPool pool        = getConstantPool();
-        boolean      fIncomplete = false;
+        boolean fIncomplete = false;
+
+        ConstantPool              pool       = getConstantPool();
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProps;
@@ -1691,7 +1705,7 @@ public abstract class TypeConstant
                 mapContribScopedMethods = new HashMap<>();
 
                 createMemberInfo(constId, struct, resolver,
-                        mapContribProps, mapContribScopedProps,
+                        mapContribProps,   mapContribScopedProps,
                         mapContribMethods, mapContribScopedMethods, errs);
                 }
             else
@@ -1703,7 +1717,6 @@ public abstract class TypeConstant
                     case Extends:
                     case Incorporates:
                     case RebasesOnto:
-                        // if we're building "public" or "protected", then this will be protected
                         assert !typeContrib.isAccessSpecified();
                         typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED);
                         break;
@@ -1711,15 +1724,9 @@ public abstract class TypeConstant
                     case Into:
                         if (!typeContrib.isAccessSpecified() && typeContrib.isSingleDefiningConstant())
                             {
-                            // if we're building "public" or "protected", then this will be protected
-                            // TODO
+                            typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED);
                             }
                         break;
-                    }
-
-                if (!typeContrib.isAccessSpecified())
-                    {
-                    // TODO
                     }
 
                 TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
@@ -1732,10 +1739,48 @@ public abstract class TypeConstant
                 mapContribScopedProps   = infoContrib.getScopedProperties();
                 mapContribMethods       = infoContrib.getMethods();
                 mapContribScopedMethods = infoContrib.getScopedMethods();
+
+                // collect all of the IdentityConstants in the potential call chain that map to this
+                // particular contribution
+                HashSet<IdentityConstant> setClass = new HashSet<>();
+                for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
+                    {
+                    if (entry.getValue().getType().equals(typeContrib))
+                        {
+                        setClass.add(entry.getKey());
+                        }
+                    }
+                HashSet<IdentityConstant> setDefault = new HashSet<>();
+                for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
+                    {
+                    if (entry.getValue().getType().equals(typeContrib))
+                        {
+                        setDefault.add(entry.getKey());
+                        }
+                    }
+
+                // reduce the TypeInfo to only contain methods appropriate to the reduced call
+                // chain for the contribution
+                if (setClass.size() < infoContrib.getClassChain().size()
+                        || setDefault.size() < infoContrib.getDefaultChain().size())
+                    {
+                    Map<SignatureConstant, MethodInfo> mapReducedMethods = new HashMap<>();
+                    for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                        {
+                        mapReducedMethods.put(entry.getKey(), entry.getValue().retainOnly(setClass, setDefault));
+                        }
+                    mapContribMethods = mapReducedMethods;
+
+                    Map<MethodConstant, MethodInfo> mapReducedScopedMethods = new HashMap<>();
+                    for (Entry<MethodConstant, MethodInfo> entry : mapContribScopedMethods.entrySet())
+                        {
+                        mapReducedScopedMethods.put(entry.getKey(), entry.getValue().retainOnly(setClass, setDefault));
+                        }
+                    mapContribScopedMethods = mapReducedScopedMethods;
+                    }
                 }
 
             // process properties
-            // TODO access
             for (Entry<String, PropertyInfo> entry : mapContribProps.entrySet())
                 {
                 PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
@@ -1758,10 +1803,29 @@ public abstract class TypeConstant
             Set<SignatureConstant> setSuperMethods = new HashSet<>();
             for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
                 {
-                // findSuperMethod(entry.getKey(), mapContribMethods)
-                // mapContribMethods
-                // TODO for this method, find the super, add it to the method info, add the sig to the setSuperMethods
-                // mapMethods.put(entry.getKey(), )
+                MethodInfo method = entry.getValue();
+                if (method.isFunction())
+                    {
+                    // functions don't have chains
+                    continue;
+                    }
+
+                SignatureConstant sigSub = method.getSubSignature();
+                if (sigSub == null)
+                    {
+                    // the chain is "terminated"
+                    continue;
+                    }
+
+                SignatureConstant sigSuper = findSuperMethod(sigSub, mapContribMethods, errs);
+                if (sigSuper == null)
+                    {
+                    // the chain doesn't have a "super" from this contribution
+                    continue;
+                    }
+
+                entry.setValue(method.appendChain(mapContribMethods.get(sigSuper), composition));
+                setSuperMethods.add(sigSuper);
                 }
 
             // sweep over the remaining chains
@@ -1777,16 +1841,104 @@ public abstract class TypeConstant
         return !fIncomplete;
         }
 
-    // TODO
-    protected SignatureConstant findSuperMethod(SignatureConstant constSig, Map<SignatureConstant, MethodInfo> mapMethods)
+    /**
+     * Find the method signature that would be the "super" of the specified method signature.
+     *
+     * @param sigSub      the method that is searching for a super
+     * @param mapMethods  the possible super methods to select from
+     * @param errs        the error list to log any errors to
+     *
+     * @return a SignatureConstant for the super method, or null if there is no one unambiguously
+     *         "best" super method signature to be found
+     */
+    protected SignatureConstant findSuperMethod(
+            SignatureConstant                  sigSub,
+            Map<SignatureConstant, MethodInfo> mapMethods,
+            ErrorListener                      errs)
         {
-        String sName = constSig.getName();
-        List<SignatureConstant> listMatches = null;
-        for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+        // check if there is an exact match
+        // note: there is one small flaw with this assumption, in that auto-narrowing could allow
+        //       multiple methods to collide in the same signature, but that's validated elsewhere
+        MethodInfo infoSuper = mapMethods.get(sigSub);
+        if (infoSuper != null && !infoSuper.isFunction())
             {
-
+            return sigSub;
             }
-        return null;
+
+        // brute force search
+        SignatureConstant       sigBest   = null;
+        List<SignatureConstant> listMatch = null;
+        for (SignatureConstant sigCandidate : mapMethods.keySet())
+            {
+            if (sigCandidate.isSubstitutableFor(sigSub, this))
+                {
+                if (listMatch == null)
+                    {
+                    if (sigBest == null)
+                        {
+                        sigBest = sigCandidate;
+                        }
+                    else
+                        {
+                        // we've got at least 2 matches, so we'll need to compare them all
+                        listMatch = new ArrayList<>();
+                        listMatch.add(sigBest);
+                        listMatch.add(sigCandidate);
+                        sigBest = null;
+                        }
+                    }
+                else
+                    {
+                    listMatch.add(sigCandidate);
+                    }
+                }
+            }
+
+        // if none match, then there is no match; if only 1 matches, then use it
+        if (listMatch == null)
+            {
+            return sigBest;
+            }
+
+        // if multiple candidates exist, then one must be obviously better than the rest
+        nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
+                iCur < cCandidates; ++iCur)
+            {
+            SignatureConstant sigCandidate = listMatch.get(iCur);
+            if (sigBest == null) // that means that "best" is ambiguous thus far
+                {
+                // have to back-test all the ones in front of us to make sure that
+                for (int iPrev = 0; iPrev < iCur; ++iPrev)
+                    {
+                    SignatureConstant sigPrev = listMatch.get(iPrev);
+                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
+                        {
+                        // still ambiguous
+                        continue nextCandidate;
+                        }
+                    }
+
+                // so far, this candidate is the best
+                sigBest = sigCandidate;
+                }
+            else if (sigBest.isSubstitutableFor(sigCandidate, this))
+                {
+                // this assumes that "best" is a transitive concept, i.e. we're not going to back-
+                // test all of the other candidates
+                sigBest = sigCandidate;
+                }
+            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
+                {
+                sigBest = null;
+                }
+            }
+
+        if (sigBest == null)
+            {
+            todoLogError("no one best candidate for super of method: " + sigSub.getValueString());
+            }
+
+        return sigBest;
         }
 
     /**
@@ -2156,7 +2308,7 @@ public abstract class TypeConstant
             }
 
         return new PropertyInfo(prop.getIdentityConstant(),
-                prop.getType().resolveGenerics(resolver), // TODO do we want to resolve auto-narrowing as well?
+                prop.getType().resolveGenerics(resolver),
                 fRO, fRW, toArray(listPropAnno), toArray(listRefAnno),
                 fCustomCode, fField, fAbstract, fStatic, fHasOverride,
                 prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant());
@@ -2906,6 +3058,32 @@ public abstract class TypeConstant
             mapProduces = m_mapProduces = new HashMap<>();
             }
         return mapProduces;
+        }
+
+
+    // ----- inner class: Origin -------------------------------------------------------------------
+
+    /**
+     * Used during potential call chain creation.
+     */
+    class Origin
+        {
+        Origin(boolean fAnchored)
+            {
+            m_fAnchored = fAnchored;
+            }
+
+        TypeConstant getType()
+            {
+            return TypeConstant.this;
+            }
+
+        boolean isAnchored()
+            {
+            return m_fAnchored;
+            }
+
+        boolean m_fAnchored;
         }
 
 
