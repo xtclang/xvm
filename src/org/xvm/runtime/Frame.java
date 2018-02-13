@@ -34,36 +34,41 @@ import org.xvm.runtime.template.collections.xTuple.TupleHandle;
  */
 public class Frame
     {
-    public final Adapter         f_adapter; // TEMPORARY
-    public final Fiber           f_fiber;
-    public final ServiceContext  f_context; // same as f_fiber.f_context
+    public final Fiber              f_fiber;
+    public final ServiceContext     f_context;      // same as f_fiber.f_context
 
     protected final MethodStructure f_function;
-    protected final Op[]            f_aOp;       // the op-codes
-    protected final ObjectHandle    f_hTarget;   // the passed in target
-    protected final ObjectHandle    f_hThis;     // the "private" view of the target
+    protected final Op[]            f_aOp;          // the op-codes
+    protected final ObjectHandle    f_hTarget;      // the passed in target
+    protected final ObjectHandle    f_hThis;        // the "private" view of the target
 
-    public final ObjectHandle[]  f_ahVar;        // arguments/local var registers
-    public final VarInfo[]       f_aInfo;        // optional info for var registers
-    public final int             f_iReturn;      // an index for a single return value;
+    public final ObjectHandle[]     f_ahVar;        // arguments/local var registers
+    public final VarInfo[]          f_aInfo;        // optional info for var registers
 
-    public final int[]           f_aiReturn;     // indexes for multiple return values
-    public final Frame           f_framePrev;    // the caller's frame
-    public final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
-    public final int             f_iId;          // the frame's id (used only for async reporting)
-    public final int[]           f_anNextVar;    // at index i, the "next available" var register for scope i
+    protected final int             f_iReturn;      // an index for a single return value;
+    protected final int[]           f_aiReturn;     // indexes for multiple return values
 
-    public  int              m_iScope;       // current scope index (starts with 0)
-    public  int              m_iGuard = -1;  // current guard index (-1 if none)
-    public  int              m_iPC;          // the program counter
-    public  Guard[]          m_aGuard;       // at index i, the guard for the guard index i
-    public  ExceptionHandle  m_hException;   // an exception
-    public  FullyBoundHandle m_hfnFinally;   // a "finally" method for the constructors
-    public  Frame            m_frameNext;    // the next frame to call
-    public  Continuation     m_continuation; // a function to call after this frame returns
-    public  CallChain        m_chain;        // an invocation call chain
-    public  int              m_nDepth;       // this frame's depth in the call chain
-    private ObjectHandle     m_hFrameLocal;  // a "frame local" holding area
+    public final Frame              f_framePrev;    // the caller's frame
+    public final int[]              f_anNextVar;    // at index i, the "next available" var register for scope i
+
+    protected final int             f_iPCPrev;      // the caller's PC (used only for async reporting)
+    protected final int             f_iId;          // the frame's id (used only for async reporting)
+
+    public  int                     m_iPC;          // the program counter
+    public  int                     m_iScope;       // current scope index (starts with 0)
+
+    private   int                   m_iGuard = -1;  // current guard index (-1 if none)
+    private   Guard[]               m_aGuard;       // at index i, the guard for the guard index i
+
+    public  ExceptionHandle         m_hException;   // an exception
+    public  FullyBoundHandle        m_hfnFinally;   // a "finally" method for the constructors
+    public  Frame                   m_frameNext;    // the next frame to call
+    public  Continuation            m_continuation; // a function to call after this frame returns
+
+    public  CallChain               m_chain;        // an invocation call chain
+    public  int                     m_nDepth;       // this frame's depth in the call chain
+
+    private ObjectHandle            m_hFrameLocal;  // a "frame local" holding area
 
     // positive return values indicate a caller's frame register
     // negative value above RET_LOCAL indicate an automatic tuple conversion
@@ -80,7 +85,7 @@ public class Frame
 
     // construct a frame
     protected Frame(Frame framePrev, MethodStructure function,
-            ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
+                    ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         assert framePrev != null && function != null;
 
@@ -90,8 +95,6 @@ public class Frame
 
         f_framePrev = framePrev;
         f_iPCPrev = framePrev.m_iPC;
-
-        f_adapter = f_context.f_templates.f_adapter;
 
         f_function = function;
         f_aOp      = function.getOps();
@@ -115,7 +118,7 @@ public class Frame
                     ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
         f_context = fiber.f_context;
-        f_adapter = f_context.f_templates.f_adapter;
+
         f_iId = f_context.m_iFrameCounter++;
         f_fiber = fiber;
         f_framePrev = null;
@@ -142,8 +145,6 @@ public class Frame
 
         f_framePrev = framePrev;
         f_iPCPrev = framePrev.m_iPC;
-
-        f_adapter = f_context.f_templates.f_adapter;
 
         f_function = null;
         f_aOp = aopNative;

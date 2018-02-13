@@ -171,6 +171,9 @@ public abstract class AstNode
         {
         if (!alreadyReached(stage))
             {
+            // TODO remove when done
+            notImplemented();
+
             throw new IllegalStateException("Stage=" + getStage() + " (expected: " + stage + ")");
             }
         }
@@ -526,10 +529,18 @@ public abstract class AstNode
                 // (see MethodDeclarationStatement.validateExpressions())
                 if (node.alreadyReached(Stage.Resolved) && !node.alreadyReached(Stage.Validated))
                     {
-                    AstNode nodeNew = node.validateExpressions(listRevisit, errs);
-                    if (node != nodeNew)
+                    // TODO: remove when fully implemented
+                    try
                         {
-                        children.replaceWith(nodeNew);
+                        AstNode nodeNew = node.validateExpressions(listRevisit, errs);
+                        if (node != nodeNew)
+                            {
+                            children.replaceWith(nodeNew);
+                            }
+                        }
+                    catch (UnsupportedOperationException e)
+                        {
+                        node.setStage(Stage.Validated);
                         }
                     }
                 }
@@ -557,10 +568,18 @@ public abstract class AstNode
         ChildIterator children = children();
         for (AstNode node : children)
             {
-            AstNode nodeNew = node.generateCode(listRevisit, errs);
-            if (node != nodeNew)
+            // TODO: remove when fully implemented
+            try
                 {
-                children.replaceWith(nodeNew);
+                AstNode nodeNew = node.generateCode(listRevisit, errs);
+                if (node != nodeNew)
+                    {
+                    children.replaceWith(nodeNew);
+                    }
+                }
+            catch (UnsupportedOperationException e)
+                {
+                node.setStage(Stage.Emitted);
                 }
             }
 

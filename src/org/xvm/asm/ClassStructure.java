@@ -21,6 +21,9 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.L_Set;
+import org.xvm.asm.op.Return_0;
+
 import org.xvm.runtime.Adapter;
 
 import org.xvm.util.ListMap;
@@ -578,6 +581,9 @@ public class ClassStructure
 
         return null;
         }
+
+
+    // ----- type comparison support ---------------------------------------------------------------
 
     /**
      * For this class structure representing the R-Value recursively find a contribution by the
@@ -1150,6 +1156,79 @@ public class ClassStructure
                 }
             }
         return false;
+        }
+
+
+    // ----- run-time support ----------------------------------------------------------------------
+
+    /**
+     * Create a synthetic MethodStructure for a default constructor for a given type.
+     * Note: the resulting method could be marked as abstract if there is are no properties
+     *       to in initialize.
+     *
+     * @param typeStruct  the type, for which a default constructor is to be created
+     *
+     * @return the [synthetic] MethodStructure for the corresponding default constructor
+     */
+    public MethodStructure getDefaultConstructor(TypeConstant typeStruct)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) getChild("default");
+        if (mms == null)
+            {
+            mms = ensureMultiMethodStructure("default");
+            }
+        else
+            {
+            for (MethodStructure method : mms.methods())
+                {
+                if (method.getParamArray()[0].getType().equals(typeStruct))
+                    {
+                    return method;
+                    }
+                }
+            }
+
+        // there is no constructor; create Void default(StructType struct)
+        Parameter[] aParam = new Parameter[]
+           {
+           new Parameter(getConstantPool(), typeStruct, "struct", null, false, 0, false)
+           };
+
+        MethodStructure method = mms.createMethod(true, Access.PUBLIC, null,
+            Parameter.NO_PARAMS, aParam, false);
+
+        // TODO: use the TypeInfo when implemented
+        MethodStructure.Code code = method.createCode();
+        for (Component child : children())
+            {
+            if (child instanceof PropertyStructure)
+                {
+                PropertyStructure prop = (PropertyStructure) child;
+
+                Constant constValue = prop.getInitialValue();
+                if (constValue != null)
+                    {
+                    // TODO: temporary; replace with
+                    // code.add(new L_Set(prop.getIdentityConstant(), constValue));
+
+                    code.add(new L_Set(
+                        Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition(),
+                        Op.CONSTANT_OFFSET - constValue.getPosition()));
+                    }
+                }
+            }
+
+        if (code.hasOps())
+            {
+            code.add(new Return_0());
+
+            code.ensureAssembled();
+            }
+        else
+            {
+            method.setAbstract(true);
+            }
+        return method;
         }
 
 

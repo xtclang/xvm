@@ -486,55 +486,6 @@ public class TypeComposition
         return this.f_typeRevealed.isA(that.f_typeRevealed);
         }
 
-    // create a sequence of frames to be called in the inverse order (the base super first)
-    public Frame callDefaultConstructors(Frame frame, ObjectHandle hStruct, ObjectHandle[] ahVar,
-                                         Frame.Continuation continuation)
-        {
-        CallChain chain = getMethodCallChain(Utils.SIG_DEFAULT, Access.PUBLIC);
-
-        int cMethods = chain.getDepth();
-        if (cMethods == 0)
-            {
-            return null;
-            }
-
-        MethodStructure method = chain.getMethod(cMethods - 1);
-        Frame frameBase = frame.createFrame1(method, hStruct, ahVar, Frame.RET_UNUSED);
-
-        if (cMethods > 1)
-            {
-            frameBase.setContinuation(new Frame.Continuation()
-                {
-                private int index = cMethods - 2;
-
-                public int proceed(Frame frameCaller)
-                    {
-                    int i = index--;
-                    if(i > 0)
-                        {
-                        MethodStructure method = chain.getMethod(i);
-
-                        Frame frameNext =
-                            frameCaller.createFrame1(method, hStruct, ahVar, Frame.RET_UNUSED);
-                        frameNext.setContinuation(this);
-
-                        return frameCaller.call(
-                            frameCaller.ensureInitialized(method, frameNext));
-                        }
-                    else
-                        {
-                        return continuation.proceed(frameCaller);
-                        }
-                    }
-                });
-            }
-        else
-            {
-            frameBase.setContinuation(continuation);
-            }
-        return frame.ensureInitialized(method, frameBase);
-        }
-
     // retrieve the call chain for the specified method
     public CallChain getMethodCallChain(SignatureConstant constSignature, Access access)
         {

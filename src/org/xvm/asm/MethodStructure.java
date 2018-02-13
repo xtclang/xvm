@@ -34,6 +34,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xNullable;
@@ -460,7 +461,7 @@ public class MethodStructure
             {
             throw new IllegalStateException(e);
             }
-        m_code.calcVars();
+        m_code.ensureAssembled();
         }
 
 
@@ -901,10 +902,8 @@ public class MethodStructure
                         ClassTemplate template = heap.f_templates.getTemplate(constClz);
 
                         // the class must have a no-params constructor to call
-                        // or have a native constant initializza
-                        SignatureConstant sigConstruct = heap.f_pool.ensureSignatureConstant(
-                            "construct", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
-                        MethodStructure constructor = clz.findMethod(sigConstruct);
+                        // or have a native constant initializer
+                        MethodStructure constructor = clz.findMethod(Utils.SIG_CONSTRUCT);
                         if (constructor == null)
                             {
                             hValue = template.createConstHandle(frame, constSingleton);
@@ -1275,10 +1274,10 @@ public class MethodStructure
          */
         Code(MethodStructure method, Op[] aop)
             {
-            m_aop = aop;
             f_method = method;
             m_aop    = aop;
-            calcVars();
+
+            ensureAssembled();
             }
 
         Code(MethodStructure method, Code wrappee)
@@ -1613,21 +1612,6 @@ public class MethodStructure
             return aop;
             }
 
-        protected void calcVars()
-            {
-            if (f_method.m_cScopes == 0)
-                {
-                Scope scope = f_method.createInitialScope();
-
-                for (Op op : getAssembledOps())
-                    {
-                    op.simulate(scope);
-                    }
-
-                f_method.m_cVars   = scope.getMaxVars();
-                f_method.m_cScopes = scope.getMaxDepth();
-                }
-            }
 
         // ----- fields -----------------------------------------------------------------------
 

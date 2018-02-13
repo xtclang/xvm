@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.xvm.asm.MethodStructure;
 
 
