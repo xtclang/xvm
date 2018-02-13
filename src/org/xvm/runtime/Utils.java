@@ -32,9 +32,8 @@ public abstract class Utils
     public final static int[] ARGS_NONE = new int[0];
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
 
-    public static SignatureConstant SIG_CONSTRUCT;  // no-parameter constructor
-    public static SignatureConstant SIG_DEFAULT;    // default initializer
-    public static SignatureConstant SIG_TO_STRING;  // to<String>()
+    public static SignatureConstant SIG_CONSTRUCT; // no-parameter constructor
+    public static SignatureConstant SIG_TO_STRING; // to<String>()
 
     public static void log(Frame frame, String sMsg)
         {
@@ -70,7 +69,6 @@ public abstract class Utils
         TypeConstant[] atString = new TypeConstant[] {tString};
 
         SIG_CONSTRUCT = pool.ensureSignatureConstant("construct", atVoid, atVoid);
-        SIG_DEFAULT = pool.ensureSignatureConstant("default", atVoid, atVoid);
         SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);
         }
 

@@ -434,7 +434,7 @@ public abstract class ClassTemplate
      *
      * The following steps are to be performed:
      * <ul>
-     *   <li>Invoke the default constructors for the inheritance chain starting at the base;
+     *   <li>Invoke the default constructor for the "inception" type;
      *   <li>Invoke the specified constructor, potentially calling some super constructors
      *       passing "this:struct" as a target
      *   <li>Invoke all finalizers in the inheritance chain starting at the base passing
@@ -455,14 +455,14 @@ public abstract class ClassTemplate
         {
         ObjectHandle hStruct = createStruct(frame, clazz).ensureAccess(Access.STRUCT);
 
-        // assume that we have C1 extending C0 with default constructors (DC),
-        // regular constructors (RC), and finalizers (F);
+        // assume that we have C1 with a default constructor (DC), a regular constructor (RC1),
+        // and a finalizer (F1) that extends C0 with a constructor (RC0) and a finalizer (F0)
         // the call sequence should be:
         //
-        //  ("new" op-code) => DC0 -> DC1 -> RC1 => RC0 -> F0 -> F1 -> "assign" (continuation)
+        //  ("new" op-code) => DC -> RC1 => RC0 -> F0 -> F1 -> "assign" (continuation)
         //
         // -> indicates a call via continuation
-        // => indicates a call via Construct op-cod
+        // => indicates a call via Construct op-code
         //
         // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
@@ -472,9 +472,6 @@ public abstract class ClassTemplate
 
         Frame frameRC1 = frame.ensureInitialized(constructor,
             frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED));
-
-        Frame frameDC0 = clazz.callDefaultConstructors(frame, hStruct, ahVar,
-            frameCaller -> frameCaller.call(frameRC1));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         frameRC1.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
@@ -492,7 +489,17 @@ public abstract class ClassTemplate
             return hF.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        return frame.call(frameDC0 == null ? frameRC1 : frameDC0);
+        MethodStructure methodDC = f_struct.getDefaultConstructor(hStruct.getType());
+        if (methodDC.isAbstract())
+            {
+            return frame.call(frameRC1);
+            }
+
+        Frame frameDC = frame.createFrame1(methodDC, hStruct, ahVar, Frame.RET_UNUSED);
+
+        frameDC.setContinuation(frameCaller -> frameCaller.call(frameRC1));
+
+        return frame.call(frame.ensureInitialized(methodDC, frameDC));
         }
 
     /**

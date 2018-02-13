@@ -33,7 +33,6 @@ public class xTestService extends xService
     public void initDeclared()
         {
         adapter.addMethod(f_struct, "construct", INT, VOID);
-        adapter.addMethod(f_struct, "default", VOID, VOID);
 
         markInjectable("runtimeClock");
         markAtomic("counter2");
@@ -56,14 +55,6 @@ public class xTestService extends xService
             new Call_10(Op.A_SUPER, 0),
             new Invoke_01(Op.A_THIS, adapter.getMethodConstId("Object", "to"), 1), // next register #1
             new X_Print(1),
-            new Return_0(),
-            });
-
-        MethodStructure ftDefault = ensureMethodStructure("default", VOID, VOID);
-        ftDefault.setOps(new Op[]
-            {
-            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
-                adapter.ensureValueConstantId(5)),
             new Return_0(),
             });
 

@@ -100,11 +100,14 @@
 
 + ClassTemplate - check for @Op for Add, Sub, ...
 
++ generate the default constructor
+
+- isA() to support auto-narrowing types
+    - add a test for auto-narrowing method invocation
+
 - Stack overflow (fiber depth + frame depth within a fiber or cross-fiber frame depth)
 
 - createConst() processing for Set, Map etc.
-
-- a test for auto-narrowing method invocation
 
 - Property and Method
 

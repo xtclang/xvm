@@ -388,16 +388,28 @@ public class PropertyStructure
         {
         super.disassemble(in);
 
+        ConstantPool pool = getConstantPool();
+
         int nAccess = in.readByte();
         m_accessVar = nAccess < 0 ? null : Access.valueOf(nAccess);
-        m_type      = (TypeConstant) getConstantPool().getConstant(readIndex(in));
+        m_type      = (TypeConstant) pool.getConstant(readIndex(in));
+        int nValue  = readIndex(in);
+        if (nValue >= 0)
+            {
+            m_constVal  = pool.getConstant(nValue);
+            }
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
         super.registerConstants(pool);
+
         m_type = (TypeConstant) pool.register(m_type);
+        if (m_constVal != null)
+            {
+            m_constVal = pool.register(m_constVal);
+            }
         }
 
     @Override
@@ -411,6 +423,10 @@ public class PropertyStructure
 
         out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());
         writePackedLong(out, m_type.getPosition());
+        if (m_constVal != null)
+            {
+            writePackedLong(out, m_constVal.getPosition());
+            }
         }
 
     @Override
