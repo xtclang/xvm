@@ -34,6 +34,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
+
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xNullable;
@@ -959,10 +960,8 @@ public class MethodStructure
                         ClassTemplate template = heap.f_templates.getTemplate(constClz);
 
                         // the class must have a no-params constructor to call
-                        // or have a native constant initializza
-                        SignatureConstant sigConstruct = heap.f_pool.ensureSignatureConstant(
-                            "construct", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
-                        MethodStructure constructor = clz.findMethod(sigConstruct);
+                        // or have a native constant initializer
+                        MethodStructure constructor = clz.findMethod(Utils.SIG_CONSTRUCT);
                         if (constructor == null)
                             {
                             hValue = template.createConstHandle(frame, constSingleton);

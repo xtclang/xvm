@@ -78,7 +78,7 @@ public class X_Print
                     }
 
                 // call the "to<String>()" method for the object to get the value
-                m_nMethodId = frame.f_adapter.getMethodConstId("Object", "to",
+                m_nMethodId = frame.f_context.f_templates.f_adapter.getMethodConstId("Object", "to",
                     ClassTemplate.VOID, ClassTemplate.STRING);
                 CallChain chain = getCallChain(frame, hValue);
 

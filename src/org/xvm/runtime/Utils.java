@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -32,8 +32,9 @@ public abstract class Utils
     public final static int[] ARGS_NONE = new int[0];
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
 
-    public static SignatureConstant SIG_DEFAULT;
-    public static SignatureConstant SIG_TO_STRING;
+    public static SignatureConstant SIG_CONSTRUCT;  // no-parameter constructor
+    public static SignatureConstant SIG_DEFAULT;    // default initializer
+    public static SignatureConstant SIG_TO_STRING;  // to<String>()
 
     public static void log(Frame frame, String sMsg)
         {
@@ -67,6 +68,8 @@ public abstract class Utils
 
         TypeConstant[] atVoid = ConstantPool.NO_TYPES;
         TypeConstant[] atString = new TypeConstant[] {tString};
+
+        SIG_CONSTRUCT = pool.ensureSignatureConstant("construct", atVoid, atVoid);
         SIG_DEFAULT = pool.ensureSignatureConstant("default", atVoid, atVoid);
         SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);
         }
@@ -143,7 +146,7 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.getComposition();
-        CallChain chain = clzValue.getMethodCallChain(Utils.SIG_TO_STRING, Constants.Access.PUBLIC);
+        CallChain chain = clzValue.getMethodCallChain(SIG_TO_STRING, Access.PUBLIC);
 
         if (chain.isNative())
             {
@@ -574,7 +577,7 @@ public abstract class Utils
             {
             while (++index < ahValue.length)
                 {
-                switch (Utils.callToString(frameCaller, ahValue[index]))
+                switch (callToString(frameCaller, ahValue[index]))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);
