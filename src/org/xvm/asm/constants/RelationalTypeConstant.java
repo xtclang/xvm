@@ -280,6 +280,23 @@ public abstract class RelationalTypeConstant
                 : cloneRelational(constResolved1, constResolved2);
         }
 
+    @Override
+    public boolean isIntoClassType()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isIntoPropertyType()
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isIntoMethodType()
+        {
+        return false;
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 
