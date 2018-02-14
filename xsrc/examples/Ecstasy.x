@@ -22,19 +22,40 @@ module Ecstasy.xtclang.org
     interface Meta<PublicType, ProtectedType, PrivateType, StructType> {}
     class Object
         {
-        protected Meta<Object:public, Object:protected, Object:private> meta;
+        protected Meta<Object:public, Object:protected, Object:private> meta.get()
+            {
+            TODO
+            }
 
-        static Boolean equals(Object o1, Object o2);
+        static Boolean equals(Object o1, Object o2)
+            {
+            TODO
+            }
 
-        String to<String>();
+        String to<String>()
+            {
+            TODO
+            }
 
-        Object[] to<Object[]>();
+        Object[] to<Object[]>()
+            {
+            TODO
+            }
 
-        Tuple<Object> to<Tuple<Object>>();
+        Tuple<Object> to<Tuple<Object>>()
+            {
+            TODO
+            }
 
-        @Auto function Object() to<function Object()>();
+        @Auto function Object() to<function Object()>()
+            {
+            TODO
+            }
 
-        immutable Object to<immutable Object>();
+        immutable Object to<immutable Object>()
+            {
+            TODO
+            }
         }
 
     interface Enum
@@ -66,7 +87,10 @@ module Ecstasy.xtclang.org
 
     class IntLiteral
         {
-        @Auto Int to<Int>();
+        @Auto Int to<Int>()
+            {
+            TODO
+            }
         }
 
     class Int64

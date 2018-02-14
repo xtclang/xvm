@@ -1069,6 +1069,7 @@ public abstract class TypeConstant
         {
         // glue any annotations from the type constant onto the front of the contribution list
         // (and remember the type of the annotated class)
+        ConstantPool pool      = getConstantPool();
         TypeConstant typeClass = this;
         NextTypeInChain: while (true)
             {
@@ -1138,7 +1139,8 @@ public abstract class TypeConstant
                     else
                         {
                         // apply annotation
-                        listProcess.add(new Contribution(annotation));
+                        listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
+                                annotation.getAnnotationType(), Access.PROTECTED)));
                         }
                     break;
 
@@ -1222,7 +1224,8 @@ public abstract class TypeConstant
             else
                 {
                 // apply annotation
-                listProcess.add(contrib);
+                listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
+                        annotation.getAnnotationType(), Access.PROTECTED)));
                 }
             }
 
@@ -1234,7 +1237,6 @@ public abstract class TypeConstant
         TypeConstant typeInto    = null;
         TypeConstant typeExtends = null;
         TypeConstant typeRebase  = null;
-        ConstantPool pool        = getConstantPool();
         switch (struct.getFormat())
             {
             case MODULE:
@@ -1471,7 +1473,8 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        listProcess.add(new Contribution(Composition.Incorporates, typeContrib));
+                        listProcess.add(new Contribution(Composition.Incorporates,
+                                pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
                         }
                     }
                     break;
@@ -1551,14 +1554,20 @@ public abstract class TypeConstant
         // "into Object")
         if (typeRebase != null)
             {
-            listProcess.add(new Contribution(Composition.RebasesOnto, typeRebase));
+            listProcess.add(new Contribution(Composition.RebasesOnto,
+                    pool.ensureAccessTypeConstant(typeRebase, Access.PROTECTED)));
             }
         if (typeExtends != null)
             {
-            listProcess.add(new Contribution(Composition.Extends, typeExtends));
+            listProcess.add(new Contribution(Composition.Extends,
+                    pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
             }
         if (typeInto != null)
             {
+            if (!typeInto.isAccessSpecified() && typeInto.isSingleDefiningConstant())
+                {
+                typeInto = pool.ensureAccessTypeConstant(typeInto, Access.PROTECTED);
+                }
             listProcess.add(new Contribution(Composition.Into, typeInto));
             }
 
@@ -1714,7 +1723,7 @@ public abstract class TypeConstant
         {
         boolean fIncomplete = false;
 
-        ConstantPool              pool       = getConstantPool();
+        ConstantPool pool = getConstantPool();
         for (Contribution contrib : listProcess)
             {
             Map<String           , PropertyInfo> mapContribProps;
@@ -1737,28 +1746,11 @@ public abstract class TypeConstant
             else
                 {
                 TypeConstant typeContrib = contrib.getTypeConstant();
-                switch (composition)
-                    {
-                    case Annotation:
-                    case Extends:
-                    case Incorporates:
-                    case RebasesOnto:
-                        assert !typeContrib.isAccessSpecified();
-                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED);
-                        break;
-
-                    case Into:
-                        if (!typeContrib.isAccessSpecified() && typeContrib.isSingleDefiningConstant())
-                            {
-                            typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED);
-                            }
-                        break;
-                    }
-
-                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
                 if (infoContrib == null)
                     {
                     fIncomplete = true;
+                    continue;
                     }
 
                 mapContribProps         = infoContrib.getProperties();
@@ -3107,26 +3099,36 @@ public abstract class TypeConstant
     // ----- inner class: Origin -------------------------------------------------------------------
 
     /**
-     * Used during potential call chain creation.
+     * Used during "potential call chain" creation.
      */
     class Origin
         {
-        Origin(boolean fAnchored)
+        public Origin(boolean fAnchored)
             {
             m_fAnchored = fAnchored;
             }
 
-        TypeConstant getType()
+        public TypeConstant getType()
             {
             return TypeConstant.this;
             }
 
-        boolean isAnchored()
+        public boolean isAnchored()
             {
             return m_fAnchored;
             }
 
-        boolean m_fAnchored;
+        @Override
+        public String toString()
+            {
+            return "Origin{type="
+                    + getType()
+                    + ", anchored="
+                    + isAnchored()
+                    + '}';
+            }
+
+        private boolean m_fAnchored;
         }
 
 

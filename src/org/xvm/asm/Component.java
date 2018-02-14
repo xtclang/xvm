@@ -2262,20 +2262,30 @@ public abstract class Component
                 throws IOException
             {
             m_composition = Composition.valueOf(in.readUnsignedByte());
-            if (m_composition == Composition.Annotation)
+            Constant constContrib = pool.getConstant(readIndex(in));
+            assert constContrib != null;
+
+            switch (m_composition)
                 {
-                m_annotation   = new Annotation(pool, in);
-                m_constContrib = m_annotation.getAnnotationClass();
-                }
-            else
-                {
-                m_constContrib = pool.getConstant(readIndex(in));
-                if (m_composition == Composition.Delegates)
-                    {
-                    m_constProp = (PropertyConstant) pool.getConstant(readIndex(in));
-                    }
-                else if (m_composition == Composition.Incorporates)
-                    {
+                case Extends:
+                case Implements:
+                case Into:
+                case RebasesOnto:
+                    m_typeContrib = (TypeConstant) constContrib;
+                    break;
+
+                case Annotation:
+                    m_typeContrib = (TypeConstant) constContrib;
+                    m_annotation  = new Annotation(pool, in);
+                    break;
+
+                case Delegates:
+                    m_typeContrib = (TypeConstant) constContrib;
+                    m_constProp   = (PropertyConstant) pool.getConstant(readIndex(in));
+                    break;
+
+                case Incorporates:
+                    m_typeContrib = (TypeConstant) constContrib;
                     final int cParams = readMagnitude(in);
                     if (cParams > 0)
                         {
@@ -2287,7 +2297,18 @@ public abstract class Component
                             }
                         m_mapParams = map;
                         }
-                    }
+                    break;
+
+                case ImportOptional:
+                case ImportDesired:
+                case ImportRequired:
+                case ImportEmbedded:
+                    m_constModule = (ModuleConstant) constContrib;
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("composition=" + m_composition);
+
                 }
             }
 
@@ -2333,8 +2354,8 @@ public abstract class Component
                     throw new UnsupportedOperationException("composition=" + composition);
                 }
 
-            m_composition  = composition;
-            m_constContrib = constType;
+            m_composition = composition;
+            m_typeContrib = constType;
             }
 
         /**
@@ -2375,24 +2396,24 @@ public abstract class Component
                     throw new UnsupportedOperationException("composition=" + composition);
                 }
 
-            m_composition  = composition;
-            m_constContrib = constModule;
+            m_composition = composition;
+            m_constModule = constModule;
             }
 
         /**
          * Construct a delegation Contribution.
          *
-         * @param constant     specifies the class being contributed
-         * @param delegate     for a Delegates composition, this is the property that provides the
-         *                     delegate reference
+         * @param constant  specifies the class being contributed
+         * @param delegate  for a Delegates composition, this is the property that provides the
+         *                  delegate reference
          */
         public Contribution(TypeConstant constant, PropertyConstant delegate)
             {
             assert constant != null && delegate != null;
 
-            m_composition  = Composition.Delegates;
-            m_constContrib = constant;
-            m_constProp    = delegate;
+            m_composition = Composition.Delegates;
+            m_typeContrib = constant;
+            m_constProp   = delegate;
             }
 
         /**
@@ -2402,11 +2423,23 @@ public abstract class Component
          */
         public Contribution(Annotation annotation)
             {
-            assert annotation != null;
+            this(annotation, annotation.getAnnotationType());
+            }
 
-            m_composition  = Composition.Annotation;
-            m_constContrib = annotation.getAnnotationClass();
-            m_annotation   = annotation;
+        /**
+         * Construct an annotation Contribution.
+         *
+         * @param annotation  the annotation
+         * @param type        the specific type to use for the annotation
+         */
+        public Contribution(Annotation annotation, TypeConstant type)
+            {
+            assert annotation != null;
+            assert type != null;
+
+            m_composition = Composition.Annotation;
+            m_typeContrib = type;
+            m_annotation  = annotation;
             }
 
         /**
@@ -2441,9 +2474,7 @@ public abstract class Component
          */
         public ModuleConstant getModuleConstant()
             {
-            return m_constContrib instanceof ModuleConstant
-                    ? (ModuleConstant) m_constContrib
-                    : null;
+            return m_constModule;
             }
 
         /**
@@ -2453,20 +2484,7 @@ public abstract class Component
          */
         public TypeConstant getTypeConstant()
             {
-            return m_constContrib instanceof TypeConstant
-                    ? (TypeConstant) m_constContrib
-                    : null;
-            }
-
-        /**
-         * The "contributed" class type or module. This may be an unresolved constant during the
-         * early stages of compilation.
-         *
-         * @return the contributed constant, as is
-         */
-        public Constant getRawConstant()
-            {
-            return m_constContrib;
+            return m_typeContrib;
             }
 
         /**
@@ -2605,7 +2623,8 @@ public abstract class Component
          */
         protected void registerConstants(ConstantPool pool)
             {
-            m_constContrib =                    pool.register(m_constContrib);
+            m_constModule  = (ModuleConstant)   pool.register(m_constModule);
+            m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
             m_constProp    = (PropertyConstant) pool.register(m_constProp);
 
             if (m_annotation != null)
@@ -2633,19 +2652,19 @@ public abstract class Component
                 throws IOException
             {
             out.writeByte(m_composition.ordinal());
-            if (m_composition == Composition.Annotation)
+            writePackedLong(out, (m_typeContrib == null ? m_constModule : m_typeContrib).getPosition());
+
+            switch (m_composition)
                 {
-                m_annotation.assemble(out);
-                }
-            else
-                {
-                writePackedLong(out, m_constContrib.getPosition());
-                if (m_composition == Composition.Delegates)
-                    {
+                case Annotation:
+                    m_annotation.assemble(out);
+                    break;
+
+                case Delegates:
                     writePackedLong(out, Constant.indexOf(m_constProp));
-                    }
-                else if (m_composition == Composition.Incorporates)
-                    {
+                    break;
+
+                case Incorporates:
                     final ListMap<StringConstant, TypeConstant> map = m_mapParams;
                     if (map == null)
                         {
@@ -2660,7 +2679,7 @@ public abstract class Component
                             writePackedLong(out, entry.getValue().getPosition());
                             }
                         }
-                    }
+                    break;
                 }
             }
 
@@ -2679,10 +2698,12 @@ public abstract class Component
 
             Contribution that = (Contribution) obj;
             return this.m_composition == that.m_composition
-                    && this.m_constContrib.equals(that.m_constContrib)
+                    && Handy.equals(this.m_constModule, that.m_constModule)
+                    && Handy.equals(this.m_typeContrib, that.m_typeContrib)
                     && Handy.equals(this.m_constProp, that.m_constProp)
                     && Handy.equals(this.m_annotation, that.m_annotation)
-                    && Handy.equals(this.m_mapParams, that.m_mapParams);    // TODO should this compare "asList()" of each? (because order matters?)
+                    && Handy.equals(this.m_mapParams.keySet().toArray(), that.m_mapParams.keySet().toArray())
+                    && Handy.equals(this.m_mapParams.values().toArray(), that.m_mapParams.values().toArray());
             }
 
         @Override
@@ -2710,7 +2731,7 @@ public abstract class Component
 
             if (m_composition == Composition.Incorporates && m_mapParams != null)
                 {
-                TypeConstant constMixin = (TypeConstant) m_constContrib;
+                TypeConstant constMixin = m_typeContrib;
                 sb.append("conditional ")
                   .append(constMixin.getDefiningConstant())
                   .append('<');
@@ -2747,9 +2768,13 @@ public abstract class Component
                 }
             else
                 {
-                if (m_constContrib != null)
+                if (m_constModule != null)
                     {
-                    sb.append(m_constContrib.getDescription());
+                    sb.append(m_constModule.getDescription());
+                    }
+                else if (m_typeContrib != null)
+                    {
+                    sb.append(m_typeContrib.getDescription());
                     }
 
                 if (m_composition == Composition.Annotation)
@@ -2794,10 +2819,14 @@ public abstract class Component
         private Composition m_composition;
 
         /**
-         * Defines the module (ModuleConstant) or class (TypeConstant) that was used as part
-         * of the Contribution.
+         * Defines the module (ModuleConstant) that was used as part of the Contribution.
          */
-        private Constant m_constContrib;
+        private ModuleConstant m_constModule;
+
+        /**
+         * Defines the class (TypeConstant) that was used as part of the Contribution.
+         */
+        private TypeConstant m_typeContrib;
 
         /**
          * The property specifying the delegate, if this Contribution represents a "delegates"

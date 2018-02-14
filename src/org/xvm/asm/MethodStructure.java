@@ -188,7 +188,13 @@ public class MethodStructure
                 return false;
                 }
 
-            if (!annotation.getAnnotationType().getExplicitClassInto().isIntoMethodType())
+            TypeConstant typeInto = annotation.getAnnotationType().getExplicitClassInto();
+            if (typeInto.containsUnresolved())
+                {
+                return false;
+                }
+
+            if (!typeInto.isIntoMethodType())
                 {
                 ++cMove;
                 }
