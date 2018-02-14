@@ -195,12 +195,19 @@ module Test
 //        return a + b;
 //        }
 //
-    // problem #18 - operator + and auto-conversion of IntLiteral to Int
-    Int foo8()
+//    // problem #18 - operator + and auto-conversion of IntLiteral to Int
+//    Int foo8()
+//        {
+//        return 40 + 2;
+//        }
+
+    // problem #19 - singleton
+    Boolean foo()
         {
-        return 40 + 2;
+        return True;
         }
 
+//
 //    // problem #19 - while loops
 //    Int foo9(Iterator<Int> iter)
 //        {
@@ -227,6 +234,7 @@ module Test
 //            return this;
 //            }
 //        }
+
 
 //    class C
 //        {
