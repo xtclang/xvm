@@ -367,7 +367,7 @@ public abstract class AstNode
      * present and which of their Compositions are in effect.</li>
      * </ul>
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
      *

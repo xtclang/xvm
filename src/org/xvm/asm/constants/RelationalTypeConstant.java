@@ -298,6 +298,7 @@ public abstract class RelationalTypeConstant
         return false;
         }
 
+
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
