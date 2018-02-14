@@ -48,7 +48,6 @@ public class xConst
     public void initDeclared()
         {
         markNativeGetter("hash");
-        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

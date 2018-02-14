@@ -39,9 +39,8 @@ public class xException
         {
         // TODO: remove everything when compiler generates the constructors
         f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
-        markNativeMethod("to", VOID, STRING);
 
-        MethodStructure ct = ensureMethodStructure("construct", new String[] {"String", "Exception"});
+        MethodStructure ct = getMethodStructure("construct", new String[]{"String", "Exception"});
         ct.setOps(new Op[] // #0 - text, #1 - cause
             {
             new L_Set(Op.CONSTANT_OFFSET - getProperty("text").getIdentityConstant().getPosition(), 0),

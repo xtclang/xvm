@@ -45,6 +45,12 @@ const String
         TODO -- native
         }
 
+    @Override
+    String to<String>()
+        {
+        return this;
+        }
+
     // TODO Sequence<Char>
 
     Int size.get()

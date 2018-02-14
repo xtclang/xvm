@@ -8,7 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * A type expression is used to specify an abstract data type. In its compiled form, there are many
  * different possible representations of an abstract data type, depending on how it is declared, and
- * depending on how it is used. A TypeExpression may be used to indicate eitherh an Constant
+ * depending on how it is used. A TypeExpression may be used to indicate either a Constant
  * (such as a ModuleConstant, PackageConstant, ClassConstant, etc.) or a TypeConstant (such as a
  * ClassTypeConstant, a ParameterTypeConstant, etc.) Often, a type expression must provide a
  * compiled representation of itself before it is able to resolve what its actual ADT will be; in

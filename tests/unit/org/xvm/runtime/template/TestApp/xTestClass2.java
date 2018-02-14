@@ -29,8 +29,8 @@ public class xTestClass2 extends ClassTemplate
     @Override
     public void initDeclared()
         {
-        MethodStructure construct = ensureMethodStructure("construct", new String[] {"Int64", "String"});
-        MethodStructure ftFinally = ensureMethodStructure("finally", new String[] {"Int64", "String"});
+        MethodStructure construct = getMethodStructure("construct", new String[]{"Int64", "String"});
+        MethodStructure ftFinally = getMethodStructure("finally", new String[]{"Int64", "String"});
 
         construct.setOps(new Op[]
             { // #0 = i; #1 = s
@@ -50,7 +50,7 @@ public class xTestClass2 extends ClassTemplate
             new Return_0(),
             });
 
-        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
+        MethodStructure mtMethod1 = getMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestClass2.method1() #")),
@@ -61,7 +61,7 @@ public class xTestClass2 extends ClassTemplate
             new Return_1(0),
             });
 
-        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
+        MethodStructure mtTo = getMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
             {
             new Call_01(Op.A_SUPER, 0), // next register #0

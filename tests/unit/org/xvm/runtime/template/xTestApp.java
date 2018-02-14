@@ -37,10 +37,10 @@ public class xTestApp extends xModule
         {
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-        MethodStructure func = ensureMethodStructure("getIntValue", null, null);
+        MethodStructure func = getMethodStructure("getIntValue", null, null);
 
         // --- test1()
-        MethodStructure ftTest1 = ensureMethodStructure("test1", VOID, VOID);
+        MethodStructure ftTest1 = getMethodStructure("test1", VOID, VOID);
         ftTest1.createCode()
             .add(new Var_DN(
                 adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
@@ -76,7 +76,7 @@ public class xTestApp extends xModule
             .add(new IsEq(5, adapter.ensureValueConstantId(18), 6)) // next register #6
             .add(new Assert(6))
 
-            .add(new Invoke_01(3, adapter.getMethodConstId("Int64", "to", VOID, STRING),
+            .add(new Invoke_01(3, adapter.getMethodConstId("Object", "to", VOID, STRING),
                 7))  // next register #7
             .add(new X_Print(7))
             .add(new Exit())
@@ -85,7 +85,7 @@ public class xTestApp extends xModule
 
         // --- test2()
 
-        MethodStructure ftTest2 = ensureMethodStructure("test2", VOID);
+        MethodStructure ftTest2 = getMethodStructure("test2", VOID);
         ftTest2.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.test2() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.TestClass"),
@@ -134,8 +134,8 @@ public class xTestApp extends xModule
 
         // --- testService()
 
-        MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",
-                new String[] {"Int64", "Int64", "Exception"});
+        MethodStructure ftLambda$1 = getMethodStructure("lambda_1",
+            new String[]{"Int64", "Int64", "Exception"});
         ftLambda$1.createCode()
             // #0 = c; #1 = r, #2 = x
             .add(new X_Print(adapter.ensureValueConstantId(
@@ -145,7 +145,7 @@ public class xTestApp extends xModule
             .add(new X_Print(2))
             .add(new Return_0());
 
-        MethodStructure ftTestService = ensureMethodStructure("testService", VOID);
+        MethodStructure ftTestService = getMethodStructure("testService", VOID);
         ftTestService.createCode()
             .add(new X_Print(
                 adapter.ensureValueConstantId("\n# in TestApp.testService() #")))
@@ -229,15 +229,13 @@ public class xTestApp extends xModule
             .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
                 8))
             .add(new X_Print(8))
-            .add(new Invoke_01(0,
-                    adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
+            .add(new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
             .add(new X_Print(8))
 
             .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #9
             .add(new X_Print(9))
 
-            .add(new Invoke_00(Op.A_SERVICE,
-                adapter.getMethodConstId("TestApp.TestService", "yield")))
+            .add(new Invoke_00(Op.A_SERVICE, adapter.getMethodConstId("Service", "yield")))
 
             .add(new P_Get(adapter.getPropertyConstId("Service", "serviceName"),
                 0, 10)) // next register #10
@@ -250,8 +248,8 @@ public class xTestApp extends xModule
 
         // --- testService2 ---
 
-        MethodStructure ftTestReturn = ensureMethodStructure("testBlockingReturn",
-                new String[] {"Service"}, INT);
+        MethodStructure ftTestReturn = getMethodStructure("testBlockingReturn",
+            new String[]{"Service"}, INT);
         ftTestReturn.createCode()
             // #0 = svc
             .add(new Invoke_01(0,
@@ -259,7 +257,7 @@ public class xTestApp extends xModule
                 1)) // next register #1
             .add(new Return_1(1));
 
-        MethodStructure ftTestService2 = ensureMethodStructure("testService2", VOID);
+        MethodStructure ftTestService2 = getMethodStructure("testService2", VOID);
         ftTestService2.createCode()
             .add(new X_Print(
                     adapter.ensureValueConstantId("\n# in TestApp.testService2() #")))
@@ -292,7 +290,7 @@ public class xTestApp extends xModule
             .add(new CatchEnd(1))
 
             .add(new Invoke_10(Op.A_SERVICE,
-                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.getMethodConstId("Service", "registerTimeout"),
                 adapter.ensureValueConstantId(2000)))
             .add(new GuardAll(+4))
             .add(new Invoke_11(0,
@@ -301,12 +299,12 @@ public class xTestApp extends xModule
             .add(new X_Print(2))
             .add(new FinallyStart())
             .add(new Invoke_10(Op.A_SERVICE,
-                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.getMethodConstId("Service", "registerTimeout"),
                 adapter.ensureValueConstantId(0)))
             .add(new FinallyEnd())
 
             .add(new Invoke_10(Op.A_SERVICE,
-                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.getMethodConstId("Service", "registerTimeout"),
                 adapter.ensureValueConstantId(500)))
             .add(new GuardAll(+9))
             .add(new GuardStart(adapter.getClassTypeConstId("Exception"),
@@ -321,14 +319,14 @@ public class xTestApp extends xModule
             .add(new CatchEnd(1))
             .add(new FinallyStart())
             .add(new Invoke_10(Op.A_SERVICE,
-                adapter.getMethodConstId("TestApp.TestService", "registerTimeout"),
+                adapter.getMethodConstId("Service", "registerTimeout"),
                 adapter.ensureValueConstantId(0)))
             .add(new FinallyEnd())
             .add(new Return_0());
 
         // --- testRef()
 
-        MethodStructure ftTestRef = ensureMethodStructure("testRef", STRING);
+        MethodStructure ftTestRef = getMethodStructure("testRef", STRING);
         ftTestRef.createCode()
             // #0 = arg
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testRef() #")))
@@ -405,18 +403,18 @@ public class xTestApp extends xModule
 
         // --- testArray()
 
-        MethodStructure ftLambda$2 = ensureMethodStructure("lambda_2",
-                new String[] {"Var<Int64>"}, STRING);
+        MethodStructure ftLambda$2 = getMethodStructure("lambda_2",
+            new String[]{"Var<Int64>"}, STRING);
         ftLambda$2.createCode()
             // #0 = i
             .add(new Var_I(adapter.getClassTypeConstId("String"),
                 adapter.ensureValueConstantId("value "))) // #1
-            .add(new Invoke_01(0, adapter.getMethodConstId("Int64", "to", VOID, STRING),
+            .add(new Invoke_01(0, adapter.getMethodConstId("Object", "to", VOID, STRING),
                 2)) // next register #
             .add(new GP_Add(1, 2, 1))
             .add(new Return_1(1));
 
-        MethodStructure ftTestArray = ensureMethodStructure("testArray", VOID);
+        MethodStructure ftTestArray = getMethodStructure("testArray", VOID);
         ftTestArray.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testArray() #")))
 
@@ -469,7 +467,7 @@ public class xTestApp extends xModule
 
         // ----- testTuple()
 
-        MethodStructure ftTestCond = ensureMethodStructure("testConditional", INT, null);
+        MethodStructure ftTestCond = getMethodStructure("testConditional", INT, null);
             {
             Code code = ftTestCond.createCode();
 
@@ -487,7 +485,7 @@ public class xTestApp extends xModule
             code.add(new Return_1(adapter.ensureValueConstant(false)));
             }
 
-        MethodStructure ftTestTuple = ensureMethodStructure("testTuple", VOID);
+        MethodStructure ftTestTuple = getMethodStructure("testTuple", VOID);
         ftTestTuple.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testTuple() #")))
             .add(new Var_IN(adapter.getClassTypeConstId("collections.Tuple<String,Int64>"),
@@ -550,8 +548,8 @@ public class xTestApp extends xModule
 
         ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
         adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
-        MethodStructure mtConst = ctPoint.ensureMethodStructure("construct",
-                new String[] {"Int64", "Int64"});
+        MethodStructure mtConst = ctPoint.getMethodStructure("construct",
+            new String[]{"Int64", "Int64"});
         mtConst.createCode()
             // #0 = x; #1 = y
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Point", "x"), 0))
@@ -559,7 +557,7 @@ public class xTestApp extends xModule
             .add(new Return_0());
 
         // Point.to<String>()
-        MethodStructure mtTo = ctPoint.ensureMethodStructure("to", VOID, STRING);
+        MethodStructure mtTo = ctPoint.getMethodStructure("to", VOID, STRING);
         mtTo.createCode()
             .add(new Var_I(adapter.getClassTypeConstId("String"),
                 adapter.ensureValueConstantId("("))) // #0
@@ -585,7 +583,7 @@ public class xTestApp extends xModule
 
         ClassTemplate ctRectangle = f_templates.getTemplate("TestApp.Rectangle");
         adapter.addMethod(ctRectangle.f_struct, "construct", new String[]{"TestApp.Point", "TestApp.Point"}, VOID);
-        MethodStructure mtRectangle = ctRectangle.ensureMethodStructure("construct",
+        MethodStructure mtRectangle = ctRectangle.getMethodStructure("construct",
             new String[]{"TestApp.Point", "TestApp.Point"});
         mtRectangle.createCode()
             // #0 = tl; #1 = br
@@ -593,7 +591,7 @@ public class xTestApp extends xModule
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "br"), 1))
             .add(new Return_0());
 
-        MethodStructure ftTestConst = ensureMethodStructure("testConst", VOID);
+        MethodStructure ftTestConst = getMethodStructure("testConst", VOID);
         ftTestConst.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testConst() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
@@ -656,13 +654,13 @@ public class xTestApp extends xModule
         ClassTemplate ctFormatter = f_templates.getTemplate("TestApp.Formatter");
         adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
 
-        MethodStructure mtFormatter = ctFormatter.ensureMethodStructure("construct", STRING);
+        MethodStructure mtFormatter = ctFormatter.getMethodStructure("construct", STRING);
         mtFormatter.createCode()
             // #0 = prefix
             .add(new L_Set(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))
             .add(new Return_0());
 
-        MethodStructure mtToString = ctFormatter.ensureMethodStructure("to", VOID, STRING);
+        MethodStructure mtToString = ctFormatter.getMethodStructure("to", VOID, STRING);
         mtToString.createCode()
             .add(new L_Get(adapter.getPropertyConstId("TestApp.Formatter", "prefix"), 0))  // next register #0
             .add(new Call_01(Op.A_SUPER, 1)) // next register #1
@@ -670,8 +668,8 @@ public class xTestApp extends xModule
             .add(new Return_1(0));
 
         ClassTemplate ctPrPoint = f_templates.getTemplate("TestApp.PrettyPoint");
-        MethodStructure mtPrPConst = ctPrPoint.ensureMethodStructure("construct",
-                new String[] {"Int64", "Int64", "String"});
+        MethodStructure mtPrPConst = ctPrPoint.getMethodStructure("construct",
+            new String[]{"Int64", "Int64", "String"});
         mtPrPConst.createCode()
             // #0 = x; #1 = y; #2 = prefix
             .add(new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
@@ -681,8 +679,8 @@ public class xTestApp extends xModule
             .add(new Return_0());
 
         ClassTemplate ctPrRectangle = f_templates.getTemplate("TestApp.PrettyRectangle");
-        MethodStructure mtPrRConst = ctPrRectangle.ensureMethodStructure("construct",
-                new String[] {"TestApp.Point", "TestApp.Point", "String"});
+        MethodStructure mtPrRConst = ctPrRectangle.getMethodStructure("construct",
+            new String[]{"TestApp.Point", "TestApp.Point", "String"});
         mtPrRConst.createCode()
             // #0 = tl; #1 = br; #2 = prefix
             .add(new Construct_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
@@ -691,7 +689,7 @@ public class xTestApp extends xModule
                     2))
             .add(new Return_0());
 
-        MethodStructure ftTestMixin = ensureMethodStructure("testMixin", VOID);
+        MethodStructure ftTestMixin = getMethodStructure("testMixin", VOID);
         ftTestMixin.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
@@ -722,7 +720,7 @@ public class xTestApp extends xModule
             .add(new Return_0());
 
         // --- run()
-        MethodStructure mtRun = ensureMethodStructure("run", VOID, VOID);
+        MethodStructure mtRun = getMethodStructure("run", VOID, VOID);
         mtRun.createCode()
             .add(new Call_00(adapter.getMethodConstId("TestApp", "test1")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "test2")))

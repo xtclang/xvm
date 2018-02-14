@@ -41,7 +41,6 @@ public class xUncheckedInt64
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, STRING);
         markNativeMethod("abs", VOID, INT);
 
         // @Op methods

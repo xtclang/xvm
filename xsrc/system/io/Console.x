@@ -30,5 +30,16 @@ interface Console
     static class TerminalConsole
             implements Console
         {
+        @Override
+        Void print(Object o) {TODO("native");}
+
+        @Override
+        Void println(Object o = "") {TODO("native");}
+
+        @Override
+        String readLine()  {TODO("native");}
+
+        @Override
+        Boolean echo(Boolean flag) {TODO("native");}
         }
     }

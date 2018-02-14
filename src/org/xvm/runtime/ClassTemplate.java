@@ -1,8 +1,9 @@
 package org.xvm.runtime;
 
 
-import java.util.HashMap;
 import java.util.Map;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -15,7 +16,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -50,23 +50,6 @@ import org.xvm.runtime.template.collections.xArray;
 public abstract class ClassTemplate
         implements OpSupport
     {
-    public final TemplateRegistry f_templates;
-    public final ClassStructure f_struct;
-
-    public final String f_sName; // globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
-
-    protected final ClassStructure f_structSuper;
-
-    protected ClassTemplate m_templateSuper;
-    protected ClassTemplate f_templateCategory; // a native category
-
-    protected TypeComposition m_clazzCanonical; // public non-parameterized class
-
-    // ----- caches ------
-
-    // cache of TypeCompositions
-    protected Map<TypeConstant, TypeComposition> m_mapCompositions = new HashMap<>();
-
     // construct the template
     public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
         {
@@ -489,7 +472,15 @@ public abstract class ClassTemplate
             return hF.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
-        MethodStructure methodDC = f_struct.getDefaultConstructor(hStruct.getType());
+        Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
+        if (mapConstructors == null)
+            {
+            mapConstructors = new ConcurrentHashMap<>();
+            }
+
+        MethodStructure methodDC = mapConstructors.computeIfAbsent(
+            hStruct.getType(), f_struct::getDefaultConstructor);
+
         if (methodDC.isAbstract())
             {
             return frame.call(frameRC1);
@@ -1305,40 +1296,20 @@ public abstract class ClassTemplate
 
     public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
-        ensureMethodStructure(sName, asParamType, asRetType).setNative(true);
+        getMethodStructure(sName, asParamType, asRetType).setNative(true);
         }
 
-    public MethodStructure ensureMethodStructure(String sName, String[] asParam)
+    public MethodStructure getMethodStructure(String sName, String[] asParam)
         {
-        return ensureMethodStructure(sName, asParam, VOID);
+        return getMethodStructure(sName, asParam, VOID);
         }
 
-    public MethodStructure ensureMethodStructure(String sName, String[] asParam, String[] asRet)
+    public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
         {
         MethodStructure method = f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
             {
-            MethodStructure methodSuper = null;
-            for (TypeComposition clzSuper : ensureCanonicalClass().getCallChain())
-                {
-                methodSuper = f_templates.f_adapter.getMethod(clzSuper.getTemplate(), sName, asParam, asRet);
-                if (methodSuper != null)
-                    {
-                    break;
-                    }
-                }
-
-            if (methodSuper == null)
-                {
-                throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
-                }
-
-            method = f_struct.createMethod(false,
-                    methodSuper.getAccess(), null,
-                    methodSuper.getReturns().toArray(new Parameter[methodSuper.getReturnCount()]),
-                    sName,
-                    methodSuper.getParams().toArray(new Parameter[methodSuper.getParamCount()]),
-                    true);
+            throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
             }
         return method;
         }
@@ -1454,8 +1425,57 @@ public abstract class ClassTemplate
         }
 
 
+    // ----- constants and fields ------------------------------------------------------------------
+
     public static String[] VOID   = new String[0];
     public static String[] OBJECT = new String[] {"Object"};
     public static String[] INT    = new String[] {"Int64"};
     public static String[] STRING = new String[] {"String"};
+
+    /**
+     * The TemplateRegistry.
+     */
+    public final TemplateRegistry f_templates;
+
+    /**
+     * Globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)
+     */
+    public final String f_sName;
+
+    /**
+     * The underlying ClassStructure.
+     */
+    public final ClassStructure f_struct;
+
+    /**
+     * The ClassStructure of the super class.
+     */
+    protected final ClassStructure f_structSuper;
+
+    /**
+     * The ClassTemplate of the super class.
+     */
+    protected ClassTemplate m_templateSuper;
+
+    /**
+     * The native category (Service, Enum, etc).
+     */
+    protected ClassTemplate f_templateCategory;
+
+    /**
+     * Public non-parameterized TypeComposition.
+     */
+    protected TypeComposition m_clazzCanonical;
+
+    // ----- caches ------
+
+    /**
+     * A cache of TypeCompositions.
+     */
+    protected Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
+
+    /**
+     * A cache of default constructors.
+     */
+    protected Map<TypeConstant, MethodStructure> m_mapConstructors;
     }
