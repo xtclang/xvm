@@ -41,7 +41,6 @@ public class xString
         markNativeGetter("size");
         markNativeMethod("indexOf", new String[]{"String", "Range<Int64>?"},
                 new String[]{"Boolean", "Int64"});
-        markNativeMethod("to", VOID, STRING);
         }
 
     @Override

@@ -58,14 +58,14 @@ public class xTestService extends xService
             new Return_0(),
             });
 
-        MethodStructure constructor = ensureMethodStructure("construct", INT);
+        MethodStructure constructor = getMethodStructure("construct", INT);
         constructor.setOps(new Op[]
             { // #0 - counter
             new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
             new Return_0(),
             });
 
-        MethodStructure mtIncrement = ensureMethodStructure("increment", VOID, INT);
+        MethodStructure mtIncrement = getMethodStructure("increment", VOID, INT);
         mtIncrement.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestService.increment #")),
@@ -73,7 +73,7 @@ public class xTestService extends xService
             new Return_1(0),
             });
 
-        MethodStructure mtTestConst = ensureMethodStructure("testConstant", VOID, VOID);
+        MethodStructure mtTestConst = getMethodStructure("testConstant", VOID, VOID);
         mtTestConst.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestService.testConstant #")),
@@ -84,15 +84,15 @@ public class xTestService extends xService
             new Return_0(),
             });
 
-        MethodStructure ftLambda$1 = ensureMethodStructure("lambda_1",
-                new String[] {"Var<Int64>", "Int64"});
+        MethodStructure ftLambda$1 = getMethodStructure("lambda_1",
+            new String[]{"Var<Int64>", "Int64"});
         ftLambda$1.setOps(new Op[]
             { // #0 = &iRet, #1 = cDelay
             new Invoke_10(0, adapter.getMethodConstId("Var", "set"), 1),
             new Return_0()
             });
 
-        MethodStructure mtExceptional = ensureMethodStructure("exceptional", INT, INT);
+        MethodStructure mtExceptional = getMethodStructure("exceptional", INT, INT);
         mtExceptional.setOps(new Op[]
             { // #0 - cDelay
             new IsZero(0, 1), // next register #1
@@ -122,7 +122,7 @@ public class xTestService extends xService
             new Exit(), // optimized out; unreachable
             });
 
-        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
+        MethodStructure mtTo = getMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId(

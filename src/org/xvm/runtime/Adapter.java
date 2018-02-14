@@ -23,8 +23,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.template.xObject;
-
 import org.xvm.util.Handy;
 
 
@@ -177,37 +175,19 @@ public class Adapter
         TypeConstant[] atArg = getTypeConstants(template, asArgType);
         TypeConstant[] atRet = getTypeConstants(template, asRetType);
 
-        ClassTemplate templateTop = template;
-        MethodStructure method;
-        do
+        MethodStructure method = template.getDeclaredMethod(sMethName, atArg, atRet);
+        if (method != null)
             {
-            method = template.getDeclaredMethod(sMethName, atArg, atRet);
-            if (method != null)
-                {
-                return method;
-                }
-
-            ClassTemplate templateCategory = template.getTemplateCategory();
-            if (templateCategory != xObject.INSTANCE)
-                {
-                method = templateCategory.getDeclaredMethod(sMethName, atArg, atRet);
-                if (method != null)
-                    {
-                    return method;
-                    }
-                }
-
-            template = template.getSuper();
+            return method;
             }
-        while (template != null);
 
         if (method == null && (asArgType != null || asRetType != null))
             {
-            method = getMethod(templateTop, sMethName, null, null);
+            method = template.getDeclaredMethod(sMethName, null, null);
             if (method != null)
                 {
                 MethodConstant constMethod = method.getIdentityConstant();
-                System.out.println("\n******** parameter mismatch at " + templateTop.f_sName + "#" + sMethName);
+                System.out.println("\n******** parameter mismatch at " + template.f_sName + "#" + sMethName);
                 System.out.println("     provided:");
                 System.out.println("         arguments " + Arrays.toString(atArg));
                 System.out.println("         return " + Arrays.toString(atRet));

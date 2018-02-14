@@ -30,8 +30,8 @@ public class xTestClass extends ClassTemplate
     public void initDeclared()
         {
         // --- constructor()
-        MethodStructure construct = ensureMethodStructure("construct", STRING);
-        MethodStructure ftFinally = ensureMethodStructure("finally", STRING);
+        MethodStructure construct = getMethodStructure("construct", STRING);
+        MethodStructure ftFinally = getMethodStructure("finally", STRING);
 
         construct.setOps(new Op[]
             { // #0 = s
@@ -50,7 +50,7 @@ public class xTestClass extends ClassTemplate
             });
 
         // --- method1()
-        MethodStructure mtMethod1 = ensureMethodStructure("method1", VOID, INT);
+        MethodStructure mtMethod1 = getMethodStructure("method1", VOID, INT);
         mtMethod1.setOps(new Op[]
             {
             new X_Print(adapter.ensureValueConstantId("\n# in TestClass.method1 #")),
@@ -67,8 +67,8 @@ public class xTestClass extends ClassTemplate
             });
 
         // ----- exceptional()
-        MethodStructure mtExceptional = ensureMethodStructure("exceptional",
-                new String[] {"String?"}, INT);
+        MethodStructure mtExceptional = getMethodStructure("exceptional",
+            new String[]{"String?"}, INT);
         mtExceptional.setOps(new Op[]
             { // #0 = s
             new New_N(adapter.getMethodConstId("Exception", "construct"),
@@ -77,7 +77,7 @@ public class xTestClass extends ClassTemplate
             });
 
         // ----- to<String>()
-        MethodStructure mtTo = ensureMethodStructure("to", VOID, STRING);
+        MethodStructure mtTo = getMethodStructure("to", VOID, STRING);
         mtTo.setOps(new Op[]
             {
             new Call_01(Op.A_SUPER, 0), // next register #0

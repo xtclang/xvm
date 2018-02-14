@@ -28,7 +28,7 @@ public class xOrigin extends ClassTemplate
     @Override
     public void initDeclared()
         {
-        MethodStructure mtConst = ensureMethodStructure("construct", VOID, VOID);
+        MethodStructure mtConst = getMethodStructure("construct", VOID, VOID);
         mtConst.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# initializing Origin #")))
             .add(new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
