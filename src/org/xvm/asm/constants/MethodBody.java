@@ -5,6 +5,8 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Represents a single method (or function) implementation body.
@@ -79,6 +81,29 @@ public class MethodBody
     public boolean isAbstract()
         {
         return m_impl == Implementation.Implicit || m_impl == Implementation.Declared;
+        }
+
+    /**
+     * @return true iff the body is neither an abstract nor a default method body
+     */
+    public boolean isConcrete()
+        {
+        switch (m_impl)
+            {
+            case Implicit:
+            case Declared:
+            case Default:
+                return false;
+
+            case Delegating:
+            case Property:
+            case Native:
+            case Explicit:
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -212,6 +237,45 @@ public class MethodBody
         return aconstParams.length >= 1
                 && aconstParams[0] instanceof StringConstant
                 && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        return m_constMethod.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof MethodBody))
+            {
+            return false;
+            }
+
+        MethodBody that = (MethodBody) obj;
+        return this.m_impl == that.m_impl
+            && Handy.equals(this.m_constMethod, that.m_constMethod)
+            && Handy.equals(this.m_constProp  , that.m_constProp  );
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append(m_constMethod.getValueString())
+          .append(" {")
+          .append(m_impl)
+          .append('}');
+        return sb.toString();
         }
 
 

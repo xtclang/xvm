@@ -242,32 +242,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(constThisClass);
-        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(constThisClass);
-
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : cloneRelational(constResolved1, constResolved2);
-        }
-
-    @Override
-    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
-        {
-        TypeConstant constOriginal1 = m_constType1;
-        TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveEverything(resolver, constThisClass);
-        TypeConstant constResolved2 = constOriginal2.resolveEverything(resolver, constThisClass);
-
-        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
-                ? this
-                : cloneRelational(constResolved1, constResolved2);
-        }
-
-    @Override
     public TypeConstant normalizeParameters()
         {
         TypeConstant constOriginal1 = m_constType1;

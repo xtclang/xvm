@@ -4,8 +4,11 @@ package org.xvm.asm.constants;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
+
+import org.xvm.util.Handy;
+import org.xvm.util.Severity;
 
 
 /**
@@ -13,6 +16,7 @@ import org.xvm.asm.ErrorListener;
  * virtual levels) about a single property as it appears in a particular type.
  */
 public class PropertyInfo
+        implements Constants
     {
     /**
      * Construct a PropertyInfo from the passed information.
@@ -97,8 +101,8 @@ public class PropertyInfo
             {
             if (this.isTypeParam() ^ that.isTypeParam())
                 {
-                todoLogError(
-                        "cannot combine PropertyInfo objects if either represents a type parameter");
+                m_constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
+                        m_constId.getValueString());
                 return this;
                 }
 
@@ -114,9 +118,10 @@ public class PropertyInfo
                 {
                 // right now, this is treated as an error; theoretically, we could "merge" or union
                 // the types
-                todoLogError("incompatible type params for " + getName() + ": "
-                        + this.getType().getValueString() + ", "
-                        + that.getType().getValueString());
+                m_constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                        m_constId.getValueString(),
+                        this.getType().getValueString(),
+                        that.getType().getValueString());
                 return this;
                 }
             }
@@ -124,15 +129,17 @@ public class PropertyInfo
         // it is illegal to combine anything with a constant
         if (this.m_fConstant || that.m_fConstant)
             {
-            todoLogError("constant collision for " + getName());
+            m_constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
+                    m_constId.getValueString());
             }
 
         // types must match
         if (!this.m_type.isA(that.m_type))
             {
-            todoLogError("type mismatch for " + getName() + ": "
-                    + this.getType().getValueString() + ", "
-                    + that.getType().getValueString());
+            m_constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                    m_constId.getValueString(),
+                    this.getType().getValueString(),
+                    that.getType().getValueString());
             }
 
         // a non-abstract RO property combined with a RW property ... TODO
@@ -359,35 +366,106 @@ public class PropertyInfo
         return TypeInfo.containsAnnotation(m_aRefAnno, "Inject");
         }
 
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        return m_constId.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof PropertyInfo))
+            {
+            return false;
+            }
+
+        PropertyInfo that = (PropertyInfo) obj;
+        return this.m_constId.equals(that.m_constId)
+            && this.m_type   .equals(that.m_type)
+            && m_fRO       == m_fRO
+            && m_fRW       == m_fRW
+            && m_fCustom   == m_fCustom
+            && m_fField    == m_fField
+            && m_fAbstract == m_fAbstract
+            && m_fConstant == m_fConstant
+            && Handy.equals(this.m_paraminfo    , that.m_paraminfo    )
+            && Handy.equals(this.m_constInitVal , that.m_constInitVal )
+            && Handy.equals(this.m_constInitFunc, that.m_constInitFunc)
+            && Handy.equals(this.m_aPropAnno    , that.m_aPropAnno    )
+            && Handy.equals(this.m_aRefAnno     , that.m_aRefAnno     );
+        }
+
     @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
 
-        // TODO needs some work
-
-        if (m_fRO)
+        for (Annotation annotation : m_aPropAnno)
             {
-            sb.append("@RO ");
+            sb.append(annotation)
+              .append(' ');
+            }
+
+        for (Annotation annotation : m_aRefAnno)
+            {
+            sb.append(annotation)
+              .append(' ');
             }
 
         sb.append(m_type.getValueString())
-                .append(' ')
-                .append(getName());
+          .append(' ')
+          .append(getName())
+          .append(';');
+
+        StringBuilder sb2 = new StringBuilder();
+        if (m_paraminfo != null)
+            {
+            sb2.append(", type-param");
+            }
+        if (m_fConstant)
+            {
+            sb2.append(", constant");
+            }
+        if (m_fField)
+            {
+            sb2.append(", has-field");
+            }
+        if (m_fCustom)
+            {
+            sb2.append(", has-code");
+            }
+        if (m_fRO)
+            {
+            sb2.append(", RO");
+            }
+        if (m_fRW)
+            {
+            sb2.append(", RW");
+            }
+        if (m_fAbstract)
+            {
+            sb2.append(", abstract");
+            }
+        if (m_fOverride)
+            {
+            sb2.append(", override");
+            }
+        if (sb2.length() > 0)
+            {
+            sb.append(" (")
+              .append(sb2.substring(2))
+              .append(')');
+            }
 
         return sb.toString();
-        }
-
-    /**
-     * Temporary helper for places in the code that have to log an error.
-     *
-     * @param s  a description of the error
-     *
-     * @return the method never returns; it always throws
-     */
-    private IllegalStateException todoLogError(String s)
-        {
-        throw new IllegalStateException(s);
         }
 
 

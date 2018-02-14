@@ -250,51 +250,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case ThisClass:
-                return constThisClass == null
-                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
-                        : constThisClass.asTypeConstant();
-
-            case ParentClass:
-                return constThisClass == null
-                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
-                        : constThisClass.getParentConstant().asTypeConstant();
-
-            case ChildClass:
-                return constThisClass == null
-                        ? ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
-                        : constThisClass.ensureChild(((ChildClassConstant) constant).getName()).asTypeConstant();
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
-            default:
-                return this;
-            }
-        }
-
-    @Override
-    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
-        {
-        // resolve typedefs, generic types, and auto-narrowing types
-        TypeConstant typeOriginal = this;
-        TypeConstant typeResolved = typeOriginal.resolveTypedefs()
-                                                .resolveGenerics(resolver)
-                                                .resolveAutoNarrowing(constThisClass);
-
-        // the fact that there are no more changes from resolving the type constant indicates that
-        // we're done; otherwise, keep repeating the resolution process, until there are no changes
-        return typeResolved == typeOriginal
-                ? typeOriginal
-                : typeResolved.resolveEverything(resolver, constThisClass);
-        }
-
-    @Override
     public TypeConstant normalizeParameters()
         {
         return this;

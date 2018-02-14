@@ -316,6 +316,74 @@ public interface Constants
      * {0} contains an @Override property {1}, but no property declaration exists to override.
      */
     public static final String VE_PROPERTY_OVERRIDE_NO_SPEC          = "VERIFY-51";
+    /**
+     * {0} contains a duplicate annotation: {1}.
+     */
+    public static final String VE_DUP_ANNOTATION                     = "VERIFY-52";
+    /**
+     * {0} contains a duplicate incorporates clause: {1}.
+     */
+    public static final String VE_DUP_INCORPORATES                   = "VERIFY-53";
+    /**
+     * {0} contains a duplicate delegates clause: {1}.
+     */
+    public static final String VE_DUP_DELEGATES                      = "VERIFY-54";
+    /**
+     * {0} contains a duplicate implements clause: {1}.
+     */
+    public static final String VE_DUP_IMPLEMENTS                     = "VERIFY-55";
+    /**
+     * The property {1} on {0} contains a duplicate initializer function.
+     */
+    public static final String VE_DUP_INITIALIZER                    = "VERIFY-56";
+    /**
+     * The constant property {1} on {0} contains custom code.
+     */
+    public static final String VE_CONST_CODE_ILLEGAL                 = "VERIFY-57";
+    /**
+     * The access for the {1} property on {0} is illegally specified as "struct".
+     */
+    public static final String VE_PROPERTY_ACCESS_STRUCT             = "VERIFY-58";
+    /**
+     * The Ref access is more restricted than the Var access for the {1} property on {0}.
+     */
+    public static final String VE_PROPERTY_ACCESS_ILLEGAL            = "VERIFY-59";
+    /**
+     * The constant property {1} on {0} does not have an initial value.
+     */
+    public static final String VE_CONST_VALUE_REQUIRED               = "VERIFY-60";
+    /**
+     * The constant property {1} on {0} has more than one initial value.
+     */
+    public static final String VE_CONST_VALUE_REDUNDANT              = "VERIFY-61";
+    /**
+     * The constant property {1} on {0} is declared as @Abstract.
+     */
+    public static final String VE_CONST_ABSTRACT_ILLEGAL             = "VERIFY-62";
+    /**
+     * The constant property {1} on {0} is declared as a read/write property.
+     */
+    public static final String VE_CONST_READWRITE_ILLEGAL            = "VERIFY-63";
+    /**
+     * The declaration of the {1} property on {0} implies both a read-only and a read/write property.
+     */
+    public static final String VE_PROPERTY_READWRITE_READONLY        = "VERIFY-64";
+    /**
+     * The super method for {0} is ambiguous.
+     */
+    public static final String VE_SUPER_AMBIGUOUS                    = "VERIFY-65";
+    /**
+     * Property information for {0} contains both a regular property and a type parameter.
+     */
+    public static final String VE_PROPERTY_ILLEGAL                   = "VERIFY-66";
+    /**
+     * Property information for {0} contains conflicting types {1} and {2}.
+     */
+    public static final String VE_PROPERTY_TYPES_INCOMPATIBLE        = "VERIFY-67";
+    /**
+     * Property information for {0} contains conflicting constant information.
+     */
+    public static final String VE_CONST_INCOMPATIBLE                 = "VERIFY-68";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

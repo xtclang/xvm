@@ -484,46 +484,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
-     * any auto-narrowing portion with an explicit class identity.
-     *
-     * @param constThisClass  the explicit "this" class identity; null implies the "declaration
-     *                        level class" for the auto-narrowing type
-     *
-     * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
-     *         identities
-     */
-    public TypeConstant resolveAutoNarrowing(IdentityConstant constThisClass)  // TODO type not identity (or delete this if no longer used)
-        {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(constThisClass);
-
-        return constResolved == constOriginal
-                ? this
-                : cloneSingle(constResolved);
-        }
-
-    /**
-     * If this type has any portions that are typedefs, generic types, or auto-narrowing, then
-     * replace those parts with fully resolved, actual types.
-     *
-     * @param  resolver       the generic type resolver
-     * @param constThisClass  the explicit "this" class identity
-     *
-     * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
-     *         identities
-     */
-    public TypeConstant resolveEverything(GenericTypeResolver resolver, IdentityConstant constThisClass)
-        {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveEverything(resolver, constThisClass);
-
-        return constResolved == constOriginal
-                ? this
-                : cloneSingle(constResolved);
-        }
-
-    /**
      * @return this same type, but with the number of parameters equal to the number of
      *         formal parameters for every parameterized type
      */
@@ -803,7 +763,7 @@ public abstract class TypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // resolve the type to make sure that typedefs etc. are removed from the equation
-        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
+        TypeConstant typeResolved = resolveTypedefs();
         if (typeResolved != this)
             {
             return typeResolved.buildTypeInfo(errs);
@@ -1144,7 +1104,17 @@ public abstract class TypeConstant
                     TypeConstant typeInto = typeMixin.getExplicitClassInto();
                     if (typeInto.isIntoClassType())
                         {
-                        listClassAnnos.add(annotation);
+                        // check for duplicate class annotation
+                        if (listClassAnnos.stream().anyMatch(annoPrev ->
+                                annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+                            {
+                            log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                                    constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                            }
+                        else
+                            {
+                            listClassAnnos.add(annotation);
+                            }
                         continue;
                         }
 
@@ -1158,10 +1128,18 @@ public abstract class TypeConstant
                         continue;
                         }
 
-                    // TODO check for duplicate mixin (not exact match!!! i.e. ignore params)
-
-                    // apply annotation
-                    listProcess.add(new Contribution(annotation));
+                    // check for duplicate type annotation
+                    if (listProcess.stream().anyMatch(contribPrev ->
+                            contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
+                        {
+                        log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                                constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                        }
+                    else
+                        {
+                        // apply annotation
+                        listProcess.add(new Contribution(annotation));
+                        }
                     break;
 
                 default:
@@ -1206,10 +1184,21 @@ public abstract class TypeConstant
 
             // the annotation could be a mixin "into Class", which means that it's a
             // non-virtual, compile-time mixin (like @Abstract)
-            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            Annotation   annotation = contrib.getAnnotation();
+            TypeConstant typeInto   = typeMixin.getExplicitClassInto();
             if (typeInto.isIntoClassType())
                 {
-                listClassAnnos.add(contrib.getAnnotation());
+                // check for duplicate class annotation
+                if (listClassAnnos.stream().anyMatch(annoPrev ->
+                        annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
+                    {
+                    log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                            constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                    }
+                else
+                    {
+                    listClassAnnos.add(annotation);
+                    }
                 continue;
                 }
 
@@ -1223,9 +1212,18 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            // TODO check for duplicate mixin (not exact match!!! i.e. ignore params)
-
-            listProcess.add(contrib);
+            // check for duplicate type annotation
+            if (listProcess.stream().anyMatch(contribPrev ->
+                    contribPrev.getAnnotation().getAnnotationClass().equals(annotation.getAnnotationClass())))
+                {
+                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                        constId.getPathString(), annotation.getAnnotationClass().getValueString());
+                }
+            else
+                {
+                // apply annotation
+                listProcess.add(contrib);
+                }
             }
 
         // add a marker into the list of contributions at this point to indicate that this class
@@ -1463,9 +1461,18 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // TODO check for duplicate mixin (not exact match!!!)
-
-                    listProcess.add(new Contribution(Composition.Incorporates, typeContrib));
+                    // check for duplicate mixin (not exact match!!!)
+                    if (listProcess.stream().anyMatch(contribPrev ->
+                            contribPrev.getComposition() == Composition.Incorporates &&
+                            contribPrev.getTypeConstant().equals(typeContrib)))
+                        {
+                        log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
+                                constId.getPathString(), typeContrib.getValueString());
+                        }
+                    else
+                        {
+                        listProcess.add(new Contribution(Composition.Incorporates, typeContrib));
+                        }
                     }
                     break;
 
@@ -1490,9 +1497,19 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // TODO check for duplicate delegates
-
-                    listProcess.add(new Contribution(typeContrib, contrib.getDelegatePropertyConstant()));
+                    // check for duplicate delegates
+                    if (listProcess.stream().anyMatch(contribPrev ->
+                            contribPrev.getComposition() == Composition.Delegates &&
+                            contribPrev.getTypeConstant().equals(typeContrib)))
+                        {
+                        log(errs, Severity.ERROR, VE_DUP_DELEGATES,
+                                constId.getPathString(), typeContrib.getValueString());
+                        }
+                    else
+                        {
+                        listProcess.add(new Contribution(typeContrib,
+                                contrib.getDelegatePropertyConstant()));
+                        }
                     }
                     break;
 
@@ -1508,9 +1525,18 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // TODO check for duplicate implements
-
-                    listProcess.add(new Contribution(Composition.Implements, typeContrib));
+                    // check for duplicate implements
+                    if (listProcess.stream().anyMatch(contribPrev ->
+                            contribPrev.getComposition() == Composition.Implements &&
+                            contribPrev.getTypeConstant().equals(typeContrib)))
+                        {
+                        log(errs, Severity.ERROR, VE_DUP_IMPLEMENTS,
+                                constId.getPathString(), typeContrib.getValueString());
+                        }
+                    else
+                        {
+                        listProcess.add(new Contribution(Composition.Implements, typeContrib));
+                        }
                     }
                     break;
 
@@ -1767,14 +1793,22 @@ public abstract class TypeConstant
                     Map<SignatureConstant, MethodInfo> mapReducedMethods = new HashMap<>();
                     for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
                         {
-                        mapReducedMethods.put(entry.getKey(), entry.getValue().retainOnly(setClass, setDefault));
+                        MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                        if (infoReduced != null)
+                            {
+                            mapReducedMethods.put(entry.getKey(), infoReduced);
+                            }
                         }
                     mapContribMethods = mapReducedMethods;
 
                     Map<MethodConstant, MethodInfo> mapReducedScopedMethods = new HashMap<>();
                     for (Entry<MethodConstant, MethodInfo> entry : mapContribScopedMethods.entrySet())
                         {
-                        mapReducedScopedMethods.put(entry.getKey(), entry.getValue().retainOnly(setClass, setDefault));
+                        MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                        if (infoReduced != null)
+                            {
+                            mapReducedScopedMethods.put(entry.getKey(), infoReduced);
+                            }
                         }
                     mapContribScopedMethods = mapReducedScopedMethods;
                     }
@@ -1824,7 +1858,7 @@ public abstract class TypeConstant
                     continue;
                     }
 
-                entry.setValue(method.appendChain(mapContribMethods.get(sigSuper), composition));
+                entry.setValue(method.apply(contrib, mapContribMethods.get(sigSuper)));
                 setSuperMethods.add(sigSuper);
                 }
 
@@ -1935,7 +1969,7 @@ public abstract class TypeConstant
 
         if (sigBest == null)
             {
-            todoLogError("no one best candidate for super of method: " + sigSub.getValueString());
+            log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigSub.getValueString());
             }
 
         return sigBest;
@@ -2121,7 +2155,8 @@ public abstract class TypeConstant
                             {
                             // there can only be one initializer function, and it must exactly match a very
                             // specific signature
-                            todoLogError("duplicate initializer function");
+                            log(errs, Severity.ERROR, VE_DUP_INITIALIZER,
+                                    getValueString(), sName);
                             }
 
                         // an initializer is not counted as custom code
@@ -2131,7 +2166,8 @@ public abstract class TypeConstant
                     if (fStatic)
                         {
                         // the only method allowed under a static property is the initializer
-                        todoLogError("static property cannot have custom code");
+                        log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
+                                getValueString(), sName);
                         continue;
                         }
 
@@ -2191,11 +2227,13 @@ public abstract class TypeConstant
         Access accessVar = prop.getVarAccess();
         if (accessRef == Access.STRUCT | accessVar == Access.STRUCT)
             {
-            todoLogError("property can not be declared with STRUCT access");
+            log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_STRUCT,
+                    getValueString(), sName);
             }
         else  if (accessVar != null && accessRef.compareTo(accessVar) > 0)
             {
-            todoLogError("property REF access cannot be more limited than VAR access");
+            log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_ILLEGAL,
+                    getValueString(), sName);
             }
 
         boolean fRW       = accessVar != null;
@@ -2210,27 +2248,31 @@ public abstract class TypeConstant
                 if (methodInit == null)
                     {
                     // it is an error for a static property to not have an initial value
-                    todoLogError("static property requires an initial value or an initializer");
+                    log(errs, Severity.ERROR, VE_CONST_VALUE_REQUIRED,
+                            getValueString(), sName);
                     }
                 else
                     {
                     // it is an error for a static property to have both an initial value that is
                     // specified by a constant and by an initializer function
-                    todoLogError("static property has both an initial value and an initializer");
+                    log(errs, Severity.ERROR, VE_CONST_VALUE_REDUNDANT,
+                            getValueString(), sName);
                     }
                 }
 
             if (fHasAbstract)
                 {
                 // it is an error for a static property to be annotated by "@Abstract"
-                todoLogError("static property cannot be annotated with @Abstract");
+                log(errs, Severity.ERROR, VE_CONST_ABSTRACT_ILLEGAL,
+                        getValueString(), sName);
                 }
 
             if (accessVar != null)
                 {
                 // it is an error for a static property to have both reader and writer access
                 // specified, e.g. "public/private"
-                todoLogError("static property cannot be declared as a read/write property");
+                log(errs, Severity.ERROR, VE_CONST_READWRITE_ILLEGAL,
+                        getValueString(), sName);
                 }
             }
         else if (fInterface)
@@ -2298,7 +2340,8 @@ public abstract class TypeConstant
             fRW |= fHasVarAnno | fSetSupers;
             if (fRO && fRW)
                 {
-                todoLogError("property is declared in a manner that implies both RO and RW");
+                log(errs, Severity.ERROR, VE_PROPERTY_READWRITE_READONLY,
+                        getValueString(), sName);
                 fRO = false;
                 }
 

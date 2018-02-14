@@ -133,6 +133,11 @@ public class MethodConstant
         return m_constParent;
         }
 
+    public IdentityConstant getGrandParent()
+        {
+        return m_constParent.getParentConstant();
+        }
+
     @Override
     public IdentityConstant getNamespace()
         {

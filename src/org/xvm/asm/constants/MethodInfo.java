@@ -1,14 +1,14 @@
 package org.xvm.asm.constants;
 
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 
-import org.xvm.asm.Component.Composition;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
-
-import org.xvm.util.ListMap;
 
 
 /**
@@ -44,50 +44,53 @@ public class MethodInfo
         }
 
     /**
-     * Use the passed method body as the default implementation for the method chain, if the method
-     * chain does not already have a default implementation.
+     * Use the passed method info as information that needs to be appended to this method info.
      *
-     * @param bodyDefault  the body to use as the default implementation
+     * @param contrib  the information about how the other MethodInfo is being contributed to this
+     * @param that     the MethodInfo to append to this
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo appendDefault(MethodBody bodyDefault)
+    public MethodInfo apply(Contribution contrib, MethodInfo that)
         {
-        if (hasDefault())
-            {
-            // defaults do not chain
-            return this;
-            }
-
         assert !isFunction();
 
-        assert !bodyDefault.isAbstract();
-        if (isAbstract())
+        switch (contrib.getComposition())
             {
-            // the default replaces the implicit or abstract method body
-            return new MethodInfo(m_constSig, new MethodBody[] {bodyDefault});
+            case Implements:
+                // since this method info already exists, nothing to "declare" from the passed
+                // method info, but it might have a "default" that we can append
+                return this.hasDefault() || !that.hasDefault()
+                        ? this
+                        : append(that.getDefault());
+
+            case Delegates:
+                // we'll have to create a method body that represents the delegation
+                return append(new MethodBody(that.getMethodConstant(), Implementation.Delegating,
+                        contrib.getDelegatePropertyConstant(), false));
+
+            case Into:
+                // this MethodInfo already exists, so an "implicit" adds nothing to this
+                return this;
             }
 
-        // add the default to the end of the chain
-        MethodBody[] abodyOld = m_abody;
-        int          cbodyOld = abodyOld.length;
-        int          cbodyNew = cbodyOld + 1;
-        MethodBody[] abodyNew = new MethodBody[cbodyNew];
-        System.arraycopy(abodyOld, 0, abodyNew, 0, cbodyOld);
-        abodyNew[cbodyOld] = bodyDefault;
-        return new MethodInfo(m_constSig, abodyNew);
+        return append(that);
         }
 
     /**
-     * Use the passed method info as information that needs to be appended to this method info.
+     * Use the passed method body as a sequence of implementations to add to the method chain.
      *
-     * @param that  the MethodInfo to append to this
+     * @param that  the MethodInfo to add
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo appendChain(MethodInfo that, Composition composition)
+    public MethodInfo append(MethodInfo that)
         {
-        assert !isFunction();
+        MethodBody[] aAdd = that.m_abody;
+        if (aAdd.length == 1)
+            {
+            return append(aAdd[0]);
+            }
 
         // if the thing to append is abstract, then we probably don't have anything to do, i.e. we
         // can use this MethodInfo as is (unless this is also abstract and the other MethodInfo has
@@ -95,8 +98,8 @@ public class MethodInfo
         if (that.isAbstract())
             {
             return this.isAbstract()
-                && this.m_abody[0].getImplementation() == Implementation.Implicit
-                && that.m_abody[0].getImplementation() == Implementation.Declared
+                    && this.m_abody[0].getImplementation() == Implementation.Implicit
+                    && that.m_abody[0].getImplementation() == Implementation.Declared
                     ? new MethodInfo(m_constSig, that.m_abody)
                     : this;
             }
@@ -108,7 +111,6 @@ public class MethodInfo
             }
 
         // neither this nor that are abstract; combine the two
-// TODO remove dups
         MethodBody[] abodyThis    = this.m_abody;
         MethodBody[] abodyThat    = that.m_abody;
         boolean      fThisDefault = this.hasDefault();
@@ -129,16 +131,138 @@ public class MethodInfo
         return new MethodInfo(m_constSig, abody);
         }
 
-    public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
+    /**
+     * Use the passed method body as an implementation to add to the method chain.
+     *
+     * @param body  the MethodBody to add
+     *
+     * @return the resulting MethodInfo
+     */
+    public MethodInfo append(MethodBody body)
         {
-        // TODO
-        return this;
+        assert !isFunction() && !body.isFunction();
+        switch (body.getImplementation())
+            {
+            case Implicit:
+                // implicit cannot add anything (because this MethodInfo cannot be "less than"
+                // implicit)
+                return this;
+
+            case Declared:
+                // declared can only add something if this MethodInfo is implicit, in which case
+                // this MethodInfo becomes declared
+                return m_abody[0].getImplementation() == Implementation.Implicit
+                        ? new MethodInfo(m_constSig, body)
+                        : this;
+
+            case Delegating:
+            case Property:
+            case Native:
+            case Explicit:
+                if (isAbstract())
+                    {
+                    return new MethodInfo(m_constSig, body);
+                    }
+
+                MethodBody[] aOld = m_abody;
+                int          cOld = aOld.length;
+                int          cNew = cOld + 1;
+                MethodBody[] aNew = new MethodBody[cNew];
+                int          cDft = hasDefault() ? 1 : 0;
+                int          cPre = cOld - cDft;
+                System.arraycopy(aOld, 0, aNew, 0, cPre);
+                aNew[cPre] = body;
+                if (cDft > 0)
+                    {
+                    aNew[cOld] = aOld[cPre];
+                    }
+                return new MethodInfo(m_constSig, aNew);
+
+            case Default:
+                if (hasDefault())
+                    {
+                    // defaults do not chain
+                    return this;
+                    }
+
+                assert !body.isAbstract();
+                if (isAbstract())
+                    {
+                    // the default replaces the implicit or abstract method body
+                    return new MethodInfo(m_constSig, new MethodBody[] {body});
+                    }
+
+                // add the default to the end of the chain
+                MethodBody[] abodyOld = m_abody;
+                int          cbodyOld = abodyOld.length;
+                int          cbodyNew = cbodyOld + 1;
+                MethodBody[] abodyNew = new MethodBody[cbodyNew];
+                System.arraycopy(abodyOld, 0, abodyNew, 0, cbodyOld);
+                abodyNew[cbodyOld] = body;
+                return new MethodInfo(m_constSig, abodyNew);
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
-    public SignatureConstant getSubSignature()
+    /**
+     * Retain only method bodies that originate from the identities specified in the passed sets.
+     *
+     * @param setClass    the set of identities that call chain bodies can come from
+     * @param setDefault  the set of identities that default bodies can come from
+     *
+     * @return the resulting MethodInfo, or null if nothing has been retained
+     */
+    public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
         {
-        // TODO
-        return m_abody[m_abody.length-1].getMethodConstant().getSignature();
+        ArrayList<MethodBody> list  = null;
+        MethodBody[]          aBody = m_abody;
+        for (int i = 0, c = aBody.length; i < c; ++i)
+            {
+            MethodBody       body     = aBody[i];
+            IdentityConstant constClz = body.getMethodConstant().getGrandParent();
+            boolean fRetain;
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                case Declared:
+                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
+                    break;
+
+                case Default:
+                    fRetain = setDefault.contains(constClz);
+                    break;
+
+                default:
+                    fRetain = setClass.contains(constClz);
+                    break;
+                }
+            if (fRetain)
+                {
+                if (list != null)
+                    {
+                    list.add(body);
+                    }
+                }
+            else if (list == null)
+                {
+                list = new ArrayList<>();
+                for (int iCopy = 0; iCopy < i; ++iCopy)
+                    {
+                    list.add(aBody[iCopy]);
+                    }
+                }
+            }
+
+        if (list == null)
+            {
+            return this;
+            }
+
+        return list.isEmpty()
+                ? null
+                : new MethodInfo(m_constSig, list.toArray(new MethodBody[list.size()]));
         }
 
     /**
@@ -173,6 +297,35 @@ public class MethodInfo
     public MethodBody[] getChain()
         {
         return m_abody;
+        }
+
+    /**
+     * @return the last concrete MethodBody in the method chain, or null if there is none
+     */
+    public MethodBody getTail()
+        {
+        MethodBody[] aBody    = m_abody;
+        int          cBody    = aBody.length;
+        MethodBody   bodyLast = aBody[cBody-1];
+        if (bodyLast.isConcrete())
+            {
+            return bodyLast;
+            }
+
+        return cBody > 1
+                ? aBody[cBody - 2]
+                : null;
+        }
+
+    /**
+     * @return the signature to use to find a "super" call chain
+     */
+    public SignatureConstant getSubSignature()
+        {
+        MethodBody bodyTail = getTail();
+        return bodyTail == null
+                ? null
+                : bodyTail.getMethodConstant().getSignature();
         }
 
     /**
@@ -233,6 +386,51 @@ public class MethodInfo
     public boolean isOp(String sName, String sOp, int cParams)
         {
         return m_abody[0].isOp(sName, sOp, cParams);
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int hashCode()
+        {
+        return m_constSig.hashCode();
+        }
+
+    @Override
+    public boolean equals(Object obj)
+        {
+        if (obj == this)
+            {
+            return true;
+            }
+
+        if (!(obj instanceof MethodInfo))
+            {
+            return false;
+            }
+
+        MethodInfo that = (MethodInfo) obj;
+        return this.m_constSig.equals(that.m_constSig)
+                && Arrays.equals(this.m_abody, that.m_abody);
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append(m_constSig.getValueString());
+
+        int i = 0;
+        for (MethodBody body : m_abody)
+            {
+            sb.append("\n    [")
+              .append(body.isConcrete() ? String.valueOf(i++) : "*")
+              .append("] ")
+              .append(body);
+            }
+
+        return sb.toString();
         }
 
 

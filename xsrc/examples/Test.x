@@ -198,7 +198,7 @@ module Test
     // problem #18 - operator + and auto-conversion of IntLiteral to Int
     Int foo8()
         {
-        return 42; // TODO 40 + 2;
+        return 40 + 2;
         }
 
 //    // problem #19 - while loops
