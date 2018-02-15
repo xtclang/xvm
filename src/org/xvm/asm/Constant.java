@@ -211,7 +211,7 @@ public abstract class Constant
             {
             default:
                 // TODO this needs to be deleted once we verify that things are working
-                System.out.println("** unsupported constant type: " + type);
+                // System.out.println("** unsupported constant type: " + type);
                 // fall through
             case "Boolean":
                 return pool.valFalse();

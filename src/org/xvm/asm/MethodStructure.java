@@ -264,6 +264,30 @@ public class MethodStructure
         m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
         }
 
+    public void inferAutoNarrowing()
+        {
+        Component    container = getParent().getParent();
+        ConstantPool pool      = container.getConstantPool();
+        if (container instanceof ClassStructure)
+            {
+            IdentityConstant constClass = container.getIdentityConstant();
+
+            Parameter[] aReturn = m_aReturns;
+            for (int i = 0, c = aReturn.length; i < c; i++)
+                {
+                Parameter param = aReturn[i];
+
+                TypeConstant typeOld = param.getType();
+                TypeConstant typeNew = typeOld.inferAutoNarrowing(constClass);
+                if (typeNew != typeOld)
+                    {
+                    aReturn[i] = new Parameter(pool, typeNew, param.getName(), param.getDefaultValue(),
+                        true, param.getIndex(), false);
+                    }
+                }
+            }
+        }
+
     /**
      * @return the number of return values
      */

@@ -385,7 +385,8 @@ public class ClassStructure
                     // even though this class may be id'd using a ModuleConstant or PackageConstant,
                     // the super will always be a class (because a Module and a Package cannot be
                     // extended)
-                    ClassConstant constSuper = (ClassConstant) contrib.getTypeConstant().getSingleUnderlyingClass();
+                    ClassConstant constSuper = (ClassConstant)
+                        contrib.getTypeConstant().getSingleUnderlyingClass(false);
                     if (constClass.equals(constSuper))
                         {
                         return true;
@@ -457,7 +458,7 @@ public class ClassStructure
             case SERVICE:
                 // only if the format differs from the format of the super
                 ClassStructure structSuper = (ClassStructure)
-                        getExtendsType().getSingleUnderlyingClass().getComponent();
+                        getExtendsType().getSingleUnderlyingClass(false).getComponent();
                 return getFormat() == structSuper.getFormat()
                         ? null
                         : getFormat() == Format.CONST
@@ -563,8 +564,7 @@ public class ClassStructure
                     if (typeContrib.isParamsSpecified())
                         {
                         ClassStructure clzContrib = (ClassStructure)
-                            ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                                getComponent();
+                            contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
                         TypeConstant type = clzContrib.getGenericParamTypeImpl(sName,
                             typeContrib.getParamTypes(), false);
                         if (type != null)
@@ -637,7 +637,9 @@ public class ClassStructure
             List<ContributionChain> chainsContrib = null;
             if (typeContrib.isSingleDefiningConstant())
                 {
-                ClassConstant constContrib = (ClassConstant) typeContrib.getDefiningConstant();
+                ClassConstant constContrib = (ClassConstant)
+                    typeContrib.getSingleUnderlyingClass(true);
+
                 if (constContrib.equals(idClzLeft))
                     {
                     chains.add(new ContributionChain(contrib));
@@ -788,7 +790,7 @@ public class ClassStructure
                     }
 
                 ClassStructure clzContrib = (ClassStructure)
-                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                    typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
@@ -928,7 +930,7 @@ public class ClassStructure
                     }
 
                 ClassStructure clzContrib = (ClassStructure)
-                    ((ClassConstant) typeContrib.getDefiningConstant()).getComponent();
+                    typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
@@ -1034,8 +1036,7 @@ public class ClassStructure
                     contrib.transformActualTypes(this, listLeft);
 
                 ClassStructure clzSuper = (ClassStructure)
-                    ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                        getComponent();
+                    contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
 
                 assert (clzSuper.getFormat() == Component.Format.INTERFACE);
 
@@ -1135,8 +1136,7 @@ public class ClassStructure
                 if (listContribActual != null)
                     {
                     ClassStructure clzContrib = (ClassStructure)
-                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).
-                            getComponent();
+                        contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(signature,
                             access, listContribActual, false))

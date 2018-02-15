@@ -75,14 +75,14 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         return false;
         }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         throw new IllegalStateException();

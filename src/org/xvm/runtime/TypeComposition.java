@@ -267,7 +267,7 @@ public class TypeComposition
     public boolean isService()
         {
         TypeConstant type = f_typeInception;
-        return type.getSingleUnderlyingClass().getComponent().getFormat() == Format.SERVICE;
+        return type.getSingleUnderlyingClass(false).getComponent().getFormat() == Format.SERVICE;
         }
 
     /**
@@ -276,7 +276,7 @@ public class TypeComposition
     public boolean isConst()
         {
         TypeConstant type = f_typeInception;
-        return ((ClassStructure) type.getSingleUnderlyingClass().getComponent()).isConst();
+        return ((ClassStructure) type.getSingleUnderlyingClass(false).getComponent()).isConst();
         }
 
     /**

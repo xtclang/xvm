@@ -143,21 +143,21 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
-        return m_constType1.isSingleUnderlyingClass()
-             ^ m_constType2.isSingleUnderlyingClass();
+        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
+             ^ m_constType2.isSingleUnderlyingClass(fAllowInterface);
         }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
-        assert isClassType() && isSingleUnderlyingClass();
+        assert isClassType() && isSingleUnderlyingClass(fAllowInterface);
 
-        IdentityConstant clz = m_constType1.getSingleUnderlyingClass();
+        IdentityConstant clz = m_constType1.getSingleUnderlyingClass(fAllowInterface);
         if (clz == null)
             {
-            clz = m_constType2.getSingleUnderlyingClass();
+            clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
             }
         return clz;
         }
@@ -252,6 +252,32 @@ public abstract class RelationalTypeConstant
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
                 : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing()
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing();
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing();
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constInferred1 = constOriginal1.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred2 = constOriginal2.inferAutoNarrowing(constThisClass);
+
+        return constInferred1 == constOriginal1 && constInferred2 == constOriginal2
+                ? this
+                : cloneRelational(constInferred1, constInferred2);
         }
 
     @Override
