@@ -11,13 +11,13 @@
   - class in a property
 
 - auto conversion
-  - IntLiteral - > Int, ok
+  x IntLiteral - > Int, ok
   - IntLiteral[] -> Int[] ???
   - Tuple(String, IntLiteral) -> Tuple(String, Int) ???
 
 - tests
-  - return 40 + 2
-  - "void" was messing up test (so was "int" for gene)
+  x return 40 + 2
+  x "void" was messing up test (so was "int" for gene)
 
 - TypeInfo
   - nested / scoped stuff

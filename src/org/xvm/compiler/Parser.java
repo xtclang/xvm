@@ -3850,7 +3850,7 @@ s     *
                         }
                     else
                         {
-                        args.add(new NamedExpression(name, parseExpression()));
+                        args.add(new LabeledExpression(name, parseExpression()));
                         continue;
                         }
                     }

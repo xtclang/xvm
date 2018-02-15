@@ -9,12 +9,12 @@ import java.lang.reflect.Field;
 /**
  * Used for named arguments.
  */
-public class NamedExpression
+public class LabeledExpression
         extends Expression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public NamedExpression(Token name, Expression expr)
+    public LabeledExpression(Token name, Expression expr)
         {
         this.name = name;
         this.expr = expr;
@@ -71,5 +71,5 @@ public class NamedExpression
     protected Token      name;
     protected Expression expr;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NamedExpression.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledExpression.class, "expr");
     }

@@ -1471,6 +1471,25 @@ public class MethodStructure
             return hole;
             }
 
+        // ----- Object methods ---------------------------------------------------------------
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            int i = 0;
+            for (Op op : m_listOps)
+                {
+                sb.append("\n[")
+                  .append(i++)
+                  .append("] ")
+                  .append(op.toString());
+                }
+
+            return sb.substring(1);
+            }
+
         // ----- read-only wrapper ------------------------------------------------------------
 
         /**
@@ -1520,6 +1539,12 @@ public class MethodStructure
             public Code blackhole()
                 {
                 return this;
+                }
+
+            @Override
+            public String toString()
+                {
+                return "<blackhole>";
                 }
 
             Code f_wrappee;
@@ -1621,9 +1646,10 @@ public class MethodStructure
 
         // ----- fields -----------------------------------------------------------------------
 
+        /**
+         * The containing method.
+         */
         protected final MethodStructure f_method;
-
-        // ----- fields -----------------------------------------------------------------------
 
         /**
          * List of ops being assembled.

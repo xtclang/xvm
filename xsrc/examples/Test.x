@@ -200,13 +200,6 @@ module Test
 //        {
 //        return 40 + 2;
 //        }
-
-    // problem #19 - singleton
-    Boolean foo()
-        {
-        return True;
-        }
-
 //
 //    // problem #19 - while loops
 //    Int foo9(Iterator<Int> iter)
@@ -304,45 +297,41 @@ module Test
 //        return bob;
 //        }
 //
-//    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
-//        {
-//        Void foo();
-//        @Auto Int size();
-//        }
-//
-//    mixin M into MyMap {}
-//
-//    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
-//        {
-//        public/private @Override @RO @Lazy @Unchecked Int x
-//            {
-//            @Unchecked Int get() {return 0;}
-//            Void set(@Unchecked Int n) {}      // TODO note "void" with lower case "v" caused an awful error
-//            }
-//
-//        Void bar();
-//        @Auto Int size();
-//
-//        // TODO should be an error: static Int x = 0;
-//
-//        static Int y = 0;
-//        static Int z = () -> y;
-//        }
-//
-//    mixin M2 into MyMap2 extends M {}
+    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
+        {
+        Void foo();
+        @Auto Int size();
+        }
 
-//    class B incorporates M {}
+    mixin M into MyMap {}
 
-//    class D extends B incorporates M2 {}
+    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
+        {
+        public/private @Unchecked Int x
+            {
+            @Unchecked Int get() {return 0;}
+            Void set(@Unchecked Int n) {}
+            }
 
-//    function Object() foo(Object o)
-//        {
-//        return o;
-//        }
+        Void bar();
+        @Auto Int size();
 
-//    Int foo()
-//        {
-//        MyMap2<Object, Object> map;
-//        return map;
-//        }
+        static Int y = 0;
+        static Int z = () -> y;
+        }
+
+    mixin M2 into MyMap2 extends M {}
+
+    class B incorporates M {}
+    class D extends B incorporates M2 {}
+    function Object() foo(Object o)
+        {
+        return o;
+        }
+
+    Int foo()
+        {
+        MyMap2<Object, Object> map;
+        return map;
+        }
     }
