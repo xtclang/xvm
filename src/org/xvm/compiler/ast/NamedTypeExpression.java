@@ -139,11 +139,30 @@ public class NamedTypeExpression
         }
 
     /**
-     * @return true iff the type is explicitly non-auto-narrowing
+     * @return true iff the type is explicitly non-auto-narrowing (the '!' post-operator)
      */
-    public boolean isNonAutoNarrowing()
+    public boolean isExplicitlyNonAutoNarrowing()
         {
         return nonnarrow != null;
+        }
+
+    /**
+     * Auto-narrowing is allowed for a type used in the following scenarios:
+     * <ul>
+     * <li>Type of a property;</li>
+     * <li>Type of a method parameter;</li>
+     * <li>Type of a method return value;</li>
+     * <li>TODO</li>
+     * </ul>
+     *
+     * @return true iff this type is used as part of a property type, a method return type, a method
+     *         parameter type,
+     */
+    public boolean isAutoNarrowingAllowed()
+        {
+        //
+        // TODO
+        return false;
         }
 
     /**
@@ -214,6 +233,26 @@ public class NamedTypeExpression
 
         ConstantPool pool      = pool();
         TypeConstant constType = pool.ensureTerminalTypeConstant(constId);
+        if (isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
+            {
+            if (isExplicitlyNonAutoNarrowing())
+                {
+                throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
+                }
+            else
+                {
+                // what is the "this:class"?
+                AstNode parent = getParent();
+                while (!(parent instanceof TypeCompositionStatement))
+                // TODO get the "this:class"
+                // TODO short-cut: is "this:class" the same as constId? if so, use ThisClassConstant(constId)
+                // TODO get the outermost of "this:class"
+                // TODO get the outermost of constId
+                // TODO if the outermosts are ==, then we have to replace the type constant with a relative (auto-narrowing) type constant
+
+                // TODO "infer" the auto-narrowing using the "this:class" by seeing if we're the same class, or we both have the same "outermost"
+                }
+            }
 
         if (paramTypes != null)
             {
@@ -245,6 +284,8 @@ public class NamedTypeExpression
     @Override
     public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        // TODO refactor (see note in super) - and also refactor ImportStatement
+
         boolean fWasResolved = alreadyReached(Stage.Resolved);
         AstNode nodeNew = super.resolveNames(listRevisit, errs);
         boolean fIsResolved  = alreadyReached(Stage.Resolved);

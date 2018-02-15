@@ -327,6 +327,7 @@ public class MethodDeclarationStatement
                 return this;
                 }
 
+            // TODO remove
             method.inferAutoNarrowing();
             }
 
