@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -512,28 +511,6 @@ public class TerminalTypeConstant
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).underlyingClasses();
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).underlyingClasses();
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).underlyingClasses();
-
-            default:
-                return isSingleUnderlyingClass(false)
-                        ? Collections.singleton(getSingleUnderlyingClass(false))
-                        : Collections.EMPTY_SET;
             }
         }
 

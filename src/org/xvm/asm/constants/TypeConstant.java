@@ -2892,14 +2892,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return the set of constants representing the classes that make this type a class type
-     */
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        return getUnderlyingType().underlyingClasses();
-        }
-
-    /**
      * Determine if this type refers to a class that can be used in an annotation, an extends
      * clause, an incorporates clause, or an implements clause.
      *

@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -160,22 +158,6 @@ public abstract class RelationalTypeConstant
             clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
             }
         return clz;
-        }
-
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        Set<IdentityConstant> set = m_constType1.underlyingClasses();
-        Set<IdentityConstant> set2 = m_constType2.underlyingClasses();
-        if (set.isEmpty())
-            {
-            set = set2;
-            }
-        else if (!set2.isEmpty())
-            {
-            set = new HashSet<>(set);
-            set.addAll(set2);
-            }
-        return set;
         }
 
     @Override
