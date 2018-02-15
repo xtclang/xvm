@@ -315,14 +315,19 @@ public class MethodDeclarationStatement
         AstNode nodeResult = super.resolveNames(listRevisit, errs);
         assert nodeResult == this;
 
-        if (getComponent() instanceof MethodStructure)
+        Component component = getComponent();
+        if (component instanceof MethodStructure)
             {
+            MethodStructure method = (MethodStructure) component;
+
             // sort out which annotations go on the method, and which belong to the return type
-            if (!((MethodStructure) getComponent()).resolveAnnotations())
+            if (!method.resolveAnnotations())
                 {
                 listRevisit.add(this);
                 return this;
                 }
+
+            // method.inferAutoNarrowing();
             }
 
         return this;

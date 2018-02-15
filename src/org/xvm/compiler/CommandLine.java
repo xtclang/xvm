@@ -878,12 +878,21 @@ public class CommandLine
             if (!errs.getErrors().isEmpty() && errs.getSeverity().ordinal() >= opts.badEnoughToPrint().ordinal())
                 {
                 err("xtc: Errors in " + compiler.getModuleStatement().getName());
-                int i = 0;
+                int c = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    err(" [" + (i++) + "] " + err);
+                    c++;
+                    // TODO: temporary until the compiler works
+                    if (c < 5)
+                        {
+                        err(" [" + c + "] " + err);
+                        }
                     }
 
+                if (c >= 5)
+                    {
+                    err("Total " + c + " errors");
+                    }
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
                 errs.clear();
                 }

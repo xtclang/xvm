@@ -157,14 +157,14 @@ public class ParameterizedTypeConstant
         boolean      fDiff         = constOriginal != constResolved;
 
         TypeConstant[] aconstOriginal = m_atypeParams;
-        TypeConstant[] aconstResolved = null;
+        TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
             TypeConstant constParamResolved = constParamOriginal.resolveTypedefs();
             if (constParamOriginal != constParamResolved)
                 {
-                if (aconstResolved == null)
+                if (aconstResolved == aconstOriginal)
                     {
                     aconstResolved = aconstOriginal.clone();
                     }
@@ -186,14 +186,14 @@ public class ParameterizedTypeConstant
         boolean      fDiff         = constOriginal != constResolved;
 
         TypeConstant[] aconstOriginal = m_atypeParams;
-        TypeConstant[] aconstResolved = null;
+        TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
             TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
             if (constParamOriginal != constParamResolved)
                 {
-                if (aconstResolved == null)
+                if (aconstResolved == aconstOriginal)
                     {
                     aconstResolved = aconstOriginal.clone();
                     }
@@ -214,8 +214,7 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.normalizeParameters();
         boolean      fDiff         = constOriginal != constResolved;
 
-        ClassStructure clzThis = (ClassStructure)
-            ((IdentityConstant) getDefiningConstant()).getComponent();
+        ClassStructure clzThis = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
         TypeConstant[] aconstParams = m_atypeParams;
 
         int cParams = aconstParams.length;
@@ -242,6 +241,64 @@ public class ParameterizedTypeConstant
         return fDiff
                 ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstParams)
                 : this;
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing()
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+        boolean      fDiff         = constOriginal != constResolved;
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = aconstOriginal;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing();
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
+        }
+
+    @Override
+    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constInferred = constOriginal.inferAutoNarrowing(constThisClass);
+        boolean      fDiff         = constOriginal != constInferred;
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstInferred = aconstOriginal;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(constThisClass);
+            if (constParamOriginal != constParamInferred)
+                {
+                if (aconstInferred == aconstOriginal)
+                    {
+                    aconstInferred = aconstOriginal.clone();
+                    }
+                aconstInferred[i] = constParamInferred;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+            ? getConstantPool().ensureParameterizedTypeConstant(constInferred, aconstInferred)
+            : this;
         }
 
     @Override
@@ -292,7 +349,7 @@ public class ParameterizedTypeConstant
                 case Into:
                     {
                     ClassStructure clzRight = (ClassStructure)
-                        ((IdentityConstant) getDefiningConstant()).getComponent();
+                        getSingleUnderlyingClass(true).getComponent();
 
                     listRight = chain.propagateActualTypes(clzRight, listRight);
                     break;
@@ -318,10 +375,10 @@ public class ParameterizedTypeConstant
                 }
 
             ClassStructure clzLeft = (ClassStructure)
-                ((IdentityConstant) thatLeft.getDefiningConstant()).getComponent();
+                thatLeft.getSingleUnderlyingClass(true).getComponent();
 
-            if (!validateAssignability(clzLeft, thatLeft.getParamTypes(), thatLeft.getAccess(), listRight, chain
-            ))
+            if (!validateAssignability(clzLeft, thatLeft.getParamTypes(),
+                    thatLeft.getAccess(), listRight, chain))
                 {
                 iter.remove();
                 }
@@ -368,7 +425,7 @@ public class ParameterizedTypeConstant
             case Into:
                 {
                 ClassStructure clzRight = (ClassStructure)
-                    ((IdentityConstant) thatRight.getDefiningConstant()).getComponent();
+                    thatRight.getSingleUnderlyingClass(true).getComponent();
 
                 listRight = chain.propagateActualTypes(clzRight, listRight);
                 break;
@@ -379,7 +436,7 @@ public class ParameterizedTypeConstant
             }
 
         ClassStructure clzLeft = (ClassStructure)
-            ((IdentityConstant) this.getDefiningConstant()).getComponent();
+            this.getSingleUnderlyingClass(true).getComponent();
 
         return validateAssignability(clzLeft, listLeft, accessLeft, listRight, chain);
         }

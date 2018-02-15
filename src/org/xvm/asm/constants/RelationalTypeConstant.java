@@ -5,9 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -143,39 +141,23 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
-        return m_constType1.isSingleUnderlyingClass()
-             ^ m_constType2.isSingleUnderlyingClass();
+        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
+             ^ m_constType2.isSingleUnderlyingClass(fAllowInterface);
         }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
-        assert isClassType() && isSingleUnderlyingClass();
+        assert isClassType() && isSingleUnderlyingClass(fAllowInterface);
 
-        IdentityConstant clz = m_constType1.getSingleUnderlyingClass();
+        IdentityConstant clz = m_constType1.getSingleUnderlyingClass(fAllowInterface);
         if (clz == null)
             {
-            clz = m_constType2.getSingleUnderlyingClass();
+            clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
             }
         return clz;
-        }
-
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        Set<IdentityConstant> set = m_constType1.underlyingClasses();
-        Set<IdentityConstant> set2 = m_constType2.underlyingClasses();
-        if (set.isEmpty())
-            {
-            set = set2;
-            }
-        else if (!set2.isEmpty())
-            {
-            set = new HashSet<>(set);
-            set.addAll(set2);
-            }
-        return set;
         }
 
     @Override
@@ -252,6 +234,32 @@ public abstract class RelationalTypeConstant
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
                 : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing()
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing();
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing();
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
+        }
+
+    @Override
+    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constInferred1 = constOriginal1.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred2 = constOriginal2.inferAutoNarrowing(constThisClass);
+
+        return constInferred1 == constOriginal1 && constInferred2 == constOriginal2
+                ? this
+                : cloneRelational(constInferred1, constInferred2);
         }
 
     @Override

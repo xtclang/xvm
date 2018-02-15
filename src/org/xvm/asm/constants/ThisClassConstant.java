@@ -81,7 +81,7 @@ public class ThisClassConstant
     @Override
     protected Object getLocator()
         {
-        return THIS_CLASS;
+        return m_constClass;
         }
 
     @Override

@@ -328,4 +328,21 @@ class TestCompiler<TestType1 extends Number,
 
         // Class<Array<PC>> clcAPC = Array<PC>;
         }
+
+    // auto-narrowing tests
+
+    interface ANIface
+        {
+        ANIface! autoNarrow1();
+        }
+
+    class ANClass
+        {
+        ANClass autoNarrow1();
+        }
+
+    static Void testAutoNarrowing(ANClass clz)
+        {
+        ANIface iface = clz;
+        }
     }

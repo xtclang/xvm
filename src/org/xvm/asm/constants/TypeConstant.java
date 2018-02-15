@@ -256,8 +256,7 @@ public abstract class TypeConstant
         // materializing the TypeInfo at this point, just answer the question without it
         if (isSingleDefiningConstant())
             {
-            ClassStructure clz = (ClassStructure)
-                    ((ClassConstant) getDefiningConstant()).getComponent();
+            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
             TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
             return type != null;
             }
@@ -290,8 +289,7 @@ public abstract class TypeConstant
 
             // because isA() uses this method, there is a chicken-and-egg problem, so instead of
             // materializing the TypeInfo at this point, just answer the question without it
-            ClassStructure clz = (ClassStructure)
-                    ((ClassConstant) getDefiningConstant()).getComponent();
+            ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
             TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
             if (type == null)
                 {
@@ -485,7 +483,7 @@ public abstract class TypeConstant
 
     /**
      * @return this same type, but with the number of parameters equal to the number of
-     *         formal parameters for every parameterized type
+     *         formal parameters for the parameterized type
      */
     public TypeConstant normalizeParameters()
         {
@@ -495,6 +493,49 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(constResolved);
+        }
+
+    /**
+     * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
+     * any auto-narrowing portion with an explicit class identity.
+     *
+     * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public TypeConstant resolveAutoNarrowing()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+
+        return constResolved == constOriginal
+            ? this
+            : cloneSingle(constResolved);
+        }
+
+    /**
+     * Assuming the "ThisClass" of A, the inference rules are:
+     * <ul>
+     *   <li>A&lt;T&gt; => TC(A)&lt;T&gt;
+     *   <li>B&lt;A&gt; => B&lt;TC(A)&gt;
+     *
+     *   //TODO: children and parents
+     * </ul>
+     * where TC is ThisClassConstant
+     *
+     * @param constThisClass  the class "context" in which the inference is calculated
+     *
+     * @return this same type, but with the underlying class of "this" replaced with the
+     *         {@link ThisClassConstant}
+     * @param constThisClass
+     */
+    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constInferred = constOriginal.inferAutoNarrowing(constThisClass);
+
+        return constInferred == constOriginal
+                ? this
+                : cloneSingle(constInferred);
         }
 
     /**
@@ -763,7 +804,7 @@ public abstract class TypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // resolve the type to make sure that typedefs etc. are removed from the equation
-        TypeConstant typeResolved = resolveTypedefs();
+        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing();
         if (typeResolved != this)
             {
             return typeResolved.buildTypeInfo(errs);
@@ -1297,7 +1338,7 @@ public abstract class TypeConstant
 
                 // the class structure will have to verify its "extends" clause in more detail, but
                 // for now perform a quick sanity check
-                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass();
+                IdentityConstant constExtends = typeExtends.getSingleUnderlyingClass(false);
                 ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
                 if (!ClassStructure.isExtendsLegal(struct.getFormat(), structExtends.getFormat()))
                     {
@@ -2827,31 +2868,27 @@ public abstract class TypeConstant
         }
 
     /**
+     * @param fAllowInterface if true, the returning identity constant could represent an interface
+     *
      * @return true iff there is exactly one underlying class that makes this a class type
      */
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
-        return getUnderlyingType().isSingleUnderlyingClass();
+        return getUnderlyingType().isSingleUnderlyingClass(fAllowInterface);
         }
 
     /**
-     * Note: Only use this method if {@link #isSingleUnderlyingClass()} returns true.
+     * Note: Only use this method if {@link #isSingleUnderlyingClass(boolean)} returns true.
+     *
+     * @param fAllowInterface if true, the returning identity constant could represent an interface
      *
      * @return the one underlying class that makes this a class type
      */
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
-        assert isClassType() && isSingleUnderlyingClass();
+        assert (fAllowInterface || isClassType()) && isSingleUnderlyingClass(fAllowInterface);
 
-        return getUnderlyingType().getSingleUnderlyingClass();
-        }
-
-    /**
-     * @return the set of constants representing the classes that make this type a class type
-     */
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        return getUnderlyingType().underlyingClasses();
+        return getUnderlyingType().getSingleUnderlyingClass(fAllowInterface);
         }
 
     /**

@@ -192,7 +192,7 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
         {
-        assert ((IdentityConstant) typeActual.getDefiningConstant()).getComponent() == f_struct;
+        assert typeActual.getSingleUnderlyingClass(true).getComponent() == f_struct;
         assert typeActual.getAccess() == Access.PUBLIC;
 
         int cActual = typeActual.getParamTypes().size();

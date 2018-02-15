@@ -6,7 +6,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -256,6 +255,42 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public TypeConstant resolveAutoNarrowing()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant();
+
+            case UnresolvedName:
+                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
+
+            default:
+                return this;
+            }
+        }
+
+    @Override
+    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+        {
+        Constant constId = getDefiningConstant();
+        if (constId.getFormat() == Format.Class)
+            {
+            ClassConstant constClass = (ClassConstant) constId;
+            if (constThisClass.equals(constClass))
+                {
+                return getConstantPool().ensureThisTypeConstant(constClass, null);
+                }
+
+            // TODO: parents & children
+            }
+        return this;
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
@@ -393,27 +428,50 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
+            case Module:
+            case Package:
+                // these are always class types (not interface types)
+                return fAllowInterface;
+
+            case Class:
+                {
+                ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
+                return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
+                }
+
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).isSingleUnderlyingClass();
+                return getTypedefTypeConstant((TypedefConstant) constant).
+                    isSingleUnderlyingClass(fAllowInterface);
 
             case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).isSingleUnderlyingClass();
+                return getPropertyTypeConstant((PropertyConstant) constant).
+                    isSingleUnderlyingClass(fAllowInterface);
 
             case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).isSingleUnderlyingClass();
+                return getRegisterTypeConstant((RegisterConstant) constant).
+                    isSingleUnderlyingClass(fAllowInterface);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
+                        .getDeclarationLevelClass().getComponent();
+                return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
+                }
 
             default:
-                return isClassType();
+                throw new IllegalStateException("unexpected defining constant: " + constant);
             }
         }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
@@ -424,18 +482,24 @@ public class TerminalTypeConstant
                 return (IdentityConstant) constant;
 
             case Class:
-                // must not be an interface
-                assert (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
+                if (!fAllowInterface)
+                    {
+                    // must not be an interface
+                    assert (((ClassConstant) constant).getComponent()).getFormat() != Component.Format.INTERFACE;
+                    }
                 return (IdentityConstant) constant;
 
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).getSingleUnderlyingClass();
+                return getTypedefTypeConstant((TypedefConstant) constant).
+                    getSingleUnderlyingClass(fAllowInterface);
 
             case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).getSingleUnderlyingClass();
+                return getPropertyTypeConstant((PropertyConstant) constant).
+                    getSingleUnderlyingClass(fAllowInterface);
 
             case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).getSingleUnderlyingClass();
+                return getRegisterTypeConstant((RegisterConstant) constant).
+                    getSingleUnderlyingClass(fAllowInterface);
 
             case ParentClass:
             case ChildClass:
@@ -447,28 +511,6 @@ public class TerminalTypeConstant
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
-        }
-
-    @Override
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
-            {
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).underlyingClasses();
-
-            case Property:
-                return getPropertyTypeConstant((PropertyConstant) constant).underlyingClasses();
-
-            case Register:
-                return getRegisterTypeConstant((RegisterConstant) constant).underlyingClasses();
-
-            default:
-                return isSingleUnderlyingClass()
-                        ? Collections.singleton(getSingleUnderlyingClass())
-                        : Collections.EMPTY_SET;
             }
         }
 

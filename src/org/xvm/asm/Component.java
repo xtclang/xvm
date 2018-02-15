@@ -2754,7 +2754,8 @@ public abstract class Component
                     if (constParam.isSingleDefiningConstant()
                             && constParam.getDefiningConstant() instanceof PropertyConstant)
                         {
-                        StringConstant constName       = ((PropertyConstant) constParam.getDefiningConstant()).getNameConstant();
+                        StringConstant constName = ((PropertyConstant)
+                            constParam.getDefiningConstant()).getNameConstant();
                         TypeConstant   constConstraint = m_mapParams.get(constName);
                         if (constConstraint != null)
                             {
@@ -2965,7 +2966,7 @@ public abstract class Component
                 if (i > 0)
                     {
                     clzParent = (ClassStructure)
-                        ((ClassConstant) contrib.getTypeConstant().getDefiningConstant()).getComponent();
+                        contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
                     }
                 }
 

@@ -4,9 +4,7 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Composition;
@@ -75,24 +73,17 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    public boolean isSingleUnderlyingClass()
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         return false;
         }
 
     @Override
-    public IdentityConstant getSingleUnderlyingClass()
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
         throw new IllegalStateException();
-        }
-
-    @Override
-    public Set<IdentityConstant> underlyingClasses()
-        {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return Collections.EMPTY_SET;
         }
 
     @Override
