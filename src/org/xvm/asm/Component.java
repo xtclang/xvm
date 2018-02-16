@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import com.sun.xml.internal.bind.v2.TODO;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -383,6 +384,16 @@ public abstract class Component
      *         component; this tends to be true when this component is a method
      */
     protected boolean isChildLessVisible()
+        {
+        return false;
+        }
+
+    /**
+     * Determine if this component allows any type within it to be auto-narrowing.
+     *
+     * @return true iff the component can contain auto-narrowing types
+     */
+    public boolean isAutoNarrowingAllowed()
         {
         return false;
         }

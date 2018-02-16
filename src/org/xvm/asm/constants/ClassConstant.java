@@ -56,6 +56,37 @@ public class ClassConstant
         super(pool);
         }
 
+    // ----- ClassConstant methods -----------------------------------------------------------------
+
+    /**
+     * @return return the "outermost" class that represents an auto-narrowing base
+     */
+    public ClassConstant getOutermost()
+        {
+        ClassConstant    outermost = this;
+        IdentityConstant parent    = outermost.getParentConstant();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Class:
+                    outermost = (ClassConstant) parent;
+                    break;
+
+                case Property:
+                    // ignored (we'll use its parent)
+                    break;
+
+                // methods, packages, modules all "terminate" this search
+                default:
+                    return outermost;
+                }
+
+            parent = parent.getParentConstant();
+            }
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

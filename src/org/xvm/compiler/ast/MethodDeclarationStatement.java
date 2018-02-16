@@ -140,6 +140,16 @@ public class MethodDeclarationStatement
         }
 
     @Override
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        return getComponent().isAutoNarrowingAllowed() &&
+                (   (typeParams != null && typeParams.stream().anyMatch(param -> param.getType() == type))
+                 || (returns != null && returns.contains(type))
+                 || (redundant != null && redundant.contains(type))
+                 || (params != null && params.stream().anyMatch(param -> param.getType() == type)));
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
@@ -326,9 +336,6 @@ public class MethodDeclarationStatement
                 listRevisit.add(this);
                 return this;
                 }
-
-            // TODO remove
-            method.inferAutoNarrowing();
             }
 
         return this;

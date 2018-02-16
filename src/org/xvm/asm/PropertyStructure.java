@@ -379,6 +379,15 @@ public class PropertyStructure
         return true;
         }
 
+    @Override
+    public boolean isAutoNarrowingAllowed()
+        {
+        // the property's type is allowed to auto-narrow, but only for non-static properties
+        // belonging to a non-singleton class (even if nested inside another property); note that
+        // a property inside a method is ALWAYS static
+        return !isStatic() && getParent().isAutoNarrowingAllowed();
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

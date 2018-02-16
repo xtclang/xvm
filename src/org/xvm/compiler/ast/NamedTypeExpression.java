@@ -5,11 +5,15 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
@@ -160,9 +164,20 @@ public class NamedTypeExpression
      */
     public boolean isAutoNarrowingAllowed()
         {
-        //
-        // TODO
-        return false;
+        TypeExpression type   = this;
+        AstNode        parent = getParent();
+        while (!(parent instanceof Statement))
+            {
+            if (parent instanceof TypeExpression)
+                {
+                type = (TypeExpression) parent;
+                }
+
+            parent = parent.getParent();
+            }
+
+        return parent instanceof ComponentStatement
+                && ((ComponentStatement) parent).isAutoNarrowingAllowed(type);
         }
 
     /**
@@ -233,24 +248,36 @@ public class NamedTypeExpression
 
         ConstantPool pool      = pool();
         TypeConstant constType = pool.ensureTerminalTypeConstant(constId);
+
+        // check for auto-narrowing
         if (isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
             {
             if (isExplicitlyNonAutoNarrowing())
                 {
                 throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
                 }
-            else
+            else if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
                 {
                 // what is the "this:class"?
-                AstNode parent = getParent();
-                while (!(parent instanceof TypeCompositionStatement))
-                // TODO get the "this:class"
-                // TODO short-cut: is "this:class" the same as constId? if so, use ThisClassConstant(constId)
-                // TODO get the outermost of "this:class"
-                // TODO get the outermost of constId
-                // TODO if the outermosts are ==, then we have to replace the type constant with a relative (auto-narrowing) type constant
+                Component component = getComponent();
+                while (!(component instanceof ClassStructure))
+                    {
+                    component = component.getParent();
+                    }
+                ClassConstant constThisClass = (ClassConstant) component.getIdentityConstant();
+                ClassConstant constThatClass = (ClassConstant) constId;
 
-                // TODO "infer" the auto-narrowing using the "this:class" by seeing if we're the same class, or we both have the same "outermost"
+                // if "this:class" is the same as constId, then use ThisClassConstant(constId)
+                if (constThisClass.equals(constThatClass))
+                    {
+                    return pool.ensureThisTypeConstant(constThisClass, null);
+                    }
+
+                // get the "outermost class" for both "this:class" and constId
+                if (constThisClass.getOutermost().equals(constThatClass.getOutermost()))
+                    {
+                    // TODO if the outermosts are ==, then we have to replace the type constant with a relative (auto-narrowing) type constant
+                    }
                 }
             }
 

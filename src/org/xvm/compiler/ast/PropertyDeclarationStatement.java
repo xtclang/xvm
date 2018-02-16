@@ -62,6 +62,19 @@ public class PropertyDeclarationStatement
         return name.getValue().toString();
         }
 
+    public TypeExpression getType()
+        {
+        return type;
+        }
+
+    @Override
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        // the property's type is allowed to auto-narrow, but only for non-static properties
+        // belonging to a non-singleton class (even if nested inside another property)
+        return type == this.type && getComponent().isAutoNarrowingAllowed();
+        }
+
     /**
      * @return true iff the property is declared as static
      */
