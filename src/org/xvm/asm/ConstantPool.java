@@ -1430,6 +1430,48 @@ public class ConstantPool
         }
 
     /**
+     * Obtain an auto-narrowing constant that represents the parent class of the passed constant.
+     *
+     * @param constClass  one of: ThisClassConstant, ParentClassConstant, ChildClassConstant
+     *
+     * @return an auto-narrowing constant that represents the parent class of the passe constant
+     */
+    public PseudoConstant ensureParentClassConstant(PseudoConstant constClass)
+        {
+        if (constClass instanceof ChildClassConstant)
+            {
+            return ((ChildClassConstant) constClass).getParent();
+            }
+
+        if (((Constant) constClass).getLocator() != null)
+            {
+            ParentClassConstant constant = (ParentClassConstant) ensureLocatorLookup(Format.ParentClass).get(constClass);
+            if (constant != null)
+                {
+                return constant;
+                }
+            }
+
+        return (ParentClassConstant) register(new ParentClassConstant(this, constClass));
+        }
+
+    /**
+     * Obtain an auto-narrowing constant that represents the named child class of the passed
+     * constant.
+     *
+     * @param constClass  one of: ThisClassConstant, ParentClassConstant, ChildClassConstant
+     *
+     * @return an auto-narrowing constant that represents the named child class of the passed
+     *         constant
+     */
+    public PseudoConstant ensureChildClassConstant(PseudoConstant constClass, String sName)
+        {
+        // eventually, we could check to see if the passed class is the parent of the child class
+        // being requested, but that seems like a lot of work for something that will never happen
+        return (ChildClassConstant) register(new ChildClassConstant(this, constClass, sName));
+        }
+
+    /**
      * Obtain an auto-narrowing class type constant that represents the type of "this".
      *
      * @param access  the access modifier, or null
@@ -1478,8 +1520,8 @@ public class ConstantPool
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
             }
 
-        TypeConstant constParent = new TerminalTypeConstant(this, new ParentClassConstant(this,
-                (PseudoConstant) constChild.getDefiningConstant()));
+        PseudoConstant constId     = ensureParentClassConstant((PseudoConstant) constChild.getDefiningConstant());
+        TypeConstant   constParent = new TerminalTypeConstant(this, constId);
 
         // wrap the parent in the same way that the child was wrapped
         if (constChild.isAccessSpecified())
@@ -1501,7 +1543,7 @@ public class ConstantPool
      * @param constParent  an auto-narrowing type constant
      * @param sChild       the name of the non-static inner class to obtain a type constant for
      *
-     * @return
+     * @return a type representing the named child of the class of the specified type constant
      */
     public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
         {
@@ -1511,8 +1553,8 @@ public class ConstantPool
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");
             }
 
-        TypeConstant constChild = new TerminalTypeConstant(this, new ChildClassConstant(this,
-                (PseudoConstant) constParent.getDefiningConstant(), sChild));
+        PseudoConstant constId    = ensureChildClassConstant((PseudoConstant) constParent.getDefiningConstant(), sChild);
+        TypeConstant   constChild = new TerminalTypeConstant(this, constId);
 
         // wrap the child in the same way that the parent was wrapped
         if (constParent.isAccessSpecified())

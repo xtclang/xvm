@@ -115,7 +115,9 @@ public class ParentClassConstant
     @Override
     protected Object getLocator()
         {
-        return m_constChild;
+        return m_constChild.getLocator() != null
+                ? m_constChild
+                : null;
         }
 
     @Override

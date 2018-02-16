@@ -79,6 +79,14 @@ public class ChildClassConstant
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**
+     * @return the parent of the child class
+     */
+    public PseudoConstant getParent()
+        {
+        return m_constParent;
+        }
+
+    /**
      * @return the name of the child class
      */
     public String getName()
@@ -122,14 +130,6 @@ public class ChildClassConstant
     public boolean isAutoNarrowing()
         {
         return true;
-        }
-
-    @Override
-    protected Object getLocator()
-        {
-        return m_constParent instanceof ThisClassConstant      // indicates "this:class"
-                ? getName()
-                : null;
         }
 
     @Override

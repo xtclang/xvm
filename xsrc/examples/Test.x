@@ -312,6 +312,46 @@ class C
         {
         TODO
         }
+
+    class K
+        {
+        C foo(K kid)
+            {
+            TODO
+            }
+        C! bar(K! kid)
+            {
+            TODO
+            }
+        }
+    }
+
+class D extends C
+    {
+    D x;
+    D! y;
+
+    D foo(D c)
+        {
+        TODO
+        }
+
+    D! bar(D! c)
+        {
+        TODO
+        }
+
+    class K extends C.K
+        {
+        D foo(K kid)
+            {
+            TODO
+            }
+        D! bar(K! kid)
+            {
+            TODO
+            }
+        }
     }
 
 /*
