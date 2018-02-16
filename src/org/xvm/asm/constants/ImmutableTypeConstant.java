@@ -120,11 +120,11 @@ public class ImmutableTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft, ContributionChain chain)
+    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft, ContributionChain chain)
         {
         // the l-value (this) is immutable; so should be the r-value (that)
-        return thatRight.isImmutabilitySpecified()
-            && super.validateContributionFrom(thatRight, accessLeft, chain);
+        return typeRight.isImmutabilitySpecified()
+            && super.validateContributionFrom(typeRight, accessLeft, chain);
         }
 
 

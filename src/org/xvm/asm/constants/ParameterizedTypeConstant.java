@@ -312,13 +312,13 @@ public class ParameterizedTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         assert listRight.isEmpty();
 
         listRight = getParamTypes();
 
-        chains = super.collectContributions(thatLeft, listRight, chains);
+        chains = super.collectContributions(typeLeft, listRight, chains);
         if (chains.isEmpty())
             {
             return chains;
@@ -367,7 +367,7 @@ public class ParameterizedTypeConstant
                 continue;
                 }
 
-            if (!thatLeft.isParamsSpecified())
+            if (!typeLeft.isParamsSpecified())
                 {
                 // "that" type is not parameterized, nothing else to check here;
                 // assignment C = C<T> is always allowed
@@ -375,10 +375,10 @@ public class ParameterizedTypeConstant
                 }
 
             ClassStructure clzLeft = (ClassStructure)
-                thatLeft.getSingleUnderlyingClass(true).getComponent();
+                typeLeft.getSingleUnderlyingClass(true).getComponent();
 
-            if (!validateAssignability(clzLeft, thatLeft.getParamTypes(),
-                    thatLeft.getAccess(), listRight, chain))
+            if (!validateAssignability(clzLeft, typeLeft.getParamTypes(),
+                    typeLeft.getAccess(), listRight, chain))
                 {
                 iter.remove();
                 }
@@ -388,11 +388,11 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft,
+    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
                                                ContributionChain chain)
         {
         // we know that from "that" perspective "that" is assignable to "this"
-        if (thatRight.isParamsSpecified() || thatRight.isRelationalType())
+        if (typeRight.isParamsSpecified() || typeRight.isRelationalType())
             {
             // the type correspondence have already been checked
             return true;
@@ -425,7 +425,7 @@ public class ParameterizedTypeConstant
             case Into:
                 {
                 ClassStructure clzRight = (ClassStructure)
-                    thatRight.getSingleUnderlyingClass(true).getComponent();
+                    typeRight.getSingleUnderlyingClass(true).getComponent();
 
                 listRight = chain.propagateActualTypes(clzRight, listRight);
                 break;
@@ -535,11 +535,11 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant thatRight, Access accessLeft,
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)
         {
         assert listLeft.isEmpty();
-        return super.isInterfaceAssignableFrom(thatRight, accessLeft, getParamTypes());
+        return super.isInterfaceAssignableFrom(typeRight, accessLeft, getParamTypes());
         }
 
     @Override

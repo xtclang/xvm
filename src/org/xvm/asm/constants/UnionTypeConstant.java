@@ -106,25 +106,25 @@ public class UnionTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         assert listRight.isEmpty();
 
         TypeConstant thisRight1 = getUnderlyingType();
         TypeConstant thisRight2 = getUnderlyingType2();
 
-        List<ContributionChain> chains1 = thisRight1.collectContributions(thatLeft, listRight, new ArrayList<>());
-        List<ContributionChain> chains2 = thisRight2.collectContributions(thatLeft, new ArrayList<>(), new ArrayList<>());
+        List<ContributionChain> chains1 = thisRight1.collectContributions(typeLeft, listRight, new ArrayList<>());
+        List<ContributionChain> chains2 = thisRight2.collectContributions(typeLeft, new ArrayList<>(), new ArrayList<>());
 
         // any contribution would do
         if (!chains1.isEmpty())
             {
-            validate(thisRight1, thatLeft, chains1);
+            validateChains(chains1, thisRight1, typeLeft);
             }
 
         if (!chains2.isEmpty())
             {
-            validate(thisRight2, thatLeft, chains2);
+            validateChains(chains2, thisRight2, typeLeft);
             }
 
         chains.addAll(chains1);
@@ -156,10 +156,10 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant thatRight, Access accessLeft, List<TypeConstant> listLeft)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
-        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
-        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
+        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
         setMiss1.retainAll(setMiss2); // signatures in both (intersection) are still missing
         return setMiss1;

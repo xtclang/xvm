@@ -284,7 +284,7 @@ public abstract class RelationalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    protected boolean validateContributionFrom(TypeConstant thatRight, Access accessLeft,
+    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
                                                ContributionChain chain)
         {
         // there is nothing that could change the result of "collectContributions"
