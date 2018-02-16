@@ -316,9 +316,6 @@ public class TerminalTypeConstant
                 return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
                         .buildTypeInfo(errs);
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
@@ -375,9 +372,6 @@ public class TerminalTypeConstant
                 return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
                         .getComponent()).extendsClass(constClass);
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
@@ -418,9 +412,6 @@ public class TerminalTypeConstant
                         .getDeclarationLevelClass().getComponent();
                 return clz.getFormat() != Component.Format.INTERFACE;
                 }
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
@@ -506,9 +497,6 @@ public class TerminalTypeConstant
             case ThisClass:
                 return ((PseudoConstant) constant).getDeclarationLevelClass();
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
-
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
@@ -532,9 +520,6 @@ public class TerminalTypeConstant
             case Property:
             case Register:
                 return false;
-
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
@@ -566,7 +551,6 @@ public class TerminalTypeConstant
             case Typedef:
             case Property:
             case Register:
-            case UnresolvedName:
             default:
                 throw new IllegalStateException("no class format for: " + constant);
             }
@@ -693,7 +677,7 @@ public class TerminalTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         if (this.equals(getConstantPool().typeObject()))
             {
@@ -703,14 +687,15 @@ public class TerminalTypeConstant
 
         Constant constIdRight = getDefiningConstant();
 
-        if (thatLeft.isSingleDefiningConstant()
-                && constIdRight.equals(thatLeft.getDefiningConstant()))
+        if (typeLeft.isSingleDefiningConstant()
+                && constIdRight.equals(typeLeft.getDefiningConstant()))
             {
             chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
             return chains;
             }
 
-        switch (constIdRight.getFormat())
+        Format format;
+        switch (format = constIdRight.getFormat())
             {
             case Module:
             case Package:
@@ -720,13 +705,15 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clzRight = (ClassStructure)
                     ((IdentityConstant) constIdRight).getComponent();
-                chains.addAll(thatLeft.collectClassContributions(clzRight, listRight, chains));
+
+                chains.addAll(typeLeft.collectClassContributions(
+                    clzRight, listRight, new ArrayList<>()));
                 break;
                 }
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constIdRight).
-                    collectContributions(thatLeft, listRight, chains);
+                    collectContributions(typeLeft, listRight, chains);
 
             case Property:
                 // scenarios we can handle here are:
@@ -736,27 +723,39 @@ public class TerminalTypeConstant
                 // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 return getPropertyTypeConstant((PropertyConstant) constIdRight).
-                    collectContributions(thatLeft, listRight, chains);
+                    collectContributions(typeLeft, listRight, chains);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdRight).
-                    collectContributions(thatLeft, listRight, chains);
+                    collectContributions(typeLeft, listRight, chains);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 {
+                if (typeLeft.isSingleDefiningConstant())
+                    {
+                    Constant constIdLeft = typeLeft.getDefiningConstant();
+
+                    if (constIdLeft.getFormat() == format
+                        && ((PseudoConstant) constIdRight).
+                                isCongruentWith((PseudoConstant) constIdLeft))
+                        {
+                        chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                        break;
+                        }
+                    }
+
                 ClassStructure clzRight = (ClassStructure)
                     ((PseudoConstant) constIdRight).getDeclarationLevelClass().getComponent();
-                chains.addAll(thatLeft.collectClassContributions(clzRight, listRight, chains));
+
+                chains.addAll(typeLeft.collectClassContributions(
+                    clzRight, listRight, new ArrayList<>()));
                 break;
                 }
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdRight);
-
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constIdRight);
+                throw new IllegalStateException("unexpected constant: " + constIdRight);
             }
         return chains;
         }
@@ -766,7 +765,6 @@ public class TerminalTypeConstant
             ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         Constant constIdLeft = getDefiningConstant();
-
         switch (constIdLeft.getFormat())
             {
             case Module:
@@ -822,11 +820,8 @@ public class TerminalTypeConstant
                     collectClassContributions(clzRight, listRight, chains);
                 }
 
-            case UnresolvedName:
-                throw new IllegalStateException("unexpected unresolved-name constant: " + constIdLeft);
-
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constIdLeft);
+                throw new IllegalStateException("unexpected constant: " + constIdLeft);
             }
 
         return chains;
@@ -834,7 +829,7 @@ public class TerminalTypeConstant
 
     @Override
     protected boolean validateContributionFrom(
-            TypeConstant thatRight, Access accessLeft, ContributionChain chain)
+            TypeConstant typeRight, Access accessLeft, ContributionChain chain)
         {
         // there is nothing that could change the result of "checkAssignableTo"
         return true;
@@ -842,18 +837,38 @@ public class TerminalTypeConstant
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
-            TypeConstant thatRight, Access accessLeft, List<TypeConstant> listLeft)
+            TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
         Constant constIdLeft = getDefiningConstant();
+        switch (constIdLeft.getFormat())
+            {
+            case Class:
+                {
+                IdentityConstant idLeft = (IdentityConstant) constIdLeft;
+                ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
 
-        assert constIdLeft.getFormat() == Format.Class;
+                assert clzLeft.getFormat() == Component.Format.INTERFACE;
 
-        IdentityConstant idLeft = (IdentityConstant) constIdLeft;
-        ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+                return clzLeft.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+                }
 
-        assert clzLeft.getFormat() == Component.Format.INTERFACE;
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constIdLeft).
+                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
-        return clzLeft.isInterfaceAssignableFrom(thatRight, accessLeft, listLeft);
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constIdLeft).
+                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constIdLeft).getDeclarationLevelClass().asTypeConstant().
+                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdLeft);
+            }
         }
 
     @Override
@@ -861,13 +876,35 @@ public class TerminalTypeConstant
                                                List<TypeConstant> listParams)
         {
         Constant constIdThis = getDefiningConstant();
+        switch (constIdThis.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                {
+                IdentityConstant idThis  = (IdentityConstant) constIdThis;
+                ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
 
-        assert constIdThis.getFormat() == Format.Class;
+                return clzThis.containsSubstitutableMethod(signature, access, listParams);
+                }
 
-        IdentityConstant idThis  = (IdentityConstant) constIdThis;
-        ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    containsSubstitutableMethod(signature, access, listParams);
 
-        return clzThis.containsSubstitutableMethod(signature, access, listParams);
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    containsSubstitutableMethod(signature, access, listParams);
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                    containsSubstitutableMethod(signature, access, listParams);
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdThis);
+            }
         }
 
     @Override
@@ -925,11 +962,11 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                // TODO: is that right?
-                return Usage.NO;
+                return Usage.valueOf(((PseudoConstant) constIdThis).getDeclarationLevelClass().
+                    asTypeConstant().consumesFormalType(sTypeName, access));
 
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("unexpected constant: " + constIdThis);
             }
         }
 
@@ -992,11 +1029,11 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                // TODO: is that right?
-                return Usage.NO;
+                return Usage.valueOf(((PseudoConstant) constIdThis).getDeclarationLevelClass().
+                    asTypeConstant().producesFormalType(sTypeName, access));
 
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("unexpected constant: " + constIdThis);
             }
         }
 
@@ -1005,24 +1042,27 @@ public class TerminalTypeConstant
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
-        Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
+        Constant constIdThis = getDefiningConstant();
+        switch (constIdThis.getFormat())
             {
             case Module:
             case Package:
             case Class:
-                return registry.getTemplate((IdentityConstant) constant);
+                return registry.getTemplate((IdentityConstant) constIdThis);
 
             case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).getOpSupport(registry);
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).getOpSupport(registry);
+
+            case Register:
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).getOpSupport(registry);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return registry.getTemplate(((PseudoConstant) constant).getDeclarationLevelClass());
+                return registry.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
 
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
+                throw new IllegalStateException("unexpected defining constant: " + constIdThis);
             }
         }
 

@@ -15,7 +15,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent the auto-narrowing class of <i>this</i></li>.
+ * Represent the auto-narrowing class of <i>this</i>.
  */
 public class ThisClassConstant
         extends PseudoConstant
@@ -49,6 +49,16 @@ public class ThisClassConstant
         super(pool);
 
         m_constClass = constClass;
+        }
+
+
+    // ----- Pseudo-constant methods --------------------------------------------------------------
+
+    @Override
+    public boolean isCongruentWith(PseudoConstant that)
+        {
+        // ThisClassConstants are congruent regardless of the declaration level
+        return that instanceof ThisClassConstant;
         }
 
 

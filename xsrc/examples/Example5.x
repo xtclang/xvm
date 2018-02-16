@@ -732,3 +732,23 @@ mixin Dual<T>
         super(t);
         }
     }
+
+// auto-narrowing
+class Person
+    {
+    List<Person> kids;
+
+    Void test0()
+        {
+        List<Employee> emps = kids;
+        }
+    }
+
+class Employee
+        extends Person
+    {
+    Void test1()
+        {
+        List<Employee> emps = kids;
+        }
+    }

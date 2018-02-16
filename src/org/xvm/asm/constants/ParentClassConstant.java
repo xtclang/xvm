@@ -92,6 +92,18 @@ public class ParentClassConstant
         }
 
 
+    @Override
+    public boolean isCongruentWith(PseudoConstant that)
+        {
+        if (that instanceof ParentClassConstant)
+            {
+            ParentClassConstant thatParent = (ParentClassConstant) that;
+
+            return this.m_constChild.isCongruentWith(thatParent.m_constChild);
+            }
+        return false;
+        }
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

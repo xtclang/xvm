@@ -331,18 +331,55 @@ class TestCompiler<TestType1 extends Number,
 
     // auto-narrowing tests
 
-    interface ANIface
+    interface ANIface1
         {
-        ANIface! autoNarrow1();
+        ANIface1 f1();
         }
 
-    class ANClass
+    interface ANIface2
         {
-        ANClass autoNarrow1();
+        ANIface2! f1();
         }
 
-    static Void testAutoNarrowing(ANClass clz)
+    interface ANIface1D extends ANIface1
         {
-        ANIface iface = clz;
+        Void f2();
+        }
+
+    class ANClass1
+        {
+        ANClass1 f1();
+        }
+
+    class ANClass2
+        {
+        ANClass2! f1();
+        }
+
+    static Void testAutoNarrow(ANClass1 clz1, ANClass2 clz2)
+        {
+        ANIface1 iface11 = clz1;
+        ANIface2 iface21 = clz1;
+        ANIface1 iface12 = clz2;
+        ANIface2 iface22 = clz2;
+        }
+
+    class Person
+        {
+        List<Person> dependents;
+
+        Void testExpectedFailure()
+            {
+            List<Employee> emps1 = dependents;
+            }
+        }
+
+    class Employee
+            extends Person
+        {
+        Void testAutoNarrow()
+            {
+            List<Employee> emps2 = dependents;
+            }
         }
     }

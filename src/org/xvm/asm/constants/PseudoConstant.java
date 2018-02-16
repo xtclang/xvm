@@ -27,6 +27,22 @@ public abstract class PseudoConstant
         }
 
 
+    // ----- constant-specific functionality -------------------------------------------------------
+
+    /**
+     * Determine if this PseudoConstant is equal to or structurally equivalent with another
+     * PseudoConstant, because they differ only in irrelevant ways, such as the declaration level.
+     *
+     * @param that  another type
+     *
+     * @return true iff the two constants are structurally equivalent
+     */
+    public boolean isCongruentWith(PseudoConstant that)
+        {
+        return this.equals(that);
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     /**

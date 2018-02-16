@@ -103,6 +103,19 @@ public class ChildClassConstant
             }
         }
 
+    @Override
+    public boolean isCongruentWith(PseudoConstant that)
+        {
+        if (that instanceof ChildClassConstant)
+            {
+            ChildClassConstant thatChild = (ChildClassConstant) that;
+
+            return this.m_constParent.isCongruentWith(thatChild.m_constParent)
+                && this.m_constName.equals           (thatChild.m_constName);
+            }
+        return false;
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

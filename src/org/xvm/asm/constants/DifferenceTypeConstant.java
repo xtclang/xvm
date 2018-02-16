@@ -119,12 +119,12 @@ public class DifferenceTypeConstant
 
     @Override
     public List<ContributionChain> collectContributions(
-            TypeConstant thatLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
         // this R-value is a difference type, which is a "dynamic" interface, so it can only
         // "duck type" to another interface
 
-        if (!thatLeft.isClassType())
+        if (!typeLeft.isClassType())
             {
             chains.add(new ContributionChain(
                 new Contribution(Composition.MaybeDuckType, null)));
