@@ -267,7 +267,7 @@ mixin FutureVar<RefType>
      */
     FutureVar!<RefType> orAny(FutureVar!<RefType> ... others)
         {
-        FutureVar!<RefType> result = this;
+        FutureVar<RefType> result = this;
         others.forEach(other -> {result = result.or(other);});
         return result;
         }
@@ -691,7 +691,7 @@ mixin FutureVar<RefType>
     static class OrStep<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct OrStep(FutureVar!<RefType> other)
+        construct OrStep(FutureVar<RefType> other)
             {
             }
         finally
@@ -709,7 +709,7 @@ mixin FutureVar<RefType>
     static class AndStep<RefType, InputType, Input2Type>
             extends DependentFuture<RefType, InputType>
         {
-        construct AndStep(FutureVar!<Input2Type> other, function RefType (InputType, Input2Type) combine)
+        construct AndStep(FutureVar<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
             }
         finally

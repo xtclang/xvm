@@ -140,9 +140,7 @@ public class ChildClassConstant
     @Override
     protected Object getLocator()
         {
-        return m_constParent instanceof ThisClassConstant      // indicates "this:class"
-                ? getName()
-                : null;
+        return null; // TODO
         }
 
     @Override
