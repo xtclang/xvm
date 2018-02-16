@@ -12,9 +12,13 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.ParentClassConstant;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
@@ -96,7 +100,7 @@ public class NamedTypeExpression
         Constant constId = m_constId;
         if (constId == null)
             {
-            m_constId = constId = new UnresolvedNameConstant(pool(), getNames());
+            m_constId = constId = new UnresolvedNameConstant(pool(), getNames(), isExplicitlyNonAutoNarrowing());
             }
         else if (constId instanceof ResolvableConstant)
             {
@@ -181,6 +185,107 @@ public class NamedTypeExpression
         }
 
     /**
+     * @return the constant to use
+     */
+    public Constant inferAutoNarrowing(Constant constId)
+        {
+        // check for auto-narrowing
+        if (!constId.containsUnresolved() && isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
+            {
+            if (isExplicitlyNonAutoNarrowing())
+                {
+                throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
+                }
+            else if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
+                {
+                // what is the "this:class"?
+                Component component = getComponent();
+                while (!(component instanceof ClassStructure))
+                    {
+                    component = component.getParent();
+                    }
+                ClassConstant constThisClass = (ClassConstant) component.getIdentityConstant();
+                ClassConstant constThatClass = (ClassConstant) constId;
+
+                // if "this:class" is the same as constId, then use ThisClassConstant(constId)
+                if (constThisClass.equals(constThatClass))
+                    {
+                    return new ThisClassConstant(pool(), constThisClass);
+                    }
+
+                // get the "outermost class" for both "this:class" and constId
+                ClassConstant constThisOutermost = constThisClass.getOutermost();
+                ClassConstant constThatOutermost = constThatClass.getOutermost();
+                if (constThisOutermost.equals(constThatOutermost))
+                    {
+                    // the two classes are related, so figure out how to describe "that" in relation
+                    // to "this"
+                    ConstantPool     pool       = pool();
+                    PseudoConstant   constPath  = new ThisClassConstant(pool, constThisClass);
+                    IdentityConstant constThis  = constThisClass;
+                    IdentityConstant constThat  = constThatClass;
+                    int              cThisDepth = constThisClass.getDepthFromOutermost();
+                    int              cThatDepth = constThatClass.getDepthFromOutermost();
+                    int              cReDescend = 0;
+                    while (cThisDepth > cThatDepth)
+                        {
+                        constPath = new ParentClassConstant(pool, constPath);
+                        constThis = constThis.getParentConstant();
+                        --cThisDepth;
+                        }
+                    while (cThatDepth > cThisDepth)
+                        {
+                        ++cReDescend;
+                        constThat = constThat.getParentConstant();
+                        --cThatDepth;
+                        }
+                    while (!constThis.equals(constThat))
+                        {
+                        assert cThisDepth == cThatDepth && cThisDepth >= 0;
+
+                        ++cReDescend;
+                        constPath = new ParentClassConstant(pool, constPath);
+
+                        constThis = constThis.getParentConstant();
+                        constThat = constThat.getParentConstant();
+                        --cThisDepth;
+                        --cThatDepth;
+                        }
+
+                    constId = redescend(constPath, constThatClass, cReDescend);
+                    }
+                }
+            }
+
+        return constId;
+        }
+
+    /**
+     * Recursively build onto the passed path to navigate the specified number of levels down to the
+     * specified child.
+     *
+     * @param constPath   the path, thus far
+     * @param constChild  the child to navigate to
+     * @param cLevels     the number of levels down that the child is
+     *
+     * @return a PseudoConstant that represents the navigation down to the child
+     */
+    private PseudoConstant redescend(PseudoConstant constPath, IdentityConstant constChild, int cLevels)
+        {
+        if (cLevels == 0)
+            {
+            return constPath;
+            }
+
+        if (cLevels > 1)
+            {
+            constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
+            }
+
+        return new ChildClassConstant(pool(), constPath, constChild.getName());
+        }
+
+    /**
      * Determine if this NamedTypeExpression could be a module name.
      *
      * @return true iff this NamedTypeExpression is just a name, and that name is a legal name for
@@ -246,40 +351,8 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
-        ConstantPool pool      = pool();
-        TypeConstant constType = pool.ensureTerminalTypeConstant(constId);
-
-        // check for auto-narrowing
-        if (isAutoNarrowingAllowed() != isExplicitlyNonAutoNarrowing())
-            {
-            if (isExplicitlyNonAutoNarrowing())
-                {
-                throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
-                }
-            else if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
-                {
-                // what is the "this:class"?
-                Component component = getComponent();
-                while (!(component instanceof ClassStructure))
-                    {
-                    component = component.getParent();
-                    }
-                ClassConstant constThisClass = (ClassConstant) component.getIdentityConstant();
-                ClassConstant constThatClass = (ClassConstant) constId;
-
-                // if "this:class" is the same as constId, then use ThisClassConstant(constId)
-                if (constThisClass.equals(constThatClass))
-                    {
-                    return pool.ensureThisTypeConstant(constThisClass, null);
-                    }
-
-                // get the "outermost class" for both "this:class" and constId
-                if (constThisClass.getOutermost().equals(constThatClass.getOutermost()))
-                    {
-                    // TODO if the outermosts are ==, then we have to replace the type constant with a relative (auto-narrowing) type constant
-                    }
-                }
-            }
+        ConstantPool pool = pool();
+        TypeConstant constType = pool().ensureTerminalTypeConstant(inferAutoNarrowing(constId));
 
         if (paramTypes != null)
             {
@@ -328,7 +401,7 @@ public class NamedTypeExpression
 
             // now that we have the resolved constId, update the unresolved m_constId to point to
             // the resolved one (just in case anyone is holding the wrong one
-            Constant constId = resolver.getConstant();
+            Constant constId = inferAutoNarrowing(resolver.getConstant());
             if (m_constId instanceof ResolvableConstant)
                 {
                 ((ResolvableConstant) m_constId).resolve(constId);

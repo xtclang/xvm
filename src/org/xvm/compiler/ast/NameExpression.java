@@ -77,7 +77,7 @@ public class NameExpression
         if (validateCondition(null))
             {
             ConstantPool pool = pool();
-            return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName()));
+            return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName(), false));
             }
 
         return super.toConditionalConstant();

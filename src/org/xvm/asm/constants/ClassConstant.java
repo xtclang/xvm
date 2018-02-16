@@ -86,6 +86,33 @@ public class ClassConstant
             }
         }
 
+    public int getDepthFromOutermost()
+        {
+        int cLevelsDown = 0;
+        ClassConstant    outermost = this;
+        IdentityConstant parent    = outermost.getParentConstant();
+        while (true)
+            {
+            switch (parent.getFormat())
+                {
+                case Class:
+                    ++cLevelsDown;
+                    outermost = (ClassConstant) parent;
+                    break;
+
+                case Property:
+                    ++cLevelsDown;
+                    break;
+
+                // methods, packages, modules all mean we've passed the outer-most
+                default:
+                    return cLevelsDown;
+                }
+
+            parent = parent.getParentConstant();
+            }
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

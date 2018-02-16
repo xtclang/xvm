@@ -297,6 +297,24 @@ module Test
 //        return bob;
 //        }
 //
+
+class C
+    {
+    C x;
+    C! y;
+
+    C foo(C c)
+        {
+        TODO
+        }
+
+    C! bar(C! c)
+        {
+        TODO
+        }
+    }
+
+/*
     class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
         {
         Void foo();
@@ -334,4 +352,5 @@ module Test
         MyMap2<Object, Object> map;
         return map;
         }
+        */
     }
