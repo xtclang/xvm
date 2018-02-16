@@ -115,4 +115,10 @@ public class MultiMethodStructure
         {
         return (List<MethodStructure>) (List) super.children();
         }
+
+    @Override
+    public boolean isAutoNarrowingAllowed()
+        {
+        return getParent().isAutoNarrowingAllowed();
+        }
     }

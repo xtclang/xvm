@@ -378,6 +378,7 @@ public abstract class AstNode
         {
         setStage(Stage.Resolving);
 
+        // TODO move this block out of this method (it's only used by ImportStatement and NamedTypeExpression; they should call it directly, instead of using super to call it)
         // if this node is a NameResolver, then make sure it resolves itself first
         boolean fResolved = true;
         if (this instanceof NameResolver.NameResolving && !alreadyReached(Stage.Resolved))

@@ -345,6 +345,13 @@ public class ClassStructure
         return true;
         }
 
+    @Override
+    public boolean isAutoNarrowingAllowed()
+        {
+        // a class must not be a singleton
+        return !isSingleton();
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 

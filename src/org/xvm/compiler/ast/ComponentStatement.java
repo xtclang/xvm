@@ -44,6 +44,20 @@ public abstract class ComponentStatement
         this.component = component;
         }
 
+    /**
+     * Given a type expression that is used as some part of this ComponentStatement, determine if
+     * that type is allowed to auto narrow.
+     *
+     * @param type  a TypeExpression that is a child of this ComponentStatement
+     *
+     * @return true iff the specified TypeExpression is being used in a place that supports
+     *         auto-narrowing
+     */
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        return false;
+        }
+
     @Override
     protected ConstantPool pool()
         {

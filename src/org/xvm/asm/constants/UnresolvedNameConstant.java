@@ -25,10 +25,11 @@ public class UnresolvedNameConstant
      *
      * @param pool  the ConstantPool that will contain this Constant
      */
-    public UnresolvedNameConstant(ConstantPool pool, String[] names)
+    public UnresolvedNameConstant(ConstantPool pool, String[] names, boolean fExplicitlyNonNarrowing)
         {
         super(pool);
-        this.m_asName = names;
+        this.m_asName    = names;
+        this.m_fNoNarrow = fExplicitlyNonNarrowing;
         }
 
 
@@ -212,7 +213,7 @@ public class UnresolvedNameConstant
         {
         return isNameResolved()
                 ? m_constId.getValueString()
-                : getName();
+                : (getName() + (m_fNoNarrow ? "!" : ""));
         }
 
     @Override
@@ -242,7 +243,12 @@ public class UnresolvedNameConstant
                     return n;
                     }
                 }
-            return cThis - cThat;
+            int n = cThis - cThat;
+            if (n == 0)
+                {
+                n = (this.m_fNoNarrow ? 1 : 0) - (((UnresolvedNameConstant) that).m_fNoNarrow ? 1 : 0);
+                }
+            return n;
             }
 
         // need to return a value that allows for stable sorts, but unless this==that, the
@@ -329,4 +335,9 @@ public class UnresolvedNameConstant
      * The resolved constant, or null if the name has not yet been resolved to a constant.
      */
     private Constant m_constId;
+
+    /**
+     * True iff the type name is explicitly non-narrowing.
+     */
+    private boolean m_fNoNarrow;
     }
