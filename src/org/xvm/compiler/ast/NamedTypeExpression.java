@@ -25,7 +25,6 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.NameResolver.Result;
 import org.xvm.compiler.ast.Statement.Context;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -384,36 +383,30 @@ public class NamedTypeExpression
     @Override
     public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        // TODO refactor (see note in super) - and also refactor ImportStatement
+        setStage(Stage.Resolving);
 
-        boolean fWasResolved = alreadyReached(Stage.Resolved);
-        AstNode nodeNew = super.resolveNames(listRevisit, errs);
-        boolean fIsResolved  = alreadyReached(Stage.Resolved);
-
-        if (nodeNew == this && fIsResolved && !fWasResolved)
+        NameResolver resolver = getNameResolver();
+        switch(resolver.resolve(errs))
             {
-            NameResolver resolver = m_resolver;
-            if (resolver.getResult() == Result.ERROR)
-                {
+            case DEFERRED:
+                listRevisit.add(this);
                 return this;
-                }
-            assert resolver.getResult() == Result.RESOLVED;
 
-            // now that we have the resolved constId, update the unresolved m_constId to point to
-            // the resolved one (just in case anyone is holding the wrong one
-            Constant constId = inferAutoNarrowing(resolver.getConstant());
-            if (m_constId instanceof ResolvableConstant)
-                {
-                ((ResolvableConstant) m_constId).resolve(constId);
-                }
+            case RESOLVED:
+                // now that we have the resolved constId, update the unresolved m_constId to point to
+                // the resolved one (just in case anyone is holding the wrong one
+                Constant constId = inferAutoNarrowing(resolver.getConstant());
+                if (m_constId instanceof ResolvableConstant)
+                    {
+                    ((ResolvableConstant) m_constId).resolve(constId);
+                    }
 
-            // store the resolved id
-            m_constId = constId;
-
-            ensureTypeConstant();
+                // store the resolved id
+                m_constId = constId;
+                ensureTypeConstant();
             }
 
-        return nodeNew;
+        return super.resolveNames(listRevisit, errs);
         }
 
     @Override

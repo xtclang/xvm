@@ -378,37 +378,9 @@ public abstract class AstNode
         {
         setStage(Stage.Resolving);
 
-        // TODO move this block out of this method (it's only used by ImportStatement and NamedTypeExpression; they should call it directly, instead of using super to call it)
-        // if this node is a NameResolver, then make sure it resolves itself first
-        boolean fResolved = true;
-        if (this instanceof NameResolver.NameResolving && !alreadyReached(Stage.Resolved))
-            {
-            NameResolver resolver = ((NameResolver.NameResolving) this).getNameResolver();
-            if (resolver != null)
-                {
-                boolean fRevisiting = !resolver.isFirstTime();
-                if (resolver.resolve(listRevisit, errs) == NameResolver.Result.DEFERRED)
-                    {
-                    fResolved = false;
-
-                    // the first time through the recursive descent of AST nodes, we need to visit
-                    // every node. subsequent visits are only to the nodes that registered
-                    // themselves for re-visits due to their inability to resolve themselves fully
-                    // in previous visits
-                    if (fRevisiting)
-                        {
-                        return this;
-                        }
-                    }
-                }
-            }
-
         // before resolving any children, mark this node as resolved, so that it is able to help
         // resolve things on requests from children
-        if (fResolved)
-            {
-            setStage(Stage.Resolved);
-            }
+        setStage(Stage.Resolved);
 
         ChildIterator children = children();
         for (AstNode node : children)
