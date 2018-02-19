@@ -106,6 +106,38 @@ public class ArrayConstant
             }
         }
 
+    @Override
+    public Constant convertTo(TypeConstant typeOut)
+        {
+        if (typeOut.isSingleDefiningConstant())
+            {
+            ConstantPool pool = getConstantPool();
+
+            if (typeOut.getDefiningConstant().equals(pool.clzArray()))
+                {
+                TypeConstant typeEl = typeOut.getParamsCount() == 0
+                    ? pool.typeObject()
+                    : typeOut.getParamTypesArray()[0];
+
+                Constant[] aconstIn  = getValue();
+                int        cValues   = aconstIn.length;
+                Constant[] aconstOut = new Constant[cValues];
+
+                for (int i = 0; i < cValues; i++)
+                    {
+                    Constant constEl = aconstIn[i].convertTo(typeEl);
+                    if (constEl == null)
+                        {
+                        return null;
+                        }
+                    aconstOut[i] = constEl;
+                    }
+                return pool.ensureArrayConstant(typeOut, aconstOut);
+                }
+            }
+        return null;
+        }
+
 
     // ----- ValueConstant methods -----------------------------------------------------------------
 
