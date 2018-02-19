@@ -6,15 +6,14 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.NameResolver.Result;
+
 import org.xvm.util.Severity;
 
 
