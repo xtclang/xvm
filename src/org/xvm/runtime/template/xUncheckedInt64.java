@@ -41,15 +41,15 @@ public class xUncheckedInt64
     @Override
     public void initDeclared()
         {
-        markNativeMethod("abs", VOID, INT);
+        markNativeMethod("abs", VOID, THIS);
 
         // @Op methods
-        markNativeMethod("add", INT, INT);
-        markNativeMethod("sub", INT, INT);
-        markNativeMethod("mul", INT, INT);
-        markNativeMethod("div", INT, INT);
-        markNativeMethod("mod", INT, INT);
-        markNativeMethod("neg", VOID, INT);
+        markNativeMethod("add", THIS, THIS);
+        markNativeMethod("sub", THIS, THIS);
+        markNativeMethod("mul", THIS, THIS);
+        markNativeMethod("div", THIS, THIS);
+        markNativeMethod("mod", THIS, THIS);
+        markNativeMethod("neg", VOID, THIS);
         }
 
     @Override

@@ -117,6 +117,12 @@ public class Adapter
             }
         else
             {
+            if (sName.equals("this"))
+                {
+                IdentityConstant constId = template == null ?
+                    pool.clzObject() : template.f_struct.getIdentityConstant();
+                return pool.ensureThisTypeConstant(constId, null);
+                }
             Component component = f_container.f_module.getChildByPath(sName);
             if (component != null)
                 {
