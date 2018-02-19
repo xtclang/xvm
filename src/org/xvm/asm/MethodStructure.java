@@ -1482,6 +1482,11 @@ public class MethodStructure
         @Override
         public String toString()
             {
+            if (m_listOps == null)
+                {
+                return "native";
+                }
+
             StringBuilder sb = new StringBuilder();
 
             int i = 0;

@@ -102,7 +102,7 @@
 
 + generate the default constructor
 
-- isA() to support auto-narrowing types
++ isA() to support auto-narrowing types
     - add a test for auto-narrowing method invocation
 
 - Stack overflow (fiber depth + frame depth within a fiber or cross-fiber frame depth)
@@ -118,7 +118,7 @@
 - introduce stock exception (Bounds, IllegalState, etc.)
 
 - Type: by-method comparison
-- Move: "safe wrapper" logic
+- Move op-code: "safe wrapper" logic
 
 
 $$$$$$$$$$ DEFERRED ISSUES $$$$$$$$$$$$$$$

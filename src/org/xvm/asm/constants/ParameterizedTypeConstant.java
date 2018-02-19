@@ -489,6 +489,7 @@ public class ParameterizedTypeConstant
             TypeConstant typeLeft = listLeft.get(i);
             TypeConstant typeRight;
             boolean fProduce;
+            boolean fLeftIsRight = false;
 
             if (i < cParamsRight)
                 {
@@ -500,8 +501,9 @@ public class ParameterizedTypeConstant
                     }
 
                 fProduce = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
+                fLeftIsRight = typeLeft.isA(typeRight);
 
-                if (typeLeft.isA(typeRight) && !fProduce)
+                if (fLeftIsRight && !fProduce)
                     {
                     // consumer only methods; rule 1.2.1
                     continue;
@@ -511,21 +513,34 @@ public class ParameterizedTypeConstant
                 {
                 // assignment  C<L1, L2> = C<R1> is not the same as
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
-                // it's only allowed for producing types
-                // and then all consuming methods (if any) must be "wrapped"
+                // the former is only allowed if class C produces L2
+                // and then all L2 consuming methods (if any) must be "wrapped"
                 typeRight = typeCanonical;
                 fProduce  = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
                 }
 
-            if (typeRight.isA(typeLeft) && fProduce)
+            if (typeRight.isA(typeLeft))
                 {
-                // there are some producing methods; rule 1.2.2.2
-                // consuming methods will need to be "wrapped"
-                if (fTuple || clz.consumesFormalType(sName, accessLeft, listLeft))
+                if (fLeftIsRight)
                     {
-                    chain.markWeakMatch();
+                    // both hold true:
+                    //   typeLeft.isA(typeRight), and
+                    //   typeRight.isA(typeLeft)
+                    // we take it that the types are congruent
+                    // (e,g. "this:class", but with different declaration levels)
+                    continue;
                     }
-                continue;
+
+                if (fProduce)
+                    {
+                    // there are some producing methods; rule 1.2.2.2
+                    // consuming methods will need to be "wrapped"
+                    if (fTuple || clz.consumesFormalType(sName, accessLeft, listLeft))
+                        {
+                        chain.markWeakMatch();
+                        }
+                    continue;
+                    }
                 }
 
             // didn't match; remove
