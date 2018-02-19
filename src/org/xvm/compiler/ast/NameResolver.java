@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -73,8 +72,7 @@ public class NameResolver
      */
     public Constant forceResolve(ErrorListener errs)
         {
-        List<AstNode> listExcuses = new ArrayList<>(3);
-        switch (resolve(listExcuses, errs))
+        switch (resolve(errs))
             {
             case RESOLVED:
                 return m_constant;
@@ -100,16 +98,14 @@ public class NameResolver
     /**
      * Resolve the name, or at least try to make progress doing so.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
-     *                     pass
-     * @param errs         the error list to log any errors etc. to
+     * @param errs   the error list to log any errors etc. to
      *
-     * @return one of {@link Result#DEFERRED} to indicate that the NameResolver added the node to
-     *         {@code listRevisit}, {@link Result#ERROR} to indicate that the NameResolver has
+     * @return one of {@link Result#DEFERRED} to indicate that the NameResolver needs to be
+     *         revisited, {@link Result#ERROR} to indicate that the NameResolver has
      *         logged an error to {@code errs} and given up all hope of resolving the name, or
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
-    public Result resolve(List<AstNode> listRevisit, ErrorListener errs)
+    public Result resolve(ErrorListener errs)
         {
         // store off the error list for use by call backs
         // (note: there's no attempt to clean this up later)
@@ -155,7 +151,7 @@ public class NameResolver
                         if (node == m_blockImport)
                             {
                             NameResolver resolver = m_stmtImport.getNameResolver();
-                            switch (resolver.resolve(listRevisit, errs))
+                            switch (resolver.resolve(errs))
                                 {
                                 case RESOLVED:
                                     m_constant  = resolver.getConstant();
@@ -164,7 +160,6 @@ public class NameResolver
 
                                 case DEFERRED:
                                     // dependent on a node that is deferred, so this is deferred
-                                    listRevisit.add(m_node);
                                     return Result.DEFERRED;
 
                                 default:
@@ -185,7 +180,6 @@ public class NameResolver
                                 {
                                 // the component that can do the resolve isn't yet available; come
                                 // back later
-                                listRevisit.add(m_node);
                                 return Result.DEFERRED;
                                 }
 
@@ -205,7 +199,6 @@ public class NameResolver
                                     return Result.ERROR;
 
                                 case DEFERRED:
-                                    listRevisit.add(m_node);
                                     return Result.DEFERRED;
 
                                 default:
@@ -266,7 +259,6 @@ public class NameResolver
                             return Result.ERROR;
 
                         case DEFERRED:
-                            listRevisit.add(m_node);
                             return Result.DEFERRED;
 
                         default:
