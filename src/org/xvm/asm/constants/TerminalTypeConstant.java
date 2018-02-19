@@ -948,22 +948,18 @@ public class TerminalTypeConstant
                 }
 
             case Typedef:
-                assert listParams.isEmpty();
-
-                return Usage.valueOf(getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    consumesFormalType(sTypeName, access));
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    checkConsumption(sTypeName, access, listParams);
 
             case Register:
-                assert listParams.isEmpty();
-
-                return Usage.valueOf(getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    consumesFormalType(sTypeName, access));
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    checkConsumption(sTypeName, access, listParams);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return Usage.valueOf(((PseudoConstant) constIdThis).getDeclarationLevelClass().
-                    asTypeConstant().consumesFormalType(sTypeName, access));
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                    checkConsumption(sTypeName, access, listParams);
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdThis);
@@ -1015,22 +1011,18 @@ public class TerminalTypeConstant
                 }
 
             case Typedef:
-                assert listParams.isEmpty();
-
-                return Usage.valueOf(getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    producesFormalType(sTypeName, access));
+                return getTypedefTypeConstant((TypedefConstant) constIdThis).
+                    checkProduction(sTypeName, access, listParams);
 
             case Register:
-                assert listParams.isEmpty();
-
-                return Usage.valueOf(getRegisterTypeConstant((RegisterConstant) constIdThis).
-                    producesFormalType(sTypeName, access));
+                return getRegisterTypeConstant((RegisterConstant) constIdThis).
+                    checkProduction(sTypeName, access, listParams);
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return Usage.valueOf(((PseudoConstant) constIdThis).getDeclarationLevelClass().
-                    asTypeConstant().producesFormalType(sTypeName, access));
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                    checkProduction(sTypeName, access, listParams);
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdThis);
@@ -1122,11 +1114,11 @@ public class TerminalTypeConstant
             TypeConstant constType;
             if (typedef instanceof CompositeComponent)
                 {
-                List<Component> typdefs = ((CompositeComponent) typedef).components();
-                constType = (TypeConstant) ((TypedefStructure) typdefs.get(0)).getType().simplify();
-                for (int i = 1, c = typdefs.size(); i < c; ++i)
+                List<Component> typedefs = ((CompositeComponent) typedef).components();
+                constType = (TypeConstant) ((TypedefStructure) typedefs.get(0)).getType().simplify();
+                for (int i = 1, c = typedefs.size(); i < c; ++i)
                     {
-                    TypeConstant constTypeN = (TypeConstant) ((TypedefStructure) typdefs.get(i)).getType().simplify();
+                    TypeConstant constTypeN = (TypeConstant) ((TypedefStructure) typedefs.get(i)).getType().simplify();
                     if (!constType.equals(constTypeN))
                         {
                         // typedef points to more than one type, conditionally, so just leave the
