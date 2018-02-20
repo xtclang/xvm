@@ -14,37 +14,19 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_INCB rvalue-target, rvalue-ix, lvalue ; ++T[ix] -> T
+ * IIP_INCA rvalue-target, rvalue-ix, lvalue ; T[ix]++ -> T
  */
-public class IIP_PreInc
+public class IIP_PostInc
         extends OpIndex
     {
     /**
-     * Construct an IIP_INCB op.
-     *
-     * @param nTarget  the target array
-     * @param nIndex   the index of the value to increment
-     * @param nRet     the location to store the pre-incremented value
-     *
-     * @deprecated
-     */
-    public IIP_PreInc(int nTarget, int nIndex, int nRet)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
-        m_nRetValue = nRet;
-        }
-
-    /**
-     * Construct an IIP_INCB op for the passed arguments.
+     * Construct an IIP_INCA op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      * @param argReturn  the Argument to store the result into
      */
-    public IIP_PreInc(Argument argTarget, Argument argIndex, Argument argReturn)
+    public IIP_PostInc(Argument argTarget, Argument argIndex, Argument argReturn)
         {
         super(argTarget, argIndex, argReturn);
         }
@@ -55,7 +37,7 @@ public class IIP_PreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_PreInc(DataInput in, Constant[] aconst)
+    public IIP_PostInc(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -64,7 +46,7 @@ public class IIP_PreInc
     @Override
     public int getOpCode()
         {
-        return OP_IIP_INCB;
+        return OP_IIP_INCA;
         }
 
     @Override
@@ -72,6 +54,6 @@ public class IIP_PreInc
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        return template.invokePreInc(frame, hTarget, hIndex.getValue(), m_nRetValue);
+        return template.invokePostInc(frame, hTarget, hIndex.getValue(), m_nRetValue);
         }
     }

@@ -58,7 +58,7 @@ public class xType
 
     public xArray.GenericArrayHandle getAllMethods(TypeHandle hType)
         {
-        MethodStructure[] aMethods = null;
+        MethodStructure[] aMethods = null; // TODO: use the type info when done
         xMethod.MethodHandle[] ahMethods = new xMethod.MethodHandle[aMethods.length];
         TypeConstant typeTarget = hType.getDataType();
 

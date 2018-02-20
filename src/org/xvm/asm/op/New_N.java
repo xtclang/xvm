@@ -24,7 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * NEW_N CONST-CONSTRUCT, #params:(rvalue), lvalue-return
+ * NEW_N CONSTRUCT, #params:(rvalue), lvalue-return
  */
 public class New_N
         extends OpCallable

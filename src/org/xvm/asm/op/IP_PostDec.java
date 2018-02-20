@@ -12,34 +12,18 @@ import org.xvm.runtime.ObjectHandle;
 
 
 /**
- * IP_INCB lvalue-target, lvalue  ; ++T -> T
+ * IP_DECA lvalue-target, lvalue ; T-- -> T
  */
-public class IP_PreInc
+public class IP_PostDec
         extends OpInPlace
     {
     /**
-     * Construct an IP_INCB op.
-     *
-     * @param nTarget  the location to increment
-     * @param nRet     the location to store the post-incremented value
-     *
-     * @deprecated
-     */
-    public IP_PreInc(int nTarget, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
-     * Construct an IP_INCB op for the passed arguments.
+     * Construct an IP_DECA op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to store the result into
      */
-    public IP_PreInc(Argument argTarget, Argument argReturn)
+    public IP_PostDec(Argument argTarget, Argument argReturn)
         {
         super(argTarget, argReturn);
         }
@@ -50,7 +34,7 @@ public class IP_PreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IP_PreInc(DataInput in, Constant[] aconst)
+    public IP_PostDec(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -59,28 +43,22 @@ public class IP_PreInc
     @Override
     public int getOpCode()
         {
-        return OP_IP_INCB;
+        return OP_IP_DECA;
         }
 
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getOpSupport().invokeNext(frame, hTarget, Frame.RET_LOCAL))
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, Frame.RET_LOCAL))
             {
             case R_NEXT:
-                {
-                ObjectHandle hValueNew = frame.getFrameLocal();
                 return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
-                    hValueNew, hValueNew);
-                }
+                    hTarget, frame.getFrameLocal());
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    {
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
-                    return frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},
-                        hValueNew, hValueNew);
-                    });
+                    frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},
+                        hTarget, frameCaller.getFrameLocal()));
                 return R_CALL;
 
             case R_EXCEPTION:
@@ -96,6 +74,6 @@ public class IP_PreInc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, sProperty, m_nRetValue);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, sProperty, m_nRetValue);
         }
     }

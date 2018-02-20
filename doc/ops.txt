@@ -133,11 +133,11 @@
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - a new register of type T is allocated if the lvalue is the next unallocated register
 +IP_INC      lvalue-target                           ; in-place increment; no result
- IP_DEC      lvalue-target                           ; in-place decrement; no result
++IP_DEC      lvalue-target                           ; in-place decrement; no result
 +IP_INCA     lvalue-target, lvalue                   ; T++ -> T
- IP_DECA     lvalue-target, lvalue                   ; T-— -> T
++IP_DECA     lvalue-target, lvalue                   ; T-— -> T
 +IP_INCB     lvalue-target, lvalue                   ; ++T -> T
- IP_DECB     lvalue-target, lvalue                   ; --T -> T
++IP_DECB     lvalue-target, lvalue                   ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ops:
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
@@ -162,9 +162,9 @@
 +PIP_INC     PROPERTY, rvalue-target                 ; in-place increment; no result
 +PIP_DEC     PROPERTY, rvalue-target                 ; in-place decrement; no result
 +PIP_INCA    PROPERTY, rvalue-target, lvalue         ; T++ -> T
- PIP_DECA    PROPERTY, rvalue-target, lvalue         ; T-- -> T
++PIP_DECA    PROPERTY, rvalue-target, lvalue         ; T-- -> T
 +PIP_INCB    PROPERTY, rvalue-target, lvalue         ; ++T -> T
- PIP_DECB    PROPERTY, rvalue-target, lvalue         ; --T -> T
++PIP_DECB    PROPERTY, rvalue-target, lvalue         ; --T -> T
 
 // ("IP"=) in-place ("___ and assign") ("P"=) property ops:
 // - the rvalue-target indicates the object on which to get/set the property value
@@ -192,15 +192,15 @@
 
 // ("I"=) index-based ("IP"=) in-place ops:
 +IIP_INC     rvalue-target, rvalue-ix                ; ++T[ix] (no result)
- IIP_DEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
- IIP_INCA    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
- IIP_DECA    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
++IIP_DEC     rvalue-target, rvalue-ix                ; --T[ix] (no result)
++IIP_INCA    rvalue-target, rvalue-ix, lvalue        ; T[ix]++ -> T
++IIP_DECA    rvalue-target, rvalue-ix, lvalue        ; T[ix]-— -> T
 +IIP_INCB    rvalue-target, rvalue-ix, lvalue        ; ++T[ix] -> T
- IIP_DECB    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
-+IIP_ADD     rvalue-target, rvalue-ix, rvalue2
- IIP_SUB     rvalue-target, rvalue-ix, rvalue2
- IIP_MUL     rvalue-target, rvalue-ix, rvalue2
- IIP_DIV     rvalue-target, rvalue-ix, rvalue2
++IIP_DECB    rvalue-target, rvalue-ix, lvalue        ; --T[ix] -> T
++IIP_ADD     rvalue-target, rvalue-ix, rvalue2       ; T[ix] += T
++IIP_SUB     rvalue-target, rvalue-ix, rvalue2
++IIP_MUL     rvalue-target, rvalue-ix, rvalue2
++IIP_DIV     rvalue-target, rvalue-ix, rvalue2
  IIP_MOD     rvalue-target, rvalue-ix, rvalue2
  IIP_SHL     rvalue-target, rvalue-ix, rvalue2
  IIP_SHR     rvalue-target, rvalue-ix, rvalue2
@@ -285,14 +285,14 @@
 // - lvalue will hold the newly constructed object
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - a new register of the constructed type is allocated if the lvalue is the next unallocated register
- NEW_0      CONSTRUCT, lvalue                                       ; simple "new"
++NEW_0      CONSTRUCT, lvalue                                       ; simple "new"
 +NEW_1      CONSTRUCT, rvalue-param, lvalue
 +NEW_N      CONSTRUCT, #:(rvalue), lvalue
- NEW_T      CONSTRUCT, rvalue-tparams, lvalue
++NEW_T      CONSTRUCT, rvalue-tparams, lvalue
 +NEWG_0     CONSTRUCT, TYPE, lvalue                                 ; generic-type "new"
 +NEWG_1     CONSTRUCT, TYPE, rvalue-param, lvalue
 +NEWG_N     CONSTRUCT, TYPE, #:(rvalue), lvalue
- NEWG_T     CONSTRUCT, TYPE, rvalue-tparams, lvalue
++NEWG_T     CONSTRUCT, TYPE, rvalue-tparams, lvalue
  NEWC_0     CONSTRUCT, rvalue-parent, lvalue                        ; virtual "new" for child classes
  NEWC_1     CONSTRUCT, rvalue-parent, rvalue-param, lvalue
  NEWC_N     CONSTRUCT, rvalue-parent, #:(rvalue), lvalue

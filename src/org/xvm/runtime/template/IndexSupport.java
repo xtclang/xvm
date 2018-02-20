@@ -69,6 +69,54 @@ public interface IndexSupport
             }
         }
 
+    // @Op "postInc" support - place the result into the specified register and increment the element value
+    // return one of the Op.R_ values or zero
+    default int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        try
+            {
+            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+
+            return hValue.getTemplate().invokePostInc(frame, hValue, null, iReturn);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    // @Op "preDec" support - decrement the element value and place the result into the specified register
+    // return one of the Op.R_ values or zero
+    default int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        try
+            {
+            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+
+            return hValue.getTemplate().invokePreDec(frame, hValue, null, iReturn);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
+    // @Op "postDec" support - place the result into the specified register and decrement the element value
+    // return one of the Op.R_ values or zero
+    default int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        try
+            {
+            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+
+            return hValue.getTemplate().invokePostDec(frame, hValue, null, iReturn);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
+        }
+
     // trivial helpers
     default ObjectHandle[] toArray(ObjectHandle hTarget)
             throws ExceptionHandle.WrapperException
