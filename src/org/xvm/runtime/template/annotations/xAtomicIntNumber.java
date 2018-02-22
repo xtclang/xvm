@@ -119,7 +119,7 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeNext(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
@@ -128,11 +128,12 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(
+            fPost ? atomic.getAndIncrement() : atomic.incrementAndGet()));
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokePrev(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
 
@@ -141,34 +142,25 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(
+            fPost ? atomic.getAndDecrement() : atomic.decrementAndGet()));
         }
 
     @Override
-    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        long lValue = ((JavaLong) hArg).getValue();
 
         if (atomic == null)
             {
             return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.decrementAndGet()));
+        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.addAndGet(lValue)));
         }
 
-    @Override
-    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
-        {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
-
-        if (atomic == null)
-            {
-            return frame.raiseException(xException.makeHandle("Unassigned reference"));
-            }
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndDecrement()));
-        }
+    // TODO: other in-place ops
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)

@@ -170,8 +170,8 @@
 // - the rvalue-target indicates the object on which to get/set the property value
 // - the rvalue-target supports the "local property" mode
 // - the rvalue2 can be a register or a constant value or a local-property indicator (PROPERTY)
- PIP_ADD     PROPERTY, rvalue-target, rvalue2        ; T += T
- PIP_SUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
++PIP_ADD     PROPERTY, rvalue-target, rvalue2        ; T += T
++PIP_SUB     PROPERTY, rvalue-target, rvalue2        ; T -= T
  PIP_MUL     PROPERTY, rvalue-target, rvalue2        ; T *= T
  PIP_DIV     PROPERTY, rvalue-target, rvalue2        ; T /= T
  PIP_MOD     PROPERTY, rvalue-target, rvalue2        ; T %= T

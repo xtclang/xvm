@@ -7,6 +7,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
@@ -162,18 +163,19 @@ public class xString
         }
 
     @Override
-    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+    public RefHandle createPropertyRef(ObjectHandle hTarget, PropertyConstant constProp, boolean fRO)
         {
-        if (sPropName.equals("size"))
+        String sName = constProp.getName();
+        if (sName.equals("size"))
             {
             if (fRO)
                 {
                 TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(hTarget.getType());
-                return new RefHandle(clzRef, hTarget, sPropName);
+                return new RefHandle(clzRef, hTarget, sName);
                 }
             throw new IllegalStateException("Read-only property : String.size");
             }
-        throw new IllegalStateException("Unknown property : String." + sPropName);
+        throw new IllegalStateException("Unknown property : String." + constProp);
         }
 
 

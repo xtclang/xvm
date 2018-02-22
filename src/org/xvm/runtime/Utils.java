@@ -231,15 +231,18 @@ public abstract class Utils
                 switch (step)
                     {
                     case Get:
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        iResult = template.
+                            getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
                         break;
 
                     case Increment:
-                        iResult = hValueOld.getOpSupport().invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        iResult = hValueOld.getOpSupport().
+                            invokeNext(frameCaller, hValueOld, false, Frame.RET_LOCAL);
                         break;
 
                     case Decrement:
-                        iResult = hValueOld.getOpSupport().invokePrev(frameCaller, hValueOld, Frame.RET_LOCAL);
+                        iResult = hValueOld.getOpSupport().
+                            invokePrev(frameCaller, hValueOld, false, Frame.RET_LOCAL);
                         break;
 
                     case AssignOld:
@@ -251,7 +254,8 @@ public abstract class Utils
                         break;
 
                     case Set:
-                        iResult = template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                        iResult = template.
+                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
                         break;
 
                     default:

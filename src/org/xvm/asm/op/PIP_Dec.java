@@ -11,6 +11,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 
 /**
  * PIP_DEC PROPERTY, rvalue-target ; in-place decrement; no result
@@ -54,11 +56,14 @@ public class PIP_Dec
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget)
+    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+        return hTarget.getTemplate().invokePreDec(frame, hTarget, sPropName, Frame.RET_UNUSED);
+        }
 
-        return hTarget.getTemplate().invokePreDec(
-                frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
+    @Override
+    protected int completeRef(Frame frame, RefHandle hTarget)
+        {
+        return hTarget.getOpSupport().invokePrev(frame, hTarget, false, Frame.RET_UNUSED);
         }
     }

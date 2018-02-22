@@ -99,12 +99,14 @@ public interface OpSupport
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
+     * @param fPost    if true, the the operation is performed after the current value is returned
+     *                 (e.g. i++); otherwise - before that (e.g. ++i)
      * @param iReturn  the register id to place the results of operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+    default int invokeNext(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + this);
         }
@@ -114,12 +116,14 @@ public interface OpSupport
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
+     * @param fPost    if true, the the operation is performed after the current value is returned
+     *                 (e.g. i--); otherwise - before that (e.g. --i)
      * @param iReturn  the register id to place the results of operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+    default int invokePrev(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         throw new IllegalStateException("Invalid op for " + this);
         }

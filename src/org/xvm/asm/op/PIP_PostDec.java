@@ -16,37 +16,19 @@ import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
- * PIP_INCB PROPERTY, rvalue-target, lvalue ; same as IP_INCB for a register
+ * PIP_DECA PROPERTY, rvalue-target, lvalue ; same as IP_DECA for a register
  */
-public class PIP_PreInc
+public class PIP_PostDec
         extends OpPropInPlace
     {
     /**
-     * Construct a PIP_INCB op.
-     *
-     * @param nPropId  the property to increment
-     * @param nTarget  the object on which the property exists
-     * @param nRet     the location to store the pre-incremented value
-     *
-     * @deprecated
-     */
-    public PIP_PreInc(int nPropId, int nTarget, int nRet)
-        {
-        super(null, null, null);
-
-        m_nPropId = nPropId;
-        m_nTarget = nTarget;
-        m_nRetValue = nRet;
-        }
-
-    /**
-     * Construct a PIP_INCB op based on the passed arguments.
+     * Construct a PIP_DECA op based on the passed arguments.
      *
      * @param constProperty  the property constant
      * @param argTarget      the target Argument
      * @param argReturn      the Argument to move the result into (Register or local property)
      */
-    public PIP_PreInc(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
+    public PIP_PostDec(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
         super(constProperty, argTarget, argReturn);
         }
@@ -57,7 +39,7 @@ public class PIP_PreInc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public PIP_PreInc(DataInput in, Constant[] aconst)
+    public PIP_PostDec(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -66,18 +48,18 @@ public class PIP_PreInc
     @Override
     public int getOpCode()
         {
-        return OP_PIP_INCB;
+        return OP_PIP_DECA;
         }
 
     @Override
     protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, m_nRetValue);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, sPropName, m_nRetValue);
         }
 
     @Override
     protected int completeRef(Frame frame, RefHandle hTarget)
         {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, false, m_nRetValue);
+        return hTarget.getOpSupport().invokePrev(frame, hTarget, true, m_nRetValue);
         }
     }

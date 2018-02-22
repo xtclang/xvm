@@ -6,10 +6,13 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpPropInPlace;
+
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
@@ -54,11 +57,14 @@ public class PIP_Inc
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget)
+    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, Frame.RET_UNUSED);
+        }
 
-        return hTarget.getTemplate().invokePreInc(
-                frame, hTarget, constProperty.getName(), Frame.RET_UNUSED);
+    @Override
+    protected int completeRef(Frame frame, RefHandle hTarget)
+        {
+        return hTarget.getOpSupport().invokeNext(frame, hTarget, false, Frame.RET_UNUSED);
         }
     }

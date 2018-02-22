@@ -154,17 +154,17 @@ class TestApp
         c = svc.counter;
         print(c);
 
-        function Int() fnInc = svc.increment;
+        function Int() fnInc = svc.increment; // counter = 18
         c = fnInc();
         print(c);
 
-        @Future Int fc = svc.increment();
+        @Future Int fc = svc.increment();  // counter = 19
         FutureVar<Int> rfc = &fc;
         print(rfc);
         print(fc);
         print(rfc);
 
-        FutureVar<Int> rfc2 = &svc.increment();
+        FutureVar<Int> rfc2 = &svc.increment(); // counter = 20
         @Future Int rfc3 = rfc2;
         rfc2.whenComplete((r, x) ->
             {
@@ -193,9 +193,9 @@ class TestApp
             print(e);
             }
 
-        print(++svc.counter2);
-        print(svc.counter++);
-        print(svc.increment());
+        assert(++svc.counter2 == 6); // counter2 was initialized with 5
+        assert(svc.counter++ == 20); // counter = 21
+        assert(svc.increment() == 22);
         print(rfc.RefType);
 
         this:service.yield();

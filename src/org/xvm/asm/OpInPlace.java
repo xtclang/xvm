@@ -18,7 +18,8 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Base class for IP_ (in-place) op codes.
  *
- * Note: "in-place assign" ops derive from OpInPlaceAssign
+ * Note: "property in-place" ops derive from {@link OpPropInPlace} and
+ *       "property in-place assign" from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpInPlace
         extends Op

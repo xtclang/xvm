@@ -152,7 +152,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.invokePreInc(frame, hTarget, sPropName, iReturn);
             }
@@ -168,8 +168,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context ||
-                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.invokePostInc(frame, hTarget, sPropName, iReturn);
             }
@@ -185,7 +184,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(getProperty(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.invokePreDec(frame, hTarget, sPropName, iReturn);
             }
@@ -201,8 +200,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context ||
-                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.invokePostDec(frame, hTarget, sPropName, iReturn);
             }
@@ -218,8 +216,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context ||
-                isAtomic(hTarget.getComposition().getPropertyGetterChain(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.getPropertyValue(frame, hTarget, sPropName, iReturn);
             }
@@ -235,7 +232,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomic(property))
+        PropertyInfo info = property.getInfo();
+        if (frame.f_context == hService.m_context || info != null && info.isAtomic())
             {
             return super.getFieldValue(frame, hTarget, property, iReturn);
             }
@@ -248,8 +246,7 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context ||
-                isAtomic(hTarget.getComposition().getPropertySetterChain(sPropName)))
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
             return super.setPropertyValue(frame, hTarget, sPropName, hValue);
             }
@@ -268,7 +265,8 @@ public class xService
         ServiceContext context = hService.m_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
-        if (context == null || context == contextCurrent || isAtomic(property))
+        PropertyInfo info = property.getInfo();
+        if (context == null || context == contextCurrent || info != null && info.isAtomic())
             {
             return super.setFieldValue(frame, hTarget, property, hValue);
             }

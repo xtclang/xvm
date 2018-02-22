@@ -640,10 +640,13 @@ public class TypeComposition
                         {
                         PropertyStructure prop = (PropertyStructure) child;
 
+                        ClassTemplate.PropertyInfo info = prop.getInfo();
+
                         RefHandle hRef = null;
-                        if (template.isRef(prop))
+                        if (info != null && info.isRef())
                             {
-                            TypeComposition clzRef = template.getRefClass(prop);
+                            TypeComposition clzRef =
+                                template.f_templates.resolveClass(info.getRefType());
 
                             hRef = clzRef.getTemplate().createRefHandle(clzRef, prop.getName());
                             }

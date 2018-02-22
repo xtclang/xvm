@@ -21,6 +21,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -807,7 +808,8 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
-        return isRef(property)
+        PropertyInfo info = property.getInfo();
+        return info != null && info.isRef()
             ? ((RefHandle) hValue).get(frame, iReturn)
             : frame.assignValue(iReturn, hValue);
         }
@@ -886,7 +888,8 @@ public abstract class ClassTemplate
 
         assert hThis.containsField(property.getName());
 
-        if (isRef(property))
+        PropertyInfo info = property.getInfo();
+        if (info != null && info.isRef())
             {
             return ((RefHandle) hThis.getField(property.getName())).set(frame, hValue);
             }
@@ -940,6 +943,13 @@ public abstract class ClassTemplate
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getOpSupport().invokeNext(frame, hRef, false, iReturn);
+            }
         return iReturn == Frame.RET_UNUSED
             ? new Utils.IncDec(Utils.IncDec.INC, this, hTarget, sPropName, iReturn).doNext(frame)
             : new Utils.IncDec(Utils.IncDec.PRE_INC, this, hTarget, sPropName, iReturn).doNext(frame);
@@ -958,6 +968,13 @@ public abstract class ClassTemplate
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getOpSupport().invokeNext(frame, hRef, true, iReturn);
+            }
         return new Utils.IncDec(Utils.IncDec.POST_INC, this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
@@ -974,6 +991,13 @@ public abstract class ClassTemplate
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getOpSupport().invokePrev(frame, hRef, false, iReturn);
+            }
         return iReturn == Frame.RET_UNUSED
             ? new Utils.IncDec(Utils.IncDec.DEC, this, hTarget, sPropName, iReturn).doNext(frame)
             : new Utils.IncDec(Utils.IncDec.PRE_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
@@ -992,6 +1016,13 @@ public abstract class ClassTemplate
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getOpSupport().invokePrev(frame, hRef, true, iReturn);
+            }
         return new Utils.IncDec(Utils.IncDec.POST_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
         }
 
@@ -1018,30 +1049,28 @@ public abstract class ClassTemplate
      * Create a property Ref or Var for the specified target and property.
      *
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param constProp  the property constant
      * @param fRO        true if the
      *
      * @return the corresponding {@link RefHandle}
      */
-    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+    public RefHandle createPropertyRef(ObjectHandle hTarget, PropertyConstant constProp, boolean fRO)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
+        String sPropName = constProp.getName();
         if (!hThis.containsField(sPropName))
             {
-            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + sPropName);
+            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + constProp);
             }
 
-        // TODO: this is an overkill; we should get the property in an easier way
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
-        PropertyStructure property = chain.getProperty();
-
-        if (isRef(property))
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
             {
             return ((RefHandle) hThis.getField(sPropName));
             }
 
-        TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());
+        TypeConstant typeReferent = constProp.getRefType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
@@ -1237,14 +1266,9 @@ public abstract class ClassTemplate
         return info != null && info.m_fInjectable;
         }
 
-    protected boolean isAtomic(CallChain.PropertyCallChain chain)
+    protected boolean isAtomicProperty(ObjectHandle hTarget, String sPropName)
         {
-        return isAtomic(chain.getProperty());
-        }
-
-    protected boolean isAtomic(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
         return info != null && info.m_fAtomic;
         }
 
@@ -1254,31 +1278,10 @@ public abstract class ClassTemplate
         return info != null && info.m_fCalculated;
         }
 
-    protected boolean isNativeGetter(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_fNativeGetter;
-        }
-
     protected boolean isNativeSetter(PropertyStructure property)
         {
         PropertyInfo info = property.getInfo();
         return info != null && info.m_fNativeSetter;
-        }
-
-    // if true, indicates that the property value is held by a Ref object
-    protected boolean isRef(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_typeRef != null;
-        }
-
-    // if not null, specifies a class of the Ref that holds the property
-    protected TypeComposition getRefClass(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        TypeConstant type = info == null ? null : info.m_typeRef;
-        return type == null ? null : f_templates.resolveClass(type);
         }
 
     // is the specified generic property declared at this level
@@ -1414,11 +1417,26 @@ public abstract class ClassTemplate
                 ? f_pool.ensureEcstasyClassConstant("annotations.AtomicIntNumber").asTypeConstant()
                 : f_pool.ensureEcstasyClassConstant("annotations.AtomicVar").asTypeConstant();
 
-            setRef(f_pool.ensureParameterizedTypeConstant(typeRef, typeProp));
+            setRefType(f_pool.ensureParameterizedTypeConstant(typeRef, typeProp));
+            }
+
+        public boolean isAtomic()
+            {
+            return m_fAtomic;
+            }
+
+        public boolean isRef()
+            {
+            return m_typeRef != null;
+            }
+
+        public TypeConstant getRefType()
+            {
+            return m_typeRef;
             }
 
         // specifies that the property value is held by the ref
-        public void setRef(TypeConstant typeRef)
+        protected void setRefType(TypeConstant typeRef)
             {
             m_typeRef = typeRef;
             }

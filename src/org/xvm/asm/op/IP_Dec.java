@@ -54,7 +54,7 @@ public class IP_Dec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget);
+        return hTarget.getOpSupport().invokePrev(frame, hTarget, true, Frame.RET_UNUSED);
         }
 
     @Override
@@ -62,7 +62,6 @@ public class IP_Dec
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePostDec(
-            frame, hTarget, sProperty, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, sProperty, Frame.RET_UNUSED);
         }
     }

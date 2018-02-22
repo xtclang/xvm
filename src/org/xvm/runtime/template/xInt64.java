@@ -145,7 +145,7 @@ public class xInt64
         }
 
     @Override
-    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int invokePrev(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
 
@@ -158,7 +158,7 @@ public class xInt64
         }
 
     @Override
-    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int invokeNext(Frame frame, ObjectHandle hTarget, boolean fPost, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();
 

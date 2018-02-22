@@ -778,6 +778,9 @@ public abstract class Op
             case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
             case OP_PIP_DECB:    return new PIP_PreDec  (in, aconst);
 
+            case OP_PIP_ADD:     return new PIP_Add     (in, aconst);
+            case OP_PIP_SUB:     return new PIP_Sub     (in, aconst);
+
             case OP_I_GET:       return new I_Get       (in, aconst);
             case OP_I_SET:       return new I_Set       (in, aconst);
             case OP_I_VAR:       return new I_Var       (in, aconst);
@@ -954,6 +957,8 @@ public abstract class Op
             case OP_PIP_DECA:    return "PIP_DECA";
             case OP_PIP_INCB:    return "PIP_INCB";
             case OP_PIP_DECB:    return "PIP_DECB";
+            case OP_PIP_ADD:     return "PIP_ADD";
+            case OP_PIP_SUB:     return "PIP_SUB";
             case OP_I_GET:       return "I_GET";
             case OP_I_SET:       return "I_SET";
             case OP_I_VAR:       return "I_VAR";
@@ -1371,6 +1376,11 @@ public abstract class Op
      * Pre-defined argument: a target for local invocation
      */
     public static final int A_THIS = -12;
+
+    /**
+     * Pre-defined argument: the frame local (used only for testing)
+     */
+    public static final int A_LOCAL = -13;
 
 
     // ----- return values from the Op.process() method --------------------------------------------

@@ -398,6 +398,9 @@ public class Frame
             case Op.A_SERVICE:
                 return ServiceContext.getCurrentContext().m_hService;
 
+            case Op.A_LOCAL:
+                return m_hFrameLocal;
+
             default:
                 throw new IllegalStateException("Invalid argument " + nArgId);
             }

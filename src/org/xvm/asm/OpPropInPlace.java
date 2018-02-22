@@ -7,10 +7,14 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -19,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Base class for PIP_ (property in-place) op codes.
  *
- * Note: "property in-place assign" ops derive from OpPropInPlaceAssign
+ * Note: "property in-place assign" ops derive from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpPropInPlace
         extends OpProperty
@@ -120,18 +124,19 @@ public abstract class OpPropInPlace
 
             if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVarCopy(m_nTarget);
+                frame.introduceVarCopy(m_nPropId);
                 }
 
             if (isProperty(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
-                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahTarget[0]);
+                Frame.Continuation stepNext = frameCaller ->
+                    processProperty(frameCaller, ahTarget[0]);
 
                 return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hTarget);
+            return processProperty(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -139,10 +144,41 @@ public abstract class OpPropInPlace
             }
         }
 
-    protected int complete(Frame frame, ObjectHandle hTarget)
+    /**
+     * Continuation of the processing.
+     */
+    protected int processProperty(Frame frame, ObjectHandle hTarget)
+        {
+        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+        String sPropName = constProperty.getName();
+
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return completeRef(frame, hRef);
+            }
+
+        return completeRegular(frame, hTarget, sPropName);
+        }
+
+    /**
+     * A completion with a regular property.
+     */
+    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
         {
         throw new UnsupportedOperationException();
         }
+
+    /**
+     * A completion with a Var property (RefHandle).
+     */
+    protected int completeRef(Frame frame, RefHandle hTarget)
+        {
+        throw new UnsupportedOperationException();
+        }
+
 
     @Override
     public void simulate(Scope scope)

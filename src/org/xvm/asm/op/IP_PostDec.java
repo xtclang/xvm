@@ -49,7 +49,7 @@ public class IP_PostDec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, Frame.RET_LOCAL))
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, true, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
