@@ -7,14 +7,10 @@ import java.io.IOException;
 
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -150,35 +146,17 @@ public abstract class OpPropInPlace
     protected int processProperty(Frame frame, ObjectHandle hTarget)
         {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-        String sPropName = constProperty.getName();
 
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
-            {
-            GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
-            return completeRef(frame, hRef);
-            }
-
-        return completeRegular(frame, hTarget, sPropName);
+        return complete(frame, hTarget, constProperty.getName());
         }
 
     /**
-     * A completion with a regular property.
+     * A completion of the processing.
      */
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
         throw new UnsupportedOperationException();
         }
-
-    /**
-     * A completion with a Var property (RefHandle).
-     */
-    protected int completeRef(Frame frame, RefHandle hTarget)
-        {
-        throw new UnsupportedOperationException();
-        }
-
 
     @Override
     public void simulate(Scope scope)

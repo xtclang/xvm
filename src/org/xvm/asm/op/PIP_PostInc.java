@@ -12,8 +12,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 
 /**
  * PIP_INCA PROPERTY, rvalue-target, lvalue ; same as IP_INCA for a register
@@ -70,14 +68,8 @@ public class PIP_PostInc
         }
 
     @Override
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
         return hTarget.getTemplate().invokePostInc(frame, hTarget, sPropName, m_nRetValue);
-        }
-
-    @Override
-    protected int completeRef(Frame frame, RefHandle hTarget)
-        {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, true, m_nRetValue);
         }
     }

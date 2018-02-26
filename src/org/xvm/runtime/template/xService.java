@@ -212,6 +212,34 @@ public class xService
         }
 
     @Override
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+            {
+            return super.invokeAdd(frame, hTarget, sPropName, hArg);
+            }
+
+        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokeAdd);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeSub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ServiceHandle hService = (ServiceHandle) hTarget;
+
+        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+            {
+            return super.invokeSub(frame, hTarget, sPropName, hArg);
+            }
+
+        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokeSub);
+        return Op.R_NEXT;
+        }
+
+    @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;

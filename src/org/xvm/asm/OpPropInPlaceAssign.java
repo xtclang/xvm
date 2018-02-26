@@ -10,10 +10,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
-
-import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -112,29 +109,13 @@ public abstract class OpPropInPlaceAssign
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
         String sPropName = constProperty.getName();
 
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
-            {
-            GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
-            return completeRef(frame, hRef, hValue);
-            }
-
-        return completeRegular(frame, hTarget, sPropName, hValue);
+        return complete(frame, hTarget, sPropName, hValue);
         }
 
     /**
-     * A completion with a regular property.
+     * The completion of processing.
      */
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    /**
-     * A completion with a Var property (RefHandle).
-     */
-    protected int completeRef(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
         throw new UnsupportedOperationException();
         }

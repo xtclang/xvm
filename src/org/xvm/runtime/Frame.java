@@ -1131,6 +1131,41 @@ public class Frame
         f_aInfo[nVar] = new VarInfo(nArrayReg, 0, ARRAY_ELEMENT_REF_RESOLVER);
         }
 
+    /**
+     * Introduce a new standard variable of the "RefType" type for the specified dynamic var.
+     *
+     * Note: this method increments the "nextVar" index.
+     *
+     * @param nVarReg  the register number holding a dynamic var handle
+     */
+    public void introduceRefTypeVar(int nVarReg)
+        {
+        int nVar = f_anNextVar[m_iScope]++;
+
+        f_aInfo[nVar] = new VarInfo(nVarReg, 0, REF_RESOLVER);
+        }
+
+    /**
+     * @return true if the specified register holds a "dynamic var"
+     */
+    public boolean isDynamicVar(int nVar)
+        {
+        return getVarInfo(nVar).getStyle() == VAR_DYNAMIC_REF;
+        }
+
+    /**
+     * @return the RefHandle for the specified dynamic var
+     */
+    public RefHandle getDynamicVar(int nVar)
+        {
+        RefHandle hRef = (RefHandle) f_ahVar[nVar];
+
+        return hRef.isAssigned() ? hRef : null;
+        }
+
+    /**
+     * @return the VarInfo for the specified register
+     */
     public VarInfo getVarInfo(int nVar)
         {
         VarInfo info = f_aInfo[nVar];
@@ -1629,8 +1664,18 @@ public class Frame
 
             return typeTarget.isGenericType(constProperty.getName())
                 ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    constProperty.asTypeConstant().resolveGenerics(typeTarget))
+                constProperty.asTypeConstant().resolveGenerics(typeTarget))
                 : constProperty.getRefType().resolveGenerics(typeTarget);
+            }
+        };
+
+    protected static final VarTypeResolver REF_RESOLVER = new VarTypeResolver()
+        {
+        @Override
+        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
+            {
+            TypeConstant typeRef = frame.getVarInfo(nTargetReg).getType();
+            return typeRef.getGenericParamType("RefType");
             }
         };
     }

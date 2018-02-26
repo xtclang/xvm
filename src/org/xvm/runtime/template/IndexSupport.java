@@ -3,6 +3,8 @@ package org.xvm.runtime.template;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -61,7 +63,30 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.getTemplate().invokePreInc(frame, hValue, null, iReturn);
+            switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    {
+                    ObjectHandle hValueNew = frame.getFrameLocal();
+                    assignArrayValue(hTarget, lIndex, hValueNew);
+                    return frame.assignValue(iReturn, hValueNew);
+                    }
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                        assignArrayValue(hTarget, lIndex, hValueNew);
+                        return frameCaller.assignValue(iReturn, hValueNew);
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -77,7 +102,26 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.getTemplate().invokePostInc(frame, hValue, null, iReturn);
+            switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
+                    return frame.assignValue(iReturn, hValue);
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
+                        return frameCaller.assignValue(iReturn, hValue);
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -93,7 +137,30 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.getTemplate().invokePreDec(frame, hValue, null, iReturn);
+            switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    {
+                    ObjectHandle hValueNew = frame.getFrameLocal();
+                    assignArrayValue(hTarget, lIndex, hValueNew);
+                    return frame.assignValue(iReturn, hValueNew);
+                    }
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                        assignArrayValue(hTarget, lIndex, hValueNew);
+                        return frameCaller.assignValue(iReturn, hValueNew);
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -109,7 +176,26 @@ public interface IndexSupport
             {
             ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
 
-            return hValue.getTemplate().invokePostDec(frame, hValue, null, iReturn);
+            switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
+                    return frame.assignValue(iReturn, hValue);
+
+                case Op.R_CALL:
+                    frame.m_frameNext.setContinuation(frameCaller ->
+                        {
+                        assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
+                        return frameCaller.assignValue(iReturn, hValue);
+                        });
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         catch (ExceptionHandle.WrapperException e)
             {

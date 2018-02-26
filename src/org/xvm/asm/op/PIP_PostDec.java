@@ -12,8 +12,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 
 /**
  * PIP_DECA PROPERTY, rvalue-target, lvalue ; same as IP_DECA for a register
@@ -52,14 +50,8 @@ public class PIP_PostDec
         }
 
     @Override
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
         return hTarget.getTemplate().invokePostDec(frame, hTarget, sPropName, m_nRetValue);
-        }
-
-    @Override
-    protected int completeRef(Frame frame, RefHandle hTarget)
-        {
-        return hTarget.getOpSupport().invokePrev(frame, hTarget, true, m_nRetValue);
         }
     }

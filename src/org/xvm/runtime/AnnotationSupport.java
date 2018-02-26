@@ -3,11 +3,13 @@ package org.xvm.runtime;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 /**
  * An OpSupport implementation for annotated types.
  */
 public class AnnotationSupport
-        implements OpSupport
+        implements OpSupport, VarSupport
     {
     public AnnotationSupport(OpSupport support, Annotation annotation)
         {
@@ -77,6 +79,108 @@ public class AnnotationSupport
             : chain.invoke(frame, hTarget, iReturn);
         }
 
+    @Override
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("next");
+        return chain == null
+            ? f_support.invokeNext(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("prev");
+        return chain == null
+            ? f_support.invokePrev(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+
+    // ----- VarSupport implementation -------------------------------------------------------------
+
+    @Override
+    public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("preInc");
+        return chain == null
+            ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("postInc");
+        return chain == null
+            ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("preDec");
+        return chain == null
+            ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("postDec");
+        return chain == null
+            ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("+=");
+        return chain == null
+            ? ensureVarSupport().invokeVarAdd(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("-=");
+        return chain == null
+            ? ensureVarSupport().invokeVarSub(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("*=");
+        return chain == null
+            ? ensureVarSupport().invokeVarMul(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("/=");
+        return chain == null
+            ? ensureVarSupport().invokeVarDiv(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("%=");
+        return chain == null
+            ? ensureVarSupport().invokeVarMod(frame, hTarget, hArg)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
 
     // ----- helpers--------------------------------------------------------------------------------
 
@@ -90,6 +194,17 @@ public class AnnotationSupport
         return null;
         }
 
+    protected VarSupport ensureVarSupport()
+        {
+        try
+            {
+            return (VarSupport) f_support;
+            }
+        catch (ClassCastException e)
+            {
+            throw new IllegalStateException("Not a VarSupport: " + f_support);
+            }
+        }
 
     // ----- data fields ---------------------------------------------------------------------------
 

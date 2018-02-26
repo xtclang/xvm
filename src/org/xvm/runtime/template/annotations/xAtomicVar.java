@@ -41,8 +41,6 @@ public class xAtomicVar
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        AtomicHandle hThis = (AtomicHandle) hTarget;
-
         switch (ahArg.length)
             {
             case 2:
@@ -50,6 +48,8 @@ public class xAtomicVar
                     {
                     case "replace":
                         {
+                        AtomicHandle hThis = (AtomicHandle) hTarget;
+
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
                         AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
@@ -92,8 +92,6 @@ public class xAtomicVar
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        AtomicHandle hThis = (AtomicHandle) hTarget;
-
         switch (ahArg.length)
             {
             case 2:
@@ -101,6 +99,7 @@ public class xAtomicVar
                     {
                     case "replaceFailed":
                         {
+                        AtomicHandle hThis = (AtomicHandle) hTarget;
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
                         AtomicReference<ObjectHandle> atomic = hThis.m_atomic;

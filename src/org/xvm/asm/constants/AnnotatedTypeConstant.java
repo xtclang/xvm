@@ -193,7 +193,13 @@ public class AnnotatedTypeConstant
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
-        return new AnnotationSupport(m_constType.getOpSupport(registry), m_annotation);
+        OpSupport support = m_support;
+        if (support == null)
+            {
+            support = m_support =
+                new AnnotationSupport(m_constType.getOpSupport(registry), m_annotation);
+            }
+        return support;
         }
 
     @Override
@@ -374,4 +380,9 @@ public class AnnotatedTypeConstant
      * The type being annotated.
      */
     private TypeConstant m_constType;
+
+    /**
+     * Cached OpSupport reference.
+     */
+    private transient OpSupport m_support;
     }

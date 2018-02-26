@@ -366,7 +366,11 @@ class TestCompiler<TestType1 extends Number,
 
     class Person
         {
+        Person parent;
         List<Person> dependents;
+
+        Void add(Person! p) {dependents.add(p);}
+        Void addParent(Person! p) {parent = p;}
 
         Void testExpectedFailure()
             {

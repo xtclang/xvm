@@ -12,8 +12,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
-
 
 /**
  * PIP_INC PROPERTY, rvalue-target ; in-place increment; no result
@@ -57,14 +55,8 @@ public class PIP_Inc
         }
 
     @Override
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
         return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, Frame.RET_UNUSED);
-        }
-
-    @Override
-    protected int completeRef(Frame frame, RefHandle hTarget)
-        {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, false, Frame.RET_UNUSED);
         }
     }

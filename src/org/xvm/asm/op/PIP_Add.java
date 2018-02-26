@@ -9,11 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpPropInPlaceAssign;
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
-import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
@@ -53,16 +50,8 @@ public class PIP_Add
         }
 
     @Override
-    protected int completeRegular(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        ClassTemplate template = hTarget.getTemplate();
-
-        return new InPlace(template, hTarget, hValue, sPropName, template::invokeAdd).doNext(frame);
-        }
-
-    @Override
-    protected int completeRef(Frame frame, RefHandle hTarget, ObjectHandle hValue)
-        {
-        return hTarget.getOpSupport().invokeAdd(frame, hTarget, hValue, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokeAdd(frame, hTarget, sPropName, hValue);
         }
     }

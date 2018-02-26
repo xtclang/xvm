@@ -10,6 +10,8 @@ import org.xvm.asm.OpInPlace;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 
 /**
  * IP_DEC lvalue-target ; in-place decrement; no result
@@ -54,7 +56,13 @@ public class IP_Dec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.getOpSupport().invokePrev(frame, hTarget, true, Frame.RET_UNUSED);
+        return hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget);
+        }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget)
+        {
+        return hTarget.getVarSupport().invokeVarPreDec(frame, hTarget, Frame.RET_UNUSED);
         }
 
     @Override

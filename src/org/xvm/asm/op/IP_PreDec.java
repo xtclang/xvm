@@ -10,6 +10,8 @@ import org.xvm.asm.OpInPlace;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 
 /**
  * IP_DECB lvalue-target, lvalue  ; --T -> T
@@ -49,7 +51,7 @@ public class IP_PreDec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, false, Frame.RET_LOCAL))
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, Frame.RET_LOCAL))
             {
             case R_NEXT:
                 {
@@ -73,6 +75,12 @@ public class IP_PreDec
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget)
+        {
+        return hTarget.getVarSupport().invokeVarPreDec(frame, hTarget, m_nRetValue);
         }
 
     @Override

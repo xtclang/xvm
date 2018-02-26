@@ -10,6 +10,8 @@ import org.xvm.asm.OpInPlace;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 
 /**
  * IP_INC lvalue-target ; in-place increment; no result
@@ -68,7 +70,13 @@ public class IP_Inc
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, true, Frame.RET_UNUSED);
+        return hTarget.getOpSupport().invokeNext(frame, hTarget, m_nTarget);
+        }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget)
+        {
+        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, Frame.RET_UNUSED);
         }
 
     @Override
