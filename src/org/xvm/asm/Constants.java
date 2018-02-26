@@ -66,6 +66,77 @@ public interface Constants
             this.FLAGS = flags;
             }
 
+        public boolean isAsAccessibleAs(Access that)
+            {
+            return !isLessAccessibleThan(that);
+            }
+
+        public boolean isMoreAccessibleThan(Access that)
+            {
+            // struct access is not comparable
+            assert this != STRUCT;
+            assert that != STRUCT;
+
+            return this.compareTo(that) < 0;
+            }
+
+        public boolean isLessAccessibleThan(Access that)
+            {
+            // struct access is not comparable
+            assert this != STRUCT;
+            assert that != STRUCT;
+
+            return this.compareTo(that) > 0;
+            }
+
+        /**
+         * Compare this access with that access, and return the one that has LESS accessibility.
+         *
+         * @param that  an Access specifier
+         *
+         * @return the lesser (i.e. the more constrained) of the two Access specifiers
+         */
+        public Access minOf(Access that)
+            {
+            if (this == that)
+                {
+                return this;
+                }
+
+            if (this == STRUCT || that == STRUCT)
+                {
+                throw new IllegalStateException("cannot compare struct to other access levels");
+                }
+
+            return this.isLessAccessibleThan(that)
+                    ? this
+                    : that;
+            }
+
+        /**
+         * Compare this access with that access, and return the one that has MORE accessibility.
+         *
+         * @param that  an Access specifier
+         *
+         * @return the greater (i.e. the more accessible) of the two Access specifiers
+         */
+        public Access maxOf(Access that)
+            {
+            if (this == that)
+                {
+                return this;
+                }
+
+            if (this == STRUCT || that == STRUCT)
+                {
+                throw new IllegalStateException("cannot compare struct to other access levels");
+                }
+
+            return this.isMoreAccessibleThan(that)
+                    ? this
+                    : that;
+            }
+
         /**
          * Look up a Access enum by its ordinal.
          *

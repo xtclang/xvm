@@ -12,22 +12,13 @@ import org.xvm.util.Severity;
 
 
 /**
- * Represents the compile time and runtime information (aggregated across all contributions and
- * virtual levels) about a single property as it appears in a particular type.
- *
- *
- * public       public/public
- *              public/protected
- *              public/private
- * protected    protected/protected
- *              protected/private
- * private      private/private
+ * Represents the information about a single property at a single virtual level.
  */
-public class PropertyInfo
+public class PropertyBody
         implements Constants
     {
     /**
-     * Construct a PropertyInfo from the passed information.
+     * Construct a PropertyBody from the passed information.
      *
      * @param constId            the property constant
      * @param type               the type of the property, including any type annotations (required)
@@ -51,22 +42,22 @@ public class PropertyInfo
      * @param constInitVal       the initial value for the property
      * @param constInitFunc      the function that will provide an initial value for the property
      */
-    public PropertyInfo(
+    public PropertyBody(
             PropertyConstant constId,
-            TypeConstant     type,
-            boolean          fRO,
-            boolean          fRW,
-            Access           accessRef,
-            Access           accessVar,
-            Annotation[]     aPropAnno,
-            Annotation[]     aRefAnno,
-            boolean          fCustomCode,
-            boolean          fReqField,
-            boolean          fAbstract,
-            boolean          fConstant,
-            boolean          fTrailingOverride,
-            Constant         constInitVal,
-            MethodConstant   constInitFunc)
+            TypeConstant type,
+            boolean fRO,
+            boolean fRW,
+            Access accessRef,
+            Access accessVar,
+            Annotation[] aPropAnno,
+            Annotation[] aRefAnno,
+            boolean fCustomCode,
+            boolean fReqField,
+            boolean fAbstract,
+            boolean fConstant,
+            boolean fTrailingOverride,
+            Constant constInitVal,
+            MethodConstant constInitFunc)
         {
         assert constId != null;
         assert type    != null;
@@ -90,12 +81,12 @@ public class PropertyInfo
         }
 
     /**
-     * Construct a PropertyInfo that represents the specified type parameter.
+     * Construct a PropertyBody that represents the specified type parameter.
      *
      * @param constId  the identity of this property
      * @param param    the type parameter information
      */
-    public PropertyInfo(PropertyConstant constId, ParamInfo param)
+    public PropertyBody(PropertyConstant constId, ParamInfo param)
         {
         ConstantPool pool = constId.getConstantPool();
 
@@ -118,15 +109,15 @@ public class PropertyInfo
         }
 
     /**
-     * Combine the information in this PropertyInfo with the information from a super type's
-     * PropertyInfo.
+     * Combine the information in this PropertyBody with the information from a super type's
+     * PropertyBody.
      *
-     * @param that  a super-type's PropertyInfo
+     * @param that  a super-type's PropertyBody
      * @param errs  the error list to log any conflicts to
      *
-     * @return a PropertyInfo representing the combined information
+     * @return a PropertyBody representing the combined information
      */
-    public PropertyInfo combineWithSuper(PropertyInfo that, ErrorListener errs)
+    public PropertyBody combineWithSuper(PropertyBody that, ErrorListener errs)
         {
         assert that != null;
         assert errs != null;
@@ -193,7 +184,7 @@ public class PropertyInfo
 
         boolean fThisInit = this.m_constInitVal != null || this.m_constInitFunc != null;
 
-        return new PropertyInfo(
+        return new PropertyBody(
                 this.m_constId,
                 this.m_type,
                 this.m_fRO & that.m_fRO,                // read-only Ref if both are read-only
@@ -210,18 +201,18 @@ public class PropertyInfo
         }
 
     /**
-     * Create a new PropertyInfo that represents a more limited (public or protected) access to the
+     * Create a new PropertyBody that represents a more limited (public or protected) access to the
      * members of this property that is on the private type.
      *
      * @param access  the desired access, either PUBLIC or PROTECTED
      *
-     * @return a PropertyInfo to use, or null if the PropertyInfo would not be present on the type
+     * @return a PropertyBody to use, or null if the PropertyBody would not be present on the type
      *         with the specified access
      */
-    public PropertyInfo limitAccess(Access access)
+    public PropertyBody limitAccess(Access access)
         {
         if (access.is)
-        // TODO this property is either a Var or a Ref on the private type (i.e. this PropertyInfo)
+        // TODO this property is either a Var or a Ref on the private type (i.e. this PropertyBody)
         //      determine if the same property would be a Var, a Ref, or absent from the type with the specified access
         //      - if absent, return null
         //      - if the same as on the private type, then return this
@@ -234,24 +225,24 @@ public class PropertyInfo
      *
      * @param fField  true to indicate the presence of a field
      *
-     * @return the PropertyInfo reflecting the changes
+     * @return the PropertyBody reflecting the changes
      */
-    public PropertyInfo specifyField(boolean fField)
+    public PropertyBody specifyField(boolean fField)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
+        return new PropertyBody(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
                 m_fCustom, fField, false, m_fConstant, m_fOverride, m_constInitVal, m_constInitFunc);
         }
 
     /**
      * Specifies a value for whether or not the property overrides some unknown super property.
      *
-     * @param fOverride  specifies whether the resulting PropertyInfo is overriding
+     * @param fOverride  specifies whether the resulting PropertyBody is overriding
      *
-     * @return the PropertyInfo reflecting the changes
+     * @return the PropertyBody reflecting the changes
      */
-    public PropertyInfo specifyOverride(boolean fOverride)
+    public PropertyBody specifyOverride(boolean fOverride)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
+        return new PropertyBody(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
                 m_fCustom, m_fField, m_fAbstract, m_fConstant, fOverride, m_constInitVal, m_constInitFunc);
         }
 
@@ -278,7 +269,7 @@ public class PropertyInfo
      *
      * @param constId  a PropertyConstant that may or may not identify this property
      *
-     * @return true iff the specified PropertyConstant refers to this PropertyInfo
+     * @return true iff the specified PropertyConstant refers to this PropertyBody
      */
     public boolean isIdentityValid(PropertyConstant constId)
         {
@@ -449,12 +440,12 @@ public class PropertyInfo
             return true;
             }
 
-        if (!(obj instanceof PropertyInfo))
+        if (!(obj instanceof PropertyBody))
             {
             return false;
             }
 
-        PropertyInfo that = (PropertyInfo) obj;
+        PropertyBody that = (PropertyBody) obj;
         return this.m_constId.equals(that.m_constId)
             && this.m_type   .equals(that.m_type)
             && m_fRO       == m_fRO
@@ -544,9 +535,9 @@ public class PropertyInfo
     private final PropertyConstant m_constId;
 
     /**
-     * The PropertyInfo that was used as the "super" to create this PropertyInfo.
+     * The PropertyBody that was used as the "super" to create this PropertyBody.
      */
-    private final PropertyInfo m_infoSuper;
+    private final PropertyBody m_infoSuper;
 
     /**
      * Type of the property, including any annotations on the type.
@@ -614,6 +605,6 @@ public class PropertyInfo
      */
     private final boolean m_fOverride;
 
-    private final Constant m_constInitVal;
+    private final Constant       m_constInitVal;
     private final MethodConstant m_constInitFunc;
     }

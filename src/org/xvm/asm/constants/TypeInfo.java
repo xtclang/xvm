@@ -46,33 +46,37 @@ public class TypeInfo
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
      * @param mapProperties        the public and protected properties of the type
-     * @param mapScopedProperties  the various scoped properties of the type
      * @param mapMethods           the public and protected methods of the type
-     * @param mapScopedMethods     the various scoped methods of the type
      * @param progress             the Progress for this TypeInfo
      */
-    public TypeInfo(TypeConstant type, ClassStructure struct, boolean fAbstract,
-            Map<String, ParamInfo> mapTypeParams, Annotation[] aannoClass,
-            TypeConstant typeExtends, TypeConstant typeRebases, TypeConstant typeInto,
-            List<Contribution>                listProcess,
-            ListMap<IdentityConstant, Origin> listmapClassChain,
-            ListMap<IdentityConstant, Origin> listmapDefaultChain,
-            Map<String, PropertyInfo> mapProperties, Map<PropertyConstant, PropertyInfo> mapScopedProperties,
-            Map<SignatureConstant, MethodInfo> mapMethods, Map<MethodConstant, MethodInfo> mapScopedMethods,
-            Progress progress)
+    public TypeInfo(
+            TypeConstant                        type,
+            ClassStructure                      struct,
+            int                                 cDepth,
+            boolean                             fAbstract,
+            Map<String, ParamInfo>              mapTypeParams,
+            Annotation[]                        aannoClass,
+            TypeConstant                        typeExtends,
+            TypeConstant                        typeRebases,
+            TypeConstant                        typeInto,
+            List<Contribution>                  listProcess,
+            ListMap<IdentityConstant, Origin>   listmapClassChain,
+            ListMap<IdentityConstant, Origin>   listmapDefaultChain,
+            Map<PropertyConstant, PropertyInfo> mapProperties,
+            Map<MethodConstant, MethodInfo>     mapMethods,
+            Progress                            progress)
         {
-        assert progress != null && progress != Progress.Absent;
-        assert type != null;
-        assert mapTypeParams != null;
-        assert listmapClassChain != null;
-        assert listmapDefaultChain != null;
-        assert mapProperties != null;
-        assert mapScopedProperties != null;
-        assert mapMethods != null;
-        assert mapScopedMethods != null;
+        assert progress             != null && progress != Progress.Absent;
+        assert type                 != null;
+        assert mapTypeParams        != null;
+        assert listmapClassChain    != null;
+        assert listmapDefaultChain  != null;
+        assert mapProperties        != null;
+        assert mapMethods           != null;
 
         m_type                  = type;
         m_struct                = struct;
+        m_cDepth                = cDepth;
         m_fAbstract             = fAbstract;
         m_mapTypeParams         = mapTypeParams;
         m_aannoClass            = validateAnnotations(aannoClass);
@@ -83,9 +87,7 @@ public class TypeInfo
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
         m_mapProperties         = mapProperties;
-        m_mapScopedProperties   = mapScopedProperties;
         m_mapMethods            = mapMethods;
-        m_mapScopedMethods      = mapScopedMethods;
         m_progress              = progress;
         }
 
@@ -108,12 +110,8 @@ public class TypeInfo
             typeNew = m_type.getConstantPool().ensureAccessTypeConstant(typeNew, Access.PROTECTED);
             }
 
-        Map<String           , PropertyInfo> mapProperties       = new HashMap<>();
-        Map<PropertyConstant , PropertyInfo> mapScopedProperties = new HashMap<>();
-        Map<SignatureConstant, MethodInfo  > mapMethods          = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapScopedMethods    = new HashMap<>();
-
-        for (Entry<String, PropertyInfo> entry : m_mapProperties.entrySet())
+        Map<PropertyConstant, PropertyInfo> mapProperties = new HashMap<>();
+        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProperties.entrySet())
             {
             PropertyInfo propertyInfo = entry.getValue().limitAccess(access);
             if (propertyInfo != null)
@@ -122,16 +120,8 @@ public class TypeInfo
                 }
             }
 
-        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapScopedProperties.entrySet())
-            {
-            PropertyInfo propertyInfo = entry.getValue().limitAccess(access);
-            if (propertyInfo != null)
-                {
-                mapScopedProperties.put(entry.getKey(), propertyInfo);
-                }
-            }
-
-        for (Entry<SignatureConstant, MethodInfo> entry : m_mapMethods.entrySet())
+        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>();
+        for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
             {
             if (entry.getValue().getAccess().compareTo(access) <= 0)
                 {
@@ -139,19 +129,11 @@ public class TypeInfo
                 }
             }
 
-        for (Entry<MethodConstant, MethodInfo> entry : m_mapScopedMethods.entrySet())
-            {
-            if (entry.getValue().getAccess().compareTo(access) <= 0)
-                {
-                mapScopedMethods.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-        return new TypeInfo(typeNew, m_struct, m_fAbstract,
+        return new TypeInfo(typeNew, m_struct, m_cDepth, m_fAbstract,
                 m_mapTypeParams, m_aannoClass,
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
-                mapProperties, mapScopedProperties, mapMethods, mapScopedMethods, m_progress);
+                mapProperties, mapMethods, m_progress);
         }
 
     /**
@@ -389,35 +371,153 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the non-scoped properties for this type
+     * @return all of the properties for this type, indexed by their "flattened" property constant
      */
-    public Map<String, PropertyInfo> getProperties()
+    public Map<PropertyConstant, PropertyInfo> getProperties()
         {
         return m_mapProperties;
         }
 
     /**
-     * @return all of the scoped properties for this type
+     * @return all of the properties for this type that can be identified by a simple name, indexed
+     *         by that name
      */
-    Map<PropertyConstant, PropertyInfo> getScopedProperties()
+    public Map<String, PropertyInfo> ensurePropertiesByName()
         {
-        return m_mapScopedProperties;
+        Map<String, PropertyInfo> map = m_mapPropertiesByName;
+
+        if (map == null)
+            {
+            map = new HashMap<>();
+            for (PropertyInfo prop : m_mapProperties.values())
+                {
+                // only include the non-nested properties
+                if (prop.getIdentity().depthFromClass() == m_cDepth + 1)
+                    {
+                    map.put(prop.getName(), prop);
+                    }
+                }
+
+            m_mapPropertiesByName = map;
+            }
+
+        return map;
+        }
+
+    /**
+     * Obtain all of the properties declared within the specified method.
+     *
+     * @param constMethod  the MethodConstant identifying the method that may contain properties
+     *
+     * @return a map from property name to PropertyInfo
+     */
+    public Map<String, PropertyInfo> ensurePropertiesByName(MethodConstant constMethod)
+        {
+        Map<String, PropertyInfo> map = null;
+        for (PropertyInfo prop : m_mapProperties.values())
+            {
+            // only include the properties nested under the specified method
+            if (prop.getParent().equals(constMethod))
+                {
+                if (map == null)
+                    {
+                    map = new HashMap<>();
+                    }
+                map.put(prop.getName(), prop);
+                }
+            }
+
+        return map == null
+                ? Collections.EMPTY_MAP
+                : map;
+        }
+
+    /**
+     * Obtain all of the properties declared within the specified property.
+     *
+     * @param constProp  the PropertyConstant identifying the property that may contain properties
+     *
+     * @return a map from property name to PropertyInfo
+     */
+    public Map<String, PropertyInfo> ensurePropertiesByName(PropertyConstant constProp)
+        {
+        Map<String, PropertyInfo> map = null;
+        int cDepth = constProp.depthFromClass();
+        for (PropertyInfo prop : m_mapProperties.values())
+            {
+            IdentityConstant constParent = prop.getParent();
+            // only include the properties nested under the specified property
+            if (constParent == constProp || constParent.trailingPathEquals(constProp, cDepth))
+                {
+                if (map == null)
+                    {
+                    map = new HashMap<>();
+                    }
+                map.put(prop.getName(), prop);
+                }
+            }
+
+        return map == null
+                ? Collections.EMPTY_MAP
+                : map;
+        }
+
+    public PropertyInfo findProperty(String sName)
+        {
+        return ensurePropertiesByName().get(sName);
+        }
+
+    /**
+     * Look up the property by its identity constant.
+     *
+     * @param constId  the constant that identifies the property
+     *
+     * @return the PropertyInfo for the specified constant, or null
+     */
+    public PropertyInfo findProperty(PropertyConstant constId)
+        {
+        PropertyInfo prop = m_mapProperties.get(constId);
+        if (prop != null)
+            {
+            return prop;
+            }
+
+        prop = ensurePropertiesByName().get(constId.getName());
+        return prop != null && prop.isIdentityValid(constId) ? prop : null;
         }
 
     /**
      * @return all of the non-scoped methods for this type
      */
-    public Map<SignatureConstant, MethodInfo> getMethods()
+    public Map<MethodConstant, MethodInfo> getMethods()
         {
         return m_mapMethods;
         }
 
     /**
-     * @return all of the scoped methods for this type
+     * @return all of the methods for this type that can be identified by just a signature, indexed
+     *         by that signature
      */
-    Map<MethodConstant, MethodInfo> getScopedMethods()
+    public Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
         {
-        return m_mapScopedMethods;
+        Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
+
+        if (map == null)
+            {
+            map = new HashMap<>();
+            for (MethodInfo method : m_mapMethods.values())
+                {
+                // only include the non-nested Methods
+                if (method.getMethodConstant().depthFromClass() == m_cDepth + 2)
+                    {
+                    map.put(method.getSignature(), method);
+                    }
+                }
+
+            m_mapMethodsBySignature = map;
+            }
+
+        return map;
         }
 
     /**
@@ -430,7 +530,7 @@ public class TypeInfo
         Set<MethodInfo> setOps = m_setOps;
         if (setOps == null)
             {
-            for (MethodInfo info : m_mapMethods.values())
+            for (MethodInfo info : ensureMethodsBySignature().values())
                 {
                 if (info.isOp())
                     {
@@ -519,7 +619,7 @@ public class TypeInfo
         Set<MethodInfo> setAuto = m_setAuto;
         if (setAuto == null)
             {
-            for (MethodInfo info : m_mapMethods.values())
+            for (MethodInfo info : ensureMethodsBySignature().values())
                 {
                 if (info.isAuto())
                     {
@@ -691,29 +791,12 @@ public class TypeInfo
               .append(m_mapProperties.size())
               .append(')');
             int i = 0;
-            for (Entry<String, PropertyInfo> entry : m_mapProperties.entrySet())
+            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProperties.entrySet())
                 {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ")
                   .append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
-                }
-            }
-
-        if (!m_mapScopedProperties.isEmpty())
-            {
-            sb.append("\n- Scoped Properties (")
-              .append(m_mapScopedProperties.size())
-              .append(')');
-            int i = 0;
-            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapScopedProperties.entrySet())
-                {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(entry.getKey().getValueString())
                   .append("=")
                   .append(entry.getValue());
                 }
@@ -725,24 +808,7 @@ public class TypeInfo
               .append(m_mapMethods.size())
               .append(')');
             int i = 0;
-            for (Entry<SignatureConstant, MethodInfo> entry : m_mapMethods.entrySet())
-                {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(entry.getKey().getValueString())
-                  .append("=")
-                  .append(entry.getValue());
-                }
-            }
-
-        if (!m_mapScopedMethods.isEmpty())
-            {
-            sb.append("\n- Scoped Methods (")
-              .append(m_mapScopedMethods.size())
-              .append(')');
-            int i = 0;
-            for (Entry<MethodConstant, MethodInfo> entry : m_mapScopedMethods.entrySet())
+            for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
                 {
                 sb.append("\n  [")
                   .append(i++)
@@ -870,6 +936,12 @@ public class TypeInfo
     private final ClassStructure m_struct;
 
     /**
+     * The "depth from class" for this TypeInfo. A TypeInfo for an actual class will have a depth of
+     * {@code 0}.
+     */
+    private final int m_cDepth;
+
+    /**
      * Whether this type is abstract, which is always true for an interface, and may be true for a
      * class or mixin.
      */
@@ -917,24 +989,29 @@ public class TypeInfo
     private final ListMap<IdentityConstant, Origin> m_listmapDefaultChain;
 
     /**
-     * The properties of the type.
+     * The properties of this type. Private properties are identified only by a single (non-virtual)
+     * property constant, as are properties declared within methods. Other properties can
+     * potentially be identified by multiple different property constants, because the properties
+     * can show up at more than one layer in the potential call chain.
      */
-    private final Map<String, PropertyInfo> m_mapProperties;
+    private final Map<PropertyConstant, PropertyInfo> m_mapProperties;
 
     /**
-     * The scoped properties for this type.
+     * The properties of the type, indexed by name. This will not include nested properties, such
+     * as those nested within a property or method. Lazily initialized
      */
-    private final Map<PropertyConstant, PropertyInfo> m_mapScopedProperties;
+    private transient Map<String, PropertyInfo> m_mapPropertiesByName;
 
     /**
      * The methods of the type.
      */
-    private final Map<SignatureConstant, MethodInfo> m_mapMethods;
+    private final Map<MethodConstant, MethodInfo> m_mapMethods;
 
     /**
-     * The scoped methods for this type.
+     * The methods of the type, indexed by signature. This will not include nested methods, such
+     * as those nested within a property or method. Lazily initialized
      */
-    private final Map<MethodConstant, MethodInfo> m_mapScopedMethods;
+    private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
     /**
      * A cached type resolver.

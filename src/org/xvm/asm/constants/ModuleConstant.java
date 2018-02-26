@@ -157,6 +157,12 @@ public class ModuleConstant
         return new StringBuilder();
         }
 
+    @Override
+    public boolean trailingPathEquals(IdentityConstant that, int cSegments)
+        {
+        return trailingSegmentEquals(that);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

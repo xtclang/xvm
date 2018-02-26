@@ -170,6 +170,12 @@ public class MethodConstant
         return sb;
         }
 
+    @Override
+    public boolean trailingSegmentEquals(IdentityConstant that)
+        {
+        return that instanceof MethodConstant && this.m_constSig.equals(((MethodConstant) that).m_constSig);
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

@@ -13,7 +13,8 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * An IdentityConstant identifies a Module, Package, Class, Property, MultiMethod, or Method.
+ * An IdentityConstant identifies a Module, Package, Class, Typedef, Property, MultiMethod, or
+ * Method structure.
  */
 public abstract class IdentityConstant
         extends Constant
@@ -71,7 +72,7 @@ public abstract class IdentityConstant
     /**
      * @return a List of IdentityConstants that makes up the path to this IdentityConstant
      */
-    public  List<IdentityConstant> getPath()
+    public List<IdentityConstant> getPath()
         {
         List<IdentityConstant> list = getParentConstant().getPath();
         list.add(this);
@@ -95,6 +96,63 @@ public abstract class IdentityConstant
         return getParentConstant().buildPath()
                 .append('.')
                 .append(getName());
+        }
+
+    /**
+     * @return the number of identity segments that need to be traversed to get up to the first
+     *         class specified in the IdentityConstant's path
+     */
+    public int depthFromClass()
+        {
+        IdentityConstant constId = this;
+        int              cDepth  = 0;
+        while (true)
+            {
+            switch (constId.getFormat())
+                {
+                case Typedef:
+                case Property:
+                case MultiMethod:
+                case Method:
+                    ++cDepth;
+                    break;
+
+                default:
+                    return cDepth;
+                }
+
+            constId = constId.getParentConstant();
+            }
+        }
+
+    /**
+     * Considering the IdentityConstant as a path of identity segments, determine if the last
+     * <i>{@code cSegments}</i> segments of this IdentityConstant are the same as the corresponding
+     * last segments of another specified IdentityConstant.
+     *
+     * @param that       another IdentityConstant
+     * @param cSegments  the number of segments to compare
+     *
+     * @return true iff the last segment of both IdentityConstants is the same
+     */
+    public boolean trailingPathEquals(IdentityConstant that, int cSegments)
+        {
+        return cSegments <= 0 || this == that || trailingSegmentEquals(that) &&
+                this.getParentConstant().trailingPathEquals(that.getParentConstant(), cSegments - 1);
+        }
+
+    /**
+     * Considering the IdentityConstant as a path of identity segments, determine if the last
+     * segment of this IdentityConstant is the same as the last segment of another specified
+     * IdentityConstant.
+     *
+     * @param that  another IdentityConstant
+     *
+     * @return true iff the last segment of both IdentityConstants is the same
+     */
+    public boolean trailingSegmentEquals(IdentityConstant that)
+        {
+        return this.getClass() == that.getClass() && this.getName().equals(that.getName());
         }
 
     /**

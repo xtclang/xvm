@@ -1736,53 +1736,41 @@ public abstract class TypeConstant
     /**
      * Collect the properties and methods (including scoped properties and method) for this type.
      *
-     * @param constId           the identity of the class
-     * @param struct            the class structure
-     * @param resolver          the GenericTypeResolver that uses the known type parameters
-     * @param listProcess       the list of contributions in the order that they should be processed
-     * @param listmapClassChain    the potential call chain
-     * @param listmapDefaultChain  the potential default call chain
-     * @param mapProps          the public and protected properties of the class
-     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
-     * @param mapMethods        the public and protected methods of the class
-     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
-     *                          nested methods, etc.)
-     * @param errs              the error list to log any errors to
+     * @param constId              identity of the class
+     * @param struct               the class structure
+     * @param resolver             the GenericTypeResolver that uses the known type parameters
+     * @param listProcess          list of contributions in the order that they should be processed
+     * @param listmapClassChain    potential call chain
+     * @param listmapDefaultChain  potential default call chain
+     * @param mapProps             properties of the class
+     * @param mapMethods           methods of the class
+     * @param errs                 the error list to log any errors to
      */
     private boolean collectMemberInfo(
-            IdentityConstant                     constId,
-            ClassStructure                       struct,
-            ParamInfo.TypeResolver               resolver,
-            List<Contribution>                   listProcess,
-            ListMap<IdentityConstant, Origin>    listmapClassChain,
-            ListMap<IdentityConstant, Origin>    listmapDefaultChain,
-            Map<String           , PropertyInfo> mapProps,
-            Map<PropertyConstant , PropertyInfo> mapScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapMethods,
-            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
-            ErrorListener                        errs)
+            IdentityConstant                    constId,
+            ClassStructure                      struct,
+            ParamInfo.TypeResolver              resolver,
+            List<Contribution>                  listProcess,
+            ListMap<IdentityConstant, Origin>   listmapClassChain,
+            ListMap<IdentityConstant, Origin>   listmapDefaultChain,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<MethodConstant  , MethodInfo  > mapMethods,
+            ErrorListener                       errs)
         {
         boolean fIncomplete = false;
 
         ConstantPool pool = getConstantPool();
         for (Contribution contrib : listProcess)
             {
-            Map<String           , PropertyInfo> mapContribProps;
-            Map<PropertyConstant , PropertyInfo> mapContribScopedProps;
-            Map<SignatureConstant, MethodInfo  > mapContribMethods;
-            Map<MethodConstant   , MethodInfo  > mapContribScopedMethods;
+            Map<PropertyConstant, PropertyInfo> mapContribProps;
+            Map<MethodConstant  , MethodInfo  > mapContribMethods;
 
             Composition composition = contrib.getComposition();
             if (composition == Composition.Equal)
                 {
-                mapContribProps         = new HashMap<>();
-                mapContribScopedProps   = new HashMap<>();
-                mapContribMethods       = new HashMap<>();
-                mapContribScopedMethods = new HashMap<>();
-
-                createMemberInfo(constId, struct, resolver,
-                        mapContribProps,   mapContribScopedProps,
-                        mapContribMethods, mapContribScopedMethods, errs);
+                mapContribProps   = new HashMap<>();
+                mapContribMethods = new HashMap<>();
+                createMemberInfo(constId, struct, resolver, mapContribProps, mapContribMethods, errs);
                 }
             else
                 {
@@ -1794,10 +1782,8 @@ public abstract class TypeConstant
                     continue;
                     }
 
-                mapContribProps         = infoContrib.getProperties();
-                mapContribScopedProps   = infoContrib.getScopedProperties();
-                mapContribMethods       = infoContrib.getMethods();
-                mapContribScopedMethods = infoContrib.getScopedMethods();
+                mapContribProps   = infoContrib.getProperties();
+                mapContribMethods = infoContrib.getMethods();
 
                 // collect all of the IdentityConstants in the potential call chain that map to this
                 // particular contribution
@@ -1823,8 +1809,8 @@ public abstract class TypeConstant
                 if (setClass.size() < infoContrib.getClassChain().size()
                         || setDefault.size() < infoContrib.getDefaultChain().size())
                     {
-                    Map<SignatureConstant, MethodInfo> mapReducedMethods = new HashMap<>();
-                    for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                    Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
+                    for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                         {
                         MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
                         if (infoReduced != null)
@@ -1833,36 +1819,16 @@ public abstract class TypeConstant
                             }
                         }
                     mapContribMethods = mapReducedMethods;
-
-                    Map<MethodConstant, MethodInfo> mapReducedScopedMethods = new HashMap<>();
-                    for (Entry<MethodConstant, MethodInfo> entry : mapContribScopedMethods.entrySet())
-                        {
-                        MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
-                        if (infoReduced != null)
-                            {
-                            mapReducedScopedMethods.put(entry.getKey(), infoReduced);
-                            }
-                        }
-                    mapContribScopedMethods = mapReducedScopedMethods;
                     }
                 }
 
             // process properties
-            for (Entry<String, PropertyInfo> entry : mapContribProps.entrySet())
+            for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                 {
                 PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
                 if (propinfo != null)
                     {
                     mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue(), errs));
-                    }
-                }
-
-            for (Entry<PropertyConstant, PropertyInfo> entry : mapContribScopedProps.entrySet())
-                {
-                PropertyInfo propinfo = mapScopedProps.putIfAbsent(entry.getKey(), entry.getValue());
-                if (propinfo != null)
-                    {
-                    mapScopedProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue(), errs));
                     }
                 }
 
@@ -1896,7 +1862,7 @@ public abstract class TypeConstant
                 }
 
             // sweep over the remaining chains
-            for (Entry<SignatureConstant, MethodInfo> entry : mapContribMethods.entrySet())
+            for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                 {
                 if (!setSuperMethods.contains(entry.getKey()))
                     {
@@ -1919,9 +1885,9 @@ public abstract class TypeConstant
      *         "best" super method signature to be found
      */
     protected SignatureConstant findSuperMethod(
-            SignatureConstant                  sigSub,
-            Map<SignatureConstant, MethodInfo> mapMethods,
-            ErrorListener                      errs)
+            SignatureConstant               sigSub,
+            Map<MethodConstant, MethodInfo> mapMethods,
+            ErrorListener                   errs)
         {
         // check if there is an exact match
         // note: there is one small flaw with this assumption, in that auto-narrowing could allow
@@ -2165,13 +2131,14 @@ public abstract class TypeConstant
             }
 
         // check the methods to see if get() and set() call super
-        MethodStructure methodInit   = null;
-        MethodStructure methodGet    = null;
-        MethodStructure methodSet    = null;
-        MethodStructure methodBadGet = null;
-        MethodStructure methodBadSet = null;
-        boolean         fStatic      = prop.isStatic();
-        boolean         fCustomCode  = false;
+        MethodStructure  methodInit   = null;
+        MethodStructure  methodGet    = null;
+        MethodStructure  methodSet    = null;
+        MethodStructure  methodBadGet = null;
+        MethodStructure  methodBadSet = null;
+        IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
+        boolean          fConstant    = prop.isStatic() && !(constParent instanceof MethodConstant); // TODO && !function
+        boolean          fCustomCode  = false;
         for (Component child : prop.getChildByNameMap().values())
             {
             if (child instanceof MultiMethodStructure)
@@ -2196,7 +2163,7 @@ public abstract class TypeConstant
                         continue;
                         }
 
-                    if (fStatic)
+                    if (fConstant)
                         {
                         // the only method allowed under a static property is the initializer
                         log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
@@ -2273,7 +2240,7 @@ public abstract class TypeConstant
         boolean fRO       = false;
         boolean fField    = false;
         boolean fAbstract = false;
-        if (fStatic)
+        if (fConstant)
             {
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
             if (!prop.hasInitialValue() && (prop.getInitialValue() == null) == (methodInit == null))
@@ -2385,8 +2352,8 @@ public abstract class TypeConstant
 
         return new PropertyInfo(prop.getIdentityConstant(),
                 prop.getType().resolveGenerics(resolver),
-                fRO, fRW, toArray(listPropAnno), toArray(listRefAnno),
-                fCustomCode, fField, fAbstract, fStatic, fHasOverride,
+                fRO, fRW, accessRef, accessVar, toArray(listPropAnno), toArray(listRefAnno),
+                fCustomCode, fField, fAbstract, fConstant, fHasOverride,
                 prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant());
         }
 
