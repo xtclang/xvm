@@ -6,7 +6,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 /**
- * An OpSupport implementation for annotated types.
+ * An OpSupport and VarSupport implementation for annotated types.
  */
 public class AnnotationSupport
         implements OpSupport, VarSupport
@@ -205,6 +205,7 @@ public class AnnotationSupport
             throw new IllegalStateException("Not a VarSupport: " + f_support);
             }
         }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 
