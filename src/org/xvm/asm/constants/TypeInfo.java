@@ -66,13 +66,13 @@ public class TypeInfo
             Map<MethodConstant, MethodInfo>     mapMethods,
             Progress                            progress)
         {
-        assert progress             != null && progress != Progress.Absent;
         assert type                 != null;
         assert mapTypeParams        != null;
         assert listmapClassChain    != null;
         assert listmapDefaultChain  != null;
         assert mapProperties        != null;
         assert mapMethods           != null;
+        assert progress             != null && progress != Progress.Absent;
 
         m_type                  = type;
         m_struct                = struct;

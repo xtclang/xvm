@@ -52,6 +52,7 @@ public class PropertyInfo
         assert errs != null;
         assert this.getName().equals(that.getName());
 
+        /* TODO
         if (this.isTypeParam() || that.isTypeParam())
             {
             if (this.isTypeParam() ^ that.isTypeParam())
@@ -127,10 +128,16 @@ public class PropertyInfo
                 that.m_fOverride,                       // override if the bottom one is override
                 fThisInit ? this.m_constInitVal  : that.m_constInitVal,
                 fThisInit ? this.m_constInitFunc : that.m_constInitFunc);
-        PropertyBody aBodyThis = this.m_aBody;
-        PropertyBody aBodyThat = that.m_aBody;
-        return new PropertyInfo()
+        */
 
+        PropertyBody[] aBodyThis = this.m_aBody;
+        PropertyBody[] aBodyThat = that.m_aBody;
+        int            cBodyThis = aBodyThis.length;
+        int            cBodyThat = aBodyThat.length;
+        PropertyBody[] aBodyNew  = new PropertyBody[cBodyThis + cBodyThat];
+        System.arraycopy(aBodyThis, 0, aBodyNew, 0, cBodyThis);
+        System.arraycopy(aBodyThat, 0, aBodyNew, cBodyThis, cBodyThat);
+        return new PropertyInfo(aBodyNew, this.hasField() | that.hasField(), that.isOverride());
         }
 
     /**

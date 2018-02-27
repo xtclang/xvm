@@ -2747,12 +2747,10 @@ public class ConstantPool
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
      */
     public final TypeInfo TYPEINFO_PLACEHOLDER = new TypeInfo(
-            typeObject(), null, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
+            typeObject(), null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-            Progress.Building);
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP, Progress.Building);
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.

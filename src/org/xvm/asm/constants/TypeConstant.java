@@ -2524,7 +2524,7 @@ public abstract class TypeConstant
                         // TODO
                         todoLogError("duplicate?!?! type param prop: " + sParam);
                         }
-                    else if (prop.isTypeParam() && prop.isRO() && prop.getType().equals(
+                    else if (prop.isTypeParam() && prop.getType().equals(
                             pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
                         {
                         fFound = true;
