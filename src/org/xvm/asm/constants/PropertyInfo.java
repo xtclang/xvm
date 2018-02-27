@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
@@ -26,95 +25,16 @@ import org.xvm.util.Severity;
 public class PropertyInfo
         implements Constants
     {
-    /**
-     * Construct a PropertyInfo from the passed information.
-     *
-     * @param constId            the property constant
-     * @param type               the type of the property, including any type annotations (required)
-     * @param fRO                true iff the property has any of a number of indicators that would
-     *                           indicate that the property is read-only
-     * @param fRW                true iff the property has any of a number of indicators that would
-     *                           indicate that the property is read-write
-     * @param accessRef          the access required to obtain the property's Ref
-     * @param accessVar          the access required to obtain the property's Var (or null)
-     * @param aPropAnno          an array of non-virtual annotations on the property declaration
-     *                           itself
-     * @param aRefAnno           an array of annotations that apply to the Ref/Var of the property
-     * @param fCustomCode        true to indicate that the property has custom code that overrides
-     *                           the underlying Ref/Var implementation
-     * @param fReqField          true iff the property requires the presence of a field
-     * @param fAbstract          true iff the property is from an interface declaration, or is
-     *                           declared explicitly as abstract
-     * @param fConstant          true iff the property represents a named constant value
-     * @param fTrailingOverride  true iff the property is still waiting to be combined with some
-     *                           "super"
-     * @param constInitVal       the initial value for the property
-     * @param constInitFunc      the function that will provide an initial value for the property
-     */
-    public PropertyInfo(
-            PropertyConstant constId,
-            TypeConstant     type,
-            boolean          fRO,
-            boolean          fRW,
-            Access           accessRef,
-            Access           accessVar,
-            Annotation[]     aPropAnno,
-            Annotation[]     aRefAnno,
-            boolean          fCustomCode,
-            boolean          fReqField,
-            boolean          fAbstract,
-            boolean          fConstant,
-            boolean          fTrailingOverride,
-            Constant         constInitVal,
-            MethodConstant   constInitFunc)
+    public PropertyInfo(PropertyBody body)
         {
-        assert constId != null;
-        assert type    != null;
-
-        m_constId       = constId;
-        m_type          = type;
-        m_paraminfo     = null;
-        m_fRO           = fRO;
-        m_fRW           = fRW;
-        m_accessRef     = accessRef;
-        m_accessVar     = accessVar;
-        m_aPropAnno     = TypeInfo.validateAnnotations(aPropAnno);
-        m_aRefAnno      = TypeInfo.validateAnnotations(aRefAnno);
-        m_fCustom       = fCustomCode;
-        m_fField        = fReqField;
-        m_fAbstract     = fAbstract;
-        m_fConstant     = fConstant;
-        m_fOverride     = fTrailingOverride;
-        m_constInitVal  = constInitVal;
-        m_constInitFunc = constInitFunc;
+        this(new PropertyBody[] {body}, body.hasField(), body.isExplicitOverride());
         }
 
-    /**
-     * Construct a PropertyInfo that represents the specified type parameter.
-     *
-     * @param constId  the identity of this property
-     * @param param    the type parameter information
-     */
-    public PropertyInfo(PropertyConstant constId, ParamInfo param)
+    protected PropertyInfo(PropertyBody[] aBody, boolean fField, boolean fOverride)
         {
-        ConstantPool pool = constId.getConstantPool();
-
-        m_constId       = constId;
-        m_type          = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
-        m_paraminfo     = param;
-        m_fRO           = true;
-        m_fRW           = false;
-        m_accessRef     = Access.PUBLIC;
-        m_accessVar     = null;
-        m_aPropAnno     = Annotation.NO_ANNOTATIONS;
-        m_aRefAnno      = Annotation.NO_ANNOTATIONS;
-        m_fCustom       = false;
-        m_fField        = false;
-        m_fAbstract     = false;
-        m_fConstant     = false;
-        m_fOverride     = false;
-        m_constInitVal  = null;
-        m_constInitFunc = null;
+        m_aBody     = aBody;
+        m_fField    = fField;
+        m_fOverride = fOverride;
         }
 
     /**
@@ -207,6 +127,10 @@ public class PropertyInfo
                 that.m_fOverride,                       // override if the bottom one is override
                 fThisInit ? this.m_constInitVal  : that.m_constInitVal,
                 fThisInit ? this.m_constInitFunc : that.m_constInitFunc);
+        PropertyBody aBodyThis = this.m_aBody;
+        PropertyBody aBodyThat = that.m_aBody;
+        return new PropertyInfo()
+
         }
 
     /**
@@ -220,7 +144,6 @@ public class PropertyInfo
      */
     public PropertyInfo limitAccess(Access access)
         {
-        if (access.is)
         // TODO this property is either a Var or a Ref on the private type (i.e. this PropertyInfo)
         //      determine if the same property would be a Var, a Ref, or absent from the type with the specified access
         //      - if absent, return null
@@ -238,8 +161,7 @@ public class PropertyInfo
      */
     public PropertyInfo specifyField(boolean fField)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
-                m_fCustom, fField, false, m_fConstant, m_fOverride, m_constInitVal, m_constInitFunc);
+        return new PropertyInfo(m_aBody, fField, m_fOverride);
         }
 
     /**
@@ -251,8 +173,7 @@ public class PropertyInfo
      */
     public PropertyInfo specifyOverride(boolean fOverride)
         {
-        return new PropertyInfo(m_constId, m_type, m_fRO, m_fRW, m_aPropAnno, m_aRefAnno,
-                m_fCustom, m_fField, m_fAbstract, m_fConstant, fOverride, m_constInitVal, m_constInitFunc);
+        return new PropertyInfo(m_aBody, m_fField, fOverride);
         }
 
     /**
@@ -260,7 +181,7 @@ public class PropertyInfo
      */
     public IdentityConstant getParent()
         {
-        return m_constId.getParentConstant();
+        return getIdentity().getParentConstant();
         }
 
     /**
@@ -268,7 +189,22 @@ public class PropertyInfo
      */
     public PropertyConstant getIdentity()
         {
-        return m_constId;
+        return getFirstBody().getIdentity();
+        }
+
+    public PropertyBody[] getPropertyBodies()
+        {
+        return m_aBody;
+        }
+
+    public PropertyBody getFirstBody()
+        {
+        return m_aBody[0];
+        }
+
+    public PropertyBody getLastBody()
+        {
+        return m_aBody[m_aBody.length-1];
         }
 
     /**
@@ -282,8 +218,18 @@ public class PropertyInfo
      */
     public boolean isIdentityValid(PropertyConstant constId)
         {
-        return constId.equals(m_constId)
-                || m_infoSuper != null && m_infoSuper.isIdentityValid(constId);
+        if (constId.getName().equals(this.getName()))
+            {
+            for (PropertyBody body : m_aBody)
+                {
+                if (body.getIdentity().equals(constId))
+                    {
+                    return true;
+                    }
+                }
+            }
+
+        return false;
         }
 
     /**
@@ -291,7 +237,7 @@ public class PropertyInfo
      */
     public String getName()
         {
-        return m_constId.getName();
+        return getFirstBody().getName();
         }
 
     /**
@@ -299,7 +245,7 @@ public class PropertyInfo
      */
     public TypeConstant getType()
         {
-        return m_type;
+        return getFirstBody().getType();
         }
 
     /**
@@ -307,7 +253,7 @@ public class PropertyInfo
      */
     public boolean isTypeParam()
         {
-        return m_paraminfo != null;
+        return getFirstBody().isTypeParam();
         }
 
     /**
@@ -315,15 +261,31 @@ public class PropertyInfo
      */
     public ParamInfo getParamInfo()
         {
-        return m_paraminfo;
+        return getFirstBody().getParamInfo();
         }
 
     /**
-     * @return true iff this property is a Ref; false iff this property is a Var
+     * @return the Access required for the Ref form of the property
      */
-    public boolean isRO()
+    public Access getRefAccess()
         {
-        return m_fRO;
+        // TODO
+        return getFirstBody().getRefAccess();
+        }
+
+    /**
+     * @return the Access required for the Var form of the property, or null if not specified
+     */
+    public Access getVarAccess()
+        {
+        // TODO
+        return getFirstBody().getVarAccess();
+        }
+
+    public boolean hasUnreachableSet()
+        {
+        // TODO
+        return false;
         }
 
     /**
@@ -339,7 +301,7 @@ public class PropertyInfo
      */
     public Annotation[] getPropertyAnnotations()
         {
-        return m_aPropAnno;
+        return getFirstBody().getStructure().getPropertyAnnotations();
         }
 
     /**
@@ -347,7 +309,8 @@ public class PropertyInfo
      */
     public Annotation[] getRefAnnotations()
         {
-        return m_aRefAnno;
+        // TODO combine?
+        return getFirstBody().getStructure().getRefAnnotations();
         }
 
     /**
@@ -356,7 +319,14 @@ public class PropertyInfo
      */
     public boolean isCustomLogic()
         {
-        return m_fCustom;
+        for (PropertyBody body : m_aBody)
+            {
+            if (body.isCustomLogic())
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**
@@ -366,8 +336,9 @@ public class PropertyInfo
      */
     public MethodConstant getGetterId()
         {
-        ConstantPool pool = m_constId.getConstantPool();
-        return pool.ensureMethodConstant(m_constId, "get", ConstantPool.NO_TYPES, new TypeConstant[]{m_type});
+        PropertyConstant constId = getIdentity();
+        ConstantPool     pool    = constId.getConstantPool();
+        return pool.ensureMethodConstant(constId, "get", ConstantPool.NO_TYPES, new TypeConstant[]{getType()});
         }
 
     /**
@@ -377,8 +348,9 @@ public class PropertyInfo
      */
     public MethodConstant getSetterId()
         {
-        ConstantPool pool = m_constId.getConstantPool();
-        return pool.ensureMethodConstant(m_constId, "set", new TypeConstant[]{m_type}, ConstantPool.NO_TYPES);
+        PropertyConstant constId = getIdentity();
+        ConstantPool     pool    = constId.getConstantPool();
+        return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
         }
 
     /**
@@ -386,59 +358,40 @@ public class PropertyInfo
      */
     public boolean isAbstract()
         {
-        return m_fAbstract;
-        }
-
-    /**
-     * @return true iff the property TODO
-     */
-    public boolean isOverride()
-        {
-        // TODO
-        // return m_infoSuper == null
-        //         ? isExplicitOverride()
-        //         : m_infoSuper.isOverride();
-        return m_fOverride;
+        return getFirstBody().isAbstract();
         }
 
     /**
      * @return true if the property is annotated by "@Abstract"
      */
-    public boolean isExplicitAbstract()
+    public boolean isExplicitlyAbstract()
         {
-        return TypeInfo.containsAnnotation(m_aPropAnno, "Abstract");
+        return getFirstBody().isExplicitAbstract();
         }
 
     /**
      * @return true if the property is annotated by "@Override"
      */
-    public boolean isExplicitOverride()
+    public boolean isOverride()
         {
-        return TypeInfo.containsAnnotation(m_aPropAnno, "Override");
-        }
-
-    /**
-     * @return true if the property is annotated by "@RO"
-     */
-    public boolean isExplicitReadOnly()
-        {
-        return TypeInfo.containsAnnotation(m_aPropAnno, "RO");
+        return m_fOverride;
         }
 
     /**
      * @return true if the property is annotated by "@Inject"
      */
-    public boolean isExplicitInject()
+    public boolean isInjected()
         {
-        return TypeInfo.containsAnnotation(m_aRefAnno, "Inject");
+        return getFirstBody().isInjected();
         }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int hashCode()
         {
-        return m_constId.hashCode();
+        return getFirstBody().hashCode();
         }
 
     @Override
@@ -455,81 +408,22 @@ public class PropertyInfo
             }
 
         PropertyInfo that = (PropertyInfo) obj;
-        return this.m_constId.equals(that.m_constId)
-            && this.m_type   .equals(that.m_type)
-            && m_fRO       == m_fRO
-            && m_fRW       == m_fRW
-            && m_fCustom   == m_fCustom
-            && m_fField    == m_fField
-            && m_fAbstract == m_fAbstract
-            && m_fConstant == m_fConstant
-            && Handy.equals(this.m_paraminfo    , that.m_paraminfo    )
-            && Handy.equals(this.m_constInitVal , that.m_constInitVal )
-            && Handy.equals(this.m_constInitFunc, that.m_constInitFunc)
-            && Handy.equals(this.m_aPropAnno    , that.m_aPropAnno    )
-            && Handy.equals(this.m_aRefAnno     , that.m_aRefAnno     );
+        return Handy.equals(this.m_aBody, that.m_aBody);
         }
 
     @Override
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+        sb.append(getType().getValueString() + ' ' + getName());
 
-        for (Annotation annotation : m_aPropAnno)
+        int i = 0;
+        for (PropertyBody body : m_aBody)
             {
-            sb.append(annotation)
-              .append(' ');
-            }
-
-        for (Annotation annotation : m_aRefAnno)
-            {
-            sb.append(annotation)
-              .append(' ');
-            }
-
-        sb.append(m_type.getValueString())
-          .append(' ')
-          .append(getName())
-          .append(';');
-
-        StringBuilder sb2 = new StringBuilder();
-        if (m_paraminfo != null)
-            {
-            sb2.append(", type-param");
-            }
-        if (m_fConstant)
-            {
-            sb2.append(", constant");
-            }
-        if (m_fField)
-            {
-            sb2.append(", has-field");
-            }
-        if (m_fCustom)
-            {
-            sb2.append(", has-code");
-            }
-        if (m_fRO)
-            {
-            sb2.append(", RO");
-            }
-        if (m_fRW)
-            {
-            sb2.append(", RW");
-            }
-        if (m_fAbstract)
-            {
-            sb2.append(", abstract");
-            }
-        if (m_fOverride)
-            {
-            sb2.append(", override");
-            }
-        if (sb2.length() > 0)
-            {
-            sb.append(" (")
-              .append(sb2.substring(2))
-              .append(')');
+            sb.append("\n    [")
+                    .append(i++)
+                    .append("] ")
+              .append(body);
             }
 
         return sb.toString();
@@ -539,81 +433,17 @@ public class PropertyInfo
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The property's identity constant.
+     * The PropertyBody objects that provide the data represented by this PropertyInfo.
      */
-    private final PropertyConstant m_constId;
+    private final PropertyBody[] m_aBody;
 
     /**
-     * The PropertyInfo that was used as the "super" to create this PropertyInfo.
+     * True iff this Property has a field.
      */
-    private final PropertyInfo m_infoSuper;
+    private final boolean m_fField;     // TODO require-field
 
     /**
-     * Type of the property, including any annotations on the type.
+     * True iff this Property has an override.
      */
-    private final TypeConstant m_type;
-
-    /**
-     * Type parameter information.
-     */
-    private final ParamInfo m_paraminfo;
-
-    /**
-     * True iff the property is explicitly a Ref and not a Var.
-     */
-    private final boolean m_fRO;
-
-    /**
-     * True iff the property is explicitly a Var and not a Ref.
-     */
-    private final boolean m_fRW;
-
-    /**
-     * Access required for the Ref.
-     */
-    private final Access m_accessRef;
-
-    /**
-     * Access required for the Var (if the property is R/W).
-     */
-    private final Access m_accessVar;
-
-    /**
-     * An array of non-virtual annotations on the property declaration itself
-     */
-    private final Annotation[] m_aPropAnno;
-
-    /**
-     * An array of annotations that apply to the Ref/Var of the property.
-     */
-    private final Annotation[] m_aRefAnno;
-
-    /**
-     * True to indicate that the property has custom code that overrides the underlying Ref/Var
-     * implementation.
-     */
-    private final boolean m_fCustom;
-
-    /**
-     * True iff the property requires a field.
-     */
-    private final boolean m_fField;
-
-    /**
-     * True iff the property is abstract, such as when it is on an interface.
-     */
-    private final boolean m_fAbstract;
-
-    /**
-     * True iff the property is a constant value.
-     */
-    private final boolean m_fConstant;
-
-    /**
-     * True iff the property's last contribution specifies "@Override".
-     */
-    private final boolean m_fOverride;
-
-    private final Constant m_constInitVal;
-    private final MethodConstant m_constInitFunc;
+    private final boolean m_fOverride;   // TODO suppress-override
     }

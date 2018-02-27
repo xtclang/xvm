@@ -658,7 +658,7 @@ public abstract class XvmStructure
      *
      * @return the method never returns; it always throws
      */
-    protected IllegalStateException todoLogError(String s)
+    public IllegalStateException todoLogError(String s)
         {
         throw new IllegalStateException(s);
         }

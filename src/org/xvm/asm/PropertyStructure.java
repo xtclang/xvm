@@ -185,6 +185,77 @@ public class PropertyStructure
                 : m_type.getConstantPool().typeObject();
         }
 
+    /**
+     * @return an array of all annotations that are <i>"{@code into Property}"</i> annotations
+     */
+    public Annotation[] getPropertyAnnotations()
+        {
+        Annotation[] aAnno = m_aPropAnno;
+        if (aAnno == null)
+            {
+            buildAnnotationArrays();
+            aAnno = m_aPropAnno;
+            assert aAnno != null;
+            }
+        return aAnno;
+        }
+
+    /**
+     * @return an array of all annotations that are <i>not</i> property annotations
+     */
+    public Annotation[] getRefAnnotations()
+        {
+        Annotation[] aAnno = m_aRefAnno;
+        if (aAnno == null)
+            {
+            buildAnnotationArrays();
+            aAnno = m_aRefAnno;
+            assert aAnno != null;
+            }
+        return aAnno;
+        }
+
+    private void buildAnnotationArrays()
+        {
+        List<Annotation> listPropAnno = null;
+        List<Annotation> listRefAnno  = null;
+        ConstantPool     pool         = getConstantPool();
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                Annotation   annotation = contrib.getAnnotation();
+                Constant     constMixin = annotation.getAnnotationClass();
+                TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+                if (typeMixin.isExplicitClassIdentity(true)
+                        && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN
+                        && typeMixin.getExplicitClassInto().isIntoPropertyType())
+                    {
+                    if (listPropAnno == null)
+                        {
+                        listPropAnno = new ArrayList<>();
+                        }
+                    listPropAnno.add(annotation);
+                    }
+                else
+                    {
+                    if (listRefAnno == null)
+                        {
+                        listRefAnno = new ArrayList<>();
+                        }
+                    listRefAnno.add(annotation);
+                    }
+                }
+            }
+
+        m_aPropAnno = listPropAnno == null
+                ? Annotation.NO_ANNOTATIONS
+                : listPropAnno.toArray(new Annotation[listPropAnno.size()]);
+        m_aRefAnno = listRefAnno == null
+                ? Annotation.NO_ANNOTATIONS
+                : listRefAnno.toArray(new Annotation[listRefAnno.size()]);
+        }
+
     public void indicateInitialValue()
         {
         m_fHasValue = true;
@@ -475,7 +546,17 @@ public class PropertyStructure
     /**
      * Indicates that the property has a value, even if it hasn't been determined yet.
      */
-    private transient boolean  m_fHasValue;
+    private transient boolean m_fHasValue;
+
+    /**
+     * A cached array of the annotations that apply to the property itself.
+     */
+    private transient Annotation[] m_aPropAnno;
+
+    /**
+     * A cached array of the annotations that apply to the Ref/Var of the property.
+     */
+    private transient Annotation[] m_aRefAnno;
 
 
     // ----- TEMPORARY -----------------------------------------------------------------------------

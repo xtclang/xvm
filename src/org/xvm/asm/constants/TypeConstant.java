@@ -879,35 +879,31 @@ public abstract class TypeConstant
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
-        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
-        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
-        Map<SignatureConstant, MethodInfo  > mapMethods       = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapProps   = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapMethods = new HashMap<>();
         fComplete &= collectMemberInfo(constId, struct, resolver,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+                mapProps, mapMethods, errs);
 
         // go through the members to determine if this is abstract
         if (!fAbstract)
             {
-            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
-                    || mapScopedProps.values().stream().anyMatch(PropertyInfo::isExplicitAbstract)
-                    || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract)
-                    || mapScopedMethods.values().stream().anyMatch(MethodInfo::isAbstract);
+            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract)
+                    || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract);
             }
 
         // make final determinations as to what fields are required, etc.
         finalizeMemberInfo(constId, struct, fAbstract,
-                mapProps, mapScopedProps, mapMethods, mapScopedMethods, errs);
+                mapProps, mapMethods, errs);
 
         // validate the type parameters against the properties for the same
         checkTypeParameterProperties(mapTypeParams, mapProps, errs);
 
-        return new TypeInfo(this, struct, fAbstract,
+        return new TypeInfo(this, struct, 0, fAbstract,
                 mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapScopedProps, mapMethods, mapScopedMethods,
+                mapProps, mapMethods,
                 fComplete ? Progress.Complete : Progress.Incomplete);
         }
 
@@ -925,14 +921,13 @@ public abstract class TypeConstant
         assert this instanceof AccessTypeConstant;
 
         // start by copying all the fields and functions from the private type of this
-        ConstantPool                         pool             = getConstantPool();
-        TypeInfo                             infoPri          = pool.ensureAccessTypeConstant(
+        ConstantPool                        pool       = getConstantPool();
+        TypeInfo                            infoPri    = pool.ensureAccessTypeConstant(
                 getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
-        Map<String           , PropertyInfo> mapProps         = new HashMap<>();
-        Map<PropertyConstant , PropertyInfo> mapScopedProps   = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapScopedMethods = new HashMap<>();
+        Map<PropertyConstant, PropertyInfo> mapProps   = new HashMap<>();
+        Map<MethodConstant  , MethodInfo  > mapMethods = new HashMap<>();
 
-        for (Map.Entry<String, PropertyInfo> entry : infoPri.getProperties().entrySet())
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
             if (entry.getValue().hasField())
                 {
@@ -940,19 +935,11 @@ public abstract class TypeConstant
                 }
             }
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getScopedProperties().entrySet())
-            {
-            if (entry.getValue().hasField())
-                {
-                mapScopedProps.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-        for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getScopedMethods().entrySet())
+        for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet())
             {
             if (entry.getValue().isFunction())
                 {
-                mapScopedMethods.put(entry.getKey(), entry.getValue());
+                mapMethods.put(entry.getKey(), entry.getValue());
                 }
             }
 
@@ -980,11 +967,11 @@ public abstract class TypeConstant
                     else
                         {
                         assert mapProps.keySet().containsAll(infoContrib.getProperties().keySet());
-                        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getScopedProperties().entrySet())
+                        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
                             {
-                            if (!mapScopedProps.containsKey(entry.getKey()))
+                            if (!mapProps.containsKey(entry.getKey()))
                                 {
-                                mapScopedProps.put(entry.getKey(), entry.getValue());
+                                mapProps.put(entry.getKey(), entry.getValue());
                                 }
                             }
                         }
@@ -993,12 +980,11 @@ public abstract class TypeConstant
                 }
             }
 
-        return new TypeInfo(this, infoPri.getClassStructure(), infoPri.isAbstract(),
-                infoPri.getTypeParams(), infoPri.getClassAnnotations(),
+        return new TypeInfo(this, infoPri.getClassStructure(), 0,
+                infoPri.isAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapScopedProps, Collections.EMPTY_MAP, mapScopedMethods,
-                fIncomplete ? Progress.Incomplete : Progress.Complete);
+                mapProps, Collections.EMPTY_MAP, fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
     /**
@@ -1834,7 +1820,7 @@ public abstract class TypeConstant
 
             // first find the "super" chains of each of the existing methods
             Set<SignatureConstant> setSuperMethods = new HashSet<>();
-            for (Entry<SignatureConstant, MethodInfo> entry : mapMethods.entrySet())
+            for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
                 {
                 MethodInfo method = entry.getValue();
                 if (method.isFunction())
@@ -1901,8 +1887,9 @@ public abstract class TypeConstant
         // brute force search
         SignatureConstant       sigBest   = null;
         List<SignatureConstant> listMatch = null;
-        for (SignatureConstant sigCandidate : mapMethods.keySet())
+        for (MethodConstant idCandidate : mapMethods.keySet())
             {
+            SignatureConstant sigCandidate = idCandidate.getSignature();
             if (sigCandidate.isSubstitutableFor(sigSub, this))
                 {
                 if (listMatch == null)
@@ -1980,22 +1967,17 @@ public abstract class TypeConstant
      * @param constId           the identity of the class
      * @param struct            the class structure
      * @param resolver          the GenericTypeResolver that uses the known type parameters
-     * @param mapProps          the public and protected properties of the class
-     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
-     * @param mapMethods        the public and protected methods of the class
-     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
-     *                          nested methods, etc.)
+     * @param mapProps          the properties of the class
+     * @param mapMethods        the methods of the class
      * @param errs              the error list to log any errors to
      */
     private void createMemberInfo(
-            IdentityConstant                     constId,
-            ClassStructure                       struct,
-            ParamInfo.TypeResolver               resolver,
-            Map<String           , PropertyInfo> mapProps,
-            Map<PropertyConstant , PropertyInfo> mapScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapMethods,
-            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
-            ErrorListener                        errs)
+            IdentityConstant                    constId,
+            ClassStructure                      struct,
+            ParamInfo.TypeResolver              resolver,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<MethodConstant  , MethodInfo  > mapMethods,
+            ErrorListener                       errs)
         {
         ConstantPool pool       = getConstantPool();
         boolean      fInterface = struct.getFormat() == Component.Format.INTERFACE;
@@ -2009,19 +1991,19 @@ public abstract class TypeConstant
             Component child = entryChild.getValue();
             if (child instanceof MultiMethodStructure)
                 {
-                for (MethodStructure structMethod : child.getMethodByConstantMap().values())
+                for (Entry<MethodConstant, MethodStructure> entry : child.getMethodByConstantMap().entrySet())
                     {
-                    SignatureConstant constSig = structMethod.getIdentityConstant()
-                            .getSignature().resolveGenericTypes(resolver);
-                    assert constSig != null;
-                    MethodBody body = new MethodBody(structMethod.getIdentityConstant(),
-                            structMethod.isAbstract() ? Implementation.Declared :
-                            fInterface                ? Implementation.Default  :
-                            structMethod.isNative()   ? Implementation.Native   :
-                                                        Implementation.Explicit  );
-                    mapMethods.put(constSig, new MethodInfo(constSig, body));
+                    MethodConstant    id     = entry.getKey();
+                    SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
+                    MethodStructure   method = entry.getValue();
+                    MethodBody body = new MethodBody(id,
+                            method.isAbstract() ? Implementation.Declared :
+                            fInterface          ? Implementation.Default  :
+                            method.isNative()   ? Implementation.Native   :
+                                                  Implementation.Explicit  );
+                    mapMethods.put(id, new MethodInfo(sig, body));
 
-                    for (Component grandchild : structMethod.children())
+                    for (Component grandchild : method.children())
                         {
                         // TODO any children of the method structure (into the "scoped" bucket)
                         System.out.println("** skipping method " + sName + " child " + grandchild.getIdentityConstant().getValueString());
@@ -2031,13 +2013,14 @@ public abstract class TypeConstant
             else if (child instanceof PropertyStructure)
                 {
                 PropertyStructure prop = (PropertyStructure) child;
+                PropertyConstant  id   = prop.getIdentityConstant();
                 if (prop.isTypeParameter())
                     {
-                    mapProps.put(sName, new PropertyInfo(prop.getIdentityConstant(), resolver.parameters.get(sName)));
+                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(sName))));
                     continue;
                     }
 
-                mapProps.put(sName, createPropertyInfo(prop, constId, fInterface, resolver, errs));
+                mapProps.put(id, createPropertyInfo(prop, constId, fInterface, resolver, errs));
 
                 for (Component grandchild : child.children())
                     {
@@ -2067,67 +2050,104 @@ public abstract class TypeConstant
             ParamInfo.TypeResolver  resolver,
             ErrorListener           errs)
         {
-        ConstantPool     pool         = getConstantPool();
-        String           sName        = prop.getName();
-        List<Annotation> listPropAnno = null;
-        List<Annotation> listRefAnno  = null;
+        ConstantPool pool      = getConstantPool();
+        String       sName     = prop.getName();
 
-        // sort annotations into Ref/Var annotations and Property annotations
-        boolean fHasRefAnno  = false;
-        boolean fHasVarAnno  = false;
-        boolean fHasInject   = false;
-        boolean fHasRO       = false;
-        boolean fHasAbstract = false;
-        boolean fHasOverride = false;
-        for (Contribution contrib : prop.getContributionsAsList())
+        // scan the Property annotations
+        Annotation[] aPropAnno    = prop.getPropertyAnnotations();
+        boolean      fHasRO       = false;
+        boolean      fHasAbstract = false;
+        boolean      fHasOverride = false;
+        for (int i = 0, c = aPropAnno.length; i < c; ++i)
             {
-            if (contrib.getComposition() == Composition.Annotation)
+            Annotation annotation = aPropAnno[i];
+            Constant   constMixin = annotation.getAnnotationClass();
+            if (scanForDups(aPropAnno, i, constMixin))
                 {
-                Annotation   annotation = contrib.getAnnotation();
-                Constant     constMixin = annotation.getAnnotationClass();
-                TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
-
-                if (!typeMixin.isExplicitClassIdentity(true)
-                        || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                    {
-                    log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                            typeMixin.getValueString());
-                    continue;
-                    }
-
-                TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                if (!typeInto.isIntoPropertyType())
-                    {
-                    log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
-                            sName, constId.getValueString(), typeMixin.getValueString());
-                    continue;
-                    }
-
-                if (typeInto.isA(pool.typeRef()))
-                    {
-                    if (listRefAnno == null)
-                        {
-                        listRefAnno = new ArrayList<>();
-                        }
-                    listRefAnno.add(annotation);
-
-                    fHasRefAnno   = true;
-                    fHasVarAnno  |= typeInto.isA(pool.typeVar());
-                    fHasInject   |= constMixin.equals(pool.clzInject());
-                    }
-                else
-                    {
-                    if (listPropAnno == null)
-                        {
-                        listPropAnno = new ArrayList<>();
-                        }
-                    listPropAnno.add(annotation);
-
-                    fHasRO       |= constMixin.equals(pool.clzRO());
-                    fHasAbstract |= constMixin.equals(pool.clzAbstract());
-                    fHasOverride |= constMixin.equals(pool.clzOverride());
-                    }
+                todoLogError("duplicate annotation " + constMixin.getValueString()
+                        + " on " + constId.getValueString());
                 }
+
+            fHasRO       |= constMixin.equals(pool.clzRO());
+            fHasAbstract |= constMixin.equals(pool.clzAbstract());
+            fHasOverride |= constMixin.equals(pool.clzOverride());
+            }
+
+        // check the non-Property annotations (including checking for verifier errors, since the
+        // property dumps anything that isn't a well-formed "into Property" annotation into this
+        // bucket)
+        Annotation[] aRefAnno    = prop.getRefAnnotations();
+        boolean      fHasRefAnno = false;
+        boolean      fHasVarAnno = false;
+        boolean      fHasInject  = false;
+        for (int i = 0, c = aRefAnno.length; i < c; ++i)
+            {
+            Annotation   annotation = aRefAnno[i];
+            Constant     constMixin = annotation.getAnnotationClass();
+            TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+
+            if (!typeMixin.isExplicitClassIdentity(true)
+                    || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                {
+                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+                        typeMixin.getValueString());
+                continue;
+                }
+
+            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            if (!typeInto.isIntoPropertyType())
+                {
+                log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
+                        sName, constId.getValueString(), typeMixin.getValueString());
+                continue;
+                }
+
+            // we've already processed the "into Property" annotations, so this has to be an
+            // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
+            assert typeInto.isA(pool.typeRef());
+
+            if (scanForDups(aRefAnno, i, constMixin))
+                {
+                todoLogError("duplicate annotation " + constMixin.getValueString()
+                        + " on " + constId.getValueString());
+                }
+
+            fHasRefAnno   = true;
+            fHasVarAnno  |= typeInto.isA(pool.typeVar());
+            fHasInject   |= constMixin.equals(pool.clzInject());
+            }
+
+        // functions and constants cannot have properties; methods cannot have constants
+        IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
+        boolean          fConstant   = prop.isStatic();
+        switch (constParent.getFormat())
+            {
+            case Property:
+                if (prop.getParent().isStatic())
+                    {
+                    todoLogError("a constant property cannot contain properties or constants");
+                    }
+                break;
+
+            case Method:
+                // "static" properties inside a method are just an indication that the Ref/Var is
+                // is a property of the containing class
+                fConstant = false;
+                if (prop.getParent().isStatic())
+                    {
+                    todoLogError("a function cannot contain properties");
+                    }
+                break;
+
+            case Module:
+            case Package:
+            case Class:
+                break;
+
+            default:
+                throw new IllegalStateException("a property (" + sName
+                        + ") cannot be nested under a " + constParent.getFormat()
+                        + " (on " + constId.getValueString() + ")");
             }
 
         // check the methods to see if get() and set() call super
@@ -2136,8 +2156,6 @@ public abstract class TypeConstant
         MethodStructure  methodSet    = null;
         MethodStructure  methodBadGet = null;
         MethodStructure  methodBadSet = null;
-        IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
-        boolean          fConstant    = prop.isStatic() && !(constParent instanceof MethodConstant); // TODO && !function
         boolean          fCustomCode  = false;
         for (Component child : prop.getChildByNameMap().values())
             {
@@ -2236,7 +2254,7 @@ public abstract class TypeConstant
                     getValueString(), sName);
             }
 
-        boolean fRW       = accessVar != null;
+        boolean fRW       = false;
         boolean fRO       = false;
         boolean fField    = false;
         boolean fAbstract = false;
@@ -2262,9 +2280,25 @@ public abstract class TypeConstant
 
             if (fHasAbstract)
                 {
-                // it is an error for a static property to be annotated by "@Abstract"
+                // it is an error for a constant to be annotated by "@Abstract"
                 log(errs, Severity.ERROR, VE_CONST_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
+                }
+
+            if (fHasOverride)
+                {
+                // it is an error for a constant to be annotated by "@Override"
+                todoLogError("@Override illegal on constant " + sName);
+//                log(errs, Severity.ERROR, VE_CONST_OVERRIDE_ILLEGAL,
+//                        getValueString(), sName);
+                }
+
+            if (fHasRefAnno)
+                {
+                // it is an error for a constant to be annotated in a manner that affects the Ref
+                todoLogError("Ref/Var annotation illegal on constant " + sName);
+//                log(errs, Severity.ERROR, VE_CONST_ANNOTATION_ILLEGAL,
+//                        getValueString(), sName);
                 }
 
             if (accessVar != null)
@@ -2279,7 +2313,7 @@ public abstract class TypeConstant
             {
             if (fCustomCode)
                 {
-                // interface is not allowed to implement a property
+                // interface is not allowed to implement a property - REVIEW: GG wants to allow @RO get()
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
                         getValueString(), sName);
                 }
@@ -2299,6 +2333,7 @@ public abstract class TypeConstant
                 }
 
             fRO      |= fHasRO;
+            fRW      |= accessVar != null;
             fField    = false;
             fAbstract = true;
             }
@@ -2337,24 +2372,44 @@ public abstract class TypeConstant
             // super and no set() (or Var-implying annotations)
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
-            fRW |= fHasVarAnno | fSetSupers;
-            if (fRO && fRW)
-                {
-                log(errs, Severity.ERROR, VE_PROPERTY_READWRITE_READONLY,
-                        getValueString(), sName);
-                fRO = false;
-                }
+            fRW |= accessVar != null | fHasVarAnno | fSetSupers;
 
             // it is possible to explicitly declare a property as abstract; this is unusual,
             // but it does mean that we have to defer the field decision
             fAbstract = fHasAbstract;
             }
 
-        return new PropertyInfo(prop.getIdentityConstant(),
-                prop.getType().resolveGenerics(resolver),
-                fRO, fRW, accessRef, accessVar, toArray(listPropAnno), toArray(listRefAnno),
-                fCustomCode, fField, fAbstract, fConstant, fHasOverride,
-                prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant());
+        if (fRO && fRW)
+            {
+            log(errs, Severity.ERROR, VE_PROPERTY_READWRITE_READONLY,
+                    getValueString(), sName);
+            fRO = false;
+            }
+
+        return new PropertyInfo(new PropertyBody(prop, prop.getType().resolveGenerics(resolver),
+                fRO, fRW, accessRef, accessVar, fCustomCode, fField, fAbstract, fConstant,
+                prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant()));
+        }
+
+    /**
+     * Scan the array of annotations for a duplicate annotation.
+     *
+     * @param aAnno         the array of annotations
+     * @param cScan         the number of annotations in the array to scan
+     * @param constScanFor  the Constant specifying the annotation to scan for
+     *
+     * @return true iff a duplicate was found
+     */
+    private boolean scanForDups(Annotation[] aAnno, int cScan, Constant constScanFor)
+        {
+        for (int i = 0; i < cScan; ++i)
+            {
+            if (aAnno[i].getAnnotationClass().equals(constScanFor))
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**
@@ -2365,25 +2420,20 @@ public abstract class TypeConstant
      * @param constId           the identity of the class
      * @param struct            the class structure
      * @param fAbstract         true if the type is abstract
-     * @param mapProps          the public and protected properties of the class
-     * @param mapScopedProps    the scoped properties (e.g. properties inside a method)
-     * @param mapMethods        the public and protected methods of the class
-     * @param mapScopedMethods  the scoped methods (e.g. private methods, methods of a property,
-     *                          nested methods, etc.)
+     * @param mapProps          the properties of the class
+     * @param mapMethods        the methods of the class
      * @param errs              the error list to log any errors to
      */
     private void finalizeMemberInfo(
-            IdentityConstant                     constId,
-            ClassStructure                       struct,
-            boolean                              fAbstract,
-            Map<String           , PropertyInfo> mapProps,
-            Map<PropertyConstant , PropertyInfo> mapScopedProps,
-            Map<SignatureConstant, MethodInfo  > mapMethods,
-            Map<MethodConstant   , MethodInfo  > mapScopedMethods,
-            ErrorListener                        errs)
+            IdentityConstant                    constId,
+            ClassStructure                      struct,
+            boolean                             fAbstract,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<MethodConstant  , MethodInfo  > mapMethods,
+            ErrorListener                       errs)
         {
         Component.Format formatInfo = struct.getFormat();
-        for (Entry<String, PropertyInfo> entry : mapProps.entrySet())
+        for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyInfo propinfo = entry.getValue();
             if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
@@ -2408,7 +2458,7 @@ public abstract class TypeConstant
                 {
                 // determine whether or not the property needs a field
                 boolean fField;
-                if (propinfo.isExplicitInject() || propinfo.isExplicitOverride())
+                if (propinfo.isInjected() || propinfo.isOverride())
                     {
                     // injection does not use a field, and override can defer the choice
                     fField = false;
@@ -2421,7 +2471,7 @@ public abstract class TypeConstant
                 else
                     {
                     // determine if get() blocks the super call to the field
-                    MethodInfo methodinfo = mapScopedMethods.get(propinfo.getGetterId());
+                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());
                     fField = true;
                     if (methodinfo != null)
                         {
@@ -2456,25 +2506,39 @@ public abstract class TypeConstant
      * @param errs           the error list to log any errors to
      */
     private void checkTypeParameterProperties(
-            Map<String, ParamInfo>    mapTypeParams,
-            Map<String, PropertyInfo> mapProps,
-            ErrorListener             errs)
+            Map<String, ParamInfo>              mapTypeParams,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            ErrorListener                       errs)
         {
         ConstantPool pool       = getConstantPool();
         for (ParamInfo param : mapTypeParams.values())
             {
-            String       sParam = param.getName();
-            PropertyInfo prop   = mapProps.get(sParam);
-            if (prop == null)
+            String  sParam = param.getName();
+            boolean fFound = false;
+            for (PropertyInfo prop : mapProps.values())
+                {
+                if (prop.getName().equals(sParam))
+                    {
+                    if (fFound)
+                        {
+                        // TODO
+                        todoLogError("duplicate?!?! type param prop: " + sParam);
+                        }
+                    else if (prop.isTypeParam() && prop.isRO() && prop.getType().equals(
+                            pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
+                        {
+                        fFound = true;
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
+                                this.getValueString(), sParam);
+                        }
+                    }
+                }
+            if (!fFound)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
-                        this.getValueString(), sParam);
-                }
-            else if (!prop.isTypeParam() || !prop.isRO() || !prop.getType().equals(
-                    pool.ensureParameterizedTypeConstant(pool.typeType(),
-                            param.getConstraintType())))
-                {
-                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.getValueString(), sParam);
                 }
             }
