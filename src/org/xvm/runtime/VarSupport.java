@@ -74,7 +74,7 @@ public interface VarSupport
      * Perform an "add" operation on the Var.
      *
      * @param frame    the current frame
-     * @param hTarget  the target handle
+     * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -85,7 +85,7 @@ public interface VarSupport
      * Perform a "subtract" operation on the Var.
      *
      * @param frame    the current frame
-     * @param hTarget  the target handle
+     * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -96,7 +96,7 @@ public interface VarSupport
      * Perform a "multiply" operation on the Var.
      *
      * @param frame    the current frame
-     * @param hTarget  the target handle
+     * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
@@ -108,7 +108,7 @@ public interface VarSupport
      * Perform a "divide" operation on the Var.
      *
      * @param frame    the current frame
-     * @param hTarget  the target handle
+     * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
@@ -120,7 +120,7 @@ public interface VarSupport
      * Perform a "modulo" operation on the Var.
      *
      * @param frame    the current frame
-     * @param hTarget  the target handle
+     * @param hTarget  the target Var handle
      * @param hArg     the argument handle
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},

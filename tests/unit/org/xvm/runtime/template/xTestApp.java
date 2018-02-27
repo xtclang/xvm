@@ -163,13 +163,18 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("c")))        // #1 (c)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 1))
-            .add(new X_Print(1))
+
+            .add(new IP_Add(1, adapter.ensureValueConstantId(47)))
+            .add(new IP_Div(1, adapter.ensureValueConstantId(2)))
+            .add(new IsEq(1, adapter.ensureValueConstantId(48), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("counter == 48")))
 
             .add(new P_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
                 adapter.ensureValueConstantId(17)))
-            .add(new P_Get(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
-                1))
-            .add(new X_Print(1))
+            .add(new P_Get(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 1))
+
+            .add(new IsEq(1, adapter.ensureValueConstantId(17), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("c == 17")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Function"),
                 adapter.ensureValueConstantId("fnInc")))   // #2 (fnInc)

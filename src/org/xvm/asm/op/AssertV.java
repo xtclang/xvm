@@ -149,9 +149,9 @@ public class AssertV
 
     protected int raiseException(Frame frame, ObjectHandle[] ahResolved, ObjectHandle[] ahOrig)
         {
-        StringBuilder sb = new StringBuilder("Assertion failed: ");
+        StringBuilder sb = new StringBuilder("Assertion failed: \"");
         sb.append(frame.getString(m_nMsgConstId))
-          .append(" (");
+          .append("\" (");
 
         // get the variable/local property names
 

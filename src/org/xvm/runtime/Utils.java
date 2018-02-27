@@ -17,7 +17,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
@@ -185,7 +185,7 @@ public abstract class Utils
                 String sProp = ((PropertyHandle) handle).m_property.getName();
 
                 switch (hThis.getTemplate().getPropertyValue(
-                    frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         // replace the property handle with the value
@@ -250,7 +250,7 @@ public abstract class Utils
                     String sProp = ((PropertyHandle) handle).m_property.getName();
 
                     switch (hThis.getTemplate().getPropertyValue(
-                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                            frameCaller, hThis, sProp, Frame.RET_LOCAL))
                         {
                         case Op.R_NEXT:
                             // replace the property handle with the value
@@ -588,33 +588,14 @@ public abstract class Utils
         };
 
     /**
-     * In place property unary operation support.
+     * An abstract base for in-place operation support.
      */
-    public static class InPlacePropertyUnary
+    public static abstract class AbstractInPlace
             implements Frame.Continuation
         {
-        private final UnaryAction action;
-        private final ClassTemplate template;
-        private final ObjectHandle hTarget;
-        private final String sPropName;
-        private final boolean fPost;
-        private final int iReturn;
-
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
-
-        protected InPlacePropertyUnary(UnaryAction action, ClassTemplate template,
-                                       ObjectHandle hTarget, String sPropName, boolean fPost,
-                                       int iReturn)
-            {
-            this.action = action;
-            this.template = template;
-            this.hTarget = hTarget;
-            this.sPropName = sPropName;
-            this.fPost = fPost;
-            this.iReturn = iReturn;
-            }
+        protected ObjectHandle hValueOld;
+        protected ObjectHandle hValueNew;
+        protected int ixStep = -1;
 
         @Override
         public int proceed(Frame frameCaller)
@@ -642,6 +623,34 @@ public abstract class Utils
                 default:
                     throw new IllegalStateException();
                 }
+            }
+
+        public abstract int doNext(Frame frameCaller);
+        }
+
+    /**
+     * In place property unary operation support.
+     */
+    public static class InPlacePropertyUnary
+            extends AbstractInPlace
+        {
+        private final UnaryAction action;
+        private final ClassTemplate template;
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final boolean fPost;
+        private final int iReturn;
+
+        protected InPlacePropertyUnary(UnaryAction action, ClassTemplate template,
+                                       ObjectHandle hTarget, String sPropName, boolean fPost,
+                                       int iReturn)
+            {
+            this.action = action;
+            this.template = template;
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.fPost = fPost;
+            this.iReturn = iReturn;
             }
 
         public int doNext(Frame frameCaller)
@@ -696,17 +705,13 @@ public abstract class Utils
      * In place property binary operation support.
      */
     public static class InPlacePropertyBinary
-            implements Frame.Continuation
+            extends AbstractInPlace
         {
         private final BinaryAction action;
         private final ClassTemplate template;
         private final ObjectHandle hTarget;
         private final String sPropName;
         private final ObjectHandle hArg;
-
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
 
         protected InPlacePropertyBinary(BinaryAction action, ClassTemplate template,
                                         ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
@@ -716,34 +721,6 @@ public abstract class Utils
             this.hTarget = hTarget;
             this.sPropName = sPropName;
             this.hArg = hArg;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            switch (ixStep)
-                {
-                case 0: // get
-                    hValueOld = frameCaller.getFrameLocal();
-                    break;
-
-                case 1: // action
-                    hValueNew = frameCaller.getFrameLocal();
-                    break;
-
-                case 2: // set
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
             }
 
         public int doNext(Frame frameCaller)
@@ -792,16 +769,12 @@ public abstract class Utils
      * In place Var unary operation support.
      */
     public static class InPlaceVarUnary
-            implements Frame.Continuation
+            extends AbstractInPlace
         {
         private final UnaryAction action;
-        private final xRef.RefHandle hTarget;
+        private final RefHandle hTarget;
         private final boolean fPost;
         private final int iReturn;
-
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
 
         /**
          * @param action   the action
@@ -810,40 +783,12 @@ public abstract class Utils
  *                 (e.g. i--); otherwise - before that (e.g. --i)
          * @param iReturn  the register to place the result of the operation into
          */
-        public InPlaceVarUnary(UnaryAction action, xRef.RefHandle hTarget, boolean fPost, int iReturn)
+        public InPlaceVarUnary(UnaryAction action, RefHandle hTarget, boolean fPost, int iReturn)
             {
             this.action = action;
             this.hTarget = hTarget;
             this.fPost = fPost;
             this.iReturn = iReturn;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            switch (ixStep)
-                {
-                case 0: // get
-                    hValueOld = frameCaller.getFrameLocal();
-                    break;
-
-                case 1: // action
-                    hValueNew = frameCaller.getFrameLocal();
-                    break;
-
-                case 2: // set
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
             }
 
         public int doNext(Frame frameCaller)
@@ -874,7 +819,6 @@ public abstract class Utils
                         throw new IllegalStateException();
                     }
 
-
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -899,49 +843,17 @@ public abstract class Utils
      * In place Var binary operation support.
      */
     public static class InPlaceVarBinary
-            implements Frame.Continuation
+            extends AbstractInPlace
         {
         private final BinaryAction action;
-        private final xRef.RefHandle hTarget;
+        private final RefHandle hTarget;
         private final ObjectHandle hArg;
 
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
-
-        public InPlaceVarBinary(BinaryAction action, xRef.RefHandle hTarget, ObjectHandle hArg)
+        public InPlaceVarBinary(BinaryAction action, RefHandle hTarget, ObjectHandle hArg)
             {
             this.action = action;
             this.hTarget = hTarget;
             this.hArg = hArg;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            switch (ixStep)
-                {
-                case 0: // get
-                    hValueOld = frameCaller.getFrameLocal();
-                    break;
-
-                case 1: // action
-                    hValueNew = frameCaller.getFrameLocal();
-                    break;
-
-                case 2: // set
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
             }
 
         public int doNext(Frame frameCaller)
@@ -965,7 +877,6 @@ public abstract class Utils
                     default:
                         throw new IllegalStateException();
                     }
-
 
                 switch (iResult)
                     {

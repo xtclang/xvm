@@ -123,8 +123,8 @@ public class AssertM
             return iPC + 1;
             }
 
-        return frame.raiseException(
-            xException.makeHandle("Assertion failed: " + frame.getString(m_nMsgConstId)));
+        return frame.raiseException(xException.makeHandle(
+            "Assertion failed: \"" + frame.getString(m_nMsgConstId) + '"'));
         }
 
     @Override

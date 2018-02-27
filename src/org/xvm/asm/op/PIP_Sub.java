@@ -52,6 +52,6 @@ public class PIP_Sub
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokeSub(frame, hTarget, sPropName, hValue);
+        return hTarget.getTemplate().invokePropertySub(frame, hTarget, sPropName, hValue);
         }
     }

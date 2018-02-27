@@ -226,7 +226,7 @@ public class xTuple
         @Override
         public String toString()
             {
-            return super.toString() + Arrays.toString(m_ahValue);
+            return "Tuple: " + Arrays.toString(m_ahValue);
             }
         }
     }

@@ -51,6 +51,7 @@ public class xService
         markNativeMethod("yield", VOID);
         markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
+        markNativeMethod("registerUnhandledExceptionNotification", new String[]{"Function"}, VOID);
         }
 
     @Override
@@ -108,13 +109,15 @@ public class xService
 
             case "registerTimeout":
                 {
-                JavaLong hDelay = (JavaLong) hArg;
-                long lDelay = hDelay.getValue();
+                long lDelay = ((JavaLong) hArg).getValue();
 
                 frame.f_fiber.m_ldtTimeout = lDelay <= 0 ? 0 : System.currentTimeMillis() + lDelay;
-
                 return Op.R_NEXT;
                 }
+
+            case "registerUnhandledExceptionNotification":
+                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
+                return Op.R_NEXT;
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -212,30 +215,30 @@ public class xService
         }
 
     @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
-            return super.invokeAdd(frame, hTarget, sPropName, hArg);
+            return super.invokePropertyAdd(frame, hTarget, sPropName, hArg);
             }
 
-        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokeAdd);
+        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokePropertyAdd);
         return Op.R_NEXT;
         }
 
     @Override
-    public int invokeSub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertySub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
         if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
             {
-            return super.invokeSub(frame, hTarget, sPropName, hArg);
+            return super.invokePropertySub(frame, hTarget, sPropName, hArg);
             }
 
-        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokeSub);
+        hService.m_context.sendProperty10Request(frame, sPropName, hArg, this::invokePropertySub);
         return Op.R_NEXT;
         }
 

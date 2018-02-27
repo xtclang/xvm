@@ -764,6 +764,12 @@ public abstract class Op
             case OP_IP_INCB:     return new IP_PreInc   (in, aconst);
             case OP_IP_DECB:     return new IP_PreDec   (in, aconst);
 
+            case OP_IP_ADD:      return new IP_Add      (in, aconst);
+            case OP_IP_SUB:      return new IP_Sub      (in, aconst);
+            case OP_IP_MUL:      return new IP_Mul      (in, aconst);
+            case OP_IP_DIV:      return new IP_Div      (in, aconst);
+            case OP_IP_MOD:      return new IP_Mod      (in, aconst);
+
             case OP_L_GET:       return new L_Get       (in, aconst);
             case OP_L_SET:       return new L_Set       (in, aconst);
             case OP_P_GET:       return new P_Get       (in, aconst);
@@ -951,6 +957,11 @@ public abstract class Op
             case OP_IP_DECA:     return "IP_DECA";
             case OP_IP_INCB:     return "IP_INCB";
             case OP_IP_DECB:     return "IP_DECB";
+            case OP_IP_ADD:      return "IP_ADD";
+            case OP_IP_SUB:      return "IP_SUB";
+            case OP_IP_MUL:      return "IP_MUL";
+            case OP_IP_DIV:      return "IP_DIV";
+            case OP_IP_MOD:      return "IP_MOD";
             case OP_PIP_INC:     return "PIP_INC";
             case OP_PIP_DEC:     return "PIP_DEC";
             case OP_PIP_INCA:    return "PIP_INCA";

@@ -239,6 +239,8 @@ public class xFutureVar
         @Override
         protected int setInternal(Frame frame, ObjectHandle handle)
             {
+            assert handle != null;
+
             if (handle instanceof FutureHandle)
                 {
                 // this is only possible if this "handle" is a "dynamic ref" and the passed in
