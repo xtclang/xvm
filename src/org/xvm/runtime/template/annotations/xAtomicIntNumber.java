@@ -16,14 +16,13 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xRef;
 
 
 /**
  * TODO:
  */
 public class xAtomicIntNumber
-        extends xRef
+        extends xAtomicVar
     {
     public static xAtomicIntNumber INSTANCE;
 
@@ -40,32 +39,22 @@ public class xAtomicIntNumber
     @Override
     public void initDeclared()
         {
-        //    @Op Void increment()
-        //    @Op Void decrement()
-        //    @Op RefType preIncrement()
-        //    @Op RefType preDecrement()
-        //    @Op RefType postIncrement()
-        //    @Op RefType postDecrement()
-        //    @Op Void addAssign(RefType n)
-        //    @Op Void subAssign(RefType n)
-        //    @Op Void mulAssign(RefType n)
-        //    @Op Void divAssign(RefType n)
-        //    @Op Void modAssign(RefType n)
-        //    @Op Void andAssign(RefType n)
-        //    @Op Void orAssign(RefType n)
-        //    @Op Void xorAssign(RefType n)
-        //    @Op Void shiftLeftAssign(Int count)
-        //    @Op Void shiftRightAssign(Int count)
-        //    @Op Void shiftAllRightAssign(Int count)
-        // TODO: all native
+        // TODO: do we need to mark the VarOps as native?
+        // TODO: how to implement checked/unchecked optimally?
+        }
+
+    // ----- ClassTemplate API ---------------------------------------------------------------------
+
+    @Override
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+        {
+        return new AtomicIntVarHandle(clazz, sName);
         }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        AtomicIntRefHandle hThis = (AtomicIntRefHandle) hTarget;
-
         switch (ahArg.length)
             {
             case 2:
@@ -73,6 +62,8 @@ public class xAtomicIntNumber
                     {
                     case "replace":
                         {
+                        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+
                         long lExpect = ((JavaLong) ahArg[0]).getValue();
                         long lNew = ((JavaLong) ahArg[1]).getValue();
                         AtomicLong atomic = hThis.m_atomicValue;
@@ -90,8 +81,6 @@ public class xAtomicIntNumber
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn)
         {
-        AtomicIntRefHandle hThis = (AtomicIntRefHandle) hTarget;
-
         switch (ahArg.length)
             {
             case 2:
@@ -99,6 +88,8 @@ public class xAtomicIntNumber
                     {
                     case "replaceFailed":
                         {
+                        AtomicIntVarHandle hThis = (AtomicIntVarHandle) hTarget;
+
                         long lExpect = ((JavaLong) ahArg[0]).getValue();
                         long lNew = ((JavaLong) ahArg[1]).getValue();
                         AtomicLong atomic = hThis.m_atomicValue;
@@ -118,10 +109,13 @@ public class xAtomicIntNumber
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+
+    // ----- VarSupport API ------------------------------------------------------------------------
+
     @Override
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
@@ -132,9 +126,9 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
@@ -145,9 +139,9 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
@@ -158,9 +152,9 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
+    public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
 
         if (atomic == null)
             {
@@ -171,35 +165,94 @@ public class xAtomicIntNumber
         }
 
     @Override
-    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+    public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        AtomicLong atomic = ((AtomicIntRefHandle) hTarget).m_atomicValue;
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
 
         if (atomic == null)
             {
             return frame.raiseException(xException.makeHandle("Unassigned reference"));
             }
 
-        long lValue = atomic.get();
-        while (!atomic.compareAndSet(lValue, -lValue))
-            {
-            lValue = atomic.get();
-            }
-        return frame.assignValue(iReturn, xInt64.makeHandle(lValue));
+        atomic.addAndGet(lArg);
+        return Op.R_NEXT;
         }
 
     @Override
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+    public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        return new AtomicIntRefHandle(clazz, sName);
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.addAndGet(-lArg);
+        return Op.R_NEXT;
         }
 
-    public static class AtomicIntRefHandle
+    @Override
+    public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal * lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        if (lArg == 0)
+            {
+            return frame.raiseException(xException.makeHandle("Division by zero"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal / lArg);
+        return Op.R_NEXT;
+        }
+
+    @Override
+    public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        AtomicLong atomic = ((AtomicIntVarHandle) hTarget).m_atomicValue;
+        long       lArg   = ((JavaLong) hArg).getValue();
+
+        if (atomic == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        atomic.updateAndGet(lVal -> lVal % lArg);
+        return Op.R_NEXT;
+        }
+
+
+    // ----- the handle -----
+
+    public static class AtomicIntVarHandle
             extends RefHandle
         {
         protected AtomicLong m_atomicValue;
 
-        protected AtomicIntRefHandle(TypeComposition clazz, String sName)
+        protected AtomicIntVarHandle(TypeComposition clazz, String sName)
             {
             super(clazz, sName);
             }

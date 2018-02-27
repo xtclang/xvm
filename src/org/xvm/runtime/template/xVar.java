@@ -5,9 +5,15 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Utils.BinaryAction;
+import org.xvm.runtime.Utils.InPlaceVarBinary;
+import org.xvm.runtime.Utils.InPlaceVarUnary;
+import org.xvm.runtime.Utils.UnaryAction;
+import org.xvm.runtime.VarSupport;
 
 
 /**
@@ -15,6 +21,7 @@ import org.xvm.runtime.TemplateRegistry;
  */
 public class xVar
         extends xRef
+        implements VarSupport
     {
     public static xVar INSTANCE;
 
@@ -48,4 +55,86 @@ public class xVar
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
+    // ----- VarSupport implementation -------------------------------------------------------------
+
+    @Override
+    public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("preInc");
+        return chain == null
+            ? new InPlaceVarUnary(UnaryAction.INC, hTarget, false, iReturn).doNext(frame)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("postInc");
+        return chain == null
+            ? new InPlaceVarUnary(UnaryAction.INC, hTarget, true, iReturn).doNext(frame)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("preDec");
+        return chain == null
+            ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, false, iReturn).doNext(frame)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("postDec");
+        return chain == null
+            ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, true, iReturn).doNext(frame)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("+=");
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.ADD, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("-=");
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.SUB, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("*=");
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.MUL, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("/=");
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.DIV, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
+
+    @Override
+    public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        CallChain chain = getOpChain("%=");
+        return chain == null
+            ? new InPlaceVarBinary(BinaryAction.MOD, hTarget, hArg).doNext(frame)
+            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+        }
     }

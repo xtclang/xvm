@@ -17,6 +17,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
+import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
@@ -155,134 +156,6 @@ public abstract class Utils
         return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
         }
 
-
-    // ----- Pre/Post-Inc/Dec support -----
-
-    protected static class IncDec
-            implements Frame.Continuation
-        {
-        public enum Step {Get, Increment, Decrement, AssignOld, AssignNew, Set}
-
-        public static Step[] INC = {Step.Get, Step.Increment, Step.AssignNew};
-        public static Step[] DEC = {Step.Get, Step.Decrement, Step.AssignNew};
-        public static Step[] PRE_INC = {Step.Get, Step.Increment, Step.AssignNew, Step.Set};
-        public static Step[] POST_INC = {Step.Get, Step.Increment, Step.AssignOld, Step.Set};
-        public static Step[] PRE_DEC = {Step.Get, Step.Decrement, Step.AssignNew, Step.Set};
-        public static Step[] POST_DEC = {Step.Get, Step.Decrement, Step.AssignOld, Step.Set};
-
-        private final ClassTemplate template;
-        private final ObjectHandle hTarget;
-        private final String sPropName;
-        private final int iReturn;
-        private final Step[] algorithm;
-
-        private ObjectHandle hValueOld;
-        private ObjectHandle hValueNew;
-        private int ixStep = -1;
-
-        protected IncDec(Step[] algorithm, ClassTemplate template,
-                         ObjectHandle hTarget, String sPropName, int iReturn)
-            {
-            this.algorithm = algorithm;
-            this.template = template;
-            this.hTarget = hTarget;
-            this.sPropName = sPropName;
-            this.iReturn = iReturn;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            updateResult(frameCaller);
-
-            return doNext(frameCaller);
-            }
-
-        protected void updateResult(Frame frameCaller)
-            {
-            switch (algorithm[ixStep])
-                {
-                case Get:
-                    hValueOld = frameCaller.getFrameLocal();
-                    break;
-
-                case AssignOld:
-                case AssignNew:
-                case Set:
-                    break;
-
-                case Increment:
-                case Decrement:
-                    hValueNew = frameCaller.getFrameLocal();
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            while (true)
-                {
-                Step step = algorithm[++ixStep];
-
-                int iResult;
-                switch (step)
-                    {
-                    case Get:
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
-                        break;
-
-                    case Increment:
-                        iResult = hValueOld.getOpSupport().invokeNext(frameCaller, hValueOld, Frame.RET_LOCAL);
-                        break;
-
-                    case Decrement:
-                        iResult = hValueOld.getOpSupport().invokePrev(frameCaller, hValueOld, Frame.RET_LOCAL);
-                        break;
-
-                    case AssignOld:
-                        iResult = frameCaller.assignValue(iReturn, hValueOld);
-                        break;
-
-                    case AssignNew:
-                        iResult = frameCaller.assignValue(iReturn, hValueNew);
-                        break;
-
-                    case Set:
-                        iResult = template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
-                if (ixStep == algorithm.length - 1)
-                    {
-                    // the last step; no need to come back
-                    return iResult;
-                    }
-
-                switch (iResult)
-                    {
-                    case Op.R_NEXT:
-                        updateResult(frameCaller);
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalArgumentException();
-                    }
-                }
-            }
-        }
 
     // ----- "local property as an argument" support -----
 
@@ -713,4 +586,446 @@ public abstract class Utils
                 }
             }
         };
+
+    /**
+     * In place property unary operation support.
+     */
+    public static class InPlacePropertyUnary
+            implements Frame.Continuation
+        {
+        private final UnaryAction action;
+        private final ClassTemplate template;
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final boolean fPost;
+        private final int iReturn;
+
+        private ObjectHandle hValueOld;
+        private ObjectHandle hValueNew;
+        private int ixStep = -1;
+
+        protected InPlacePropertyUnary(UnaryAction action, ClassTemplate template,
+                                       ObjectHandle hTarget, String sPropName, boolean fPost,
+                                       int iReturn)
+            {
+            this.action = action;
+            this.template = template;
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.fPost = fPost;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            switch (ixStep)
+                {
+                case 0: // get
+                    hValueOld = frameCaller.getFrameLocal();
+                    break;
+
+                case 1: // action
+                    hValueNew = frameCaller.getFrameLocal();
+                    break;
+
+                case 2: // set
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                int iResult;
+                switch (++ixStep)
+                    {
+                    case 0:
+                        iResult = template.
+                            getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        break;
+
+                    case 1:
+                        iResult = action.invoke(frameCaller, hValueOld);
+                        break;
+
+                    case 2:
+                        iResult = template.
+                            setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+                        break;
+
+                    case 3:
+                        return frameCaller.assignValue(iReturn, fPost ? hValueOld : hValueNew);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalArgumentException();
+                    }
+                }
+            }
+        }
+
+    /**
+     * In place property binary operation support.
+     */
+    public static class InPlacePropertyBinary
+            implements Frame.Continuation
+        {
+        private final BinaryAction action;
+        private final ClassTemplate template;
+        private final ObjectHandle hTarget;
+        private final String sPropName;
+        private final ObjectHandle hArg;
+
+        private ObjectHandle hValueOld;
+        private ObjectHandle hValueNew;
+        private int ixStep = -1;
+
+        protected InPlacePropertyBinary(BinaryAction action, ClassTemplate template,
+                                        ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+            {
+            this.action = action;
+            this.template = template;
+            this.hTarget = hTarget;
+            this.sPropName = sPropName;
+            this.hArg = hArg;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            switch (ixStep)
+                {
+                case 0: // get
+                    hValueOld = frameCaller.getFrameLocal();
+                    break;
+
+                case 1: // action
+                    hValueNew = frameCaller.getFrameLocal();
+                    break;
+
+                case 2: // set
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                int iResult;
+                switch (++ixStep)
+                    {
+                    case 0:
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        break;
+
+                    case 1:
+                        iResult = action.invoke(frameCaller, hValueOld, hArg);
+                        break;
+
+                    case 2:
+                        return template.setPropertyValue(frameCaller, hTarget, sPropName, hValueNew);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalArgumentException();
+                    }
+                }
+            }
+        }
+
+    /**
+     * In place Var unary operation support.
+     */
+    public static class InPlaceVarUnary
+            implements Frame.Continuation
+        {
+        private final UnaryAction action;
+        private final xRef.RefHandle hTarget;
+        private final boolean fPost;
+        private final int iReturn;
+
+        private ObjectHandle hValueOld;
+        private ObjectHandle hValueNew;
+        private int ixStep = -1;
+
+        /**
+         * @param action   the action
+         * @param hTarget  the target Var
+         * @param fPost    if true, the the operation is performed after the current value is returned
+ *                 (e.g. i--); otherwise - before that (e.g. --i)
+         * @param iReturn  the register to place the result of the operation into
+         */
+        public InPlaceVarUnary(UnaryAction action, xRef.RefHandle hTarget, boolean fPost, int iReturn)
+            {
+            this.action = action;
+            this.hTarget = hTarget;
+            this.fPost = fPost;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            switch (ixStep)
+                {
+                case 0: // get
+                    hValueOld = frameCaller.getFrameLocal();
+                    break;
+
+                case 1: // action
+                    hValueNew = frameCaller.getFrameLocal();
+                    break;
+
+                case 2: // set
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                int nStep = ++ixStep;
+
+                int iResult;
+                switch (nStep)
+                    {
+                    case 0:
+                        iResult = hTarget.get(frameCaller, Frame.RET_LOCAL);
+                        break;
+
+                    case 1:
+                        iResult = action.invoke(frameCaller, hValueOld);
+                        break;
+
+                    case 2:
+                        iResult = hTarget.set(frameCaller, hValueNew);
+                        break;
+
+                    case 3:
+                        return frameCaller.assignValue(iReturn, fPost ? hValueOld : hValueNew);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalArgumentException();
+                    }
+                }
+            }
+        }
+
+    /**
+     * In place Var binary operation support.
+     */
+    public static class InPlaceVarBinary
+            implements Frame.Continuation
+        {
+        private final BinaryAction action;
+        private final xRef.RefHandle hTarget;
+        private final ObjectHandle hArg;
+
+        private ObjectHandle hValueOld;
+        private ObjectHandle hValueNew;
+        private int ixStep = -1;
+
+        public InPlaceVarBinary(BinaryAction action, xRef.RefHandle hTarget, ObjectHandle hArg)
+            {
+            this.action = action;
+            this.hTarget = hTarget;
+            this.hArg = hArg;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            switch (ixStep)
+                {
+                case 0: // get
+                    hValueOld = frameCaller.getFrameLocal();
+                    break;
+
+                case 1: // action
+                    hValueNew = frameCaller.getFrameLocal();
+                    break;
+
+                case 2: // set
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (true)
+                {
+                int iResult;
+                switch (++ixStep)
+                    {
+                    case 0:
+                        iResult = hTarget.get(frameCaller, Frame.RET_LOCAL);
+                        break;
+
+                    case 1:
+                        iResult = action.invoke(frameCaller, hValueOld, hArg);
+                        break;
+
+                    case 2:
+                        return hTarget.set(frameCaller, hValueNew);
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+
+
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalArgumentException();
+                    }
+                }
+            }
+        }
+
+    // the lambda for unary actions
+    public interface UnaryAction
+        {
+        // invoke and place the result into Frame.RET_LOCAL
+        int invoke(Frame frame, ObjectHandle hTarget);
+
+        // ----- action constants ------------------------------------------------------------------
+
+        UnaryAction INC = (frameCaller, hValue) ->
+            hValue.getOpSupport().invokeNext(frameCaller, hValue, Frame.RET_LOCAL);
+
+        UnaryAction DEC = (frameCaller, hValue) ->
+            hValue.getOpSupport().invokePrev(frameCaller, hValue, Frame.RET_LOCAL);
+
+        UnaryAction NEG = (frameCaller, hValue) ->
+            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Frame.RET_LOCAL);
+        }
+
+    // the lambda for binary actions
+    public interface BinaryAction
+        {
+        // invoke and place the result into Frame.RET_LOCAL
+        int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg);
+
+        // ----- action constants ------------------------------------------------------------------
+
+        BinaryAction ADD = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeAdd(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+
+        BinaryAction SUB = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeSub(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+
+        BinaryAction MUL = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeMul(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+
+        BinaryAction DIV = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeDiv(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+
+        BinaryAction MOD = (frameCaller, hValue, hArg) ->
+            hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+        }
     }

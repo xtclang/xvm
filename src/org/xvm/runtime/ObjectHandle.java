@@ -116,6 +116,13 @@ public abstract class ObjectHandle
         return m_clazz.ensureAccess(this, access);
         }
 
+    public ClassTemplate.PropertyInfo getPropertyInfo(String sPropName)
+        {
+        // TODO: replace with TypeInfo.getPropertyInfo() when done
+        CallChain chain = getComposition().getPropertySetterChain(sPropName);
+        return chain.getProperty().getInfo();
+        }
+
     @Override
     public int hashCode()
         {

@@ -17,37 +17,19 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_ADD rvalue-target, rvalue-ix, rvalue2 ; T[ix] += T
+ * IIP_SUB rvalue-target, rvalue-ix, rvalue2 ; T[ix] -= T
  */
-public class IIP_Add
+public class IIP_Sub
         extends OpIndexInPlace
     {
     /**
-     * Construct an IIP_ADD op.
-     *
-     * @param nTarget  the target indexed object
-     * @param nIndex   the index
-     * @param nValue   the value to store
-     *
-     * @deprecated
-     */
-    public IIP_Add(int nTarget, int nIndex, int nValue)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex  = nIndex;
-        m_nValue  = nValue;
-        }
-
-    /**
-     * Construct an IIP_ADD op for the passed target.
+     * Construct an IIP_SUB op for the passed target.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Add(Argument argTarget, Argument argIndex, Argument argValue)
+    protected IIP_Sub(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
@@ -58,7 +40,7 @@ public class IIP_Add
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_Add(DataInput in, Constant[] aconst)
+    public IIP_Sub(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -67,7 +49,7 @@ public class IIP_Add
     @Override
     public int getOpCode()
         {
-        return OP_IIP_ADD;
+        return OP_IIP_SUB;
         }
 
     @Override
@@ -80,7 +62,7 @@ public class IIP_Add
             {
             ObjectHandle hCurrent = template.extractArrayValue(hTarget, lIndex);
 
-            switch (hCurrent.getOpSupport().invokeAdd(frame, hCurrent, hValue, Frame.RET_LOCAL))
+            switch (hCurrent.getOpSupport().invokeSub(frame, hCurrent, hValue, Frame.RET_LOCAL))
                 {
                 case R_NEXT:
                     {

@@ -14,31 +14,17 @@ import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
- * IP_INC lvalue-target ; in-place increment; no result
+ * IP_DEC lvalue-target ; in-place decrement; no result
  */
-public class IP_Inc
+public class IP_Dec
         extends OpInPlace
     {
     /**
-     * Construct an IP_INC op.
-     *
-     * @param nTarget  indicates the incrementable target
-     *
-     * @deprecated
-     */
-    public IP_Inc(int nTarget)
-        {
-        super(null);
-
-        m_nTarget = nTarget;
-        }
-
-    /**
-     * Construct an IP_INC op for the passed arguments.
+     * Construct an IP_DEC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      */
-    public IP_Inc(Argument argTarget)
+    public IP_Dec(Argument argTarget)
         {
         super(argTarget);
         }
@@ -49,7 +35,7 @@ public class IP_Inc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IP_Inc(DataInput in, Constant[] aconst)
+    public IP_Dec(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -58,7 +44,7 @@ public class IP_Inc
     @Override
     public int getOpCode()
         {
-        return OP_IP_INC;
+        return OP_IP_DEC;
         }
 
     @Override
@@ -70,13 +56,13 @@ public class IP_Inc
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, m_nTarget);
+        return hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget);
         }
 
     @Override
     protected int completeWithVar(Frame frame, RefHandle hTarget)
         {
-        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, Frame.RET_UNUSED);
+        return hTarget.getVarSupport().invokeVarPreDec(frame, hTarget, Frame.RET_UNUSED);
         }
 
     @Override
@@ -84,6 +70,6 @@ public class IP_Inc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokePostDec(frame, hTarget, sProperty, Frame.RET_UNUSED);
         }
     }

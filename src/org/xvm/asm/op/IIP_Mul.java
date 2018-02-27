@@ -7,8 +7,8 @@ import java.io.IOException;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpIndexInPlace;
-
 import org.xvm.runtime.Frame;
+
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -17,37 +17,19 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_ADD rvalue-target, rvalue-ix, rvalue2 ; T[ix] += T
+ * IIP_MUL rvalue-target, rvalue-ix, rvalue2 ; T[ix] *= T
  */
-public class IIP_Add
+public class IIP_Mul
         extends OpIndexInPlace
     {
     /**
-     * Construct an IIP_ADD op.
-     *
-     * @param nTarget  the target indexed object
-     * @param nIndex   the index
-     * @param nValue   the value to store
-     *
-     * @deprecated
-     */
-    public IIP_Add(int nTarget, int nIndex, int nValue)
-        {
-        super(null, null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex  = nIndex;
-        m_nValue  = nValue;
-        }
-
-    /**
-     * Construct an IIP_ADD op for the passed target.
+     * Construct an IIP_MUL op for the passed target.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    protected IIP_Add(Argument argTarget, Argument argIndex, Argument argValue)
+    protected IIP_Mul(Argument argTarget, Argument argIndex, Argument argValue)
         {
         super(argTarget, argIndex, argValue);
         }
@@ -58,7 +40,7 @@ public class IIP_Add
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_Add(DataInput in, Constant[] aconst)
+    public IIP_Mul(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -67,7 +49,7 @@ public class IIP_Add
     @Override
     public int getOpCode()
         {
-        return OP_IIP_ADD;
+        return OP_IIP_MUL;
         }
 
     @Override
@@ -80,7 +62,7 @@ public class IIP_Add
             {
             ObjectHandle hCurrent = template.extractArrayValue(hTarget, lIndex);
 
-            switch (hCurrent.getOpSupport().invokeAdd(frame, hCurrent, hValue, Frame.RET_LOCAL))
+            switch (hCurrent.getOpSupport().invokeMul(frame, hCurrent, hValue, Frame.RET_LOCAL))
                 {
                 case R_NEXT:
                     {

@@ -49,7 +49,7 @@ public class NewG_1
         }
 
     /**
-     * Construct a NEW_1 op based on the passed arguments.
+     * Construct a NEWG_1 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
      * @param argType      the type Argument

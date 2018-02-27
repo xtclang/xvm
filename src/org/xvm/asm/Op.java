@@ -758,8 +758,11 @@ public abstract class Op
             case OP_GP_NEG:      return new GP_Neg      (in, aconst);
 
             case OP_IP_INC:      return new IP_Inc      (in, aconst);
+            case OP_IP_DEC:      return new IP_Dec      (in, aconst);
             case OP_IP_INCA:     return new IP_PostInc  (in, aconst);
+            case OP_IP_DECA:     return new IP_PostDec  (in, aconst);
             case OP_IP_INCB:     return new IP_PreInc   (in, aconst);
+            case OP_IP_DECB:     return new IP_PreDec   (in, aconst);
 
             case OP_L_GET:       return new L_Get       (in, aconst);
             case OP_L_SET:       return new L_Set       (in, aconst);
@@ -771,7 +774,12 @@ public abstract class Op
             case OP_PIP_INC:     return new PIP_Inc     (in, aconst);
             case OP_PIP_DEC:     return new PIP_Dec     (in, aconst);
             case OP_PIP_INCA:    return new PIP_PostInc (in, aconst);
+            case OP_PIP_DECA:    return new PIP_PostDec (in, aconst);
             case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
+            case OP_PIP_DECB:    return new PIP_PreDec  (in, aconst);
+
+            case OP_PIP_ADD:     return new PIP_Add     (in, aconst);
+            case OP_PIP_SUB:     return new PIP_Sub     (in, aconst);
 
             case OP_I_GET:       return new I_Get       (in, aconst);
             case OP_I_SET:       return new I_Set       (in, aconst);
@@ -779,8 +787,15 @@ public abstract class Op
             case OP_I_REF:       return new I_Ref       (in, aconst);
 
             case OP_IIP_INC:     return new IIP_Inc     (in, aconst);
+            case OP_IIP_DEC:     return new IIP_Dec     (in, aconst);
+            case OP_IIP_INCA:    return new IIP_PostInc (in, aconst);
             case OP_IIP_INCB:    return new IIP_PreInc  (in, aconst);
+            case OP_IIP_DECA:    return new IIP_PostDec (in, aconst);
+            case OP_IIP_DECB:    return new IIP_PreDec  (in, aconst);
             case OP_IIP_ADD:     return new IIP_Add     (in, aconst);
+            case OP_IIP_SUB:     return new IIP_Sub     (in, aconst);
+            case OP_IIP_MUL:     return new IIP_Mul     (in, aconst);
+            case OP_IIP_DIV:     return new IIP_Div     (in, aconst);
 
             case OP_CALL_00:     return new Call_00     (in, aconst);
             case OP_CALL_01:     return new Call_01     (in, aconst);
@@ -816,11 +831,14 @@ public abstract class Op
             case OP_NVOK_TN:     return new Invoke_TN   (in, aconst);
             case OP_NVOK_TT:     return new Invoke_TT   (in, aconst);
 
+            case OP_NEW_0:       return new New_0       (in, aconst);
             case OP_NEW_1:       return new New_1       (in, aconst);
             case OP_NEW_N:       return new New_N       (in, aconst);
+            case OP_NEW_T:       return new New_T       (in, aconst);
             case OP_NEWG_0:      return new NewG_0      (in, aconst);
             case OP_NEWG_1:      return new NewG_1      (in, aconst);
             case OP_NEWG_N:      return new NewG_N      (in, aconst);
+            case OP_NEWG_T:      return new NewG_T      (in, aconst);
 
             case OP_CONSTR_0:    return new Construct_0 (in, aconst);
             case OP_CONSTR_1:    return new Construct_1 (in, aconst);
@@ -939,13 +957,22 @@ public abstract class Op
             case OP_PIP_DECA:    return "PIP_DECA";
             case OP_PIP_INCB:    return "PIP_INCB";
             case OP_PIP_DECB:    return "PIP_DECB";
+            case OP_PIP_ADD:     return "PIP_ADD";
+            case OP_PIP_SUB:     return "PIP_SUB";
             case OP_I_GET:       return "I_GET";
             case OP_I_SET:       return "I_SET";
             case OP_I_VAR:       return "I_VAR";
             case OP_I_REF:       return "I_REF";
             case OP_IIP_INC:     return "IIP_INC";
+            case OP_IIP_DEC:     return "IIP_DEC";
             case OP_IIP_INCB:    return "IIP_INCB";
+            case OP_IIP_INCA:    return "IIP_INCA";
+            case OP_IIP_DECB:    return "IIP_DECB";
+            case OP_IIP_DECA:    return "IIP_DECA";
             case OP_IIP_ADD:     return "IIP_ADD";
+            case OP_IIP_SUB:     return "IIP_SUB";
+            case OP_IIP_MUL:     return "IIP_MUL";
+            case OP_IIP_DIV:     return "IIP_DIV";
             case OP_CALL_00:     return "CALL_00";
             case OP_CALL_01:     return "CALL_01";
             case OP_CALL_0N:     return "CALL_0N";
@@ -978,11 +1005,14 @@ public abstract class Op
             case OP_NVOK_T1:     return "NVOK_T1";
             case OP_NVOK_TN:     return "NVOK_TN";
             case OP_NVOK_TT:     return "NVOK_TT";
+            case OP_NEW_0:       return "NEW_0";
             case OP_NEW_1:       return "NEW_1";
             case OP_NEW_N:       return "NEW_N";
+            case OP_NEW_T:       return "NEW_T";
             case OP_NEWG_0:      return "NEWG_0";
             case OP_NEWG_1:      return "NEWG_1";
             case OP_NEWG_N:      return "NEWG_N";
+            case OP_NEWG_T:      return "NEWG_T";
             case OP_CONSTR_0:    return "CONSTR_0";
             case OP_CONSTR_1:    return "CONSTR_1";
             case OP_CONSTR_N:    return "CONSTR_N";
@@ -1346,6 +1376,11 @@ public abstract class Op
      * Pre-defined argument: a target for local invocation
      */
     public static final int A_THIS = -12;
+
+    /**
+     * Pre-defined argument: the frame local (used only for testing)
+     */
+    public static final int A_LOCAL = -13;
 
 
     // ----- return values from the Op.process() method --------------------------------------------

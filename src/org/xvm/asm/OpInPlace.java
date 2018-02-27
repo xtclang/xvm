@@ -11,6 +11,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.xRef.RefHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -18,7 +20,8 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Base class for IP_ (in-place) op codes.
  *
- * Note: "in-place assign" ops derive from OpInPlaceAssign
+ * Note: "property in-place" ops derive from {@link OpPropInPlace} and
+ *       "property in-place assign" from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpInPlace
         extends Op
@@ -103,32 +106,51 @@ public abstract class OpInPlace
         {
         try
             {
-            if (m_nTarget >= 0)
+            int nTarget = m_nTarget;
+            if (nTarget >= 0)
                 {
                 // operation on a register
-                ObjectHandle hTarget = frame.getArgument(m_nTarget);
-                if (hTarget == null)
+                if (frame.isDynamicVar(nTarget))
                     {
-                    return R_REPEAT;
-                    }
+                    RefHandle hVar = frame.getDynamicVar(nTarget);
+                    if (hVar == null)
+                        {
+                        return R_REPEAT;
+                        }
 
-                if (isAssignOp() && frame.isNextRegister(m_nRetValue))
+                    if (isAssignOp() && frame.isNextRegister(m_nRetValue))
+                        {
+                        frame.introduceRefTypeVar(nTarget);
+                        }
+
+                    return completeWithVar(frame, hVar);
+                    }
+                else
                     {
-                    frame.introduceVarCopy(m_nTarget);
-                    }
+                    ObjectHandle hTarget = frame.getArgument(nTarget);
+                    if (hTarget == null)
+                        {
+                        return R_REPEAT;
+                        }
 
-                return completeWithRegister(frame, hTarget);
+                    if (isAssignOp() && frame.isNextRegister(m_nRetValue))
+                        {
+                        frame.introduceVarCopy(nTarget);
+                        }
+
+                    return completeWithRegister(frame, hTarget);
+                    }
                 }
             else
                 {
                 // operation on a local property
                 if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                     {
-                    frame.introduceVarCopy(m_nTarget);
+                    frame.introduceVarCopy(nTarget);
                     }
 
                 PropertyConstant constProperty = (PropertyConstant)
-                    frame.getConstant(m_nTarget);
+                    frame.getConstant(nTarget);
 
                 return completeWithProperty(frame, constProperty.getName());
                 }
@@ -140,6 +162,11 @@ public abstract class OpInPlace
         }
 
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    protected int completeWithVar(Frame frame, RefHandle hTarget)
         {
         throw new UnsupportedOperationException();
         }

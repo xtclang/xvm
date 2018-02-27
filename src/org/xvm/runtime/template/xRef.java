@@ -13,6 +13,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.VarSupport;
 
 
 /**
@@ -313,6 +314,11 @@ public class xRef
 
             m_frame = frame;
             m_iVar = iVar;
+            }
+
+        public VarSupport getVarSupport()
+            {
+            return (VarSupport) getOpSupport();
             }
 
         public boolean isAssigned()

@@ -12,6 +12,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.TemplateRegistry;
 
 /**
@@ -224,13 +225,16 @@ public class xTestApp extends xModule
 
             .add(new PIP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 0,
                 8))  // next register #8
-            .add(new X_Print(8))
+            .add(new IsEq(8, adapter.ensureValueConstantId(6), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("++counter2 == 6")))
 
-            .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
-                8))
-            .add(new X_Print(8))
+            .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 8))
+            .add(new IsEq(8, adapter.ensureValueConstantId(20), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("counter++ == 20")))
+
             .add(new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
-            .add(new X_Print(8))
+            .add(new IsEq(8, adapter.ensureValueConstantId(22), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("svc.increment() == 22")))
 
             .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #9
             .add(new X_Print(9))

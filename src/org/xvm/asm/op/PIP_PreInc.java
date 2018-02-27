@@ -41,8 +41,8 @@ public class PIP_PreInc
      * Construct a PIP_INCB op based on the passed arguments.
      *
      * @param constProperty  the property constant
-     * @param argTarget    the target Argument
-     * @param argReturn    the Argument to move the result into (Register or local property)
+     * @param argTarget      the target Argument
+     * @param argReturn      the Argument to move the result into (Register or local property)
      */
     public PIP_PreInc(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
@@ -64,15 +64,12 @@ public class PIP_PreInc
     @Override
     public int getOpCode()
         {
-        return OP_PIP_INCA;
+        return OP_PIP_INCB;
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-
-        return hTarget.getTemplate().invokePreInc(
-                frame, hTarget, constProperty.getName(), m_nRetValue);
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, m_nRetValue);
         }
     }

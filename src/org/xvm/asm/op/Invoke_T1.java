@@ -163,7 +163,7 @@ public class Invoke_T1
         return chain.isNative()
             ? hTarget.getTemplate().invokeNativeN(frame, method, hTarget, ahArg, m_nRetValue)
             : hTarget.getTemplate().invoke1(frame, chain, hTarget,
-            Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
+                Utils.ensureSize(ahArg, method.getMaxVars()), m_nRetValue);
         }
 
     @Override

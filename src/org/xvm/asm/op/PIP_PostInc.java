@@ -41,8 +41,8 @@ public class PIP_PostInc
      * Construct a PIP_INCA op based on the passed arguments.
      *
      * @param constProperty  the property constant
-     * @param argTarget    the target Argument
-     * @param argReturn    the Argument to move the result into (Register or local property)
+     * @param argTarget      the target Argument
+     * @param argReturn      the Argument to move the result into (Register or local property)
      */
     public PIP_PostInc(PropertyConstant constProperty, Argument argTarget, Argument argReturn)
         {
@@ -68,11 +68,8 @@ public class PIP_PostInc
         }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget)
+    protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
-
-        return hTarget.getTemplate().invokePostInc(
-                frame, hTarget, constProperty.getName(), m_nRetValue);
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, sPropName, m_nRetValue);
         }
     }

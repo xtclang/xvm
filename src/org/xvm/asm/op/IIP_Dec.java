@@ -15,34 +15,18 @@ import org.xvm.runtime.template.IndexSupport;
 
 
 /**
- * IIP_INC rvalue-target, rvalue-ix ; ++T[ix] (no result)
+ * IIP_DEC rvalue-target, rvalue-ix ; --T[ix] (no result)
  */
-public class IIP_Inc
+public class IIP_Dec
         extends OpIndex
     {
-    /**
-     * Construct an IIP_INC op.
-     *
-     * @param nTarget  the target array
-     * @param nIndex   the index of the value to increment
-     *
-     * @deprecated
-     */
-    public IIP_Inc(int nTarget, int nIndex)
-        {
-        super((Argument) null, null);
-
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
-        }
-
     /**
      * Construct an IIP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      */
-    public IIP_Inc(Argument argTarget, Argument argIndex)
+    public IIP_Dec(Argument argTarget, Argument argIndex)
         {
         super(argTarget, argIndex);
         }
@@ -53,7 +37,7 @@ public class IIP_Inc
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public IIP_Inc(DataInput in, Constant[] aconst)
+    public IIP_Dec(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -62,7 +46,7 @@ public class IIP_Inc
     @Override
     public int getOpCode()
         {
-        return OP_IIP_INC;
+        return OP_IIP_DEC;
         }
 
     @Override
@@ -76,6 +60,6 @@ public class IIP_Inc
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        return template.invokePreInc(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
+        return template.invokePreDec(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
         }
     }

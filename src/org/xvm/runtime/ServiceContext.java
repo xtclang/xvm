@@ -388,14 +388,8 @@ public class ServiceContext
                                 // this fiber is done
                                 break;
 
-                            case Op.R_CALL:
-                                assert frame.m_frameNext != null;
-
-                                iPC = Op.R_CALL;
-                                continue nextOp;
-
                             default:
-                                // the proto-frame never throws
+                                // the proto-frame never calls anything naturally nor throws
                                 throw new IllegalStateException();
                             }
 
@@ -524,7 +518,7 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
-    public int callUnhandledExceptionHandler(Frame frame)
+    protected int callUnhandledExceptionHandler(Frame frame)
         {
         // TODO: call the handler (via invokeLater)
         // TODO: for the "main" context this should terminate the container

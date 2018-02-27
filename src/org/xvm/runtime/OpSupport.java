@@ -15,7 +15,7 @@ public interface OpSupport
     ClassTemplate getTemplate();
 
 
-    // ----- various built-in operations -----------------------------------------------------------
+    // ----- built-in binary operations ------------------------------------------------------------
 
     /**
      * Perform an "add" operation.
@@ -23,7 +23,7 @@ public interface OpSupport
      * @param frame    the current frame
      * @param hTarget  the target handle
      * @param hArg     the argument handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -36,7 +36,7 @@ public interface OpSupport
      * @param frame    the current frame
      * @param hTarget  the target handle
      * @param hArg     the argument handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -49,7 +49,7 @@ public interface OpSupport
      * @param frame    the current frame
      * @param hTarget  the target handle
      * @param hArg     the argument handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -62,7 +62,7 @@ public interface OpSupport
      * @param frame    the current frame
      * @param hTarget  the target handle
      * @param hArg     the argument handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -75,19 +75,22 @@ public interface OpSupport
      * @param frame    the current frame
      * @param hTarget  the target handle
      * @param hArg     the argument handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
+
+    // ----- built-in unary operations -------------------------------------------------------------
+
     /**
      * Perform a "negate" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -99,28 +102,22 @@ public interface OpSupport
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn);
 
     /**
      * Perform a "sequential previous" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
-     * @param iReturn  the register id to place the results of operation into
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    default int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
+    int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn);
     }

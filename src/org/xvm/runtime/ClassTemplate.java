@@ -21,10 +21,15 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.Utils.BinaryAction;
+import org.xvm.runtime.Utils.InPlacePropertyBinary;
+import org.xvm.runtime.Utils.InPlacePropertyUnary;
+import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
@@ -725,7 +730,7 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param sPropName  the property name
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -760,7 +765,7 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param property   the PropertyStructure representing the property
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -807,7 +812,8 @@ public abstract class ClassTemplate
             return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
             }
 
-        return isRef(property)
+        PropertyInfo info = property.getInfo();
+        return info != null && info.isRef()
             ? ((RefHandle) hValue).get(frame, iReturn)
             : frame.assignValue(iReturn, hValue);
         }
@@ -886,7 +892,8 @@ public abstract class ClassTemplate
 
         assert hThis.containsField(property.getName());
 
-        if (isRef(property))
+        PropertyInfo info = property.getInfo();
+        if (info != null && info.isRef())
             {
             return ((RefHandle) hThis.getField(property.getName())).set(frame, hValue);
             }
@@ -906,7 +913,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    protected int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
         throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
         }
@@ -922,7 +929,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
+    protected int invokeNativeSet(Frame frame, ObjectHandle hTarget, PropertyStructure property, ObjectHandle hValue)
         {
         throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
         }
@@ -933,16 +940,22 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param sPropName  the property name
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return iReturn == Frame.RET_UNUSED
-            ? new Utils.IncDec(Utils.IncDec.INC, this, hTarget, sPropName, iReturn).doNext(frame)
-            : new Utils.IncDec(Utils.IncDec.PRE_INC, this, hTarget, sPropName, iReturn).doNext(frame);
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarPreInc(frame, hRef, iReturn);
+            }
+        return new InPlacePropertyUnary(
+            UnaryAction.INC, this, hTarget, sPropName, false, iReturn).doNext(frame);
         }
 
     /**
@@ -951,14 +964,22 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param sPropName  the property name
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return new Utils.IncDec(Utils.IncDec.POST_INC, this, hTarget, sPropName, iReturn).doNext(frame);
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarPostInc(frame, hRef, iReturn);
+            }
+        return new InPlacePropertyUnary(
+            UnaryAction.INC, this, hTarget, sPropName, true, iReturn).doNext(frame);
         }
 
     /**
@@ -967,16 +988,22 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param sPropName  the property name
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return iReturn == Frame.RET_UNUSED
-            ? new Utils.IncDec(Utils.IncDec.DEC, this, hTarget, sPropName, iReturn).doNext(frame)
-            : new Utils.IncDec(Utils.IncDec.PRE_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarPreDec(frame, hRef, iReturn);
+            }
+        return new InPlacePropertyUnary(
+            UnaryAction.DEC, this, hTarget, sPropName, false, iReturn).doNext(frame);
         }
 
     /**
@@ -985,14 +1012,72 @@ public abstract class ClassTemplate
      * @param frame      the current frame
      * @param hTarget    the target handle
      * @param sPropName  the property name
-     * @param iReturn    the register id to place the results of operation into
+     * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        return new Utils.IncDec(Utils.IncDec.POST_DEC, this, hTarget, sPropName, iReturn).doNext(frame);
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarPostDec(frame, hRef, iReturn);
+            }
+        return new InPlacePropertyUnary(
+            UnaryAction.DEC, this, hTarget, sPropName, true, iReturn).doNext(frame);
+        }
+
+    /**
+     * Add the specified argument to the property value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokeAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarAdd(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.ADD, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Subtract the specified argument from the property value.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokeSub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarSub(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.SUB, this, hTarget, sPropName, hArg).doNext(frame);
         }
 
 
@@ -1018,30 +1103,28 @@ public abstract class ClassTemplate
      * Create a property Ref or Var for the specified target and property.
      *
      * @param hTarget    the target handle
-     * @param sPropName  the property name
+     * @param constProp  the property constant
      * @param fRO        true if the
      *
      * @return the corresponding {@link RefHandle}
      */
-    public RefHandle createPropertyRef(ObjectHandle hTarget, String sPropName, boolean fRO)
+    public RefHandle createPropertyRef(ObjectHandle hTarget, PropertyConstant constProp, boolean fRO)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
+        String sPropName = constProp.getName();
         if (!hThis.containsField(sPropName))
             {
-            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + sPropName);
+            throw new IllegalStateException("Unknown property: (" + f_sName + ")." + constProp);
             }
 
-        // TODO: this is an overkill; we should get the property in an easier way
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
-        PropertyStructure property = chain.getProperty();
-
-        if (isRef(property))
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
             {
             return ((RefHandle) hThis.getField(sPropName));
             }
 
-        TypeConstant typeReferent = property.getType().resolveGenerics(hTarget.getType());
+        TypeConstant typeReferent = constProp.getRefType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
@@ -1194,6 +1277,18 @@ public abstract class ClassTemplate
         return getOpChain("neg").invoke(frame, hTarget, iReturn);
         }
 
+    @Override
+    public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return getOpChain("next").invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return getOpChain("prev").invoke(frame, hTarget, iReturn);
+        }
+
     /**
      * @return a call chain for the specified op or null if non exists
      */
@@ -1237,14 +1332,9 @@ public abstract class ClassTemplate
         return info != null && info.m_fInjectable;
         }
 
-    protected boolean isAtomic(CallChain.PropertyCallChain chain)
+    protected boolean isAtomicProperty(ObjectHandle hTarget, String sPropName)
         {
-        return isAtomic(chain.getProperty());
-        }
-
-    protected boolean isAtomic(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
         return info != null && info.m_fAtomic;
         }
 
@@ -1254,31 +1344,10 @@ public abstract class ClassTemplate
         return info != null && info.m_fCalculated;
         }
 
-    protected boolean isNativeGetter(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_fNativeGetter;
-        }
-
     protected boolean isNativeSetter(PropertyStructure property)
         {
         PropertyInfo info = property.getInfo();
         return info != null && info.m_fNativeSetter;
-        }
-
-    // if true, indicates that the property value is held by a Ref object
-    protected boolean isRef(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_typeRef != null;
-        }
-
-    // if not null, specifies a class of the Ref that holds the property
-    protected TypeComposition getRefClass(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        TypeConstant type = info == null ? null : info.m_typeRef;
-        return type == null ? null : f_templates.resolveClass(type);
         }
 
     // is the specified generic property declared at this level
@@ -1414,11 +1483,26 @@ public abstract class ClassTemplate
                 ? f_pool.ensureEcstasyClassConstant("annotations.AtomicIntNumber").asTypeConstant()
                 : f_pool.ensureEcstasyClassConstant("annotations.AtomicVar").asTypeConstant();
 
-            setRef(f_pool.ensureParameterizedTypeConstant(typeRef, typeProp));
+            setRefType(f_pool.ensureParameterizedTypeConstant(typeRef, typeProp));
+            }
+
+        public boolean isAtomic()
+            {
+            return m_fAtomic;
+            }
+
+        public boolean isRef()
+            {
+            return m_typeRef != null;
+            }
+
+        public TypeConstant getRefType()
+            {
+            return m_typeRef;
             }
 
         // specifies that the property value is held by the ref
-        public void setRef(TypeConstant typeRef)
+        protected void setRefType(TypeConstant typeRef)
             {
             m_typeRef = typeRef;
             }
