@@ -32,15 +32,15 @@ public class MethodInfo
      * Internal: Construct a MethodInfo.
      *
      * @param constSig  the method signature
-     * @param abody     the array of method bodies that make up the method chain
+     * @param aBody     the array of method bodies that make up the method chain
      */
-    protected MethodInfo(SignatureConstant constSig, MethodBody[] abody)
+    protected MethodInfo(SignatureConstant constSig, MethodBody[] aBody)
         {
         assert constSig != null;
-        assert abody != null && abody.length >= 1;
+        assert aBody != null && aBody.length >= 1;
 
         m_constSig = constSig;
-        m_abody    = abody;
+        m_aBody    = aBody;
         }
 
     /**
@@ -67,7 +67,7 @@ public class MethodInfo
             case Delegates:
                 // we'll have to create a method body that represents the delegation
                 return append(new MethodBody(that.getMethodConstant(), Implementation.Delegating,
-                        contrib.getDelegatePropertyConstant(), false));
+                        contrib.getDelegatePropertyConstant()));
 
             case Into:
                 // this MethodInfo already exists, so an "implicit" adds nothing to this
@@ -86,7 +86,7 @@ public class MethodInfo
      */
     public MethodInfo append(MethodInfo that)
         {
-        MethodBody[] aAdd = that.m_abody;
+        MethodBody[] aAdd = that.m_aBody;
         if (aAdd.length == 1)
             {
             return append(aAdd[0]);
@@ -98,37 +98,37 @@ public class MethodInfo
         if (that.isAbstract())
             {
             return this.isAbstract()
-                    && this.m_abody[0].getImplementation() == Implementation.Implicit
-                    && that.m_abody[0].getImplementation() == Implementation.Declared
-                    ? new MethodInfo(m_constSig, that.m_abody)
+                    && this.m_aBody[0].getImplementation() == Implementation.Implicit
+                    && that.m_aBody[0].getImplementation() == Implementation.Declared
+                    ? new MethodInfo(this.m_constSig, that.m_aBody)
                     : this;
             }
 
         // if this is abstract and that isn't, then just use the information from that method info
         if (this.isAbstract())
             {
-            return new MethodInfo(m_constSig, that.m_abody);
+            return new MethodInfo(this.m_constSig, that.m_aBody);
             }
 
         // neither this nor that are abstract; combine the two
-        MethodBody[] abodyThis    = this.m_abody;
-        MethodBody[] abodyThat    = that.m_abody;
+        MethodBody[] aBodyThis    = this.m_aBody;
+        MethodBody[] aBodyThat    = that.m_aBody;
         boolean      fThisDefault = this.hasDefault();
         boolean      fThatDefault = that.hasDefault();
         boolean      fHasDefault  = fThisDefault | fThatDefault;
-        int          cThis        = this.m_abody.length - (fThisDefault ? 1 : 0);
-        int          cThat        = that.m_abody.length - (fThatDefault ? 1 : 0);
+        int          cThis        = this.m_aBody.length - (fThisDefault ? 1 : 0);
+        int          cThat        = that.m_aBody.length - (fThatDefault ? 1 : 0);
         int          cTotal       = cThis + cThat + (fHasDefault ? 1 : 0);
-        MethodBody[] abody        = new MethodBody[cTotal];
+        MethodBody[] aBody        = new MethodBody[cTotal];
 
-        System.arraycopy(abodyThis, 0, abody, 0, cThis);
-        System.arraycopy(abodyThat, 0, abody, cThis, cThat);
+        System.arraycopy(aBodyThis, 0, aBody, 0, cThis);
+        System.arraycopy(aBodyThat, 0, aBody, cThis, cThat);
         if (fHasDefault)
             {
-            abody[cTotal-1] = fThisDefault ? this.getDefault() : that.getDefault();
+            aBody[cTotal-1] = fThisDefault ? this.getDefault() : that.getDefault();
             }
 
-        return new MethodInfo(m_constSig, abody);
+        return new MethodInfo(m_constSig, aBody);
         }
 
     /**
@@ -151,7 +151,7 @@ public class MethodInfo
             case Declared:
                 // declared can only add something if this MethodInfo is implicit, in which case
                 // this MethodInfo becomes declared
-                return m_abody[0].getImplementation() == Implementation.Implicit
+                return m_aBody[0].getImplementation() == Implementation.Implicit
                         ? new MethodInfo(m_constSig, body)
                         : this;
 
@@ -164,7 +164,7 @@ public class MethodInfo
                     return new MethodInfo(m_constSig, body);
                     }
 
-                MethodBody[] aOld = m_abody;
+                MethodBody[] aOld = m_aBody;
                 int          cOld = aOld.length;
                 int          cNew = cOld + 1;
                 MethodBody[] aNew = new MethodBody[cNew];
@@ -193,13 +193,13 @@ public class MethodInfo
                     }
 
                 // add the default to the end of the chain
-                MethodBody[] abodyOld = m_abody;
-                int          cbodyOld = abodyOld.length;
-                int          cbodyNew = cbodyOld + 1;
-                MethodBody[] abodyNew = new MethodBody[cbodyNew];
-                System.arraycopy(abodyOld, 0, abodyNew, 0, cbodyOld);
-                abodyNew[cbodyOld] = body;
-                return new MethodInfo(m_constSig, abodyNew);
+                MethodBody[] aBodyOld = m_aBody;
+                int          cBodyOld = aBodyOld.length;
+                int          cBodyNew = cBodyOld + 1;
+                MethodBody[] aBodyNew = new MethodBody[cBodyNew];
+                System.arraycopy(aBodyOld, 0, aBodyNew, 0, cBodyOld);
+                aBodyNew[cBodyOld] = body;
+                return new MethodInfo(m_constSig, aBodyNew);
 
             default:
                 throw new IllegalStateException();
@@ -217,11 +217,11 @@ public class MethodInfo
     public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
         {
         ArrayList<MethodBody> list  = null;
-        MethodBody[]          aBody = m_abody;
+        MethodBody[]          aBody = m_aBody;
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             MethodBody       body     = aBody[i];
-            IdentityConstant constClz = body.getMethodConstant().getGrandParent();
+            IdentityConstant constClz = body.getMethodConstant().getClassIdentity();
             boolean fRetain;
             switch (body.getImplementation())
                 {
@@ -280,7 +280,7 @@ public class MethodInfo
         {
         // the only way to be abstract is to have a chain that contains only a declared or implicit
         // method body
-        return m_abody.length == 1 && m_abody[0].isAbstract();
+        return m_aBody.length == 1 && m_aBody[0].isAbstract();
         }
 
     /**
@@ -288,7 +288,7 @@ public class MethodInfo
      */
     public boolean isFunction()
         {
-        return m_abody.length == 1 && m_abody[0].isFunction();
+        return m_aBody.length == 1 && m_aBody[0].isFunction();
         }
 
     /**
@@ -296,7 +296,7 @@ public class MethodInfo
      */
     public MethodBody[] getChain()
         {
-        return m_abody;
+        return m_aBody;
         }
 
     /**
@@ -304,7 +304,7 @@ public class MethodInfo
      */
     public MethodBody getTail()
         {
-        MethodBody[] aBody    = m_abody;
+        MethodBody[] aBody    = m_aBody;
         int          cBody    = aBody.length;
         MethodBody   bodyLast = aBody[cBody-1];
         if (bodyLast.isConcrete())
@@ -334,7 +334,7 @@ public class MethodInfo
     public boolean hasDefault()
         {
         // the only way to have a default method body is to have it at the very end of the chain
-        return m_abody[m_abody.length-1].getImplementation() == Implementation.Default;
+        return m_aBody[m_aBody.length-1].getImplementation() == Implementation.Default;
         }
 
     /**
@@ -342,7 +342,7 @@ public class MethodInfo
      */
     public MethodBody getDefault()
         {
-        MethodBody body = m_abody[m_abody.length-1];
+        MethodBody body = m_aBody[m_aBody.length-1];
         return body.getImplementation() == Implementation.Default
                 ? body
                 : null;
@@ -353,7 +353,7 @@ public class MethodInfo
      */
     public MethodConstant getMethodConstant()
         {
-        return m_abody[0].getMethodConstant();
+        return m_aBody[0].getMethodConstant();
         }
 
     /**
@@ -361,7 +361,7 @@ public class MethodInfo
      */
     public Access getAccess()
         {
-        return m_abody[0].getMethodStructure().getAccess();
+        return m_aBody[0].getMethodStructure().getAccess();
         }
 
     /**
@@ -369,7 +369,7 @@ public class MethodInfo
      */
     public boolean isAuto()
         {
-        return m_abody[0].isAuto();
+        return m_aBody[0].isAuto();
         }
 
     /**
@@ -377,7 +377,7 @@ public class MethodInfo
      */
     public boolean isOp()
         {
-        return m_abody[0].findAnnotation(m_constSig.getConstantPool().clzOp()) != null;
+        return m_aBody[0].findAnnotation(m_constSig.getConstantPool().clzOp()) != null;
         }
 
     /**
@@ -385,7 +385,7 @@ public class MethodInfo
      */
     public boolean isOp(String sName, String sOp, int cParams)
         {
-        return m_abody[0].isOp(sName, sOp, cParams);
+        return m_aBody[0].isOp(sName, sOp, cParams);
         }
 
 
@@ -412,7 +412,7 @@ public class MethodInfo
 
         MethodInfo that = (MethodInfo) obj;
         return this.m_constSig.equals(that.m_constSig)
-                && Arrays.equals(this.m_abody, that.m_abody);
+                && Arrays.equals(this.m_aBody, that.m_aBody);
         }
 
     @Override
@@ -422,7 +422,7 @@ public class MethodInfo
         sb.append(m_constSig.getValueString());
 
         int i = 0;
-        for (MethodBody body : m_abody)
+        for (MethodBody body : m_aBody)
             {
             sb.append("\n    [")
               .append(body.isConcrete() ? String.valueOf(i++) : "*")
@@ -444,5 +444,5 @@ public class MethodInfo
     /**
      * The method chain.
      */
-    private MethodBody[] m_abody;
+    private MethodBody[] m_aBody;
     }

@@ -99,8 +99,8 @@ public abstract class IdentityConstant
         }
 
     /**
-     * @return the number of identity segments that need to be traversed to get up to the first
-     *         class specified in the IdentityConstant's path
+     * @return the number of identity segments that need to be traversed to find a class in the
+     *         IdentityConstant's path
      */
     public int depthFromClass()
         {
@@ -119,6 +119,36 @@ public abstract class IdentityConstant
 
                 default:
                     return cDepth;
+                }
+
+            constId = constId.getParentConstant();
+            }
+        }
+
+    /**
+     * @return the first class encountered when traversing the IdentityConstant's path (which could
+     *         be this IdentityConstant if this is the identity of class)
+     */
+    public IdentityConstant getClassIdentity()
+        {
+        IdentityConstant constId = this;
+        while (true)
+            {
+            switch (constId.getFormat())
+                {
+                case Typedef:
+                case Property:
+                case MultiMethod:
+                case Method:
+                    break;
+
+                case Module:
+                case Package:
+                case Class:
+                    return constId;
+
+                default:
+                    throw new IllegalStateException();
                 }
 
             constId = constId.getParentConstant();

@@ -23,6 +23,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -893,17 +894,14 @@ public abstract class TypeConstant
             }
 
         // make final determinations as to what fields are required, etc.
-        finalizeMemberInfo(constId, struct, fAbstract,
-                mapProps, mapMethods, errs);
+        finalizeMemberInfo(constId, struct, fAbstract, mapProps, mapMethods, errs);
 
         // validate the type parameters against the properties for the same
         checkTypeParameterProperties(mapTypeParams, mapProps, errs);
 
-        return new TypeInfo(this, struct, 0, fAbstract,
-                mapTypeParams, aannoClass,
+        return new TypeInfo(this, struct, 0, fAbstract, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
-                listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapMethods,
+                listProcess, listmapClassChain, listmapDefaultChain, mapProps, mapMethods,
                 fComplete ? Progress.Complete : Progress.Incomplete);
         }
 
@@ -1735,7 +1733,7 @@ public abstract class TypeConstant
     private boolean collectMemberInfo(
             IdentityConstant                    constId,
             ClassStructure                      struct,
-            ParamInfo.TypeResolver              resolver,
+            TypeResolver              resolver,
             List<Contribution>                  listProcess,
             ListMap<IdentityConstant, Origin>   listmapClassChain,
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
@@ -1795,6 +1793,17 @@ public abstract class TypeConstant
                 if (setClass.size() < infoContrib.getClassChain().size()
                         || setDefault.size() < infoContrib.getDefaultChain().size())
                     {
+                    Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
+                    for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+                        {
+                        PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                        if (infoReduced != null)
+                            {
+                            mapReducedProps.put(entry.getKey(), infoReduced);
+                            }
+                        }
+                    mapContribProps = mapReducedProps;
+
                     Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
                     for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                         {
@@ -1814,7 +1823,7 @@ public abstract class TypeConstant
                 PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
                 if (propinfo != null)
                     {
-                    mapProps.put(entry.getKey(), propinfo.combineWithSuper(entry.getValue(), errs));
+                    mapProps.put(entry.getKey(), propinfo.append(entry.getValue(), errs));
                     }
                 }
 
@@ -2332,6 +2341,14 @@ public abstract class TypeConstant
                         getValueString(), sName);
                 }
 
+            if (fHasAbstract && prop.getParent().getFormat() == Component.Format.INTERFACE)
+                {
+                // it is an error for a interface property to be annotated by "@Abstract"
+                todoLogError("@Abstract interface property illegal");
+                // log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
+                //         getValueString(), sName);
+                }
+
             fRO      |= fHasRO;
             fRW      |= accessVar != null;
             fField    = false;
@@ -2443,7 +2460,7 @@ public abstract class TypeConstant
                         getValueString(), propinfo.getName());
 
                 // erase the "override" flag, now that we've reported it
-                entry.setValue(propinfo = propinfo.specifyOverride(false));
+                entry.setValue(propinfo = propinfo.suppressOverride());
                 }
 
 // TODO review
@@ -2542,20 +2559,6 @@ public abstract class TypeConstant
                         this.getValueString(), sParam);
                 }
             }
-        }
-
-    /**
-     * Helper to turn a list into an array of annotations.
-     *
-     * @param list  the list of annotations; may be null or empty
-     *
-     * @return an array of annotations; never null
-     */
-    private Annotation[] toArray(List<Annotation> list)
-        {
-        return list == null || list.size() == 0
-                ? Annotation.NO_ANNOTATIONS
-                : list.toArray(new Annotation[list.size()]);
         }
 
 

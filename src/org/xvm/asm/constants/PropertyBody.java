@@ -6,6 +6,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.MethodBody.Implementation;
+
 import org.xvm.util.Handy;
 
 
@@ -19,50 +21,53 @@ public class PropertyBody
      * Construct a PropertyBody from the passed information.
      *
      * @param struct         the property structure that this body is derived from
+     * @param impl           one of Implicit, Declared, Delegating, or Explicit
+     * @param constProp      the property constant that provides the reference to delegate to
      * @param type           the type of the property, including any type annotations (required)
      * @param fRO            true iff the property has any of a number of indicators that would
      *                       indicate that the property is read-only
      * @param fRW            true iff the property has any of a number of indicators that would
      *                       indicate that the property is read-write
-     * @param accessRef      the access required to obtain the property's Ref
-     * @param accessVar      the access required to obtain the property's Var (or null)
      * @param fCustomCode    true to indicate that the property has custom code that overrides
      *                       the underlying Ref/Var implementation
      * @param fReqField      true iff the property requires the presence of a field
-     * @param fAbstract      true iff the property is from an interface declaration, or is
-     *                       declared explicitly as abstract
      * @param fConstant      true iff the property represents a named constant value
      * @param constInitVal   the initial value for the property
      * @param constInitFunc  the function that will provide an initial value for the property
      */
     public PropertyBody(
             PropertyStructure struct,
+            Implementation    impl,
+            PropertyConstant  constProp,
             TypeConstant      type,
             boolean           fRO,
             boolean           fRW,
-            Access            accessRef,
-            Access            accessVar,
             boolean           fCustomCode,
             boolean           fReqField,
-            boolean           fAbstract,
             boolean           fConstant,
             Constant          constInitVal,
             MethodConstant    constInitFunc)
         {
         assert struct    != null;
         assert type      != null;
-        assert accessRef != null;
+        assert     impl == Implementation.Implicit
+                || impl == Implementation.Declared
+                || impl == Implementation.Delegating
+                || impl == Implementation.Native
+                || impl == Implementation.Explicit;
+        assert (impl == Implementation.Delegating) ^ (constProp == null);
+        assert constInitVal == null || constInitFunc == null;
+        assert !fConstant || (constInitVal == null ^ constInitFunc == null);
 
         m_structProp    = struct;
+        m_impl          = impl;
+        m_constProp     = constProp;
         m_paraminfo     = null;
         m_type          = type;
         m_fRO           = fRO;
         m_fRW           = fRW;
-        m_accessRef     = accessRef;
-        m_accessVar     = accessVar;
         m_fCustom       = fCustomCode;
         m_fField        = fReqField;
-        m_fAbstract     = fAbstract;
         m_fConstant     = fConstant;
         m_constInitVal  = constInitVal;
         m_constInitFunc = constInitFunc;
@@ -78,19 +83,19 @@ public class PropertyBody
         {
         assert struct != null;
         assert param  != null;
+        assert struct.getName().equals(param.getName());
 
         ConstantPool pool = struct.getConstantPool();
 
         m_structProp    = struct;
+        m_impl          = Implementation.Native;
+        m_constProp     = null;
         m_paraminfo     = param;
         m_type          = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
         m_fRO           = true;
         m_fRW           = false;
-        m_accessRef     = Access.PUBLIC;
-        m_accessVar     = null;
         m_fCustom       = false;
         m_fField        = false;
-        m_fAbstract     = false;
         m_fConstant     = false;
         m_constInitVal  = null;
         m_constInitFunc = null;
@@ -129,6 +134,27 @@ public class PropertyBody
         }
 
     /**
+     * Property body implementations are one of the following:
+     * <p/>
+     * <ul>
+     * <li><b>Implicit</b> - the method body represents a property known to exist for compilation
+     * purposes, but is otherwise not present; this is the result of the {@code into} clause, or any
+     * properties of {@code Object} in the context of an interface, for example;</li>
+     * <li><b>Declared</b> - the property body represents a declared but non-concrete property, such
+     * as a property on an interface;</li>
+     * <li><b>Delegating</b> - the property body delegates the Ref/Var functionality;</li>
+     * <li><b>Native</b> - indicates a type param or a constant;</li>
+     * <li><b>Explicit</b> - a "normal" property body</li>
+     * </ul>
+     *
+     * @return the implementation type for the property
+     */
+    public Implementation getImplementation()
+        {
+        return m_impl;
+        }
+
+    /**
      * @return the property type
      */
     public TypeConstant getType()
@@ -157,7 +183,7 @@ public class PropertyBody
      */
     public Access getRefAccess()
         {
-        return m_accessRef;
+        return getStructure().getAccess();
         }
 
     /**
@@ -165,15 +191,23 @@ public class PropertyBody
      */
     public Access getVarAccess()
         {
-        return m_accessVar;
+        return getStructure().getVarAccess();
         }
 
     /**
-     * @return true iff this property is a Ref; false iff this property is a Var
+     * @return true iff this property body must be a Ref-not-Var
      */
     public boolean isRO()
         {
         return m_fRO;
+        }
+
+    /**
+     * @return true iff this property body must be a Var
+     */
+    public boolean isRW()
+        {
+        return m_fRW;
         }
 
     /**
@@ -188,9 +222,18 @@ public class PropertyBody
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
-    public boolean isCustomLogic()
+    public boolean hasCustomCode()
         {
         return m_fCustom;
+        }
+
+    /**
+     * @return true iff the property is annotated with one or more annotations that alter the Ref or
+     *         Var functionality
+     */
+    public boolean hasRefAnnotations()
+        {
+        return getStructure().getRefAnnotations().length > 0;
         }
 
     /**
@@ -215,14 +258,6 @@ public class PropertyBody
         PropertyConstant constId = getIdentity();
         ConstantPool     pool    = constId.getConstantPool();
         return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{m_type}, ConstantPool.NO_TYPES);
-        }
-
-    /**
-     * @return true iff the property is abstract, which means that it comes from an interface
-     */
-    public boolean isAbstract()
-        {
-        return m_fAbstract;
         }
 
     /**
@@ -284,11 +319,8 @@ public class PropertyBody
             && this.m_type      .equals(that.m_type)
             && this.m_fRO       == that.m_fRO
             && this.m_fRW       == that.m_fRW
-            && this.m_accessRef == that.m_accessRef
-            && this.m_accessVar == that.m_accessVar
             && this.m_fCustom   == that.m_fCustom
             && this.m_fField    == that.m_fField
-            && this.m_fAbstract == that.m_fAbstract
             && this.m_fConstant == that.m_fConstant
             && Handy.equals(this.m_paraminfo    , that.m_paraminfo    )
             && Handy.equals(this.m_constInitVal , that.m_constInitVal )
@@ -299,17 +331,6 @@ public class PropertyBody
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-
-        if (m_accessRef != Access.STRUCT)
-            {
-            sb.append(m_accessRef);
-            if (m_accessVar != null)
-                {
-                sb.append('/')
-                  .append(m_accessVar);
-                }
-            sb.append(' ');
-            }
 
         sb.append(m_type.getValueString())
           .append(' ')
@@ -328,10 +349,6 @@ public class PropertyBody
         if (m_fRW)
             {
             sb.append(", RW");
-            }
-        if (m_fAbstract)
-            {
-            sb.append(", abstract");
             }
         if (m_fConstant)
             {
@@ -366,6 +383,17 @@ public class PropertyBody
     private final PropertyStructure m_structProp;
 
     /**
+     * The implementation type for the property body.
+     */
+    private final Implementation m_impl;
+
+    /**
+     * For Implementation Delegating, this specifies the property which contains the reference
+     * to delegate to.
+     */
+    private final PropertyConstant m_constProp;
+
+    /**
      * Type parameter information.
      */
     private final ParamInfo m_paraminfo;
@@ -386,16 +414,6 @@ public class PropertyBody
     private final boolean m_fRW;
 
     /**
-     * Access for the property.
-     */
-    private final Access m_accessRef;
-
-    /**
-     * A second access specifically for the Var (write access), or null.
-     */
-    private final Access m_accessVar;
-
-    /**
      * True to indicate that the property has custom code that overrides the underlying Ref/Var
      * implementation.
      */
@@ -403,16 +421,11 @@ public class PropertyBody
 
     /**
      * True iff the property requires a field. A field is assumed to exist iff the property is a
-     * non-constant, non-interface property, @Abstract is not specified, @Inject is not specified,
-     * @RO is not specified, @Override is not specified, and the Ref.get() doesn't block its super.
+     * non-constant, non-type-parameter, non-interface property, @Abstract is not specified, @Inject
+     * is not specified, @RO is not specified, @Override is not specified, and the Ref.get() does
+     * not block its super.
      */
     private final boolean m_fField;
-
-    /**
-     * True iff the property is abstract, such as when it is on an interface, or when it is
-     * explicitly declared as abstract.
-     */
-    private final boolean m_fAbstract;
 
     /**
      * True iff the property is a constant value.

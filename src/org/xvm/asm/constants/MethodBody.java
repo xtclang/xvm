@@ -35,7 +35,7 @@ public class MethodBody
      * @param impl         one of Delegating or Property
      * @param constProp    the property constant that provides the reference to delegate to
      */
-    public MethodBody(MethodConstant constMethod, Implementation impl, PropertyConstant constProp, boolean fAnchor)
+    public MethodBody(MethodConstant constMethod, Implementation impl, PropertyConstant constProp)
         {
         assert constMethod != null;
         assert impl == Implementation.Delegating || impl == Implementation.Property;

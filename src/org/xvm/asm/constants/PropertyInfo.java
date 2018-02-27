@@ -1,13 +1,15 @@
 package org.xvm.asm.constants;
 
 
+import java.util.ArrayList;
+import java.util.Set;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Handy;
-import org.xvm.util.Severity;
 
 
 /**
@@ -30,11 +32,11 @@ public class PropertyInfo
         this(new PropertyBody[] {body}, body.hasField(), body.isExplicitOverride());
         }
 
-    protected PropertyInfo(PropertyBody[] aBody, boolean fField, boolean fOverride)
+    protected PropertyInfo(PropertyBody[] aBody, boolean fRequireField, boolean fSuppressOverride)
         {
-        m_aBody     = aBody;
-        m_fField    = fField;
-        m_fOverride = fOverride;
+        m_aBody             = aBody;
+        m_fRequireField     = fRequireField;
+        m_fSuppressOverride = fSuppressOverride;
         }
 
     /**
@@ -46,7 +48,7 @@ public class PropertyInfo
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo combineWithSuper(PropertyInfo that, ErrorListener errs)
+    public PropertyInfo append(PropertyInfo that, ErrorListener errs)
         {
         assert that != null;
         assert errs != null;
@@ -141,6 +143,66 @@ public class PropertyInfo
         }
 
     /**
+     * Retain only property bodies that originate from the identities specified in the passed sets.
+     *
+     * @param setClass    the set of identities that call chain bodies can come from
+     * @param setDefault  the set of identities that default bodies can come from
+     *
+     * @return the resulting PropertyInfo, or null if nothing has been retained
+     */
+    public PropertyInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
+        {
+        ArrayList<PropertyBody> list  = null;
+        PropertyBody[]          aBody = m_aBody;
+        for (int i = 0, c = aBody.length; i < c; ++i)
+            {
+            PropertyBody     body     = aBody[i];
+            IdentityConstant constClz = body.getIdentity().getClassIdentity();
+            boolean fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                case Declared:
+                    fRetain
+                    break;
+
+                case Default:
+                    fRetain = setDefault.contains(constClz);
+                    break;
+
+                default:
+                    fRetain = setClass.contains(constClz);
+                    break;
+                }
+            if (fRetain)
+                {
+                if (list != null)
+                    {
+                    list.add(body);
+                    }
+                }
+            else if (list == null)
+                {
+                list = new ArrayList<>();
+                for (int iCopy = 0; iCopy < i; ++iCopy)
+                    {
+                    list.add(aBody[iCopy]);
+                    }
+                }
+            }
+
+        if (list == null)
+            {
+            return this;
+            }
+
+        return list.isEmpty()
+                ? null
+                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]));
+        }
+
+
+    /**
      * Create a new PropertyInfo that represents a more limited (public or protected) access to the
      * members of this property that is on the private type.
      *
@@ -160,27 +222,11 @@ public class PropertyInfo
         }
 
     /**
-     * Specifies a value for whether or not the property has a field, and unsets the abstract flag.
-     *
-     * @param fField  true to indicate the presence of a field
-     *
-     * @return the PropertyInfo reflecting the changes
+     * @return this PropertyInfo, but with the trailing "@Override" suppressed
      */
-    public PropertyInfo specifyField(boolean fField)
+    public PropertyInfo suppressOverride()
         {
-        return new PropertyInfo(m_aBody, fField, m_fOverride);
-        }
-
-    /**
-     * Specifies a value for whether or not the property overrides some unknown super property.
-     *
-     * @param fOverride  specifies whether the resulting PropertyInfo is overriding
-     *
-     * @return the PropertyInfo reflecting the changes
-     */
-    public PropertyInfo specifyOverride(boolean fOverride)
-        {
-        return new PropertyInfo(m_aBody, m_fField, fOverride);
+        return new PropertyInfo(m_aBody, m_fRequireField, false);
         }
 
     /**
@@ -300,7 +346,7 @@ public class PropertyInfo
      */
     public boolean hasField()
         {
-        return m_fField;
+        return m_fRequireField;
         }
 
     /**
@@ -328,7 +374,7 @@ public class PropertyInfo
         {
         for (PropertyBody body : m_aBody)
             {
-            if (body.isCustomLogic())
+            if (body.hasCustomCode())
                 {
                 return true;
                 }
@@ -361,7 +407,8 @@ public class PropertyInfo
         }
 
     /**
-     * @return true iff the property is abstract, which means that it comes from an interface
+     * @return true iff the property is abstract, which means that it comes from an interface or is
+     *         annotated with "@Abstract"
      */
     public boolean isAbstract()
         {
@@ -381,7 +428,7 @@ public class PropertyInfo
      */
     public boolean isOverride()
         {
-        return m_fOverride;
+        return !m_fSuppressOverride && getLastBody().isExplicitOverride();
         }
 
     /**
@@ -415,7 +462,9 @@ public class PropertyInfo
             }
 
         PropertyInfo that = (PropertyInfo) obj;
-        return Handy.equals(this.m_aBody, that.m_aBody);
+        return this.m_fRequireField     == that.m_fRequireField
+            && this.m_fSuppressOverride == that.m_fSuppressOverride
+            && Handy.equals(this.m_aBody, that.m_aBody);
         }
 
     @Override
@@ -444,13 +493,15 @@ public class PropertyInfo
      */
     private final PropertyBody[] m_aBody;
 
-    /**
-     * True iff this Property has a field.
-     */
-    private final boolean m_fField;     // TODO require-field
+    private final int m_c
 
     /**
-     * True iff this Property has an override.
+     * True iff this Property has been marked as requiring a field.
      */
-    private final boolean m_fOverride;   // TODO suppress-override
+    private final boolean m_fRequireField;
+
+    /**
+     * True iff this Property has been marked as not having an override.
+     */
+    private final boolean m_fSuppressOverride;
     }
