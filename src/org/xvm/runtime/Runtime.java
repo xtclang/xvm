@@ -37,14 +37,16 @@ public class Runtime
     public boolean isIdle()
         {
         // TODO: very naive; replace
-        if (f_daemons.m_fWaiting)
+        if (!f_daemons.m_fWaiting)
             {
-            for (Container container : f_mapContainers.values())
+            return false;
+            }
+
+        for (Container container : f_mapContainers.values())
+            {
+            if (!container.isIdle())
                 {
-                if (!container.isIdle())
-                    {
-                    return false;
-                    }
+                return false;
                 }
             }
 
