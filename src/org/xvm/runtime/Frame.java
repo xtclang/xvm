@@ -481,6 +481,8 @@ public class Frame
     // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK (only if hValue is a FutureVar)
     public int assignValue(int nVar, ObjectHandle hValue)
         {
+        assert hValue != null;
+
         if (nVar >= 0)
             {
             VarInfo info = f_aInfo[nVar];

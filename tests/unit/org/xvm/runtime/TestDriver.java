@@ -27,7 +27,7 @@ public class TestDriver
 
         runtime.createContainer(sApp, repository);
 
-        while (runtime.isIdle())
+        while (!runtime.isIdle())
             {
             Thread.sleep(500);
             }

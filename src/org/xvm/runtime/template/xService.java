@@ -51,6 +51,7 @@ public class xService
         markNativeMethod("yield", VOID);
         markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
+        markNativeMethod("registerUnhandledExceptionNotification", new String[]{"Function"}, VOID);
         }
 
     @Override
@@ -108,13 +109,15 @@ public class xService
 
             case "registerTimeout":
                 {
-                JavaLong hDelay = (JavaLong) hArg;
-                long lDelay = hDelay.getValue();
+                long lDelay = ((JavaLong) hArg).getValue();
 
                 frame.f_fiber.m_ldtTimeout = lDelay <= 0 ? 0 : System.currentTimeMillis() + lDelay;
-
                 return Op.R_NEXT;
                 }
+
+            case "registerUnhandledExceptionNotification":
+                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
+                return Op.R_NEXT;
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);

@@ -1,9 +1,11 @@
 package org.xvm.runtime;
 
 
+import java.util.Map;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.xvm.asm.ConstantPool;
@@ -15,10 +17,11 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Fiber.FiberStatus;
-
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
+import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
@@ -26,6 +29,7 @@ import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
+import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -33,46 +37,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
  */
 public class ServiceContext
     {
-    public final Container f_container;
-    public final TemplateRegistry f_templates;
-    public final ObjectHeap f_heapGlobal;
-    public final ConstantPool f_pool;
-
-    private final Queue<Message> f_queueMsg;
-    private final Queue<Response> f_queueResponse;
-
-    private final int f_nId; // the service id
-    public final String f_sName; // the service name
-
-    protected ServiceHandle m_hService;
-
-    public int m_iFrameCounter; // used to create the Frame id
-
-    /**
-     * The current Timeout that will be used by the service when it invokes other services.
-     */
-    public long m_cTimeoutMillis;
-
-    // Metrics: the total time (in nanos) this service has been running
-    protected long m_cRuntimeNanos;
-
-    private Frame m_frameCurrent;
-    private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
-
-    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
-    volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
-
-    enum ServiceStatus
-        {
-        Idle,
-        Busy,
-        ShuttingDown,
-        Terminated,
-        }
-    volatile ServiceStatus m_status = ServiceStatus.Idle;
-
-    final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
-
     ServiceContext(Container container, String sName, int nId)
         {
         f_container = container;
@@ -110,6 +74,11 @@ public class ServiceContext
         {
         assert m_hService == null;
         m_hService = hService;
+        }
+
+    public ServiceStatus getStatus()
+        {
+        return m_status;
         }
 
     public void addRequest(Message msg)
@@ -465,10 +434,18 @@ public class ServiceContext
     public CompletableFuture<ObjectHandle> sendInvoke1Request(Frame frameCaller,
                 FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
-        CompletableFuture<ObjectHandle> future = cReturns == 0 ? null : new CompletableFuture<>();
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         addRequest(new Invoke1Request(frameCaller, hFunction, ahArg, cReturns, future));
 
+        if (cReturns == 0)
+            {
+            ServiceContext ctxCaller = frameCaller == null
+                ? this // primordial or "callLater" invocation
+                : frameCaller.f_context;
+            ctxCaller.registerUncapturedRequest(future, hFunction);
+            return null;
+            }
         return future;
         }
 
@@ -480,10 +457,15 @@ public class ServiceContext
 
         addRequest(new InvokeNRequest(frameCaller, hFunction, ahArg, cReturns, future));
 
+        if (cReturns == 0)
+            {
+            frameCaller.f_context.registerUncapturedRequest(future, hFunction);
+            return null;
+            }
         return future;
         }
 
-    // send and asynchronous property operation message
+    // send and asynchronous property "read" operation message
     public CompletableFuture<ObjectHandle> sendProperty01Request(Frame frameCaller,
                                             String sPropName, PropertyOperation01 op)
         {
@@ -494,11 +476,15 @@ public class ServiceContext
         return future;
         }
 
-    // send and asynchronous property operation message
+    // send and asynchronous property "update" operation message
     public void sendProperty10Request(Frame frameCaller,
                                       String sPropName, ObjectHandle hValue, PropertyOperation10 op)
         {
-        addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, null, op));
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+
+        addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, future, op));
+
+        frameCaller.f_context.registerUncapturedRequest(future, sPropName);
         }
 
     // send and asynchronous "constant initialization" message
@@ -518,15 +504,64 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
-    protected int callUnhandledExceptionHandler(Frame frame)
+    protected void registerUncapturedRequest(CompletableFuture<?> future, Object oInfo)
         {
-        // TODO: call the handler (via invokeLater)
-        // TODO: for the "main" context this should terminate the container
-        Utils.log(frame, "Unhandled exception: " + frame.m_hException);
-        return Op.R_NEXT;
+        m_mapPendingFutures.put(future, oInfo);
+
+        future.whenComplete((_void, ex) ->
+            {
+            if (ex != null)
+                {
+                callUnhandledExceptionHandler(
+                    ((ExceptionHandle.WrapperException) ex).getExceptionHandle());
+                }
+            m_mapPendingFutures.remove(future);
+            });
+        }
+
+    protected int callUnhandledExceptionHandler(ExceptionHandle hException)
+        {
+        FunctionHandle hFunction = m_hExceptionHandler;
+        if (hFunction == null)
+            {
+            // TODO: this should terminate the service, or if "main" - the container
+
+            hFunction = new xFunction.NativeMethodHandle((frame, ahArg, iReturn) ->
+                {
+                switch (Utils.callToString(frame, ahArg[0]))
+                    {
+                    case Op.R_NEXT:
+                        Utils.log(frame,
+                            "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
+                        return Op.R_NEXT;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.setContinuation(
+                            frameCaller ->
+                                {
+                                Utils.log(frameCaller,
+                                    "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
+                                return Op.R_NEXT;
+                                }
+                            );
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                });
+            }
+        return callLater(hFunction, new ObjectHandle[] {hException});
         }
 
     // ----- helpers ------
+
+    // send zero results back to the caller
+    protected static void sendResponse0(Fiber fiberCaller, Frame frame, CompletableFuture future)
+        {
+        fiberCaller.f_context.respond(
+                new Response(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+        }
 
     // send one results back to the caller
     protected static void sendResponse1(Fiber fiberCaller, Frame frame, CompletableFuture future)
@@ -542,6 +577,8 @@ public class ServiceContext
     // send all results back to the caller
     protected static void sendResponseN(Fiber fiberCaller, Frame frame, CompletableFuture future)
         {
+        // TODO: validate that all the arguments are immutable or ImmutableAble;
+        //       replace functions with proxies
         fiberCaller.f_context.respond(
                 new Response(fiberCaller, frame.f_ahVar, frame.m_hException, future));
         }
@@ -626,7 +663,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opConstruct, Return_0.INSTANCE});
 
-            frame0.setContinuation((_null) ->
+            frame0.setContinuation(_null ->
                 {
                 sendResponse1(f_fiberCaller, frame0, f_future);
                 return Op.R_NEXT;
@@ -679,13 +716,26 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation((_null) ->
+            frame0.setContinuation(_null ->
                 {
                 if (f_cReturns == 0)
                     {
-                    if (frame0.m_hException != null)
+                    if (f_fiberCaller == null)
                         {
-                        return context.callUnhandledExceptionHandler(frame0);
+                        // "callLater" has returned
+                        ExceptionHandle hException = frame0.m_hException;
+                        if (hException == null)
+                            {
+                            f_future.complete(xTuple.H_VOID);
+                            }
+                        else
+                            {
+                            f_future.completeExceptionally(hException.getException());
+                            }
+                        }
+                    else
+                        {
+                        sendResponse0(f_fiberCaller, frame0, f_future);
                         }
                     }
                 else
@@ -748,7 +798,7 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                 new Op[] {opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation((_null) ->
+            frame0.setContinuation(_null ->
                 {
                 sendResponseN(f_fiberCaller, frame0, f_future);
                 return Op.R_NEXT;
@@ -809,14 +859,11 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, cReturns,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation((_null) ->
+            frame0.setContinuation(_null ->
                 {
                 if (cReturns == 0)
                     {
-                    if (frame0.m_hException != null)
-                        {
-                        return context.callUnhandledExceptionHandler(frame0);
-                        }
+                    sendResponse0(f_fiberCaller, frame0, f_future);
                     }
                 else
                     {
@@ -866,15 +913,10 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, 1,
                     new Op[]{opCall, Return_0.INSTANCE});
 
-            frame0.setContinuation((_null) ->
+            frame0.setContinuation(_null ->
                 {
-                if (frame0.m_hException == null)
-                    {
-                    sendResponse1(f_fiberCaller, frame0, f_future);
-                    return Op.R_NEXT;
-                    }
-                // this should terminate the container
-                return context.callUnhandledExceptionHandler(frame0);
+                sendResponse0(f_fiberCaller, frame0, f_future);
+                return Op.R_NEXT;
                 });
 
             return frame0;
@@ -895,6 +937,8 @@ public class ServiceContext
         public Response(Fiber fiberCaller, T returnValue, ExceptionHandle hException,
                         CompletableFuture<T> future)
             {
+            assert returnValue != null || hException != null;
+
             f_fiberCaller = fiberCaller;
             f_hException = hException;
             f_return = returnValue;
@@ -916,4 +960,52 @@ public class ServiceContext
                 }
             }
         }
+
+    // ----- constants and fields ------------------------------------------------------------------
+
+    public final Container f_container;
+    public final TemplateRegistry f_templates;
+    public final ObjectHeap f_heapGlobal;
+    public final ConstantPool f_pool;
+
+    private final Queue<Message> f_queueMsg;
+    private final Queue<Response> f_queueResponse;
+
+    private final int f_nId; // the service id
+    public final String f_sName; // the service name
+
+    protected ServiceHandle m_hService;
+
+    public int m_iFrameCounter; // used to create the Frame id
+
+    /**
+     * The current Timeout that will be used by the service when it invokes other services.
+     */
+    public long m_cTimeoutMillis;
+
+    // Metrics: the total time (in nanos) this service has been running
+    protected long m_cRuntimeNanos;
+
+    private Frame m_frameCurrent;
+    private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
+
+    // pending uncaptured futures
+    private Map<CompletableFuture, Object> m_mapPendingFutures = new ConcurrentHashMap<>();
+
+    // the unhandled exception notification
+    public FunctionHandle m_hExceptionHandler;
+
+    enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
+    volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
+
+    enum ServiceStatus
+        {
+        Idle,
+        Busy,
+        ShuttingDown,
+        Terminated,
+        }
+    private volatile ServiceStatus m_status = ServiceStatus.Idle;
+
+    final static ThreadLocal<ServiceContext> s_tloContext = new ThreadLocal<>();
     }

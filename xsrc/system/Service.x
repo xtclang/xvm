@@ -275,9 +275,18 @@ interface Service()
     Void registerShuttingDownNotification(function Void notify());
 
     /**
-     * Register a function to invoke when an exception occurs that cannot be propagated to a caller,
-     * and thus the information in the exception would be lost. This notification is provided
-     * primarily for logging or debugging purposes.
+     * Register a function to invoke when an unhandled exception occurs. An unhandled exception can
+     * occur when an unguarded asynchronous call originates from within this service, and the result
+     * is not explicitly captured using a {@code @Future} reference. An exception resulting from
+     * such a call will trigger an invocation of the specified function, passing the exception as
+     * the argument.
+     *
+     * REVIEW semantics of "unguarded" / contract+mechanism for guarding async calls
+     * a) could it be explicit: catch (AsyncException e) {...}
+     * b) is "try { asyncCall(); } catch (...)" a similarly "blocking" construct as "Int i = asyncCall();"?
+     * c) similar to timeout: "using (new AsyncHandler(fn)) {...}" ?
+     *
+     * This notification is provided primarily for logging or debugging purposes.
      *
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */

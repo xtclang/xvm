@@ -192,7 +192,7 @@ public class xFunction
         @Override
         public String toString()
             {
-            return super.toString() +
+            return "Function: " +
                     (f_function == null ? f_chain.getMethod(f_nDepth) : f_function);
             }
         }
@@ -292,6 +292,12 @@ public class xFunction
         public int getVarCount()
             {
             return getParamCount();
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Native function: " + f_op;
             }
         }
 
