@@ -1041,7 +1041,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
         ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
         if (info != null && info.isRef())
@@ -1066,7 +1066,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int invokeSub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+    public int invokePropertySub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
         ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
         if (info != null && info.isRef())
@@ -1078,6 +1078,81 @@ public abstract class ClassTemplate
 
         return new InPlacePropertyBinary(
             BinaryAction.SUB, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Multiply the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyMul(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarMul(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.MUL, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Divide the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarDiv(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.DIV, this, hTarget, sPropName, hArg).doNext(frame);
+        }
+
+    /**
+     * Mod the property value by the specified argument.
+     *
+     * @param frame      the current frame
+     * @param hTarget    the target handle
+     * @param sPropName  the property name
+     * @param hArg       the argument handle
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    public int invokePropertyMod(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
+        {
+        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info != null && info.isRef())
+            {
+            GenericHandle hThis = (GenericHandle) hTarget;
+            RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
+            return hRef.getVarSupport().invokeVarMod(frame, hRef, hArg);
+            }
+
+        return new InPlacePropertyBinary(
+            BinaryAction.MOD, this, hTarget, sPropName, hArg).doNext(frame);
         }
 
 

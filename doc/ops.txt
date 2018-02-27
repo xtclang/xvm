@@ -142,11 +142,11 @@
 // ("IP"=) in-place ("___ and assign") ops:
 // - the lvalue can be a register or a local-property indicator (PROPERTY)
 // - the rvalue can be a register or a constant value or a local-property indicator (PROPERTY)
- IP_ADD      lvalue, rvalue2                         ; T += T
- IP_SUB      lvalue, rvalue2                         ; T -= T
- IP_MUL      lvalue, rvalue2                         ; T *= T
- IP_DIV      lvalue, rvalue2                         ; T /= T
- IP_MOD      lvalue, rvalue2                         ; T %= T
++IP_ADD      lvalue, rvalue2                         ; T += T
++IP_SUB      lvalue, rvalue2                         ; T -= T
++IP_MUL      lvalue, rvalue2                         ; T *= T
++IP_DIV      lvalue, rvalue2                         ; T /= T
++IP_MOD      lvalue, rvalue2                         ; T %= T
  IP_SHL      lvalue, rvalue2                         ; T <<= Int
  IP_SHR      lvalue, rvalue2                         ; T >>= Int
  IP_USHR     lvalue, rvalue2                         ; T >>>= Int

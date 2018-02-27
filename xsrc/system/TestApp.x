@@ -147,12 +147,15 @@ class TestApp
 
         svc.testConstant();
 
-        Int c = svc.increment();
-        print(c);
+        Int c = svc.increment(); // counter = 49
+
+        c += 47;
+        c /= 2;
+        assert(c == 48);
 
         svc.counter = 17;
         c = svc.counter;
-        print(c);
+        assert(c == 17);
 
         function Int() fnInc = svc.increment; // counter = 18
         c = fnInc();
@@ -196,7 +199,11 @@ class TestApp
         assert(++svc.counter2 == 6); // counter2 was initialized with 5
         assert(svc.counter++ == 20); // counter = 21
         assert(svc.increment() == 22);
+
         print(rfc.RefType);
+
+        svc.counter += 2;
+        assert(svc.counter == 23);
 
         this:service.yield();
 

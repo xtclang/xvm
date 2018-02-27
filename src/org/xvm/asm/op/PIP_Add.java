@@ -52,6 +52,6 @@ public class PIP_Add
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokeAdd(frame, hTarget, sPropName, hValue);
+        return hTarget.getTemplate().invokePropertyAdd(frame, hTarget, sPropName, hValue);
         }
     }
