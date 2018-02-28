@@ -2389,7 +2389,7 @@ public abstract class TypeConstant
             // super and no set() (or Var-implying annotations)
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
-            fRW |= accessVar != null | fHasVarAnno | fSetSupers;
+            fRW |= accessVar != null | methodSet != null | fHasVarAnno;
 
             // it is possible to explicitly declare a property as abstract; this is unusual,
             // but it does mean that we have to defer the field decision
@@ -2449,6 +2449,8 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
+        // TODO methods? check for trailing override?
+
         Component.Format formatInfo = struct.getFormat();
         for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
@@ -2463,15 +2465,9 @@ public abstract class TypeConstant
                 entry.setValue(propinfo = propinfo.suppressOverride());
                 }
 
-// TODO review
-//                    if (fHasOverride)
-//                        {
-//                        // interface is not allowed to use @Override
-//                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_OVERRIDDEN,
-//                                getValueString(), sName);
-//                        }
-
-            if (!fAbstract && propinfo.isAbstract())
+            // for properties on a non-abstract class that come from an interface, decide which ones
+            // need a field
+            if (!fAbstract && propinfo.getFirstBody().getImplementation() == Implementation.Declared)
                 {
                 // determine whether or not the property needs a field
                 boolean fField;
@@ -2510,7 +2506,10 @@ public abstract class TypeConstant
 
                 // erase the "abstract" flag, and store the result of the field-is-required
                 // calculation
-                entry.setValue(propinfo = propinfo.specifyField(fField));
+                if (fField)
+                    {
+                    entry.setValue(propinfo = propinfo.requireField());
+                    }
                 }
             }
         }

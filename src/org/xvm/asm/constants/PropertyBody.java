@@ -155,6 +155,14 @@ public class PropertyBody
         }
 
     /**
+     * @return the property that provides the reference to the delegatee
+     */
+    public PropertyConstant getDelegatee()
+        {
+        return m_constProp;
+        }
+
+    /**
      * @return the property type
      */
     public TypeConstant getType()
@@ -219,6 +227,32 @@ public class PropertyBody
         }
 
     /**
+     * @return true iff this property represents a constant (a static property)
+     */
+    public boolean isConstant()
+        {
+        return m_fConstant;
+        }
+
+    /**
+     * @return the initial value of the property as a constant, or null if there is no constant
+     *         initial value
+     */
+    public Constant getInitialValue()
+        {
+        return m_constInitVal;
+        }
+
+    /**
+     * @return the function that provides the initial value of the property, or null if there is no
+     *         initializer
+     */
+    public MethodConstant getInitializer()
+        {
+        return m_constInitFunc;
+        }
+
+    /**
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
@@ -258,6 +292,26 @@ public class PropertyBody
         PropertyConstant constId = getIdentity();
         ConstantPool     pool    = constId.getConstantPool();
         return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{m_type}, ConstantPool.NO_TYPES);
+        }
+
+    /**
+     * @return true iff the property body is abstract, which means that it comes from an interface
+     *         or "into" clause, or is annotated with "@Abstract"
+     */
+    public boolean isAbstract()
+        {
+        switch (getImplementation())
+            {
+            case Delegating:
+            case Native:
+                return false;
+
+            case Explicit:
+                return isExplicitAbstract();
+
+            default:
+                return true;
+            }
         }
 
     /**

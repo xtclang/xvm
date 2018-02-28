@@ -2,13 +2,17 @@ package org.xvm.asm.constants;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.util.Handy;
 
 
@@ -29,13 +33,18 @@ public class PropertyInfo
     {
     public PropertyInfo(PropertyBody body)
         {
-        this(new PropertyBody[] {body}, body.hasField(), body.isExplicitOverride());
+        this(new PropertyBody[] {body}, false, false, false);
         }
 
-    protected PropertyInfo(PropertyBody[] aBody, boolean fRequireField, boolean fSuppressOverride)
+    protected PropertyInfo(
+            PropertyBody[] aBody,
+            boolean        fRequireField,
+            boolean        fSuppressVar,
+            boolean        fSuppressOverride)
         {
         m_aBody             = aBody;
         m_fRequireField     = fRequireField;
+        m_fSuppressVar      = fSuppressVar;
         m_fSuppressOverride = fSuppressOverride;
         }
 
@@ -132,14 +141,73 @@ public class PropertyInfo
                 fThisInit ? this.m_constInitFunc : that.m_constInitFunc);
         */
 
-        PropertyBody[] aBodyThis = this.m_aBody;
-        PropertyBody[] aBodyThat = that.m_aBody;
-        int            cBodyThis = aBodyThis.length;
-        int            cBodyThat = aBodyThat.length;
-        PropertyBody[] aBodyNew  = new PropertyBody[cBodyThis + cBodyThat];
-        System.arraycopy(aBodyThis, 0, aBodyNew, 0, cBodyThis);
-        System.arraycopy(aBodyThat, 0, aBodyNew, cBodyThis, cBodyThat);
-        return new PropertyInfo(aBodyNew, this.m_fRequireField | that.m_fRequireField, that.m_fSuppressOverride);
+        PropertyBody[] aBodyThis  = this.m_aBody;
+        PropertyBody[] aBodyThat  = that.m_aBody;
+        int            cThis      = aBodyThis.length;
+        int            cThat      = aBodyThat.length;
+        PropertyBody[] aBodyNew   = new PropertyBody[cThis + cThat];
+        int            ofThis     = 0;
+        int            ofThat     = 0;
+        int            ofNew      = 0;
+
+        CopyConcrete: while (ofThis < cThis)
+            {
+            PropertyBody body = aBodyThis[ofThis];
+            switch (body.getImplementation())
+                {
+                case Delegating:
+                case Native:
+                case Explicit:
+                    aBodyNew[ofNew++] = body;
+                    ++ofThis;
+                    break;
+
+                default:
+                    break CopyConcrete;
+                }
+            }
+
+        CopyConcrete: while (ofThat < cThat)
+            {
+            PropertyBody body = aBodyThat[ofThat];
+            switch (body.getImplementation())
+                {
+                case Delegating:
+                case Native:
+                case Explicit:
+                    aBodyNew[ofNew++] = body;
+                    ++ofThat;
+                    break;
+
+                default:
+                    break CopyConcrete;
+                }
+            }
+
+        while (ofThis < cThis && aBodyThis[ofThis].getImplementation() == Implementation.Declared)
+            {
+            aBodyNew[ofNew++] = aBodyThis[ofThis++];
+            }
+
+        while (ofThat < cThat && aBodyThat[ofThat].getImplementation() == Implementation.Declared)
+            {
+            aBodyNew[ofNew++] = aBodyThat[ofThat++];
+            }
+
+        while (ofThis < cThis && aBodyThis[ofThis].getImplementation() == Implementation.Implicit)
+            {
+            aBodyNew[ofNew++] = aBodyThis[ofThis++];
+            }
+
+        while (ofThat < cThat && aBodyThat[ofThat].getImplementation() == Implementation.Implicit)
+            {
+            aBodyNew[ofNew++] = aBodyThat[ofThat++];
+            }
+
+        return new PropertyInfo(aBodyNew,
+                this.m_fRequireField | that.m_fRequireField,
+                this.m_fSuppressVar | that.m_fSuppressVar,
+                that.m_fSuppressOverride);
         }
 
     /**
@@ -161,23 +229,21 @@ public class PropertyInfo
             boolean fRetain;
             switch (body.getImplementation())
                 {
-                Implicit - the method body represents a property known to exist for compilation purposes, but is otherwise not present; this is the result of the into clause, or any properties of Object in the context of an interface, for example;
-                Declared - the property body represents a declared but non-concrete property, such as a property on an interface;
-                Delegating - the property body delegates the Ref/Var functionality;
-                Native - indicates a type param or a constant;
-                Explicit
                 case Implicit:
                 case Declared:
+                    fRetain = setDefault.contains(constClz);
+
+                case Delegating:
+                case Explicit:
+                    fRetain = setClass.contains(constClz);
+                    break;
+
+                case Native:
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
 
-                case Default:
-                    fRetain = setDefault.contains(constClz);
-                    break;
-
                 default:
-                    fRetain = setClass.contains(constClz);
-                    break;
+                    throw new IllegalStateException();
                 }
             if (fRetain)
                 {
@@ -203,7 +269,8 @@ public class PropertyInfo
 
         return list.isEmpty()
                 ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]));
+                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]),
+                        m_fRequireField, m_fSuppressVar, m_fSuppressOverride);
         }
 
 
@@ -218,22 +285,22 @@ public class PropertyInfo
      */
     public PropertyInfo limitAccess(Access access)
         {
-        // TODO this property is either a Var or a Ref on the private type (i.e. this PropertyInfo)
-        //      determine if the same property would be a Var, a Ref, or absent from the type with the specified access
-        //      - if absent, return null
-        //      - if the same as on the private type, then return this
-        //      - otherwise private type must be Var and we need to create a Ref (@RO) of the same
-        return this;
-        }
+        // determine if the resulting property would be a Var, a Ref, or absent from the type with
+        // the specified access
+        Access  accessRef = getRefAccess();
+        if (accessRef.isLessAccessibleThan(access))
+            {
+            return null;
+            }
 
-    /**
-     * @return this PropertyInfo, but with the trailing "@Override" suppressed
-     */
-    public PropertyInfo suppressOverride()
-        {
-        return isOverride()
-                ? new PropertyInfo(m_aBody, m_fRequireField, true)
-                : this;
+        Access accessVar = getVarAccess();
+        if (accessVar != null && isVar() && accessVar.isLessAccessibleThan(access))
+            {
+            // create the Ref-only form of this property
+            return new PropertyInfo(m_aBody, m_fRequireField, true, m_fSuppressOverride);
+            }
+
+        return this;
         }
 
     /**
@@ -243,7 +310,17 @@ public class PropertyInfo
         {
         return hasField()
                 ? this
-                : new PropertyInfo(m_aBody, true, m_fSuppressOverride);
+                : new PropertyInfo(m_aBody, true, m_fSuppressVar, m_fSuppressOverride);
+        }
+
+    /**
+     * @return this PropertyInfo, but with the trailing "@Override" suppressed
+     */
+    public PropertyInfo suppressOverride()
+        {
+        return isOverride()
+                ? new PropertyInfo(m_aBody, m_fRequireField, m_fSuppressVar, true)
+                : this;
         }
 
     /**
@@ -262,19 +339,21 @@ public class PropertyInfo
         return getFirstBody().getIdentity();
         }
 
+    /**
+     * @return the array of all PropertyBody objects that compose this PropertyInfo
+     */
     public PropertyBody[] getPropertyBodies()
         {
         return m_aBody;
         }
 
+    /**
+     * @return the first PropertyBody of this PropertyInfo; in a loose sense, the meaning of the
+     *         term "first" corresponds to the order of the call chain
+     */
     public PropertyBody getFirstBody()
         {
         return m_aBody[0];
-        }
-
-    public PropertyBody getLastBody()
-        {
-        return m_aBody[m_aBody.length-1];
         }
 
     /**
@@ -319,6 +398,60 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff this property represents a constant (a static property)
+     */
+    public boolean isConstant()
+        {
+        return getFirstBody().isConstant();
+        }
+
+    /**
+     * @return the initial value of the property as a constant, or null if there is no constant
+     *         initial value
+     */
+    public Constant getInitialValue()
+        {
+        for (PropertyBody body : m_aBody)
+            {
+            Constant constVal = body.getInitialValue();
+            if (constVal != null)
+                {
+                return constVal;
+                }
+
+            if (body.getInitializer() != null)
+                {
+                return null;
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * @return the function that provides the initial value of the property, or null if there is no
+     *         initializer
+     */
+    public MethodConstant getInitializer()
+        {
+        for (PropertyBody body : m_aBody)
+            {
+            MethodConstant methodInit = body.getInitializer();
+            if (methodInit != null)
+                {
+                return methodInit;
+                }
+
+            if (body.getInitialValue() != null)
+                {
+                return null;
+                }
+            }
+
+        return null;
+        }
+
+    /**
      * @return true iff this property represents a type parameter type
      */
     public boolean isTypeParam()
@@ -335,11 +468,43 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff the property is a Var (or false if the property is only a Ref)
+     */
+    public boolean isVar()
+        {
+        if (m_fSuppressVar || isConstant() || isTypeParam())
+            {
+            return false;
+            }
+
+        if (hasField())
+            {
+            return true;
+            }
+
+        for (PropertyBody body : m_aBody)
+            {
+            if (body.isRW())
+                {
+                return true;
+                }
+
+            if (body.getImplementation() == Implementation.Delegating)
+                {
+                TypeInfo     typeThat = body.getDelegatee().getRefType().ensureTypeInfo();
+                PropertyInfo propThat = typeThat.findProperty(getName());
+                return propThat != null && propThat.isVar();
+                }
+            }
+
+        return false;
+        }
+
+    /**
      * @return the Access required for the Ref form of the property
      */
     public Access getRefAccess()
         {
-        // TODO
         return getFirstBody().getRefAccess();
         }
 
@@ -348,7 +513,6 @@ public class PropertyInfo
      */
     public Access getVarAccess()
         {
-        // TODO
         return getFirstBody().getVarAccess();
         }
 
@@ -392,8 +556,38 @@ public class PropertyInfo
      */
     public Annotation[] getRefAnnotations()
         {
-        // TODO combine?
-        return getFirstBody().getStructure().getRefAnnotations();
+        List<Annotation> list   = null;
+        Annotation[]     aAnnos = Annotation.NO_ANNOTATIONS;
+
+        for (PropertyBody body : m_aBody)
+            {
+            Annotation[] aAdd = body.getStructure().getRefAnnotations();
+            if (aAdd.length > 0)
+                {
+                if (list == null)
+                    {
+                    if (aAnnos.length == 0)
+                        {
+                        aAnnos = aAdd;
+                        }
+                    else
+                        {
+                        list = new ArrayList<>();
+                        Collections.addAll(list, aAnnos);
+                        Collections.addAll(list, aAdd);
+                        }
+                    }
+
+                if (list != null)
+                    {
+                    Collections.addAll(list, aAdd);
+                    }
+                }
+            }
+
+        return list == null
+                ? aAnnos
+                : list.toArray(new Annotation[list.size()]);
         }
 
     /**
@@ -458,7 +652,23 @@ public class PropertyInfo
      */
     public boolean isOverride()
         {
-        return !m_fSuppressOverride && getLastBody().isExplicitOverride();
+        if (m_fSuppressOverride)
+            {
+            return false;
+            }
+
+        // get the last non-implicit body
+        PropertyBody[] aBody = m_aBody;
+        for (int i = aBody.length - 1; i >= 0; --i)
+            {
+            PropertyBody body = aBody[i];
+            if (body.getImplementation() != Implementation.Implicit)
+                {
+                return body.isExplicitOverride();
+                }
+            }
+
+        return false;
         }
 
     /**
@@ -523,12 +733,16 @@ public class PropertyInfo
      */
     private final PropertyBody[] m_aBody;
 
-    private final int m_c
-
     /**
      * True iff this Property has been marked as requiring a field.
      */
     private final boolean m_fRequireField;
+
+    /**
+     * True iff this Property has been marked as not exposing access to the Var, such that it is
+     * treated as a Ref.
+     */
+    private final boolean m_fSuppressVar;
 
     /**
      * True iff this Property has been marked as not having an override.
