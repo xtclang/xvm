@@ -139,7 +139,7 @@ public class PropertyInfo
         PropertyBody[] aBodyNew  = new PropertyBody[cBodyThis + cBodyThat];
         System.arraycopy(aBodyThis, 0, aBodyNew, 0, cBodyThis);
         System.arraycopy(aBodyThat, 0, aBodyNew, cBodyThis, cBodyThat);
-        return new PropertyInfo(aBodyNew, this.hasField() | that.hasField(), that.isOverride());
+        return new PropertyInfo(aBodyNew, this.m_fRequireField | that.m_fRequireField, that.m_fSuppressOverride);
         }
 
     /**
@@ -158,12 +158,17 @@ public class PropertyInfo
             {
             PropertyBody     body     = aBody[i];
             IdentityConstant constClz = body.getIdentity().getClassIdentity();
-            boolean fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
+            boolean fRetain;
             switch (body.getImplementation())
                 {
+                Implicit - the method body represents a property known to exist for compilation purposes, but is otherwise not present; this is the result of the into clause, or any properties of Object in the context of an interface, for example;
+                Declared - the property body represents a declared but non-concrete property, such as a property on an interface;
+                Delegating - the property body delegates the Ref/Var functionality;
+                Native - indicates a type param or a constant;
+                Explicit
                 case Implicit:
                 case Declared:
-                    fRetain
+                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
 
                 case Default:
@@ -226,7 +231,19 @@ public class PropertyInfo
      */
     public PropertyInfo suppressOverride()
         {
-        return new PropertyInfo(m_aBody, m_fRequireField, false);
+        return isOverride()
+                ? new PropertyInfo(m_aBody, m_fRequireField, true)
+                : this;
+        }
+
+    /**
+     * @return this PropertyInfo, but with a requirement that a field exists
+     */
+    public PropertyInfo requireField()
+        {
+        return hasField()
+                ? this
+                : new PropertyInfo(m_aBody, true, m_fSuppressOverride);
         }
 
     /**
@@ -346,7 +363,20 @@ public class PropertyInfo
      */
     public boolean hasField()
         {
-        return m_fRequireField;
+        if (m_fRequireField)
+            {
+            return true;
+            }
+
+        for (PropertyBody body : m_aBody)
+            {
+            if (body.hasField())
+                {
+                return true;
+                }
+            }
+
+        return false;
         }
 
     /**

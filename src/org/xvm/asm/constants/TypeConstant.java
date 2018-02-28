@@ -1733,7 +1733,7 @@ public abstract class TypeConstant
     private boolean collectMemberInfo(
             IdentityConstant                    constId,
             ClassStructure                      struct,
-            TypeResolver              resolver,
+            TypeResolver                        resolver,
             List<Contribution>                  listProcess,
             ListMap<IdentityConstant, Origin>   listmapClassChain,
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
