@@ -20,6 +20,8 @@ public class PropertyBody
     /**
      * Construct a PropertyBody from the passed information.
      *
+     * TODO hasGetter, hasSetter, isGetterBlockingSuper, isSetterBlockingSuper (or: None, BlocksSuper, MayUseSuper)
+     *
      * @param struct         the property structure that this body is derived from
      * @param impl           one of Implicit, Declared, Delegating, or Explicit
      * @param constProp      the property constant that provides the reference to delegate to

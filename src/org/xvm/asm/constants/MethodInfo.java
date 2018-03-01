@@ -71,6 +71,7 @@ public class MethodInfo
 
             case Into:
                 // this MethodInfo already exists, so an "implicit" adds nothing to this
+                // TODO nowhere is the "implicit" implementation actually used, which must be a bug
                 return this;
             }
 

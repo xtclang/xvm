@@ -230,16 +230,24 @@ public class PropertyInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
-                case Declared:
-                    fRetain = setDefault.contains(constClz);
+                    // "into" isn't in the call chain
+                    fRetain = true;
+                    break;
 
-                case Delegating:
-                case Explicit:
-                    fRetain = setClass.contains(constClz);
+                case Declared:
+                    // interface type
+                    fRetain = setDefault.contains(constClz);
                     break;
 
                 case Native:
+                    //
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
+                    break;
+
+                case Delegating:
+                case Explicit:
+                    //
+                    fRetain = setClass.contains(constClz);
                     break;
 
                 default:

@@ -18,6 +18,11 @@
 - tests
   x return 40 + 2
   x "void" was messing up test (so was "int" for gene)
+  - props: should NOT be able to combine constants, type params, and props
+  - props: should NOT be able to re-introduce setter if super is unreachable
+  - props: "delegates" should default Ref / Var -
+  - props: nested inside other props, methods
+  - props: implicit never getting set for either props or methods? test "into"
 
 - TypeInfo
   - nested / scoped stuff

@@ -2389,7 +2389,7 @@ public abstract class TypeConstant
             // super and no set() (or Var-implying annotations)
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
-            fRW |= accessVar != null | methodSet != null | fHasVarAnno;
+            fRW |= fHasVarAnno | accessVar != null | methodSet != null;
 
             // it is possible to explicitly declare a property as abstract; this is unusual,
             // but it does mean that we have to defer the field decision
