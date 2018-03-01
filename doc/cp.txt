@@ -23,9 +23,11 @@
   - props: "delegates" should default Ref / Var -
   - props: nested inside other props, methods
   - props: implicit never getting set for either props or methods? test "into"
+  - props: "invoke non virtual" question from gene regarding public/private implementation (in the presence of virtual collisions)
 
 - TypeInfo
   - nested / scoped stuff
+    - static props in methods must be private
   - methods
   - constructors
 

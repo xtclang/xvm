@@ -24,7 +24,7 @@ public class PropertyBody
      *
      * @param struct         the property structure that this body is derived from
      * @param impl           one of Implicit, Declared, Delegating, or Explicit
-     * @param constProp      the property constant that provides the reference to delegate to
+     * @param constDelegate  the property constant that provides the reference to delegate to
      * @param type           the type of the property, including any type annotations (required)
      * @param fRO            true iff the property has any of a number of indicators that would
      *                       indicate that the property is read-only
@@ -40,7 +40,7 @@ public class PropertyBody
     public PropertyBody(
             PropertyStructure struct,
             Implementation    impl,
-            PropertyConstant  constProp,
+            PropertyConstant  constDelegate,
             TypeConstant      type,
             boolean           fRO,
             boolean           fRW,
@@ -57,13 +57,13 @@ public class PropertyBody
                 || impl == Implementation.Delegating
                 || impl == Implementation.Native
                 || impl == Implementation.Explicit;
-        assert (impl == Implementation.Delegating) ^ (constProp == null);
+        assert (impl == Implementation.Delegating) ^ (constDelegate == null);
         assert constInitVal == null || constInitFunc == null;
         assert !fConstant || (constInitVal == null ^ constInitFunc == null);
 
         m_structProp    = struct;
         m_impl          = impl;
-        m_constProp     = constProp;
+        m_constDelegate = constDelegate;
         m_paraminfo     = null;
         m_type          = type;
         m_fRO           = fRO;
@@ -91,7 +91,7 @@ public class PropertyBody
 
         m_structProp    = struct;
         m_impl          = Implementation.Native;
-        m_constProp     = null;
+        m_constDelegate = null;
         m_paraminfo     = param;
         m_type          = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
         m_fRO           = true;
@@ -157,11 +157,11 @@ public class PropertyBody
         }
 
     /**
-     * @return the property that provides the reference to the delegatee
+     * @return the property that provides the reference to delegate to
      */
-    public PropertyConstant getDelegatee()
+    public PropertyConstant getDelegate()
         {
-        return m_constProp;
+        return m_constDelegate;
         }
 
     /**
@@ -183,7 +183,7 @@ public class PropertyBody
     /**
      * @return the type param info
      */
-    public ParamInfo getParamInfo()
+    public ParamInfo getTypeParamInfo()
         {
         return m_paraminfo;
         }
@@ -447,7 +447,7 @@ public class PropertyBody
      * For Implementation Delegating, this specifies the property which contains the reference
      * to delegate to.
      */
-    private final PropertyConstant m_constProp;
+    private final PropertyConstant m_constDelegate;
 
     /**
      * Type parameter information.

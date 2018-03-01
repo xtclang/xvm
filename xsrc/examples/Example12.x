@@ -230,3 +230,149 @@ console.print(new B().foo());
 console.print(new D().foo());
 console.print(new @M2 B().foo());
 console.print(new @M2 D().foo());
+
+--
+
+// properties can delegate
+
+interface Hopper
+    {
+    Void jump();
+
+    Int height;
+    }
+
+class BigHopper
+    implements Hopper
+    {
+    // ...
+    }
+
+class FakeHopper
+    delegates Hopper(big)
+    {
+
+    BigHopper big = ...;
+    }
+
+--
+
+// properties from an interface
+
+interface State
+    {
+    String abbrev;
+    @RO String name;
+    }
+
+@Abstract class AbstractState
+    implements State
+    {
+    // implicitly:
+    // R/W String abbrev;
+    // @RO String name;
+    }
+
+@Abstract class AbstractState2
+    implements State
+    {
+    String name.get()
+        {
+        return super();
+        }
+    }
+
+class SimpleState
+    implements State
+    {
+    // implicitly:
+    // String abbrev;
+    // String name;
+    }
+
+class ComplicatedState
+    implements State
+    {
+    String name.get()
+        {
+        return ...;
+        }
+    }
+
+--
+
+// proprerty "limit access"
+
+class Base
+    {
+    public/private Int x;
+    protected/private Int y;
+    public/protected Int z;
+    }
+
+class Derived
+        extends Base
+    {
+    // ...
+    }
+
+// typeinfo for Base:private
+// Int x - Var, field, ...
+// Int y - Var, field, ...
+// Int z - Var, field, ...
+
+// typeinfo for Derived requires typeinfo for Base:protected, which triggers limitAccess(protected)
+// Int x - Ref (via SuppressVar), field, ...
+// Int y - Ref (via SuppressVar), field, ...
+// Int z - Var, field, ...
+
+// typeinfo for Derived:private
+// Int x - Ref (via SuppressVar), field, ...
+// Int y - Ref (via SuppressVar), field, ...
+// Int z - Var, field, ...
+
+Derived d = new Derived(...);
+
+// this requires the typeinfo for Derived:public
+// Int x - Ref (via SuppressVar), field, ...
+// Int z - Ref (via SuppressVar), field, ...
+
+--
+
+// version conflicts that would cause a compiler error, but not a verifier error
+
+module m1 // v1
+    {
+    class Base
+        {
+        Void foo() {..}
+        }
+    }
+
+module m2 // v2
+    {
+    package q import m1;
+
+    class Derived
+            extends q.Base
+        {
+        Void foo() {if (x == 3) ... else x = ..}
+
+        private Int x;
+        }
+    }
+
+module m1 // v3
+    {
+    class Base
+        {
+        Void foo() {..}
+
+        public/private Int x;
+        }
+    }
+
+// at this point, m2 will no longer compile
+// m1 compiles in the absence of m2 (assume they're made by different groups or companies)
+// m1 still works
+// m2 still works ... even though there is a conflict that would prevent the compiler from succeeding

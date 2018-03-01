@@ -13,20 +13,14 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
+
 import org.xvm.util.Handy;
+import org.xvm.util.Severity;
 
 
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
  * virtual levels) about a single property as it appears in a particular type.
- *
- *
- * public       public/public
- *              public/protected
- *              public/private
- * protected    protected/protected
- *              protected/private
- * private      private/private
  */
 public class PropertyInfo
         implements Constants
@@ -61,15 +55,16 @@ public class PropertyInfo
         {
         assert that != null;
         assert errs != null;
-        assert this.getName().equals(that.getName());
 
-        /* TODO
+        PropertyConstant constId = getIdentity();
+        assert constId.getName().equals(that.getName());
+
         if (this.isTypeParam() || that.isTypeParam())
             {
             if (this.isTypeParam() ^ that.isTypeParam())
                 {
-                m_constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
-                        m_constId.getValueString());
+                constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
+                        constId.getValueString());
                 return this;
                 }
 
@@ -85,8 +80,8 @@ public class PropertyInfo
                 {
                 // right now, this is treated as an error; theoretically, we could "merge" or union
                 // the types
-                m_constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                        m_constId.getValueString(),
+                constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                        constId.getValueString(),
                         this.getType().getValueString(),
                         that.getType().getValueString());
                 return this;
@@ -94,53 +89,36 @@ public class PropertyInfo
             }
 
         // it is illegal to combine anything with a constant
-        if (this.m_fConstant || that.m_fConstant)
+        if (this.isConstant() || that.isConstant())
             {
-            m_constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
-                    m_constId.getValueString());
+            constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
+                    constId.getValueString());
             }
 
         // types must match
-        if (!this.m_type.isA(that.m_type))
+        if (!this.getType().isA(that.getType()))
             {
-            m_constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                    m_constId.getValueString(),
+            constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                    constId.getValueString(),
                     this.getType().getValueString(),
                     that.getType().getValueString());
             }
 
         // cannot combine struct with anything other than struct
-        if (this.m_accessRef == Access.STRUCT ^ that.m_accessRef == Access.STRUCT)
+        if (this.getRefAccess() == Access.STRUCT ^ that.getRefAccess() == Access.STRUCT)
             {
-            // error
+            constId.todoLogError("cannot combine struct with anything other than struct");
             }
 
         // cannot combine private with anything
-        if (this.m_accessRef == Access.PRIVATE || that.m_accessRef == Access.PRIVATE)
+        if (this.getRefAccess() == Access.PRIVATE || that.getRefAccess() == Access.PRIVATE)
             {
-            // error
+            constId.todoLogError("cannot combine private with anything");
             }
 
         // a non-abstract RO property combined with a RW property ... TODO
 
-        boolean fThisInit = this.m_constInitVal != null || this.m_constInitFunc != null;
-
-        return new PropertyInfo(
-                this.m_constId,
-                this.m_type,
-                this.m_fRO & that.m_fRO,                // read-only Ref if both are read-only
-                this.m_fRW | that.m_fRW,                // read-write Ref if either is read-write
-                this.m_aPropAnno,                       // property annotations NOT inherited
-                TypeInfo.mergeAnnotations(this.m_aRefAnno, that.m_aRefAnno),
-                this.m_fCustom | that.m_fCustom,        // custom logic if either is custom
-                this.m_fField | that.m_fField,          // field present if either has field
-                this.m_fAbstract,                       // abstract if the top one is abstract
-                this.m_fConstant,                       // constant if the top one is constant (err)
-                that.m_fOverride,                       // override if the bottom one is override
-                fThisInit ? this.m_constInitVal  : that.m_constInitVal,
-                fThisInit ? this.m_constInitFunc : that.m_constInitFunc);
-        */
-
+        // combine the two arrays of PropertyBody objects into a new PropertyInfo
         PropertyBody[] aBodyThis  = this.m_aBody;
         PropertyBody[] aBodyThat  = that.m_aBody;
         int            cThis      = aBodyThis.length;
@@ -240,13 +218,14 @@ public class PropertyInfo
                     break;
 
                 case Native:
-                    //
+                    // generic type parameters can come from either the concrete contributions, or
+                    // from an interface
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
 
                 case Delegating:
                 case Explicit:
-                    //
+                    // concrete type
                     fRetain = setClass.contains(constClz);
                     break;
 
@@ -295,7 +274,7 @@ public class PropertyInfo
         {
         // determine if the resulting property would be a Var, a Ref, or absent from the type with
         // the specified access
-        Access  accessRef = getRefAccess();
+        Access accessRef = getRefAccess();
         if (accessRef.isLessAccessibleThan(access))
             {
             return null;
@@ -414,6 +393,23 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff there is an initial value for the property, either as a constant or via an
+     *         initializer function
+     */
+    public boolean isInitialized()
+        {
+        for (PropertyBody body : m_aBody)
+            {
+            if (body.getInitialValue() != null || body.getInitializer() != null)
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
      * @return the initial value of the property as a constant, or null if there is no constant
      *         initial value
      */
@@ -472,7 +468,7 @@ public class PropertyInfo
      */
     public ParamInfo getParamInfo()
         {
-        return getFirstBody().getParamInfo();
+        return getFirstBody().getTypeParamInfo();
         }
 
     /**
@@ -499,7 +495,7 @@ public class PropertyInfo
 
             if (body.getImplementation() == Implementation.Delegating)
                 {
-                TypeInfo     typeThat = body.getDelegatee().getRefType().ensureTypeInfo();
+                TypeInfo     typeThat = body.getDelegate().getRefType().ensureTypeInfo();
                 PropertyInfo propThat = typeThat.findProperty(getName());
                 return propThat != null && propThat.isVar();
                 }
@@ -524,10 +520,9 @@ public class PropertyInfo
         return getFirstBody().getVarAccess();
         }
 
-    public boolean hasUnreachableSet()
+    public boolean isSetterUnreachable()
         {
-        // TODO
-        return false;
+        return m_fSuppressVar;
         }
 
     /**
@@ -684,7 +679,7 @@ public class PropertyInfo
      */
     public boolean isInjected()
         {
-        return getFirstBody().isInjected();
+        return getFirstBody().isInjected();   // REVIEW inject is a Ref annotation
         }
 
 

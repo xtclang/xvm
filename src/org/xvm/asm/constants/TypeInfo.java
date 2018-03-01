@@ -394,6 +394,7 @@ public class TypeInfo
                 // only include the non-nested properties
                 if (prop.getIdentity().depthFromClass() == m_cDepth + 1)
                     {
+// TODO requires collision check, with the private/private property being discarded
                     map.put(prop.getName(), prop);
                     }
                 }
@@ -411,7 +412,7 @@ public class TypeInfo
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensurePropertiesByName(MethodConstant constMethod)
+    public Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant constMethod)
         {
         Map<String, PropertyInfo> map = null;
         for (PropertyInfo prop : m_mapProperties.values())
@@ -439,7 +440,7 @@ public class TypeInfo
      *
      * @return a map from property name to PropertyInfo
      */
-    public Map<String, PropertyInfo> ensurePropertiesByName(PropertyConstant constProp)
+    public Map<String, PropertyInfo> ensureNestedPropertiesByName(PropertyConstant constProp)
         {
         Map<String, PropertyInfo> map = null;
         int cDepth = constProp.depthFromClass();

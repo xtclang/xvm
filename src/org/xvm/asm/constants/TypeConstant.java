@@ -277,7 +277,7 @@ public abstract class TypeConstant
         if (isSingleDefiningConstant())
             {
             TypeInfo info = getTypeInfo();
-            if (info != null)
+            if (info != null && info.getProgress().compareTo(Progress.Incomplete) >= 0)
                 {
                 ParamInfo param = info.getTypeParams().get(sName);
                 if (param == null)
@@ -982,7 +982,7 @@ public abstract class TypeConstant
                 infoPri.isAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, Collections.EMPTY_MAP, fIncomplete ? Progress.Incomplete : Progress.Complete);
+                mapProps, mapMethods, fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
     /**
@@ -1820,15 +1820,30 @@ public abstract class TypeConstant
             // process properties
             for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                 {
-                PropertyInfo propinfo = mapProps.putIfAbsent(entry.getKey(), entry.getValue());
-                if (propinfo != null)
+                PropertyConstant idSuper   = entry.getKey();
+                PropertyInfo     propSuper = entry.getValue();
+
+                // constant properties and private properties are always "fully scoped", so there
+                // will be no a collision there; other properties may have a property both in the
+                // previously-collected properties and the to-be-contributed properties, so check
+                // if there is a match
+                PropertyConstant idSub;
+                if (!propSuper.isConstant() && propSuper.getRefAccess() != Access.PRIVATE
+                        && (idSub = findSubProperty(idSuper, mapProps)) != null)
                     {
-                    mapProps.put(entry.getKey(), propinfo.append(entry.getValue(), errs));
+                    PropertyInfo propSub  = mapProps.get(idSub);
+                    PropertyInfo propPrev = mapProps.put(idSub, propSub.append(propSuper, errs));
+                    assert propPrev != null;
+                    }
+                else
+                    {
+                    PropertyInfo propPrev = mapProps.put(idSuper, propSuper);
+                    assert propPrev == null;
                     }
                 }
 
             // first find the "super" chains of each of the existing methods
-            Set<SignatureConstant> setSuperMethods = new HashSet<>();
+            Set<MethodConstant> setSuperMethods = new HashSet<>();
             for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
                 {
                 MethodInfo method = entry.getValue();
@@ -1845,15 +1860,15 @@ public abstract class TypeConstant
                     continue;
                     }
 
-                SignatureConstant sigSuper = findSuperMethod(sigSub, mapContribMethods, errs);
-                if (sigSuper == null)
+                MethodConstant idSuper = findSuperMethod(sigSub, mapContribMethods, errs);
+                if (idSuper == null)
                     {
                     // the chain doesn't have a "super" from this contribution
                     continue;
                     }
 
-                entry.setValue(method.apply(contrib, mapContribMethods.get(sigSuper)));
-                setSuperMethods.add(sigSuper);
+                entry.setValue(method.apply(contrib, mapContribMethods.get(idSuper)));
+                setSuperMethods.add(idSuper);
                 }
 
             // sweep over the remaining chains
@@ -1870,7 +1885,58 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find the method signature that would be the "super" of the specified method signature.
+     * TODO
+     *
+     * @param idSuper
+     * @param mapSubProps
+     *
+     * @return
+     */
+    protected PropertyConstant findSubProperty(
+            PropertyConstant                    idSuper,
+            Map<PropertyConstant, PropertyInfo> mapSubProps)
+        {
+        if (mapSubProps.containsKey(idSuper))
+            {
+            return idSuper;
+            }
+
+        String sName  = idSuper.getName();
+        int    cDepth = idSuper.depthFromClass();
+        NextProperty: for (Entry<PropertyConstant, PropertyInfo> entry : mapSubProps.entrySet())
+            {
+            PropertyConstant idSub = entry.getKey();
+            if (idSub.getName().equals(sName) && idSub.depthFromClass() == cDepth)
+                {
+                if (cDepth > 1)
+                    {
+                    // verify sameness of path (only nesting that would be allowed to match is
+                    // properties within properties, since properties within methods MUST be
+                    // private)
+                    IdentityConstant idSubParent   = idSub  .getParentConstant();
+                    IdentityConstant idSuperParent = idSuper.getParentConstant();
+                    for (int i = 1; i < cDepth; ++i)
+                        {
+                        if ( !(    idSubParent   instanceof PropertyConstant
+                                && idSuperParent instanceof PropertyConstant
+                                && idSub.getName().equals(idSuperParent.getName())))
+                            {
+                            continue NextProperty;
+                            }
+
+                        idSubParent   = idSubParent  .getParentConstant();
+                        idSuperParent = idSuperParent.getParentConstant();
+                        }
+                    }
+                return idSub;
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * Find the method that would be the "super" of the specified method signature.
      *
      * @param sigSub      the method that is searching for a super
      * @param mapMethods  the possible super methods to select from
@@ -1879,46 +1945,36 @@ public abstract class TypeConstant
      * @return a SignatureConstant for the super method, or null if there is no one unambiguously
      *         "best" super method signature to be found
      */
-    protected SignatureConstant findSuperMethod(
+    protected MethodConstant findSuperMethod(
             SignatureConstant               sigSub,
             Map<MethodConstant, MethodInfo> mapMethods,
             ErrorListener                   errs)
         {
-        // check if there is an exact match
-        // note: there is one small flaw with this assumption, in that auto-narrowing could allow
-        //       multiple methods to collide in the same signature, but that's validated elsewhere
-        MethodInfo infoSuper = mapMethods.get(sigSub);
-        if (infoSuper != null && !infoSuper.isFunction())
-            {
-            return sigSub;
-            }
-
         // brute force search
-        SignatureConstant       sigBest   = null;
-        List<SignatureConstant> listMatch = null;
+        MethodConstant       idBest    = null;
+        List<MethodConstant> listMatch = null;
         for (MethodConstant idCandidate : mapMethods.keySet())
             {
-            SignatureConstant sigCandidate = idCandidate.getSignature();
-            if (sigCandidate.isSubstitutableFor(sigSub, this))
+            if (idCandidate.getSignature().isSubstitutableFor(sigSub, this))
                 {
                 if (listMatch == null)
                     {
-                    if (sigBest == null)
+                    if (idBest == null)
                         {
-                        sigBest = sigCandidate;
+                        idBest = idCandidate;
                         }
                     else
                         {
                         // we've got at least 2 matches, so we'll need to compare them all
                         listMatch = new ArrayList<>();
-                        listMatch.add(sigBest);
-                        listMatch.add(sigCandidate);
-                        sigBest = null;
+                        listMatch.add(idBest);
+                        listMatch.add(idCandidate);
+                        idBest = null;
                         }
                     }
                 else
                     {
-                    listMatch.add(sigCandidate);
+                    listMatch.add(idCandidate);
                     }
                 }
             }
@@ -1926,20 +1982,22 @@ public abstract class TypeConstant
         // if none match, then there is no match; if only 1 matches, then use it
         if (listMatch == null)
             {
-            return sigBest;
+            return idBest;
             }
 
         // if multiple candidates exist, then one must be obviously better than the rest
+        SignatureConstant sigBest = null;
         nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
                 iCur < cCandidates; ++iCur)
             {
-            SignatureConstant sigCandidate = listMatch.get(iCur);
-            if (sigBest == null) // that means that "best" is ambiguous thus far
+            MethodConstant    idCandidate  = listMatch.get(iCur);
+            SignatureConstant sigCandidate = idCandidate.getSignature();
+            if (idBest == null) // that means that "best" is ambiguous thus far
                 {
                 // have to back-test all the ones in front of us to make sure that
                 for (int iPrev = 0; iPrev < iCur; ++iPrev)
                     {
-                    SignatureConstant sigPrev = listMatch.get(iPrev);
+                    SignatureConstant sigPrev = listMatch.get(iPrev).getSignature();
                     if (!sigPrev.isSubstitutableFor(sigCandidate, this))
                         {
                         // still ambiguous
@@ -1948,26 +2006,29 @@ public abstract class TypeConstant
                     }
 
                 // so far, this candidate is the best
+                idBest  = idCandidate;
                 sigBest = sigCandidate;
                 }
             else if (sigBest.isSubstitutableFor(sigCandidate, this))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
+                idBest  = idCandidate;
                 sigBest = sigCandidate;
                 }
             else if (!sigCandidate.isSubstitutableFor(sigBest, this))
                 {
+                idBest  = null;
                 sigBest = null;
                 }
             }
 
-        if (sigBest == null)
+        if (idBest == null)
             {
             log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigSub.getValueString());
             }
 
-        return sigBest;
+        return idBest;
         }
 
     /**
@@ -2263,12 +2324,14 @@ public abstract class TypeConstant
                     getValueString(), sName);
             }
 
-        boolean fRW       = false;
-        boolean fRO       = false;
-        boolean fField    = false;
-        boolean fAbstract = false;
+        boolean         fRW       = false;
+        boolean         fRO       = false;
+        boolean         fField    = false;
+        Implementation  impl;
         if (fConstant)
             {
+            impl = Implementation.Native;
+
             // static properties of a type are language-level constant values, e.g. "Int KB = 1024;"
             if (!prop.hasInitialValue() && (prop.getInitialValue() == null) == (methodInit == null))
                 {
@@ -2320,6 +2383,8 @@ public abstract class TypeConstant
             }
         else if (fInterface)
             {
+            impl = Implementation.Declared;
+
             if (fCustomCode)
                 {
                 // interface is not allowed to implement a property - REVIEW: GG wants to allow @RO get()
@@ -2352,10 +2417,11 @@ public abstract class TypeConstant
             fRO      |= fHasRO;
             fRW      |= accessVar != null;
             fField    = false;
-            fAbstract = true;
             }
         else
             {
+            impl = Implementation.Explicit;
+
             // determine if the get explicitly calls super, or explicitly blocks super
             boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
             boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
@@ -2390,10 +2456,6 @@ public abstract class TypeConstant
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
             fRW |= fHasVarAnno | accessVar != null | methodSet != null;
-
-            // it is possible to explicitly declare a property as abstract; this is unusual,
-            // but it does mean that we have to defer the field decision
-            fAbstract = fHasAbstract;
             }
 
         if (fRO && fRW)
@@ -2403,8 +2465,8 @@ public abstract class TypeConstant
             fRO = false;
             }
 
-        return new PropertyInfo(new PropertyBody(prop, prop.getType().resolveGenerics(resolver),
-                fRO, fRW, accessRef, accessVar, fCustomCode, fField, fAbstract, fConstant,
+        return new PropertyInfo(new PropertyBody(prop, impl, null,
+                prop.getType().resolveGenerics(resolver), fRO, fRW, fCustomCode, fField, fConstant,
                 prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant()));
         }
 
@@ -2467,11 +2529,12 @@ public abstract class TypeConstant
 
             // for properties on a non-abstract class that come from an interface, decide which ones
             // need a field
+// TODO this is wrong ... it should be "if not an interface and does not have a field and is not explicitly abstract property ..."
             if (!fAbstract && propinfo.getFirstBody().getImplementation() == Implementation.Declared)
                 {
                 // determine whether or not the property needs a field
                 boolean fField;
-                if (propinfo.isInjected() || propinfo.isOverride())
+                if (propinfo.isInjected() || propinfo.isOverride()) // REVIEW @Inject into Ref, needs to be overrideable
                     {
                     // injection does not use a field, and override can defer the choice
                     fField = false;
@@ -2484,7 +2547,7 @@ public abstract class TypeConstant
                 else
                     {
                     // determine if get() blocks the super call to the field
-                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());
+                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());   // REVIEW
                     fField = true;
                     if (methodinfo != null)
                         {
