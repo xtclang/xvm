@@ -1885,12 +1885,14 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO
+     * Find a corresponding property in the passed map of properties that corresponds to the passed
+     * identity.
      *
-     * @param idSuper
-     * @param mapSubProps
+     * @param idSuper      an identity being contributed to a property chain
+     * @param mapSubProps  a map of existing property chains as they are being constructed
      *
-     * @return
+     * @return the identity of the property in the passed map that would be the assumed "sub" of the
+     *         property identified by {@code idSuper}
      */
     protected PropertyConstant findSubProperty(
             PropertyConstant                    idSuper,
