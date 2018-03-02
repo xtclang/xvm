@@ -859,7 +859,6 @@ public class CommandLine
         // determine if the errors are bad enough to quit
         if (error || (!deferred.isEmpty() && opts.strictLevel == Options.Strictness.Stickler))
             {
-//            TODO: re-introduce when implemented
 //            err("xtc: Terminating.");
 //            System.exit(1);
 //            throw new IllegalStateException();

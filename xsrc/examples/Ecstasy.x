@@ -47,15 +47,10 @@ module Ecstasy.xtclang.org
             TODO
             }
 
-        @Auto function Object() to<function Object()>()
-            {
-            TODO
-            }
-
-        immutable Object to<immutable Object>()
-            {
-            TODO
-            }
+//        @Auto function Object() to<function Object()>()
+//            {
+//            TODO
+//            }
         }
 
     interface Enum

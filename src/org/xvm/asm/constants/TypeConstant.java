@@ -1754,7 +1754,8 @@ public abstract class TypeConstant
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
-                createMemberInfo(constId, struct, resolver, mapContribProps, mapContribMethods, errs);
+                createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE, struct,
+                        resolver, mapContribProps, mapContribMethods, errs);
                 }
             else
                 {
@@ -1860,6 +1861,9 @@ public abstract class TypeConstant
                     continue;
                     }
 
+                // TODO need an "exact match" or "substitutable match" based on whether the last body is marked as @Override
+                boolean fOverride = method.getTail().findAnnotation(pool.clzOverride()) != null;
+
                 MethodConstant idSuper = findSuperMethod(sigSub, mapContribMethods, errs);
                 if (idSuper == null)
                     {
@@ -1957,6 +1961,11 @@ public abstract class TypeConstant
         List<MethodConstant> listMatch = null;
         for (MethodConstant idCandidate : mapMethods.keySet())
             {
+            if (idCandidate.getSignature().equals(sigSub))
+                {
+                return idCandidate;
+                }
+
             if (idCandidate.getSignature().isSubstitutableFor(sigSub, this))
                 {
                 if (listMatch == null)
@@ -2036,8 +2045,9 @@ public abstract class TypeConstant
     /**
      * Generate the members of the "this" class of "this" type.
      *
-     * @param constId           the identity of the class
-     * @param struct            the class structure
+     * @param constId           the identity of the class (used for logging error information)
+     * @param fInterface        if the class is an interface type
+     * @param struct            the class structure, property structure, or method structure REVIEW or typedef?
      * @param resolver          the GenericTypeResolver that uses the known type parameters
      * @param mapProps          the properties of the class
      * @param mapMethods        the methods of the class
@@ -2045,61 +2055,47 @@ public abstract class TypeConstant
      */
     private void createMemberInfo(
             IdentityConstant                    constId,
-            ClassStructure                      struct,
+            boolean                             fInterface,
+            Component                           struct,
             ParamInfo.TypeResolver              resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
-        ConstantPool pool       = getConstantPool();
-        boolean      fInterface = struct.getFormat() == Component.Format.INTERFACE;
-
-        // add the properties and methods from "struct"
-        // if this is an interface, then these are "abstract" or "default" methods
-        // otherwise these are added to the primary chain
-        for (Entry<String, Component> entryChild : struct.ensureChildByNameMap().entrySet())
+        if (struct instanceof MethodStructure)
             {
-            String    sName = entryChild.getKey();
-            Component child = entryChild.getValue();
+            MethodStructure   method = (MethodStructure) struct;
+            MethodConstant    id     = method.getIdentityConstant();
+            SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
+            MethodBody body = new MethodBody(id,
+                    method.isAbstract() ? Implementation.Declared :
+                    fInterface          ? Implementation.Default  :
+                    method.isNative()   ? Implementation.Native   :
+                                          Implementation.Explicit  );
+            mapMethods.put(id, new MethodInfo(sig, body));
+            }
+        else if (struct instanceof PropertyStructure)
+            {
+            PropertyStructure prop = (PropertyStructure) struct;
+            PropertyConstant  id   = prop.getIdentityConstant();
+            mapProps.put(id, prop.isTypeParameter()
+                    ? new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(id.getName())))
+                    : createPropertyInfo(prop, constId, fInterface, resolver, errs));
+            }
+
+        // recurse through children
+        for (Component child : struct.ensureChildByNameMap().values())
+            {
             if (child instanceof MultiMethodStructure)
                 {
-                for (Entry<MethodConstant, MethodStructure> entry : child.getMethodByConstantMap().entrySet())
+                for (MethodStructure method : child.getMethodByConstantMap().values())
                     {
-                    MethodConstant    id     = entry.getKey();
-                    SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
-                    MethodStructure   method = entry.getValue();
-                    MethodBody body = new MethodBody(id,
-                            method.isAbstract() ? Implementation.Declared :
-                            fInterface          ? Implementation.Default  :
-                            method.isNative()   ? Implementation.Native   :
-                                                  Implementation.Explicit  );
-                    mapMethods.put(id, new MethodInfo(sig, body));
-
-                    for (Component grandchild : method.children())
-                        {
-                        // TODO any children of the method structure (into the "scoped" bucket)
-                        System.out.println("** skipping method " + sName + " child " + grandchild.getIdentityConstant().getValueString());
-                        }
+                    createMemberInfo(constId, fInterface, method, resolver, mapProps, mapMethods, errs);
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
-                PropertyStructure prop = (PropertyStructure) child;
-                PropertyConstant  id   = prop.getIdentityConstant();
-                if (prop.isTypeParameter())
-                    {
-                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(sName))));
-                    continue;
-                    }
-
-                mapProps.put(id, createPropertyInfo(prop, constId, fInterface, resolver, errs));
-
-                for (Component grandchild : child.children())
-                    {
-                    // TODO any children of the property structure (into the "scoped" bucket)
-                    System.out.println("** skipping property " + sName + " child " +
-                            grandchild.getIdentityConstant().getValueString());
-                    }
+                createMemberInfo(constId, fInterface, child, resolver, mapProps, mapMethods, errs);
                 }
             }
         }

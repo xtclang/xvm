@@ -2224,6 +2224,30 @@ public class ConstantPool
             }
         }
 
+    /**
+     * TODO
+     *
+     * @param errlist
+     *
+     * @return
+     */
+    protected boolean postValidate(ErrorListener errlist)
+        {
+        for (int i = 0, c = m_listConst.size(); i < c; ++i)
+            {
+            Constant constant = m_listConst.get(i);
+            if (constant instanceof TypeConstant)
+                {
+                TypeInfo info = ((TypeConstant) constant).ensureTypeInfo(errlist);
+                if (errlist.isAbortDesired())
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
 
     // ----- debugging support ---------------------------------------------------------------------
 

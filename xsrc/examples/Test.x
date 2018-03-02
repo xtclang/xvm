@@ -228,6 +228,99 @@ module Test
 //            }
 //        }
 
+    class B
+        {
+        Object foo() {return "hello";}
+        }
+
+    // this will fail (compiler error), because there is no exact sig match for the super (and no
+    // @Override)
+    class D1 extends B
+        {
+        String foo() {return super();}
+        }
+
+    // this will succeed, because even though there is no exact sig match for the super, the
+    // @Override annotation indicates that it may use (i.e. must find) a compatible signature.
+    // because it overrides the "Object foo()" method, it "caps" that method chain, such that it would
+    // redirect to this chain); calls to "Object foo()" will redirect to "String foo()" now
+    class D2 extends B
+        {
+        @Override
+        String foo()
+            {
+            // could just say "return super()" and the compiler will know to insert a cast because
+            // of the presence of the @Override
+            Object o = super();
+            return o.to<String>();
+            }
+        }
+
+    // this will fail, because even though @Override was used, there is now no unambiguous method
+    // to call to support "Object foo()"
+    case D3 extends B
+        {
+        @Override
+        String foo() {return "hello";}
+
+        @Override
+        Int foo() {return 4;}
+        }
+
+    // this will succeed, because it provides an unambiguous (exact signature match) method to call
+    // to support "Object foo()"
+    case D3 extends B
+        {
+        Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
+
+        @Override
+        String foo() {return "hello";}
+
+        @Override
+        Int foo() {return 4;}
+        }
+
+
+//    // type info for nested children
+//    class C
+//        {
+//        Int x
+//            {
+//            Int get()
+//                {
+//                static Int z = 0;
+//                return z++;
+//                }
+//            }
+//
+//        Int y
+//            {
+//            Void set(Int value)
+//                {
+//                super(value);
+//                }
+//            }
+//        }
+//
+//    class D extends C
+//        {
+//        Int x
+//            {
+//            Int get()
+//                {
+//                return super();
+//                }
+//            }
+//
+//        Int y
+//            {
+//            Void set(Int value)
+//                {
+//                super(value);
+//                }
+//            }
+//        }
+
 
 //    class C
 //        {
@@ -298,99 +391,100 @@ module Test
 //        }
 //
 
-class C
-    {
-    C x;
-    C! y;
+//    // auto-narrowing tests:
+//    class C
+//        {
+//        C x;
+//        C! y;
+//
+//        C foo(C c)
+//            {
+//            TODO
+//            }
+//
+//        C! bar(C! c)
+//            {
+//            TODO
+//            }
+//
+//        class K
+//            {
+//            C foo(K kid)
+//                {
+//                TODO
+//                }
+//            C! bar(K! kid)
+//                {
+//                TODO
+//                }
+//            }
+//        }
+//
+//    class D extends C
+//        {
+//        D x;
+//        D! y;
+//
+//        D foo(D c)
+//            {
+//            TODO
+//            }
+//
+//        D! bar(D! c)
+//            {
+//            TODO
+//            }
+//
+//        class K extends C.K
+//            {
+//            D foo(K kid)
+//                {
+//                TODO
+//                }
+//            D! bar(K! kid)
+//                {
+//                TODO
+//                }
+//            }
+//        }
 
-    C foo(C c)
-        {
-        TODO
-        }
+//    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
+//        {
+//        Void foo();
+//        @Auto Int size();
+//        }
+//
+//    mixin M into MyMap {}
+//
+//    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
+//        {
+//        public/private @Unchecked Int x
+//            {
+//            @Unchecked Int get() {return 0;}
+//            Void set(@Unchecked Int n) {}
+//            }
+//
+//        Void bar();
+//        @Auto Int size();
+//
+//        static Int y = 0;
+//        static Int z = () -> y;
+//        }
+//
+//    mixin M2 into MyMap2 extends M {}
+//
+//    class B incorporates M {}
+//    class D extends B incorporates M2 {}
+//
+//    Int foo()
+//        {
+//        MyMap2<Object, Object> map;
+//        return map;
+//        }
 
-    C! bar(C! c)
-        {
-        TODO
-        }
-
-    class K
-        {
-        C foo(K kid)
-            {
-            TODO
-            }
-        C! bar(K! kid)
-            {
-            TODO
-            }
-        }
-    }
-
-class D extends C
-    {
-    D x;
-    D! y;
-
-    D foo(D c)
-        {
-        TODO
-        }
-
-    D! bar(D! c)
-        {
-        TODO
-        }
-
-    class K extends C.K
-        {
-        D foo(K kid)
-            {
-            TODO
-            }
-        D! bar(K! kid)
-            {
-            TODO
-            }
-        }
-    }
-
-/*
-    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
-        {
-        Void foo();
-        @Auto Int size();
-        }
-
-    mixin M into MyMap {}
-
-    class MyMap2<KeyType, ValueType> extends MyMap<KeyType, ValueType>
-        {
-        public/private @Unchecked Int x
-            {
-            @Unchecked Int get() {return 0;}
-            Void set(@Unchecked Int n) {}
-            }
-
-        Void bar();
-        @Auto Int size();
-
-        static Int y = 0;
-        static Int z = () -> y;
-        }
-
-    mixin M2 into MyMap2 extends M {}
-
-    class B incorporates M {}
-    class D extends B incorporates M2 {}
-    function Object() foo(Object o)
-        {
-        return o;
-        }
-
-    Int foo()
-        {
-        MyMap2<Object, Object> map;
-        return map;
-        }
-        */
+//    // this fails!!!
+//    function Object() foo(Object o)
+//        {
+//        return o;
+//        }
     }
