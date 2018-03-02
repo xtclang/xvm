@@ -6,8 +6,10 @@ import java.util.Arrays;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -43,6 +45,13 @@ public class xIntArray
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        ConstantPool pool = f_struct.getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
         }
 
     @Override

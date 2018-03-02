@@ -115,21 +115,16 @@ public abstract class OpIndex
                 return R_REPEAT;
                 }
 
-            if (isAssignOp() && frame.isNextRegister(m_nRetValue))
-                {
-                introduceAssignVar(frame);
-                }
-
             if (isProperty(hTarget) || isProperty(hIndex))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hIndex};
                 Frame.Continuation stepNext = frameCaller ->
-                    complete(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
+                    processArgs(frameCaller, ahArg[0], (JavaLong) ahArg[1]);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
-            return complete(frame, hTarget, (JavaLong) hIndex);
+            return processArgs(frame, hTarget, (JavaLong) hIndex);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -137,14 +132,24 @@ public abstract class OpIndex
             }
         }
 
+    protected int processArgs(Frame frame, ObjectHandle hTarget, JavaLong hIndex)
+        {
+        if (isAssignOp() && frame.isNextRegister(m_nRetValue))
+            {
+            introduceAssignVar(frame, (int) hIndex.getValue());
+            }
+
+        return complete(frame, hTarget, hIndex);
+        }
+
     /**
      * Introduce a register for the resulting value.
      *
-     * This method should be overridden by I_Ref to introduce a Ref of an element instead.
+     * This method is overridden by I_Ref/I_Var to introduce a Ref of an element instead.
      */
-    protected void introduceAssignVar(Frame frame)
+    protected void introduceAssignVar(Frame frame, int nIndex)
         {
-        frame.introduceElementVar(m_nTarget);
+        frame.introduceElementVar(m_nTarget, nIndex);
         }
 
     protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex)

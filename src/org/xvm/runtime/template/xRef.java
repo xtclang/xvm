@@ -23,7 +23,6 @@ public class xRef
         extends ClassTemplate
     {
     public static xRef INSTANCE;
-    public static TypeConstant TYPE;
 
     public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -32,7 +31,6 @@ public class xRef
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = getCanonicalType();
             }
         }
 

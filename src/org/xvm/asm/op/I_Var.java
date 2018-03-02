@@ -69,12 +69,9 @@ public class I_Var
         }
 
     @Override
-    protected void introduceAssignVar(Frame frame)
+    protected void introduceAssignVar(Frame frame, int nIndex)
         {
-        if (frame.isNextRegister(m_nRetValue))
-            {
-            frame.introduceElementRef(m_nTarget);
-            }
+        frame.introduceElementRef(m_nTarget, nIndex);
         }
 
     @Override
