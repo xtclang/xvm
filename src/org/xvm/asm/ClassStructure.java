@@ -14,11 +14,12 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.L_Set;
@@ -1315,23 +1316,43 @@ public class ClassStructure
 
     // ----- helpers -------------------------------------------------------------------------------
 
+
+    // TODO on Component? public IdentityConstant lookupNested(Object oIdNested)
+    // TODO public Component evaluate(Component clz)
+
     /**
-     * Helper method to find a method by signature.
+     * Assuming that this component is a class containing nested members, and using a value
+     * previously returned from {@link IdentityConstant#getNestedIdentity()} that would be usable
+     * in relation to this class, determine the nested component that the identity refers to.
+     *
+     * @param id  a nested identity, which is null, or a String name, or a SignatureConstant, or an
+     *            instance of NestedIdentity
+     *
+     * @return the specified component, or null
      */
-    public MethodStructure findMethod(SignatureConstant sig)
+    public Component getNestedChild(Object id)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) getChild(sig.getName());
-        if (mms != null)
+        if (id == null)
             {
-            for (MethodStructure method : mms.methods())
-                {
-                if (method.getIdentityConstant().getSignature().equals(sig))
-                    {
-                    return method;
-                    }
-                }
+            return this;
             }
-        return null;
+
+        if (id instanceof String)
+            {
+            return getChild((String) id);
+            }
+
+        if (id instanceof SignatureConstant)
+            {
+            return findMethod((SignatureConstant) id);
+            }
+
+        if (id instanceof NestedIdentity)
+            {
+            IdentityConstant idFull = ((NestedIdentity) id).getIdentityConstant();
+
+            }
+
         }
 
 

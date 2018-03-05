@@ -133,11 +133,6 @@ public class MethodConstant
         return m_constParent;
         }
 
-    public IdentityConstant getGrandParent()
-        {
-        return m_constParent.getParentConstant();
-        }
-
     @Override
     public IdentityConstant getNamespace()
         {
@@ -151,9 +146,15 @@ public class MethodConstant
         }
 
     @Override
-    protected StringBuilder buildPath()
+    public Object getPathElement()
         {
-        StringBuilder sb = getParentConstant().buildPath();
+        return m_constSig;
+        }
+
+    @Override
+    public String getPathElementString()
+        {
+        StringBuilder sb = new StringBuilder();
 
         sb.append('(');
         TypeConstant[] aParamType = getRawParams();
@@ -167,7 +168,7 @@ public class MethodConstant
             sb.append(typeParam.getValueString());
             }
         sb.append(')');
-        return sb;
+        return sb.toString();
         }
 
     @Override

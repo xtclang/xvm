@@ -23,7 +23,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -1908,11 +1907,11 @@ public abstract class TypeConstant
             }
 
         String sName  = idSuper.getName();
-        int    cDepth = idSuper.depthFromClass();
+        int    cDepth = idSuper.getNestedDepth();
         NextProperty: for (Entry<PropertyConstant, PropertyInfo> entry : mapSubProps.entrySet())
             {
             PropertyConstant idSub = entry.getKey();
-            if (idSub.getName().equals(sName) && idSub.depthFromClass() == cDepth)
+            if (idSub.getName().equals(sName) && idSub.getNestedDepth() == cDepth)
                 {
                 if (cDepth > 1)
                     {

@@ -4,6 +4,7 @@ package org.xvm.asm;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import java.util.List;
@@ -33,6 +34,29 @@ public class MultiMethodStructure
         {
         super(xsParent, nFlags, constId, condition);
         assert Format.fromFlags(nFlags) == Format.MULTIMETHOD;
+        }
+
+
+    // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public boolean isAutoNarrowingAllowed()
+        {
+        return getParent().isAutoNarrowingAllowed();
+        }
+
+    @Override
+    public MethodStructure findMethod(SignatureConstant sig)
+        {
+        for (MethodStructure method : methods())
+            {
+            if (method.getIdentityConstant().getSignature().equals(sig))
+                {
+                return method;
+                }
+            }
+
+        return null;
         }
 
 
@@ -114,11 +138,5 @@ public class MultiMethodStructure
     public List<MethodStructure> methods()
         {
         return (List<MethodStructure>) (List) super.children();
-        }
-
-    @Override
-    public boolean isAutoNarrowingAllowed()
-        {
-        return getParent().isAutoNarrowingAllowed();
         }
     }

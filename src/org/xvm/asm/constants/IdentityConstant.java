@@ -95,34 +95,59 @@ public abstract class IdentityConstant
         {
         return getParentConstant().buildPath()
                 .append('.')
-                .append(getName());
+                .append(getPathElementString());
+        }
+
+    /**
+     * @return an Object that represents the path element for this IdentityConstant, and which
+     *         implements {@link Object#hashCode()} and {@link Object#equals(Object)} accordingly
+     */
+    public Object getPathElement()
+        {
+        return getName();
+        }
+
+    /**
+     * @return a String representation of the path element for this IdentityConstant
+     */
+    public String getPathElementString()
+        {
+        return getName();
+        }
+
+    /**
+     * @return true iff this constant represents a component nested within a class, but not a class
+     *         itself
+     */
+    public boolean isNested()
+        {
+        switch (getFormat())
+            {
+            case Typedef:
+            case Property:
+            case MultiMethod:
+            case Method:
+                return true;
+
+            default:
+                return false;
+            }
         }
 
     /**
      * @return the number of identity segments that need to be traversed to find a class in the
      *         IdentityConstant's path
      */
-    public int depthFromClass()
+    public int getNestedDepth()
         {
-        IdentityConstant constId = this;
-        int              cDepth  = 0;
-        while (true)
+        int              c  = 0;
+        IdentityConstant id = this;
+        while (id.isNested())
             {
-            switch (constId.getFormat())
-                {
-                case Typedef:
-                case Property:
-                case MultiMethod:
-                case Method:
-                    ++cDepth;
-                    break;
-
-                default:
-                    return cDepth;
-                }
-
-            constId = constId.getParentConstant();
+            id = id.getParentConstant();
+            ++c;
             }
+        return c;
         }
 
     /**
@@ -131,27 +156,93 @@ public abstract class IdentityConstant
      */
     public IdentityConstant getClassIdentity()
         {
-        IdentityConstant constId = this;
-        while (true)
+        IdentityConstant id = this;
+        while (id.isNested())
             {
-            switch (constId.getFormat())
+            id = id.getParentConstant();
+            }
+        return id;
+        }
+
+    /**
+     * @return an object that identifies this constant relative to the class within which it nests,
+     *         or null if this constant refers to a class structure
+     */
+    public Object getNestedIdentity()
+        {
+        if (!isNested())
+            {
+            return null;
+            }
+
+        return getNamespace().isNested()
+                ? new NestedIdentity()
+                : getPathElement();
+        }
+
+    /**
+     * A class used to as a nested identity for members not directly nested (or in the case of
+     * methods, methods whose multi-method parent is not directly nested).
+     */
+    public class NestedIdentity
+        {
+        /**
+         * @return the IdentityConstant that created this NestedIdentity
+         */
+        public IdentityConstant getIdentityConstant()
+            {
+            return IdentityConstant.this;
+            }
+
+        @Override
+        public String toString()
+            {
+            // for member "m" of class "c", the string is "m"
+            IdentityConstant id = IdentityConstant.this;
+            return id.getPathString().substring(id.getClassIdentity().getPathString().length()+1);
+            }
+
+        @Override
+        public int hashCode()
+            {
+            int n = 0;
+            IdentityConstant id = IdentityConstant.this;
+            while (id.isNested())
                 {
-                case Typedef:
-                case Property:
-                case MultiMethod:
-                case Method:
-                    break;
+                n ^= id.getPathElement().hashCode();
+                id = id.getNamespace();
+                }
+            return n;
+            }
 
-                case Module:
-                case Package:
-                case Class:
-                    return constId;
-
-                default:
-                    throw new IllegalStateException();
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (obj == this)
+                {
+                return true;
                 }
 
-            constId = constId.getParentConstant();
+            if (!(obj instanceof NestedIdentity))
+                {
+                return false;
+                }
+
+            NestedIdentity   that   = (NestedIdentity) obj;
+            IdentityConstant idThis = this.getIdentityConstant();
+            IdentityConstant idThat = that.getIdentityConstant();
+            while (idThis.isNested() && idThat.isNested())
+                {
+                if (!idThis.getPathElement().equals(idThat.getPathElement()))
+                    {
+                    return false;
+                    }
+
+                idThis = idThis.getNamespace();
+                idThat = idThat.getNamespace();
+                }
+
+            return idThis.isNested() == idThat.isNested();
             }
         }
 

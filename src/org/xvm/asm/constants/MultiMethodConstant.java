@@ -1,7 +1,6 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import java.io.DataInput;

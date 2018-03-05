@@ -20,7 +20,6 @@ import java.util.NoSuchElementException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -30,6 +29,8 @@ import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
 
@@ -1223,6 +1224,7 @@ public abstract class Component
 
     /**
      * For all but the multi-method, this obtains a child by the specified dot-delimited path.
+     * TODO discuss with GG - do we still need this? (use NestedIdentity instead?)
      *
      * @param sPath  dot-delimited child name path
      *
@@ -1247,6 +1249,21 @@ public abstract class Component
             ofEnd   = sPath.indexOf('.', ofStart);
             }
         return parent.getChild(sPath.substring(ofStart));
+        }
+
+    /**
+     * Helper method to find a method by signature.
+     *
+     * @param sig  the method signature to find
+     *
+     * @return the specified MethodStructure, or null
+     */
+    public MethodStructure findMethod(SignatureConstant sig)
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) getChild(sig.getName());
+        return mms == null
+                ? null
+                : mms.findMethod(sig);
         }
 
     /**
