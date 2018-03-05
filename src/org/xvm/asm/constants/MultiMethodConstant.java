@@ -1,10 +1,13 @@
 package org.xvm.asm.constants;
 
 
-import org.xvm.asm.ConstantPool;
-
 import java.io.DataInput;
 import java.io.IOException;
+
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MultiMethodStructure;
 
 
 /**
@@ -58,6 +61,21 @@ public class MultiMethodConstant
     public Format getFormat()
         {
         return Format.MultiMethod;
+        }
+
+    @Override
+    public MultiMethodStructure resolveNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().resolveNestedIdentity(clz);
+        if (parent == null)
+            {
+            return null;
+            }
+
+        Component that = parent.getChild(this.getName());
+        return that instanceof MultiMethodStructure
+                ? (MultiMethodStructure) that
+                : null;
         }
 
 

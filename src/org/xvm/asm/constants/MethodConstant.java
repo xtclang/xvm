@@ -9,8 +9,12 @@ import java.util.List;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -175,6 +179,15 @@ public class MethodConstant
     public boolean trailingSegmentEquals(IdentityConstant that)
         {
         return that instanceof MethodConstant && this.m_constSig.equals(((MethodConstant) that).m_constSig);
+        }
+
+    @Override
+    public MethodStructure resolveNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().resolveNestedIdentity(clz);
+        return parent instanceof MultiMethodStructure
+                ? parent.findMethod(this.getSignature())
+                : null;
         }
 
 

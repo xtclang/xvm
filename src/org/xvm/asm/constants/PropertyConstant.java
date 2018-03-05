@@ -5,6 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.PropertyStructure;
 
@@ -98,6 +100,21 @@ public class PropertyConstant
             m_type = type = ((PropertyStructure) getComponent()).getType();
             }
         return type;
+        }
+
+    @Override
+    public PropertyStructure resolveNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().resolveNestedIdentity(clz);
+        if (parent == null)
+            {
+            return null;
+            }
+
+        Component that = parent.getChild(this.getName());
+        return that instanceof PropertyStructure
+                ? (PropertyStructure) that
+                : null;
         }
 
 

@@ -181,6 +181,19 @@ public abstract class IdentityConstant
         }
 
     /**
+     * Given a ClassStructure, use the nested identity from this IdentityConstant to find the
+     * corresponding Component within that ClassStructure.
+     *
+     * @param clz  the ClassStructure to find the corresponding nested Component within
+     *
+     * @return the corresponding nested Component, or null
+     */
+    public Component resolveNestedIdentity(ClassStructure clz)
+        {
+        return getComponent();
+        }
+
+    /**
      * A class used to as a nested identity for members not directly nested (or in the case of
      * methods, methods whose multi-method parent is not directly nested).
      */

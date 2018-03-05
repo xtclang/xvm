@@ -1316,10 +1316,6 @@ public class ClassStructure
 
     // ----- helpers -------------------------------------------------------------------------------
 
-
-    // TODO on Component? public IdentityConstant lookupNested(Object oIdNested)
-    // TODO public Component evaluate(Component clz)
-
     /**
      * Assuming that this component is a class containing nested members, and using a value
      * previously returned from {@link IdentityConstant#getNestedIdentity()} that would be usable
@@ -1349,10 +1345,10 @@ public class ClassStructure
 
         if (id instanceof NestedIdentity)
             {
-            IdentityConstant idFull = ((NestedIdentity) id).getIdentityConstant();
-
+            return ((NestedIdentity) id).getIdentityConstant().resolveNestedIdentity(this);
             }
 
+        throw new IllegalStateException();
         }
 
 
