@@ -1022,7 +1022,8 @@ public abstract class TypeConstant
                 {
                 if (cClassParams == 0)
                     {
-                    log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED, constId.getPathString());
+                    log(errs, Severity.ERROR, VE_TYPE_PARAMS_UNEXPECTED,
+                            constId.getPathString());
                     }
                 else
                     {
@@ -1621,7 +1622,6 @@ public abstract class TypeConstant
         {
         boolean fIncomplete = false;
 
-        ConstantPool pool = getConstantPool();
         for (Contribution contrib : listProcess)
             {
             Composition compContrib = contrib.getComposition();

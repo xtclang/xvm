@@ -1328,27 +1328,25 @@ public class ClassStructure
      */
     public Component getNestedChild(Object id)
         {
+        // a null identity indicates the class itself
         if (id == null)
             {
             return this;
             }
 
+        // immediately-nested properties are identified by using only a string name
         if (id instanceof String)
             {
             return getChild((String) id);
             }
 
+        // immediately-nested multi-method/method combinations are identified by using only a sig
         if (id instanceof SignatureConstant)
             {
             return findMethod((SignatureConstant) id);
             }
 
-        if (id instanceof NestedIdentity)
-            {
-            return ((NestedIdentity) id).getIdentityConstant().resolveNestedIdentity(this);
-            }
-
-        throw new IllegalStateException();
+        return ((NestedIdentity) id).getIdentityConstant().resolveNestedIdentity(this);
         }
 
 

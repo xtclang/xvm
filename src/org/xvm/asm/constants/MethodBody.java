@@ -291,10 +291,12 @@ public class MethodBody
      * <li><b>Declared</b> - the method body represents a declared but non-implemented method</li>
      * <li><b>Default</b> - the method body is a default implementation from an interface</li>
      * <li><b>Delegating</b> - the method body is implemented by delegating the method call</li>
-     * <li><b>Property</b> - the method body represents access to a property's underlying field,
+     * TODO add "redirect" or "rebase" (into a different call chain, e.g. as a result of explicit return value narrowing)
+     * <li><b>Property</b> - (TODO rename as "field"?) the method body represents access to a property's underlying field,
      * which occurs when a property's method is overridden and calls {@code super()}</li>
      * <li><b>Native</b> - the method body is implemented natively by the runtime</li>
      * <li><b>Explicit</b> - the method body is represented by byte code that gets executed</li>
+     * TODO add "capped"
      * </ul>
      */
     public enum Implementation {Implicit, Declared, Default, Delegating, Property, Native, Explicit}

@@ -182,12 +182,21 @@ public class MethodConstant
         }
 
     @Override
+    public Object getNestedIdentity()
+        {
+        // method can be identified with only a signature, assuming it is not recursively nested
+        return getNamespace().isNested()
+                ? new NestedIdentity()
+                : getSignature();
+        }
+
+    @Override
     public MethodStructure resolveNestedIdentity(ClassStructure clz)
         {
         Component parent = getNamespace().resolveNestedIdentity(clz);
-        return parent instanceof MultiMethodStructure
-                ? parent.findMethod(this.getSignature())
-                : null;
+        return parent == null
+                ? null
+                : parent.findMethod(getSignature());
         }
 
 

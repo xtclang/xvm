@@ -170,14 +170,9 @@ public abstract class IdentityConstant
      */
     public Object getNestedIdentity()
         {
-        if (!isNested())
-            {
-            return null;
-            }
-
-        return getNamespace().isNested()
+        return isNested()
                 ? new NestedIdentity()
-                : getPathElement();
+                : null;
         }
 
     /**
@@ -190,7 +185,8 @@ public abstract class IdentityConstant
      */
     public Component resolveNestedIdentity(ClassStructure clz)
         {
-        return getComponent();
+        assert !isNested();
+        return clz;
         }
 
     /**

@@ -1260,10 +1260,10 @@ public abstract class Component
      */
     public MethodStructure findMethod(SignatureConstant sig)
         {
-        MultiMethodStructure mms = (MultiMethodStructure) getChild(sig.getName());
-        return mms == null
-                ? null
-                : mms.findMethod(sig);
+        Component child = getChild(sig.getName());
+        return child instanceof MultiMethodStructure
+                ? child.findMethod(sig)
+                : null;
         }
 
     /**

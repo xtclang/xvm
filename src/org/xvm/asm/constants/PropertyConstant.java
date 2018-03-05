@@ -103,6 +103,15 @@ public class PropertyConstant
         }
 
     @Override
+    public Object getNestedIdentity()
+        {
+        // property can be identified with only a name, assuming it is not recursively nested
+        return getNamespace().isNested()
+                ? new NestedIdentity()
+                : getName();
+        }
+
+    @Override
     public PropertyStructure resolveNestedIdentity(ClassStructure clz)
         {
         Component parent = getNamespace().resolveNestedIdentity(clz);
