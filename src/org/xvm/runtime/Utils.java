@@ -801,7 +801,7 @@ public abstract class Utils
                 switch (nStep)
                     {
                     case 0:
-                        iResult = hTarget.get(frameCaller, Frame.RET_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Frame.RET_LOCAL);
                         break;
 
                     case 1:
@@ -809,7 +809,7 @@ public abstract class Utils
                         break;
 
                     case 2:
-                        iResult = hTarget.set(frameCaller, hValueNew);
+                        iResult = hTarget.getVarSupport().set(frameCaller, hTarget, hValueNew);
                         break;
 
                     case 3:
@@ -864,7 +864,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = hTarget.get(frameCaller, Frame.RET_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Frame.RET_LOCAL);
                         break;
 
                     case 1:
@@ -872,7 +872,7 @@ public abstract class Utils
                         break;
 
                     case 2:
-                        return hTarget.set(frameCaller, hValueNew);
+                        return hTarget.getVarSupport().set(frameCaller, hTarget, hValueNew);
 
                     default:
                         throw new IllegalStateException();

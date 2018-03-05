@@ -502,9 +502,9 @@ public class Frame
                             }
 
                         FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.isAssigned())
+                        if (hFuture.isAssigned(this))
                             {
-                            return hFuture.get(this, nVar);
+                            return hFuture.getVarSupport().get(this, hFuture, nVar);
                             }
 
                         // mark the register as "waiting for a result",
@@ -526,8 +526,11 @@ public class Frame
                     break;
 
                 case VAR_DYNAMIC_REF:
+                    {
+                    RefHandle hVar = (RefHandle) f_ahVar[nVar];
                     // TODO: check the "weak" assignment (here or inside)
-                    return ((RefHandle) f_ahVar[nVar]).set(this, hValue);
+                    return hVar.getVarSupport().set(this, hVar, hValue);
+                    }
 
                 default:
                     throw new IllegalStateException();
@@ -536,6 +539,7 @@ public class Frame
             TypeConstant typeFrom = hValue.getType();
             if (typeFrom.getPosition() != info.m_nTypeId) // quick check
                 {
+                // TODO: how to minimize the probability of getting here?
                 TypeConstant typeTo = info.getType();
 
                 switch (typeFrom.calculateRelation(typeTo))
@@ -797,13 +801,13 @@ public class Frame
             if (info != null && info.isWaiting())
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isAssigned())
+                if (hFuture.isAssigned(this))
                     {
                     info.stopWaiting();
 
                     if (info.isStandard())
                         {
-                        switch (hFuture.get(this, i))
+                        switch (hFuture.getVarSupport().get(this, hFuture, i))
                             {
                             case Op.R_NEXT:
                                 break;
@@ -896,7 +900,8 @@ public class Frame
 
             if (info != null && !info.isStandard())
                 {
-                switch (((RefHandle) hValue).get(this, RET_LOCAL))
+                RefHandle hRef = (RefHandle) f_ahVar[iArg];
+                switch (hRef.getVarSupport().get(this, hRef, RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         return getFrameLocal();
@@ -1194,7 +1199,7 @@ public class Frame
         {
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
-        return hRef.isAssigned() ? hRef : null;
+        return hRef.isAssigned(this) ? hRef : null;
         }
 
     /**
@@ -1594,7 +1599,7 @@ public class Frame
             {
             if (m_ref != null)
                 {
-                m_ref.dereference();
+                m_ref.dereference(Frame.this);
                 }
             }
 

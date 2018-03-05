@@ -49,37 +49,44 @@ public class xInjectedRef
         return new InjectedHandle(clazz, sName);
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        InjectedHandle hInjected = (InjectedHandle) hTarget;
+        ObjectHandle hValue = hInjected.m_hDelegate;
+        if (hValue == null)
+            {
+            TypeConstant typeEl = hInjected.getType().getGenericParamType("RefType");
+
+            hInjected.m_hDelegate = hValue =
+                frame.f_context.f_container.getInjectable(hInjected.m_sName, typeEl);
+            if (hValue == null)
+                {
+                return frame.raiseException(
+                    xException.makeHandle("Unknown injectable property " + hInjected.m_sName));
+                }
+            }
+
+        return frame.assignValue(iReturn, hValue);
+        }
+
+
+    // ----- handle class -----
+
     public static class InjectedHandle
             extends RefHandle
         {
         protected InjectedHandle(TypeComposition clazz, String sName)
             {
             super(clazz, sName);
+
+            m_fMutable = false;
             }
 
         @Override
-        protected int getInternal(Frame frame, int iReturn)
+        public boolean isAssigned(Frame frame)
             {
-            ObjectHandle hValue = m_hDelegate;
-            if (hValue == null)
-                {
-                TypeConstant typeEl = getType().getGenericParamType("RefType");
-
-                hValue = m_hDelegate = frame.f_context.f_container.getInjectable(m_sName, typeEl);
-                if (hValue == null)
-                    {
-                    return frame.raiseException(xException.makeHandle("Unknown injectable property " + m_sName));
-                    }
-                }
-
-            return frame.assignValue(iReturn, hValue);
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            return frame.raiseException(
-                xException.makeHandle("InjectedRef cannot be re-assigned"));
+            return m_hDelegate != null;
             }
 
         @Override

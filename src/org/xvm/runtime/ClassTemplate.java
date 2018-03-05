@@ -9,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -209,18 +208,11 @@ public abstract class ClassTemplate
 
         assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
 
-        return m_mapCompositions.computeIfAbsent(typeMask,
-            (type) -> new TypeComposition(this, typeInception, type));
-        }
+        OpSupport support = typeInception.isAnnotated() ?
+            typeInception.getOpSupport(f_templates) : this;
 
-    public boolean isService()
-        {
-        return f_struct.getFormat() == Format.SERVICE;
-        }
-
-    public boolean isConst()
-        {
-        return f_struct.isConst();
+        return m_mapCompositions.computeIfAbsent(typeMask, (type) ->
+            new TypeComposition(support, typeInception, type));
         }
 
     // should we generate fields for this class
@@ -237,11 +229,6 @@ public abstract class ClassTemplate
             default:
                 return false;
             }
-        }
-
-    public boolean isSingleton()
-        {
-        return f_struct.isStatic();
         }
 
     protected boolean isConstructImmutable()
@@ -813,9 +800,12 @@ public abstract class ClassTemplate
             }
 
         PropertyInfo info = property.getInfo();
-        return info != null && info.isRef()
-            ? ((RefHandle) hValue).get(frame, iReturn)
-            : frame.assignValue(iReturn, hValue);
+        if (info != null && info.isRef())
+            {
+            RefHandle hRef = (RefHandle) hValue;
+            return hRef.getVarSupport().get(frame, hRef, iReturn);
+            }
+         return frame.assignValue(iReturn, hValue);
         }
 
     /**
@@ -895,7 +885,8 @@ public abstract class ClassTemplate
         PropertyInfo info = property.getInfo();
         if (info != null && info.isRef())
             {
-            return ((RefHandle) hThis.getField(property.getName())).set(frame, hValue);
+            RefHandle hRef = (RefHandle) hThis.getField(property.getName());
+            return hRef.getVarSupport().set(frame, hRef, hValue);
             }
 
         hThis.setField(property.getName(), hValue);

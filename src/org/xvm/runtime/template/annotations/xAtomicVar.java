@@ -52,7 +52,7 @@ public class xAtomicVar
 
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
+                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
 
                         // conceptually, the logic looks like:
                         //
@@ -102,7 +102,7 @@ public class xAtomicVar
                         AtomicHandle hThis = (AtomicHandle) hTarget;
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
+                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
 
                         // conceptually, the logic looks like:
                         //
@@ -143,47 +143,53 @@ public class xAtomicVar
         return new AtomicHandle(clazz, sName, null);
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        AtomicHandle hAtomic = (AtomicHandle) hTarget;
+        ObjectHandle hValue = hAtomic.f_atomic.get();
+        return hValue == null
+            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            : frame.assignValue(iReturn, hValue);
+        }
+
+    @Override
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle handle)
+        {
+        AtomicHandle hAtomic = (AtomicHandle) hTarget;
+        hAtomic.f_atomic.set(handle);
+        return Op.R_NEXT;
+        }
+
+
+    // ----- handle class -----
+
     public static class AtomicHandle
             extends RefHandle
         {
-        protected AtomicReference<ObjectHandle> m_atomic = new AtomicReference<>();
+        protected final AtomicReference<ObjectHandle> f_atomic;
 
         protected AtomicHandle(TypeComposition clazz, String sName, ObjectHandle hValue)
             {
             super(clazz, sName);
 
+            f_atomic = new AtomicReference<>();
             if (hValue != null)
                 {
-                m_atomic.set(hValue);
+                f_atomic.set(hValue);
                 }
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
-            return m_atomic != null;
-            }
-
-        @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            ObjectHandle hValue = m_atomic.get();
-            return hValue == null
-                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
-                : frame.assignValue(iReturn, hValue);
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            m_atomic.set(handle);
-            return Op.R_NEXT;
+            return f_atomic.get() != null;
             }
 
         @Override
         public String toString()
             {
-            return m_clazz + " -> " + m_atomic.get();
+            return m_clazz + " -> " + f_atomic.get();
             }
         }
 

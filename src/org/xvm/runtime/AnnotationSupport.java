@@ -101,6 +101,15 @@ public class AnnotationSupport
     // ----- VarSupport implementation -------------------------------------------------------------
 
     @Override
+    public int get(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("get");
+        return chain == null
+            ? ensureVarSupport().get(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
         CallChain chain = getOpChain("preInc");
@@ -134,6 +143,15 @@ public class AnnotationSupport
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        CallChain chain = getOpChain("set");
+        return chain == null
+            ? ensureVarSupport().set(frame, hTarget, hValue)
+            : chain.invoke(frame, hTarget, hValue, Frame.RET_UNUSED);
         }
 
     @Override

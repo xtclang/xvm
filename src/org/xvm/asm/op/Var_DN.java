@@ -124,8 +124,8 @@ public class Var_DN
 
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {
-                // prime the injection (fail fast)
-                switch (hRef.get(frame, Frame.RET_UNUSED))
+                // TODO: should we prime the injection (fail fast)?
+                switch (hRef.getVarSupport().get(frame, hRef, Frame.RET_UNUSED))
                     {
                     case R_NEXT:
                         break;
