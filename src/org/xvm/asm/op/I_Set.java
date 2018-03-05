@@ -5,12 +5,10 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.Op;
 import org.xvm.asm.OpIndexInPlace;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
@@ -75,8 +73,6 @@ public class I_Set
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        ExceptionHandle hException = template.assignArrayValue(hTarget, hIndex.getValue(), hValue);
-
-        return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+        return template.assignArrayValue(frame, hTarget, hIndex.getValue(), hValue);
         }
     }

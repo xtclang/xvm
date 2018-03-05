@@ -397,7 +397,7 @@ public abstract class ClassTemplate
      * @param frame     the current frame
      * @param constant  the constant
      *
-     * @return the corresponding {@link ObjectHandle}
+     * @return the corresponding {@link ObjectHandle} or null if the operation failed
      */
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {

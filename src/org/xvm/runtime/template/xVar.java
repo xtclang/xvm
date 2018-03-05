@@ -125,9 +125,7 @@ public class xVar
                 ObjectHandle hArray = hTarget.m_hDelegate;
                 IndexSupport template = (IndexSupport) hArray.getTemplate();
 
-                ExceptionHandle hException =
-                    template.assignArrayValue(hArray, hIndexedRef.f_lIndex, hValue);
-                return hException == null ? Op.R_NEXT : frame.raiseException(hException);
+                return template.assignArrayValue(frame, hArray, hIndexedRef.f_lIndex, hValue);
                 }
 
             default:

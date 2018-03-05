@@ -14,7 +14,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
@@ -93,11 +92,10 @@ public class xArray
 
             ObjectHandle hValue = heap.ensureConstHandle(frame, constValue.getPosition());
 
-            ExceptionHandle hException =
-                    templateArray.assignArrayValue(hArray, i, hValue);
-            if (hException != null)
+            if (templateArray.assignArrayValue(frame, hArray, i, hValue) == Op.R_EXCEPTION)
                 {
-                throw new IllegalStateException("Failed to initialize an array " + hException);
+                throw new IllegalStateException("Failed to initialize an array " +
+                    frame.m_hException);
                 }
             }
 
@@ -172,21 +170,20 @@ public class xArray
     // ----- IndexSupport methods -----
 
     @Override
-    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
-            throws ExceptionHandle.WrapperException
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            throw IndexSupport.outOfRange(lIndex, hArray.m_cSize).getException();
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
             }
 
-        return hArray.m_ahValue[(int) lIndex];
+        return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
         }
 
     @Override
-    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
         GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
 
@@ -194,7 +191,7 @@ public class xArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return IndexSupport.outOfRange(lIndex, cSize);
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
             }
 
         if (lIndex == cSize)
@@ -205,7 +202,7 @@ public class xArray
                 {
                 if (hArray.m_fFixed)
                     {
-                    return IndexSupport.outOfRange(lIndex, cSize);
+                    return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
                     }
 
                 // resize (TODO: we should be much smarter here)
@@ -220,7 +217,7 @@ public class xArray
             }
 
         hArray.m_ahValue[(int) lIndex] = hValue;
-        return null;
+        return Op.R_NEXT;
         }
 
     @Override
@@ -269,13 +266,9 @@ public class xArray
         @Override
         public int proceed(Frame frameCaller)
             {
-            ExceptionHandle hException =
-                    template.assignArrayValue(hArray, index, frameCaller.getFrameLocal());
-            if (hException != null)
-                {
-                return frameCaller.raiseException(hException);
-                }
-            return doNext(frameCaller);
+            return template.assignArrayValue(frameCaller, hArray, index, frameCaller.getFrameLocal())
+                    == Op.R_EXCEPTION ?
+                Op.R_EXCEPTION : doNext(frameCaller);
             }
 
         public int doNext(Frame frameCaller)

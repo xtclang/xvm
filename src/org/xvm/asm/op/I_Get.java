@@ -9,7 +9,6 @@ import org.xvm.asm.OpIndex;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.IndexSupport;
@@ -74,14 +73,6 @@ public class I_Get
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        try
-            {
-            return frame.assignValue(m_nRetValue,
-                    template.extractArrayValue(hTarget, hIndex.getValue()));
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
-            }
+        return template.extractArrayValue(frame, hTarget, hIndex.getValue(), m_nRetValue);
         }
     }

@@ -250,15 +250,8 @@ public class xRef
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
                 ObjectHandle hArray = hTarget.m_hDelegate;
                 IndexSupport template = (IndexSupport) hArray.getTemplate();
-                try
-                    {
-                    return frame.assignValue(iReturn,
-                        template.extractArrayValue(hArray, hIndexedRef.f_lIndex));
-                    }
-                catch (ObjectHandle.ExceptionHandle.WrapperException e)
-                    {
-                    return frame.raiseException(e);
-                    }
+
+                return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
                 }
 
             default:

@@ -102,6 +102,7 @@ public class Container
 
             // m_hModule = (ModuleHandle) app.createConstHandle(f_constModule, f_heapGlobal);
             m_hApp = app.createConstHandle(null, app.f_struct.getIdentityConstant());
+            assert m_hApp != null;
 
             m_contextMain.callLater(xFunction.makeHandle(mtRun), Utils.OBJECTS_NONE);
             }

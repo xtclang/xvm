@@ -7,6 +7,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -95,7 +97,7 @@ public class xTuple
 
         try
             {
-            ahValue = support.toArray(hSequence);
+            ahValue = support.toArray(frame, hSequence);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -110,8 +112,7 @@ public class xTuple
     // ----- IndexSupport methods -----
 
     @Override
-    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
-            throws ExceptionHandle.WrapperException
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
         ObjectHandle[] ahValue = hTuple.m_ahValue;
@@ -119,14 +120,14 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            throw IndexSupport.outOfRange(lIndex, cElements).getException();
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, cElements));
             }
 
-        return hTuple.m_ahValue[(int) lIndex];
+        return frame.assignValue(iReturn, hTuple.m_ahValue[(int) lIndex]);
         }
 
     @Override
-    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
         TupleHandle hTuple = (TupleHandle) hTarget;
         ObjectHandle[] ahValue = hTuple.m_ahValue;
@@ -134,16 +135,16 @@ public class xTuple
 
         if (lIndex < 0 || lIndex >= cElements)
             {
-            return IndexSupport.outOfRange(lIndex, cElements);
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, cElements));
             }
 
         if (!hTuple.isMutable())
             {
-            return xException.makeHandle("Immutable object");
+            return frame.raiseException(xException.makeHandle("Immutable object"));
             }
 
         hTuple.m_ahValue[(int) lIndex] = hValue;
-        return null;
+        return Op.R_NEXT;
         }
 
     @Override
