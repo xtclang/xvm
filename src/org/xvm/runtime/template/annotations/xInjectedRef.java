@@ -1,8 +1,6 @@
 package org.xvm.runtime.template.annotations;
 
 
-import java.util.concurrent.ExecutionException;
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -53,18 +51,18 @@ public class xInjectedRef
     protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
         {
         InjectedHandle hInjected = (InjectedHandle) hTarget;
-        ObjectHandle hValue = hInjected.m_hDelegate;
+        ObjectHandle hValue = hInjected.getValue();
         if (hValue == null)
             {
             TypeConstant typeEl = hInjected.getType().getGenericParamType("RefType");
 
-            hInjected.m_hDelegate = hValue =
-                frame.f_context.f_container.getInjectable(hInjected.m_sName, typeEl);
+            hValue = frame.f_context.f_container.getInjectable(hInjected.getName(), typeEl);
             if (hValue == null)
                 {
                 return frame.raiseException(
-                    xException.makeHandle("Unknown injectable property " + hInjected.m_sName));
+                    xException.makeHandle("Unknown injectable property " + hInjected.getName()));
                 }
+            hInjected.setValue(hValue);
             }
 
         return frame.assignValue(iReturn, hValue);
@@ -81,29 +79,6 @@ public class xInjectedRef
             super(clazz, sName);
 
             m_fMutable = false;
-            }
-
-        @Override
-        public boolean isAssigned(Frame frame)
-            {
-            return m_hDelegate != null;
-            }
-
-        @Override
-        public String toString()
-            {
-            try
-                {
-                return "(" + m_clazz + ") " + m_hDelegate;
-                }
-            catch (Throwable e)
-                {
-                if (e instanceof ExecutionException)
-                    {
-                    e = e.getCause();
-                    }
-                return e.toString();
-                }
             }
         }
     }

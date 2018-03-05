@@ -82,7 +82,7 @@ public class xRef
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
 
             case "name":
-                String sName = hRef.m_sName;
+                String sName = hRef.getName();
                 return frame.assignValue(iReturn, sName == null ?
                     xNullable.NULL : xString.makeHandle(sName));
 
@@ -237,18 +237,21 @@ public class xRef
 
             case RefHandle.REF_REF:
                 {
-                RefHandle hDelegate = (RefHandle) hTarget.m_hDelegate;
+                RefHandle hDelegate = (RefHandle) hTarget.getValue();
                 return hDelegate.getVarSupport().get(frame, hDelegate, iReturn);
                 }
 
             case RefHandle.REF_PROPERTY:
-                return hTarget.m_hDelegate.getTemplate().getPropertyValue(
-                    frame, hTarget.m_hDelegate, hTarget.m_sName, iReturn);
+                {
+                ObjectHandle hDelegate = hTarget.getValue();
+                return hDelegate.getTemplate().getPropertyValue(
+                    frame, hDelegate, hTarget.getName(), iReturn);
+                }
 
             case RefHandle.REF_ARRAY:
                 {
                 IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
-                ObjectHandle hArray = hTarget.m_hDelegate;
+                ObjectHandle hArray = hTarget.getValue();
                 IndexSupport template = (IndexSupport) hArray.getTemplate();
 
                 return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
@@ -262,7 +265,7 @@ public class xRef
 
     protected int getInternal(Frame frame, RefHandle hRef, int iReturn)
         {
-        ObjectHandle hValue = hRef.m_hDelegate;
+        ObjectHandle hValue = hRef.getValue();
         return hValue == null
             ? frame.raiseException(xException.makeHandle("Unassigned reference"))
             : frame.assignValue(iReturn, hValue);
@@ -338,9 +341,8 @@ public class xRef
     public static class RefHandle
             extends ObjectHandle
         {
-        public String m_sName;
-        public ObjectHandle m_hDelegate; // can point to another Ref for the same referent
-
+        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
+        protected String m_sName;
         protected int m_iVar;
 
         // indicates that the m_hDelegate field holds a referent
@@ -420,6 +422,21 @@ public class xRef
                 }
 
             m_iVar = iVar;
+            }
+
+        public ObjectHandle getValue()
+            {
+            return m_hDelegate;
+            }
+
+        public void setValue(ObjectHandle hDelegate)
+            {
+            m_hDelegate = hDelegate;
+            }
+
+        public String getName()
+            {
+            return m_sName;
             }
 
         public VarSupport getVarSupport()

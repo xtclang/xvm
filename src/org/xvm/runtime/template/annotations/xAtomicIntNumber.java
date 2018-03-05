@@ -256,11 +256,11 @@ public class xAtomicIntNumber
         }
 
     @Override
-    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle handle)
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
         AtomicLong atomicValue = hAtomic.m_atomicValue;
-        long lValue = ((JavaLong) handle).getValue();
+        long lValue = ((JavaLong) hValue).getValue();
 
         if (atomicValue == null)
             {

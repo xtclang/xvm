@@ -221,13 +221,13 @@ public class xFutureVar
         }
 
     @Override
-    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle handle)
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         FutureHandle hFuture = (FutureHandle) hTarget;
 
-        assert handle != null;
+        assert hValue != null;
 
-        if (handle instanceof FutureHandle)
+        if (hValue instanceof FutureHandle)
             {
             // this is only possible if this "handle" is a "dynamic ref" and the passed in
             // "handle" is a synthetic or dynamic one (see Frame.assignValue)
@@ -237,7 +237,7 @@ public class xFutureVar
                     xException.makeHandle("FutureVar has already been assigned"));
                 }
 
-            FutureHandle that = (FutureHandle) handle;
+            FutureHandle that = (FutureHandle) hValue;
             hFuture.m_future = that.m_future;
             return Op.R_NEXT;
             }
@@ -245,7 +245,7 @@ public class xFutureVar
         CompletableFuture cf = hFuture.m_future;
         if (cf == null)
             {
-            hFuture.m_future = CompletableFuture.completedFuture(handle);
+            hFuture.m_future = CompletableFuture.completedFuture(hValue);
             return Op.R_NEXT;
             }
 
@@ -255,7 +255,7 @@ public class xFutureVar
                 xException.makeHandle("FutureVar has already been set"));
             }
 
-        cf.complete(handle);
+        cf.complete(hValue);
         return Op.R_NEXT;
         }
 

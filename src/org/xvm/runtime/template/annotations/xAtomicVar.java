@@ -154,10 +154,10 @@ public class xAtomicVar
         }
 
     @Override
-    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle handle)
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
         AtomicHandle hAtomic = (AtomicHandle) hTarget;
-        hAtomic.f_atomic.set(handle);
+        hAtomic.f_atomic.set(hValue);
         return Op.R_NEXT;
         }
 
