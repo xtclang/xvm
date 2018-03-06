@@ -1743,8 +1743,10 @@ public abstract class TypeConstant
         boolean fIncomplete = false;
 
         ConstantPool pool = getConstantPool();
-        for (Contribution contrib : listProcess)
+        for (int i = listProcess.size()-1; i >= 0; --i)
             {
+            Contribution contrib = listProcess.get(i);
+
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
 
@@ -1816,6 +1818,8 @@ public abstract class TypeConstant
                     mapContribMethods = mapReducedMethods;
                     }
                 }
+
+            // TODO this has to all change because we're now going in reverse order
 
             // process properties
             for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
@@ -2162,7 +2166,7 @@ public abstract class TypeConstant
                 }
 
             TypeConstant typeInto = typeMixin.getExplicitClassInto();
-            if (!typeInto.isIntoPropertyType())
+            if (!typeInto.isIntoPropertyType())  // TODO should test that this mixes specifically into Ref
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
                         sName, constId.getValueString(), typeMixin.getValueString());
@@ -2172,6 +2176,9 @@ public abstract class TypeConstant
             // we've already processed the "into Property" annotations, so this has to be an
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
             assert typeInto.isA(pool.typeRef());
+
+// TODO verify that the mixin has one and only one type parameter, and it is named RefType, i.e. "mixin M<RefType> into Var<RefType>"
+// TODO does the annotation class provide a hard-coded value for RefType? because if it does, we need to "isA()" test it against the type of the property
 
             if (scanForDups(aRefAnno, i, constMixin))
                 {
@@ -2218,12 +2225,12 @@ public abstract class TypeConstant
             }
 
         // check the methods to see if get() and set() call super
-        MethodStructure  methodInit   = null;
-        MethodStructure  methodGet    = null;
-        MethodStructure  methodSet    = null;
-        MethodStructure  methodBadGet = null;
-        MethodStructure  methodBadSet = null;
-        boolean          fCustomCode  = false;
+        MethodStructure  methodInit     = null;
+        MethodStructure  methodGet      = null;
+        MethodStructure  methodSet      = null;
+        MethodStructure  methodBadGet   = null;
+        MethodStructure  methodBadSet   = null;
+        int              cCustomMethods = 0;
         for (Component child : prop.getChildByNameMap().values())
             {
             if (child instanceof MultiMethodStructure)
@@ -2290,7 +2297,10 @@ public abstract class TypeConstant
                         }
 
                     // regardless of what the code does, there is custom code in the property
-                    fCustomCode = !method.isAbstract() && !method.isStatic();
+                    if (!method.isAbstract() && !method.isStatic())
+                        {
+                        ++cCustomMethods;
+                        }
                     }
                 }
             }
@@ -2382,9 +2392,10 @@ public abstract class TypeConstant
             {
             impl = Implementation.Declared;
 
-            if (fCustomCode)
+            if (cCustomMethods == (methodGet == null ? 0 : 1))
                 {
-                // interface is not allowed to implement a property - REVIEW: GG wants to allow @RO get()
+                // interface is not allowed to implement a property, other than it may have a
+                // default implementation of get()
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
                         getValueString(), sName);
                 }
@@ -2463,7 +2474,7 @@ public abstract class TypeConstant
             }
 
         return new PropertyInfo(new PropertyBody(prop, impl, null,
-                prop.getType().resolveGenerics(resolver), fRO, fRW, fCustomCode, fField, fConstant,
+                prop.getType().resolveGenerics(resolver), fRO, fRW, cCustomMethods > 0, fField, fConstant,
                 prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant()));
         }
 
@@ -3042,7 +3053,7 @@ public abstract class TypeConstant
      *         means that the mix-in applies to the meta-data of the property or to the Ref/Var
      *         instance used for the property
      */
-    public boolean isIntoPropertyType()
+    public boolean isIntoPropertyType() // TODO need SEPARATE: isIntoRefType and isIntoPropertyType
         {
         ConstantPool pool = getConstantPool();
         return equals(pool.typeProperty()) || isA(pool.typeRef());

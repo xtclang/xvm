@@ -376,3 +376,24 @@ module m1 // v3
 // m1 compiles in the absence of m2 (assume they're made by different groups or companies)
 // m1 still works
 // m2 still works ... even though there is a conflict that would prevent the compiler from succeeding
+
+// ----- mixins / annotations into Ref/Var
+
+mixin BlackHole<RefType> into Var<RefType> {...}
+
+mixin AtomicVar<RefType> into Var<RefType> {...}
+
+// TODO TypeConstant (and AnnotatedTypeConstant) needs
+
+@Atomic T t;
+
+type of &t is: AtomicVar<T> + Var<T>                // we can drop the "+ Var<T>" because it's redundant
+
+@Atomic @Lazy T t;
+
+type of &t is: AtomicVar<T> + LazyVar<T> + Var<T>   // we can drop the "+ Var<T>" because it's redundant
+
+@Atomic (Runnable | String) p;
+// type of p is "(Runnable | String)"
+// type of &p is "AtomicVar<Runnable | String>"     // we've started dropping the Var by this point
+Annotated(M1, Annotated(M2, Annotated(Atomic, Parameterized(Ref, T))))

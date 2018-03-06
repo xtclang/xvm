@@ -110,6 +110,9 @@ public class PropertyStructure
         return m_type;
         }
 
+    // TODO what is the RefType of the Ref/Var for this at runtime? getRefType() (if it's not already taken)
+    // TODO this means that AnnotatedTypeConstant (hence Annotation) has to hold a type not a class, so that it can be parameterized for this use case
+
     /**
      * Configure the property's type.
      *
@@ -229,7 +232,7 @@ public class PropertyStructure
                 TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
                 if (typeMixin.isExplicitClassIdentity(true)
                         && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN
-                        && typeMixin.getExplicitClassInto().isIntoPropertyType())
+                        && typeMixin.getExplicitClassInto().isIntoPropertyType())       // TODO only "into Property"
                     {
                     if (listPropAnno == null)
                         {
