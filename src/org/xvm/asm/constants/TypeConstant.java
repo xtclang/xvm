@@ -879,8 +879,10 @@ public abstract class TypeConstant
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
-        Map<PropertyConstant , PropertyInfo> mapProps   = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapMethods = new HashMap<>();
+        Map<PropertyConstant , PropertyInfo> mapProps       = new HashMap<>();
+        Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
+        Map<Object           , PropertyInfo> mapPropsByLocalId   = new HashMap<>();
+        Map<Object           , MethodInfo  > mapMethodsByLocalId = new HashMap<>();
         fComplete &= collectMemberInfo(constId, struct, resolver,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, errs);
@@ -1738,6 +1740,8 @@ public abstract class TypeConstant
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo  > mapMethods,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<Object, MethodInfo  >           mapVirtMethods,
             ErrorListener                       errs)
         {
         boolean fIncomplete = false;
@@ -1834,8 +1838,6 @@ public abstract class TypeConstant
             // treated more like "incorporated" mix-ins, in that the custom code on the property
             // at a given virtual level in the type's call chain will overlay the annotations from
             // that same level.
-
-            // TODO this has to all change because we're now going in reverse order
 
             // process properties
             for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())

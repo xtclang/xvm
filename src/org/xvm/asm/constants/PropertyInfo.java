@@ -555,6 +555,49 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff the property can exist across multiple "glass panes" of the type's
+     *         composition; note that a property considered to be non-virtual by this test can
+     *         still have a multi-level call chain, such as if it has Ref/Var annotations
+     */
+    public boolean isVirtual()
+        {
+        // it can only be virtual if it is non-private and non-constant, and if it is not contained
+        // within a method or a private property
+        if (isConstant() || getVarAccess() == Access.PRIVATE)
+            {
+            return false;
+            }
+
+        IdentityConstant id = getIdentity();
+        for (int i = 0, c = id.getNestedDepth(); i < c; ++i)
+            {
+            id = id.getParentConstant();
+            if (id instanceof PropertyConstant)
+                {
+                if (id.getComponent().getAccess() == Access.PRIVATE)
+                    {
+                    return false;
+                    }
+                }
+            else
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
+     * @return true iff the property contains any reference annotations
+     */
+    public boolean isRefAnnotated()
+        {
+        // TODO - efficiently
+        return getRefAnnotations().length > 0;
+        }
+
+    /**
      * @return an array of the annotations that apply to the Ref/Var of the property
      */
     public Annotation[] getRefAnnotations()
