@@ -1819,13 +1819,45 @@ public abstract class TypeConstant
                     }
                 }
 
+            // basically, we're building from the bottom up, in columns. if we build from the top
+            // down, we may make the wrong "narrowing" choice, because the right choice might not
+            // yet be introduced (it comes in at a lower level), and thus we'll narrow when there
+            // is an exact match (or at least a better match) available. additionally, we have to
+            // build the property call chains for any properties that have custom logic and/or
+            // Ref/Var annotations, because those properties are basically "little classes", whose
+            // state just happens to be embedded within this larger type. the call chains for these
+            // properties are *based on* the call chains of this type, but due to annotations on
+            // the Ref/Var aspect of the property, the call chains can "bloom" at any level within
+            // this type's call chain. fortunately, the property call chains are simpler in one
+            // particular aspect vis-a-vis the type's call chains: property call chains do not
+            // having the "yanking" aspect, since what we refer to as Ref/Var *annotations* are
+            // treated more like "incorporated" mix-ins, in that the custom code on the property
+            // at a given virtual level in the type's call chain will overlay the annotations from
+            // that same level.
+
             // TODO this has to all change because we're now going in reverse order
 
             // process properties
             for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                 {
+                // TODO wrong names .. the contrib is the "sub"
                 PropertyConstant idSuper   = entry.getKey();
                 PropertyInfo     propSuper = entry.getValue();
+
+                // the property is not virtual if it is a constant, if it is private/private, or if
+                // it is inside a method (which coincidentally must be private/private)
+                boolean fVirtual = false;   // TODO
+
+                // determine if the property is marked as explicitly over-riding a property
+                boolean fOverride = false;  // TODO
+
+                // if the property is virtual see if there is a property that this property
+                // over-rides
+                // TODO use the local (nested) id to look up the super property
+                // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
+                // TODO if types don't match then there is an error
+
+                // TODO if there is a super but the contrib didn't specify @Override then it is an error
 
                 // constant properties and private properties are always "fully scoped", so there
                 // will be no a collision there; other properties may have a property both in the
@@ -1844,6 +1876,15 @@ public abstract class TypeConstant
                     PropertyInfo propPrev = mapProps.put(idSuper, propSuper);
                     assert propPrev == null;
                     }
+
+                // TODO remember to expand annotations / custom code into call chain
+                // - is there custom code? if so, then add the levels at which there is custom code
+                // - are there any annotations? is so, then they need to be expanded, and the call chains glued on
+                // TODO check for annotation redudancy / overlap
+                // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
+                // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
+                // - it is possible that an annotation has a potential call chain that includes layers that are
+                //   already in the property call chain; they are simply discarded (similar to retain-only)
                 }
 
             // first find the "super" chains of each of the existing methods
