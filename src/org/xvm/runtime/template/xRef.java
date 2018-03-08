@@ -496,7 +496,7 @@ public class xRef
             }
         }
 
-    // Ref handle for an indexed element of an Array or Tuple
+    // RefHandle for an indexed element of an Array or Tuple
     public static class IndexedRefHandle
             extends RefHandle
         {
@@ -515,6 +515,22 @@ public class xRef
         public void dereference(Frame frame)
             {
             // no op
+            }
+        }
+
+    // RefHandle for a dynamic var call
+    public static class RefCallHandle
+            extends RefHandle
+        {
+        public final Frame f_frameNext;
+
+        public RefCallHandle(Frame frameNext, RefHandle hRef)
+            {
+            super(INSTANCE.m_clazzCanonical, null);
+
+            f_frameNext = frameNext;
+            m_hDelegate = hRef;
+            m_iVar = -5; // TODO:
             }
         }
     }

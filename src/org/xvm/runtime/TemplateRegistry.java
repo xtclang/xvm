@@ -261,9 +261,9 @@ public class TemplateRegistry
                     template.initDeclared();
                     break;
 
+                case MIXIN:
                 case CLASS:
                 case INTERFACE:
-                case MIXIN:
                     template = new xObject(this, structClass, false);
                     break;
 
@@ -296,6 +296,6 @@ public class TemplateRegistry
     // produce a TypeComposition based on the specified TypeConstant
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        return typeActual.getOpSupport(this).getTemplate().ensureClass(typeActual, typeActual);
+        return typeActual.getOpSupport(this).getTemplate(typeActual).ensureClass(typeActual);
         }
     }

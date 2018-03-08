@@ -9,6 +9,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -35,6 +36,15 @@ public class xAtomicVar
         {
         markNativeMethod("replace", new String[]{"RefType", "RefType"}, new String[] {"Boolean"});
         markNativeMethod("replaceFailed", new String[]{"RefType", "RefType"}, null);
+        }
+
+    @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        // if RefType is Int64, then the template should be AtomicIntNumber
+        return type.getParamTypesArray()[0] == f_struct.getConstantPool().typeInt()
+            ? xAtomicIntNumber.INSTANCE
+            : this;
         }
 
     @Override

@@ -162,22 +162,6 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    @Override
-    public RefHandle createPropertyRef(ObjectHandle hTarget, PropertyConstant constProp, boolean fRO)
-        {
-        String sName = constProp.getName();
-        if (sName.equals("size"))
-            {
-            if (fRO)
-                {
-                TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(hTarget.getType());
-                return new RefHandle(clzRef, hTarget, sName);
-                }
-            throw new IllegalStateException("Read-only property : String.size");
-            }
-        throw new IllegalStateException("Unknown property : String." + constProp);
-        }
-
 
     // ----- comparison support -----
 

@@ -94,12 +94,12 @@ public class TypeComposition
      * @param typeInception  the "origin type"
      * @param typeRevealed   the type to reveal an ObjectHandle reference to this class as
      */
-    protected TypeComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
+    public TypeComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
         {
         assert typeInception.isSingleDefiningConstant();
 
         f_support = support;
-        f_template = support.getTemplate();
+        f_template = support.getTemplate(typeInception);
         f_typeInception = typeInception;
         f_typeRevealed = typeRevealed;
         }
@@ -648,7 +648,8 @@ public class TypeComposition
                             TypeComposition clzRef =
                                 template.f_templates.resolveClass(info.getRefType());
 
-                            hRef = clzRef.getTemplate().createRefHandle(clzRef, prop.getName());
+                            hRef = ((VarSupport) clzRef.getSupport()).
+                                createRefHandle(clzRef, prop.getName());
                             }
 
                         if (template.isCalculated(prop))

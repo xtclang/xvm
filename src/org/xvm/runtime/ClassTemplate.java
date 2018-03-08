@@ -180,7 +180,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a TypeComposition for this template using the specified actual (inception) type.
+     * Produce a TypeComposition using the specified actual (inception) type.
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
@@ -196,7 +196,6 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
         {
-        assert typeActual.getSingleUnderlyingClass(true).getComponent() == f_struct;
         assert typeActual.getAccess() == Access.PUBLIC;
 
         int cActual = typeActual.getParamTypes().size();
@@ -1150,22 +1149,6 @@ public abstract class ClassTemplate
     // ----- Ref operations ------------------------------------------------------------------------
 
     /**
-     * Create a Ref or Var for the specified referent class.
-     *
-     * Most commonly, the returned handle is an uninitialized Var, but
-     * in the case of InjectedRef, it's an initialized [read-only] Ref.
-     *
-     * @param clazz  the referent class
-     * @param sName  an optional Ref name
-     *
-     * @return the corresponding {@link RefHandle}
-     */
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
-    /**
      * Create a property Ref or Var for the specified target and property.
      *
      * @param hTarget    the target handle
@@ -1302,7 +1285,7 @@ public abstract class ClassTemplate
     // ---- OpSupport implementation ---------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate()
+    public ClassTemplate getTemplate(TypeConstant type)
         {
         return this;
         }
@@ -1621,7 +1604,12 @@ public abstract class ClassTemplate
     // ----- caches ------
 
     /**
-     * A cache of TypeCompositions.
+     * A cache of TypeCompositions keyed by the "revealed type".
+     *
+     * We assume that for a given template, there will never be two classes with the same
+     * revealed types, but different inception types.
+     *
+     * If that assumption breaks, we'd need to either change the key, or link-list the classes.
      */
     protected Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
 

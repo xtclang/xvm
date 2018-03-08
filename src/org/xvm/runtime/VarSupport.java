@@ -10,11 +10,22 @@ import org.xvm.runtime.template.xRef.RefHandle;
  * {@link VarSupport} represents a run-time facet of a Var.
  */
 public interface VarSupport
+        extends OpSupport
     {
+    // ----- construction --------------------------------------------------------------------------
+
     /**
-     * Obtain an underlying ClassTemplate for this {@link VarSupport}
+     * Create a Ref or a Var for the specified referent class.
+     *
+     * Most commonly, the returned handle is an uninitialized Var, but
+     * in the case of InjectedRef, it's an initialized [read-only] Ref.
+     *
+     * @param clazz  the referent class
+     * @param sName  an optional Ref/Var name
+     *
+     * @return the corresponding {@link RefHandle}
      */
-    ClassTemplate getTemplate();
+    RefHandle createRefHandle(TypeComposition clazz, String sName);
 
 
     // ----- built-in unary operations -------------------------------------------------------------

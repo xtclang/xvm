@@ -21,6 +21,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRef.RefCallHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -532,6 +533,9 @@ public class Frame
                     return hVar.getVarSupport().set(this, hVar, hValue);
                     }
 
+                case VAR_STANDARD_WAITING:
+                case VAR_DYNAMIC_WAITING:
+                    // we cannot get here while waiting
                 default:
                     throw new IllegalStateException();
                 }
@@ -805,6 +809,8 @@ public class Frame
                     {
                     info.stopWaiting();
 
+                    // only standard vars needs to be replaced on the spot;
+                    // the dynamic vars will "get" the value naturally on-demand
                     if (info.isStandard())
                         {
                         switch (hFuture.getVarSupport().get(this, hFuture, i))
@@ -841,7 +847,7 @@ public class Frame
     public TypeConstant getArgumentType(int iArg)
         {
         return iArg >= 0
-            ? getVarInfo(iArg).getType()
+            ? getRegisterType(iArg)
             : iArg == Op.A_THIS
                 ? f_hThis.getType()            // "this" is always resolved
                 : getConstant(iArg).getType(); // a constant cannot be generic
@@ -851,11 +857,24 @@ public class Frame
     public TypeConstant getLocalType(int iArg)
         {
         return iArg >= 0
-            ? getVarInfo(iArg).getType() // always resolved
+            ? getRegisterType(iArg)
             : iArg == Op.A_THIS
-                ? f_hThis.getType()
-                // "local property"
+                ? f_hThis.getType() // "this" is always resolved
+                // "local property" type needs to be resolved
                 : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
+        }
+
+    protected TypeConstant getRegisterType(int iArg)
+        {
+        VarInfo info = getVarInfo(iArg);
+        if (info.isStandard())
+            {
+            return info.getType(); // always resolved
+            }
+
+        // Ref<RefType> -> RefType
+        assert !info.isWaiting();
+        return info.getType().getParamTypesArray()[0];
         }
 
     // same as getArgumentClass, but treats the negative ids as "local-property" references
@@ -898,29 +917,43 @@ public class Frame
                 throw xException.makeHandle("Unassigned value").getException();
                 }
 
-            if (info != null && !info.isStandard())
+            if (info != null)
                 {
-                RefHandle hRef = (RefHandle) f_ahVar[iArg];
-                switch (hRef.getVarSupport().get(this, hRef, RET_LOCAL))
+                switch (info.getStyle())
                     {
-                    case Op.R_NEXT:
-                        return getFrameLocal();
+                    case VAR_STANDARD:
+                        break;
 
-                    case Op.R_CALL:
-                        throw new IllegalStateException("Future's get() must be fully native");
+                    case VAR_DYNAMIC_REF:
+                        {
+                        RefHandle hRef = (RefHandle) hValue;
+                        switch (hRef.getVarSupport().get(this, hRef, RET_LOCAL))
+                            {
+                            case Op.R_NEXT:
+                                return getFrameLocal();
 
-                    case Op.R_BLOCK:
-                        info.markWaiting();
-                        return null;
+                            case Op.R_CALL:
+                                return new RefCallHandle(m_frameNext, hRef);
 
-                    case Op.R_EXCEPTION:
-                        throw m_hException.getException();
+                            case Op.R_BLOCK:
+                                info.markWaiting();
+                                return null;
 
+                            case Op.R_EXCEPTION:
+                                throw m_hException.getException();
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+
+                    case VAR_STANDARD_WAITING:
+                    case VAR_DYNAMIC_WAITING:
+                        // we cannot get unblocked until the standard var is assigned
                     default:
                         throw new IllegalStateException();
                     }
                 }
-
             return hValue;
             }
 

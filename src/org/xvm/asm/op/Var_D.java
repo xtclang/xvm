@@ -12,6 +12,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.xRef.RefHandle;
 
@@ -79,7 +80,7 @@ public class Var_D
         {
         TypeComposition clz = frame.resolveClass(m_nType);
 
-        RefHandle hRef = clz.getTemplate().createRefHandle(clz, null);
+        RefHandle hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, null);
 
         frame.introduceResolvedVar(clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 

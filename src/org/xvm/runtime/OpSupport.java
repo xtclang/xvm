@@ -3,6 +3,8 @@ package org.xvm.runtime;
 
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
+
 
 /**
  * {@link OpSupport} represents a run-time facet of a type.
@@ -10,9 +12,13 @@ import org.xvm.asm.Op;
 public interface OpSupport
     {
     /**
-     * Obtain an underlying ClassTemplate for this {@link OpSupport}
+     * Obtain an underlying ClassTemplate for this {@link OpSupport} and the specified type.
+     *
+     * @param type  the type
+     *
+     * @return the corresponding ClassTemplate
      */
-    ClassTemplate getTemplate();
+    ClassTemplate getTemplate(TypeConstant type);
 
 
     // ----- built-in binary operations ------------------------------------------------------------

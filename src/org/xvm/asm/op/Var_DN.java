@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.annotations.xInjectedRef;
@@ -120,29 +121,10 @@ public class Var_DN
             {
             TypeComposition clz = frame.resolveClass(m_nType);
 
-            hRef = clz.getTemplate().createRefHandle(clz, sName);
+            hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, sName);
 
             if (hRef instanceof xInjectedRef.InjectedHandle)
                 {
-                // TODO: should we prime the injection (fail fast)?
-                switch (hRef.getVarSupport().get(frame, hRef, Frame.RET_UNUSED))
-                    {
-                    case R_NEXT:
-                        break;
-
-                    case R_CALL:
-                        throw new IllegalStateException("Injected ref's get() must be fully native");
-
-                    case R_BLOCK:
-                        throw new IllegalStateException("Injected ref's get() must be synchronous");
-
-                    case R_EXCEPTION:
-                        return R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
                 m_ref = hRef;
                 }
             }
