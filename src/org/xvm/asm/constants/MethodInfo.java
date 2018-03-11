@@ -3,10 +3,11 @@ package org.xvm.asm.constants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 
-import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -20,191 +21,99 @@ public class MethodInfo
     /**
      * Construct a MethodInfo for a method body.
      *
-     * @param constSig  the method signature
-     * @param body      the initial method body
+     * @param body  the initial method body
      */
-    public MethodInfo(SignatureConstant constSig, MethodBody body)
+    public MethodInfo(MethodBody body)
         {
-        this(constSig, new MethodBody[] {body});
+        this(new MethodBody[] {body});
         }
 
     /**
      * Internal: Construct a MethodInfo.
      *
-     * @param constSig  the method signature
-     * @param aBody     the array of method bodies that make up the method chain
+     * @param aBody  the array of method bodies that make up the method chain
      */
-    protected MethodInfo(SignatureConstant constSig, MethodBody[] aBody)
+    protected MethodInfo(MethodBody[] aBody)
         {
-        assert constSig != null;
         assert aBody != null && aBody.length >= 1;
 
-        m_constSig = constSig;
-        m_aBody    = aBody;
+        m_aBody = aBody;
         }
 
     /**
-     * Use the passed method info as information that needs to be appended to this method info.
+     * Cap this method chain with a redirection to a narrowed method chain. Error checking is the
+     * responsibility of the caller.
      *
-     * @param contrib  the information about how the other MethodInfo is being contributed to this
-     * @param that     the MethodInfo to append to this
+     * @param that  the method chain to redirect to, which is the narrowed form of this MethodInfo
      *
-     * @return the resulting MethodInfo
+     * @return a capped version of this method chain
      */
-    public MethodInfo apply(Contribution contrib, MethodInfo that)
+    MethodInfo cappedBy(MethodInfo that)
         {
-        assert !isFunction();
+        // both method chains must be virtual, and neither can already be capped
+        assert this.isOverrideable();
+        assert that.isOverrideable();
 
-        switch (contrib.getComposition())
-            {
-            case Implements:
-                // since this method info already exists, nothing to "declare" from the passed
-                // method info, but it might have a "default" that we can append
-                return this.hasDefault() || !that.hasDefault()
-                        ? this
-                        : append(that.getDefault());
+        // create a MethodConstant for the cap that will sit next to the method body that caused the
+        // narrowing to occur
+        MethodConstant idThat = that.getTail().getIdentity();
+        MethodConstant idCap  = idThat.getConstantPool().ensureMethodConstant(
+                                idThat.getParentConstant(), this.getSignature());
 
-            case Delegates:
-                // we'll have to create a method body that represents the delegation
-                return append(new MethodBody(that.getMethodConstant(), Implementation.Delegating,
-                        contrib.getDelegatePropertyConstant()));
+        MethodBody[] aOld = m_aBody;
+        int          cOld = aOld.length;
+        MethodBody[] aNew = new MethodBody[cOld+1];
 
-            case Into:
-                // this MethodInfo already exists, so an "implicit" adds nothing to this
-                // TODO nowhere is the "implicit" implementation actually used, which must be a bug
-                return this;
-            }
+        aNew[0] = new MethodBody(idCap, Implementation.Capped, idThat);
+        System.arraycopy(aOld, 0, aNew, 1, cOld);
 
-        return append(that);
+        return new MethodInfo(aNew);
         }
 
     /**
-     * Use the passed method body as a sequence of implementations to add to the method chain.
+     * In terms of the "glass planes" metaphor, the glass planes from "that" are to be layered on to
+     * the glass planes of "this", with the resulting combination of glass planes returned as a
+     * MethodInfo.
      *
-     * @param that  the MethodInfo to add
-     *
-     * @return the resulting MethodInfo
-     */
-    public MethodInfo append(MethodInfo that)
-        {
-        MethodBody[] aAdd = that.m_aBody;
-        if (aAdd.length == 1)
-            {
-            return append(aAdd[0]);
-            }
-
-        // if the thing to append is abstract, then we probably don't have anything to do, i.e. we
-        // can use this MethodInfo as is (unless this is also abstract and the other MethodInfo has
-        // more information than we do)
-        if (that.isAbstract())
-            {
-            return this.isAbstract()
-                    && this.m_aBody[0].getImplementation() == Implementation.Implicit
-                    && that.m_aBody[0].getImplementation() == Implementation.Declared
-                    ? new MethodInfo(this.m_constSig, that.m_aBody)
-                    : this;
-            }
-
-        // if this is abstract and that isn't, then just use the information from that method info
-        if (this.isAbstract())
-            {
-            return new MethodInfo(this.m_constSig, that.m_aBody);
-            }
-
-        // neither this nor that are abstract; combine the two
-        MethodBody[] aBodyThis    = this.m_aBody;
-        MethodBody[] aBodyThat    = that.m_aBody;
-        boolean      fThisDefault = this.hasDefault();
-        boolean      fThatDefault = that.hasDefault();
-        boolean      fHasDefault  = fThisDefault | fThatDefault;
-        int          cThis        = this.m_aBody.length - (fThisDefault ? 1 : 0);
-        int          cThat        = that.m_aBody.length - (fThatDefault ? 1 : 0);
-        int          cTotal       = cThis + cThat + (fHasDefault ? 1 : 0);
-        MethodBody[] aBody        = new MethodBody[cTotal];
-
-        System.arraycopy(aBodyThis, 0, aBody, 0, cThis);
-        System.arraycopy(aBodyThat, 0, aBody, cThis, cThat);
-        if (fHasDefault)
-            {
-            aBody[cTotal-1] = fThisDefault ? this.getDefault() : that.getDefault();
-            }
-
-        return new MethodInfo(m_constSig, aBody);
-        }
-
-    /**
-     * Use the passed method body as an implementation to add to the method chain.
-     *
-     * @param body  the MethodBody to add
+     * @param that  the MethodInfo to layer onto this MethodInfo
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo append(MethodBody body)
+    public MethodInfo layerOn(MethodInfo that)
         {
-        assert !isFunction() && !body.isFunction();
-        switch (body.getImplementation())
+        MethodBody[] aThis = this.m_aBody;
+        MethodBody[] aThat = that.m_aBody;
+        int          cThis = aThis.length;
+        int          cThat = aThat.length;
+
+        ArrayList<MethodBody> listMerge = null;
+        NextLayer: for (int iThat = 0; iThat < cThat; ++iThat)
             {
-            case Implicit:
-                // implicit cannot add anything (because this MethodInfo cannot be "less than"
-                // implicit)
-                return this;
-
-            case Declared:
-                // declared can only add something if this MethodInfo is implicit, in which case
-                // this MethodInfo becomes declared
-                return m_aBody[0].getImplementation() == Implementation.Implicit
-                        ? new MethodInfo(m_constSig, body)
-                        : this;
-
-            case Delegating:
-            case Property:
-            case Native:
-            case Explicit:
-                if (isAbstract())
+            MethodBody bodyThat = aThat[iThat];
+            for (int iThis = 0; iThis < cThis; ++iThis)
+                {
+                if (bodyThat.equals(aThis[iThis]))
                     {
-                    return new MethodInfo(m_constSig, body);
+                    // we found a duplicate, so we can ignore it (it'll get added when we add all of
+                    // the bodies from this)
+                    continue NextLayer;
                     }
-
-                MethodBody[] aOld = m_aBody;
-                int          cOld = aOld.length;
-                int          cNew = cOld + 1;
-                MethodBody[] aNew = new MethodBody[cNew];
-                int          cDft = hasDefault() ? 1 : 0;
-                int          cPre = cOld - cDft;
-                System.arraycopy(aOld, 0, aNew, 0, cPre);
-                aNew[cPre] = body;
-                if (cDft > 0)
-                    {
-                    aNew[cOld] = aOld[cPre];
-                    }
-                return new MethodInfo(m_constSig, aNew);
-
-            case Default:
-                if (hasDefault())
-                    {
-                    // defaults do not chain
-                    return this;
-                    }
-
-                assert !body.isAbstract();
-                if (isAbstract())
-                    {
-                    // the default replaces the implicit or abstract method body
-                    return new MethodInfo(m_constSig, new MethodBody[] {body});
-                    }
-
-                // add the default to the end of the chain
-                MethodBody[] aBodyOld = m_aBody;
-                int          cBodyOld = aBodyOld.length;
-                int          cBodyNew = cBodyOld + 1;
-                MethodBody[] aBodyNew = new MethodBody[cBodyNew];
-                System.arraycopy(aBodyOld, 0, aBodyNew, 0, cBodyOld);
-                aBodyNew[cBodyOld] = body;
-                return new MethodInfo(m_constSig, aBodyNew);
-
-            default:
-                throw new IllegalStateException();
+                }
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyThat);
             }
+
+        if (listMerge == null)
+            {
+            // all the bodies in "that" were duplicates of bodies in "this"
+            return this;
+            }
+
+        Collections.addAll(listMerge, aThis);
+        return new MethodInfo(listMerge.toArray(new MethodBody[listMerge.size()]));
         }
 
     /**
@@ -222,10 +131,11 @@ public class MethodInfo
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             MethodBody       body     = aBody[i];
-            IdentityConstant constClz = body.getMethodConstant().getClassIdentity();
+            IdentityConstant constClz = body.getIdentity().getClassIdentity();
             boolean fRetain;
             switch (body.getImplementation())
                 {
+// TODO review this considering all the other change ... is this still correct?
                 case Implicit:
                 case Declared:
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
@@ -263,25 +173,76 @@ public class MethodInfo
 
         return list.isEmpty()
                 ? null
-                : new MethodInfo(m_constSig, list.toArray(new MethodBody[list.size()]));
+                : new MethodInfo(list.toArray(new MethodBody[list.size()]));
         }
 
     /**
-     * @return the method signature
+     * @return the identity of the call chain, which is the MethodConstant that identifies the first
+     *         body (which may <em>or may not</em> refer to an actual MethodStructure)
+     */
+    public MethodConstant getIdentity()
+        {
+        return getHead().getIdentity();
+        }
+
+    /**
+     * @return the method signature represented by the call chain; all method bodies in the call
+     *         chain have this method signature, or a signature which was narrowed by this
+     *         MethodInfo
      */
     public SignatureConstant getSignature()
         {
-        return m_constSig;
+        return getIdentity().getSignature();
         }
 
     /**
+     * @return the first MethodBody in the call chain
+     */
+    public MethodBody getHead()
+        {
+        return m_aBody[0];
+        }
+
+    /**
+     * @return the last MethodBody in the call chain
+     */
+    public MethodBody getTail()
+        {
+        return m_aBody[m_aBody.length-1];
+        }
+
+    /**
+     * Determine if the method is abstract, which means that its chain must not begin with an
+     * abstract method body.
+     *
      * @return true iff this is an abstract method
      */
     public boolean isAbstract()
         {
-        // the only way to be abstract is to have a chain that contains only a declared or implicit
-        // method body
-        return m_aBody.length == 1 && m_aBody[0].isAbstract();
+        MethodBody[] abody = m_aBody;
+        boolean fIgnoreAbstract = false;
+        for (int i = 0, c = abody.length; i < c; ++i)
+            {
+            MethodBody body = abody[i];
+            if (body.isAbstract())
+                {
+                if (body.getImplementation() == Implementation.SansCode)
+                    {
+                    fIgnoreAbstract = true;
+                    }
+                else if (!fIgnoreAbstract || body.getImplementation() != Implementation.Abstract)
+                    {
+                    return true;
+                    }
+                // else ... a SansCode followed by any number of Abstract bodies are ignored
+                }
+            else
+                {
+                return false;
+                }
+            }
+
+        return true;
         }
 
     /**
@@ -289,7 +250,58 @@ public class MethodInfo
      */
     public boolean isFunction()
         {
-        return m_aBody.length == 1 && m_aBody[0].isFunction();
+        return getHead().isFunction();
+        }
+
+    /**
+     * @return true iff the method can exist across multiple "glass panes" of the type's composition
+     */
+    public boolean isVirtual()
+        {
+        // it can only be virtual if it is non-private and non-function, and if it is not contained
+        // within a method or a private property
+        if (isFunction() || getAccess() == Access.PRIVATE)
+            {
+            return false;
+            }
+
+        IdentityConstant id = getIdentity();
+        for (int i = 0, c = id.getNestedDepth(); i < c; ++i)
+            {
+            id = id.getParentConstant();
+            if (!(id instanceof PropertyConstant) || id.getComponent().getAccess() == Access.PRIVATE)
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
+     * @return true iff the method chain is capped
+     */
+    public boolean isCapped()
+        {
+        return getHead().getImplementation() == Implementation.Capped;
+        }
+
+    /**
+     * Determine if the method can be overridden.
+     *
+     * @return true iff the method is virtual and not capped
+     */
+    public boolean isOverrideable()
+        {
+        return isVirtual() && !isCapped();
+        }
+
+    /**
+     * @return true iff the last method body in the chain is an override
+     */
+    public boolean isOverride()
+        {
+        return getTail().isOverride();
         }
 
     /**
@@ -301,60 +313,135 @@ public class MethodInfo
         }
 
     /**
-     * @return the last concrete MethodBody in the method chain, or null if there is none
+     * Obtain the optimized (resolved) call chain for the method. An optimized chain contains the
+     * method bodies in the order that they should be invoked, and ending with the first encountered
+     * default method. An optimized chain contains only method bodies with the implementation types
+     * of: Explicit, Native, Delegating, Field, and Default.
+     *
+     * @param type  the TypeInfo that contains this method
+     *
+     * @return a chain of bodies, each representing functionality to invoke, in their "super" order
      */
-    public MethodBody getTail()
+    public MethodBody[] ensureOptimizedMethodChain(TypeInfo type)
         {
-        MethodBody[] aBody    = m_aBody;
-        int          cBody    = aBody.length;
-        MethodBody   bodyLast = aBody[cBody-1];
-        if (bodyLast.isConcrete())
+        MethodBody[] aBody = m_aBodyResolved;
+        if (aBody == null)
             {
-            return bodyLast;
+            // grab the "raw" (unoptimized) chain
+            aBody = getChain();
+
+            // first, see if this chain was capped, which means that it (virtually) redirects to
+            // a different method chain, which (somewhere at the bottom of that chain) will contain
+            // the method bodies that are "hidden" under this chain's cap
+            if (aBody[0].getImplementation() == Implementation.Capped)
+                {
+                // note: turtles
+                return m_aBodyResolved = type.getOptimizedMethodChain(aBody[0].getNarrowingNestedIdentity());
+                }
+
+            // see if the chain will work as-is
+            ArrayList  listNew     = null;
+            MethodBody bodyDefault = null;
+            for (int i = 0, c = aBody.length; i < c; ++i)
+                {
+                MethodBody body = aBody[i];
+                switch (body.getImplementation())
+                    {
+                    case Implicit:
+                    case Declared:
+                    case Abstract:
+                    case SansCode:
+                        // this body will be discarded (no code to run), so that alters the chain,
+                        // so start building the optimized chain (if it has not already started)
+                        if (listNew == null)
+                            {
+                            listNew = startList(aBody, i);
+                            }
+                        break;
+
+                    case Default:
+                        // only the first one is kept, and it will be placed at the end of the chain
+                        if (bodyDefault == null)
+                            {
+                            bodyDefault = body;
+                            }
+                        if (listNew == null && i != c-1)
+                            {
+                            listNew = startList(aBody, i);
+                            }
+                        break;
+
+                    case Delegating:
+                    case Field:
+                    case Native:
+                    case Explicit:
+                        if (listNew != null)
+                            {
+                            listNew.add(body);
+                            }
+                        break;
+
+                    default:
+                    case Capped:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            // see if any changes were made to the chain, which will have been collected in listNew
+            if (listNew != null)
+                {
+                if (bodyDefault != null)
+                    {
+                    listNew.add(bodyDefault);
+                    }
+                int c = listNew.size();
+                aBody = c == 0
+                        ? MethodBody.NO_BODIES
+                        : (MethodBody[]) listNew.toArray(new MethodBody[c]);
+                }
+
+            // cache the optimized chain (no worries about race conditions, as the result is
+            // idempotent)
+            m_aBodyResolved = aBody;
             }
 
-        return cBody > 1
-                ? aBody[cBody - 2]
-                : null;
+        return aBody;
+        }
+
+    private ArrayList<MethodBody> startList(MethodBody[] aBody, int c)
+        {
+        ArrayList list = new ArrayList<>();
+        for (int i = 0; i < c; ++i)
+            {
+            list.add(aBody[i]);
+            }
+        return list;
         }
 
     /**
-     * @return the signature to use to find a "super" call chain
+     * @return true iff the method chain contains no redirections, abstract bodies, etc.
      */
-    public SignatureConstant getSubSignature()
+    public boolean isChainOptimized()
         {
-        MethodBody bodyTail = getTail();
-        return bodyTail == null
-                ? null
-                : bodyTail.getMethodConstant().getSignature();
-        }
+        boolean fHasDefault = false;
+        for (MethodBody body : getChain())
+            {
+            if (!body.isOptimized())
+                {
+                return false;
+                }
 
-    /**
-     * @return true iff the method chain has a default method implementation at the end of it
-     */
-    public boolean hasDefault()
-        {
-        // the only way to have a default method body is to have it at the very end of the chain
-        return m_aBody[m_aBody.length-1].getImplementation() == Implementation.Default;
-        }
+            if (body.getImplementation() == Implementation.Default)
+                {
+                if (fHasDefault)
+                    {
+                    return false;
+                    }
+                fHasDefault = true;
+                }
+            }
 
-    /**
-     * @return the default implementation from the end of this method chain, or null
-     */
-    public MethodBody getDefault()
-        {
-        MethodBody body = m_aBody[m_aBody.length-1];
-        return body.getImplementation() == Implementation.Default
-                ? body
-                : null;
-        }
-
-    /**
-     * @return the constant to use to invoke the method
-     */
-    public MethodConstant getMethodConstant()
-        {
-        return m_aBody[0].getMethodConstant();
+        return true;
         }
 
     /**
@@ -362,7 +449,7 @@ public class MethodInfo
      */
     public Access getAccess()
         {
-        return m_aBody[0].getMethodStructure().getAccess();
+        return getHead().getMethodStructure().getAccess();
         }
 
     /**
@@ -370,7 +457,7 @@ public class MethodInfo
      */
     public boolean isAuto()
         {
-        return m_aBody[0].isAuto();
+        return getHead().isAuto();
         }
 
     /**
@@ -378,7 +465,7 @@ public class MethodInfo
      */
     public boolean isOp()
         {
-        return m_aBody[0].findAnnotation(m_constSig.getConstantPool().clzOp()) != null;
+        return getHead().findAnnotation(getIdentity().getConstantPool().clzOp()) != null;
         }
 
     /**
@@ -386,7 +473,7 @@ public class MethodInfo
      */
     public boolean isOp(String sName, String sOp, int cParams)
         {
-        return m_aBody[0].isOp(sName, sOp, cParams);
+        return getHead().isOp(sName, sOp, cParams);
         }
 
 
@@ -395,7 +482,7 @@ public class MethodInfo
     @Override
     public int hashCode()
         {
-        return m_constSig.hashCode();
+        return getSignature().hashCode();
         }
 
     @Override
@@ -412,7 +499,7 @@ public class MethodInfo
             }
 
         MethodInfo that = (MethodInfo) obj;
-        return this.m_constSig.equals(that.m_constSig)
+        return this.getSignature().equals(that.getSignature())
                 && Arrays.equals(this.m_aBody, that.m_aBody);
         }
 
@@ -420,7 +507,7 @@ public class MethodInfo
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constSig.getValueString());
+        sb.append(getSignature().getValueString());
 
         int i = 0;
         for (MethodBody body : m_aBody)
@@ -438,12 +525,12 @@ public class MethodInfo
     // -----fields ---------------------------------------------------------------------------------
 
     /**
-     * The method signature that identifies the MethodInfo.
-     */
-    private SignatureConstant m_constSig;
-
-    /**
      * The method chain.
      */
     private MethodBody[] m_aBody;
+
+    /**
+     * The "optimized" (resolved) method chain.
+     */
+    private transient MethodBody[] m_aBodyResolved;
     }

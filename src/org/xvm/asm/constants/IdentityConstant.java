@@ -11,6 +11,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.util.Handy;
+
 
 /**
  * An IdentityConstant identifies a Module, Package, Class, Typedef, Property, MultiMethod, or
@@ -136,7 +138,7 @@ public abstract class IdentityConstant
 
     /**
      * @return the number of identity segments that need to be traversed to find a class in the
-     *         IdentityConstant's path
+     *         IdentityConstant's path; a member nested immediately within a class is at depth 1
      */
     public int getNestedDepth()
         {
@@ -173,6 +175,63 @@ public abstract class IdentityConstant
         return isNested()
                 ? new NestedIdentity()
                 : null;
+        }
+
+    /**
+     * Determine the nesting depth of a particular nested identity.
+     *
+     * @param nid  a nested identity
+     *
+     * @return the depth of the nested identity, in the same measure as {@link #getNestedDepth()}
+     */
+    public int getNestedDepth(Object nid)
+        {
+        return nid instanceof NestedIdentity
+                ? ((NestedIdentity) nid).getIdentityConstant().getNestedDepth()
+                : nid == null ? 0 : 1;
+        }
+
+    /**
+     * Determine if two nested identities refer to members that are nested within the same
+     * component container.
+     *
+     * @param nid1  the first nested identity
+     * @param nid2  the second nested identity
+     *
+     * @return true if the two nested identities refer to members within the same container
+     */
+    public static boolean isNestedSibling(Object nid1, Object nid2)
+        {
+        if (nid1 instanceof NestedIdentity)
+            {
+            if (nid2 instanceof NestedIdentity)
+                {
+                IdentityConstant id1 = ((NestedIdentity) nid1).getIdentityConstant();
+                IdentityConstant id2 = ((NestedIdentity) nid2).getIdentityConstant();
+                return id1.getNestedDepth() == id2.getNestedDepth()
+                        && Handy.equals(id1.getParentConstant().getNestedIdentity(),
+                                        id2.getParentConstant().getNestedIdentity());
+                }
+            else
+                {
+                // nid1 must be at depth 1 (since nid1 is at depth 1)
+                return ((NestedIdentity) nid1).getIdentityConstant().getNestedDepth() == 1;
+                }
+            }
+        else
+            {
+            if (nid2 instanceof NestedIdentity)
+                {
+                // nid2 must be at depth 1 (since nid1 is at depth 1)
+                return ((NestedIdentity) nid2).getIdentityConstant().getNestedDepth() == 1;
+                }
+            else
+                {
+                // if neither is a nested identity, then they're automatically siblings
+                // (i.e. immediately nested within a class)
+                return true;
+                }
+            }
         }
 
     /**

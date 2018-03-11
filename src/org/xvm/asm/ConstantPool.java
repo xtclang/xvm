@@ -2774,7 +2774,9 @@ public class ConstantPool
             typeObject(), null, 0, true, Collections.EMPTY_MAP, Annotation.NO_ANNOTATIONS,
             getConstantPool().typeObject(), null, getConstantPool().typeObject(),
             Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
-            Collections.EMPTY_MAP, Collections.EMPTY_MAP, Progress.Building);
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+            Collections.EMPTY_MAP, Collections.EMPTY_MAP,
+            Progress.Building);
 
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.

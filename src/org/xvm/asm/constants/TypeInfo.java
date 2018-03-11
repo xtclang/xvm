@@ -36,6 +36,7 @@ public class TypeInfo
      *
      * @param type                 the type that the TypeInfo represents
      * @param struct               the structure that underlies the type, or null if there is none
+     * @param cDepth               TODO
      * @param fAbstract            true if the type is abstract
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
@@ -45,8 +46,10 @@ public class TypeInfo
      * @param listProcess
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
-     * @param mapProperties        the public and protected properties of the type
-     * @param mapMethods           the public and protected methods of the type
+     * @param mapProperties        the properties of the type
+     * @param mapMethods           the methods of the type
+     * @param mapVirtProperties    the virtual properties of the type, keyed by nested id
+     * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
      * @param progress             the Progress for this TypeInfo
      */
     public TypeInfo(
@@ -64,6 +67,8 @@ public class TypeInfo
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
             Map<PropertyConstant, PropertyInfo> mapProperties,
             Map<MethodConstant, MethodInfo>     mapMethods,
+            Map<Object, PropertyInfo>           mapVirtProperties,
+            Map<Object, MethodInfo>             mapVirtMethods,
             Progress                            progress)
         {
         assert type                 != null;
@@ -87,7 +92,9 @@ public class TypeInfo
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
         m_mapProperties         = mapProperties;
+        m_mapVirtProperties     = mapVirtProperties;
         m_mapMethods            = mapMethods;
+        m_mapVirtMethods        = mapVirtMethods;
         m_progress              = progress;
         }
 
@@ -110,22 +117,37 @@ public class TypeInfo
             typeNew = m_type.getConstantPool().ensureAccessTypeConstant(typeNew, Access.PROTECTED);
             }
 
-        Map<PropertyConstant, PropertyInfo> mapProperties = new HashMap<>();
+        Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProperties.entrySet())
             {
-            PropertyInfo propertyInfo = entry.getValue().limitAccess(access);
-            if (propertyInfo != null)
+            PropertyInfo prop = entry.getValue().limitAccess(access);
+            if (prop != null)
                 {
-                mapProperties.put(entry.getKey(), propertyInfo);
+                PropertyConstant id = entry.getKey();
+                mapProps.put(id, prop);
+
+                if (prop.isVirtual())
+                    {
+                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    }
                 }
             }
 
-        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>();
+        Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
             {
-            if (entry.getValue().getAccess().compareTo(access) <= 0)
+            MethodInfo method = entry.getValue();
+            if (method.getAccess().compareTo(access) <= 0)
                 {
-                mapMethods.put(entry.getKey(), entry.getValue());
+                MethodConstant id = entry.getKey();
+                mapMethods.put(id, method);
+
+                if (method.isVirtual())
+                    {
+                    mapVirtMethods.put(id.getNestedIdentity(), method);
+                    }
                 }
             }
 
@@ -133,7 +155,7 @@ public class TypeInfo
                 m_mapTypeParams, m_aannoClass,
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
-                mapProperties, mapMethods, m_progress);
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, m_progress);
         }
 
     /**
@@ -495,6 +517,7 @@ public class TypeInfo
         return m_mapMethods;
         }
 
+    // TODO this should be the "virt map" from Object to MethodInfo
     /**
      * @return all of the methods for this type that can be identified by just a signature, indexed
      *         by that signature
@@ -509,7 +532,7 @@ public class TypeInfo
             for (MethodInfo method : m_mapMethods.values())
                 {
                 // only include the non-nested Methods
-                if (method.getMethodConstant().getNestedDepth() == m_cDepth + 2)
+                if (method.getIdentity().getNestedDepth() == m_cDepth + 2)
                     {
                     map.put(method.getSignature(), method);
                     }
@@ -519,6 +542,25 @@ public class TypeInfo
             }
 
         return map;
+        }
+
+    public MethodInfo getMethodById(MethodConstant id)
+        {
+        return getMethods().get(id);
+        }
+
+    public MethodInfo getMethodByNestedId(Object nid)
+        {
+        // TODO
+        return null;
+        }
+
+    public MethodBody[] getOptimizedMethodChain(Object nid)
+        {
+        MethodInfo info = getMethodByNestedId(nid);
+        return info == null
+                ? null
+                : info.ensureOptimizedMethodChain(this);
         }
 
     /**
@@ -598,7 +640,7 @@ public class TypeInfo
                         {
                         setOps = new HashSet<>(7);
                         }
-                    setOps.add(info.getMethodConstant());
+                    setOps.add(info.getIdentity());
                     }
                 }
 
@@ -662,7 +704,7 @@ public class TypeInfo
             {
             for (MethodInfo info : getAutoMethodInfos())
                 {
-                MethodConstant method     = info.getMethodConstant();
+                MethodConstant method     = info.getIdentity();
                 TypeConstant   typeResult = method.getRawReturns()[0];
                 if (typeResult.equals(typeDesired))
                     {
@@ -921,6 +963,7 @@ public class TypeInfo
 
     public enum Progress {Absent, Building, Incomplete, Complete}
 
+
     /**
      * Represents the completeness of the TypeInfo.
      */
@@ -990,13 +1033,23 @@ public class TypeInfo
     private final ListMap<IdentityConstant, Origin> m_listmapDefaultChain;
 
     /**
-     * The properties of this type. Private properties are identified only by a single (non-virtual)
-     * property constant, as are properties declared within methods. Other properties can
-     * potentially be identified by multiple different property constants, because the properties
-     * can show up at more than one layer in the potential call chain.
+     * The properties of this type, indexed by PropertyConstant. Constants, private properties, and
+     * properties declared within methods, are identified only by a single (non-virtual) property
+     * constant. Other properties can show up at multiple virtual levels, and thus the same property
+     * may be referred to by different PropertyConstants, although it will only show up once in this
+     * map (using the identity from the highest "pane of glass" that the property shows up on.)
      */
     private final Map<PropertyConstant, PropertyInfo> m_mapProperties;
 
+    /**
+     * The properties of the type, indexed by nested identity. Properties nested immediately under
+     * a class are identified by their (String) name, while properties nested further below the
+     * class are identified by a NestedIdentity object. In either case, the index can be obtained by
+     * calling {@link PropertyConstant#getNestedIdentity()}.
+     */
+    private final Map<Object, PropertyInfo> m_mapVirtProperties;
+
+    // TODO can this be removed?
     /**
      * The properties of the type, indexed by name. This will not include nested properties, such
      * as those nested within a property or method. Lazily initialized
@@ -1004,10 +1057,23 @@ public class TypeInfo
     private transient Map<String, PropertyInfo> m_mapPropertiesByName;
 
     /**
-     * The methods of the type.
+     * The methods of the type, indexed by MethodConstant. Functions, private methods, and other
+     * non-virtual methods are identified only by a single (non-virtual) MethodConstant. Other
+     * methods can show up a multiple virtual levels, and thus the same method chain may be referred
+     * to by different MethodConstants, although each virtual method will show up only once in this
+     * map (using the identity from the highest "pane of glass" that the method shows up on.)
      */
     private final Map<MethodConstant, MethodInfo> m_mapMethods;
 
+    /**
+     * The virtual methods of the type, indexed by nested identity. Methods nested immediately under
+     * a class are identified by their signature, while methods nested further below the class are
+     * identified by a NestedIdentity object. In either case, the index can be obtained by calling
+     * {@link MethodConstant#getNestedIdentity()}.
+     */
+    private final Map<Object, MethodInfo> m_mapVirtMethods;
+
+    // TODO can this be removed?
     /**
      * The methods of the type, indexed by signature. This will not include nested methods, such
      * as those nested within a property or method. Lazily initialized

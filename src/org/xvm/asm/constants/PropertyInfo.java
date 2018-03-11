@@ -51,8 +51,18 @@ public class PropertyInfo
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo append(PropertyInfo that, ErrorListener errs)
+    public PropertyInfo layerOn(PropertyInfo that, ErrorListener errs)
         {
+
+        // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
+        // TODO if types don't match then there is an error
+        // TODO if there is a super but the contrib didn't specify @Override then it is an error
+        // TODO check for annotation redudancy / overlap
+        // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
+        // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
+        // - it is possible that an annotation has a potential call chain that includes layers that are
+        //   already in the property call chain; they are simply discarded (similar to retain-only)
+
         assert that != null;
         assert errs != null;
 
@@ -572,14 +582,7 @@ public class PropertyInfo
         for (int i = 0, c = id.getNestedDepth(); i < c; ++i)
             {
             id = id.getParentConstant();
-            if (id instanceof PropertyConstant)
-                {
-                if (id.getComponent().getAccess() == Access.PRIVATE)
-                    {
-                    return false;
-                    }
-                }
-            else
+            if (!(id instanceof PropertyConstant) || id.getComponent().getAccess() == Access.PRIVATE)
                 {
                 return false;
                 }

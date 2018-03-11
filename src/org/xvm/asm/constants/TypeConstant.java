@@ -881,11 +881,11 @@ public abstract class TypeConstant
         // properties and methods, and collecting all of them
         Map<PropertyConstant , PropertyInfo> mapProps       = new HashMap<>();
         Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
-        Map<Object           , PropertyInfo> mapPropsByLocalId   = new HashMap<>();
-        Map<Object           , MethodInfo  > mapMethodsByLocalId = new HashMap<>();
+        Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
+        Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
         fComplete &= collectMemberInfo(constId, struct, resolver,
                 listProcess, listmapClassChain, listmapDefaultChain,
-                mapProps, mapMethods, errs);
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, errs);
 
         // go through the members to determine if this is abstract
         if (!fAbstract)
@@ -895,14 +895,15 @@ public abstract class TypeConstant
             }
 
         // make final determinations as to what fields are required, etc.
-        finalizeMemberInfo(constId, struct, fAbstract, mapProps, mapMethods, errs);
+        finalizeMemberInfo(constId, struct, fAbstract, mapProps, mapMethods, errs); // TODO this has to change
 
         // validate the type parameters against the properties for the same
         checkTypeParameterProperties(mapTypeParams, mapProps, errs);
 
         return new TypeInfo(this, struct, 0, fAbstract, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
-                listProcess, listmapClassChain, listmapDefaultChain, mapProps, mapMethods,
+                listProcess, listmapClassChain, listmapDefaultChain,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
                 fComplete ? Progress.Complete : Progress.Incomplete);
         }
 
@@ -920,17 +921,18 @@ public abstract class TypeConstant
         assert this instanceof AccessTypeConstant;
 
         // start by copying all the fields and functions from the private type of this
-        ConstantPool                        pool       = getConstantPool();
-        TypeInfo                            infoPri    = pool.ensureAccessTypeConstant(
-                getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
-        Map<PropertyConstant, PropertyInfo> mapProps   = new HashMap<>();
-        Map<MethodConstant  , MethodInfo  > mapMethods = new HashMap<>();
+        Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+        Map<MethodConstant  , MethodInfo  > mapMethods   = new HashMap<>();
+        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
 
+        ConstantPool pool    = getConstantPool();
+        TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
             if (entry.getValue().hasField())
                 {
                 mapProps.put(entry.getKey(), entry.getValue());
+                // TODO mapVirtProps
                 }
             }
 
@@ -971,6 +973,7 @@ public abstract class TypeConstant
                             if (!mapProps.containsKey(entry.getKey()))
                                 {
                                 mapProps.put(entry.getKey(), entry.getValue());
+                                // TODO mapVirtProps
                                 }
                             }
                         }
@@ -983,7 +986,8 @@ public abstract class TypeConstant
                 infoPri.isAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, fIncomplete ? Progress.Incomplete : Progress.Complete);
+                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP,
+                fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
     /**
@@ -1830,11 +1834,11 @@ public abstract class TypeConstant
             // build the property call chains for any properties that have custom logic and/or
             // Ref/Var annotations, because those properties are basically "little classes", whose
             // state just happens to be embedded within this larger type. the call chains for these
-            // properties are *based on* the call chains of this type, but due to annotations on
+            // properties are _based on_ the call chains of this type, but due to annotations on
             // the Ref/Var aspect of the property, the call chains can "bloom" at any level within
             // this type's call chain. fortunately, the property call chains are simpler in one
             // particular aspect vis-a-vis the type's call chains: property call chains do not
-            // having the "yanking" aspect, since what we refer to as Ref/Var *annotations* are
+            // having the "yanking" aspect, since what we refer to as Ref/Var _annotations_ are
             // treated more like "incorporated" mix-ins, in that the custom code on the property
             // at a given virtual level in the type's call chain will overlay the annotations from
             // that same level.
@@ -1842,92 +1846,203 @@ public abstract class TypeConstant
             // process properties
             for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                 {
-                // TODO wrong names .. the contrib is the "sub"
-                PropertyConstant idSuper   = entry.getKey();
-                PropertyInfo     propSuper = entry.getValue();
+                PropertyConstant idContrib   = entry.getKey();
+                PropertyInfo     propContrib = entry.getValue();
 
                 // the property is not virtual if it is a constant, if it is private/private, or if
-                // it is inside a method (which coincidentally must be private/private)
-                boolean fVirtual = false;   // TODO
-
-                // determine if the property is marked as explicitly over-riding a property
-                boolean fOverride = false;  // TODO
-
-                // if the property is virtual see if there is a property that this property
-                // over-rides
-                // TODO use the local (nested) id to look up the super property
-                // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
-                // TODO if types don't match then there is an error
-
-                // TODO if there is a super but the contrib didn't specify @Override then it is an error
-
-                // constant properties and private properties are always "fully scoped", so there
-                // will be no a collision there; other properties may have a property both in the
-                // previously-collected properties and the to-be-contributed properties, so check
-                // if there is a match
-                PropertyConstant idSub;
-                if (!propSuper.isConstant() && propSuper.getRefAccess() != Access.PRIVATE
-                        && (idSub = findSubProperty(idSuper, mapProps)) != null)
+                // it is inside a method (which coincidentally must be private/private). in this
+                // case, the properties are always "fully scoped" (they have only one identity), so
+                // there is no chance of a collision
+                if (!propContrib.isVirtual())
                     {
-                    PropertyInfo propSub  = mapProps.get(idSub);
-                    PropertyInfo propPrev = mapProps.put(idSub, propSub.append(propSuper, errs));
-                    assert propPrev != null;
+                    mapProps.put(idContrib, propContrib);
+                    continue;
+                    }
+
+                // look for a property of the same name (using its nested identity); only virtually
+                // composable properties are registered using their nested identities
+                Object       nidContrib = idContrib.getNestedIdentity();
+                PropertyInfo propBase   = mapVirtProps.get(nidContrib);
+                PropertyInfo propResult;
+                if (propBase == null)
+                    {
+                    propResult = propContrib;
+                    if (propContrib.isOverride())
+                        {
+                        // there's supposed to be a property by this same identity already existing,
+                        // so this is an error
+                        todoLogError("@Override prop " + idContrib.getPathString() + " could not find its base");
+                        }
                     }
                 else
                     {
-                    PropertyInfo propPrev = mapProps.put(idSuper, propSuper);
-                    assert propPrev == null;
+                    propResult = propBase.layerOn(propContrib, errs);
+                    mapProps.remove(propBase.getIdentity());
+                    assert nidContrib.equals(propBase.getIdentity().getNestedIdentity());
                     }
 
-                // TODO remember to expand annotations / custom code into call chain
-                // - is there custom code? if so, then add the levels at which there is custom code
-                // - are there any annotations? is so, then they need to be expanded, and the call chains glued on
-                // TODO check for annotation redudancy / overlap
-                // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
-                // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
-                // - it is possible that an annotation has a potential call chain that includes layers that are
-                //   already in the property call chain; they are simply discarded (similar to retain-only)
+                // the property is stored both by its absolute (fully qualified) ID and its nested
+                // ID, which is useful for example when trying to find it when building the actual
+                // call chains
+                mapProps.put(idContrib, propResult);
+                mapVirtProps.put(nidContrib, propResult);   // replaces the previous "base", if any
                 }
 
-            // first find the "super" chains of each of the existing methods
-            Set<MethodConstant> setSuperMethods = new HashSet<>();
-            for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+            if (mapContribMethods.isEmpty())
                 {
-                MethodInfo method = entry.getValue();
-                if (method.isFunction())
-                    {
-                    // functions don't have chains
-                    continue;
-                    }
-
-                SignatureConstant sigSub = method.getSubSignature();
-                if (sigSub == null)
-                    {
-                    // the chain is "terminated"
-                    continue;
-                    }
-
-                // TODO need an "exact match" or "substitutable match" based on whether the last body is marked as @Override
-                boolean fOverride = method.getTail().findAnnotation(pool.clzOverride()) != null;
-
-                MethodConstant idSuper = findSuperMethod(sigSub, mapContribMethods, errs);
-                if (idSuper == null)
-                    {
-                    // the chain doesn't have a "super" from this contribution
-                    continue;
-                    }
-
-                entry.setValue(method.apply(contrib, mapContribMethods.get(idSuper)));
-                setSuperMethods.add(idSuper);
+                continue;
                 }
 
-            // sweep over the remaining chains
+            // process methods
+            // the challenge here is that the methods being contributed may @Override a method that
+            // does not have the same exact signature, in which case the method signature is
+            // _narrowed_. there are a few different possible outcomes when this occurs:
+            // 1) there is only one method in the contribution that narrows the method signature,
+            //    and no method in the contribution that has the same signature: this is the
+            //    typical case, in which the method signature is truly narrowed, but the resulting
+            //    data structure carries a record of that choice. first, the method that is being
+            //    narrowed is *capped*, which is to say that it can no longer be extended (although
+            //    it still exists and can be found by the un-narrowed signature, since it is
+            //    necessary for the system to be able to find the method chain that corresponds to
+            //    that un-narrowed signature, because that is the signature that will appear in any
+            //    code that was comipled against the base type). further, the cap indicates what
+            //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
+            //    narrowed signature, which in turn will be able to walk up its super chain to the
+            //    bottom-most narrowing method, which then supers to the method chain that is under
+            //    the cap.
+            // 2) there are one or more methods in the contribution that narrow the method
+            //    signature, and there is also a method in the contribution that has the same
+            //    exact non-narrowed signature: this is a less common case, but it is one that is
+            //    expected to occur whenever the loss of the non-narrowed method is undesirable.
+            //    the result is that, instead of a "cap" on the un-narrowed method chain, the method
+            //    from the contribution with the exact same signature is placed onto the top of that
+            //    un-narrowed method chain, as one would expect. additionally, any method that
+            //    selects the un-narrowed method chain as its super will super to the un-narrowed
+            //    method chain, starting with the method that was on top of that chain *before*
+            //    this contribution was added.
+            // 3) if there is more than one method in the contribution that narrow the method
+            //    signature, and no method in the contribution that has the same signature: this is
+            //    a compiler and verifier error, because there is no single signature that is doing
+            //    the narrowing, and thus there is ambiguity in terms of which signature the cap
+            //    should virtually invoke.
+            // to accurately collect this information, including sufficient information to report
+            // any errors, all changes to virtual method chains are recorded in a separate map, so
+            // that the "pre-contribution" view is not modified until all of the information has
+            // been collected. additionally, if any method signatures are narrowed, the un-narrowed
+            // signatures are recorded in a separate set, so that it is possible to determine if
+            // they should be capped (and to identify any errors).
+            Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
+            Map<Object, Set<Object>> mapNarrowedNids = null;
             for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                 {
-                if (!setSuperMethods.contains(entry.getKey()))
+                MethodConstant idContrib     = entry.getKey();
+                MethodInfo     methodContrib = entry.getValue();
+
+                // the method is not virtual if it is a function, if it is private, or if it is
+                // contained inside a method or some other structure (such as a property) that is
+                // non-virtual
+                if (!methodContrib.isVirtual())
                     {
-                    mapMethods.put(entry.getKey(), entry.getValue());
+                    mapMethods.put(idContrib, methodContrib);
+                    continue;
                     }
+
+                // look for a method of the same signature (using its nested identity); only
+                // virtual methods are registered using their nested identities
+                Object     nidContrib = idContrib.getNestedIdentity();
+                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
+                MethodInfo methodResult;
+                if (methodBase == null)
+                    {
+                    if (methodContrib.isOverride())
+                        {
+                        // the @Override tag gives us permission to look for a method with a
+                        // different signature that can be narrowed to the signature of the
+                        // contribution (because @Override means there MUST be a super method)
+                        Object nidBase = findRequiredSuper(
+                                nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
+                        if (nidBase != null)
+                            {
+                            methodBase = mapVirtMethods.get(nidBase);
+                            assert methodBase != null;
+
+                            // there exists a method that this method will narrow, so add this
+                            // method to the set of methods that are narrowing the super method
+                            if (mapNarrowedNids == null)
+                                {
+                                mapNarrowedNids = new HashMap<>();
+                                }
+                            Set<Object> setNarrowing = mapNarrowedNids.get(nidBase);
+                            if (setNarrowing == null)
+                                {
+                                setNarrowing = new HashSet<>();
+                                mapNarrowedNids.put(nidBase, setNarrowing);
+                                }
+                            setNarrowing.add(nidContrib);
+                            }
+                        }
+                    }
+
+                if (methodBase == null)
+                    {
+                    methodResult = methodContrib;
+                    }
+                else
+                    {
+                    // TODO are there any other errors that need to be checked? e.g. overrideable?
+                    methodResult = methodBase.layerOn(methodContrib);
+                    mapMethods.remove(methodBase.getIdentity());
+                    assert nidContrib.equals(methodBase.getIdentity().getNestedIdentity());
+                    }
+
+                mapVirtMods.put(nidContrib, methodResult);
+                }
+
+            if (mapNarrowedNids != null)
+                {
+                // find every narrowed method signature that did *not* receive a contribution of its
+                // own (i.e. same method signature), because any that did receive a contribution at
+                // this level can be safely ignored
+                mapNarrowedNids.keySet().removeAll(mapVirtMods.keySet());
+
+                // for each remaining nid that was narrowed, if it was narrowed by exactly one
+                // method, then cap the nid by redirecting to the narrowed method, otherwise it is
+                // an error
+                for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet())
+                    {
+                    Object      nidNarrowed  = entry.getKey();
+                    Set<Object> setNarrowing = entry.getValue();
+                    if (setNarrowing.size() == 1)
+                        {
+                        // cap the method
+                        Object     nidNarrowing  = setNarrowing.iterator().next();
+                        MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
+                        MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
+                        mapVirtMods.put(nidNarrowed, infoNarrowed.cappedBy(infoNarrowing));
+                        }
+                    else
+                        {
+                        for (Object nidNarrowing : setNarrowing)
+                            {
+                            todoLogError("more than one method, including " + nidNarrowing
+                                    + ", attempted to narrow " + nidNarrowed
+                                    + ", but the narrowed method itself was not overridden");
+                            }
+                        }
+                    }
+                }
+
+            // the method is stored both by its absolute (fully qualified) ID and its nested
+            // ID, which is useful for example when trying to find it when building the actual
+            // call chains
+            for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet())
+                {
+                Object         nid  = entry.getKey();
+                MethodInfo     info = entry.getValue();
+                MethodConstant id   = info.getIdentity();
+
+                mapMethods.put(id, info);
+                mapVirtMethods.put(nid, info);
                 }
             }
 
@@ -1935,103 +2050,59 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find a corresponding property in the passed map of properties that corresponds to the passed
-     * identity.
+     * Find the method that would be the "super" of the specified method signature. A super is
+     * required to exist, and one super must be the unambiguously best choice, otherwise an error
+     * will be logged.
      *
-     * @param idSuper      an identity being contributed to a property chain
-     * @param mapSubProps  a map of existing property chains as they are being constructed
+     * @param nidSub     the nested identity of the method that is searching for a super
+     * @param mapSupers  the possible super methods to select from
+     * @param errs       the error list to log any errors to
      *
-     * @return the identity of the property in the passed map that would be the assumed "sub" of the
-     *         property identified by {@code idSuper}
-     */
-    protected PropertyConstant findSubProperty(
-            PropertyConstant                    idSuper,
-            Map<PropertyConstant, PropertyInfo> mapSubProps)
-        {
-        if (mapSubProps.containsKey(idSuper))
-            {
-            return idSuper;
-            }
-
-        String sName  = idSuper.getName();
-        int    cDepth = idSuper.getNestedDepth();
-        NextProperty: for (Entry<PropertyConstant, PropertyInfo> entry : mapSubProps.entrySet())
-            {
-            PropertyConstant idSub = entry.getKey();
-            if (idSub.getName().equals(sName) && idSub.getNestedDepth() == cDepth)
-                {
-                if (cDepth > 1)
-                    {
-                    // verify sameness of path (only nesting that would be allowed to match is
-                    // properties within properties, since properties within methods MUST be
-                    // private)
-                    IdentityConstant idSubParent   = idSub  .getParentConstant();
-                    IdentityConstant idSuperParent = idSuper.getParentConstant();
-                    for (int i = 1; i < cDepth; ++i)
-                        {
-                        if ( !(    idSubParent   instanceof PropertyConstant
-                                && idSuperParent instanceof PropertyConstant
-                                && idSub.getName().equals(idSuperParent.getName())))
-                            {
-                            continue NextProperty;
-                            }
-
-                        idSubParent   = idSubParent  .getParentConstant();
-                        idSuperParent = idSuperParent.getParentConstant();
-                        }
-                    }
-                return idSub;
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * Find the method that would be the "super" of the specified method signature.
-     *
-     * @param sigSub      the method that is searching for a super
-     * @param mapMethods  the possible super methods to select from
-     * @param errs        the error list to log any errors to
-     *
-     * @return a SignatureConstant for the super method, or null if there is no one unambiguously
+     * @return the nested identity for the super method, or null if there is no one unambiguously
      *         "best" super method signature to be found
      */
-    protected MethodConstant findSuperMethod(
-            SignatureConstant               sigSub,
-            Map<MethodConstant, MethodInfo> mapMethods,
-            ErrorListener                   errs)
+    protected Object findRequiredSuper(
+            Object                  nidSub,
+            SignatureConstant       sigSub,
+            Map<Object, MethodInfo> mapSupers,
+            ErrorListener           errs)
         {
-        // brute force search
-        MethodConstant       idBest    = null;
-        List<MethodConstant> listMatch = null;
-        for (MethodConstant idCandidate : mapMethods.keySet())
+        // check for exact match
+        if (mapSupers.containsKey(nidSub))
             {
-            if (idCandidate.getSignature().equals(sigSub))
-                {
-                return idCandidate;
-                }
+            return nidSub;
+            }
 
-            if (idCandidate.getSignature().isSubstitutableFor(sigSub, this))
+        // brute force search
+        Object            nidBest   = null;
+        List<Object>      listMatch = null;
+        for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
+            {
+            Object nidCandidate = entry.getKey();
+            if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
-                if (listMatch == null)
+                SignatureConstant sigCandidate = entry.getValue().getSignature();
+                if (sigCandidate.isSubstitutableFor(sigSub, this))
                     {
-                    if (idBest == null)
+                    if (listMatch == null)
                         {
-                        idBest = idCandidate;
+                        if (nidBest == null)
+                            {
+                            nidBest = nidCandidate;
+                            }
+                        else
+                            {
+                            // we've got at least 2 matches, so we'll need to compare them all
+                            listMatch = new ArrayList<>();
+                            listMatch.add(nidBest);
+                            listMatch.add(nidCandidate);
+                            nidBest = null;
+                            }
                         }
                     else
                         {
-                        // we've got at least 2 matches, so we'll need to compare them all
-                        listMatch = new ArrayList<>();
-                        listMatch.add(idBest);
-                        listMatch.add(idCandidate);
-                        idBest = null;
+                        listMatch.add(nidCandidate);
                         }
-                    }
-                else
-                    {
-                    listMatch.add(idCandidate);
                     }
                 }
             }
@@ -2039,7 +2110,12 @@ public abstract class TypeConstant
         // if none match, then there is no match; if only 1 matches, then use it
         if (listMatch == null)
             {
-            return idBest;
+            if (nidBest == null)
+                {
+                todoLogError("the chain doesn't have a \"super\" for @Override method " + nidSub);
+                }
+
+            return nidBest;
             }
 
         // if multiple candidates exist, then one must be obviously better than the rest
@@ -2047,14 +2123,14 @@ public abstract class TypeConstant
         nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
                 iCur < cCandidates; ++iCur)
             {
-            MethodConstant    idCandidate  = listMatch.get(iCur);
-            SignatureConstant sigCandidate = idCandidate.getSignature();
-            if (idBest == null) // that means that "best" is ambiguous thus far
+            Object            nidCandidate = listMatch.get(iCur);
+            SignatureConstant sigCandidate = mapSupers.get(nidCandidate).getSignature();
+            if (nidBest == null) // that means that "best" is ambiguous thus far
                 {
                 // have to back-test all the ones in front of us to make sure that
                 for (int iPrev = 0; iPrev < iCur; ++iPrev)
                     {
-                    SignatureConstant sigPrev = listMatch.get(iPrev).getSignature();
+                    SignatureConstant sigPrev = mapSupers.get(listMatch.get(iPrev)).getSignature();
                     if (!sigPrev.isSubstitutableFor(sigCandidate, this))
                         {
                         // still ambiguous
@@ -2063,29 +2139,29 @@ public abstract class TypeConstant
                     }
 
                 // so far, this candidate is the best
-                idBest  = idCandidate;
+                nidBest = nidCandidate;
                 sigBest = sigCandidate;
                 }
             else if (sigBest.isSubstitutableFor(sigCandidate, this))
                 {
                 // this assumes that "best" is a transitive concept, i.e. we're not going to back-
                 // test all of the other candidates
-                idBest  = idCandidate;
+                nidBest = nidCandidate;
                 sigBest = sigCandidate;
                 }
             else if (!sigCandidate.isSubstitutableFor(sigBest, this))
                 {
-                idBest  = null;
+                nidBest = null;
                 sigBest = null;
                 }
             }
 
-        if (idBest == null)
+        if (nidBest == null)
             {
             log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS, sigSub.getValueString());
             }
 
-        return idBest;
+        return nidBest;
         }
 
     /**
@@ -2108,17 +2184,20 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
+        // TODO verify that these log an error if @Override is specified for a non-virtual member
+
         if (struct instanceof MethodStructure)
             {
             MethodStructure   method = (MethodStructure) struct;
             MethodConstant    id     = method.getIdentityConstant();
             SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
+// TODO implementation types etc. LOTS OF WORK HERE?
             MethodBody body = new MethodBody(id,
                     method.isAbstract() ? Implementation.Declared :
                     fInterface          ? Implementation.Default  :
                     method.isNative()   ? Implementation.Native   :
                                           Implementation.Explicit  );
-            mapMethods.put(id, new MethodInfo(sig, body));
+            mapMethods.put(id, new MethodInfo(body));
             }
         else if (struct instanceof PropertyStructure)
             {
@@ -2266,6 +2345,11 @@ public abstract class TypeConstant
                         + ") cannot be nested under a " + constParent.getFormat()
                         + " (on " + constId.getValueString() + ")");
             }
+
+// TODO expand the call chains that are inside of the property
+// TODO remember to expand annotations / custom code into call chain
+// - is there custom code? if so, then add the levels at which there is custom code
+// - are there any annotations? is so, then they need to be expanded, and the call chains glued on
 
         // check the methods to see if get() and set() call super
         MethodStructure  methodInit     = null;
@@ -2604,7 +2688,7 @@ public abstract class TypeConstant
                         {
                         for (MethodBody body : methodinfo.getChain())
                             {
-                            if (body.getImplementation() == Implementation.Property)
+                            if (body.getImplementation() == Implementation.Field)
                                 {
                                 break;
                                 }

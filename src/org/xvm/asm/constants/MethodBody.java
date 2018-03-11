@@ -17,59 +17,75 @@ public class MethodBody
      * Construct an implicit, abstract, native, or normal byte-code method body.
      *
      * @param constMethod  the method constant that this body represents
-     * @param impl         one of Implicit, Declared, Native, or Explicit
+     * @param impl         one of Implicit, Declared, Default, Native, or Explicit
      */
     public MethodBody(MethodConstant constMethod, Implementation impl)
         {
-        assert constMethod != null;
-        assert impl != null && impl != Implementation.Delegating && impl != Implementation.Property;
-
-        m_constMethod = constMethod;
-        m_impl        = impl;
+        this(constMethod, impl, null);
         }
 
     /**
-     * Construct a delegating or property field access method body.
+     * Construct a method body with an optional target.
      *
      * @param constMethod  the method constant that this body represents
-     * @param impl         one of Delegating or Property
-     * @param constProp    the property constant that provides the reference to delegate to
+     * @param impl         specifies the implementation of the MethodBody
+     * @param constTarget  a MethodConstant from the "narrowing" chain for Implementation Capped;
+     *                     a PropertyConstant for Delegating or Field Implementation; otherwise null
      */
-    public MethodBody(MethodConstant constMethod, Implementation impl, PropertyConstant constProp)
+    public MethodBody(MethodConstant constMethod, Implementation impl, Constant constTarget)
         {
-        assert constMethod != null;
-        assert impl == Implementation.Delegating || impl == Implementation.Property;
-        assert constProp != null;
+        assert constMethod != null && impl != null;
+
+        switch (impl)
+            {
+            default:
+                assert constTarget == null;
+                break;
+
+            case Capped:
+                assert constTarget instanceof MethodConstant;
+                break;
+
+            case Delegating:
+            case Field:
+                assert constTarget instanceof PropertyConstant;
+                break;
+
+            }
 
         m_constMethod = constMethod;
         m_impl        = impl;
-        m_constProp   = constProp;
+        m_constTarget = constTarget;
         }
 
     /**
      * @return the MethodConstant that this MethodBody represents
      */
-    public MethodConstant getMethodConstant()
+    public MethodConstant getIdentity()
         {
         return m_constMethod;
         }
 
     /**
      * @return the MethodStructure that this MethodBody represents, or null if the method
-     *         implementation is Delegating or Property
+     *         implementation does not have a MethodStructure, such as when the implementation is
+     *         Delegating, Field, or Capped
      */
     public MethodStructure getMethodStructure()
         {
         MethodStructure structMethod = m_structMethod;
         if (structMethod == null)
             {
-            // delegating methods and property methods don't exist in the structural sense
-            if (m_impl == Implementation.Delegating || m_impl == Implementation.Property)
+            switch (m_impl)
                 {
-                return null;
-                }
+                case Capped:
+                case Delegating:
+                case Field:
+                    return null;
 
-            m_structMethod = structMethod = (MethodStructure) m_constMethod.getComponent();
+                default:
+                    m_structMethod = structMethod = (MethodStructure) m_constMethod.getComponent();
+                }
             }
         return structMethod;
         }
@@ -80,7 +96,26 @@ public class MethodBody
      */
     public boolean isAbstract()
         {
-        return m_impl == Implementation.Implicit || m_impl == Implementation.Declared;
+        switch (m_impl)
+            {
+            case Implicit:
+            case Declared:
+            case Abstract:
+            case SansCode:          // special case: it could be used to make a chain non-abstract,
+                                    // so even though this body is abstract, the chain may not be
+                return true;
+
+            case Default:           // default methods are neither abstract nor concrete
+            case Capped:            // capped are not abstract, because they represent a redirect
+            case Delegating:        // delegating methods also represent a redirect
+            case Field:             // field access is a terminal (non-abstract) implementation
+            case Native:            // native code is a terminal (non-abstract) implementation
+            case Explicit:          // this is actual "user" code in a class or mixin
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -92,11 +127,14 @@ public class MethodBody
             {
             case Implicit:
             case Declared:
-            case Default:
+            case Default:           // default methods are neither abstract nor concrete
+            case Abstract:
+            case SansCode:
                 return false;
 
+            case Capped:
             case Delegating:
-            case Property:
+            case Field:
             case Native:
             case Explicit:
                 return true;
@@ -113,6 +151,40 @@ public class MethodBody
         {
         MethodStructure structMethod = getMethodStructure();
         return structMethod != null && structMethod.isFunction();
+        }
+
+    /**
+     * @return true iff this specifies the @Override annotation
+     */
+    public boolean isOverride()
+        {
+        return findAnnotation(m_constMethod.getConstantPool().clzOverride()) != null;
+        }
+
+    /**
+     * @return true iff the body represents functionality that would show up in an optimized chain
+     */
+    public boolean isOptimized()
+        {
+        switch (m_impl)
+            {
+            case Implicit:
+            case Declared:
+            case Abstract:
+            case SansCode:
+            case Capped:
+                return false;
+
+            case Default:           // at most one default method body in an optimized chain
+            case Delegating:
+            case Field:
+            case Native:
+            case Explicit:
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
@@ -140,17 +212,21 @@ public class MethodBody
             {
             case Implicit:
             case Declared:
+            case Capped:    // this does redirect, but eventually the chain comes back to the super
+            case Abstract:
+            case SansCode:
                 return false;
 
             case Default:
             case Delegating:
-            case Property:
+            case Field:
             case Native:
                 return true;
 
             case Explicit:
                 MethodStructure structMethod = getMethodStructure();
-                return !structMethod.isAbstract() && !structMethod.usesSuper();
+                assert !structMethod.isAbstract();
+                return !structMethod.usesSuper();
 
             default:
                 throw new IllegalStateException();
@@ -163,7 +239,29 @@ public class MethodBody
      */
     public PropertyConstant getPropertyConstant()
         {
-        return m_constProp;
+        return m_impl == Implementation.Delegating || m_impl == Implementation.Field
+                ? (PropertyConstant) m_constTarget
+                : null;
+        }
+
+    /**
+     * @return the SignatureConstant of the method that narrowed this method, if this is a cap
+     */
+    public SignatureConstant getNarrowingSignature()
+        {
+        return m_impl == Implementation.Capped
+                ? ((MethodConstant) m_constTarget).getSignature()
+                : null;
+        }
+
+    /**
+     * @return the nested identity of the method that narrowed this method, if this is a cap
+     */
+    public Object getNarrowingNestedIdentity()
+        {
+        return m_impl == Implementation.Capped
+                ? ((MethodConstant) m_constTarget).getNestedIdentity()
+                : null;
         }
 
     /**
@@ -264,7 +362,7 @@ public class MethodBody
         MethodBody that = (MethodBody) obj;
         return this.m_impl == that.m_impl
             && Handy.equals(this.m_constMethod, that.m_constMethod)
-            && Handy.equals(this.m_constProp  , that.m_constProp  );
+            && Handy.equals(this.m_constTarget, that.m_constTarget);
         }
 
     @Override
@@ -287,22 +385,41 @@ public class MethodBody
      * <ul>
      * <li><b>Implicit</b> - the method body represents a method known to exist for compilation
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or the
-     * methods of {@code Object} in the context of an interface, for example</li>
-     * <li><b>Declared</b> - the method body represents a declared but non-implemented method</li>
-     * <li><b>Default</b> - the method body is a default implementation from an interface</li>
-     * <li><b>Delegating</b> - the method body is implemented by delegating the method call</li>
-     * TODO add "redirect" or "rebase" (into a different call chain, e.g. as a result of explicit return value narrowing)
-     * <li><b>Property</b> - (TODO rename as "field"?) the method body represents access to a property's underlying field,
-     * which occurs when a property's method is overridden and calls {@code super()}</li>
-     * <li><b>Native</b> - the method body is implemented natively by the runtime</li>
-     * <li><b>Explicit</b> - the method body is represented by byte code that gets executed</li>
-     * TODO add "capped"
+     * methods of {@code Object} in the context of an interface, for example;</li>
+     * <li><b>Declared</b> - the method body represents a declared but non-implemented method;</li>
+     * <li><b>Default</b> - the method body is a default implementation from an interface;</li>
+     * <li><b>Abstract</b> - the method body is on a class, but is explicitly abstract;</li>
+     * <li><b>SansCode</b> - the method body has no code, but isn't explicitly abstract;</li>
+     * <li><b>Capped</b> - the method body represents the "cap" on a method chain;</li>
+     * <li><b>Delegating</b> - the method body is implemented by delegating to the same signature on
+     * a different reference;</li>
+     * <li><b>Field</b> - the method body represents access to a property's underlying field,
+     * which occurs when a property's method is overridden and calls {@code super()};</li>
+     * <li><b>Native</b> - the method body is implemented natively by the runtime;</li>
+     * <li><b>Explicit</b> - the method body is represented by byte code that gets executed.</li>
      * </ul>
      */
-    public enum Implementation {Implicit, Declared, Default, Delegating, Property, Native, Explicit}
+    public enum Implementation
+        {
+        Implicit,
+        Declared,
+        Default,
+        Abstract,
+        SansCode,
+        Capped,
+        Delegating,
+        Field,
+        Native,
+        Explicit;
+        }
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Empty array of method bodies.
+     */
+    public static final MethodBody[] NO_BODIES = new MethodBody[0];
 
     /**
      * The MethodConstant that this method body corresponds to.
@@ -315,16 +432,19 @@ public class MethodBody
     private Implementation m_impl;
 
     /**
-     * The property related to the method body:
+     * The constant denoting additional information (if required) for the MethodBody implementation:
      * <ul>
-     * <li>For Implementation Property, this specifies the property that the method body corresponds
-     * to. For example, this is used to represent the field access for a {@code get()} method on a
-     * property.</li>
+     * <li>For Implementation Capped, this specifies a MethodConstant from the narrowing method that
+     * the cap redirects execution to via a virtual method call (a MethodConstant is provided, but
+     * its purpose is to provide both a nested identity and a method signature);</li>
      * <li>For Implementation Delegating, this specifies the property which contains the reference
      * to delegate to.</li>
+     * <li>For Implementation Field, this specifies the property that the method body corresponds
+     * to. For example, this is used to represent the field access for a {@code get()} method on a
+     * property.</li>
      * </ul>
      */
-    private PropertyConstant m_constProp;
+    private Constant m_constTarget;
 
     /**
      * The cached method structure.

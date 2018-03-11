@@ -397,3 +397,26 @@ type of &t is: AtomicVar<T> + LazyVar<T> + Var<T>   // we can drop the "+ Var<T>
 // type of p is "(Runnable | String)"
 // type of &p is "AtomicVar<Runnable | String>"     // we've started dropping the Var by this point
 Annotated(M1, Annotated(M2, Annotated(Atomic, Parameterized(Ref, T))))
+
+// ----- @Override
+
+interface I1
+    {
+    @Override Void foo();                           // compiler error
+    }
+
+interface I2
+        extends I3
+    {
+    @Override Void foo();                           // ok
+    }
+
+interface I3
+    {
+    Void foo();
+    }
+
+mixin M1 into I2
+    {
+    @Override Void foo();                           // ok because "into" should lay down an implicit foo()
+    }
