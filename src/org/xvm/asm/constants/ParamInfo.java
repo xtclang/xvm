@@ -31,7 +31,10 @@ public class ParamInfo
 
         m_sName          = sName;
         m_typeConstraint = typeConstraint;
-        m_typeActual     = typeActual;
+        // TODO think about this some more
+        m_typeActual     = typeActual instanceof TerminalTypeConstant
+                           && ((TerminalTypeConstant) typeActual).isFormalType(sName)
+                ? null : typeActual;
         }
 
     /**
@@ -117,17 +120,14 @@ public class ParamInfo
         public TypeConstant resolveGenericType(PropertyConstant constProperty)
             {
             ParamInfo info = parameters.get(constProperty.getName());
-            if (info == null)
-                {
-// TODO either the name is naturally unknown (so return the property as the type constant), or this is an error -- which is it?
+// TODO in the case of "null", either the name is naturally unknown (so return the property as the type constant), or this is an error -- which is it?
 // TODO need to figure out (in actual usage) when this can happen, and whether any of those times indicate an error!
 //                        m_errs.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
 //                                new Object[] {sName, type.getValueString()}, type);
 //                        return type.getConstantPool().typeObject();
-                return constProperty.asTypeConstant();
-                }
-
-            return info.getActualType();
+            return info != null && info.isActualTypeSpecified()
+                    ? info.getActualType()
+                    : constProperty.asTypeConstant();
             }
 
         /*
@@ -147,17 +147,17 @@ public class ParamInfo
     /**
      * The name of the type parameter.
      */
-    private String m_sName;
+    private final String m_sName;
 
     /**
      * The constraint type for the type parameter, which is both the type that constrains what the
      * actual type can be, and provides the default if an actual type is not specified.
      */
-    private TypeConstant m_typeConstraint;
+    private final TypeConstant m_typeConstraint;
 
     /**
      * The actual type of te type parameter, which may be null to indicate that an actual type was
      * not specified.
      */
-    private TypeConstant m_typeActual;
+    private final TypeConstant m_typeActual;
     }

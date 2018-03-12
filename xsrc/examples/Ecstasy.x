@@ -96,7 +96,7 @@ module Ecstasy.xtclang.org
         {
         }
 
-    interface Type {}
+    const Type<DataType> {}
 
     enum Nullable{Null}
     enum Boolean{False, True}

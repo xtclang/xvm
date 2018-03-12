@@ -17,6 +17,7 @@ import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -113,12 +114,17 @@ public class TypeInfo
     public TypeInfo limitAccess(Access access)
         {
         assert m_type.getAccess() == Access.PRIVATE;
-        assert access == Access.PROTECTED ||  access == Access.PUBLIC;
+        if (access == Access.PRIVATE)
+            {
+            return this;
+            }
+
+        assert access == Access.PROTECTED || access == Access.PUBLIC;
 
         TypeConstant typeNew = m_type.getUnderlyingType();
         if (access == Access.PROTECTED)
             {
-            typeNew = m_type.getConstantPool().ensureAccessTypeConstant(typeNew, Access.PROTECTED);
+            typeNew = pool().ensureAccessTypeConstant(typeNew, Access.PROTECTED);
             }
 
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
@@ -897,6 +903,11 @@ public class TypeInfo
             }
 
         return methodMatch;
+        }
+
+    private ConstantPool pool()
+        {
+        return  m_type.getConstantPool();
         }
 
 

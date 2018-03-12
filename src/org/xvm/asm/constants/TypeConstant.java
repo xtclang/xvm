@@ -828,7 +828,7 @@ public abstract class TypeConstant
             case PUBLIC:
                 assert !isAccessSpecified();
                 return getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
-                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC);
+                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC); // TODO recursive, so should this be some sort of "ensureInternal()"?
             }
 
         // this implementation only deals with modifying (not including immutable) and terminal type
@@ -1420,14 +1420,28 @@ public abstract class TypeConstant
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(resolver);
+            Contribution contrib  = listContribs.get(iContrib);
+
+            // TODO clean up
+            TypeConstant typeThis = isParamsSpecified() ? this : struct.getFormalType();
+            TypeConstant typeTemp = contrib.getTypeConstant();
+            TypeConstant typeContrib;
+            if (typeTemp.isParamsSpecified())
+                {
+                List<TypeConstant> listIn  = typeThis.getParamTypes();
+                List<TypeConstant> listOut = contrib.transformActualTypes(struct, listIn);
+                typeContrib = pool.ensureParameterizedTypeConstant(typeTemp.getUnderlyingType(), listOut.toArray(new TypeConstant[listOut.size()]));
+                }
+            else
+                {
+                typeContrib = typeTemp;
+                }
 
             switch (contrib.getComposition())
                 {
                 case Annotation:
                     log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL,
-                            contrib.getTypeConstant().getValueString(),
+                            typeContrib.getValueString(),
                             constId.getPathString());
                     break;
 
@@ -1435,7 +1449,7 @@ public abstract class TypeConstant
                     // only applicable on a mixin, only one allowed, and it should have been earlier
                     // in the list of contributions
                     log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
+                            typeContrib.getValueString(),
                             constId.getPathString());
                     break;
 
@@ -1443,7 +1457,7 @@ public abstract class TypeConstant
                     // not applicable on an interface, only one allowed, and it should have been
                     // earlier in the list of contributions
                     log(errs, Severity.ERROR, VE_EXTENDS_UNEXPECTED,
-                            contrib.getTypeConstant().getValueString(),
+                            typeContrib.getValueString(),
                             constId.getPathString());
                     break;
 
@@ -1452,7 +1466,7 @@ public abstract class TypeConstant
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 constId.getPathString());
                         break;
                         }
@@ -1466,7 +1480,7 @@ public abstract class TypeConstant
                     if (!typeContrib.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 constId.getPathString());
                         break;
                         }
@@ -1488,7 +1502,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                                 constId.getPathString(),
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 this.getValueString(),
                                 typeRequire.getValueString());
                         break;
@@ -1516,7 +1530,7 @@ public abstract class TypeConstant
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
                         log(errs, Severity.ERROR, VE_DELEGATES_UNEXPECTED,
-                                contrib.getTypeConstant().getValueString(),
+                                typeContrib.getValueString(),
                                 constId.getPathString());
                         break;
                         }
@@ -2518,7 +2532,7 @@ public abstract class TypeConstant
             {
             impl = Implementation.Declared;
 
-            if (cCustomMethods == (methodGet == null ? 0 : 1))
+            if (cCustomMethods > (methodGet == null ? 0 : 1))
                 {
                 // interface is not allowed to implement a property, other than it may have a
                 // default implementation of get()
@@ -2723,7 +2737,7 @@ public abstract class TypeConstant
             Map<PropertyConstant, PropertyInfo> mapProps,
             ErrorListener                       errs)
         {
-        ConstantPool pool       = getConstantPool();
+        ConstantPool pool = getConstantPool();
         for (ParamInfo param : mapTypeParams.values())
             {
             String  sParam = param.getName();

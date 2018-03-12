@@ -183,6 +183,24 @@ public class TerminalTypeConstant
         return false;
         }
 
+    /**
+     * TODO
+     *
+     * @param sName
+     *
+     * @return
+     */
+    public boolean isFormalType(String sName)
+        {
+        if (isSingleDefiningConstant())
+            {
+            Constant constant = getDefiningConstant();
+            return constant instanceof PropertyConstant && ((PropertyConstant) constant).getName().equals(sName);
+            }
+
+        return false;
+        }
+
     @Override
     public boolean isSingleDefiningConstant()
         {
