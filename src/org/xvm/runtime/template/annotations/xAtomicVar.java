@@ -9,6 +9,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -38,6 +39,15 @@ public class xAtomicVar
         }
 
     @Override
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        // if RefType is Int64, then the template should be AtomicIntNumber
+        return type.getParamTypesArray()[0] == f_struct.getConstantPool().typeInt()
+            ? xAtomicIntNumber.INSTANCE
+            : this;
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
@@ -52,7 +62,7 @@ public class xAtomicVar
 
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
+                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
 
                         // conceptually, the logic looks like:
                         //
@@ -102,7 +112,7 @@ public class xAtomicVar
                         AtomicHandle hThis = (AtomicHandle) hTarget;
                         ObjectHandle hExpect = ahArg[0];
                         ObjectHandle hNew = ahArg[1];
-                        AtomicReference<ObjectHandle> atomic = hThis.m_atomic;
+                        AtomicReference<ObjectHandle> atomic = hThis.f_atomic;
 
                         // conceptually, the logic looks like:
                         //
@@ -143,47 +153,53 @@ public class xAtomicVar
         return new AtomicHandle(clazz, sName, null);
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        AtomicHandle hAtomic = (AtomicHandle) hTarget;
+        ObjectHandle hValue = hAtomic.f_atomic.get();
+        return hValue == null
+            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            : frame.assignValue(iReturn, hValue);
+        }
+
+    @Override
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        AtomicHandle hAtomic = (AtomicHandle) hTarget;
+        hAtomic.f_atomic.set(hValue);
+        return Op.R_NEXT;
+        }
+
+
+    // ----- handle class -----
+
     public static class AtomicHandle
             extends RefHandle
         {
-        protected AtomicReference<ObjectHandle> m_atomic = new AtomicReference<>();
+        protected final AtomicReference<ObjectHandle> f_atomic;
 
         protected AtomicHandle(TypeComposition clazz, String sName, ObjectHandle hValue)
             {
             super(clazz, sName);
 
+            f_atomic = new AtomicReference<>();
             if (hValue != null)
                 {
-                m_atomic.set(hValue);
+                f_atomic.set(hValue);
                 }
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
-            return m_atomic != null;
-            }
-
-        @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            ObjectHandle hValue = m_atomic.get();
-            return hValue == null
-                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
-                : frame.assignValue(iReturn, hValue);
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            m_atomic.set(handle);
-            return Op.R_NEXT;
+            return f_atomic.get() != null;
             }
 
         @Override
         public String toString()
             {
-            return m_clazz + " -> " + m_atomic.get();
+            return m_clazz + " -> " + f_atomic.get();
             }
         }
 

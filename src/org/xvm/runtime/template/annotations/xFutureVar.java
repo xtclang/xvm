@@ -182,6 +182,86 @@ public class xFutureVar
         return new FutureHandle(clazz, sName, null);
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        FutureHandle hFuture = (FutureHandle) hTarget;
+
+        CompletableFuture<ObjectHandle> cf = hFuture.m_future;
+        if (cf == null)
+            {
+            return frame.raiseException(xException.makeHandle("Unassigned reference"));
+            }
+
+        if (cf.isDone())
+            {
+            try
+                {
+                return frame.assignValue(iReturn, cf.get());
+                }
+            catch (InterruptedException e)
+                {
+                throw new UnsupportedOperationException("TODO");
+                }
+            catch (ExecutionException e)
+                {
+                Throwable eOrig = e.getCause();
+                if (eOrig instanceof ExceptionHandle.WrapperException)
+                    {
+                    return frame.raiseException((ExceptionHandle.WrapperException) eOrig);
+                    }
+                throw new UnsupportedOperationException("Unexpected exception", eOrig);
+                }
+            }
+        else
+            {
+            // wait for the completion; the service is responsible for timing out
+            return Op.R_BLOCK;
+            }
+        }
+
+    @Override
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        FutureHandle hFuture = (FutureHandle) hTarget;
+
+        assert hValue != null;
+
+        if (hValue instanceof FutureHandle)
+            {
+            // this is only possible if this "handle" is a "dynamic ref" and the passed in
+            // "handle" is a synthetic or dynamic one (see Frame.assignValue)
+            if (hFuture.m_future != null)
+                {
+                return frame.raiseException(
+                    xException.makeHandle("FutureVar has already been assigned"));
+                }
+
+            FutureHandle that = (FutureHandle) hValue;
+            hFuture.m_future = that.m_future;
+            return Op.R_NEXT;
+            }
+
+        CompletableFuture cf = hFuture.m_future;
+        if (cf == null)
+            {
+            hFuture.m_future = CompletableFuture.completedFuture(hValue);
+            return Op.R_NEXT;
+            }
+
+        if (cf.isDone())
+            {
+            return frame.raiseException(
+                xException.makeHandle("FutureVar has already been set"));
+            }
+
+        cf.complete(hValue);
+        return Op.R_NEXT;
+        }
+
+
+    // ----- the handle -----
+
     public static class FutureHandle
             extends RefHandle
         {
@@ -195,81 +275,9 @@ public class xFutureVar
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             return m_future != null && m_future.isDone();
-            }
-
-        @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            CompletableFuture<ObjectHandle> cf = m_future;
-            if (cf == null)
-                {
-                return frame.raiseException(xException.makeHandle("Unassigned reference"));
-                }
-
-            if (cf.isDone())
-                {
-                try
-                    {
-                    return frame.assignValue(iReturn, cf.get());
-                    }
-                catch (InterruptedException e)
-                    {
-                    throw new UnsupportedOperationException("TODO");
-                    }
-                catch (ExecutionException e)
-                    {
-                    Throwable eOrig = e.getCause();
-                    if (eOrig instanceof ExceptionHandle.WrapperException)
-                        {
-                        return frame.raiseException((ExceptionHandle.WrapperException) eOrig);
-                        }
-                    throw new UnsupportedOperationException("Unexpected exception", eOrig);
-                    }
-                }
-            else
-                {
-                // wait for the completion; the service is responsible for timing out
-                return Op.R_BLOCK;
-                }
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            assert handle != null;
-
-            if (handle instanceof FutureHandle)
-                {
-                // this is only possible if this "handle" is a "dynamic ref" and the passed in
-                // "handle" is a synthetic or dynamic one (see Frame.assignValue)
-                if (m_future != null)
-                    {
-                    return frame.raiseException(
-                        xException.makeHandle("FutureVar has already been assigned"));
-                    }
-
-                FutureHandle that = (FutureHandle) handle;
-                this.m_future = that.m_future;
-                return Op.R_NEXT;
-                }
-
-            if (m_future == null)
-                {
-                m_future = CompletableFuture.completedFuture(handle);
-                return Op.R_NEXT;
-                }
-
-            if (m_future.isDone())
-                {
-                return frame.raiseException(
-                    xException.makeHandle("FutureVar has already been set"));
-                }
-
-            m_future.complete(handle);
-            return Op.R_NEXT;
             }
 
         @Override

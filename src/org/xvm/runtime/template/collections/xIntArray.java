@@ -6,13 +6,15 @@ import java.util.Arrays;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -46,6 +48,13 @@ public class xIntArray
         }
 
     @Override
+    public TypeConstant getCanonicalType()
+        {
+        ConstantPool pool = f_struct.getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constArray = (ArrayConstant) constant;
@@ -67,20 +76,19 @@ public class xIntArray
         }
 
     @Override
-    public ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
-            throws ExceptionHandle.WrapperException
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
         if (lIndex < 0 || lIndex >= hArray.m_cSize)
             {
-            throw IndexSupport.outOfRange(lIndex, hArray.m_cSize).getException();
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
             }
-        return xInt64.makeHandle(hArray.m_alValue[(int) lIndex]);
+        return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_alValue[(int) lIndex]));
         }
 
     @Override
-    public ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
         IntArrayHandle hArray = (IntArrayHandle) hTarget;
 
@@ -88,7 +96,7 @@ public class xIntArray
 
         if (lIndex < 0 || lIndex > cSize)
             {
-            return IndexSupport.outOfRange(lIndex, cSize);
+            return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
             }
 
         if (lIndex == cSize)
@@ -99,7 +107,7 @@ public class xIntArray
                 {
                 if (hArray.m_fFixed)
                     {
-                    return IndexSupport.outOfRange(lIndex, cSize);
+                    return frame.raiseException(IndexSupport.outOfRange(lIndex, cSize));
                     }
 
                 // resize (TODO: we should be much smarter here)
@@ -114,7 +122,7 @@ public class xIntArray
             }
 
         ((IntArrayHandle) hTarget).m_alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
-        return null;
+        return Op.R_NEXT;
         }
 
     public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)

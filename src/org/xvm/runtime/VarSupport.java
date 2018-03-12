@@ -10,21 +10,44 @@ import org.xvm.runtime.template.xRef.RefHandle;
  * {@link VarSupport} represents a run-time facet of a Var.
  */
 public interface VarSupport
+        extends OpSupport
     {
+    // ----- construction --------------------------------------------------------------------------
+
     /**
-     * Obtain an underlying ClassTemplate for this {@link VarSupport}
+     * Create a Ref or a Var for the specified referent class.
+     *
+     * Most commonly, the returned handle is an uninitialized Var, but
+     * in the case of InjectedRef, it's an initialized [read-only] Ref.
+     *
+     * @param clazz  the referent class
+     * @param sName  an optional Ref/Var name
+     *
+     * @return the corresponding {@link RefHandle}
      */
-    ClassTemplate getTemplate();
+    RefHandle createRefHandle(TypeComposition clazz, String sName);
 
 
     // ----- built-in unary operations -------------------------------------------------------------
 
     /**
+     * Get the Var's value.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var or Ref handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int get(Frame frame, RefHandle hTarget, int iReturn);
+
+    /**
      * Increment the Var value and retrieve the new value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target Var handle
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -34,9 +57,9 @@ public interface VarSupport
     /**
      * Retrieve the Var value and then increment it.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target Var handle
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -46,9 +69,9 @@ public interface VarSupport
     /**
      * Decrement the Var value and retrieve the new value.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target Var handle
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -58,9 +81,9 @@ public interface VarSupport
     /**
      * Retrieve the Var value and then decrement it.
      *
-     * @param frame      the current frame
-     * @param hTarget    the target Var handle
-     * @param iReturn    the register id to place a result of the operation into
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param iReturn  the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -69,6 +92,18 @@ public interface VarSupport
 
 
     // ----- built-in binary operations ------------------------------------------------------------
+
+    /**
+     * Set the Var's value.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target Var handle
+     * @param hValue   the new value
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int set(Frame frame, RefHandle hTarget, ObjectHandle hValue);
 
     /**
      * Perform an "add" operation on the Var.

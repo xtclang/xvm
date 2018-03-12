@@ -5,14 +5,19 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.Op;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
+
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
 import org.xvm.runtime.Utils.UnaryAction;
+
 import org.xvm.runtime.VarSupport;
 
 
@@ -50,7 +55,7 @@ public class xVar
         switch (method.getName())
             {
             case "set":
-                return hThis.set(frame, hArg);
+                return set(frame, hThis, hArg);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -94,6 +99,48 @@ public class xVar
         }
 
     @Override
+    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        switch (hTarget.m_iVar)
+            {
+            case RefHandle.REF_REFERENT:
+                return setInternal(frame, hTarget, hValue);
+
+            case RefHandle.REF_REF:
+                {
+                RefHandle hDelegate = (RefHandle) hTarget.getValue();
+                return hDelegate.getVarSupport().set(frame, hDelegate, hValue);
+                }
+
+            case RefHandle.REF_PROPERTY:
+                {
+                ObjectHandle hDelegate = hTarget.getValue();
+                return hDelegate.getTemplate().setPropertyValue(
+                    frame, hDelegate, hTarget.getName(), hTarget);
+                }
+
+            case RefHandle.REF_ARRAY:
+                {
+                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
+                ObjectHandle hArray = hTarget.getValue();
+                IndexSupport template = (IndexSupport) hArray.getTemplate();
+
+                return template.assignArrayValue(frame, hArray, hIndexedRef.f_lIndex, hValue);
+                }
+
+            default:
+                assert hTarget.m_iVar >= 0;
+                frame.f_ahVar[hTarget.m_iVar] = hValue;
+                return Op.R_NEXT;
+            }
+        }
+
+    protected int setInternal(Frame frame, RefHandle hRef, ObjectHandle hValue)
+        {
+        hRef.setValue(hValue);
+        return Op.R_NEXT;
+        }
+
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
         CallChain chain = getOpChain("+=");

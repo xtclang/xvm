@@ -6,8 +6,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -21,9 +19,9 @@ import org.xvm.runtime.VarSupport;
  */
 public class xRef
         extends ClassTemplate
+        implements VarSupport
     {
     public static xRef INSTANCE;
-    public static TypeConstant TYPE;
 
     public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -32,7 +30,6 @@ public class xRef
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = getCanonicalType();
             }
         }
 
@@ -54,12 +51,12 @@ public class xRef
     @Override
     public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
         {
-        RefHandle hThis = (RefHandle) hTarget;
+        RefHandle hRef = (RefHandle) hTarget;
 
         switch (property.getName())
             {
             case "ActualType":
-                switch (hThis.get(frame, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -82,10 +79,10 @@ public class xRef
                     }
 
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
 
             case "name":
-                String sName = hThis.m_sName;
+                String sName = hRef.getName();
                 return frame.assignValue(iReturn, sName == null ?
                     xNullable.NULL : xString.makeHandle(sName));
 
@@ -94,10 +91,10 @@ public class xRef
                 return frame.assignValue(iReturn, xInt64.makeHandle(0));
 
             case "selfContained":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isSelfContained()));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
 
             case "service_":
-                switch (hThis.get(frame, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -120,7 +117,7 @@ public class xRef
                     }
 
             case "const_":
-                switch (hThis.get(frame, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -143,7 +140,7 @@ public class xRef
                     }
 
             case "immutable_":
-                switch (hThis.get(frame, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Frame.RET_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -172,7 +169,7 @@ public class xRef
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        RefHandle hThis = (RefHandle) hTarget;
+        RefHandle hRef = (RefHandle) hTarget;
 
         switch (ahArg.length)
             {
@@ -180,7 +177,7 @@ public class xRef
                 switch (method.getName())
                     {
                     case "get":
-                        return hThis.get(frame, iReturn);
+                        return get(frame, hRef, iReturn);
                     }
             }
 
@@ -190,14 +187,14 @@ public class xRef
     @Override
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        RefHandle hThis = (RefHandle) hTarget;
+        RefHandle hRef = (RefHandle) hTarget;
 
         switch (method.getName())
             {
             case "peek":
-                if (hThis.isAssigned())
+                if (hRef.isAssigned(frame))
                     {
-                    switch (hThis.get(frame, Frame.RET_LOCAL))
+                    switch (get(frame, hRef, Frame.RET_LOCAL))
                         {
                         case Op.R_NEXT:
                             return frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal());
@@ -228,24 +225,137 @@ public class xRef
         return new RefHandle(clazz, sName);
         }
 
-    // a simple reference handle
+    // ----- VarSupport implementation -------------------------------------------------------------
+
+    @Override
+    public int get(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        switch (hTarget.m_iVar)
+            {
+            case RefHandle.REF_REFERENT:
+                return getInternal(frame, hTarget, iReturn);
+
+            case RefHandle.REF_REF:
+                {
+                RefHandle hDelegate = (RefHandle) hTarget.getValue();
+                return hDelegate.getVarSupport().get(frame, hDelegate, iReturn);
+                }
+
+            case RefHandle.REF_PROPERTY:
+                {
+                ObjectHandle hDelegate = hTarget.getValue();
+                return hDelegate.getTemplate().getPropertyValue(
+                    frame, hDelegate, hTarget.getName(), iReturn);
+                }
+
+            case RefHandle.REF_ARRAY:
+                {
+                IndexedRefHandle hIndexedRef = (IndexedRefHandle) hTarget;
+                ObjectHandle hArray = hTarget.getValue();
+                IndexSupport template = (IndexSupport) hArray.getTemplate();
+
+                return template.extractArrayValue(frame, hArray, hIndexedRef.f_lIndex, iReturn);
+                }
+
+            default:
+                assert hTarget.m_iVar >= 0;
+                return frame.assignValue(iReturn, frame.f_ahVar[hTarget.m_iVar]);
+            }
+        }
+
+    protected int getInternal(Frame frame, RefHandle hRef, int iReturn)
+        {
+        ObjectHandle hValue = hRef.getValue();
+        return hValue == null
+            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            : frame.assignValue(iReturn, hValue);
+        }
+
+    @Override
+    public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    @Override
+    public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
+        {
+        return readOnly(frame);
+        }
+
+    protected int readOnly(Frame frame)
+        {
+        return frame.raiseException(xException.makeHandle("Ref cannot be assigned"));
+        }
+
+    // ----- handle class -----
+
     public static class RefHandle
             extends ObjectHandle
         {
+        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
         protected String m_sName;
-        protected Frame m_frame;
         protected int m_iVar;
 
-        protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
-
         // indicates that the m_hDelegate field holds a referent
-        private static final int REF_REFERENT = -1;
+        protected static final int REF_REFERENT = -1;
 
         // indicates that the m_hDelegate field holds a Ref that this Ref is "chained" to
-        private static final int REF_REF = -2;
+        protected static final int REF_REF = -2;
 
         // indicates that the m_hDelegate field holds a property target
-        private static final int REF_PROPERTY = -3;
+        protected static final int REF_PROPERTY = -3;
+
+        // indicates that the m_hDelegate field holds an array target
+        protected static final int REF_ARRAY = -4;
 
         /**
          * Create an unassigned RefHandle for a given clazz.
@@ -308,12 +418,25 @@ public class xRef
                 // there is already a Ref pointing to that register;
                 // simply link to it
                 iVar = REF_REF;
-                frame = null;
                 m_hDelegate = refCurrent;
                 }
 
-            m_frame = frame;
             m_iVar = iVar;
+            }
+
+        public ObjectHandle getValue()
+            {
+            return m_hDelegate;
+            }
+
+        public void setValue(ObjectHandle hDelegate)
+            {
+            m_hDelegate = hDelegate;
+            }
+
+        public String getName()
+            {
+            return m_sName;
             }
 
         public VarSupport getVarSupport()
@@ -321,7 +444,7 @@ public class xRef
             return (VarSupport) getOpSupport();
             }
 
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             switch (m_iVar)
                 {
@@ -330,10 +453,10 @@ public class xRef
                     return m_hDelegate != null;
 
                 case REF_REF:
-                    return ((RefHandle) m_hDelegate).isAssigned();
+                    return ((RefHandle) m_hDelegate).isAssigned(frame);
 
                 default: // assertion m_iVar >= 0
-                    return m_frame.f_ahVar[m_iVar] != null;
+                    return frame.f_ahVar[m_iVar] != null;
                 }
             }
 
@@ -342,66 +465,13 @@ public class xRef
             return m_hDelegate == null || m_hDelegate.isSelfContained();
             }
 
-        public int get(Frame frame, int iReturn)
-            {
-            switch (m_iVar)
-                {
-                case REF_REFERENT:
-                    return getInternal(frame, iReturn);
-
-                case REF_REF:
-                    return ((RefHandle) m_hDelegate).get(frame, iReturn);
-
-                case REF_PROPERTY:
-                    return m_hDelegate.getTemplate().getPropertyValue(
-                        frame, m_hDelegate, m_sName, iReturn);
-
-                default: // assertion m_iVar >= 0
-                    return frame.assignValue(iReturn, m_frame.f_ahVar[m_iVar]);
-                }
-            }
-
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            return m_hDelegate == null
-                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
-                : frame.assignValue(iReturn, m_hDelegate);
-            }
-
-        public int set(Frame frame, ObjectHandle handle)
-            {
-            switch (m_iVar)
-                {
-                case REF_REFERENT:
-                    return setInternal(frame, handle);
-
-                case REF_REF:
-                    return ((RefHandle) m_hDelegate).set(frame, handle);
-
-                case REF_PROPERTY:
-                    return m_hDelegate.getTemplate().setPropertyValue(
-                        frame, m_hDelegate, m_sName, handle);
-
-                default: // assertion m_iVar >= 0
-                    m_frame.f_ahVar[m_iVar] = handle;
-                    return Op.R_NEXT;
-                }
-            }
-
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            m_hDelegate = handle;
-            return Op.R_NEXT;
-            }
-
         // dereference the Ref from a register-bound to a handle-bound
-        public void dereference()
+        public void dereference(Frame frame)
             {
             assert m_iVar >= 0;
 
-            m_hDelegate = m_frame.f_ahVar[m_iVar];
+            m_hDelegate = frame.f_ahVar[m_iVar];
             m_iVar = REF_REFERENT;
-            m_frame = null;
             }
 
         @Override
@@ -411,6 +481,7 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
+                case REF_ARRAY:
                     return m_hDelegate == null ? s : s + m_hDelegate;
 
                 case REF_REF:
@@ -420,52 +491,46 @@ public class xRef
                     return s + "-> " + m_hDelegate.getComposition() + "#" + m_sName;
 
                 default:
-                    return s + "-> " + m_frame.f_ahVar[m_iVar];
+                    return s + "-> #" + m_iVar;
                 }
             }
         }
 
-    // Ref handle for an indexed element
+    // RefHandle for an indexed element of an Array or Tuple
     public static class IndexedRefHandle
             extends RefHandle
         {
-        protected final ObjectHandle f_hTarget;
         protected final long f_lIndex;
 
         public IndexedRefHandle(TypeComposition clazz, ObjectHandle hTarget, long lIndex)
             {
             super(clazz, null);
 
-            f_hTarget = hTarget;
+            m_iVar = REF_ARRAY;
+            m_hDelegate = hTarget;
             f_lIndex = lIndex;
             }
 
         @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            try
-                {
-                return frame.assignValue(iReturn,
-                    ((IndexSupport) f_hTarget.getOpSupport()).extractArrayValue(f_hTarget, f_lIndex));
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            ExceptionHandle hException = ((IndexSupport) f_hTarget.getOpSupport()).
-                    assignArrayValue(f_hTarget, f_lIndex, handle);
-            return hException == null ? Op.R_NEXT : frame.raiseException(hException);
-            }
-
-        @Override
-        public void dereference()
+        public void dereference(Frame frame)
             {
             // no op
+            }
+        }
+
+    // RefHandle for a dynamic var call
+    public static class RefCallHandle
+            extends RefHandle
+        {
+        public final Frame f_frameNext;
+
+        public RefCallHandle(Frame frameNext, RefHandle hRef)
+            {
+            super(INSTANCE.m_clazzCanonical, null);
+
+            f_frameNext = frameNext;
+            m_hDelegate = hRef;
+            m_iVar = -5; // TODO:
             }
         }
     }

@@ -1,8 +1,6 @@
 package org.xvm.runtime.template.annotations;
 
 
-import java.util.concurrent.ExecutionException;
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -49,54 +47,38 @@ public class xInjectedRef
         return new InjectedHandle(clazz, sName);
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        InjectedHandle hInjected = (InjectedHandle) hTarget;
+        ObjectHandle hValue = hInjected.getValue();
+        if (hValue == null)
+            {
+            TypeConstant typeEl = hInjected.getType().getGenericParamType("RefType");
+
+            hValue = frame.f_context.f_container.getInjectable(hInjected.getName(), typeEl);
+            if (hValue == null)
+                {
+                return frame.raiseException(
+                    xException.makeHandle("Unknown injectable property " + hInjected.getName()));
+                }
+            hInjected.setValue(hValue);
+            }
+
+        return frame.assignValue(iReturn, hValue);
+        }
+
+
+    // ----- handle class -----
+
     public static class InjectedHandle
             extends RefHandle
         {
         protected InjectedHandle(TypeComposition clazz, String sName)
             {
             super(clazz, sName);
-            }
 
-        @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            ObjectHandle hValue = m_hDelegate;
-            if (hValue == null)
-                {
-                TypeConstant typeEl = getType().getGenericParamType("RefType");
-
-                hValue = m_hDelegate = frame.f_context.f_container.getInjectable(m_sName, typeEl);
-                if (hValue == null)
-                    {
-                    return frame.raiseException(xException.makeHandle("Unknown injectable property " + m_sName));
-                    }
-                }
-
-            return frame.assignValue(iReturn, hValue);
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            return frame.raiseException(
-                xException.makeHandle("InjectedRef cannot be re-assigned"));
-            }
-
-        @Override
-        public String toString()
-            {
-            try
-                {
-                return "(" + m_clazz + ") " + m_hDelegate;
-                }
-            catch (Throwable e)
-                {
-                if (e instanceof ExecutionException)
-                    {
-                    e = e.getCause();
-                    }
-                return e.toString();
-                }
+            m_fMutable = false;
             }
         }
     }

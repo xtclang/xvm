@@ -196,8 +196,7 @@ public class AnnotatedTypeConstant
         OpSupport support = m_support;
         if (support == null)
             {
-            support = m_support =
-                new AnnotationSupport(m_constType.getOpSupport(registry), m_annotation);
+            support = m_support = new AnnotationSupport(this, registry);
             }
         return support;
         }

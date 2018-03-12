@@ -20,8 +20,8 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
-import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRef.RefCallHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -79,9 +79,10 @@ public class Frame
     public final static int RET_MULTI  = -65002;  // an indicator for "multiple return values"
     public final static int RET_TUPLE  = -65003;  // an indicator for a "tuple return"
 
-    public static final int VAR_STANDARD    = 0;
-    public static final int VAR_DYNAMIC_REF = 1;
-    public static final int VAR_WAITING     = 2;
+    public static final int VAR_STANDARD         = 0;
+    public static final int VAR_DYNAMIC_REF      = 1;
+    public static final int VAR_STANDARD_WAITING = 2;
+    public static final int VAR_DYNAMIC_WAITING  = 3;
 
     // construct a frame
     protected Frame(Frame framePrev, MethodStructure function,
@@ -487,11 +488,8 @@ public class Frame
             {
             VarInfo info = f_aInfo[nVar];
 
-            switch (info.m_nStyle)
+            switch (info.getStyle())
                 {
-                case VAR_WAITING:
-                    info.m_nStyle = VAR_STANDARD;
-                    // fall through
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
@@ -505,9 +503,9 @@ public class Frame
                             }
 
                         FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.isAssigned())
+                        if (hFuture.isAssigned(this))
                             {
-                            return hFuture.get(this, nVar);
+                            return hFuture.getVarSupport().get(this, hFuture, nVar);
                             }
 
                         // mark the register as "waiting for a result",
@@ -522,17 +520,52 @@ public class Frame
                             }
                         cf.whenComplete((r, x) -> f_fiber.m_fResponded = true);
 
+                        info.markWaiting();
                         f_ahVar[nVar] = hFuture;
-                        info.m_nStyle = VAR_WAITING;
                         return Op.R_BLOCK;
                         }
                     break;
 
                 case VAR_DYNAMIC_REF:
-                    return ((RefHandle) f_ahVar[nVar]).set(this, hValue);
+                    {
+                    RefHandle hVar = (RefHandle) f_ahVar[nVar];
+                    // TODO: check the "weak" assignment (here or inside)
+                    return hVar.getVarSupport().set(this, hVar, hValue);
+                    }
 
+                case VAR_STANDARD_WAITING:
+                case VAR_DYNAMIC_WAITING:
+                    // we cannot get here while waiting
                 default:
                     throw new IllegalStateException();
+                }
+
+            TypeConstant typeFrom = hValue.getType();
+            if (typeFrom.getPosition() != info.m_nTypeId) // quick check
+                {
+                // TODO: how to minimize the probability of getting here?
+                TypeConstant typeTo = info.getType();
+
+                switch (typeFrom.calculateRelation(typeTo))
+                    {
+                    case IS_A:
+                        // no need to do anything
+                        break;
+
+                    case IS_A_WEAK:
+                        // the types are assignable, but we need to inject a "safe-wrapper" proxy;
+                        // for example, in the case of:
+                        //      List<Object> lo;
+                        //      List<String> ls = ...;
+                        //      lo = ls;
+                        // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
+                        // run-time type of "String"
+                        throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
+
+                    default:
+                        // the compiler/verifier shouldn't have allowed this
+                        throw new IllegalStateException();
+                    }
                 }
 
             f_ahVar[nVar] = hValue;
@@ -555,6 +588,7 @@ public class Frame
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
+                    // TODO: check the "weak" assignment (here or inside)
                     return hThis.getTemplate().setPropertyValue(
                             this, hThis, constProperty.getName(), hValue);
                     }
@@ -768,27 +802,33 @@ public class Frame
             {
             VarInfo info = aInfo[i];
 
-            if (info != null && info.m_nStyle == VAR_WAITING)
+            if (info != null && info.isWaiting())
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                switch (hFuture.get(this, i))
+                if (hFuture.isAssigned(this))
                     {
-                    case Op.R_NEXT:
-                        info.m_nStyle = VAR_STANDARD;
-                        continue;
+                    info.stopWaiting();
 
-                    case Op.R_CALL:
-                        throw new IllegalStateException("Injected ref's get() must be fully native");
+                    // only standard vars needs to be replaced on the spot;
+                    // the dynamic vars will "get" the value naturally on-demand
+                    if (info.isStandard())
+                        {
+                        switch (hFuture.getVarSupport().get(this, hFuture, i))
+                            {
+                            case Op.R_NEXT:
+                                break;
 
-                    case Op.R_BLOCK:
-                        return Op.R_BLOCK;
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
 
-                    case Op.R_EXCEPTION:
-                        info.m_nStyle = VAR_STANDARD;
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
+                            default: // the "standard" future is completely native
+                                throw new IllegalStateException();
+                            }
+                        }
+                    }
+                else
+                    {
+                    return Op.R_BLOCK;
                     }
                 }
             }
@@ -807,7 +847,7 @@ public class Frame
     public TypeConstant getArgumentType(int iArg)
         {
         return iArg >= 0
-            ? getVarInfo(iArg).getType()
+            ? getRegisterType(iArg)
             : iArg == Op.A_THIS
                 ? f_hThis.getType()            // "this" is always resolved
                 : getConstant(iArg).getType(); // a constant cannot be generic
@@ -817,11 +857,24 @@ public class Frame
     public TypeConstant getLocalType(int iArg)
         {
         return iArg >= 0
-            ? getVarInfo(iArg).getType().resolveGenerics(getGenericsResolver())
+            ? getRegisterType(iArg)
             : iArg == Op.A_THIS
-                ? f_hThis.getType()
-                // "local property"
+                ? f_hThis.getType() // "this" is always resolved
+                // "local property" type needs to be resolved
                 : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
+        }
+
+    protected TypeConstant getRegisterType(int iArg)
+        {
+        VarInfo info = getVarInfo(iArg);
+        if (info.isStandard())
+            {
+            return info.getType(); // always resolved
+            }
+
+        // Ref<RefType> -> RefType
+        assert !info.isWaiting();
+        return info.getType().getParamTypesArray()[0];
         }
 
     // same as getArgumentClass, but treats the negative ids as "local-property" references
@@ -864,28 +917,43 @@ public class Frame
                 throw xException.makeHandle("Unassigned value").getException();
                 }
 
-            if (info != null && info.m_nStyle == VAR_DYNAMIC_REF)
+            if (info != null)
                 {
-                switch (((RefHandle) hValue).get(this, RET_LOCAL))
+                switch (info.getStyle())
                     {
-                    case Op.R_NEXT:
-                        return getFrameLocal();
+                    case VAR_STANDARD:
+                        break;
 
-                    case Op.R_CALL:
-                        throw new IllegalStateException("Future's get() must be fully native");
+                    case VAR_DYNAMIC_REF:
+                        {
+                        RefHandle hRef = (RefHandle) hValue;
+                        switch (hRef.getVarSupport().get(this, hRef, RET_LOCAL))
+                            {
+                            case Op.R_NEXT:
+                                return getFrameLocal();
 
-                    case Op.R_BLOCK:
-                        info.m_nStyle = VAR_WAITING;
-                        return null;
+                            case Op.R_CALL:
+                                return new RefCallHandle(m_frameNext, hRef);
 
-                    case Op.R_EXCEPTION:
-                        throw m_hException.getException();
+                            case Op.R_BLOCK:
+                                info.markWaiting();
+                                return null;
 
+                            case Op.R_EXCEPTION:
+                                throw m_hException.getException();
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+
+                    case VAR_STANDARD_WAITING:
+                    case VAR_DYNAMIC_WAITING:
+                        // we cannot get unblocked until the standard var is assigned
                     default:
                         throw new IllegalStateException();
                     }
                 }
-
             return hValue;
             }
 
@@ -1109,12 +1177,13 @@ public class Frame
      *
      * @param nArrayReg  if positive, the register number holding an array handle;
      *                   otherwise a constant id pointing to an array type
+     * @param nIndex     an element's index (for Tuples)
      */
-    public void introduceElementVar(int nArrayReg)
+    public void introduceElementVar(int nArrayReg, int nIndex)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(nArrayReg, 0, ARRAY_ELEMENT_RESOLVER);
+        f_aInfo[nVar] = new VarInfo(nArrayReg, nIndex, ARRAY_ELEMENT_RESOLVER);
         }
 
     /**
@@ -1125,12 +1194,13 @@ public class Frame
      *
      * @param nArrayReg  if positive, the register number holding an array handle;
      *                   otherwise a constant id pointing to an array type
+     * @param nIndex     an element's index (for Tuples)
      */
-    public void introduceElementRef(int nArrayReg)
+    public void introduceElementRef(int nArrayReg, int nIndex)
         {
         int nVar = f_anNextVar[m_iScope]++;
 
-        f_aInfo[nVar] = new VarInfo(nArrayReg, 0, ARRAY_ELEMENT_REF_RESOLVER);
+        f_aInfo[nVar] = new VarInfo(nArrayReg, nIndex, ARRAY_ELEMENT_REF_RESOLVER);
         }
 
     /**
@@ -1152,7 +1222,7 @@ public class Frame
      */
     public boolean isDynamicVar(int nVar)
         {
-        return getVarInfo(nVar).getStyle() == VAR_DYNAMIC_REF;
+        return getVarInfo(nVar).isDynamic();
         }
 
     /**
@@ -1162,7 +1232,7 @@ public class Frame
         {
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
-        return hRef.isAssigned() ? hRef : null;
+        return hRef.isAssigned(this) ? hRef : null;
         }
 
     /**
@@ -1448,6 +1518,7 @@ public class Frame
         public VarInfo(TypeConstant type, int nStyle)
             {
             m_type = type;
+            m_nTypeId = type.getPosition();
             m_nStyle = nStyle;
             }
 
@@ -1511,6 +1582,41 @@ public class Frame
             return m_nStyle;
             }
 
+        public boolean isStandard()
+            {
+            return m_nStyle == VAR_STANDARD;
+            }
+
+        public boolean isDynamic()
+            {
+            return m_nStyle == VAR_DYNAMIC_REF || m_nStyle == VAR_DYNAMIC_WAITING;
+            }
+
+        public boolean isWaiting()
+            {
+            return m_nStyle >= VAR_STANDARD_WAITING;
+            }
+
+        public void markWaiting()
+            {
+            if (m_nStyle < VAR_STANDARD_WAITING)
+                {
+                // VAR_STANDARD -> VAR_STANDARD_WAITING;
+                // VAR_DYNAMIC_REF -> VAR_DYNAMIC_WAITING;
+                m_nStyle += 2;
+                }
+            }
+
+        public void stopWaiting()
+            {
+            if (m_nStyle >= VAR_STANDARD_WAITING)
+                {
+                // VAR_STANDARD_WAITING -> VAR_STANDARD;
+                // VAR_DYNAMIC_WAITING -> VAR_DYNAMIC_REF;
+                m_nStyle -= 2;
+                }
+            }
+
         public RefHandle getRef()
             {
             return m_ref;
@@ -1526,7 +1632,7 @@ public class Frame
             {
             if (m_ref != null)
                 {
-                m_ref.dereference();
+                m_ref.dereference(Frame.this);
                 }
             }
 
@@ -1538,15 +1644,17 @@ public class Frame
                     return "";
                 case VAR_DYNAMIC_REF:
                     return "<dynamic> ";
-                case VAR_WAITING:
+                case VAR_STANDARD_WAITING:
                     return "<waiting> ";
+                case VAR_DYNAMIC_WAITING:
+                    return "<dynamic waiting> ";
                 default:
                     return "unknown ";
                 }
             }
         public String toString()
             {
-            return getStyleName() + getName() + ": " + getType();
+            return getStyleName() + getName();
             }
         }
 
@@ -1602,20 +1710,25 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
+            TypeConstant typeArray;
             if (nTargetReg >= 0)
                 {
                 VarInfo infoArray = frame.f_aInfo[nTargetReg];
-                return infoArray.getType().getGenericParamType("ElementType");
+                typeArray = infoArray.getType();
+                }
+            else
+                {
+                // "local property" or a literal constant
+                typeArray = nTargetReg == Op.A_THIS
+                    ? frame.getThis().getType() // "this" is an array
+                    : frame.getLocalType(nTargetReg);
                 }
 
-            // "local property" or a literal constant
-            TypeConstant typeArray = nTargetReg == Op.A_THIS
-                ? frame.getThis().getType() // "this" is an array
-                : frame.getLocalType(nTargetReg);
             if (typeArray.isParamsSpecified())
                 {
-                TypeConstant constElType = typeArray.getParamTypesArray()[0];
-                return constElType.resolveGenerics(frame.getGenericsResolver());
+                return typeArray.isTuple()
+                    ? typeArray.getParamTypesArray()[iAuxId]
+                    : typeArray.getParamTypesArray()[0];
                 }
             return frame.f_context.f_pool.typeObject();
             }
@@ -1626,8 +1739,9 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, nTargetReg);
-            return frame.f_context.f_pool.ensureParameterizedTypeConstant(xRef.TYPE, typeEl);
+            TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, iAuxId);
+            ConstantPool pool = frame.f_context.f_pool;
+            return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeEl);
             }
         };
 

@@ -1,8 +1,13 @@
 package org.xvm.runtime;
 
-import org.xvm.asm.Annotation;
+import org.xvm.asm.Constants;
+import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 /**
@@ -11,18 +16,35 @@ import org.xvm.runtime.template.xRef.RefHandle;
 public class AnnotationSupport
         implements OpSupport, VarSupport
     {
-    public AnnotationSupport(OpSupport support, Annotation annotation)
+    public AnnotationSupport(AnnotatedTypeConstant type, TemplateRegistry registry)
         {
-        f_support = support;
-        f_annotation = annotation;
+        TypeConstant typeBase = type.getUnderlyingType();
+
+        IdentityConstant constIdAnno = (IdentityConstant) type.getAnnotation().getAnnotationClass();
+        OpSupport supportAnno = registry.getTemplate(constIdAnno);
+
+        // if the annotation itself is native, it overrides the base type template (support)
+        if (supportAnno instanceof xRef) // TODO: isNative()?
+            {
+            f_support = supportAnno.getTemplate(typeBase);
+            f_fNative = true;
+            }
+        else
+            {
+            f_support = typeBase.getOpSupport(registry);
+            f_fNative = false;
+            }
+
+        f_typeAnno = type.getAnnotation().getAnnotationType();
+        f_registry = registry;
         }
 
     // ----- OpSupport implementation --------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate()
+    public ClassTemplate getTemplate(TypeConstant type)
         {
-        return f_support.getTemplate();
+        return f_support.getTemplate(type);
         }
 
     @Override
@@ -101,6 +123,21 @@ public class AnnotationSupport
     // ----- VarSupport implementation -------------------------------------------------------------
 
     @Override
+    public RefHandle createRefHandle(TypeComposition clazz, String sName)
+        {
+        return ensureVarSupport().createRefHandle(clazz, sName);
+        }
+
+    @Override
+    public int get(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("get");
+        return chain == null
+            ? ensureVarSupport().get(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
         CallChain chain = getOpChain("preInc");
@@ -134,6 +171,15 @@ public class AnnotationSupport
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        CallChain chain = getOpChain("set");
+        return chain == null
+            ? ensureVarSupport().set(frame, hTarget, hValue)
+            : chain.invoke(frame, hTarget, hValue, Frame.RET_UNUSED);
         }
 
     @Override
@@ -189,8 +235,24 @@ public class AnnotationSupport
      */
     protected CallChain getOpChain(String sOp)
         {
-        TypeInfo info = f_annotation.getAnnotationType().ensureTypeInfo();
-        // TODO: use the TypeInfo to get the chain
+        if (!f_fNative)
+            {
+            TypeInfo info = f_typeAnno.ensureTypeInfo();
+            // TODO: use the TypeInfo to get the chain
+
+            // temporary very silly implementation
+            for (MethodConstant constMethod: info.getMethods().keySet())
+                {
+                if (constMethod.getName().equals(sOp))
+                    {
+                    TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
+                    CallChain chain = clzAnno.
+                        getMethodCallChain(constMethod.getSignature(), Constants.Access.PUBLIC);
+                    assert !chain.isNative();
+                    return chain;
+                    }
+                }
+            }
         return null;
         }
 
@@ -215,7 +277,17 @@ public class AnnotationSupport
     private final OpSupport f_support;
 
     /**
-     * The underlying annotation.
+     * Indicates that the annotation support is native and all calls should be routed directly to it.
      */
-    private final Annotation f_annotation;
+    private final boolean f_fNative;
+
+    /**
+     * The underlying annotated type.
+     */
+    private final TypeConstant f_typeAnno;
+
+    /**
+     * The template registry.
+     */
+    private final TemplateRegistry f_registry;
     }

@@ -244,6 +244,32 @@ public class xAtomicIntNumber
         return Op.R_NEXT;
         }
 
+    @Override
+    protected int getInternal(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
+        AtomicLong atomicValue = hAtomic.m_atomicValue;
+
+        return atomicValue == null
+            ? frame.raiseException(xException.makeHandle("Unassigned reference"))
+            : frame.assignValue(iReturn, xInt64.makeHandle(atomicValue.get()));
+        }
+
+    @Override
+    protected int setInternal(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
+        AtomicLong atomicValue = hAtomic.m_atomicValue;
+        long lValue = ((JavaLong) hValue).getValue();
+
+        if (atomicValue == null)
+            {
+            hAtomic.m_atomicValue = atomicValue = new AtomicLong(lValue);
+            }
+        atomicValue.set(lValue);
+        return Op.R_NEXT;
+        }
+
 
     // ----- the handle -----
 
@@ -258,29 +284,9 @@ public class xAtomicIntNumber
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             return m_atomicValue != null;
-            }
-
-        @Override
-        protected int getInternal(Frame frame, int iReturn)
-            {
-            return m_atomicValue == null
-                ? frame.raiseException(xException.makeHandle("Unassigned reference"))
-                : frame.assignValue(iReturn, xInt64.makeHandle(m_atomicValue.get()));
-            }
-
-        @Override
-        protected int setInternal(Frame frame, ObjectHandle handle)
-            {
-            long lValue = ((JavaLong) handle).getValue();
-            if (m_atomicValue == null)
-                {
-                m_atomicValue = new AtomicLong(lValue);
-                }
-            m_atomicValue.set(lValue);
-            return Op.R_NEXT;
             }
 
         @Override

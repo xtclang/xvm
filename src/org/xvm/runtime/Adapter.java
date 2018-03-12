@@ -86,6 +86,18 @@ public class Adapter
         {
         ConstantPool pool = f_container.f_pool;
 
+        if (sName.startsWith("@"))
+            {
+            int ofEnd = sName.indexOf(" ", 1);
+            if (ofEnd < 0)
+                {
+                throw new IllegalArgumentException("Invalid annotation: " + sName);
+                }
+            TypeConstant typeAnno = getClassType(sName.substring(1, ofEnd), template);
+            TypeConstant typeMain = getClassType(sName.substring(ofEnd + 1), template);
+            return pool.ensureAnnotatedTypeConstant(typeAnno.getDefiningConstant(), null, typeMain);
+            }
+
         boolean fNullable = sName.endsWith("?");
         if (fNullable)
             {

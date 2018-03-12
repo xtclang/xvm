@@ -9,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -181,7 +180,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Produce a TypeComposition for this template using the specified actual (inception) type.
+     * Produce a TypeComposition using the specified actual (inception) type.
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
@@ -197,7 +196,6 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
         {
-        assert typeActual.getSingleUnderlyingClass(true).getComponent() == f_struct;
         assert typeActual.getAccess() == Access.PUBLIC;
 
         int cActual = typeActual.getParamTypes().size();
@@ -209,18 +207,11 @@ public abstract class ClassTemplate
 
         assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
 
-        return m_mapCompositions.computeIfAbsent(typeMask,
-            (type) -> new TypeComposition(this, typeInception, type));
-        }
+        OpSupport support = typeInception.isAnnotated() ?
+            typeInception.getOpSupport(f_templates) : this;
 
-    public boolean isService()
-        {
-        return f_struct.getFormat() == Format.SERVICE;
-        }
-
-    public boolean isConst()
-        {
-        return f_struct.isConst();
+        return m_mapCompositions.computeIfAbsent(typeMask, (type) ->
+            new TypeComposition(support, typeInception, type));
         }
 
     // should we generate fields for this class
@@ -237,11 +228,6 @@ public abstract class ClassTemplate
             default:
                 return false;
             }
-        }
-
-    public boolean isSingleton()
-        {
-        return f_struct.isStatic();
         }
 
     protected boolean isConstructImmutable()
@@ -410,7 +396,7 @@ public abstract class ClassTemplate
      * @param frame     the current frame
      * @param constant  the constant
      *
-     * @return the corresponding {@link ObjectHandle}
+     * @return the corresponding {@link ObjectHandle} or null if the operation failed
      */
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
@@ -813,9 +799,12 @@ public abstract class ClassTemplate
             }
 
         PropertyInfo info = property.getInfo();
-        return info != null && info.isRef()
-            ? ((RefHandle) hValue).get(frame, iReturn)
-            : frame.assignValue(iReturn, hValue);
+        if (info != null && info.isRef())
+            {
+            RefHandle hRef = (RefHandle) hValue;
+            return hRef.getVarSupport().get(frame, hRef, iReturn);
+            }
+         return frame.assignValue(iReturn, hValue);
         }
 
     /**
@@ -895,7 +884,8 @@ public abstract class ClassTemplate
         PropertyInfo info = property.getInfo();
         if (info != null && info.isRef())
             {
-            return ((RefHandle) hThis.getField(property.getName())).set(frame, hValue);
+            RefHandle hRef = (RefHandle) hThis.getField(property.getName());
+            return hRef.getVarSupport().set(frame, hRef, hValue);
             }
 
         hThis.setField(property.getName(), hValue);
@@ -1159,22 +1149,6 @@ public abstract class ClassTemplate
     // ----- Ref operations ------------------------------------------------------------------------
 
     /**
-     * Create a Ref or Var for the specified referent class.
-     *
-     * Most commonly, the returned handle is an uninitialized Var, but
-     * in the case of InjectedRef, it's an initialized [read-only] Ref.
-     *
-     * @param clazz  the referent class
-     * @param sName  an optional Ref name
-     *
-     * @return the corresponding {@link RefHandle}
-     */
-    public RefHandle createRefHandle(TypeComposition clazz, String sName)
-        {
-        throw new IllegalStateException("Invalid op for " + this);
-        }
-
-    /**
      * Create a property Ref or Var for the specified target and property.
      *
      * @param hTarget    the target handle
@@ -1311,7 +1285,7 @@ public abstract class ClassTemplate
     // ---- OpSupport implementation ---------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate()
+    public ClassTemplate getTemplate(TypeConstant type)
         {
         return this;
         }
@@ -1630,7 +1604,12 @@ public abstract class ClassTemplate
     // ----- caches ------
 
     /**
-     * A cache of TypeCompositions.
+     * A cache of TypeCompositions keyed by the "revealed type".
+     *
+     * We assume that for a given template, there will never be two classes with the same
+     * revealed types, but different inception types.
+     *
+     * If that assumption breaks, we'd need to either change the key, or link-list the classes.
      */
     protected Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
 

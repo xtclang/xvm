@@ -8,8 +8,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -83,32 +81,6 @@ public class Move
             if (frame.isNextRegister(nTo))
                 {
                 frame.introduceVarCopy(nFrom);
-                }
-            else
-                {
-                TypeConstant typeFrom = hValue.getType();
-                TypeConstant typeTo   = frame.getArgumentType(nTo);
-
-                switch (typeFrom.calculateRelation(typeTo))
-                    {
-                    case IS_A:
-                        // no need to do anything
-                        break;
-
-                    case IS_A_WEAK:
-                        // the types are assignable, but we need to inject a "safe-wrapper" proxy;
-                        // for example, in the case of:
-                        //      List<Object> lo;
-                        //      List<String> ls = ...;
-                        //      lo = ls;
-                        // "add(Object o)" method needs to be wrapped on "lo" reference, to ensure the
-                        // run-time type of "String"
-                        throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
-
-                    default:
-                        // the compiler/verifier shouldn't have allowed this
-                        throw new IllegalStateException();
-                    }
                 }
             return frame.assignValue(nTo, hValue);
             }

@@ -20,21 +20,51 @@ import org.xvm.runtime.template.xRef.IndexedRefHandle;
  */
 public interface IndexSupport
     {
-    // @Op "get" support - place the element value into the specified frame register
-    ObjectHandle extractArrayValue(ObjectHandle hTarget, long lIndex)
+    /**
+     * Extract an array or tuple element at a given index.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return {@link Op#R_NEXT} or {@link Op#R_EXCEPTION}
+     */
+    int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn);
+
+    /**
+     * Place the specified element into an array or tuple at a given index.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     *
+     * @return {@link Op#R_NEXT} or {@link Op#R_EXCEPTION}
+     */
+    int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue);
+
+    /**
+     * @return the [declared] element type at the specifed index
+     */
+     TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
 
-    // @Op "set" support - assign the element value
-    ExceptionHandle assignArrayValue(ObjectHandle hTarget, long lIndex, ObjectHandle hValue);
-
-    // obtain the [declared] element type
-    TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
-            throws ExceptionHandle.WrapperException;
-
-    // get the element count
+    /**
+     * @return the element count
+     */
     long size(ObjectHandle hTarget);
 
-    // @Op "elementAt" support - place a Var/Ref to the element value into the specified register
+    /**
+     * Place a Var/Ref to the element value at the specified index into the specified register
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     default int makeRef(Frame frame, ObjectHandle hTarget, long lIndex, boolean fReadOnly, int iReturn)
         {
         try
@@ -55,156 +85,212 @@ public interface IndexSupport
             }
         }
 
-    // @Op "preInc" support - increment the element value and place the result into the specified register
-    // return one of the Op.R_ values or zero
+    /**
+     * Increment the element value and place the result into the specified register.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        try
+        ObjectHandle hValue;
+        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
             {
-            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+            case Op.R_NEXT:
+                hValue = frame.getFrameLocal();
+                break;
 
-            switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
-                {
-                case Op.R_NEXT:
-                    {
-                    ObjectHandle hValueNew = frame.getFrameLocal();
-                    assignArrayValue(hTarget, lIndex, hValueNew);
-                    return frame.assignValue(iReturn, hValueNew);
-                    }
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        ObjectHandle hValueNew = frameCaller.getFrameLocal();
-                        assignArrayValue(hTarget, lIndex, hValueNew);
-                        return frameCaller.assignValue(iReturn, hValueNew);
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                // for now, virtual array ops are not supported
+                throw new IllegalStateException();
             }
-        catch (ExceptionHandle.WrapperException e)
+
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
             {
-            return frame.raiseException(e);
+            case Op.R_NEXT:
+                {
+                ObjectHandle hValueNew = frame.getFrameLocal();
+                return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
+                    Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    {
+                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
+                        Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
-    // @Op "postInc" support - place the result into the specified register and increment the element value
-    // return one of the Op.R_ values or zero
+    /**
+     * Place the element value into the specified register and increment the value.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     default int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        try
+        ObjectHandle hValue;
+        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
             {
-            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+            case Op.R_NEXT:
+                hValue = frame.getFrameLocal();
+                break;
 
-            switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
-                {
-                case Op.R_NEXT:
-                    assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
-                    return frame.assignValue(iReturn, hValue);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
-                        return frameCaller.assignValue(iReturn, hValue);
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                // for now, virtual array ops are not supported
+                throw new IllegalStateException();
             }
-        catch (ExceptionHandle.WrapperException e)
+
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
             {
-            return frame.raiseException(e);
+            case Op.R_NEXT:
+                return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                    Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                        Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
-    // @Op "preDec" support - decrement the element value and place the result into the specified register
-    // return one of the Op.R_ values or zero
+    /**
+     * Decrement the element value and place the result into the specified register.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     default int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        try
+        ObjectHandle hValue;
+        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
             {
-            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+            case Op.R_NEXT:
+                hValue = frame.getFrameLocal();
+                break;
 
-            switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
-                {
-                case Op.R_NEXT:
-                    {
-                    ObjectHandle hValueNew = frame.getFrameLocal();
-                    assignArrayValue(hTarget, lIndex, hValueNew);
-                    return frame.assignValue(iReturn, hValueNew);
-                    }
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        ObjectHandle hValueNew = frameCaller.getFrameLocal();
-                        assignArrayValue(hTarget, lIndex, hValueNew);
-                        return frameCaller.assignValue(iReturn, hValueNew);
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                // for now, virtual array ops are not supported
+                throw new IllegalStateException();
             }
-        catch (ExceptionHandle.WrapperException e)
+
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
             {
-            return frame.raiseException(e);
+            case Op.R_NEXT:
+                {
+                ObjectHandle hValueNew = frame.getFrameLocal();
+                return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
+                    Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
+                }
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    {
+                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
+                        Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
-    // @Op "postDec" support - place the result into the specified register and decrement the element value
-    // return one of the Op.R_ values or zero
+    /**
+     * Place the element value into the specified register and decrement the value.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the array or tuple handle
+     * @param lIndex   the element index
+     * @param iReturn  the register id to place the extracted element into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
     default int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        try
+        ObjectHandle hValue;
+        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
             {
-            ObjectHandle hValue = extractArrayValue(hTarget, lIndex);
+            case Op.R_NEXT:
+                hValue = frame.getFrameLocal();
+                break;
 
-            switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
-                {
-                case Op.R_NEXT:
-                    assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
-                    return frame.assignValue(iReturn, hValue);
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
 
-                case Op.R_CALL:
-                    frame.m_frameNext.setContinuation(frameCaller ->
-                        {
-                        assignArrayValue(hTarget, lIndex, frame.getFrameLocal());
-                        return frameCaller.assignValue(iReturn, hValue);
-                        });
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            default:
+                // for now, virtual array ops are not supported
+                throw new IllegalStateException();
             }
-        catch (ExceptionHandle.WrapperException e)
+
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
             {
-            return frame.raiseException(e);
+            case Op.R_NEXT:
+                return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                    Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                        Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
     // trivial helpers
-    default ObjectHandle[] toArray(ObjectHandle hTarget)
+    default ObjectHandle[] toArray(Frame frame, ObjectHandle hTarget)
             throws ExceptionHandle.WrapperException
         {
         int cValues = (int) size(hTarget);
@@ -212,19 +298,43 @@ public interface IndexSupport
 
         for (int i = 0; i < cValues; i++)
             {
-            ahValue[i] = extractArrayValue(hTarget, i);
+            switch (extractArrayValue(frame, hTarget, i, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    ahValue[i] = frame.getFrameLocal();
+                    break;
+
+                case Op.R_EXCEPTION:
+                    throw frame.m_hException.getException();
+
+                default:
+                    // for now, virtual array ops are not supported
+                    throw new IllegalStateException();
+                }
             }
         return ahValue;
         }
 
-    default void forEach(ObjectHandle hTarget, Consumer<ObjectHandle> consumer)
+    default void forEach(Frame frame, ObjectHandle hTarget, Consumer<ObjectHandle> consumer)
             throws ExceptionHandle.WrapperException
         {
         int cValues = (int) size(hTarget);
 
         for (int i = 0; i < cValues; i++)
             {
-            consumer.accept(extractArrayValue(hTarget, i));
+            switch (extractArrayValue(frame, hTarget, i, Frame.RET_LOCAL))
+                {
+                case Op.R_NEXT:
+                    consumer.accept(frame.getFrameLocal());
+                    break;
+
+                case Op.R_EXCEPTION:
+                    throw frame.m_hException.getException();
+
+                default:
+                    // for now, virtual array ops are not supported
+                    throw new IllegalStateException();
+                }
             }
         }
 

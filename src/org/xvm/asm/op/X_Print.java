@@ -49,15 +49,9 @@ public class X_Print
                 {
                 Frame.VarInfo info = frame.getVarInfo(nValue);
 
-                switch (info.getStyle())
+                if (info.isDynamic())
                     {
-                    case Frame.VAR_DYNAMIC_REF:
-                        sb.append("<dynamic> ");
-                        break;
-
-                    case Frame.VAR_WAITING:
-                        // must not happen
-                        throw new IllegalStateException();
+                    sb.append("<dynamic> ");
                     }
 
                 sb.append(info.getName()).append("=");
