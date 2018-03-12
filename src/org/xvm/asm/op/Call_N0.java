@@ -106,7 +106,7 @@ public class Call_N0
                     return R_REPEAT;
                     }
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED, false);
@@ -127,7 +127,7 @@ public class Call_N0
                     return R_REPEAT;
                     }
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         frame.call1(function, null, ahVar, Frame.RET_UNUSED);
@@ -149,7 +149,7 @@ public class Call_N0
                 return R_REPEAT;
                 }
 
-            if (anyProperty(ahVar))
+            if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.call1(frameCaller, null, ahVar, Frame.RET_UNUSED);

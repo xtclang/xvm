@@ -127,12 +127,12 @@ public class NewG_1
                 frame.introduceResolvedVar(clzTarget.getType());
                 }
 
-            if (isProperty(ahVar[0]))
+            if (isDeferred(ahVar[0]))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);
 
-                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);

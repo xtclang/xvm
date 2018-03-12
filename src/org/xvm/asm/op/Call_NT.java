@@ -118,7 +118,7 @@ public class Call_NT
                     return R_REPEAT;
                     }
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperN1(frame, ahVar, m_nRetValue, true);
@@ -141,7 +141,7 @@ public class Call_NT
 
                 checkReturnTupleRegister(frame, function);
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         frame.callT(function, null, ahVar, m_nRetValue);
@@ -165,7 +165,7 @@ public class Call_NT
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 
-            if (anyProperty(ahVar))
+            if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.callT(frameCaller, null, ahVar, m_nRetValue);

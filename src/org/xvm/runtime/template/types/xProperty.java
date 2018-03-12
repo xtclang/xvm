@@ -4,14 +4,12 @@ package org.xvm.runtime.template.types;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 
@@ -43,26 +41,27 @@ public class xProperty
         {
         if (constant instanceof PropertyConstant)
             {
-            PropertyStructure prop = (PropertyStructure) ((PropertyConstant) constant).getComponent();
-
-            TypeConstant typeTarget = prop.getParent().getIdentityConstant().asTypeConstant();
-            TypeConstant typeProp = prop.getType();
-
-            TypeComposition clzProp = ensureParameterizedClass(typeTarget, typeProp);
-
-            return new PropertyHandle(clzProp, prop);
+            return new DeferredPropertyHandle((PropertyConstant) constant);
             }
         return null;
         }
 
-    public static class PropertyHandle extends ObjectHandle
+    public static class DeferredPropertyHandle
+            extends DeferredCallHandle
         {
-        public PropertyStructure m_property;
+        public PropertyConstant m_property;
 
-        protected PropertyHandle(TypeComposition clazz, PropertyStructure prop)
+        protected DeferredPropertyHandle(PropertyConstant prop)
             {
-            super(clazz);
+            super(null);
+
             m_property = prop;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred property access: " + m_property.getName();
             }
         }
     }

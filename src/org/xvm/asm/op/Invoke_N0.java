@@ -100,7 +100,7 @@ public class Invoke_N0
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 // we won't know the number of method vars until later,
                 // will have to resize the arg array then
@@ -113,7 +113,7 @@ public class Invoke_N0
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArgs(frame, hTarget, null);
@@ -149,7 +149,7 @@ public class Invoke_N0
             ahVar = Utils.ensureSize(ahArg, chain.getTop().getMaxVars());
             }
 
-        if (anyProperty(ahVar))
+        if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext = frameCaller ->
                 complete(frameCaller, chain, hTarget, ahVar);

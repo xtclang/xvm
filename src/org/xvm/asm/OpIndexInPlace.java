@@ -82,7 +82,7 @@ public abstract class OpIndexInPlace
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget) || isProperty(hIndex) || isProperty(hValue))
+            if (isDeferred(hTarget) || isDeferred(hIndex) || isDeferred(hValue))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hIndex, hValue};
                 Frame.Continuation stepNext = frameCaller ->

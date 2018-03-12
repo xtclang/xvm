@@ -85,7 +85,7 @@ public abstract class OpPropInPlaceAssign
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget) || isProperty(hValue))
+            if (isDeferred(hTarget) || isDeferred(hValue))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                 Frame.Continuation stepNext = frameCaller ->

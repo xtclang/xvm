@@ -124,13 +124,13 @@ public class Call_1N
 
                 checkReturnRegisters(frame, chain.getSuper(frame));
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperNN(frame, ahArg, m_anRetValue);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return chain.callSuperNN(frame, new ObjectHandle[]{hArg}, m_anRetValue);
@@ -142,13 +142,13 @@ public class Call_1N
 
                 checkReturnRegisters(frame, function);
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, ahArg[0], function);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, hArg, function);
@@ -162,13 +162,13 @@ public class Call_1N
 
             checkReturnRegisters(frame, hFunction.getMethod());
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ahArg[0], hFunction);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hArg, hFunction);

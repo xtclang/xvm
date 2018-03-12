@@ -121,13 +121,13 @@ public class Call_1T
 
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperN1(frame, ahArg, m_nRetValue, true);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return chain.callSuperN1(frame, new ObjectHandle[]{hArg}, m_nRetValue, true);
@@ -139,13 +139,13 @@ public class Call_1T
 
                 checkReturnTupleRegister(frame, function);
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, ahArg[0], function);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, hArg, function);
@@ -159,13 +159,13 @@ public class Call_1T
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ahArg[0], hFunction);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hArg, hFunction);

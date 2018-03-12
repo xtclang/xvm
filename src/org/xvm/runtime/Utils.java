@@ -13,6 +13,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
@@ -22,7 +24,7 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 
-import org.xvm.runtime.template.types.xProperty.PropertyHandle;
+import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
 
 
 /**
@@ -159,63 +161,12 @@ public abstract class Utils
 
     // ----- "local property as an argument" support -----
 
-    static public class GetArgument
-                implements Frame.Continuation
-        {
-        public GetArgument(ObjectHandle[] ahTarget, Frame.Continuation continuation)
-            {
-            this.ahTarget = ahTarget;
-            this.continuation = continuation;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            ahTarget[0] = frameCaller.getFrameLocal();
-
-            return continuation.proceed(frameCaller);
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            ObjectHandle handle = ahTarget[0];
-            if (handle instanceof PropertyHandle)
-                {
-                ObjectHandle hThis = frameCaller.getThis();
-                String sProp = ((PropertyHandle) handle).m_property.getName();
-
-                switch (hThis.getTemplate().getPropertyValue(
-                        frameCaller, hThis, sProp, Frame.RET_LOCAL))
-                    {
-                    case Op.R_NEXT:
-                        // replace the property handle with the value
-                        ahTarget[0] = frameCaller.getFrameLocal();
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.setContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-            return continuation.proceed(frameCaller);
-            }
-
-        private final ObjectHandle[] ahTarget;
-        private final Frame.Continuation continuation;
-        }
-
     static public class GetArguments
                 implements Frame.Continuation
         {
-        public GetArguments(ObjectHandle[] ahVar, Frame.Continuation continuation)
+        public GetArguments(ObjectHandle[] ahArg, Frame.Continuation continuation)
             {
-            this.ahVar = ahVar;
+            this.ahArg = ahArg;
             this.continuation = continuation;
             }
 
@@ -230,24 +181,24 @@ public abstract class Utils
         protected void updateResult(Frame frameCaller)
             {
             // replace a property handle with the value
-            ahVar[index] = frameCaller.getFrameLocal();
+            ahArg[index] = frameCaller.getFrameLocal();
             }
 
         public int doNext(Frame frameCaller)
             {
-            while (++index < ahVar.length)
+            while (++index < ahArg.length)
                 {
-                ObjectHandle handle = ahVar[index];
-                if (handle == null)
+                ObjectHandle hArg = ahArg[index];
+                if (hArg == null)
                     {
                     // nulls can only be at the tail of the array
                     break;
                     }
 
-                if (handle instanceof PropertyHandle)
+                if (hArg instanceof DeferredPropertyHandle)
                     {
                     ObjectHandle hThis = frameCaller.getThis();
-                    String sProp = ((PropertyHandle) handle).m_property.getName();
+                    String sProp = ((DeferredPropertyHandle) hArg).m_property.getName();
 
                     switch (hThis.getTemplate().getPropertyValue(
                             frameCaller, hThis, sProp, Frame.RET_LOCAL))
@@ -268,11 +219,17 @@ public abstract class Utils
                             throw new IllegalStateException();
                         }
                     }
+                else if (hArg instanceof DeferredCallHandle)
+                    {
+                    Frame frameNext = ((DeferredCallHandle) hArg).f_frameNext;
+                    frameNext.setContinuation(this);
+                    return frameCaller.call(frameNext);
+                    }
                 }
             return continuation.proceed(frameCaller);
             }
 
-        private final ObjectHandle[] ahVar;
+        private final ObjectHandle[] ahArg;
         private final Frame.Continuation continuation;
         private int index = -1;
         }

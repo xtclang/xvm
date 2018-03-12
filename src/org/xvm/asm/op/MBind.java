@@ -103,12 +103,12 @@ public class MBind
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller -> proceed(frameCaller, ahTarget[0]);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return proceed(frame, hTarget);

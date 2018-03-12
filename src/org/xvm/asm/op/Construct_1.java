@@ -105,11 +105,11 @@ public class Construct_1
             ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
             ahVar[0] = hArg;
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, constructor, ahVar);
-                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return complete(frame, constructor, ahVar);

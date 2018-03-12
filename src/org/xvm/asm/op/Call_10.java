@@ -109,13 +109,13 @@ public class Call_10
                     throw new IllegalStateException();
                     }
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuper10(frame, ahArg[0]);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return chain.callSuper10(frame, hArg);
@@ -125,13 +125,13 @@ public class Call_10
                 {
                 MethodStructure function = getMethodStructure(frame);
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, ahArg[0], function);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, hArg, function);
@@ -143,13 +143,13 @@ public class Call_10
                 return R_REPEAT;
                 }
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ahArg[0], hFunction);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hArg, hFunction);

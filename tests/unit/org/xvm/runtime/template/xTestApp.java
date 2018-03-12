@@ -44,7 +44,7 @@ public class xTestApp extends xModule
         MethodStructure ftTest1 = getMethodStructure("test1", VOID, VOID);
         ftTest1.createCode()
             .add(new Var_DN(
-                adapter.getClassTypeConstId("annotations.InjectedRef<io.Console>"),
+                adapter.getClassTypeConstId("@annotations.InjectedRef Ref<io.Console>"),
                 adapter.ensureValueConstantId("console"))) // #0 (console)
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.test1() #")))
             .add(new Var_N(adapter.getClassTypeConstId("String"),
@@ -183,7 +183,7 @@ public class xTestApp extends xModule
             .add(new Call_01(2, 1))
             .add(new X_Print(1))
 
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
                 adapter.ensureValueConstantId("fc"))) // #3 (fc)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 3))
@@ -196,7 +196,7 @@ public class xTestApp extends xModule
 
             .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("rfc"))) // #5 (rfc2)
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
                 adapter.ensureValueConstantId("rfc3"))) // #6 (rfc3)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 6))
@@ -284,7 +284,7 @@ public class xTestApp extends xModule
             .add(new Call_01(1, 2))
             .add(new X_Print(2))
 
-            .add(new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
+            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
                      adapter.ensureValueConstantId("fc"))) // #3 (fc)
             .add(new Invoke_01(0,
                     adapter.getMethodConstId("TestApp.TestService", "increment"), 3))
@@ -704,27 +704,34 @@ public class xTestApp extends xModule
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
                     adapter.ensureValueConstantId("prp"))) // #0 (prp)
             .add(new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
-                    new int[] {
-                            adapter.ensureValueConstantId(1),
-                            adapter.ensureValueConstantId(2),
-                            adapter.ensureValueConstantId("*** ")
-                    }, 0))
+                new int[]{
+                    adapter.ensureValueConstantId(1),
+                    adapter.ensureValueConstantId(2),
+                    adapter.ensureValueConstantId("*** ")}, 0))
             .add(new X_Print(0))
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Point"),
-                    adapter.ensureValueConstantId("p2"))) // #1 (p2)
+                adapter.ensureValueConstantId("p2"))) // #1 (p2)
             .add(new New_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                    new int[] {
-                            adapter.ensureValueConstantId(2),
-                            adapter.ensureValueConstantId(1)
-                    },
-                    1))
+                new int[]{
+                    adapter.ensureValueConstantId(2),
+                    adapter.ensureValueConstantId(1)}, 1))
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyRectangle"),
-                    adapter.ensureValueConstantId("prr"))) // #2 (prr)
+                adapter.ensureValueConstantId("prr"))) // #2 (prr)
             .add(new New_N(adapter.getMethodConstId("TestApp.PrettyRectangle", "construct"),
-                    new int[] {0, 1, adapter.ensureValueConstantId("+++ ")}, 2))
+                new int[]{0, 1, adapter.ensureValueConstantId("+++ ")}, 2))
             .add(new X_Print(2))
+
+            .add(new Var_DN(adapter.getClassTypeConstId("@TestApp.BlackHole Var<Int64>"),
+                adapter.ensureValueConstantId("zero"))) // #3 (zero)
+            .add(new Move(adapter.ensureValueConstantId(1), 3))
+
+            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
+                adapter.ensureValueConstantId("ai"))) // #4 (ai)
+
+            .add(new IsEq(3, adapter.ensureValueConstantId(0), Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("zero == 0")))
 
             .add(new Return_0());
 

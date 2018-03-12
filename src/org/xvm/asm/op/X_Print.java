@@ -13,7 +13,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.types.xProperty.PropertyHandle;
+import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
 
 import org.xvm.runtime.template.xString;
 
@@ -64,9 +64,9 @@ public class X_Print
                     return R_REPEAT;
                     }
 
-                if (isProperty(hValue))
+                if (hValue instanceof DeferredPropertyHandle)
                     {
-                    PropertyHandle hProp = (PropertyHandle) hValue;
+                    DeferredPropertyHandle hProp = (DeferredPropertyHandle) hValue;
                     sb.append("Local property: ").append(hProp.m_property.getName());
                     return R_NEXT;
                     }

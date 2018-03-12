@@ -530,6 +530,9 @@ class TestApp
         Point p2 = new Point(2, 1);
         PrettyRectangle prr = new PrettyRectangle(prp, p2, "+++ ");
         print(prp);
+
+        @BlackHole Int zero = 1;
+        assert(zero == 0);
         }
 
     static Void testReal1()
@@ -544,5 +547,12 @@ class TestApp
         Class<Point> clzP = Point;
 
 //        Class<Array<Point>> clzAP = Array<Point>;
+        }
+
+    static mixin BlackHole
+            into Var<Int>
+        {
+        Int get() {return 0;}
+        Void set(Int i) {}
         }
     }

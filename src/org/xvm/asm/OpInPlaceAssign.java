@@ -87,7 +87,7 @@ public abstract class OpInPlaceAssign
                         return R_REPEAT;
                         }
 
-                    if (isProperty(hValue))
+                    if (isDeferred(hValue))
                         {
                         ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
                         Frame.Continuation stepNext = frameCaller ->
@@ -103,7 +103,7 @@ public abstract class OpInPlaceAssign
 
                     assert hTarget != null;
 
-                    if (isProperty(hValue))
+                    if (isDeferred(hValue))
                         {
                         ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
                         Frame.Continuation stepNext = frameCaller ->
@@ -120,7 +120,7 @@ public abstract class OpInPlaceAssign
 
                 ObjectHandle hTarget = frame.getThis();
 
-                if (isProperty(hValue))
+                if (isDeferred(hValue))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hValue};
                     Frame.Continuation stepNext = frameCaller ->

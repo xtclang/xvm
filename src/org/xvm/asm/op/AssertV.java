@@ -17,7 +17,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.types.xProperty.PropertyHandle;
+import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -106,13 +106,13 @@ public class AssertV
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTest))
+            if (isDeferred(hTest))
                 {
                 ObjectHandle[] ahTest = new ObjectHandle[] {hTest};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, iPC, (BooleanHandle) ahTest[0], ahValue);
 
-                return new Utils.GetArgument(ahTest, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTest, stepNext).doNext(frame);
                 }
 
             return complete(frame, iPC, (BooleanHandle) hTest, ahValue);
@@ -130,7 +130,7 @@ public class AssertV
             return iPC + 1;
             }
 
-        if (anyProperty(ahValue))
+        if (anyDeferred(ahValue))
             {
             int cValues = ahValue.length;
 
@@ -174,12 +174,12 @@ public class AssertV
                 }
             else
                 {
-                // nValue points to a local property or a constant;
+                // nValue points to a local property, deferred call or a constant;
                 // in the local property case the property handle must be in the ahOrig array
                 ObjectHandle hValueOrig = ahOrig[i];
-                if (isProperty(hValueOrig))
+                if (hValueOrig instanceof DeferredPropertyHandle)
                     {
-                    asName[i] = ((PropertyHandle) hValueOrig).m_property.getName();
+                    asName[i] = ((DeferredPropertyHandle) hValueOrig).m_property.getName();
                     }
                 else // simply a constant; no label
                     {

@@ -131,7 +131,7 @@ public class JumpVal
                 return R_REPEAT;
                 }
 
-            if (isProperty(hValue))
+            if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->

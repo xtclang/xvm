@@ -121,7 +121,7 @@ public class New_N
                 frame.introduceResolvedVar(clzTarget.getType());
                 }
 
-            if (anyProperty(ahVar))
+            if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);

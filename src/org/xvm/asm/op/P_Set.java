@@ -109,14 +109,14 @@ public class P_Set
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
-            if (isProperty(hTarget) || isProperty(hValue))
+            if (isDeferred(hTarget) || isDeferred(hValue))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hValue};
                 Frame.Continuation stepNext = frameCaller ->
                     ahArg[0].getTemplate().setPropertyValue(
                         frame, ahArg[0], sProperty, ahArg[1]);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return hTarget.getTemplate().setPropertyValue(

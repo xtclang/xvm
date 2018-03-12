@@ -125,7 +125,7 @@ public abstract class OpCondJump
                 return R_REPEAT;
                 }
 
-            if (isProperty(hValue))
+            if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
@@ -157,7 +157,7 @@ public abstract class OpCondJump
             TypeConstant type2;
             boolean fAnyProp = false;
 
-            if (isProperty(hValue1))
+            if (isDeferred(hValue1))
                 {
                 type1 = frame.getLocalType(m_nArg);
                 fAnyProp = true;
@@ -167,7 +167,7 @@ public abstract class OpCondJump
                 type1 = frame.getArgumentType(m_nArg);
                 }
 
-            if (isProperty(hValue2))
+            if (isDeferred(hValue2))
                 {
                 type2 = frame.getLocalType(m_nArg2);
                 fAnyProp = true;

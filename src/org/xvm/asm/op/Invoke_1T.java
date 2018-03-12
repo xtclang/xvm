@@ -111,13 +111,13 @@ public class Invoke_1T
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     resolveArg(frameCaller, ahTarget[0], hArg);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArg(frame, hTarget, hArg);
@@ -130,12 +130,12 @@ public class Invoke_1T
 
     protected int resolveArg(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        if (isProperty(hArg))
+        if (isDeferred(hArg))
             {
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
             Frame.Continuation stepNext = frameCaller -> complete(frameCaller, hTarget, ahArg[0]);
 
-            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
         return complete(frame, hTarget, hArg);

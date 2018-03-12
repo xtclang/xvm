@@ -517,20 +517,4 @@ public class xRef
             // no op
             }
         }
-
-    // RefHandle for a dynamic var call
-    public static class RefCallHandle
-            extends RefHandle
-        {
-        public final Frame f_frameNext;
-
-        public RefCallHandle(Frame frameNext, RefHandle hRef)
-            {
-            super(INSTANCE.m_clazzCanonical, null);
-
-            f_frameNext = frameNext;
-            m_hDelegate = hRef;
-            m_iVar = -5; // TODO:
-            }
-        }
     }

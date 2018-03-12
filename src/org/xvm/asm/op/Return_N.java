@@ -91,14 +91,14 @@ public class Return_N
             ObjectHandle hArg = frame.getReturnValue(m_anArg[i]);
 
             ahArg[i] = hArg;
-            fAnyProp |= isProperty(hArg);
+            fAnyProp |= isDeferred(hArg);
             }
 
         if (fAnyProp)
             {
             Frame.Continuation stepNext = frameCaller -> frameCaller.returnValues(ahArg);
 
-            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
         return frame.returnValues(ahArg);

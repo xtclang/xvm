@@ -111,7 +111,7 @@ public class Invoke_N1
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
                 if (ahArg == null)
@@ -122,7 +122,7 @@ public class Invoke_N1
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller -> resolveArgs(frameCaller, ahTarget[0], ahArg);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveArgs(frame, hTarget, null);
@@ -161,7 +161,7 @@ public class Invoke_N1
             ahVar = Utils.ensureSize(ahArg, method.getMaxVars());
             }
 
-        if (anyProperty(ahVar))
+        if (anyDeferred(ahVar))
             {
             Frame.Continuation stepNext =
                 frameCaller -> complete(frameCaller, chain, hTarget, ahVar);
