@@ -115,7 +115,7 @@ public abstract class OpIndex
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget) || isProperty(hIndex))
+            if (isDeferred(hTarget) || isDeferred(hIndex))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hTarget, hIndex};
                 Frame.Continuation stepNext = frameCaller ->

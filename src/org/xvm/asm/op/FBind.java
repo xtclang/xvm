@@ -158,7 +158,7 @@ public class FBind
                     return R_REPEAT;
                     }
                 ahParam[i] = hParam;
-                fAnyProperty |= isProperty(hParam);
+                fAnyProperty |= isDeferred(hParam);
                 }
 
             if (fAnyProperty)

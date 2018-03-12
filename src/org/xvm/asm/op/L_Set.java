@@ -104,13 +104,13 @@ public class L_Set
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
             String sProperty = constProperty.getName();
 
-            if (isProperty(hValue))
+            if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller -> hTarget.getTemplate().
                     setPropertyValue(frameCaller, hTarget, sProperty, ahValue[0]);
 
-                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
             return hTarget.getTemplate().setPropertyValue(frame, hTarget, sProperty, hValue);

@@ -81,12 +81,12 @@ public class Return_1
         {
         ObjectHandle hValue = frame.getReturnValue(m_nArg);
 
-        if (isProperty(hValue))
+        if (isDeferred(hValue))
             {
             ObjectHandle[] ahValue = new ObjectHandle[]{hValue};
             Frame.Continuation stepNext = frameCaller -> frameCaller.returnValue(ahValue[0]);
 
-            return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
         return frame.returnValue(hValue);

@@ -116,13 +116,13 @@ public class Invoke_T1
                 return R_REPEAT;
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     resolveTuple(frameCaller, ahTarget[0], hArg);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return resolveTuple(frame, hTarget, hArg);
@@ -136,13 +136,13 @@ public class Invoke_T1
     protected int resolveTuple(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
         // Tuple values cannot be local properties
-        if (isProperty(hArg))
+        if (isDeferred(hArg))
             {
             ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
             Frame.Continuation stepNext = frameCaller ->
                 complete(frameCaller, hTarget, ((TupleHandle) ahArg[0]).m_ahValue);
 
-            return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
         return complete(frame, hTarget, ((TupleHandle) hArg).m_ahValue);

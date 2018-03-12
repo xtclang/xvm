@@ -123,13 +123,13 @@ public class Call_TT
 
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperN1(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue, m_nRetValue, true);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
                 return chain.callSuperN1(frame, ((TupleHandle) hArg).m_ahValue, m_nRetValue, true);
                 }
@@ -140,13 +140,13 @@ public class Call_TT
 
                 checkReturnTupleRegister(frame, function);
 
-                if (isProperty(hArg))
+                if (isDeferred(hArg))
                     {
                     ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                     Frame.Continuation stepNext = frameCaller ->
                         complete(frameCaller, function, (TupleHandle) ahArg[0]);
 
-                    return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                     }
 
                 return complete(frame, function, (TupleHandle) hArg);
@@ -160,13 +160,13 @@ public class Call_TT
 
             checkReturnTupleRegister(frame, hFunction.getMethod());
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, hFunction, (TupleHandle) ahArg[0]);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, hFunction, (TupleHandle) hArg);

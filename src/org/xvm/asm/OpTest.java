@@ -124,7 +124,7 @@ public abstract class OpTest
                 return R_REPEAT;
                 }
 
-            if (isProperty(hValue))
+            if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
@@ -156,7 +156,7 @@ public abstract class OpTest
             TypeConstant type2;
             boolean fAnyProp = false;
 
-            if (isProperty(hValue1))
+            if (isDeferred(hValue1))
                 {
                 type1 = frame.getLocalType(m_nValue1);
                 fAnyProp = true;
@@ -166,7 +166,7 @@ public abstract class OpTest
                 type1 = frame.getArgumentType(m_nValue1);
                 }
 
-            if (isProperty(hValue2))
+            if (isDeferred(hValue2))
                 {
                 type2 = frame.getLocalType(m_nValue2);
                 fAnyProp = true;

@@ -114,14 +114,14 @@ public class P_Get
                 frame.introducePropertyVar(m_nTarget, constProperty);
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     hTarget.getTemplate().getPropertyValue(
                         frame, ahTarget[0], constProperty.getName(), m_nRetValue);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
             return hTarget.getTemplate().getPropertyValue(
                 frame, hTarget, constProperty.getName(), m_nRetValue);

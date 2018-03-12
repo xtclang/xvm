@@ -123,13 +123,13 @@ public abstract class OpPropInPlace
                 frame.introduceVarCopy(m_nPropId);
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahTarget = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     processProperty(frameCaller, ahTarget[0]);
 
-                return new Utils.GetArgument(ahTarget, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahTarget, stepNext).doNext(frame);
                 }
 
             return processProperty(frame, hTarget);

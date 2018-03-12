@@ -115,7 +115,7 @@ public class Call_NN
                     return R_REPEAT;
                     }
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         chain.callSuperNN(frame, ahVar, m_anRetValue);
@@ -138,7 +138,7 @@ public class Call_NN
 
                 checkReturnRegisters(frame, function);
 
-                if (anyProperty(ahVar))
+                if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
                         frame.callN(function, null, ahVar, m_anRetValue);
@@ -162,7 +162,7 @@ public class Call_NN
 
             checkReturnRegisters(frame, hFunction.getMethod());
 
-            if (anyProperty(ahVar))
+            if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.callN(frameCaller, null, ahVar, m_anRetValue);

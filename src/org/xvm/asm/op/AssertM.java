@@ -99,13 +99,13 @@ public class AssertM
                 return R_REPEAT;
                 }
 
-            if (isProperty(hValue))
+            if (isDeferred(hValue))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, iPC, (BooleanHandle) ahValue[0]);
 
-                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
             return complete(frame, iPC, (BooleanHandle) hValue);

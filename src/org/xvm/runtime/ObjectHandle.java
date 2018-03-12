@@ -135,7 +135,6 @@ public abstract class ObjectHandle
         throw new UnsupportedOperationException(getClass() + " cannot be used as a constant");
         }
 
-
     @Override
     public String toString()
         {
@@ -293,6 +292,28 @@ public abstract class ObjectHandle
             m_fMutable = true;
             }
         }
+
+    // a handle representing a deferred action, such as a property access or a method call;
+    // this handle cannot be allocated naturally and must be processed in a special way
+    public static class DeferredCallHandle
+            extends ObjectHandle
+        {
+        public Frame f_frameNext;
+
+        protected DeferredCallHandle(Frame frameNext)
+            {
+            super(null);
+
+            f_frameNext = frameNext;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Deferred call: " + f_frameNext;
+            }
+        }
+
 
     // ----- DEFERRED ----
 

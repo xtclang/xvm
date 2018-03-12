@@ -15,13 +15,13 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xRef.RefCallHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
@@ -933,7 +933,7 @@ public class Frame
                                 return getFrameLocal();
 
                             case Op.R_CALL:
-                                return new RefCallHandle(m_frameNext, hRef);
+                                return new DeferredCallHandle(m_frameNext);
 
                             case Op.R_BLOCK:
                                 info.markWaiting();

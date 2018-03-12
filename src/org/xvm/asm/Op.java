@@ -18,8 +18,9 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.template.types.xProperty;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template.types.xProperty;
 
 import static org.xvm.util.Handy.byteToHexString;
 import static org.xvm.util.Handy.readMagnitude;
@@ -305,29 +306,26 @@ public abstract class Op
         }
 
     /**
-     * Determine if the specified ObjectHandle represents a PropertyHandle.
+     * Determine if the specified ObjectHandle represents a deferred action such as a property
+     * access or a method call.
      *
      * @param handle  the argument
      *
-     * @return true iff the argument is a PropertyHandle
+     * @return true iff the argument represents a deferred action
      */
-    protected static boolean isProperty(ObjectHandle handle)
+    protected static boolean isDeferred(ObjectHandle handle)
         {
-        return handle instanceof xProperty.PropertyHandle;
+        return handle instanceof DeferredCallHandle;
         }
 
     /**
-     * Determine if any of the handles is a PropertyHandle.
-     *
-     * @param aHandle  an array of handles
-     *
-     * @return true iff any of the handles is a PropertyHandle
+     * @return true iff any of the specified handles represents a deferred action
      */
-    protected static boolean anyProperty(ObjectHandle[] aHandle)
+    protected static boolean anyDeferred(ObjectHandle[] aHandle)
         {
         for (ObjectHandle h : aHandle)
             {
-            if (h instanceof xProperty.PropertyHandle)
+            if (h instanceof xProperty.DeferredPropertyHandle)
                 {
                 return true;
                 }

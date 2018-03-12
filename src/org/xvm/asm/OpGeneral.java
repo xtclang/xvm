@@ -123,13 +123,13 @@ public abstract class OpGeneral
                 frame.introduceVarCopy(m_nTarget);
                 }
 
-            if (isProperty(hTarget))
+            if (isDeferred(hTarget))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hTarget};
                 Frame.Continuation stepNext = frameCaller ->
                     completeUnary(frameCaller, ahValue[0]);
 
-                return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
             return completeUnary(frame, hTarget);
@@ -161,7 +161,7 @@ public abstract class OpGeneral
                 frame.introduceVarCopy(m_nTarget);
                 }
 
-            if (isProperty(hTarget) || isProperty(hArg))
+            if (isDeferred(hTarget) || isDeferred(hArg))
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hTarget, hArg};
                 Frame.Continuation stepNext = frameCaller ->

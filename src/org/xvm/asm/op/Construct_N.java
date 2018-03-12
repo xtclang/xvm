@@ -99,11 +99,11 @@ public class Construct_N
                 return R_REPEAT;
                 }
 
-            if (anyProperty(ahVar))
+            if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, constructor, ahVar);
-                return new Utils.GetArgument(ahVar, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
             return complete(frame, constructor, ahVar);

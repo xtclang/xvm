@@ -96,13 +96,13 @@ public class NewG_T
                 return R_REPEAT;
                 }
 
-            if (isProperty(hArg))
+            if (isDeferred(hArg))
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, ((TupleHandle) ahArg[0]).m_ahValue);
 
-                return new Utils.GetArgument(ahArg, stepNext).doNext(frame);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
                 }
 
             return complete(frame, ((TupleHandle) hArg).m_ahValue);

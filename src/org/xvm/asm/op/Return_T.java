@@ -86,13 +86,13 @@ public class Return_T
         {
         ObjectHandle hArg = frame.getReturnValue(m_nArg);
 
-        if (isProperty(hArg))
+        if (isDeferred(hArg))
             {
             ObjectHandle[] ahValue = new ObjectHandle[]{hArg};
             Frame.Continuation stepNext =
                 frameCaller -> frameCaller.returnTuple((TupleHandle) ahValue[0]);
 
-            return new Utils.GetArgument(ahValue, stepNext).doNext(frame);
+            return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
         return frame.returnTuple((TupleHandle) hArg);
