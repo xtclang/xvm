@@ -65,7 +65,6 @@ module Ecstasy.xtclang.org
     mixin Enumeration<EnumType extends Enum>
             into Class
         {
-        @Override
         String name;
 
         @Lazy Int count;

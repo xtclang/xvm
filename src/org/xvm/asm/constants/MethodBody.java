@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.util.Handy;
@@ -16,44 +17,44 @@ public class MethodBody
     /**
      * Construct an implicit, abstract, native, or normal byte-code method body.
      *
-     * @param constMethod  the method constant that this body represents
-     * @param impl         one of Implicit, Declared, Default, Native, or Explicit
+     * @param id    the method constant that this body represents
+     * @param sig   the resolved signature of the method
+     * @param impl  one of Implicit, Declared, Default, Native, or Explicit
      */
-    public MethodBody(MethodConstant constMethod, Implementation impl)
+    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl)
         {
-        this(constMethod, impl, null);
+        this(id, sig, impl, null);
         }
 
     /**
      * Construct a method body with an optional target.
      *
-     * @param constMethod  the method constant that this body represents
+     * @param id           the method constant that this body represents
+     * @param sig          the resolved signature of the method
      * @param impl         specifies the implementation of the MethodBody
-     * @param constTarget  a MethodConstant from the "narrowing" chain for Implementation Capped;
-     *                     a PropertyConstant for Delegating or Field Implementation; otherwise null
+     * @param constTarget  a <i>resolved</i> SignatureConstant from the "narrowing" chain for a
+     *                     Capped Implementation; a PropertyConstant for a Delegating or Field
+     *                     Implementation; otherwise null
      */
-    public MethodBody(MethodConstant constMethod, Implementation impl, Constant constTarget)
+    public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Constant constTarget)
         {
-        assert constMethod != null && impl != null;
-
+        assert id != null && sig != null && impl != null;
         switch (impl)
             {
-            default:
-                assert constTarget == null;
-                break;
-
             case Capped:
-                assert constTarget instanceof MethodConstant;
+                assert constTarget instanceof SignatureConstant;
                 break;
-
             case Delegating:
             case Field:
                 assert constTarget instanceof PropertyConstant;
                 break;
-
+            default:
+                assert constTarget == null;
+                break;
             }
 
-        m_constMethod = constMethod;
+        m_id          = id;
+        m_sig         = sig;
         m_impl        = impl;
         m_constTarget = constTarget;
         }
@@ -63,7 +64,15 @@ public class MethodBody
      */
     public MethodConstant getIdentity()
         {
-        return m_constMethod;
+        return m_id;
+        }
+
+    /**
+     * @return the <i>resolved</i> SignatureConstant that this MethodBody represents
+     */
+    public SignatureConstant getSignature()
+        {
+        return m_sig;
         }
 
     /**
@@ -84,7 +93,7 @@ public class MethodBody
                     return null;
 
                 default:
-                    m_structMethod = structMethod = (MethodStructure) m_constMethod.getComponent();
+                    m_structMethod = structMethod = (MethodStructure) m_id.getComponent();
                 }
             }
         return structMethod;
@@ -158,7 +167,7 @@ public class MethodBody
      */
     public boolean isOverride()
         {
-        return findAnnotation(m_constMethod.getConstantPool().clzOverride()) != null;
+        return findAnnotation(pool().clzOverride()) != null;
         }
 
     /**
@@ -245,22 +254,13 @@ public class MethodBody
         }
 
     /**
-     * @return the SignatureConstant of the method that narrowed this method, if this is a cap
+     * @return the <i>resolved</i> SignatureConstant of the method that narrowed this method, iff
+     *         this MethodBody is a cap
      */
-    public SignatureConstant getNarrowingSignature()
+    public SignatureConstant getNarrowingNestedIdentity()
         {
         return m_impl == Implementation.Capped
-                ? ((MethodConstant) m_constTarget).getSignature()
-                : null;
-        }
-
-    /**
-     * @return the nested identity of the method that narrowed this method, if this is a cap
-     */
-    public Object getNarrowingNestedIdentity()
-        {
-        return m_impl == Implementation.Capped
-                ? ((MethodConstant) m_constTarget).getNestedIdentity()
+                ? (SignatureConstant) m_constTarget
                 : null;
         }
 
@@ -294,9 +294,9 @@ public class MethodBody
     public boolean isAuto()
         {
         // all @Auto methods must have no params and a single return value
-        return  m_constMethod.getRawParams().length == 0 &&
-                m_constMethod.getRawReturns().length == 1 &&
-                findAnnotation(m_constMethod.getConstantPool().clzAuto()) != null;
+        return  m_id.getRawParams().length == 0 &&
+                m_id.getRawReturns().length == 1 &&
+                findAnnotation(pool().clzAuto()) != null;
         }
 
     /**
@@ -311,7 +311,7 @@ public class MethodBody
     public boolean isOp(String sName, String sOp, int cParams)
         {
         // the number of parameters must match
-        if (m_constMethod.getRawParams().length != cParams)
+        if (m_id.getRawParams().length != cParams)
             {
             return false;
             }
@@ -320,13 +320,13 @@ public class MethodBody
         // if the method name matches the default method name for the op, then we're ok;
         // otherwise we need to get the operator text from the operator annotation
         // (it's the first of the @Op annotation parameters)
-        Annotation annotation = findAnnotation(m_constMethod.getConstantPool().clzOp());
+        Annotation annotation = findAnnotation(pool().clzOp());
         if (annotation == null)
             {
             return false;
             }
 
-        if (m_constMethod.getName().equals(sName))
+        if (m_id.getName().equals(sName))
             {
             return true;
             }
@@ -337,13 +337,21 @@ public class MethodBody
                 && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
         }
 
+    /**
+     * @return the ConstantPool
+     */
+    ConstantPool pool()
+        {
+        return m_id.getConstantPool();
+        }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public int hashCode()
         {
-        return m_constMethod.hashCode();
+        return m_id.hashCode();
         }
 
     @Override
@@ -361,7 +369,8 @@ public class MethodBody
 
         MethodBody that = (MethodBody) obj;
         return this.m_impl == that.m_impl
-            && Handy.equals(this.m_constMethod, that.m_constMethod)
+            && Handy.equals(this.m_id, that.m_id)
+            && Handy.equals(this.m_sig, that.m_sig)
             && Handy.equals(this.m_constTarget, that.m_constTarget);
         }
 
@@ -369,11 +378,19 @@ public class MethodBody
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_constMethod.getValueString())
-          .append(" {")
-          .append(m_impl)
-          .append('}');
-        return sb.toString();
+        sb.append(m_id.getValueString())
+          .append(" {sig=")
+          .append(m_sig.getValueString())
+          .append(", impl=")
+          .append(m_impl);
+
+        if (m_constTarget != null)
+            {
+            sb.append(", target=")
+              .append(m_constTarget.getValueString());
+            }
+
+        return sb.append('}').toString();
         }
 
 
@@ -410,7 +427,7 @@ public class MethodBody
         Delegating,
         Field,
         Native,
-        Explicit;
+        Explicit
         }
 
 
@@ -424,19 +441,26 @@ public class MethodBody
     /**
      * The MethodConstant that this method body corresponds to.
      */
-    private MethodConstant m_constMethod;
+    private final MethodConstant m_id;
+
+    /**
+     * The <b>resolved</b> method signature. The MethodBody cannot resolve a signature, because the
+     * necessary information is external to the MethodInfo and MethodBody, yet it is required to
+     * have the resolved signature so that collisions can be detected and the method chains will be
+     * correctly assembled.
+     */
+    private final SignatureConstant m_sig;
 
     /**
      * The implementation type for the method body.
      */
-    private Implementation m_impl;
+    private final Implementation m_impl;
 
     /**
      * The constant denoting additional information (if required) for the MethodBody implementation:
      * <ul>
-     * <li>For Implementation Capped, this specifies a MethodConstant from the narrowing method that
-     * the cap redirects execution to via a virtual method call (a MethodConstant is provided, but
-     * its purpose is to provide both a nested identity and a method signature);</li>
+     * <li>For Implementation Capped, this specifies a <i>resolved</i> SignatureConstant from the
+     * narrowing method that the cap redirects execution to via a virtual method call;</li>
      * <li>For Implementation Delegating, this specifies the property which contains the reference
      * to delegate to.</li>
      * <li>For Implementation Field, this specifies the property that the method body corresponds
@@ -444,7 +468,7 @@ public class MethodBody
      * property.</li>
      * </ul>
      */
-    private Constant m_constTarget;
+    private final Constant m_constTarget;
 
     /**
      * The cached method structure.

@@ -579,10 +579,11 @@ public class PropertyInfo
             }
 
         IdentityConstant id = getIdentity();
-        for (int i = 0, c = id.getNestedDepth(); i < c; ++i)
+        for (int i = 1, c = id.getNestedDepth(); i < c; ++i)
             {
             id = id.getParentConstant();
-            if (!(id instanceof PropertyConstant) || id.getComponent().getAccess() == Access.PRIVATE)
+            if ((id instanceof PropertyConstant && id.getComponent().getAccess() == Access.PRIVATE)
+                    || id instanceof MethodConstant)
                 {
                 return false;
                 }

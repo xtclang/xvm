@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -36,7 +37,8 @@ public class TypeInfo
      *
      * @param type                 the type that the TypeInfo represents
      * @param struct               the structure that underlies the type, or null if there is none
-     * @param cDepth               TODO
+     * @param cDepth               the nested depth of the TypeInfo; {@code 0} for a class TypeInfo,
+     *                             or {@code >0} for a TypeInfo that represents a property
      * @param fAbstract            true if the type is abstract
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
@@ -46,9 +48,9 @@ public class TypeInfo
      * @param listProcess
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
-     * @param mapProperties        the properties of the type
+     * @param mapProps             the properties of the type
      * @param mapMethods           the methods of the type
-     * @param mapVirtProperties    the virtual properties of the type, keyed by nested id
+     * @param mapVirtProps         the virtual properties of the type, keyed by nested id
      * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
      * @param progress             the Progress for this TypeInfo
      */
@@ -65,9 +67,9 @@ public class TypeInfo
             List<Contribution>                  listProcess,
             ListMap<IdentityConstant, Origin>   listmapClassChain,
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
-            Map<PropertyConstant, PropertyInfo> mapProperties,
+            Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
-            Map<Object, PropertyInfo>           mapVirtProperties,
+            Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo>             mapVirtMethods,
             Progress                            progress)
         {
@@ -75,8 +77,10 @@ public class TypeInfo
         assert mapTypeParams        != null;
         assert listmapClassChain    != null;
         assert listmapDefaultChain  != null;
-        assert mapProperties        != null;
+        assert mapProps             != null;
         assert mapMethods           != null;
+        assert mapVirtProps         != null;
+        assert mapVirtMethods       != null;
         assert progress             != null && progress != Progress.Absent;
 
         m_type                  = type;
@@ -91,8 +95,8 @@ public class TypeInfo
         m_listProcess           = listProcess;
         m_listmapClassChain     = listmapClassChain;
         m_listmapDefaultChain   = listmapDefaultChain;
-        m_mapProperties         = mapProperties;
-        m_mapVirtProperties     = mapVirtProperties;
+        m_mapProps              = mapProps;
+        m_mapVirtProps          = mapVirtProps;
         m_mapMethods            = mapMethods;
         m_mapVirtMethods        = mapVirtMethods;
         m_progress              = progress;
@@ -119,7 +123,7 @@ public class TypeInfo
 
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
-        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProperties.entrySet())
+        for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
             {
             PropertyInfo prop = entry.getValue().limitAccess(access);
             if (prop != null)
@@ -322,7 +326,7 @@ public class TypeInfo
      */
     public boolean isChild()
         {
-        return isClass() && m_struct != null && m_struct.isChild();
+        return isClass() && m_struct.isChild();
         }
 
     /**
@@ -397,7 +401,7 @@ public class TypeInfo
      */
     public Map<PropertyConstant, PropertyInfo> getProperties()
         {
-        return m_mapProperties;
+        return m_mapProps;
         }
 
     /**
@@ -411,13 +415,17 @@ public class TypeInfo
         if (map == null)
             {
             map = new HashMap<>();
-            for (PropertyInfo prop : m_mapProperties.values())
+            for (PropertyInfo prop : m_mapProps.values())
                 {
                 // only include the non-nested properties
                 if (prop.getIdentity().getNestedDepth() == m_cDepth + 1)
                     {
-// TODO requires collision check, with the private/private property being discarded
-                    map.put(prop.getName(), prop);
+                    PropertyInfo propPrev = map.put(prop.getName(), prop);
+                    if (propPrev != null && propPrev.isVirtual())
+                        {
+                        // have to pick one that is more visible than the other
+                        map.put(prop.getName(), selectVisible(prop, propPrev));
+                        }
                     }
                 }
 
@@ -425,6 +433,69 @@ public class TypeInfo
             }
 
         return map;
+        }
+
+    private PropertyInfo selectVisible(PropertyInfo prop1, PropertyInfo prop2)
+        {
+        // only one, at most, can be virtual
+        if (prop1.isVirtual())
+            {
+            assert !prop2.isVirtual();
+            return prop1;
+            }
+        if (prop2.isVirtual())
+            {
+            return prop2;
+            }
+
+        // "highest" pane of glass for a non-virtual property wins
+        IdentityConstant idClass1 = prop1.getIdentity().getClassIdentity();
+        IdentityConstant idClass2 = prop2.getIdentity().getClassIdentity();
+        assert idClass1 != null && idClass2 != null && !idClass1.equals(idClass2);
+
+        // first check the class call chain
+        int of1 = indexOfClass(m_listmapClassChain, idClass1);
+        int of2 = indexOfClass(m_listmapClassChain, idClass2);
+        if (of1 >= 0)
+            {
+            return of2 >= 0 && of2 < of1
+                    ? prop2
+                    : prop1;
+            }
+        if (of2 >= 0)
+            {
+            return prop2;
+            }
+
+        // next check the interface call chain
+        of1 = indexOfClass(m_listmapDefaultChain, idClass1);
+        of2 = indexOfClass(m_listmapDefaultChain, idClass2);
+        if (of1 >= 0)
+            {
+            return of2 >= 0 && of2 < of1
+                    ? prop2
+                    : prop1;
+            }
+        if (of2 >= 0)
+            {
+            return prop2;
+            }
+
+        throw new IllegalStateException();
+        }
+
+    private int indexOfClass(ListMap<IdentityConstant, Origin> listmap, IdentityConstant idClass)
+        {
+        int i = 0;
+        for (IdentityConstant id : listmap.keySet())
+            {
+            if (id.equals(idClass))
+                {
+                return i;
+                }
+            ++i;
+            }
+        return -1;
         }
 
     /**
@@ -437,7 +508,7 @@ public class TypeInfo
     public Map<String, PropertyInfo> ensureNestedPropertiesByName(MethodConstant constMethod)
         {
         Map<String, PropertyInfo> map = null;
-        for (PropertyInfo prop : m_mapProperties.values())
+        for (PropertyInfo prop : m_mapProps.values())
             {
             // only include the properties nested under the specified method
             if (prop.getParent().equals(constMethod))
@@ -457,6 +528,7 @@ public class TypeInfo
 
     /**
      * Obtain all of the properties declared within the specified property.
+     * REVIEW this implementation is probably insufficient, considering possible visibility rules
      *
      * @param constProp  the PropertyConstant identifying the property that may contain properties
      *
@@ -466,7 +538,7 @@ public class TypeInfo
         {
         Map<String, PropertyInfo> map = null;
         int cDepth = constProp.getNestedDepth();
-        for (PropertyInfo prop : m_mapProperties.values())
+        for (PropertyInfo prop : m_mapProps.values())
             {
             IdentityConstant constParent = prop.getParent();
             // only include the properties nested under the specified property
@@ -499,13 +571,13 @@ public class TypeInfo
      */
     public PropertyInfo findProperty(PropertyConstant constId)
         {
-        PropertyInfo prop = m_mapProperties.get(constId);
+        PropertyInfo prop = m_mapProps.get(constId);
         if (prop != null)
             {
             return prop;
             }
 
-        prop = ensurePropertiesByName().get(constId.getName());
+        prop = m_mapVirtProps.get(constId.getNestedIdentity());
         return prop != null && prop.isIdentityValid(constId) ? prop : null;
         }
 
@@ -544,17 +616,95 @@ public class TypeInfo
         return map;
         }
 
+    /**
+     * Find the MethodInfo for the specified MethodConstant identity.
+     *
+     * @param id  a MethodConstant identity
+     *
+     * @return the MethodInfo corresponding to the specified identity
+     */
     public MethodInfo getMethodById(MethodConstant id)
         {
-        return getMethods().get(id);
-        }
+        MethodInfo method = getMethods().get(id);
+        if (method != null)
+            {
+            return method;
+            }
 
-    public MethodInfo getMethodByNestedId(Object nid)
-        {
-        // TODO
+        // try to find a method with the same signature
+        method = m_mapVirtMethods.get(id.getNestedIdentity());
+        if (method != null)
+            {
+            for (MethodBody body : method.getChain())
+                {
+                if (body.getIdentity().equals(id))
+                    {
+                    return method;
+                    }
+                }
+            }
+
+        // it is possible that the map lookup miss is caused by the passed id's signature NOT
+        // having its generic types resolved, so brute-force search
+        String sName  = id.getName();
+        int    cDepth = id.getNestedDepth();
+        for (Iterator<MethodInfo> iter = m_mapVirtMethods.values().iterator(); iter.hasNext(); )
+            {
+            method = iter.next();
+
+            // this "if" does not prove that this is the method that we're looking for; it just
+            // eliminates 99% of the potential garbage from our brute force search
+            if (method.getSignature().getName().equals(sName)
+                    && method.getIdentity().getNestedDepth() == cDepth)
+                {
+                for (MethodBody body : method.getChain())
+                    {
+                    if (body.getIdentity().equals(id))
+                        {
+                        return method;
+                        }
+                    }
+                }
+            }
+
         return null;
         }
 
+    /**
+     * Find the MethodInfo for the specified nested identity.
+     *
+     * @param nid  a nested identity, as obtained from {@link MethodConstant#getNestedIdentity()}
+     *
+     * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
+     *         nested identity
+     */
+    public MethodInfo getMethodByNestedId(Object nid)
+        {
+        return m_mapVirtMethods.get(nid);
+        }
+
+    /**
+     * Obtain the method chain for the specified method.
+     *
+     * @param id  the MethodConstant for the method
+     *
+     * @return the method chain iff the method exists; otherwise null
+     */
+    public MethodBody[] getOptimizedMethodChain(MethodConstant id)
+        {
+        MethodInfo info = getMethodById(id);
+        return info == null
+                ? null
+                : info.ensureOptimizedMethodChain(this);
+        }
+
+    /**
+     * Obtain the method chain for the specified method.
+     *
+     * @param nid  the nested id for the method
+     *
+     * @return the method chain iff the method exists; otherwise null
+     */
     public MethodBody[] getOptimizedMethodChain(Object nid)
         {
         MethodInfo info = getMethodByNestedId(nid);
@@ -562,6 +712,9 @@ public class TypeInfo
                 ? null
                 : info.ensureOptimizedMethodChain(this);
         }
+
+
+    // ----- compiler support ----------------------------------------------------------------------
 
     /**
      * Obtain all of the methods that are annotated with "@Op".
@@ -607,7 +760,7 @@ public class TypeInfo
      */
     public MethodInfo findMethod(SignatureConstant constSig, ErrorListener errs)
         {
-        // TODO
+        // TODO - the idea is that this method would be useful for the compiler resolving method calls
         return null;
         }
 
@@ -828,13 +981,13 @@ public class TypeInfo
                 }
             }
 
-        if (!m_mapProperties.isEmpty())
+        if (!m_mapProps.isEmpty())
             {
             sb.append("\n- Properties (")
-              .append(m_mapProperties.size())
+              .append(m_mapProps.size())
               .append(')');
             int i = 0;
-            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProperties.entrySet())
+            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
                 {
                 sb.append("\n  [")
                   .append(i++)
@@ -1039,7 +1192,7 @@ public class TypeInfo
      * may be referred to by different PropertyConstants, although it will only show up once in this
      * map (using the identity from the highest "pane of glass" that the property shows up on.)
      */
-    private final Map<PropertyConstant, PropertyInfo> m_mapProperties;
+    private final Map<PropertyConstant, PropertyInfo> m_mapProps;
 
     /**
      * The properties of the type, indexed by nested identity. Properties nested immediately under
@@ -1047,9 +1200,8 @@ public class TypeInfo
      * class are identified by a NestedIdentity object. In either case, the index can be obtained by
      * calling {@link PropertyConstant#getNestedIdentity()}.
      */
-    private final Map<Object, PropertyInfo> m_mapVirtProperties;
+    private final Map<Object, PropertyInfo> m_mapVirtProps;
 
-    // TODO can this be removed?
     /**
      * The properties of the type, indexed by name. This will not include nested properties, such
      * as those nested within a property or method. Lazily initialized
@@ -1073,7 +1225,6 @@ public class TypeInfo
      */
     private final Map<Object, MethodInfo> m_mapVirtMethods;
 
-    // TODO can this be removed?
     /**
      * The methods of the type, indexed by signature. This will not include nested methods, such
      * as those nested within a property or method. Lazily initialized

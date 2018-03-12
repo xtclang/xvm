@@ -6,8 +6,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -56,15 +56,29 @@ public class MethodInfo
 
         // create a MethodConstant for the cap that will sit next to the method body that caused the
         // narrowing to occur
-        MethodConstant idThat = that.getTail().getIdentity();
-        MethodConstant idCap  = idThat.getConstantPool().ensureMethodConstant(
-                                idThat.getParentConstant(), this.getSignature());
+        SignatureConstant sigThis = this.getSignature();
+        SignatureConstant sigThat = that.getSignature();
+        MethodConstant    idThat  = null;
+        for (MethodBody bodyThat : that.getChain())
+            {
+            if (bodyThat.getSignature().equals(sigThat))
+                {
+                idThat = bodyThat.getIdentity();
+                }
+            else
+                {
+                assert idThat != null;
+                break;
+                }
+            }
+
+        MethodConstant idCap = pool().ensureMethodConstant(idThat.getParentConstant(), sigThis);
 
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
         MethodBody[] aNew = new MethodBody[cOld+1];
 
-        aNew[0] = new MethodBody(idCap, Implementation.Capped, idThat);
+        aNew[0] = new MethodBody(idCap, sigThis, Implementation.Capped, sigThat);
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
         return new MethodInfo(aNew);
@@ -158,11 +172,7 @@ public class MethodInfo
                 }
             else if (list == null)
                 {
-                list = new ArrayList<>();
-                for (int iCopy = 0; iCopy < i; ++iCopy)
-                    {
-                    list.add(aBody[iCopy]);
-                    }
+                list = startList(aBody, i);
                 }
             }
 
@@ -178,7 +188,7 @@ public class MethodInfo
 
     /**
      * @return the identity of the call chain, which is the MethodConstant that identifies the first
-     *         body (which may <em>or may not</em> refer to an actual MethodStructure)
+     *         body (which may <i>or may not</i> refer to an actual MethodStructure)
      */
     public MethodConstant getIdentity()
         {
@@ -186,13 +196,13 @@ public class MethodInfo
         }
 
     /**
-     * @return the method signature represented by the call chain; all method bodies in the call
-     *         chain have this method signature, or a signature which was narrowed by this
-     *         MethodInfo
+     * @return the <i>resolved</i> method signature represented by the call chain; all method bodies
+     *         in the call chain have this method signature, or a signature which was narrowed by
+     *         this MethodInfo (and so on)
      */
     public SignatureConstant getSignature()
         {
-        return getIdentity().getSignature();
+        return getHead().getSignature();
         }
 
     /**
@@ -266,10 +276,11 @@ public class MethodInfo
             }
 
         IdentityConstant id = getIdentity();
-        for (int i = 0, c = id.getNestedDepth(); i < c; ++i)
+        for (int i = 1, c = id.getNestedDepth(); i < c; ++i)
             {
             id = id.getParentConstant();
-            if (!(id instanceof PropertyConstant) || id.getComponent().getAccess() == Access.PRIVATE)
+            if ((id instanceof PropertyConstant && id.getComponent().getAccess() == Access.PRIVATE)
+                    || id instanceof MethodConstant)
                 {
                 return false;
                 }
@@ -336,7 +347,7 @@ public class MethodInfo
             if (aBody[0].getImplementation() == Implementation.Capped)
                 {
                 // note: turtles
-                return m_aBodyResolved = type.getOptimizedMethodChain(aBody[0].getNarrowingNestedIdentity());
+                return type.getOptimizedMethodChain(aBody[0].getNarrowingNestedIdentity());
                 }
 
             // see if the chain will work as-is
@@ -465,7 +476,7 @@ public class MethodInfo
      */
     public boolean isOp()
         {
-        return getHead().findAnnotation(getIdentity().getConstantPool().clzOp()) != null;
+        return getHead().findAnnotation(pool().clzOp()) != null;
         }
 
     /**
@@ -474,6 +485,14 @@ public class MethodInfo
     public boolean isOp(String sName, String sOp, int cParams)
         {
         return getHead().isOp(sName, sOp, cParams);
+        }
+
+    /**
+     * @return the ConstantPool
+     */
+    ConstantPool pool()
+        {
+        return getHead().pool();
         }
 
 
@@ -499,8 +518,7 @@ public class MethodInfo
             }
 
         MethodInfo that = (MethodInfo) obj;
-        return this.getSignature().equals(that.getSignature())
-                && Arrays.equals(this.m_aBody, that.m_aBody);
+        return Arrays.equals(this.m_aBody, that.m_aBody);
         }
 
     @Override
@@ -527,7 +545,7 @@ public class MethodInfo
     /**
      * The method chain.
      */
-    private MethodBody[] m_aBody;
+    private final MethodBody[] m_aBody;
 
     /**
      * The "optimized" (resolved) method chain.

@@ -202,6 +202,11 @@ public abstract class IdentityConstant
      */
     public static boolean isNestedSibling(Object nid1, Object nid2)
         {
+        if (nid1 == null || nid2 == null)
+            {
+            return nid1 == nid2;
+            }
+
         if (nid1 instanceof NestedIdentity)
             {
             if (nid2 instanceof NestedIdentity)

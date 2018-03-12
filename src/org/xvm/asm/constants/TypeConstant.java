@@ -2191,7 +2191,7 @@ public abstract class TypeConstant
             MethodConstant    id     = method.getIdentityConstant();
             SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
 // TODO implementation types etc. LOTS OF WORK HERE?
-            MethodBody body = new MethodBody(id,
+            MethodBody body = new MethodBody(id, sig,
                     method.isAbstract() ? Implementation.Declared :
                     fInterface          ? Implementation.Default  :
                     method.isNative()   ? Implementation.Native   :
@@ -2645,21 +2645,21 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
-        // TODO methods? check for trailing override?
-
         Component.Format formatInfo = struct.getFormat();
         for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
             {
             PropertyInfo propinfo = entry.getValue();
-            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
-                    && propinfo.isOverride())
-                {
-                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-                        getValueString(), propinfo.getName());
 
-                // erase the "override" flag, now that we've reported it
-                entry.setValue(propinfo = propinfo.suppressOverride());
-                }
+            // TODO this check should now move up to the collect..() method
+//            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
+//                    && propinfo.isOverride())
+//                {
+//                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+//                        getValueString(), propinfo.getName());
+//
+//                // erase the "override" flag, now that we've reported it
+//                entry.setValue(propinfo = propinfo.suppressOverride());
+//                }
 
             // for properties on a non-abstract class that come from an interface, decide which ones
             // need a field

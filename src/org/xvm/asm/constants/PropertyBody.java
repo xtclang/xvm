@@ -297,6 +297,44 @@ public class PropertyBody
         }
 
     /**
+     * @return true iff the property has a getter method
+     */
+    public boolean hasGetter()
+        {
+        // TODO
+        return false;
+        }
+
+    /**
+     * @return true iff the property has a setter method
+     */
+    public boolean hasSetter()
+        {
+        // TODO
+        return false;
+        }
+
+    /**
+     * @return true iff the property has a getter method that blocks the invocation of its super
+     *         method
+     */
+    public boolean isGetterBlockingSuper()
+        {
+        // TODO
+        return false;
+        }
+
+    /**
+     * @return true iff the property has a setter method that blocks the invocation of its super
+     *         method
+     */
+    public boolean isSetterBlockingSuper()
+        {
+        // TODO
+        return false;
+        }
+
+    /**
      * @return true iff the property body is abstract, which means that it comes from an interface
      *         or "into" clause, or is annotated with "@Abstract"
      */
