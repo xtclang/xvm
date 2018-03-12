@@ -1750,7 +1750,6 @@ public abstract class TypeConstant
         {
         boolean fIncomplete = false;
 
-        ConstantPool pool = getConstantPool();
         for (int i = listProcess.size()-1; i >= 0; --i)
             {
             Contribution contrib = listProcess.get(i);
@@ -2736,7 +2735,7 @@ public abstract class TypeConstant
                     if (fFound)
                         {
                         // TODO
-                        todoLogError("duplicate?!?! type param prop: " + sParam);
+                        todoLogError("duplicate?!?! type param prop: " + sParam + " on " + this.getValueString());
                         }
                     else if (prop.isTypeParam() && prop.getType().equals(
                             pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
