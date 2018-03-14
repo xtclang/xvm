@@ -198,14 +198,7 @@ public abstract class ClassTemplate
         {
         assert typeActual.getAccess() == Access.PUBLIC;
 
-        int cActual = typeActual.getParamTypes().size();
-        int cFormal = f_struct.isParameterized() ? f_struct.getTypeParams().size() : 0;
-
-        TypeConstant typeInception = cActual == cFormal
-            ? typeActual
-            : typeActual.normalizeParameters();
-
-        assert typeActual.getParamTypes().size() == cFormal || typeActual.isTuple();
+        TypeConstant typeInception = typeActual.normalizeParameters();
 
         OpSupport support = typeInception.isAnnotated() ?
             typeInception.getOpSupport(f_templates) : this;

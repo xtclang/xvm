@@ -183,24 +183,6 @@ public class TerminalTypeConstant
         return false;
         }
 
-    /**
-     * TODO
-     *
-     * @param sName
-     *
-     * @return
-     */
-    public boolean isFormalType(String sName)
-        {
-        if (isSingleDefiningConstant())
-            {
-            Constant constant = getDefiningConstant();
-            return constant instanceof PropertyConstant && ((PropertyConstant) constant).getName().equals(sName);
-            }
-
-        return false;
-        }
-
     @Override
     public boolean isSingleDefiningConstant()
         {
@@ -267,8 +249,54 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant normalizeParameters()
+    public TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
         {
+        Constant         constant = getDefiningConstant();
+        IdentityConstant idClz;
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+                idClz = (IdentityConstant) constant;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).normalizeParametersInternal(listParams);
+
+            case Property:
+            case Register:
+                return this;
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+
+        // keep tuples as-is
+        if (!isTuple())
+            {
+            // if the type is parameterized, but it is missing some of its parameters, then default
+            // those type parameters to their constraint types
+            ClassStructure struct = (ClassStructure) idClz.getComponent();
+            Map<StringConstant, TypeConstant> mapClassParams = struct.getTypeParams();
+            if (mapClassParams.size() > listParams.size())
+                {
+                // build a "merged" list of type parameters
+                List<TypeConstant> listTypes = struct.normalizeParameters(listParams);
+                if (listTypes != listParams)
+                    {
+                    TypeConstant[] aTypes = listTypes.toArray(new TypeConstant[listTypes.size()]);
+                    return getConstantPool().ensureParameterizedTypeConstant(this, aTypes);
+                    }
+                }
+            }
+
         return this;
         }
 

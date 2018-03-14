@@ -31,10 +31,7 @@ public class ParamInfo
 
         m_sName          = sName;
         m_typeConstraint = typeConstraint;
-        // TODO think about this some more
-        m_typeActual     = typeActual instanceof TerminalTypeConstant
-                           && ((TerminalTypeConstant) typeActual).isFormalType(sName)
-                ? null : typeActual;
+        m_typeActual     = typeActual;
         }
 
     /**

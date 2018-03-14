@@ -224,12 +224,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant normalizeParameters()
+    public TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.normalizeParameters();
-        TypeConstant constResolved2 = constOriginal2.normalizeParameters();
+        TypeConstant constResolved1 = constOriginal1.normalizeParametersInternal(listParams);
+        TypeConstant constResolved2 = constOriginal2.normalizeParametersInternal(listParams);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this

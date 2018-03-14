@@ -487,8 +487,18 @@ public abstract class TypeConstant
      */
     public TypeConstant normalizeParameters()
         {
+        return normalizeParametersInternal(Collections.EMPTY_LIST);
+        }
+
+    /**
+     * @return this same type, but with the number of parameters equal to the number of
+     *         formal parameters for the parameterized type
+     * @param listParams
+     */
+    protected TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
+        {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.normalizeParameters();
+        TypeConstant constResolved = constOriginal.normalizeParametersInternal(listParams);
 
         return constResolved == constOriginal
                 ? this
@@ -827,8 +837,10 @@ public abstract class TypeConstant
 
             case PUBLIC:
                 assert !isAccessSpecified();
+                // note: this uses ensureTypeInfo() instead of ensureTypeInfoInternal(), which may
+                //       need to be carefully REVIEW'd, in the off chance of circular dependencies
                 return getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
-                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC); // TODO recursive, so should this be some sort of "ensureInternal()"?
+                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC);
             }
 
         // this implementation only deals with modifying (not including immutable) and terminal type
@@ -845,6 +857,14 @@ public abstract class TypeConstant
         catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
+            }
+
+        // it's possible that not all of the parameters have been specified, and while this type
+        // is not equal to the normalized type, the TypeInfo for the two will be identical
+        // TODO except for ParamInfo.isActualTypeSpecified() - determine if we still need that
+        if (struct.getTypeParams().size() > getParamsCount() && !isTuple())
+            {
+            return normalizeParameters().ensureTypeInfo(errs);
             }
 
         // we're going to build a map from name to param info, including whatever parameters are
@@ -1422,19 +1442,19 @@ public abstract class TypeConstant
             // only process annotations
             Contribution contrib  = listContribs.get(iContrib);
 
-            // TODO clean up
-            TypeConstant typeThis = isParamsSpecified() ? this : struct.getFormalType();
-            TypeConstant typeTemp = contrib.getTypeConstant();
+            // TODO GG clean up (should this be in a helper?)
+            TypeConstant typeContribRaw = contrib.getTypeConstant();
             TypeConstant typeContrib;
-            if (typeTemp.isParamsSpecified())
+            if (typeContribRaw.isParamsSpecified())
                 {
-                List<TypeConstant> listIn  = typeThis.getParamTypes();
+                List<TypeConstant> listIn  = this.getParamTypes();
                 List<TypeConstant> listOut = contrib.transformActualTypes(struct, listIn);
-                typeContrib = pool.ensureParameterizedTypeConstant(typeTemp.getUnderlyingType(), listOut.toArray(new TypeConstant[listOut.size()]));
+                // TODO GG should this somehow use TC.cloneSingle instead of CP.ensure?
+                typeContrib = pool.ensureParameterizedTypeConstant(typeContribRaw.getUnderlyingType(), listOut.toArray(new TypeConstant[listOut.size()]));
                 }
             else
                 {
-                typeContrib = typeTemp;
+                typeContrib = typeContribRaw;
                 }
 
             switch (contrib.getComposition())
