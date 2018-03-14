@@ -117,11 +117,6 @@ public class ParamInfo
         public TypeConstant resolveGenericType(PropertyConstant constProperty)
             {
             ParamInfo info = parameters.get(constProperty.getName());
-// TODO in the case of "null", either the name is naturally unknown (so return the property as the type constant), or this is an error -- which is it?
-// TODO need to figure out (in actual usage) when this can happen, and whether any of those times indicate an error!
-//                        m_errs.log(Severity.ERROR, VE_FORMAL_NAME_UNKNOWN,
-//                                new Object[] {sName, type.getValueString()}, type);
-//                        return type.getConstantPool().typeObject();
             return info != null && info.isActualTypeSpecified()
                     ? info.getActualType()
                     : constProperty.asTypeConstant();

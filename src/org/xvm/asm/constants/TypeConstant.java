@@ -861,7 +861,6 @@ public abstract class TypeConstant
 
         // it's possible that not all of the parameters have been specified, and while this type
         // is not equal to the normalized type, the TypeInfo for the two will be identical
-        // TODO except for ParamInfo.isActualTypeSpecified() - determine if we still need that
         if (struct.getTypeParams().size() > getParamsCount() && !isTuple())
             {
             return normalizeParameters().ensureTypeInfo(errs);
@@ -914,10 +913,7 @@ public abstract class TypeConstant
                     || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract);
             }
 
-        // make final determinations as to what fields are required, etc.
-        finalizeMemberInfo(constId, struct, fAbstract, mapProps, mapMethods, errs); // TODO this has to change
-
-        // validate the type parameters against the properties for the same
+        // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapProps, errs);
 
         return new TypeInfo(this, struct, 0, fAbstract, mapTypeParams, aannoClass,
@@ -1767,6 +1763,8 @@ public abstract class TypeConstant
      * @param listmapDefaultChain  potential default call chain
      * @param mapProps             properties of the class
      * @param mapMethods           methods of the class
+     * @param mapVirtProps         the virtual properties of the type, keyed by nested id
+     * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
      * @param errs                 the error list to log any errors to
      */
     private boolean collectMemberInfo(
@@ -1914,7 +1912,56 @@ public abstract class TypeConstant
                     mapProps.remove(propBase.getIdentity());
                     assert nidContrib.equals(propBase.getIdentity().getNestedIdentity());
                     }
+/* TODO
+            // for properties on a non-abstract class that come from an interface, decide which ones
+            // need a field
+// TODO this is wrong ... it should be "if not an interface and does not have a field and is not explicitly abstract property ..."
+            if (!fAbstract && propinfo.getHead().getImplementation() == Implementation.Declared)
+                {
+                // determine whether or not the property needs a field
+                boolean fField;
+                if (propinfo.isInjected() || propinfo.isOverride()) // REVIEW @Inject into Ref, needs to be overrideable
+                    {
+                    // injection does not use a field, and override can defer the choice
+                    fField = false;
+                    }
+                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
+                    {
+                    // no logic implies that there is an underlying field
+                    fField = true;
+                    }
+                else
+                    {
+                    // determine if get() blocks the super call to the field
+                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());   // REVIEW
+                    fField = true;
+                    if (methodinfo != null)
+                        {
+                        for (MethodBody body : methodinfo.getChain())
+                            {
+                            if (body.getImplementation() == Implementation.Field)
+                                {
+                                break;
+                                }
 
+                            if (body.blocksSuper())
+                                {
+                                fField = false;
+                                break;
+                                }
+                            }
+                        }
+                    }
+
+                // erase the "abstract" flag, and store the result of the field-is-required
+                // calculation
+                if (fField)
+                    {
+                    entry.setValue(propinfo = propinfo.requireField());
+                    }
+                }
+
+ */
                 // the property is stored both by its absolute (fully qualified) ID and its nested
                 // ID, which is useful for example when trying to find it when building the actual
                 // call chains
@@ -2662,92 +2709,6 @@ public abstract class TypeConstant
                 }
             }
         return false;
-        }
-
-    /**
-     * This step is used to finalize the processing for all of the member information that has been
-     * collected. For example, some decisions are deferred until the information is all present,
-     * such as whether a field is required for a property that may or may not need one.
-     *
-     * @param constId           the identity of the class
-     * @param struct            the class structure
-     * @param fAbstract         true if the type is abstract
-     * @param mapProps          the properties of the class
-     * @param mapMethods        the methods of the class
-     * @param errs              the error list to log any errors to
-     */
-    private void finalizeMemberInfo(
-            IdentityConstant                    constId,
-            ClassStructure                      struct,
-            boolean                             fAbstract,
-            Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<MethodConstant  , MethodInfo  > mapMethods,
-            ErrorListener                       errs)
-        {
-        Component.Format formatInfo = struct.getFormat();
-        for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
-            {
-            PropertyInfo propinfo = entry.getValue();
-
-            // TODO this check should now move up to the collect..() method
-//            if (formatInfo != Component.Format.INTERFACE && formatInfo != Component.Format.MIXIN
-//                    && propinfo.isOverride())
-//                {
-//                log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-//                        getValueString(), propinfo.getName());
-//
-//                // erase the "override" flag, now that we've reported it
-//                entry.setValue(propinfo = propinfo.suppressOverride());
-//                }
-
-            // for properties on a non-abstract class that come from an interface, decide which ones
-            // need a field
-// TODO this is wrong ... it should be "if not an interface and does not have a field and is not explicitly abstract property ..."
-            if (!fAbstract && propinfo.getFirstBody().getImplementation() == Implementation.Declared)
-                {
-                // determine whether or not the property needs a field
-                boolean fField;
-                if (propinfo.isInjected() || propinfo.isOverride()) // REVIEW @Inject into Ref, needs to be overrideable
-                    {
-                    // injection does not use a field, and override can defer the choice
-                    fField = false;
-                    }
-                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
-                    {
-                    // no logic implies that there is an underlying field
-                    fField = true;
-                    }
-                else
-                    {
-                    // determine if get() blocks the super call to the field
-                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());   // REVIEW
-                    fField = true;
-                    if (methodinfo != null)
-                        {
-                        for (MethodBody body : methodinfo.getChain())
-                            {
-                            if (body.getImplementation() == Implementation.Field)
-                                {
-                                break;
-                                }
-
-                            if (body.blocksSuper())
-                                {
-                                fField = false;
-                                break;
-                                }
-                            }
-                        }
-                    }
-
-                // erase the "abstract" flag, and store the result of the field-is-required
-                // calculation
-                if (fField)
-                    {
-                    entry.setValue(propinfo = propinfo.requireField());
-                    }
-                }
-            }
         }
 
     /**

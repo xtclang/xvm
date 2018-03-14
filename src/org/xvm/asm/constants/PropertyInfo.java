@@ -25,21 +25,24 @@ import org.xvm.util.Severity;
 public class PropertyInfo
         implements Constants
     {
+    /**
+     * Create a PropertyInfo.
+     *
+     * @param body  a PropertyBody
+     */
     public PropertyInfo(PropertyBody body)
         {
-        this(new PropertyBody[] {body}, false, false, false);
+        this(new PropertyBody[] {body}, false, false);
         }
 
     protected PropertyInfo(
             PropertyBody[] aBody,
             boolean        fRequireField,
-            boolean        fSuppressVar,
-            boolean        fSuppressOverride)
+            boolean        fSuppressVar)
         {
         m_aBody             = aBody;
         m_fRequireField     = fRequireField;
         m_fSuppressVar      = fSuppressVar;
-        m_fSuppressOverride = fSuppressOverride;
         }
 
     /**
@@ -53,18 +56,7 @@ public class PropertyInfo
      */
     public PropertyInfo layerOn(PropertyInfo that, ErrorListener errs)
         {
-
-        // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
-        // TODO if types don't match then there is an error
-        // TODO if there is a super but the contrib didn't specify @Override then it is an error
-        // TODO check for annotation redudancy / overlap
-        // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
-        // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
-        // - it is possible that an annotation has a potential call chain that includes layers that are
-        //   already in the property call chain; they are simply discarded (similar to retain-only)
-
-        assert that != null;
-        assert errs != null;
+        assert that != null && errs != null;
 
         PropertyConstant constId = getIdentity();
         assert constId.getName().equals(that.getName());
@@ -112,6 +104,7 @@ public class PropertyInfo
                     constId.getValueString(),
                     this.getType().getValueString(),
                     that.getType().getValueString());
+            return this;
             }
 
         // cannot combine struct with anything other than struct
@@ -126,7 +119,20 @@ public class PropertyInfo
             throw new IllegalStateException("cannot combine private with anything");
             }
 
+        boolean fRequireField = this.m_fRequireField | that.m_fRequireField;
+        boolean fSuppressVar  = this.m_fSuppressVar  | that.m_fSuppressVar;
+
         // a non-abstract RO property combined with a RW property ... TODO
+        // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
+        // TODO if types don't match then there is an error
+        // TODO if there is a super but the contrib didn't specify @Override then it is an error
+        // TODO check for annotation redudancy / overlap
+        // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
+        // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
+        // - it is possible that an annotation has a potential call chain that includes layers that are
+        //   already in the property call chain; they are simply discarded (similar to retain-only)
+
+        // TODO maybe combine the properties by putting "that" into the end of the array first, then working backwards (so that we can eliminate duplicates)
 
         // combine the two arrays of PropertyBody objects into a new PropertyInfo
         PropertyBody[] aBodyThis  = this.m_aBody;
@@ -134,68 +140,10 @@ public class PropertyInfo
         int            cThis      = aBodyThis.length;
         int            cThat      = aBodyThat.length;
         PropertyBody[] aBodyNew   = new PropertyBody[cThis + cThat];
-        int            ofThis     = 0;
-        int            ofThat     = 0;
-        int            ofNew      = 0;
+        System.arraycopy(aBodyThis, 0, aBodyNew, 0, cThis);
+        System.arraycopy(aBodyThat, 0, aBodyNew, cThis, cThat);
 
-        CopyConcrete: while (ofThis < cThis)
-            {
-            PropertyBody body = aBodyThis[ofThis];
-            switch (body.getImplementation())
-                {
-                case Delegating:
-                case Native:
-                case Explicit:
-                    aBodyNew[ofNew++] = body;
-                    ++ofThis;
-                    break;
-
-                default:
-                    break CopyConcrete;
-                }
-            }
-
-        CopyConcrete: while (ofThat < cThat)
-            {
-            PropertyBody body = aBodyThat[ofThat];
-            switch (body.getImplementation())
-                {
-                case Delegating:
-                case Native:
-                case Explicit:
-                    aBodyNew[ofNew++] = body;
-                    ++ofThat;
-                    break;
-
-                default:
-                    break CopyConcrete;
-                }
-            }
-
-        while (ofThis < cThis && aBodyThis[ofThis].getImplementation() == Implementation.Declared)
-            {
-            aBodyNew[ofNew++] = aBodyThis[ofThis++];
-            }
-
-        while (ofThat < cThat && aBodyThat[ofThat].getImplementation() == Implementation.Declared)
-            {
-            aBodyNew[ofNew++] = aBodyThat[ofThat++];
-            }
-
-        while (ofThis < cThis && aBodyThis[ofThis].getImplementation() == Implementation.Implicit)
-            {
-            aBodyNew[ofNew++] = aBodyThis[ofThis++];
-            }
-
-        while (ofThat < cThat && aBodyThat[ofThat].getImplementation() == Implementation.Implicit)
-            {
-            aBodyNew[ofNew++] = aBodyThat[ofThat++];
-            }
-
-        return new PropertyInfo(aBodyNew,
-                this.m_fRequireField | that.m_fRequireField,
-                this.m_fSuppressVar | that.m_fSuppressVar,
-                that.m_fSuppressOverride);
+        return new PropertyInfo(aBodyNew, fRequireField, fSuppressVar);
         }
 
     /**
@@ -267,7 +215,7 @@ public class PropertyInfo
         return list.isEmpty()
                 ? null
                 : new PropertyInfo(list.toArray(new PropertyBody[list.size()]),
-                        m_fRequireField, m_fSuppressVar, m_fSuppressOverride);
+                        m_fRequireField, m_fSuppressVar);
         }
 
 
@@ -294,7 +242,7 @@ public class PropertyInfo
         if (accessVar != null && isVar() && accessVar.isLessAccessibleThan(access))
             {
             // create the Ref-only form of this property
-            return new PropertyInfo(m_aBody, m_fRequireField, true, m_fSuppressOverride);
+            return new PropertyInfo(m_aBody, m_fRequireField, true);
             }
 
         return this;
@@ -307,17 +255,7 @@ public class PropertyInfo
         {
         return hasField()
                 ? this
-                : new PropertyInfo(m_aBody, true, m_fSuppressVar, m_fSuppressOverride);
-        }
-
-    /**
-     * @return this PropertyInfo, but with the trailing "@Override" suppressed
-     */
-    public PropertyInfo suppressOverride()
-        {
-        return isOverride()
-                ? new PropertyInfo(m_aBody, m_fRequireField, m_fSuppressVar, true)
-                : this;
+                : new PropertyInfo(m_aBody, true, m_fSuppressVar);
         }
 
     /**
@@ -333,7 +271,7 @@ public class PropertyInfo
      */
     public PropertyConstant getIdentity()
         {
-        return getFirstBody().getIdentity();
+        return getHead().getIdentity();
         }
 
     /**
@@ -348,9 +286,18 @@ public class PropertyInfo
      * @return the first PropertyBody of this PropertyInfo; in a loose sense, the meaning of the
      *         term "first" corresponds to the order of the call chain
      */
-    public PropertyBody getFirstBody()
+    public PropertyBody getHead()
         {
         return m_aBody[0];
+        }
+
+    /**
+     * @return the last PropertyBody of this PropertyInfo; in a loose sense, the meaning of the
+     *         term "last" corresponds to the order of the call chain
+     */
+    public PropertyBody getTail()
+        {
+        return m_aBody[m_aBody.length-1];
         }
 
     /**
@@ -383,7 +330,7 @@ public class PropertyInfo
      */
     public String getName()
         {
-        return getFirstBody().getName();
+        return getHead().getName();
         }
 
     /**
@@ -391,7 +338,7 @@ public class PropertyInfo
      */
     public TypeConstant getType()
         {
-        return getFirstBody().getType();
+        return getHead().getType();
         }
 
     /**
@@ -399,7 +346,7 @@ public class PropertyInfo
      */
     public boolean isConstant()
         {
-        return getFirstBody().isConstant();
+        return getHead().isConstant();
         }
 
     /**
@@ -470,7 +417,7 @@ public class PropertyInfo
      */
     public boolean isTypeParam()
         {
-        return getFirstBody().isTypeParam();
+        return getHead().isTypeParam();
         }
 
     /**
@@ -478,7 +425,7 @@ public class PropertyInfo
      */
     public ParamInfo getParamInfo()
         {
-        return getFirstBody().getTypeParamInfo();
+        return getHead().getTypeParamInfo();
         }
 
     /**
@@ -519,7 +466,7 @@ public class PropertyInfo
      */
     public Access getRefAccess()
         {
-        return getFirstBody().getRefAccess();
+        return getHead().getRefAccess();
         }
 
     /**
@@ -527,7 +474,7 @@ public class PropertyInfo
      */
     public Access getVarAccess()
         {
-        return getFirstBody().getVarAccess();
+        return getHead().getVarAccess();
         }
 
     public boolean isSetterUnreachable()
@@ -561,7 +508,7 @@ public class PropertyInfo
      */
     public Annotation[] getPropertyAnnotations()
         {
-        return getFirstBody().getStructure().getPropertyAnnotations();
+        return getHead().getStructure().getPropertyAnnotations();
         }
 
     /**
@@ -686,7 +633,7 @@ public class PropertyInfo
      */
     public boolean isAbstract()
         {
-        return getFirstBody().isAbstract();
+        return getHead().isAbstract();
         }
 
     /**
@@ -694,7 +641,7 @@ public class PropertyInfo
      */
     public boolean isExplicitlyAbstract()
         {
-        return getFirstBody().isExplicitAbstract();
+        return getHead().isExplicitAbstract();
         }
 
     /**
@@ -702,23 +649,7 @@ public class PropertyInfo
      */
     public boolean isOverride()
         {
-        if (m_fSuppressOverride)
-            {
-            return false;
-            }
-
-        // get the last non-implicit body
-        PropertyBody[] aBody = m_aBody;
-        for (int i = aBody.length - 1; i >= 0; --i)
-            {
-            PropertyBody body = aBody[i];
-            if (body.getImplementation() != Implementation.Implicit)
-                {
-                return body.isExplicitOverride();
-                }
-            }
-
-        return false;
+        return getTail().isExplicitOverride();
         }
 
     /**
@@ -726,7 +657,7 @@ public class PropertyInfo
      */
     public boolean isInjected()
         {
-        return getFirstBody().isInjected();   // REVIEW inject is a Ref annotation
+        return getHead().isInjected();   // REVIEW inject is a Ref annotation
         }
 
 
@@ -735,7 +666,7 @@ public class PropertyInfo
     @Override
     public int hashCode()
         {
-        return getFirstBody().hashCode();
+        return getHead().hashCode();
         }
 
     @Override
@@ -752,8 +683,8 @@ public class PropertyInfo
             }
 
         PropertyInfo that = (PropertyInfo) obj;
-        return this.m_fRequireField     == that.m_fRequireField
-            && this.m_fSuppressOverride == that.m_fSuppressOverride
+        return this.m_fRequireField == that.m_fRequireField
+            && this.m_fSuppressVar  == that.m_fSuppressVar
             && Handy.equals(this.m_aBody, that.m_aBody);
         }
 
@@ -761,7 +692,19 @@ public class PropertyInfo
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(getType().getValueString() + ' ' + getName());
+        sb.append(getType().getValueString())
+          .append(' ')
+          .append(getName());
+
+        if (m_fRequireField)
+            {
+            sb.append(", require-field");
+            }
+
+        if (m_fSuppressVar)
+            {
+            sb.append(", suppress-var");
+            }
 
         int i = 0;
         for (PropertyBody body : m_aBody)
@@ -793,9 +736,4 @@ public class PropertyInfo
      * treated as a Ref.
      */
     private final boolean m_fSuppressVar;
-
-    /**
-     * True iff this Property has been marked as not having an override.
-     */
-    private final boolean m_fSuppressOverride;
     }
