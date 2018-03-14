@@ -117,13 +117,13 @@ public class PropertyInfo
         // cannot combine struct with anything other than struct
         if (this.getRefAccess() == Access.STRUCT ^ that.getRefAccess() == Access.STRUCT)
             {
-            constId.todoLogError("cannot combine struct with anything other than struct");
+            throw new IllegalStateException("cannot combine struct with anything other than struct");
             }
 
         // cannot combine private with anything
         if (this.getRefAccess() == Access.PRIVATE || that.getRefAccess() == Access.PRIVATE)
             {
-            constId.todoLogError("cannot combine private with anything");
+            throw new IllegalStateException("cannot combine private with anything");
             }
 
         // a non-abstract RO property combined with a RW property ... TODO

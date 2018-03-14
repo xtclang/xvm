@@ -1058,38 +1058,35 @@ public abstract class TypeConstant
                     }
                 }
 
-            if (cClassParams > 0)
+            for (int i = 0; i < cClassParams; ++i)
                 {
-                for (int i = 0; i < cClassParams; ++i)
+                Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
+                String                              sName           = entryClassParam.getKey().getValue();
+                TypeConstant                        typeConstraint  = entryClassParam.getValue();
+                TypeConstant                        typeActual      = null;
+
+                // resolve any generics in the type constraint
+                typeConstraint = typeConstraint.resolveGenerics(resolver);
+
+                // validate the actual type, if there is one
+                if (i < cTypeParams)
                     {
-                    Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
-                    String                              sName           = entryClassParam.getKey().getValue();
-                    TypeConstant                        typeConstraint  = entryClassParam.getValue();
-                    TypeConstant                        typeActual      = null;
+                    typeActual = atypeParams[i];
+                    assert typeActual != null;
 
-                    // resolve any generics in the type constraint
-                    typeConstraint = typeConstraint.resolveGenerics(resolver);
+                    // the actual type of the type parameter may refer to other type parameters
+                    typeActual = typeActual.resolveGenerics(resolver);
 
-                    // validate the actual type, if there is one
-                    if (i < cTypeParams)
+                    if (!typeActual.isA(typeConstraint))
                         {
-                        typeActual = atypeParams[i];
-                        assert typeActual != null;
-
-                        // the actual type of the type parameter may refer to other type parameters
-                        typeActual = typeActual.resolveGenerics(resolver);
-
-                        if (!typeActual.isA(typeConstraint))
-                            {
-                            log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                                    constId.getPathString(), sName,
-                                    typeConstraint.getValueString(),
-                                    typeActual.getValueString(), this.getValueString());
-                            }
+                        log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                                constId.getPathString(), sName,
+                                typeConstraint.getValueString(),
+                                typeActual.getValueString(), this.getValueString());
                         }
-
-                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
                     }
+
+                mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
                 }
             }
 
@@ -1450,7 +1447,10 @@ public abstract class TypeConstant
                 List<TypeConstant> listIn  = this.getParamTypes();
                 List<TypeConstant> listOut = contrib.transformActualTypes(struct, listIn);
                 // TODO GG should this somehow use TC.cloneSingle instead of CP.ensure?
-                typeContrib = pool.ensureParameterizedTypeConstant(typeContribRaw.getUnderlyingType(), listOut.toArray(new TypeConstant[listOut.size()]));
+                typeContrib = listOut == null
+                        ? null
+                        : pool.ensureParameterizedTypeConstant(typeContribRaw.getUnderlyingType(),
+                                listOut.toArray(new TypeConstant[listOut.size()]));
                 }
             else
                 {
@@ -1904,7 +1904,8 @@ public abstract class TypeConstant
                         {
                         // there's supposed to be a property by this same identity already existing,
                         // so this is an error
-                        todoLogError("@Override prop " + idContrib.getPathString() + " could not find its base");
+                        log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+                                contrib.getTypeConstant().getValueString(), propContrib.getName());
                         }
                     }
                 else
@@ -1917,7 +1918,7 @@ public abstract class TypeConstant
                 // the property is stored both by its absolute (fully qualified) ID and its nested
                 // ID, which is useful for example when trying to find it when building the actual
                 // call chains
-                mapProps.put(idContrib, propResult);
+                mapProps.put(propResult.getIdentity(), propResult);
                 mapVirtProps.put(nidContrib, propResult);   // replaces the previous "base", if any
                 }
 
@@ -2057,9 +2058,10 @@ public abstract class TypeConstant
                         {
                         for (Object nidNarrowing : setNarrowing)
                             {
-                            todoLogError("more than one method, including " + nidNarrowing
-                                    + ", attempted to narrow " + nidNarrowed
-                                    + ", but the narrowed method itself was not overridden");
+                            log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
+                                    contrib.getTypeConstant().getValueString(),
+                                    mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
+                                    mapVirtMods.get(nidNarrowing).getIdentity().getSignature().getValueString());
                             }
                         }
                     }
@@ -2145,7 +2147,8 @@ public abstract class TypeConstant
             {
             if (nidBest == null)
                 {
-                todoLogError("the chain doesn't have a \"super\" for @Override method " + nidSub);
+                log(errs, Severity.ERROR, VE_SUPER_MISSING,
+                        sigSub.getValueString(), getValueString());
                 }
 
             return nidBest;
@@ -2290,8 +2293,9 @@ public abstract class TypeConstant
             Constant   constMixin = annotation.getAnnotationClass();
             if (scanForDups(aPropAnno, i, constMixin))
                 {
-                todoLogError("duplicate annotation " + constMixin.getValueString()
-                        + " on " + constId.getValueString());
+                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                        prop.getIdentityConstant().getValueString(),
+                        constMixin.getValueString());
                 }
 
             fHasRO       |= constMixin.equals(pool.clzRO());
@@ -2337,8 +2341,9 @@ public abstract class TypeConstant
 
             if (scanForDups(aRefAnno, i, constMixin))
                 {
-                todoLogError("duplicate annotation " + constMixin.getValueString()
-                        + " on " + constId.getValueString());
+                log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
+                        prop.getIdentityConstant().getValueString(),
+                        constMixin.getValueString());
                 }
 
             fHasRefAnno   = true;
@@ -2354,7 +2359,8 @@ public abstract class TypeConstant
             case Property:
                 if (prop.getParent().isStatic())
                     {
-                    todoLogError("a constant property cannot contain properties or constants");
+                    log(errs, Severity.ERROR, VE_CONST_CODE_ILLEGAL,
+                            constParent.getValueString(), sName);
                     }
                 break;
 
@@ -2364,7 +2370,9 @@ public abstract class TypeConstant
                 fConstant = false;
                 if (prop.getParent().isStatic())
                     {
-                    todoLogError("a function cannot contain properties");
+                    // a function cannot contain properties
+                    log(errs, Severity.ERROR, VE_FUNCTION_CONTAINS_PROPERTY,
+                            constParent.getValueString(), sName);
                     }
                 break;
 
@@ -2527,17 +2535,15 @@ public abstract class TypeConstant
             if (fHasOverride)
                 {
                 // it is an error for a constant to be annotated by "@Override"
-                todoLogError("@Override illegal on constant " + sName);
-//                log(errs, Severity.ERROR, VE_CONST_OVERRIDE_ILLEGAL,
-//                        getValueString(), sName);
+                log(errs, Severity.ERROR, VE_CONST_OVERRIDE_ILLEGAL,
+                        getValueString(), sName);
                 }
 
             if (fHasRefAnno)
                 {
                 // it is an error for a constant to be annotated in a manner that affects the Ref
-                todoLogError("Ref/Var annotation illegal on constant " + sName);
-//                log(errs, Severity.ERROR, VE_CONST_ANNOTATION_ILLEGAL,
-//                        getValueString(), sName);
+                log(errs, Severity.ERROR, VE_CONST_ANNOTATION_ILLEGAL,
+                        getValueString(), sName);
                 }
 
             if (accessVar != null)
@@ -2577,9 +2583,8 @@ public abstract class TypeConstant
             if (fHasAbstract && prop.getParent().getFormat() == Component.Format.INTERFACE)
                 {
                 // it is an error for a interface property to be annotated by "@Abstract"
-                todoLogError("@Abstract interface property illegal");
-                // log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
-                //         getValueString(), sName);
+                log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
+                        getValueString(), sName);
                 }
 
             fRO      |= fHasRO;
@@ -2768,8 +2773,8 @@ public abstract class TypeConstant
                     {
                     if (fFound)
                         {
-                        // TODO
-                        todoLogError("duplicate?!?! type param prop: " + sParam + " on " + this.getValueString());
+                        throw new IllegalStateException("duplicate or colliding type-param property "
+                                + sParam + " on " + this.getValueString());
                         }
                     else if (prop.isTypeParam() && prop.getType().equals(
                             pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
