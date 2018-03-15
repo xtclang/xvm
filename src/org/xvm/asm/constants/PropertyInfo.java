@@ -124,26 +124,51 @@ public class PropertyInfo
 
         // a non-abstract RO property combined with a RW property ... TODO
         // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
+
         // TODO if types don't match then there is an error
+
         // TODO if there is a super but the contrib didn't specify @Override then it is an error
+
         // TODO check for annotation redudancy / overlap
         // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
         // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
         // - it is possible that an annotation has a potential call chain that includes layers that are
         //   already in the property call chain; they are simply discarded (similar to retain-only)
 
-        // TODO maybe combine the properties by putting "that" into the end of the array first, then working backwards (so that we can eliminate duplicates)
-
         // combine the two arrays of PropertyBody objects into a new PropertyInfo
-        PropertyBody[] aBodyThis  = this.m_aBody;
-        PropertyBody[] aBodyThat  = that.m_aBody;
-        int            cThis      = aBodyThis.length;
-        int            cThat      = aBodyThat.length;
-        PropertyBody[] aBodyNew   = new PropertyBody[cThis + cThat];
-        System.arraycopy(aBodyThis, 0, aBodyNew, 0, cThis);
-        System.arraycopy(aBodyThat, 0, aBodyNew, cThis, cThat);
+        PropertyBody[] aThis = this.m_aBody;
+        PropertyBody[] aThat = that.m_aBody;
+        int            cThis = aThis.length;
+        int            cThat = aThat.length;
 
-        return new PropertyInfo(aBodyNew, fRequireField, fSuppressVar);
+        ArrayList<PropertyBody> listMerge = null;
+        NextLayer: for (int iThat = 0; iThat < cThat; ++iThat)
+            {
+            PropertyBody bodyThat = aThat[iThat];
+            for (int iThis = 0; iThis < cThis; ++iThis)
+                {
+                if (bodyThat.equals(aThis[iThis]))
+                    {
+                    // we found a duplicate, so we can ignore it (it'll get added when we add all of
+                    // the bodies from this)
+                    continue NextLayer;
+                    }
+                }
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyThat);
+            }
+
+        int c = listMerge.size();
+        if (c >= 1)
+            {
+            // TODO could do type check here (compare type from last item added to list, if any, with first in aThis)
+            }
+
+        Collections.addAll(listMerge, aThis);
+        return new PropertyInfo(listMerge.toArray(new PropertyBody[c]), fRequireField, fSuppressVar);
         }
 
     /**
