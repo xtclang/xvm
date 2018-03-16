@@ -56,8 +56,10 @@ public class PropertyBody
         assert type      != null;
         assert     impl == Implementation.Implicit
                 || impl == Implementation.Declared
+                || impl == Implementation.Default
                 || impl == Implementation.Delegating
                 || impl == Implementation.Native
+                || impl == Implementation.SansCode
                 || impl == Implementation.Explicit;
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
         assert constInitVal == null || constInitFunc == null;
@@ -144,10 +146,13 @@ public class PropertyBody
      * <li><b>Implicit</b> - the method body represents a property known to exist for compilation
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or any
      * properties of {@code Object} in the context of an interface, for example;</li>
-     * <li><b>Declared</b> - the property body represents a declared but non-concrete property, such
-     * as a property on an interface;</li>
+     * <li><b>Declared</b> - the property body represents an interface-declared property;</li>
+     * <li><b>Default</b> - the property body represents an interface-declared property with a
+     * default implementation of {@code get()};</li> TODO
      * <li><b>Delegating</b> - the property body delegates the Ref/Var functionality;</li>
      * <li><b>Native</b> - indicates a type param or a constant;</li>
+     * <li><b>SansCode</b> - a property body that was created to represent the implicit adoption of
+     * an interface's property declaration onto a class;</li>
      * <li><b>Explicit</b> - a "normal" property body</li>
      * </ul>
      *

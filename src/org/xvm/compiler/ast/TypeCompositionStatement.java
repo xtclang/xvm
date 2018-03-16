@@ -1546,6 +1546,18 @@ public class TypeCompositionStatement
         return toSignatureString();
         }
 
+    /**
+     * Temporary: Used to build a fake module that can be used to look up information while in the
+     * debugger. (REMOVE LATER!!!)
+     *
+     * @param component  the "real" component to associate with the "fake" module
+     */
+    public void buildDumpModule(Component component)
+        {
+        introduceParentage();
+        setComponent(component);
+        }
+
 
     // ----- inner class: Zone ---------------------------------------------------------------------
 

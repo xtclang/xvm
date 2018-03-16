@@ -22,8 +22,8 @@ import java.util.Set;
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.*;
-
 import org.xvm.asm.constants.TypeInfo.Progress;
+
 import org.xvm.type.Decimal;
 
 import org.xvm.util.ListMap;
@@ -2225,7 +2225,10 @@ public class ConstantPool
         }
 
     /**
-     * TODO
+     * Makes sure that every constant that could be a type has its TypeInfo built, in order to
+     * validate all of the constants.
+     *
+     * REVIEW This seems like the wrong way to do this (or the wrong place to do it)
      *
      * @param errlist
      *
@@ -2236,9 +2239,34 @@ public class ConstantPool
         for (int i = 0, c = m_listConst.size(); i < c; ++i)
             {
             Constant constant = m_listConst.get(i);
-            if (constant instanceof TypeConstant)
+            TypeConstant type = null;
+            switch (constant.getFormat())
                 {
-                TypeInfo info = ((TypeConstant) constant).ensureTypeInfo(errlist);
+                case Package:
+                    if (((PackageStructure) ((IdentityConstant) constant).getComponent()).isModuleImport())
+                        {
+                        break;
+                        }
+                case Module:
+                case Class:
+                case Typedef:
+                    type = ((IdentityConstant) constant).asTypeConstant();
+                    break;
+
+                case TerminalType:
+                case ImmutableType:
+                case AccessType:
+                case AnnotatedType:
+                case ParameterizedType:
+                case UnionType:
+                case IntersectionType:
+                case DifferenceType:
+                    type = (TypeConstant) constant;
+                    break;
+                }
+            if (type != null)
+                {
+                TypeInfo info = type.ensureTypeInfo(errlist);
                 if (errlist.isAbortDesired())
                     {
                     return true;

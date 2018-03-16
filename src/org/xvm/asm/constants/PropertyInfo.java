@@ -237,7 +237,62 @@ public class PropertyInfo
         return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar);
         }
 
+    /**
+     * When a property on a class originates on an interface, it may not have been evaluated for a
+     * field. This method is invoked on all of the properties of a class once all of the interfaces
+     * have been applied to the class, giving the properties a chance to replace themselves with an
+     * appropriate PropertyInfo.
+     *
+     * @param errs   the error list to log any errors to
+     *
+     * @return a PropertyInfo to use in place of this
+     */
+    public PropertyInfo finishAdoption(ErrorListener errs)
+        {
+        // only modify normal properties that originate from interfaces and have not been
+        // subsequently "layered on"
+        if (isConstant() || isTypeParam() || getExistence() != Existence.Interface)
+            {
+            return this;
+            }
 
+        assert !hasField();
+
+        // interface properties with a default get() and an @RO declaration become calculated
+        // properties; all others become field-based properties
+        PropertyBody[] aBody   = m_aBody;
+        PropertyBody   bodyOld = null;
+        boolean        fRO     = true;
+        MethodConstant idGet   = null;
+        for (int i = 0, c = m_aBody.length; i < c; ++i)
+            {
+            PropertyBody body = aBody[i];
+            if (body.getExistence() == Existence.Interface)
+                {
+                if (bodyOld == null)
+                    {
+                    bodyOld = body;
+                    }
+                if (body.isExplicitReadOnly())
+                    {
+                    if (idGet == null && body.hasGetter())
+                        {
+                        idGet = body.getGetterId();
+                        }
+                    }
+                else
+                    {
+                    fRO = false;
+                    break;
+                    }
+                }
+            }
+        fRO &= idGet != null;
+
+        PropertyBody bodyNew = new PropertyBody(bodyOld.getStructure(), Implementation.SansCode,
+                null, getType(), fRO, false, false, !fRO, false, null, null);
+        return layerOn(new PropertyInfo(bodyNew), false, errs);
+        }
 
     /**
      * Retain only property bodies that originate from the identities specified in the passed sets.

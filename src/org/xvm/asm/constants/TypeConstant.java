@@ -1921,12 +1921,35 @@ public abstract class TypeConstant
                 mapVirtProps.put(nidContrib, propResult);   // replaces the previous "base", if any
                 }
 
+            // if there are any remaining declared-but-not-overridden properties originating from
+            // an interface on a class once the "self" layer is applied, then those need to be
+            // analyzed to determine if they require fields, etc.
+            if (fSelf && struct.getFormat() != Component.Format.INTERFACE)
+                {
+                for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+                    {
+                    PropertyInfo infoOld = entry.getValue();
+                    PropertyInfo infoNew = infoOld.finishAdoption(errs);
+                    if (infoNew != infoOld)
+                        {
+                        entry.setValue(infoNew);
+                        if (infoNew.isVirtual())
+                            {
+                            assert infoOld.isVirtual();
+                            Object nid = entry.getKey().getNestedIdentity();
+                            PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
+                            assert infoOld == infoCheck;
+                            }
+                        }
+                    }
+                }
+
+            // process methods
             if (mapContribMethods.isEmpty())
                 {
                 continue;
                 }
 
-            // process methods
             // the challenge here is that the methods being contributed may @Override a method that
             // does not have the same exact signature, in which case the method signature is
             // _narrowed_. there are a few different possible outcomes when this occurs:
@@ -1994,7 +2017,11 @@ public abstract class TypeConstant
                         // contribution (because @Override means there MUST be a super method)
                         Object nidBase = findRequiredSuper(
                                 nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
-                        if (nidBase != null)
+                        if (nidBase == null)
+                            {
+                            // TODO log error
+                            }
+                        else
                             {
                             methodBase = mapVirtMethods.get(nidBase);
                             assert methodBase != null;
@@ -2025,7 +2052,6 @@ public abstract class TypeConstant
                     // TODO are there any other errors that need to be checked? e.g. overrideable?
                     methodResult = methodBase.layerOn(methodContrib);
                     mapMethods.remove(methodBase.getIdentity());
-                    assert nidContrib.equals(methodBase.getIdentity().getNestedIdentity());
                     }
 
                 mapVirtMods.put(nidContrib, methodResult);
@@ -2116,7 +2142,7 @@ public abstract class TypeConstant
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
                 SignatureConstant sigCandidate = entry.getValue().getSignature();
-                if (sigCandidate.isSubstitutableFor(sigSub, this))
+                if (sigSub.isSubstitutableFor(sigCandidate, this))
                     {
                     if (listMatch == null)
                         {

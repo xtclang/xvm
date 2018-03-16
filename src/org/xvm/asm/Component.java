@@ -32,7 +32,11 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
+
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
 
 import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
@@ -1637,6 +1641,37 @@ public abstract class Component
 
         // dump the shared children
         child.dumpChildren(out, nextIndent(sIndent));
+        }
+
+    /**
+     * Temporary: Helper for use in debugger to dump specific information. (REMOVE LATER!)
+     *
+     * @param sType  the type to evaluate
+     *
+     * @return a String that has the TypeInfo dump in it
+     */
+    public String dumpType(String sType)
+        {
+        ErrorList    errs   = new ErrorList(10);
+        Parser       parser = new Parser(new Source(sType + ";"), errs);
+        TypeConstant type   = parser.parseType(this);
+        if (errs.getSeriousErrorCount() > 0)
+            {
+            return errs.toString();
+            }
+
+        if (type == null)
+            {
+            return "type could not be resolved: " + sType;
+            }
+
+        TypeInfo info = type.ensureTypeInfo(errs);
+        if (errs.getSeriousErrorCount() > 0)
+            {
+            return errs.toString();
+            }
+
+        return info.toString();
         }
 
 

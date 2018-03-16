@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -452,7 +453,16 @@ public class MethodInfo
      */
     public Access getAccess()
         {
-        return getHead().getMethodStructure().getAccess();
+        for (MethodBody body : m_aBody)
+            {
+            MethodStructure struct = body.getMethodStructure();
+            if (struct != null)
+                {
+                return struct.getAccess();
+                }
+            }
+
+        throw new IllegalStateException();
         }
 
     /**

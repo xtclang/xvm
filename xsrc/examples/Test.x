@@ -235,10 +235,10 @@ module Test
 
     // this will fail (compiler error), because there is no exact sig match for the super (and no
     // @Override)
-    class D1 extends B
-        {
-        String foo() {return super();}
-        }
+//    class D1 extends B
+//        {
+//        String foo() {return super();}
+//        }
 
     // this will succeed, because even though there is no exact sig match for the super, the
     // @Override annotation indicates that it may use (i.e. must find) a compatible signature.
@@ -251,8 +251,8 @@ module Test
             {
             // could just say "return super()" and the compiler will know to insert a cast because
             // of the presence of the @Override
-            Object o = super();
-            return o.to<String>();
+//            Object o = super();
+            return "test"; // TODOo.to<String>();
             }
         }
 
@@ -269,7 +269,7 @@ module Test
 
     // this will succeed, because it provides an unambiguous (exact signature match) method to call
     // to support "Object foo()"
-    class D3 extends B
+    class D4 extends B
         {
         Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
 

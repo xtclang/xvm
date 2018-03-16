@@ -2,14 +2,18 @@ package org.xvm.compiler;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token.Id;
 
@@ -103,6 +107,33 @@ public class Parser
             }
 
         return m_root;
+        }
+
+    /**
+     * Temporary: Allows a type to be parsed from a string in the debugger. (REMOVE LATER!)
+     *
+     * @param ctx  the component that links this in to a real module
+     *
+     * @return the TypeConstant represented by the parsed String
+     */
+    public TypeConstant parseType(Component ctx)
+        {
+        next();
+        TypeExpression type = parseTypeExpression();
+
+        Token var = new Token(type.getEndPosition(), type.getEndPosition(), Id.IDENTIFIER, "test");
+        Statement stmt = new VariableDeclarationStatement(type, var, null);
+        StatementBlock body = new StatementBlock(Arrays.asList(stmt));
+        TypeCompositionStatement module = new TypeCompositionStatement(m_source,
+                type.getStartPosition(), type.getEndPosition(), null, null, null,
+                new Token(0, 0, Id.MODULE), null, null, null, null, null, body, null);
+        module.buildDumpModule(ctx);
+        List list = new ArrayList<>();
+        module.resolveNames(list, m_errorListener);
+        assert list.isEmpty();
+        module.validateExpressions(list, m_errorListener);
+        assert list.isEmpty();
+        return type.ensureTypeConstant();
         }
 
     /**
