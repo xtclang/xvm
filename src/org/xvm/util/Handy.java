@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UTFDataFormatException;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 
@@ -1454,7 +1455,181 @@ public class Handy
         }
 
 
-    // ----- hashing & equality ------------------------------------------------
+    // ----- array and collection helpers ----------------------------------------------------------
+
+    /**
+     * Given an array of "base" elements and an array of elements that are being evaluated as some
+     * form of "addition" to those base elements, determine if there are any duplicates, and return
+     * an array that contains the non-duplicates.
+     *
+     * @param aoBase  the array of "base" elements
+     * @param aoAdd   the array of the elements being evaluated in addition to the base elements
+     *
+     * @return an array containing all of the elements from the {@code aoAdd} array that are not
+     *         duplicates of elements in the {@code aoBase} array
+     */
+    public static <T> T[] dedupAdds(T[] aoBase, T[] aoAdd)
+        {
+        // there's a fair likelihood that *ALL* of the "adds" will be duplicates, and a fair
+        // likelihood that *NONE* of the "adds" will be unique, so assume both up front, and only
+        // de-optimize when *BOTH* of those two things have been proven to be false
+        int          cBase     = aoBase.length;
+        int          cAdd      = aoAdd.length;
+        boolean      fAllDups  = true;
+        boolean      fNoDups   = true;
+        ArrayList<T> listDeDup = null;
+        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+            {
+            T oAdd = aoAdd[iAdd];
+            for (int iBase = 0; iBase < cBase; ++iBase)
+                {
+                if (oAdd.equals(aoBase[iBase]))
+                    {
+                    // we found a duplicate; is it the first one?
+                    if (fNoDups)
+                        {
+                        fNoDups = false;
+
+                        // if we already know that there are some that are NOT duplicates, then we
+                        // need to start maintaining a list of non-duplicates to add; since this is
+                        // the first duplicate encountered, just take everything up to this point
+                        if (!fAllDups)
+                            {
+                            assert listDeDup == null;
+                            listDeDup = startList(aoAdd, iAdd);
+                            }
+                        }
+
+                    // this one was a duplicate, so advance to the next thing to add
+                    continue NextLayer;
+                    }
+                }
+
+            // this one to add is NOT a duplicate; is it the first one?
+            if (fAllDups)
+                {
+                fAllDups = false;
+
+                // if we already know that there are duplicates (i.e. NOT no duplicates), then we
+                // need to start maintaining a list of non-duplicates (starting with this one)
+                if (!fNoDups)
+                    {
+                    assert listDeDup == null;
+                    listDeDup = new ArrayList<>();
+                    }
+                }
+
+            // if, for whatever reason, we are maintaining a list of non-duplicates by this point,
+            // and since we just verified that this is a non-duplicate, then add it to the list
+            if (listDeDup != null)
+                {
+                listDeDup.add(oAdd);
+                }
+            }
+
+        // at this point, we finished our check for duplicates; if there are no duplicates, then
+        // the original array of things to add is the result
+        if (fNoDups)
+            {
+            assert listDeDup == null;
+            return aoAdd;
+            }
+
+        // otherwise, there are duplicates, which boils down into two possibilities: they're all
+        // duplicates (so we return an empty array), or just some are duplicates (in which case
+        // there is a list of the ones that are NOT duplicates that we should return)
+        int cResult  = listDeDup == null ? 0 : listDeDup.size();
+        T[] aoResult = (T[]) Array.newInstance(aoAdd.getClass().getComponentType(), cResult);
+        if (cResult > 0)
+            {
+            aoResult = listDeDup.toArray(aoResult);
+            }
+        return aoResult;
+        }
+
+    /**
+     * Glue two arrays together.
+     *
+     * @param aoBase  the first array
+     * @param aoAdd   the second array
+     *
+     * @return an array containing all of the elements of both passed arrays
+     */
+    public static <T> T[] append(T[] aoBase, T[] aoAdd)
+        {
+        int cBase = aoBase.length;
+        if (cBase == 0)
+            {
+            return aoAdd;
+            }
+
+        int cAdd = aoAdd.length;
+        if (cAdd == 0)
+            {
+            return aoBase;
+            }
+
+        int cResult  = cBase + cAdd;
+        T[] aoResult = (T[]) Array.newInstance(aoAdd.getClass().getComponentType(), cResult);
+        System.arraycopy(aoBase, 0, aoResult, 0, cBase);
+        System.arraycopy(aoAdd, 0, aoResult, cBase, cAdd);
+        return aoResult;
+        }
+
+    /**
+     * Creeate an ArrayList that contains the first {@code c} elements of the array {@code ao}.
+     *
+     * @param ao  an array of T
+     * @param c   the number of elements of the array to put into the new list
+     *
+     * @return a new ArrayList of the first {@code c} elements of the {@code ao} array
+     */
+    public static <T> ArrayList<T> startList(T[] ao, int c)
+        {
+        return appendList(new ArrayList<T>(), ao, 0, c);
+        }
+
+    /**
+     * Append the specified elements from the passed array to the list.
+     *
+     * @param list  a list of T to add to
+     * @param ao    an array of T to obtain the values-to-add from
+     * @param of    the offset into the array
+     * @param c     the number of elements from the array to add to the list
+     *
+     * @return the list
+     */
+    public static <T> ArrayList<T> appendList(ArrayList<T> list, T[] ao, int of, int c)
+        {
+        for (int ofEnd = of+c; of < ofEnd; ++of)
+            {
+            list.add(ao[of]);
+            }
+        return list;
+        }
+
+    /**
+     * Find the specified value in the passed array.
+     *
+     * @param ao  the array to search in
+     * @param o   the value to search for
+     *
+     * @return true iff at least one element of the passed array is equal to the passed value
+     */
+    public static <T> boolean anyMatches(T[] ao, T o)
+        {
+        for (T oCur : ao)
+            {
+            if (equals(o, oCur))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+
+    // ----- hashing & equality --------------------------------------------------------------------
 
     /**
      * Perform a hash of the object. This performs a deep hash on arrays.

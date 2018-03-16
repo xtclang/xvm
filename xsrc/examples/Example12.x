@@ -420,3 +420,31 @@ mixin M1 into I2
     {
     @Override Void foo();                           // ok because "into" should lay down an implicit foo()
     }
+
+
+// ----- conditional returns
+
+conditional Int indexOf(Char ch);
+
+if (Int of : s.indexOf('p'))
+    {
+    return s.substring(of);
+    }
+else
+    {
+    return s;
+    }
+
+// how to do with ternary operator?
+(Boolean found, Int of) = s.indexOf('p');       // "of" not definitely assigned?!?
+return found ? s.substring(of) : s;
+
+(Boolean found, Int of) = s.indexOf('p');       // "of" not definitely assigned?!?
+return found ? s.substring(of) : s;
+
+// also you forgot ...
+Int of = -1;
+of := s.substring(of);
+
+Alternatively:
+(Boolean, Int) indexOf(Char ch);

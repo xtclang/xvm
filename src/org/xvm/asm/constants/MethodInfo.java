@@ -11,6 +11,8 @@ import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
+import static org.xvm.util.Handy.startList;
+
 
 /**
  * Represents all of the information about a method (or function). For methods, this includes a
@@ -417,16 +419,6 @@ public class MethodInfo
             }
 
         return aBody;
-        }
-
-    private ArrayList<MethodBody> startList(MethodBody[] aBody, int c)
-        {
-        ArrayList list = new ArrayList<>();
-        for (int i = 0; i < c; ++i)
-            {
-            list.add(aBody[i]);
-            }
-        return list;
         }
 
     /**

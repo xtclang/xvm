@@ -2,6 +2,7 @@ package org.xvm.asm.constants;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -12,10 +13,15 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
+
+import static org.xvm.util.Handy.anyMatches;
+import static org.xvm.util.Handy.append;
+import static org.xvm.util.Handy.dedupAdds;
 
 
 /**
@@ -32,15 +38,17 @@ public class PropertyInfo
      */
     public PropertyInfo(PropertyBody body)
         {
-        this(new PropertyBody[] {body}, false, false);
+        this(new PropertyBody[] {body}, body.getType(), body.hasField(), false);
         }
 
     protected PropertyInfo(
             PropertyBody[] aBody,
+            TypeConstant   type,
             boolean        fRequireField,
             boolean        fSuppressVar)
         {
         m_aBody             = aBody;
+        m_type              = type;
         m_fRequireField     = fRequireField;
         m_fSuppressVar      = fSuppressVar;
         }
@@ -49,12 +57,13 @@ public class PropertyInfo
      * Combine the information in this PropertyInfo with the information from a super type's
      * PropertyInfo.
      *
-     * @param that  a super-type's PropertyInfo
-     * @param errs  the error list to log any conflicts to
+     * @param that   a super-type's PropertyInfo
+     * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
+     * @param errs   the error list to log any conflicts to
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo layerOn(PropertyInfo that, ErrorListener errs)
+    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, ErrorListener errs)
         {
         assert that != null && errs != null;
 
@@ -119,57 +128,116 @@ public class PropertyInfo
             throw new IllegalStateException("cannot combine private with anything");
             }
 
-        boolean fRequireField = this.m_fRequireField | that.m_fRequireField;
-        boolean fSuppressVar  = this.m_fSuppressVar  | that.m_fSuppressVar;
-
-        // a non-abstract RO property combined with a RW property ... TODO
-        // TODO have to get the "tail end" of the property body chain of the sub to get the type (the "super" can be == or wider)
-
-        // TODO if types don't match then there is an error
-
-        // TODO if there is a super but the contrib didn't specify @Override then it is an error
-
-        // TODO check for annotation redudancy / overlap
-        // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
-        // - make sure to check for annotations at this level that are super-classes of annotations already contributed, since they are also discarded
-        // - it is possible that an annotation has a potential call chain that includes layers that are
-        //   already in the property call chain; they are simply discarded (similar to retain-only)
-
-        // combine the two arrays of PropertyBody objects into a new PropertyInfo
-        PropertyBody[] aThis = this.m_aBody;
-        PropertyBody[] aThat = that.m_aBody;
-        int            cThis = aThis.length;
-        int            cThat = aThat.length;
-
-        ArrayList<PropertyBody> listMerge = null;
-        NextLayer: for (int iThat = 0; iThat < cThat; ++iThat)
+        // first, determine what property bodies are duplicates, if any
+        PropertyBody[] aBase = this.m_aBody;
+        PropertyBody[] aAdd  = dedupAdds(aBase, that.m_aBody);
+        int            cBase = aBase.length;
+        int            cAdd  = aAdd.length;
+        if (cAdd == 0)
             {
-            PropertyBody bodyThat = aThat[iThat];
-            for (int iThis = 0; iThis < cThis; ++iThis)
+            assert !fSelf;
+            return this;
+            }
+
+        // glue together the layers
+        PropertyBody[] aResult = append(aBase, aAdd);
+        int            cResult = aResult.length;
+        assert cResult == cBase + cAdd;
+
+        // check @Override
+        if (fSelf)
+            {
+            // should only have one layer (or zero layers, in which case we wouldn't have been
+            // called) of property body for the "self" layer
+            assert cAdd == 1;
+
+            // check @Override
+            if (!aAdd[0].isExplicitOverride())
                 {
-                if (bodyThat.equals(aThis[iThis]))
+                constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
+                        constId.getValueString(),
+                        aBase[0].getIdentity().getValueString());
+                }
+            }
+
+        // check the property type and determine the type of the resulting property
+        TypeConstant typeBase   = this.getType();
+        TypeConstant typeResult = typeBase;
+        for (int iAdd = cAdd - 1; iAdd >= 0; --iAdd)
+            {
+            PropertyBody bodyAdd = aAdd[iAdd];
+            TypeConstant typeAdd = bodyAdd.getType();
+            Existence    exAdd   = bodyAdd.getExistence();
+            if (!typeAdd.equals(typeResult))
+                {
+                // the property type can narrowed by a class implementation
+                if (exAdd == Existence.Class && typeAdd.isA(typeResult))
                     {
-                    // we found a duplicate, so we can ignore it (it'll get added when we add all of
-                    // the bodies from this)
-                    continue NextLayer;
+                    // type has been narrowed
+                    typeResult = typeAdd;
+                    }
+                // the property type can only be wider if it is a read-only interface/into method;
+                // otherwise it is an error
+                else if (!(exAdd != Existence.Class && bodyAdd.isRO() && typeResult.isA(typeAdd)))
+                    {
+                    constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
+                            constId.getValueString(),
+                            typeAdd.getValueString(),
+                            typeResult.getValueString());
                     }
                 }
-            if (listMerge == null)
-                {
-                listMerge = new ArrayList<>();
-                }
-            listMerge.add(bodyThat);
             }
 
-        int c = listMerge.size();
-        if (c >= 1)
+        // determine whether a field is required
+        boolean fRequireField = this.m_fRequireField | that.m_fRequireField;
+        if (!fRequireField && Arrays.stream(aBase).allMatch(
+                body -> body.getImplementation().compareTo(Implementation.Abstract) <= 0))
             {
-            // TODO could do type check here (compare type from last item added to list, if any, with first in aThis)
+            // one of the bodies being added could cause the resulting property to require a field
+            for (int i = cAdd - 1; i >= 0; --i)
+                {
+                PropertyBody body = aResult[i];
+                if (body.getImplementation().compareTo(Implementation.Abstract) > 0)
+                    {
+                    // this is the first body that is "real", so determine whether a field is
+                    // required
+                    fRequireField = body.impliesField();
+                    }
+                }
             }
 
-        Collections.addAll(listMerge, aThis);
-        return new PropertyInfo(listMerge.toArray(new PropertyBody[c]), fRequireField, fSuppressVar);
+        // check for annotation redundancy / overlap
+        // - duplicate annotations do NOT yank; they are simply logged (WARNING) and discarded
+        // - make sure to check for annotations at this level that are super-classes of annotations
+        //   already contributed, since they are also discarded
+        // - it is possible that an annotation has a potential call chain that includes layers that are
+        //   already in the property call chain; they are simply discarded (similar to retain-only)
+        Annotation[] aAnnoBase = this.getRefAnnotations();
+        for (int i = cAdd - 1; i >= 0; --i)
+            {
+            PropertyBody body     = aResult[i];
+            Annotation[] aAnnoAdd = body.getRefAnnotations();
+            for (int iAnno = aAnnoAdd.length - 1; iAnno >= 0; --iAnno)
+                {
+                // TODO
+                }
+
+            if (body.getImplementation().compareTo(Implementation.Abstract) > 0)
+                {
+                // this is the first body that is "real", so determine whether a field is
+                // required
+                fRequireField = body.impliesField();
+                }
+            }
+
+        // determine whether TODO
+        boolean fSuppressVar  = this.m_fSuppressVar  | that.m_fSuppressVar;
+        // a non-abstract RO property combined with a RW property ... TODO
+
+        return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar);
         }
+
+
 
     /**
      * Retain only property bodies that originate from the identities specified in the passed sets.
@@ -239,8 +307,7 @@ public class PropertyInfo
 
         return list.isEmpty()
                 ? null
-                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]),
-                        m_fRequireField, m_fSuppressVar);
+                : new PropertyInfo(list.toArray(new PropertyBody[list.size()]), m_type, m_fRequireField, m_fSuppressVar);
         }
 
 
@@ -267,7 +334,7 @@ public class PropertyInfo
         if (accessVar != null && isVar() && accessVar.isLessAccessibleThan(access))
             {
             // create the Ref-only form of this property
-            return new PropertyInfo(m_aBody, m_fRequireField, true);
+            return new PropertyInfo(m_aBody, m_type, m_fRequireField, true);
             }
 
         return this;
@@ -280,7 +347,7 @@ public class PropertyInfo
         {
         return hasField()
                 ? this
-                : new PropertyInfo(m_aBody, true, m_fSuppressVar);
+                : new PropertyInfo(m_aBody, m_type, true, m_fSuppressVar);
         }
 
     /**
@@ -363,7 +430,7 @@ public class PropertyInfo
      */
     public TypeConstant getType()
         {
-        return getHead().getType();
+        return m_type;
         }
 
     /**
@@ -451,6 +518,35 @@ public class PropertyInfo
     public ParamInfo getParamInfo()
         {
         return getHead().getTypeParamInfo();
+        }
+
+    /**
+     * @return the Existence of the property
+     */
+    public Existence getExistence()
+        {
+        return getExistence(m_aBody);
+        }
+
+    /**
+     * @return the Existence implied by the passed array of property bodies
+     */
+    private static Existence getExistence(PropertyBody[] aBody)
+        {
+        Existence ex = null;
+        for (PropertyBody body : aBody)
+            {
+            Existence exBody = body.getExistence();
+            if (exBody == Existence.Class)
+                {
+                return exBody;
+                }
+            if (ex == null || exBody.compareTo(ex) > 0)
+                {
+                ex = exBody;
+                }
+            }
+        return ex;
         }
 
     /**
@@ -545,7 +641,7 @@ public class PropertyInfo
         {
         // it can only be virtual if it is non-private and non-constant, and if it is not contained
         // within a method or a private property
-        if (isConstant() || getVarAccess() == Access.PRIVATE)
+        if (isConstant() || getRefAccess() == Access.PRIVATE)
             {
             return false;
             }
@@ -750,6 +846,11 @@ public class PropertyInfo
      * The PropertyBody objects that provide the data represented by this PropertyInfo.
      */
     private final PropertyBody[] m_aBody;
+
+    /**
+     * The type of this Property.
+     */
+    private final TypeConstant m_type;
 
     /**
      * True iff this Property has been marked as requiring a field.

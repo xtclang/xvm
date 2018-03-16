@@ -1,11 +1,13 @@
 package org.xvm.asm.constants;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Handy;
@@ -157,6 +159,14 @@ public class PropertyBody
         }
 
     /**
+     * @return the existence for the property implementation
+     */
+    public Existence getExistence()
+        {
+        return m_impl.getExistence();
+        }
+
+    /**
      * @return the property that provides the reference to delegate to
      */
     public PropertyConstant getDelegate()
@@ -228,6 +238,18 @@ public class PropertyBody
         return m_fField;
         }
 
+    public boolean impliesField()
+        {
+        // this needs to stay in sync with TypeConstant#createPropertyInfo()
+        return m_fField ||
+                (getExistence() == Existence.Class
+                && !isInjected()
+                && !isRO()
+                && !isExplicitAbstract()
+                && !isExplicitOverride()
+                && !isGetterBlockingSuper());
+        }
+
     /**
      * @return true iff this property represents a constant (a static property)
      */
@@ -270,6 +292,14 @@ public class PropertyBody
     public boolean hasRefAnnotations()
         {
         return getStructure().getRefAnnotations().length > 0;
+        }
+
+    /**
+     * @return the property's Ref/Var annotations
+     */
+    public Annotation[] getRefAnnotations()
+        {
+        return getStructure().getRefAnnotations();
         }
 
     /**

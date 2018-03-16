@@ -368,9 +368,9 @@ public interface Constants
      */
     public static final String VE_INTERFACE_PROPERTY_INJECTED         = "VERIFY-46";
     /**
-     * Interface {0} contains an illegal property declaration for {1}: Interface properties must not specify @Override.
+     * Property {0}  overrides the property {1}, so it must specify @Override.
      */
-    public static final String VE_INTERFACE_PROPERTY_OVERRIDDEN       = "VERIFY-47";
+    public static final String VE_PROPERTY_OVERRIDE_REQUIRED          = "VERIFY-47";
     /**
      * {0} contains an @RO property {1} that has a "set()" that uses "super", or a Var annotation.
      */

@@ -427,7 +427,44 @@ public class MethodBody
         Delegating,
         Field,
         Native,
-        Explicit
+        Explicit;
+
+        public Existence getExistence()
+            {
+            switch (this)
+                {
+                case Implicit:
+                    return Existence.Implied;
+
+                case Declared:
+                case Default:
+                    return Existence.Interface;
+
+                default:
+                    return Existence.Class;
+                }
+            }
+        }
+
+    /**
+     * An enumeration of various forms of method existence:
+     * <p/>
+     * <ul>
+     * <li><b>Implied</b> - the method exists implicitly; this is the result of the {@code into}
+     * clause, or the methods of {@code Object} in the context of an interface, for example;</li>
+     * <li><b>Interface</b> - the method is defined as part of an interface;</li>
+     * <li><b>Class</b> - the method is defined as part of a class.</li>
+     * </ul>
+     * <p/>
+     * Only the highest level of existence is used; for example, a method that exists due to an
+     * "into type" clause, an "implements interface" clause, and is also implemented on a class, is
+     * considered to have an Existence of "Class".
+     */
+    public enum Existence
+        {
+        Implied,
+        Interface,
+        Class
         }
 
 

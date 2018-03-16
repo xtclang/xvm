@@ -1790,7 +1790,8 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
 
             Composition composition = contrib.getComposition();
-            if (composition == Composition.Equal)
+            boolean     fSelf       = composition == Composition.Equal;
+            if (fSelf)
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
@@ -1908,60 +1909,11 @@ public abstract class TypeConstant
                     }
                 else
                     {
-                    propResult = propBase.layerOn(propContrib, errs);
+                    propResult = propBase.layerOn(propContrib, fSelf, errs);
                     mapProps.remove(propBase.getIdentity());
                     assert nidContrib.equals(propBase.getIdentity().getNestedIdentity());
                     }
-/* TODO
-            // for properties on a non-abstract class that come from an interface, decide which ones
-            // need a field
-// TODO this is wrong ... it should be "if not an interface and does not have a field and is not explicitly abstract property ..."
-            if (!fAbstract && propinfo.getHead().getImplementation() == Implementation.Declared)
-                {
-                // determine whether or not the property needs a field
-                boolean fField;
-                if (propinfo.isInjected() || propinfo.isOverride()) // REVIEW @Inject into Ref, needs to be overrideable
-                    {
-                    // injection does not use a field, and override can defer the choice
-                    fField = false;
-                    }
-                else if (!propinfo.isCustomLogic() && propinfo.getRefAnnotations().length == 0)
-                    {
-                    // no logic implies that there is an underlying field
-                    fField = true;
-                    }
-                else
-                    {
-                    // determine if get() blocks the super call to the field
-                    MethodInfo methodinfo = mapMethods.get(propinfo.getGetterId());   // REVIEW
-                    fField = true;
-                    if (methodinfo != null)
-                        {
-                        for (MethodBody body : methodinfo.getChain())
-                            {
-                            if (body.getImplementation() == Implementation.Field)
-                                {
-                                break;
-                                }
 
-                            if (body.blocksSuper())
-                                {
-                                fField = false;
-                                break;
-                                }
-                            }
-                        }
-                    }
-
-                // erase the "abstract" flag, and store the result of the field-is-required
-                // calculation
-                if (fField)
-                    {
-                    entry.setValue(propinfo = propinfo.requireField());
-                    }
-                }
-
- */
                 // the property is stored both by its absolute (fully qualified) ID and its nested
                 // ID, which is useful for example when trying to find it when building the actual
                 // call chains
