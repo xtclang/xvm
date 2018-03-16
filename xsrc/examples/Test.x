@@ -258,18 +258,18 @@ module Test
 
     // this will fail, because even though @Override was used, there is now no unambiguous method
     // to call to support "Object foo()"
-    class D3 extends B
-        {
-        @Override
-        String foo() {return "hello";}
-
-        @Override
-        Int foo() {return 4;}
-        }
+//    class D3 extends B
+//        {
+//        @Override
+//        String foo() {return "hello";}
+//
+//        @Override
+//        Int foo() {return 4;}
+//        }
 
     // this will succeed, because it provides an unambiguous (exact signature match) method to call
     // to support "Object foo()"
-    class D4 extends B
+    class DumpD4 extends B
         {
         Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
 

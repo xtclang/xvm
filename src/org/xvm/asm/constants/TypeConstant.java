@@ -1895,10 +1895,9 @@ public abstract class TypeConstant
                 // composable properties are registered using their nested identities
                 Object       nidContrib = idContrib.getNestedIdentity();
                 PropertyInfo propBase   = mapVirtProps.get(nidContrib);
-                PropertyInfo propResult;
+                PropertyInfo propResult = propContrib;
                 if (propBase == null)
                     {
-                    propResult = propContrib;
                     if (propContrib.isOverride())
                         {
                         // there's supposed to be a property by this same identity already existing,
@@ -2005,9 +2004,9 @@ public abstract class TypeConstant
 
                 // look for a method of the same signature (using its nested identity); only
                 // virtual methods are registered using their nested identities
-                Object     nidContrib = idContrib.getNestedIdentity();
-                MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                MethodInfo methodResult;
+                Object     nidContrib   = idContrib.getNestedIdentity();
+                MethodInfo methodBase   = mapVirtMethods.get(nidContrib);
+                MethodInfo methodResult = methodContrib;
                 if (methodBase == null)
                     {
                     if (methodContrib.isOverride())
@@ -2017,11 +2016,7 @@ public abstract class TypeConstant
                         // contribution (because @Override means there MUST be a super method)
                         Object nidBase = findRequiredSuper(
                                 nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
-                        if (nidBase == null)
-                            {
-                            // TODO log error
-                            }
-                        else
+                        if (nidBase != null)
                             {
                             methodBase = mapVirtMethods.get(nidBase);
                             assert methodBase != null;
@@ -2043,14 +2038,9 @@ public abstract class TypeConstant
                         }
                     }
 
-                if (methodBase == null)
+                if (methodBase != null)
                     {
-                    methodResult = methodContrib;
-                    }
-                else
-                    {
-                    // TODO are there any other errors that need to be checked? e.g. overrideable?
-                    methodResult = methodBase.layerOn(methodContrib);
+                    methodResult = methodBase.layerOn(methodContrib, errs);
                     mapMethods.remove(methodBase.getIdentity());
                     }
 

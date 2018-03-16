@@ -2267,6 +2267,14 @@ public class ConstantPool
             if (type != null)
                 {
                 TypeInfo info = type.ensureTypeInfo(errlist);
+
+                // TODO temporary for debugging; REMOVE LATER!!!
+                if (type.toString().contains(System.getProperty("CP", "Dump")))
+                    {
+                    System.out.println("*** TypeInfo for " + type.getValueString() + ":");
+                    System.out.println(info);
+                    }
+
                 if (errlist.isAbortDesired())
                     {
                     return true;

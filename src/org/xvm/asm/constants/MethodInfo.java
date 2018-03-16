@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -96,8 +97,15 @@ public class MethodInfo
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo layerOn(MethodInfo that)
+    public MethodInfo layerOn(MethodInfo that, ErrorListener errs)
         {
+        if (!isOverrideable())
+            {
+            // it is not possible to override the base method
+            // TODO log error
+            return this;
+            }
+
         MethodBody[] aThis = this.m_aBody;
         MethodBody[] aThat = that.m_aBody;
         int          cThis = aThis.length;
