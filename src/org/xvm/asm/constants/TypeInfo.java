@@ -921,8 +921,26 @@ public class TypeInfo
         sb.append("TypeInfo: ")
           .append(m_type.getValueString())
           .append(" (format=")
-          .append(getFormat())
-          .append(")");
+          .append(getFormat());
+
+        if (isAbstract())
+            {
+            sb.append(", abstract");
+            }
+        if (isStatic())
+            {
+            sb.append(", static");
+            }
+        if (isSingleton())
+            {
+            sb.append(", singleton");
+            }
+        if (isNewable())
+            {
+            sb.append(", newable");
+            }
+
+        sb.append(")");
 
         if (!m_mapTypeParams.isEmpty())
             {

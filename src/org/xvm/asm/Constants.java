@@ -368,7 +368,7 @@ public interface Constants
      */
     public static final String VE_INTERFACE_PROPERTY_INJECTED         = "VERIFY-46";
     /**
-     * Property {0}  overrides the property {1}, so it must specify @Override.
+     * Property {0} overrides the property {1}, so it must specify @Override.
      */
     public static final String VE_PROPERTY_OVERRIDE_REQUIRED          = "VERIFY-47";
     /**
@@ -489,6 +489,18 @@ public interface Constants
      * The annotation {2} on property {1} on {0} is a super-class of the annotation {3} that is already present from the base property; the annotation on the derived property is ignored.
      */
     public static final String VE_SUP_ANNOTATION_IGNORED              = "VERIFY-76";
+    /**
+     * The property {1} on {0} attempts to declare a Var property, but the setter on the base is private.
+     */
+    public static final String VE_PROPERTY_SET_PRIVATE_SUPER          = "VERIFY-77";
+    /**
+     * Interface {0} contains an illegal property declaration for {1}: An interface property must be declared as @RO to specify a default get() implementation.
+     */
+    public static final String VE_INTERFACE_PROPERTY_GET_REQUIRES_RO  = "VERIFY-78";
+    /**
+     * The access for the {1} property on {0} is defined more restrictively than its base.
+     */
+    public static final String VE_PROPERTY_ACCESS_LESSENED            = "VERIFY-79";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

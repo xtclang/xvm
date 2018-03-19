@@ -228,6 +228,33 @@ module Test
 //            }
 //        }
 
+    interface I
+        {
+        @RO Int x;
+        }
+
+    class DumpC1
+        implements I
+        {
+        }
+
+    class DumpC2
+        implements I
+        {
+        @Override
+        public/private Int x;
+        }
+
+    class DumpC3
+        implements I
+        {
+        @Override
+        public Int x.get()
+            {
+            return 0;
+            }
+        }
+
     class B
         {
         Object foo() {return "hello";}

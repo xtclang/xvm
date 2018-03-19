@@ -140,7 +140,7 @@ public class PropertyInfo
             }
 
         // glue together the layers
-        PropertyBody[] aResult = append(aBase, aAdd);
+        PropertyBody[] aResult = append(aAdd, aBase);        // TODO backwards?
         int            cResult = aResult.length;
         assert cResult == cBase + cAdd;
 
@@ -212,41 +212,73 @@ public class PropertyInfo
         //   already contributed, since they are also discarded
         // - it is possible that an annotation has a potential call chain that includes layers that are
         //   already in the property call chain; they are simply discarded (similar to retain-only)
+        // note that we do not attempt to check for duplicates within the annotations that are being
+        // added (i.e. we don't accrue the ones being added onto the list of ones that we're
+        // checking against), because transitivity.
         Annotation[] aAnnoBase = this.getRefAnnotations();
-        for (int i = cAdd - 1; i >= 0; --i)
+        int          cAnnoBase = aAnnoBase.length;
+        if (cAnnoBase > 0)
             {
-            PropertyBody body     = aResult[i];
-            Annotation[] aAnnoAdd = body.getRefAnnotations();
-            for (int iAnno = aAnnoAdd.length - 1; iAnno >= 0; --iAnno)
+            for (int iBodyAdd = cAdd - 1; iBodyAdd >= 0; --iBodyAdd)
                 {
-                Annotation   annoAdd = aAnnoAdd[iAnno];
-                TypeConstant typeAdd = annoAdd.getAnnotationType();
+                PropertyBody bodyAdd  = aAdd[iBodyAdd];
+                Annotation[] aAnnoAdd = bodyAdd.getRefAnnotations();
+                for (int iAnnoAdd = aAnnoAdd.length - 1; iAnnoAdd >= 0; --iAnnoAdd)
+                    {
+                    Annotation   annoAdd     = aAnnoAdd[iAnnoAdd];
+                    TypeConstant typeAnnoAdd = annoAdd.getAnnotationType();
+                    for (int iAnnoBase = 0; iAnnoBase < cAnnoBase; ++iAnnoBase)
+                        {
+                        TypeConstant typeAnnoBase = aAnnoBase[iAnnoBase].getAnnotationType();
+                        if (typeAnnoAdd.equals(typeAnnoBase))
+                            {
+                            constId.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
+                                    constId.getParentConstant().getValueString(),
+                                    getName(),
+                                    annoAdd.getAnnotationClass().getValueString());
+                            break;
+                            }
 
-                constId.log(errs, Severity.ERROR, VE_DUP_ANNOTATION_IGNORED,
-                        constId.getValueString(),
-                        getName(),
-                        annoAdd.getAnnotationClass().getValueString());
-
-                constId.log(errs, Severity.ERROR, VE_SUP_ANNOTATION_IGNORED,
-                        constId.getValueString(),
-                        getName(),
-                        annoAdd.getAnnotationClass().getValueString(),
-                        annoSup.getAnnotationClass().getValueString());
-
-                // TODO
-                }
-
-            if (body.getImplementation().compareTo(Implementation.Abstract) > 0)
-                {
-                // this is the first body that is "real", so determine whether a field is
-                // required
-                fRequireField = body.impliesField();
+                        if (typeAnnoAdd.isA(typeAnnoBase))
+                            {
+                            constId.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
+                                    constId.getParentConstant().getValueString(),
+                                    getName(),
+                                    typeAnnoAdd.getValueString(),
+                                    typeAnnoBase.getValueString());
+                            break;
+                            }
+                        }
+                    }
                 }
             }
 
-        // determine whether TODO
-        boolean fSuppressVar  = this.m_fSuppressVar  | that.m_fSuppressVar;
-        // a non-abstract RO property combined with a RW property ... TODO
+        // whenever property loses access because its setter is not available, it transitions from
+        // being a Var to being a Ref (a read-only property). for example, when a public/private
+        // is extended, the private setter is no longer accessible, so while the underlying property
+        // itself is not changed, the ability to access the property as a Var disappears; this is
+        // referred to as "suppressing the Var".
+        boolean fSuppressVar  = this.m_fSuppressVar | that.m_fSuppressVar;
+
+        // the property extension cannot re-introduce a Var if it has been suppressed by the base
+        if (this.isSetterUnreachable() && that.isVar())
+            {
+            constId.log(errs, Severity.ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
+                    constId.getParentConstant().getValueString(),
+                    getName());
+            }
+
+        // the property extension cannot reduce the accessibility of the base
+        Access accessThisVar = this.calcVarAccess();
+        Access accessThatVar = that.calcVarAccess();
+        if (that.getRefAccess().isLessAccessibleThan(this.getRefAccess()) ||
+                (accessThisVar != null && accessThatVar != accessThisVar &&
+                        (accessThatVar == null || accessThatVar.isLessAccessibleThan(accessThisVar))))
+            {
+            constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
+                    constId.getParentConstant().getValueString(),
+                    getName());
+            }
 
         return new PropertyInfo(aResult, typeResult, fRequireField, fSuppressVar);
         }
@@ -665,6 +697,20 @@ public class PropertyInfo
     public Access getVarAccess()
         {
         return getHead().getVarAccess();
+        }
+
+    /**
+     * @return the Access required for the Var form of the property, or null if the property is not
+     *         a Var
+     */
+    public Access calcVarAccess()
+        {
+        Access access = getVarAccess();
+        if (access == null && isVar())
+            {
+            access = getRefAccess();
+            }
+        return access;
         }
 
     public boolean isSetterUnreachable()

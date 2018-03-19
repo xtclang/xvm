@@ -2571,14 +2571,29 @@ public abstract class TypeConstant
             }
         else if (fInterface)
             {
-            impl = Implementation.Declared;
+            impl   = Implementation.Declared;
+            fRO   |= fHasRO;
+            fRW   |= !fRO | accessVar != null;
+            fField = false;
 
-            if (cCustomMethods > (methodGet == null ? 0 : 1))
+            if (cCustomMethods > 0)
                 {
                 // interface is not allowed to implement a property, other than it may have a
                 // default implementation of get()
-                log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
-                        getValueString(), sName);
+                if (cCustomMethods == 1 && methodGet != null)
+                    {
+                    // the @RO annotation is required in this case
+                    if (!fHasRO)
+                        {
+                        log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_GET_REQUIRES_RO,
+                                getValueString(), sName);
+                        }
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_IMPLEMENTED,
+                            getValueString(), sName);
+                    }
                 }
 
             if (fHasRefAnno)
@@ -2601,10 +2616,6 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
                 }
-
-            fRO      |= fHasRO;
-            fRW      |= accessVar != null;
-            fField    = false;
             }
         else
             {
