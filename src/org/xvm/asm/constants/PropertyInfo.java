@@ -19,7 +19,6 @@ import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.anyMatches;
 import static org.xvm.util.Handy.append;
 import static org.xvm.util.Handy.dedupAdds;
 
@@ -140,7 +139,7 @@ public class PropertyInfo
             }
 
         // glue together the layers
-        PropertyBody[] aResult = append(aAdd, aBase);        // TODO backwards?
+        PropertyBody[] aResult = append(aAdd, aBase);
         int            cResult = aResult.length;
         assert cResult == cBase + cAdd;
 
@@ -200,8 +199,9 @@ public class PropertyInfo
                 if (body.getImplementation().compareTo(Implementation.Abstract) > 0)
                     {
                     // this is the first body that is "real", so determine whether a field is
-                    // required
+                    // required; this needs to stay in sync with TypeConstant#createPropertyInfo()
                     fRequireField = body.impliesField();
+                    break;
                     }
                 }
             }
