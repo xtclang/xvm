@@ -481,6 +481,14 @@ public interface Constants
      * The function {0} contains a property {1}; functions must not contain properties.
      */
     public static final String VE_FUNCTION_CONTAINS_PROPERTY          = "VERIFY-74";
+    /**
+     * The annotation {2} on property {1} on {0} duplicates an annotation that is already present from the base property; the annotation on the derived property is ignored.
+     */
+    public static final String VE_DUP_ANNOTATION_IGNORED              = "VERIFY-75";
+    /**
+     * The annotation {2} on property {1} on {0} is a super-class of the annotation {3} that is already present from the base property; the annotation on the derived property is ignored.
+     */
+    public static final String VE_SUP_ANNOTATION_IGNORED              = "VERIFY-76";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

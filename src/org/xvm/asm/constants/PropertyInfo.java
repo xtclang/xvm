@@ -219,6 +219,20 @@ public class PropertyInfo
             Annotation[] aAnnoAdd = body.getRefAnnotations();
             for (int iAnno = aAnnoAdd.length - 1; iAnno >= 0; --iAnno)
                 {
+                Annotation   annoAdd = aAnnoAdd[iAnno];
+                TypeConstant typeAdd = annoAdd.getAnnotationType();
+
+                constId.log(errs, Severity.ERROR, VE_DUP_ANNOTATION_IGNORED,
+                        constId.getValueString(),
+                        getName(),
+                        annoAdd.getAnnotationClass().getValueString());
+
+                constId.log(errs, Severity.ERROR, VE_SUP_ANNOTATION_IGNORED,
+                        constId.getValueString(),
+                        getName(),
+                        annoAdd.getAnnotationClass().getValueString(),
+                        annoSup.getAnnotationClass().getValueString());
+
                 // TODO
                 }
 
