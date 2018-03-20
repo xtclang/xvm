@@ -140,6 +140,8 @@ public class NamedTypeExpression
                 return Access.PROTECTED;
             case PRIVATE:
                 return Access.PRIVATE;
+            case STRUCT:
+                return Access.STRUCT;
             default:
                 throw new IllegalStateException("access=" + access);
             }

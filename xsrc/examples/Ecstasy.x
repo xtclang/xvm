@@ -150,7 +150,44 @@ module Ecstasy.xtclang.org
         mixin Operator(String? token = null) into Method {}
         mixin Override into Property | Method {}
         mixin InjectedRef<RefType> into Ref<RefType> {}
-        mixin LazyVar<RefType> into Var<RefType> {}
         mixin UncheckedInt into Int64 {}
+        mixin LazyVar<RefType>(function RefType ()? calculate)
+                into Var<RefType>
+            {
+            private function RefType ()? calculate;
+            private Boolean assignable = false;
+
+            RefType get()
+                {
+                if (!assigned)
+                    {
+                    RefType value = calculate == null ? calc() : calculate();
+                    try
+                        {
+                        assignable = true;
+                        set(value);
+                        }
+                    finally
+                        {
+                        assignable = false;
+                        }
+
+                    return value;
+                    }
+
+                return super();
+                }
+
+            Void set(RefType value)
+                {
+                assert !assigned && assignable;
+                super(value);
+                }
+
+            protected RefType calc()
+                {
+                TODO construct LazyVar with a calculate function, or override the calc() method
+                }
+            }
         }
     }

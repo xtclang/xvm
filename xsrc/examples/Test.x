@@ -236,6 +236,13 @@ module Test
     class DumpC1
         implements I
         {
+        @Lazy Int y;
+        }
+
+    class DumpC12
+        extends DumpC1
+        {
+        Int z;
         }
 
     class DumpC2

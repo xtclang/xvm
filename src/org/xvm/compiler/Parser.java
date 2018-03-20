@@ -2709,7 +2709,7 @@ s     *
                     }
 
                 // test for an access-specified TypeExpression, i.e. ending with :public,
-                // :protected, or :private
+                // :protected, :private, or :struct
                 Token access = null;
                 Token colon  = match(Id.COLON);
                 if (colon != null)
@@ -2721,6 +2721,7 @@ s     *
                             case PUBLIC:
                             case PROTECTED:
                             case PRIVATE:
+                            case STRUCT:
                                 // at this point, this MUST be a type expression
                                 access  = current();
                                 lEndPos = access.getEndPosition();
@@ -3431,6 +3432,7 @@ s     *
                 case PUBLIC:
                 case PROTECTED:
                 case PRIVATE:
+                case STRUCT:
                     // use expect() to make sure that getLastMatch() is set correctly
                     tokAccess = expect(tokNext.getId());
                     break;
