@@ -685,7 +685,7 @@ public class xTestApp extends xModule
         mtPrPConst.createCode()
             // #0 = x; #1 = y; #2 = prefix
             .add(new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                    new int[] {0, 1}))
+                new int[]{0, 1}))
             .add(new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"),
                     2))
             .add(new Return_0());
@@ -730,11 +730,12 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("zero"))) // #3 (zero)
             .add(new Move(adapter.ensureValueConstantId(1), 3))
 
-            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
-                adapter.ensureValueConstantId("ai"))) // #4 (ai)
-
             .add(new IsEq(3, adapter.ensureValueConstantId(0), Frame.RET_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("zero == 0")))
+
+            .add(new Var_DN(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
+                adapter.ensureValueConstantId("ai"))) // #4 (ai)
+            .add(new Move(adapter.ensureValueConstantId(0), 4))
 
             .add(new Return_0());
 

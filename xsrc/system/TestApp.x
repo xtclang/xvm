@@ -534,8 +534,9 @@ class TestApp
         print(prp);
 
         @BlackHole Int zero = 1;
-        BlackHole rzero = &zero;
         assert(zero == 0);
+
+        @Atomic Int ai = 0;
         }
 
     static Void testReal1()

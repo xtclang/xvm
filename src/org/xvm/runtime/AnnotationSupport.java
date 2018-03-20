@@ -41,18 +41,16 @@ public class AnnotationSupport
             if (constIdBase.equals(pool.clzVar()))
                 {
                 f_support = xVarImpl.INSTANCE;
-                f_fNative = true;
                 }
             else if (constIdBase.equals(pool.clzRef()))
                 {
                 f_support = xRefImpl.INSTANCE;
-                f_fNative = true;
                 }
             else
                 {
                 f_support = typeBase.getOpSupport(registry);
-                f_fNative = false;
                 }
+            f_fNative = false;
             }
         else
             {
