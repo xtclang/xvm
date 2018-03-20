@@ -350,6 +350,9 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("bye")))
             .add(new X_Print(0))
 
+            .add(new P_Get(adapter.getPropertyConstId("Referent", "const_"), 1, Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("ra.const_")))
+
             .add(new Var_N(adapter.getClassTypeConstId("Var<Int64>"),
                 adapter.ensureValueConstantId("ri"))) // #3 (ri)
             .add(new Enter())

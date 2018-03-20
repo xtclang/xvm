@@ -38,11 +38,11 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRef;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xVar;
+import org.xvm.runtime.template.xVarImpl;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xArray;
@@ -1169,8 +1169,8 @@ public abstract class ClassTemplate
         TypeConstant typeReferent = constProp.getRefType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
-            ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
-            : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
+            ? xRefImpl.INSTANCE.ensureParameterizedClass(typeReferent)
+            : xVarImpl.INSTANCE.ensureParameterizedClass(typeReferent);
 
         return new RefHandle(clzRef, hThis, sPropName);
         }

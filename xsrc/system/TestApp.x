@@ -327,6 +327,8 @@ class TestApp
         ra.set("bye");
         print(arg);
 
+        assert(ra.const_);
+
         Var<Int> ri;
             {
             Int i = 1;
@@ -532,6 +534,7 @@ class TestApp
         print(prp);
 
         @BlackHole Int zero = 1;
+        BlackHole rzero = &zero;
         assert(zero == 0);
         }
 

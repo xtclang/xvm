@@ -11,7 +11,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;

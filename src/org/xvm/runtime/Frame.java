@@ -21,7 +21,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 

@@ -1,14 +1,18 @@
 package org.xvm.runtime;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.template.xRef;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xVarImpl;
 
 /**
  * An OpSupport and VarSupport implementation for annotated types.
@@ -24,10 +28,31 @@ public class AnnotationSupport
         OpSupport supportAnno = registry.getTemplate(constIdAnno);
 
         // if the annotation itself is native, it overrides the base type template (support)
-        if (supportAnno instanceof xRef) // TODO: isNative()?
+        if (supportAnno instanceof xRefImpl) // TODO: isNative()?
             {
             f_support = supportAnno.getTemplate(typeBase);
             f_fNative = true;
+            }
+        else if (typeBase.isSingleDefiningConstant())
+            {
+            Constant constIdBase = typeBase.getDefiningConstant();
+
+            ConstantPool pool = typeBase.getConstantPool();
+            if (constIdBase.equals(pool.clzVar()))
+                {
+                f_support = xVarImpl.INSTANCE;
+                f_fNative = true;
+                }
+            else if (constIdBase.equals(pool.clzRef()))
+                {
+                f_support = xRefImpl.INSTANCE;
+                f_fNative = true;
+                }
+            else
+                {
+                f_support = typeBase.getOpSupport(registry);
+                f_fNative = false;
+                }
             }
         else
             {

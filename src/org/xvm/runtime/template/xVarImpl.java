@@ -10,7 +10,6 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.Utils.BinaryAction;
@@ -24,13 +23,13 @@ import org.xvm.runtime.VarSupport;
 /**
  * TODO:
  */
-public class xVar
-        extends xRef
+public class xVarImpl
+        extends xRefImpl
         implements VarSupport
     {
-    public static xVar INSTANCE;
+    public static xVarImpl INSTANCE;
 
-    public xVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xVarImpl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 

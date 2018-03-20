@@ -43,9 +43,9 @@ public class X_Print
 
         StringBuilder sb = new StringBuilder();
 
-        if (nValue >= 0)
+        try
             {
-            try
+            if (nValue >= 0)
                 {
                 Frame.VarInfo info = frame.getVarInfo(nValue);
 
@@ -55,72 +55,59 @@ public class X_Print
                     }
 
                 sb.append(info.getName()).append("=");
-
-                ObjectHandle hValue = frame.getArgument(nValue);
-                if (hValue == null)
-                    {
-                    sb.append("<waiting>...");
-                    Utils.log(frame, sb.toString());
-                    return R_REPEAT;
-                    }
-
-                if (hValue instanceof DeferredPropertyHandle)
-                    {
-                    DeferredPropertyHandle hProp = (DeferredPropertyHandle) hValue;
-                    sb.append("Local property: ").append(hProp.m_property.getName());
-                    return R_NEXT;
-                    }
-
-                // call the "to<String>()" method for the object to get the value
-                m_nMethodId = frame.f_context.f_templates.f_adapter.getMethodConstId("Object", "to",
-                    ClassTemplate.VOID, ClassTemplate.STRING);
-                CallChain chain = getCallChain(frame, hValue);
-
-                int iResult;
-                if (chain.isNative())
-                    {
-                    iResult = hValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue,
-                            Utils.OBJECTS_NONE, Frame.RET_LOCAL);
-                    if (iResult == R_NEXT)
-                        {
-                        sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
-                        }
-                    }
-                else
-                    {
-                    ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-
-                    iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
-                    }
-
-                if (iResult == R_CALL)
-                    {
-                    frame.m_frameNext.setContinuation(frameCaller->
-                        {
-                        sb.append(((xString.StringHandle) frameCaller.getFrameLocal()).getValue());
-                        Utils.log(frame, sb.toString());
-                        return Op.R_NEXT;
-                        });
-                    return R_CALL;
-                    }
                 }
-            catch (ObjectHandle.ExceptionHandle.WrapperException e)
-                {
-                return frame.raiseException(e);
-                }
-            }
-        else
-            {
-            Constant constValue = frame.getConstant(nValue);
 
-            if (constValue instanceof StringConstant)
+            ObjectHandle hValue = frame.getArgument(nValue);
+            if (hValue == null)
                 {
-                sb.append(((StringConstant) constValue).getValue());
+                sb.append("<waiting>...");
+                Utils.log(frame, sb.toString());
+                return R_REPEAT;
+                }
+
+            if (hValue instanceof DeferredPropertyHandle)
+                {
+                DeferredPropertyHandle hProp = (DeferredPropertyHandle) hValue;
+                sb.append("Local property: ").append(hProp.m_property.getName());
+                return R_NEXT;
+                }
+
+            // call the "to<String>()" method for the object to get the value
+            m_nMethodId = frame.f_context.f_templates.f_adapter.getMethodConstId("Object", "to",
+                ClassTemplate.VOID, ClassTemplate.STRING);
+            CallChain chain = getCallChain(frame, hValue);
+
+            int iResult;
+            if (chain.isNative())
+                {
+                iResult = hValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue,
+                        Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                if (iResult == R_NEXT)
+                    {
+                    sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                    }
                 }
             else
                 {
-                sb.append(constValue.getValueString());
+                ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
+
+                iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
                 }
+
+            if (iResult == R_CALL)
+                {
+                frame.m_frameNext.setContinuation(frameCaller->
+                    {
+                    sb.append(((xString.StringHandle) frameCaller.getFrameLocal()).getValue());
+                    Utils.log(frame, sb.toString());
+                    return Op.R_NEXT;
+                    });
+                return R_CALL;
+                }
+            }
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
             }
 
         Utils.log(frame, sb.toString());

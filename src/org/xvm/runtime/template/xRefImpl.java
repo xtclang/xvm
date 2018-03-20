@@ -17,13 +17,13 @@ import org.xvm.runtime.VarSupport;
 /**
  * TODO:
  */
-public class xRef
+public class xRefImpl
         extends ClassTemplate
         implements VarSupport
     {
-    public static xRef INSTANCE;
+    public static xRefImpl INSTANCE;
 
-    public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRefImpl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 

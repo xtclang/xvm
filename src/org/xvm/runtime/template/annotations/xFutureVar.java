@@ -24,14 +24,14 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xVar;
+import org.xvm.runtime.template.xVarImpl;
 
 
 /**
  * TODO:
  */
 public class xFutureVar
-        extends xVar
+        extends xVarImpl
     {
     public static xFutureVar INSTANCE;
     public static TypeConstant TYPE;

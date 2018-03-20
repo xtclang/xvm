@@ -7,7 +7,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
@@ -15,8 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
-
-import org.xvm.runtime.template.xRef.RefHandle;
 
 /**
  * TODO:

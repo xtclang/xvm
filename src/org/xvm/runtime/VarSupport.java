@@ -3,7 +3,7 @@ package org.xvm.runtime;
 
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 
 
 /**

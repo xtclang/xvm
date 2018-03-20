@@ -14,7 +14,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.VarSupport;
 
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 
 
 /**

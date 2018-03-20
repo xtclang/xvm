@@ -26,7 +26,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain.PropertyCallChain;
 
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xRefImpl.RefHandle;
 
 import org.xvm.util.ListMap;
 
