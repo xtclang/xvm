@@ -2236,51 +2236,55 @@ public class ConstantPool
      */
     protected boolean postValidate(ErrorListener errlist)
         {
-        for (int i = 0, c = m_listConst.size(); i < c; ++i)
+        if (System.getProperties().containsKey("CP"))
             {
-            Constant constant = m_listConst.get(i);
-            TypeConstant type = null;
-            switch (constant.getFormat())
+            for (int i = 0, c = m_listConst.size(); i < c; ++i)
                 {
-                case Package:
-                    if (((PackageStructure) ((IdentityConstant) constant).getComponent()).isModuleImport())
-                        {
+                Constant constant = m_listConst.get(i);
+                TypeConstant type = null;
+                switch (constant.getFormat())
+                    {
+                    case Package:
+                        if (((PackageStructure) ((IdentityConstant) constant).getComponent()).isModuleImport())
+                            {
+                            break;
+                            }
+                    case Module:
+                    case Class:
+                    case Typedef:
+                        type = ((IdentityConstant) constant).asTypeConstant();
                         break;
-                        }
-                case Module:
-                case Class:
-                case Typedef:
-                    type = ((IdentityConstant) constant).asTypeConstant();
-                    break;
 
-                case TerminalType:
-                case ImmutableType:
-                case AccessType:
-                case AnnotatedType:
-                case ParameterizedType:
-                case UnionType:
-                case IntersectionType:
-                case DifferenceType:
-                    type = (TypeConstant) constant;
-                    break;
-                }
-            if (type != null)
-                {
-                TypeInfo info = type.ensureTypeInfo(errlist);
-
-                // TODO temporary for debugging; REMOVE LATER!!!
-                if (type.toString().contains(System.getProperty("CP", "Dump")))
-                    {
-                    System.out.println("*** TypeInfo for " + type.getValueString() + ":");
-                    System.out.println(info);
+                    case TerminalType:
+                    case ImmutableType:
+                    case AccessType:
+                    case AnnotatedType:
+                    case ParameterizedType:
+                    case UnionType:
+                    case IntersectionType:
+                    case DifferenceType:
+                        type = (TypeConstant) constant;
+                        break;
                     }
-
-                if (errlist.isAbortDesired())
+                if (type != null)
                     {
-                    return true;
+                    TypeInfo info = type.ensureTypeInfo(errlist);
+
+                    // TODO temporary for debugging; REMOVE LATER!!!
+                    if (type.toString().contains(System.getProperty("CP", "Dump")))
+                        {
+                        System.out.println("*** TypeInfo for " + type.getValueString() + ":");
+                        System.out.println(info);
+                        }
+
+                    if (errlist.isAbortDesired())
+                        {
+                        return true;
+                        }
                     }
                 }
             }
+
         return false;
         }
 

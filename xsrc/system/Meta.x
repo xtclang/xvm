@@ -20,7 +20,7 @@ interface Meta<PublicType, ProtectedType, PrivateType, StructType>
      * The read-only struct for this object. Each property that has space allocated for
      * storage of the property's value will occur within this structure.
      */
-    @RO StructType struct;
+    @RO StructType struct_;
 
     /**
      * This property represents the immutability of an object. This property can be set to true to

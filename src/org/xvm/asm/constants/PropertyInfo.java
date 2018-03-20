@@ -375,6 +375,7 @@ public class PropertyInfo
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
 
+                case SansCode:
                 case Delegating:
                 case Explicit:
                     // concrete type
