@@ -919,7 +919,7 @@ public class TypeInfo
         StringBuilder sb = new StringBuilder();
 
         sb.append("TypeInfo: ")
-          .append(m_type.getValueString())
+          .append(m_type)
           .append(" (format=")
           .append(getFormat());
 
@@ -1020,8 +1020,12 @@ public class TypeInfo
                 {
                 sb.append("\n  [")
                   .append(i++)
-                  .append("] ")
-                  .append(entry.getKey())
+                  .append("] ");
+                if (m_mapVirtProps.containsKey(entry.getKey().getNestedIdentity()))
+                    {
+                    sb.append("(v) ");
+                    }
+                sb.append(entry.getKey())
                   .append("=")
                   .append(entry.getValue());
                 }
@@ -1037,8 +1041,12 @@ public class TypeInfo
                 {
                 sb.append("\n  [")
                   .append(i++)
-                  .append("] ")
-                  .append(entry.getKey().getValueString())
+                  .append("] ");
+                if (m_mapVirtMethods.containsKey(entry.getKey().getNestedIdentity()))
+                    {
+                    sb.append("(v) ");
+                    }
+                sb.append(entry.getKey())
                   .append("=")
                   .append(entry.getValue());
                 }

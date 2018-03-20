@@ -236,7 +236,7 @@ module Test
     class DumpC1
         implements I
         {
-        Int y;
+        @Lazy Int y;
         }
 
     class DumpC12

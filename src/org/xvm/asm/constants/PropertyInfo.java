@@ -411,7 +411,6 @@ public class PropertyInfo
                 : new PropertyInfo(list.toArray(new PropertyBody[list.size()]), m_type, m_fRequireField, m_fSuppressVar);
         }
 
-
     /**
      * Create a new PropertyInfo that represents a more limited (public or protected) access to the
      * members of this property that is on the private type.
@@ -423,6 +422,8 @@ public class PropertyInfo
      */
     public PropertyInfo limitAccess(Access access)
         {
+        assert access != null && access != Access.STRUCT;
+
         // determine if the resulting property would be a Var, a Ref, or absent from the type with
         // the specified access
         Access accessRef = getRefAccess();

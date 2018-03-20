@@ -443,6 +443,7 @@ public class Token
         RETURN      ("return"         ),
         SERVICE     ("service"        ),
         STATIC      ("static"         ),
+        STRUCT      ("struct"         ),
         SUPER       ("super"          , true, true),
         SWITCH      ("switch"         ),
         THIS        ("this"           , true, true),

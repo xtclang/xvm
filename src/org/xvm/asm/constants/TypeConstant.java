@@ -945,18 +945,28 @@ public abstract class TypeConstant
         TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
-            if (entry.getValue().hasField())
+            // the properties that show up in structure types are those that have a field; however,
+            // we also need to retain both type params and constants, even though they technically
+            // are not "in" the structure itself
+            PropertyInfo prop = entry.getValue();
+            if (prop.isTypeParam() || prop.isConstant() || prop.hasField())
                 {
-                mapProps.put(entry.getKey(), entry.getValue());
-                // TODO mapVirtProps
+                PropertyConstant id = entry.getKey();
+                // REVIEW do we need to transform "prop" into some sort of "struct" form?
+                if (prop.isVirtual())
+                    {
+                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    }
+                mapProps.put(id, prop);
                 }
             }
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet())
             {
-            if (entry.getValue().isFunction())
+            MethodInfo method = entry.getValue();
+            if (method.isFunction())
                 {
-                mapMethods.put(entry.getKey(), entry.getValue());
+                mapMethods.put(entry.getKey(), method);
                 }
             }
 
@@ -974,23 +984,53 @@ public abstract class TypeConstant
                     {
                     // obtain the struct type of the contribution and copy any missing fields from it
                     TypeConstant typeContrib = contrib.getTypeConstant();
-                    assert !typeContrib.isAccessSpecified();
-                    TypeInfo infoContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT)
-                            .ensureTypeInfoInternal(errs);
+                    if (typeContrib instanceof AccessTypeConstant)
+                        {
+                        // unwrap the access type constant
+                        typeContrib = typeContrib.getUnderlyingType();
+                        }
+                    if (typeContrib.getAccess() != Access.STRUCT)
+                        {
+                        // wrap the type as an access type constant
+                        assert !typeContrib.isAccessSpecified();
+                        typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
+                        }
+
+                    TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
                     if (infoContrib == null)
                         {
                         fIncomplete = true;
                         }
                     else
                         {
-                        assert mapProps.keySet().containsAll(infoContrib.getProperties().keySet());
                         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
                             {
-                            if (!mapProps.containsKey(entry.getKey()))
+                            PropertyInfo prop = entry.getValue();
+                            if (prop.isTypeParam()
+                                    || (prop.isConstant() && prop.getRefAccess().isAsAccessibleAs(Access.PROTECTED))
+                                    || prop.hasField())
                                 {
-                                mapProps.put(entry.getKey(), entry.getValue());
-                                // TODO mapVirtProps
+                                PropertyConstant id = entry.getKey();
+                                // REVIEW do we need to transform "prop" into some sort of "struct" form?
+                                if (prop.isVirtual())
+                                    {
+                                    Object nid = id.getNestedIdentity();
+                                    if (mapVirtProps.containsKey(nid))
+                                        {
+                                        continue;
+                                        }
+
+                                    mapVirtProps.put(nid, prop);
+                                    }
+                                mapProps.putIfAbsent(id, prop);
                                 }
+                            }
+
+                        for (Map.Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
+                            {
+                            MethodInfo method = entry.getValue();
+                            assert method.isFunction();
+                            mapMethods.putIfAbsent(entry.getKey(), method);
                             }
                         }
                     }
