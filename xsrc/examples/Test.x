@@ -305,6 +305,7 @@ module Test
     // to support "Object foo()"
     class DumpD4 extends B
         {
+        @Override
         Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
 
         @Override

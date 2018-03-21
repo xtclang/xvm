@@ -474,7 +474,7 @@ public interface Constants
      */
     public static final String VE_CONST_ANNOTATION_ILLEGAL            = "VERIFY-72";
     /**
-     * The @Overrid annotation on the constant {1} on {0} is illegal.
+     * The @Override annotation on the constant {1} on {0} is illegal.
      */
     public static final String VE_CONST_OVERRIDE_ILLEGAL              = "VERIFY-73";
     /**
@@ -501,6 +501,14 @@ public interface Constants
      * The access for the {1} property on {0} is defined more restrictively than its base.
      */
     public static final String VE_PROPERTY_ACCESS_LESSENED            = "VERIFY-79";
+    /**
+     * {0} attempts to override the method {1} on {2}, but the method cannot be overridden.
+     */
+    public static final String VE_METHOD_OVERRIDE_ILLEGAL             = "VERIFY-80";
+    /**
+     * {0} attempts to override the method {1} on {2}, but does not specify @Override.
+     */
+    public static final String VE_METHOD_OVERRIDE_REQUIRED            = "VERIFY-81";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

@@ -2080,7 +2080,7 @@ public abstract class TypeConstant
 
                 if (methodBase != null)
                     {
-                    methodResult = methodBase.layerOn(methodContrib, errs);
+                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                     mapMethods.remove(methodBase.getIdentity());
                     }
 

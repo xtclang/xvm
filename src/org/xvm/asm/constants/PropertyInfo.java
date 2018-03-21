@@ -8,13 +8,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -117,10 +115,10 @@ public class PropertyInfo
             return this;
             }
 
-        // cannot combine struct with anything other than struct
-        if (this.getRefAccess() == Access.STRUCT ^ that.getRefAccess() == Access.STRUCT)
+        // cannot combine struct with anything
+        if (this.getRefAccess() == Access.STRUCT || that.getRefAccess() == Access.STRUCT)
             {
-            throw new IllegalStateException("cannot combine struct with anything other than struct");
+            throw new IllegalStateException("cannot combine struct with anything");
             }
 
         // cannot combine private with anything
@@ -272,10 +270,10 @@ public class PropertyInfo
 
         // the property extension cannot reduce the accessibility of the base
         Access accessThisVar = this.calcVarAccess();
-        Access accessThatVar = that.calcVarAccess();
+        Access accessThatVar = that.getVarAccess();     // null has additional possible meanings
         if (that.getRefAccess().isLessAccessibleThan(this.getRefAccess()) ||
-                (accessThisVar != null && accessThatVar != accessThisVar &&
-                        (accessThatVar == null || accessThatVar.isLessAccessibleThan(accessThisVar))))
+                (accessThisVar != null && accessThatVar != null &&
+                        accessThatVar.isLessAccessibleThan(accessThisVar)))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
                     constId.getParentConstant().getValueString(),

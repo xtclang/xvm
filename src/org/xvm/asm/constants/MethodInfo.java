@@ -7,11 +7,13 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.startList;
 
@@ -21,6 +23,7 @@ import static org.xvm.util.Handy.startList;
  * method chain, which is a sequence of method bodies representing implementations of the method.
  */
 public class MethodInfo
+        implements Constants
     {
     /**
      * Construct a MethodInfo for a method body.
@@ -93,31 +96,59 @@ public class MethodInfo
      * the glass planes of "this", with the resulting combination of glass planes returned as a
      * MethodInfo.
      *
-     * @param that  the MethodInfo to layer onto this MethodInfo
+     * @param that   the MethodInfo to layer onto this MethodInfo
+     * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
+     * @param errs   the error list to log any conflicts to
      *
      * @return the resulting MethodInfo
      */
-    public MethodInfo layerOn(MethodInfo that, ErrorListener errs)
+    public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs)
         {
+        assert this.getIdentity().getName().equals(that.getIdentity().getName());
+        assert !this.isFunction() && !that.isFunction();
+        assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) && that.getAccess().isAsAccessibleAs(Access.PROTECTED);
+
         if (!isOverrideable())
             {
             // it is not possible to override the base method
-            // TODO log error
+            MethodConstant id = getIdentity();
+            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                    that.getIdentity().getNamespace().getValueString(),
+                    id.getSignature().getValueString(),
+                    id.getNamespace().getValueString());
             return this;
             }
 
-        MethodBody[] aThis = this.m_aBody;
-        MethodBody[] aThat = that.m_aBody;
-        int          cThis = aThis.length;
-        int          cThat = aThat.length;
+        MethodBody[] aBase = this.m_aBody;
+        MethodBody[] aAdd  = that.m_aBody;
+        int          cBase = aBase.length;
+        int          cAdd  = aAdd.length;
+
+        // check @Override
+        if (fSelf)
+            {
+            // should only have one layer (or zero layers, in which case we wouldn't have been
+            // called) of property body for the "self" layer
+            assert cAdd == 1;
+
+            // check @Override
+            if (!aAdd[0].isOverride())
+                {
+                MethodConstant id = getIdentity();
+                id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                        that.getIdentity().getNamespace().getValueString(),
+                        id.getSignature().getValueString(),
+                        id.getNamespace().getValueString());
+                }
+            }
 
         ArrayList<MethodBody> listMerge = null;
-        NextLayer: for (int iThat = 0; iThat < cThat; ++iThat)
+        NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat)
             {
-            MethodBody bodyThat = aThat[iThat];
-            for (int iThis = 0; iThis < cThis; ++iThis)
+            MethodBody bodyThat = aAdd[iThat];
+            for (int iThis = 0; iThis < cBase; ++iThis)
                 {
-                if (bodyThat.equals(aThis[iThis]))
+                if (bodyThat.equals(aBase[iThis]))
                     {
                     // we found a duplicate, so we can ignore it (it'll get added when we add all of
                     // the bodies from this)
@@ -137,7 +168,7 @@ public class MethodInfo
             return this;
             }
 
-        Collections.addAll(listMerge, aThis);
+        Collections.addAll(listMerge, aBase);
         return new MethodInfo(listMerge.toArray(new MethodBody[listMerge.size()]));
         }
 
