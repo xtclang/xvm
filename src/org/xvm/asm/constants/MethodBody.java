@@ -378,7 +378,7 @@ public class MethodBody
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
-        sb.append(m_id.getValueString())
+        sb.append(m_id.getPathString())
           .append(" {sig=")
           .append(m_sig.getValueString())
           .append(", impl=")

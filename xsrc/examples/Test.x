@@ -230,7 +230,10 @@ module Test
 
     interface I
         {
-        @RO Int x;
+        @RO Int x.get()
+            {
+            return 0;
+            }
         }
 
     class DumpC1

@@ -151,6 +151,13 @@ public class MethodConstant
         }
 
     @Override
+    protected StringBuilder buildPath()
+        {
+        return getParentConstant().buildPath()
+                .append(getPathElementString());
+        }
+
+    @Override
     public Object getPathElement()
         {
         return m_constSig;
