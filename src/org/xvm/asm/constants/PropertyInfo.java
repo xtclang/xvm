@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 

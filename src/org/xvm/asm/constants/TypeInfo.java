@@ -131,15 +131,23 @@ public class TypeInfo
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
             {
-            PropertyInfo prop = entry.getValue().limitAccess(access);
-            if (prop != null)
+            // first, determine if the property's parent would even still exist (since everything
+            // inside of it will disappear if it doesn't)
+            PropertyConstant id       = entry.getKey();
+            PropertyInfo     prop     = entry.getValue();
+            boolean          fVirtual = prop.isVirtual();
+            if (id.getNestedDepth() <= 1 || isIdentityReachable(id, fVirtual, access))
                 {
-                PropertyConstant id = entry.getKey();
-                mapProps.put(id, prop);
-
-                if (prop.isVirtual())
+                // now ask the Property itself to reduce its capabilities based on the new access level
+                prop = prop.limitAccess(access);
+                if (prop != null)
                     {
-                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    mapProps.put(id, prop);
+
+                    if (fVirtual)
+                        {
+                        mapVirtProps.put(id.getNestedIdentity(), prop);
+                        }
                     }
                 }
             }
@@ -148,10 +156,11 @@ public class TypeInfo
         Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
             {
+            MethodConstant id = entry.getKey();
             MethodInfo method = entry.getValue();
-            if (method.getAccess().compareTo(access) <= 0)
+            if (method.getAccess().isAsAccessibleAs(access) &&
+                    (id.getNestedDepth() <= 1 || isIdentityReachable(id, method.isVirtual(), access)))
                 {
-                MethodConstant id = entry.getKey();
                 mapMethods.put(id, method);
 
                 if (method.isVirtual())
@@ -166,6 +175,46 @@ public class TypeInfo
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, m_progress);
+        }
+
+    /**
+     * Given a specified level of access, would the specified identity still be reachable?
+     *
+     * @param id        a property or method identity
+     * @param fVirtual  true if the identity represents a virtual member of the type
+     * @param access    the access level being proposed
+     *
+     * @return true iff all of the properties and methods between the specified identity and the
+     *         containing type would still be reachable given the proposed access level
+     */
+    private boolean isIdentityReachable(IdentityConstant id, boolean fVirtual, Access access)
+        {
+        IdentityConstant idParent = id.getNamespace();
+        while (idParent.isNested())
+            {
+            if (fVirtual)
+                {
+                // substitute a sub-class property or method if one is available
+                if (idParent instanceof PropertyConstant)
+                    {
+                    idParent = m_mapVirtProps.get(idParent.getNestedIdentity()).getIdentity();
+                    }
+                else if (idParent instanceof MethodConstant)
+                    {
+                    idParent = m_mapVirtMethods.get(idParent.getNestedIdentity()).getIdentity();
+                    }
+                }
+
+            // REVIEW capping has no body, so getComponent() could result in a NPE (need to follow the "redirect" from the cap)
+            if (idParent.getComponent().getAccess().isLessAccessibleThan(access))
+                {
+                return false;
+                }
+
+            idParent = idParent.getNamespace();
+            }
+
+        return true;
         }
 
     /**

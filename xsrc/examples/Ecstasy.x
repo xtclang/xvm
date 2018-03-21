@@ -73,7 +73,7 @@ module Ecstasy.xtclang.org
         @Lazy Map<String, EnumType> byName;
         }
 
-    interface Function // <ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+    interface Function<ParamTypes, ReturnTypes> // TODO <ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
         {
 //         @Override
 //         function Function() to<function Function()>();
@@ -159,29 +159,31 @@ module Ecstasy.xtclang.org
 
             RefType get()
                 {
-                if (!assigned)
-                    {
-                    RefType value = calculate == null ? calc() : calculate();
-                    try
-                        {
-                        assignable = true;
-                        set(value);
-                        }
-                    finally
-                        {
-                        assignable = false;
-                        }
-
-                    return value;
-                    }
-
-                return super();
+                TODO
+//                if (!assigned)
+//                    {
+//                    RefType value = calculate == null ? calc() : calculate();
+//                    try
+//                        {
+//                        assignable = true;
+//                        set(value);
+//                        }
+//                    finally
+//                        {
+//                        assignable = false;
+//                        }
+//
+//                    return value;
+//                    }
+//
+//                return super();
                 }
 
             Void set(RefType value)
                 {
-                assert !assigned && assignable;
-                super(value);
+                TODO
+//                assert !assigned && assignable;
+//                super(value);
                 }
 
             protected RefType calc()
