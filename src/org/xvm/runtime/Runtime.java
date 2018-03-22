@@ -1,11 +1,7 @@
 package org.xvm.runtime;
 
 
-import java.util.Map;
-
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.xvm.asm.ModuleRepository;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -15,41 +11,27 @@ public class Runtime
     {
     final public DaemonPool f_daemons;
 
-    final protected Map<String, Container> f_mapContainers = new ConcurrentHashMap<>();
+    // service id producer
+    final AtomicInteger f_idProducer = new AtomicInteger();
 
     public Runtime()
         {
         f_daemons = new DaemonPool("Worker");
+        }
+
+    public void start()
+        {
         f_daemons.start();
         }
 
-    public Container createContainer(String sName, ModuleRepository repository)
+    public void shutdown()
         {
-        Container container = new Container(this, sName, repository);
-
-        container.start();
-
-        f_mapContainers.put(sName, container);
-
-        return container;
+        f_daemons.shutdown();
         }
 
     public boolean isIdle()
         {
         // TODO: very naive; replace
-        if (!f_daemons.m_fWaiting)
-            {
-            return false;
-            }
-
-        for (Container container : f_mapContainers.values())
-            {
-            if (!container.isIdle())
-                {
-                return false;
-                }
-            }
-
-        return true;
+        return f_daemons == null || f_daemons.m_fWaiting;
         }
     }
