@@ -266,7 +266,17 @@ public class NameResolver
                         }
                     }
 
-                // no names left to resolve
+                // no names left to resolve, but what we resolved to has not yet been resolved
+                m_status = Status.RESOLVING_TURTLES;
+                // fall through
+
+            case RESOLVING_TURTLES:
+                if (m_constant.containsUnresolved())
+                    {
+                    return Result.DEFERRED;
+                    }
+
+                // no turtles left to resolve
                 m_status = Status.RESOLVED;
                 // fall through
 
@@ -528,7 +538,7 @@ public class NameResolver
     /**
      * The possible internal states for the resolver.
      */
-    private enum Status {INITIAL, CHECKED_IMPORTS, RESOLVED_PARTIAL, RESOLVED, ERROR}
+    private enum Status {INITIAL, CHECKED_IMPORTS, RESOLVED_PARTIAL, RESOLVING_TURTLES, RESOLVED, ERROR}
 
 
     // ----- fields --------------------------------------------------------------------------------
