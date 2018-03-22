@@ -448,3 +448,83 @@ of := s.substring(of);
 
 Alternatively:
 (Boolean, Int) indexOf(Char ch);
+
+--
+
+- library (passive) - not "startable"
+- "one and done"
+    - command line
+    - console
+- daemon (server model)
+    - database service?
+- request/response (service model)
+    - micro service
+    - web app
+
+"one and done"
+"service model"
+
+interface Module
+    {
+    Boolean supports(ApplicationStyle style);
+
+
+    }
+
+module My1nDModule
+    {
+    Void run()
+        {
+        @Inject String[] args;
+        @Inject Console console;
+        console.println("hello world!");
+        }
+    }
+
+interface RequestProcessor
+    {
+    Response process(Request req)
+        {
+        TODO
+        }
+    }
+
+mixin WebApp
+        into Module
+        implements RequestProcessor
+    {
+    @RO RequestProcessor handler.get()
+        {
+        return this;
+        }
+    }
+
+@WebApp module HelloWorld
+    {
+    @Override
+    Response process(Request req)
+        {
+        return new Response("hello world");
+        }
+    }
+
+@WebApp module FusionApps
+    {
+    @Override
+    RequestProcessor handler.get()
+        {
+        return FAService;
+        }
+    }
+
+static service FAService
+        implements RequestProcessor
+    {
+    @Override
+    Response process(Request req)
+        {
+        return new Response("hello world");
+        }
+    }
+
+
