@@ -229,6 +229,18 @@ public class MethodInfo
         }
 
     /**
+     * @return the "into" version of this MethodInfo
+     */
+    public MethodInfo asInto()
+        {
+        // basically, if the method is a function, it stays as-is; otherwise, it needs to be
+        // "flattened" into a single implicit entry with the right signature
+        return isFunction()
+                ? this
+                : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
+        }
+
+    /**
      * @return the identity of the call chain, which is the MethodConstant that identifies the first
      *         body (which may <i>or may not</i> refer to an actual MethodStructure)
      */

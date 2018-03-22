@@ -1848,56 +1848,65 @@ public abstract class TypeConstant
                     continue;
                     }
 
+                if (composition == Composition.Into)
+                    {
+                    infoContrib = infoContrib.asInto();
+                    }
+
                 mapContribProps   = infoContrib.getProperties();
                 mapContribMethods = infoContrib.getMethods();
 
-                // collect all of the IdentityConstants in the potential call chain that map to this
-                // particular contribution
-                HashSet<IdentityConstant> setClass = new HashSet<>();
-                for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
+                if (composition != Composition.Into)
                     {
-                    if (entry.getValue().getType().equals(typeContrib))
+                    // collect all of the IdentityConstants in the potential call chain that map to
+                    // this particular contribution
+                    HashSet<IdentityConstant> setClass = new HashSet<>();
+                    for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
                         {
-                        setClass.add(entry.getKey());
-                        }
-                    }
-                HashSet<IdentityConstant> setDefault = new HashSet<>();
-                for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
-                    {
-                    if (entry.getValue().getType().equals(typeContrib))
-                        {
-                        setDefault.add(entry.getKey());
-                        }
-                    }
-
-                // reduce the TypeInfo to only contain methods appropriate to the reduced call
-                // chain for the contribution
-                if (setClass.size() < infoContrib.getClassChain().size()
-                        || setDefault.size() < infoContrib.getDefaultChain().size())
-                    {
-                    Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
-                    for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-                        {
-                        PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
-                        if (infoReduced != null)
+                        if (entry.getValue().getType().equals(typeContrib))
                             {
-                            mapReducedProps.put(entry.getKey(), infoReduced);
+                            setClass.add(entry.getKey());
                             }
                         }
-                    mapContribProps = mapReducedProps;
-
-                    Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
-                    for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                    HashSet<IdentityConstant> setDefault = new HashSet<>();
+                    for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
                         {
-                        MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
-                        if (infoReduced != null)
+                        if (entry.getValue().getType().equals(typeContrib))
                             {
-                            mapReducedMethods.put(entry.getKey(), infoReduced);
+                            setDefault.add(entry.getKey());
                             }
                         }
-                    mapContribMethods = mapReducedMethods;
+
+                    // reduce the TypeInfo to only contain methods appropriate to the reduced call
+                    // chain for the contribution
+                    if (setClass.size() < infoContrib.getClassChain().size()
+                            || setDefault.size() < infoContrib.getDefaultChain().size())
+                        {
+                        Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
+                        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+                            {
+                            PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            if (infoReduced != null)
+                                {
+                                mapReducedProps.put(entry.getKey(), infoReduced);
+                                }
+                            }
+                        mapContribProps = mapReducedProps;
+
+                        Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
+                        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                            {
+                            MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            if (infoReduced != null)
+                                {
+                                mapReducedMethods.put(entry.getKey(), infoReduced);
+                                }
+                            }
+                        mapContribMethods = mapReducedMethods;
+                        }
                     }
                 }
+
 
             // basically, we're building from the bottom up, in columns. if we build from the top
             // down, we may make the wrong "narrowing" choice, because the right choice might not

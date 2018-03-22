@@ -123,9 +123,43 @@ module Ecstasy.xtclang.org
             }
         }
 
-    interface Ref<RefType>
+    interface Referent
         {
+        @RO Type ActualType;
+        <AsType> AsType maskAs<AsType>();
+        <AsType> conditional AsType revealAs<AsType>();
+        Boolean instanceOf(Type type);
+        Boolean implements_(Class interface_);
+        Boolean extends_(Class class_);
+        Boolean incorporates_(Class mixin_);
+        @RO Boolean service_;
+        @RO Boolean const_;
+        @RO Boolean immutable_;
+        }
+
+    interface Ref<RefType>
+            extends Referent
+        {
+        @RO Boolean assigned;
+        conditional RefType peek()
+            {
+            if (assigned)
+                {
+                return True, get();
+                }
+
+            return False;
+            }
         RefType get();
+        @Override
+        @RO Type ActualType;
+        static Boolean equals(Ref value1, Ref value2)
+            {
+            return value1 == value2;
+            }
+        @RO String? name;
+        @RO Int byteLength;
+        @RO Boolean selfContained;
         }
 
     interface Var<RefType>
