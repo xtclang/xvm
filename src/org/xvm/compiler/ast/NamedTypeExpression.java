@@ -388,7 +388,7 @@ public class NamedTypeExpression
         setStage(Stage.Resolving);
 
         NameResolver resolver = getNameResolver();
-        switch(resolver.resolve(errs))
+        switch (resolver.resolve(errs))
             {
             case DEFERRED:
                 listRevisit.add(this);

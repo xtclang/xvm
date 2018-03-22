@@ -1848,54 +1848,62 @@ public abstract class TypeConstant
                     continue;
                     }
 
+                if (composition == Composition.Into)
+                    {
+                    infoContrib = infoContrib.asInto();
+                    }
+
                 mapContribProps   = infoContrib.getProperties();
                 mapContribMethods = infoContrib.getMethods();
 
-                // collect all of the IdentityConstants in the potential call chain that map to this
-                // particular contribution
-                HashSet<IdentityConstant> setClass = new HashSet<>();
-                for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
+                if (composition != Composition.Into)
                     {
-                    if (entry.getValue().getType().equals(typeContrib))
+                    // collect all of the IdentityConstants in the potential call chain that map to
+                    // this particular contribution
+                    HashSet<IdentityConstant> setClass = new HashSet<>();
+                    for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
                         {
-                        setClass.add(entry.getKey());
-                        }
-                    }
-                HashSet<IdentityConstant> setDefault = new HashSet<>();
-                for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
-                    {
-                    if (entry.getValue().getType().equals(typeContrib))
-                        {
-                        setDefault.add(entry.getKey());
-                        }
-                    }
-
-                // reduce the TypeInfo to only contain methods appropriate to the reduced call
-                // chain for the contribution
-                if (setClass.size() < infoContrib.getClassChain().size()
-                        || setDefault.size() < infoContrib.getDefaultChain().size())
-                    {
-                    Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
-                    for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-                        {
-                        PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
-                        if (infoReduced != null)
+                        if (entry.getValue().getType().equals(typeContrib))
                             {
-                            mapReducedProps.put(entry.getKey(), infoReduced);
+                            setClass.add(entry.getKey());
                             }
                         }
-                    mapContribProps = mapReducedProps;
-
-                    Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
-                    for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                    HashSet<IdentityConstant> setDefault = new HashSet<>();
+                    for (Entry<IdentityConstant, Origin> entry : listmapDefaultChain.entrySet())
                         {
-                        MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
-                        if (infoReduced != null)
+                        if (entry.getValue().getType().equals(typeContrib))
                             {
-                            mapReducedMethods.put(entry.getKey(), infoReduced);
+                            setDefault.add(entry.getKey());
                             }
                         }
-                    mapContribMethods = mapReducedMethods;
+
+                    // reduce the TypeInfo to only contain methods appropriate to the reduced call
+                    // chain for the contribution
+                    if (setClass.size() < infoContrib.getClassChain().size()
+                            || setDefault.size() < infoContrib.getDefaultChain().size())
+                        {
+                        Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
+                        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+                            {
+                            PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            if (infoReduced != null)
+                                {
+                                mapReducedProps.put(entry.getKey(), infoReduced);
+                                }
+                            }
+                        mapContribProps = mapReducedProps;
+
+                        Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
+                        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                            {
+                            MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            if (infoReduced != null)
+                                {
+                                mapReducedMethods.put(entry.getKey(), infoReduced);
+                                }
+                            }
+                        mapContribMethods = mapReducedMethods;
+                        }
                     }
                 }
 
@@ -2275,28 +2283,36 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
-        // TODO verify that these log an error if @Override is specified for a non-virtual member
-
         if (struct instanceof MethodStructure)
             {
-            MethodStructure   method = (MethodStructure) struct;
-            MethodConstant    id     = method.getIdentityConstant();
-            SignatureConstant sig    = id.getSignature().resolveGenericTypes(resolver);
-// TODO implementation types etc. LOTS OF WORK HERE?
-            MethodBody body = new MethodBody(id, sig,
-                    method.isAbstract() ? Implementation.Declared :
-                    fInterface          ? Implementation.Default  :
-                    method.isNative()   ? Implementation.Native   :
-                                          Implementation.Explicit  );
+            MethodStructure   method       = (MethodStructure) struct;
+            boolean           fHasNoCode   = method.isAbstract();
+            boolean           fHasAbstract = method.findAnnotation(getConstantPool().clzAbstract()) != null;
+            MethodConstant    id           = method.getIdentityConstant();
+            SignatureConstant sig          = id.getSignature().resolveGenericTypes(resolver);
+            MethodBody        body         = new MethodBody(id, sig,
+                    fInterface && fHasNoCode ? Implementation.Declared :
+                    fInterface               ? Implementation.Default  :
+                    method.isNative()        ? Implementation.Native   :
+                    fHasAbstract             ? Implementation.Abstract :
+                    fHasNoCode               ? Implementation.SansCode :
+                                               Implementation.Explicit  );
             mapMethods.put(id, new MethodInfo(body));
             }
         else if (struct instanceof PropertyStructure)
             {
             PropertyStructure prop = (PropertyStructure) struct;
             PropertyConstant  id   = prop.getIdentityConstant();
-            mapProps.put(id, prop.isTypeParameter()
+            PropertyInfo      info = prop.isTypeParameter()
                     ? new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(id.getName())))
                     : createPropertyInfo(prop, constId, fInterface, resolver, errs));
+            mapProps.put(id, info);
+
+            if (info.isCustomLogic() || info.isRefAnnotated())
+                {
+                // "explode" the property
+                // TODO for (info.getRefAnnotations())
+                }
             }
 
         // recurse through children

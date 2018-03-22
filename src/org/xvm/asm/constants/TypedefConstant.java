@@ -63,6 +63,13 @@ public class TypedefConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        TypedefStructure typedef = (TypedefStructure) getComponent();
+        return typedef == null || typedef.getType().containsUnresolved();
+        }
+
+    @Override
     public TypedefStructure resolveNestedIdentity(ClassStructure clz)
         {
         Component parent = getNamespace().resolveNestedIdentity(clz);

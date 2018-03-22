@@ -178,6 +178,68 @@ public class TypeInfo
         }
 
     /**
+     * @return the "into" version of this TypeInfo
+     */
+    public TypeInfo asInto()
+        {
+        TypeInfo info = m_into;
+        if (info == null)
+            {
+            Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+            Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
+                {
+                PropertyConstant id       = entry.getKey();
+                PropertyInfo     prop     = entry.getValue();
+                boolean          fVirtual = prop.isVirtual();
+
+                // convert the property into an "into" property
+                prop = prop.asInto();
+
+                mapProps.put(id, prop);
+                if (fVirtual)
+                    {
+                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    }
+                }
+
+            Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+            Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+            for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
+                {
+                MethodConstant id       = entry.getKey();
+                MethodInfo     method   = entry.getValue();
+                boolean        fVirtual = method.isVirtual();
+
+                // convert the method into an "into" method
+                method = method.asInto();
+
+                mapMethods.put(id, method);
+                if (method.isVirtual())
+                    {
+                    mapVirtMethods.put(id.getNestedIdentity(), method);
+                    }
+                }
+
+            info = new TypeInfo(m_type, m_struct, m_cDepth, m_fAbstract,
+                    m_mapTypeParams, m_aannoClass,
+                    m_typeExtends, m_typeRebases, m_typeInto,
+                    m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, m_progress);
+
+            if (m_progress == Progress.Complete)
+                {
+                // cache the result
+                m_into = info;
+
+                // cache the result on the result itself, so it doesn't have to build its own "into"
+                info.m_into = info;
+                }
+            }
+        return info;
+        }
+
+    /**
      * Given a specified level of access, would the specified identity still be reachable?
      *
      * @param id        a property or method identity
@@ -1323,6 +1385,7 @@ public class TypeInfo
     private transient TypeResolver m_resolver;
 
     // cached query results
+    private transient TypeInfo            m_into;
     private transient Set<MethodInfo>     m_setAuto;
     private transient Set<MethodInfo>     m_setOps;
     private transient String              m_sOp;

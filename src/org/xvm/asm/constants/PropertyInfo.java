@@ -454,6 +454,31 @@ public class PropertyInfo
         }
 
     /**
+     * @return the "into" version of this PropertyInfo
+     */
+    public PropertyInfo asInto()
+        {
+        // basically, if the method is a constant or type parameter, it stays as-is; otherwise, it
+        // needs to be "flattened" into a single implicit entry with the right signature
+        if (isConstant() || isTypeParam())
+            {
+            return this;
+            }
+
+        boolean fRO = false;
+        boolean fRW = false;
+        for (PropertyBody body : m_aBody)
+            {
+            fRO |= body.isRO();
+            fRW |= body.isRW();
+            }
+
+        PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit,
+                null, getType(), fRO, fRW, false, hasField(), false, null, null);
+        return new PropertyInfo(new PropertyBody[] {body}, m_type, m_fRequireField, m_fSuppressVar);
+        }
+
+    /**
      * @return the container of the property
      */
     public IdentityConstant getParent()
