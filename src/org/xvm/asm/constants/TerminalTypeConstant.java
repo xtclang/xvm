@@ -1140,7 +1140,16 @@ public class TerminalTypeConstant
     @Override
     public boolean containsUnresolved()
         {
-        return ensureResolvedConstant().containsUnresolved();
+        Constant constId = ensureResolvedConstant();
+        if (constId.containsUnresolved())
+            {
+            return true;
+            }
+        if (getFormat() == Format.Typedef)
+            {
+            return getTypedefTypeConstant((TypedefConstant) constId).containsUnresolved();
+            }
+        return false;
         }
 
     @Override
