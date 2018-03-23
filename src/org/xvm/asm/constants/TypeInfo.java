@@ -136,7 +136,7 @@ public class TypeInfo
             PropertyConstant id       = entry.getKey();
             PropertyInfo     prop     = entry.getValue();
             boolean          fVirtual = prop.isVirtual();
-            if (id.getNestedDepth() <= 1 || isIdentityReachable(id, fVirtual, access))
+            if (id.getNestedDepth() <= 1 || isIdentityReachable(prop.getIdentity(), fVirtual, access))
                 {
                 // now ask the Property itself to reduce its capabilities based on the new access level
                 prop = prop.limitAccess(access);
@@ -158,8 +158,8 @@ public class TypeInfo
             {
             MethodConstant id = entry.getKey();
             MethodInfo method = entry.getValue();
-            if (method.getAccess().isAsAccessibleAs(access) &&
-                    (id.getNestedDepth() <= 1 || isIdentityReachable(id, method.isVirtual(), access)))
+            if (method.getAccess().isAsAccessibleAs(access) && (id.getNestedDepth() <= 1
+                    || isIdentityReachable(method.getIdentity(), method.isVirtual(), access)))
                 {
                 mapMethods.put(id, method);
 

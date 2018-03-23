@@ -13,44 +13,16 @@ module Ecstasy.xtclang.org
 
     typedef Tuple<> Void;
 
-//    class Object
-//        {
-//        String to<String>();
-//        @Auto function Object() to<function Object()>();
-//        }
-
     interface Meta<PublicType, ProtectedType, PrivateType, StructType> {}
+
     class Object
         {
-        protected Meta<Object:public, Object:protected, Object:private> meta.get()
-            {
-            TODO
-            }
-
-        static Boolean equals(Object o1, Object o2)
-            {
-            TODO
-            }
-
-        String to<String>()
-            {
-            TODO
-            }
-
-        Object[] to<Object[]>()
-            {
-            TODO
-            }
-
-        Tuple<Object> to<Tuple<Object>>()
-            {
-            TODO
-            }
-
-//        @Auto function Object() to<function Object()>()
-//            {
-//            TODO
-//            }
+        @Inject protected Meta<Object:public, Object:protected, Object:private> meta;
+        static Boolean equals(Object o1, Object o2) { TODO(""); }
+        String to<String>() { TODO(""); }
+        Object[] to<Object[]>() { TODO(""); }
+        Tuple<Object> to<Tuple<Object>>() { TODO(""); }
+        @Auto function Object() to<function Object()>() { TODO(""); }
         }
 
     interface Enum
@@ -143,16 +115,15 @@ module Ecstasy.xtclang.org
         @RO Boolean assigned;
         conditional RefType peek()
             {
-            if (assigned)
-                {
-                return True, get();
-                }
-
+// TODO
+//            if (assigned)
+//                {
+//                return True, get();
+//                }
             return False;
             }
         RefType get();
-        @Override
-        @RO Type ActualType;
+        @Override @RO Type ActualType;
         static Boolean equals(Ref value1, Ref value2)
             {
             return value1 == value2;
@@ -185,6 +156,7 @@ module Ecstasy.xtclang.org
         mixin Override into Property | Method {}
         mixin InjectedRef<RefType> into Ref<RefType> {}
         mixin UncheckedInt into Int64 {}
+        mixin AnnotateVar<RefType> into Var<RefType> {}
         mixin LazyVar<RefType>(function RefType ()? calculate)
                 into Var<RefType>
             {

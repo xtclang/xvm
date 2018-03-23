@@ -687,7 +687,15 @@ public abstract class TypeConstant
                     // recursion, so be very careful about what can allow a TypeInfo to be built
                     // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
                     // be incomplete for the second time)
-                    typeDeferred.ensureTypeInfo(errs);
+                    if (++m_cRecursiveDepth > 2)
+                        {
+                        // an infinite loop
+                        throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
+                                + this + "; deferred type=" + typeDeferred);
+                        }
+                    TypeInfo infoDeferred = typeDeferred.ensureTypeInfo(errs);
+                    --m_cRecursiveDepth;
+                    assert infoDeferred.getProgress() == Progress.Complete;
                     }
                 }
             }
@@ -1173,7 +1181,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                                 constId.getPathString(), typeMixin.getValueString());
-                        continue;
+                        break;
                         }
 
                     // has to be a mixin
@@ -1181,7 +1189,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                                 typeMixin.getValueString());
-                        continue;
+                        break;
                         }
 
                     // the annotation could be a mixin "into Class", which means that it's a
@@ -1200,7 +1208,7 @@ public abstract class TypeConstant
                             {
                             listClassAnnos.add(annotation);
                             }
-                        continue;
+                        break;
                         }
 
                     // the mixin has to be able to apply to the remainder of the type constant chain
@@ -1210,7 +1218,7 @@ public abstract class TypeConstant
                                 typeClass.getUnderlyingType().getValueString(),
                                 typeMixin.getValueString(),
                                 typeInto.getValueString());
-                        continue;
+                        break;
                         }
 
                     // check for duplicate type annotation
@@ -1931,44 +1939,39 @@ public abstract class TypeConstant
                 {
                 PropertyConstant idContrib   = entry.getKey();
                 PropertyInfo     propContrib = entry.getValue();
+                Object           nidContrib  = idContrib.getNestedIdentity();
+                PropertyConstant idResult    = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
 
                 // the property is not virtual if it is a constant, if it is private/private, or if
                 // it is inside a method (which coincidentally must be private/private). in this
                 // case, the properties are always "fully scoped" (they have only one identity), so
                 // there is no chance of a collision
-                if (!propContrib.isVirtual())
-                    {
-                    mapProps.put(idContrib, propContrib);
-                    continue;
-                    }
+                boolean fVirtual = propContrib.isVirtual();
 
                 // look for a property of the same name (using its nested identity); only virtually
                 // composable properties are registered using their nested identities
-                Object       nidContrib = idContrib.getNestedIdentity();
-                PropertyInfo propBase   = mapVirtProps.get(nidContrib);
-                PropertyInfo propResult = propContrib;
-                if (propBase == null)
+                PropertyInfo propBase   = fVirtual
+                        ? mapVirtProps.get(nidContrib)
+                        : null;
+                PropertyInfo propResult = propBase == null
+                        ? propContrib
+                        : propBase.layerOn(propContrib, fSelf, errs);
+
+                // check if there's supposed to be a property by this same identity
+                if (propBase == null && propContrib.isOverride())
                     {
-                    if (propContrib.isOverride())
-                        {
-                        // there's supposed to be a property by this same identity already existing,
-                        // so this is an error
-                        log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-                                contrib.getTypeConstant().getValueString(), propContrib.getName());
-                        }
-                    }
-                else
-                    {
-                    propResult = propBase.layerOn(propContrib, fSelf, errs);
-                    mapProps.remove(propBase.getIdentity());
-                    assert nidContrib.equals(propBase.getIdentity().getNestedIdentity());
+                    log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+                            contrib.getTypeConstant().getValueString(), propContrib.getName());
                     }
 
                 // the property is stored both by its absolute (fully qualified) ID and its nested
                 // ID, which is useful for example when trying to find it when building the actual
                 // call chains
-                mapProps.put(propResult.getIdentity(), propResult);
-                mapVirtProps.put(nidContrib, propResult);   // replaces the previous "base", if any
+                mapProps.put(idResult, propResult);
+                if (fVirtual)
+                    {
+                    mapVirtProps.put(nidContrib, propResult);
+                    }
                 }
 
             // if there are any remaining declared-but-not-overridden properties originating from
@@ -1986,7 +1989,7 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object nid = entry.getKey().getNestedIdentity();
+                            Object       nid       = entry.getKey().getNestedIdentity();
                             PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
                             assert infoOld == infoCheck;
                             }
@@ -2043,19 +2046,22 @@ public abstract class TypeConstant
                 {
                 MethodConstant idContrib     = entry.getKey();
                 MethodInfo     methodContrib = entry.getValue();
+                Object         nidContrib    = idContrib.getNestedIdentity();
 
                 // the method is not virtual if it is a function, if it is private, or if it is
                 // contained inside a method or some other structure (such as a property) that is
                 // non-virtual
                 if (!methodContrib.isVirtual())
                     {
-                    mapMethods.put(idContrib, methodContrib);
+                    // TODO check for collision, because a function could theoretically replace a virtual method
+                    // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
+                    // TODO we'll also have to check similar conditions below
+                    mapMethods.put((MethodConstant) constId.appendNestedIdentity(nidContrib), methodContrib);
                     continue;
                     }
 
                 // look for a method of the same signature (using its nested identity); only
                 // virtual methods are registered using their nested identities
-                Object     nidContrib   = idContrib.getNestedIdentity();
                 MethodInfo methodBase   = mapVirtMethods.get(nidContrib);
                 MethodInfo methodResult = methodContrib;
                 if (methodBase == null)
@@ -2092,7 +2098,6 @@ public abstract class TypeConstant
                 if (methodBase != null)
                     {
                     methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
-                    mapMethods.remove(methodBase.getIdentity());
                     }
 
                 mapVirtMods.put(nidContrib, methodResult);
@@ -2140,7 +2145,7 @@ public abstract class TypeConstant
                 {
                 Object         nid  = entry.getKey();
                 MethodInfo     info = entry.getValue();
-                MethodConstant id   = info.getIdentity();
+                MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(nid);
 
                 mapMethods.put(id, info);
                 mapVirtMethods.put(nid, info);
@@ -2310,7 +2315,7 @@ public abstract class TypeConstant
                 // explodes any annotations on top of an "into" for Ref or Var, which shows up as
                 // the "infoOld" that we just found, with the custom code on the property being the
                 // "infoNew" that we just created
-                MethodInfo infoMerged = infoOld.layerOn(infoNew, true, errs);
+                mapMethods.put(id, infoOld.layerOn(infoNew, true, errs));
                 }
             }
         else if (struct instanceof PropertyStructure)
@@ -2322,22 +2327,38 @@ public abstract class TypeConstant
                     : createPropertyInfo(prop, constId, fInterface, resolver, errs);
             mapProps.put(id, info);
 
-            if (info.isCustomLogic() || info.isRefAnnotated())
+            if ((info.isCustomLogic() || info.isRefAnnotated()) && !constId.equals(getConstantPool().clzObject()))
                 {
                 // determine if the property will need to be "into Ref" or "into Var"
-                Annotation[] aAnnos  = info.getRefAnnotations();
-                int          cAnnos  = aAnnos.length;
-                ConstantPool pool    = getConstantPool();
-                TypeConstant typeVar = pool.typeVar();
-                boolean      fVar    = info.isVar();
-                for (int i = 0; !fVar && i < cAnnos; ++i)
+                Annotation[] aAnnos   = info.getRefAnnotations();
+                int          cAnnos   = aAnnos.length;
+                ConstantPool pool     = getConstantPool();
+                TypeConstant typeVar  = pool.typeVar();
+                boolean      fVar     = info.isVar();
+                boolean      fVarAnno = false;
+                for (int i = 0; !fVarAnno && i < cAnnos; ++i)
                     {
-                    fVar = aAnnos[i].getAnnotationType().getExplicitClassInto().isA(typeVar);
+                    fVarAnno = aAnnos[i].getAnnotationType().getExplicitClassInto().isA(typeVar);
                     }
+                fVar |= fVarAnno;
 
                 // string together the annotations on the property
-                TypeConstant typeProp = fVar ? typeVar : pool.typeRef();
-                for (int i = cAnnos - 1; i >= 0; --i)
+                int          iFirstAnno;
+                TypeConstant typeProp;
+                if (fVar && !fVarAnno)
+                    {
+                    // insert a "fake into Var" annotation at the end of the list to force the
+                    // resulting chains to have "into Var" contents
+                    typeProp   = pool.typeAnnotateVar();
+                    iFirstAnno = cAnnos - 1;
+                    }
+                else
+                    {
+                    typeProp   = aAnnos[cAnnos - 1].getAnnotationType();
+                    iFirstAnno = cAnnos - 2;
+                    }
+
+                for (int i = iFirstAnno; i >= 0; --i)
                     {
                     typeProp = pool.ensureAnnotatedTypeConstant(aAnnos[i], typeProp);
                     }
@@ -2408,7 +2429,7 @@ public abstract class TypeConstant
         String       sName     = prop.getName();
 
         // scan the Property annotations
-        Annotation[] aPropAnno    = prop.getPropertyAnnotations();
+        Annotation[] aPropAnno    = prop.getPropertyAnnotations();     // TODO BUGBUG InjectedRef shows up in this list e.g. Object.meta
         boolean      fHasRO       = false;
         boolean      fHasAbstract = false;
         boolean      fHasOverride = false;
@@ -2449,8 +2470,9 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            TypeConstant typeInto = typeMixin.getExplicitClassInto();
-            if (!typeInto.isIntoPropertyType())  // TODO should test that this mixes specifically into Ref
+            TypeConstant typeInto    = typeMixin.getExplicitClassInto();
+            TypeConstant typeIntoCat = typeInto.getIntoPropertyType();
+            if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
                         sName, constId.getValueString(), typeMixin.getValueString());
@@ -2511,11 +2533,6 @@ public abstract class TypeConstant
                         + ") cannot be nested under a " + constParent.getFormat()
                         + " (on " + constId.getValueString() + ")");
             }
-
-// TODO expand the call chains that are inside of the property
-// TODO remember to expand annotations / custom code into call chain
-// - is there custom code? if so, then add the levels at which there is custom code
-// - are there any annotations? is so, then they need to be expanded, and the call chains glued on
 
         // check the methods to see if get() and set() call super
         MethodStructure  methodInit     = null;
@@ -2749,7 +2766,7 @@ public abstract class TypeConstant
                         getValueString(), sName);
                 }
 
-            if (fHasInject && (fSetSupers || fHasVarAnno))
+            if (fHasInject && (fSetSupers || fHasVarAnno))   // TODO inject should not have ANY other Ref/Var annotations
                 {
                 // the @Inject conflicts with the annotations that require a Var
                 log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
@@ -3268,10 +3285,34 @@ public abstract class TypeConstant
      *         means that the mix-in applies to the meta-data of the property or to the Ref/Var
      *         instance used for the property
      */
-    public boolean isIntoPropertyType() // TODO need SEPARATE: isIntoRefType and isIntoPropertyType
+    public boolean isIntoPropertyType()
         {
         ConstantPool pool = getConstantPool();
         return equals(pool.typeProperty()) || isA(pool.typeRef());
+        }
+
+    /**
+     * @return one of: Property, Ref, Var, or null
+     */
+    public TypeConstant getIntoPropertyType()
+        {
+        ConstantPool pool = getConstantPool();
+        if (this.equals(pool.typeProperty()))
+            {
+            return pool.typeProperty();
+            }
+        else if (this.isA(pool.typeVar()))
+            {
+            return pool.typeVar();
+            }
+        else if (this.isA(pool.typeRef()))
+            {
+            return pool.typeRef();
+            }
+        else
+            {
+            return null;
+            }
         }
 
     /**
@@ -3524,6 +3565,7 @@ public abstract class TypeConstant
     /**
      * The resolved information about the type, its properties, and its methods.
      */
+    private transient volatile int m_cRecursiveDepth;
     private transient volatile TypeInfo m_typeinfo;
     private static AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");

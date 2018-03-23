@@ -232,7 +232,7 @@ public class PropertyStructure
                 TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
                 if (typeMixin.isExplicitClassIdentity(true)
                         && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN
-                        && typeMixin.getExplicitClassInto().isIntoPropertyType())       // TODO only "into Property"
+                        && typeMixin.getExplicitClassInto().getIntoPropertyType() == pool.typeProperty())
                     {
                     if (listPropAnno == null)
                         {

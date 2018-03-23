@@ -207,6 +207,13 @@ public class MethodConstant
                 : parent.findMethod(getSignature());
         }
 
+    @Override
+    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return getConstantPool().ensureMethodConstant(
+                getParentConstant().ensureNestedIdentity(that), getSignature());
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -281,7 +288,25 @@ public class MethodConstant
     @Override
     public String getDescription()
         {
-        return "name=" + getName()
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName());
+        IdentityConstant idParent = getNamespace();
+        while (idParent != null)
+            {
+            switch (idParent.getFormat())
+                {
+                case Method:
+                case Property:
+                    sb.insert(0, idParent.getName() + '#');
+                    idParent = idParent.getNamespace();
+                    break;
+
+                default:
+                    idParent = null;
+                }
+            }
+
+        return "name=" + sb.toString()
                 + ", signature=" + getSignature().getValueString();
         }
 

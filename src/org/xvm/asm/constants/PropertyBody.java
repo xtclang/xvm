@@ -402,7 +402,8 @@ public class PropertyBody
      */
     public boolean isExplicitOverride()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
+        return m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
         }
 
     /**
@@ -410,7 +411,8 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
+        return m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
         }
 
     /**
@@ -418,7 +420,8 @@ public class PropertyBody
      */
     public boolean isInjected()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
+        return m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
         }
 
 
@@ -465,7 +468,8 @@ public class PropertyBody
           .append(' ')
           .append(getName())
           .append("; (id=")
-          .append(getIdentity().getValueString());
+          .append(getIdentity().getValueString())
+          .append(", impl=" + m_impl);
 
         if (m_paraminfo != null)
             {
@@ -491,6 +495,24 @@ public class PropertyBody
             {
             sb.append(", has-code");
             }
+
+        if (isInjected())
+            {
+            sb.append(", @Inject");
+            }
+        if (isExplicitAbstract())
+            {
+            sb.append(", @Abstract");
+            }
+        if (isExplicitOverride())
+            {
+            sb.append(", @Override");
+            }
+        if (isExplicitReadOnly())
+            {
+            sb.append(", @RO");
+            }
+
         if (m_constInitVal != null)
             {
             sb.append(", has-init-value");
@@ -498,6 +520,11 @@ public class PropertyBody
         if (m_constInitFunc != null)
             {
             sb.append(", has-init-fn");
+            }
+        if (m_constDelegate != null)
+            {
+            sb.append(", delegate=")
+              .append(m_constDelegate);
             }
 
         return sb.append(')').toString();

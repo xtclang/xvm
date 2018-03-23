@@ -1056,9 +1056,10 @@ public class ConstantPool
                 sClz = "Operator";
                 break;
 
+            case "AnnotateVar":
             case "Override":
                 sPkg = "annotations";
-                sClz = "Override";
+                sClz = sName;
                 break;
 
             case "RO":
@@ -1736,6 +1737,7 @@ public class ConstantPool
     public ClassConstant     clzObject()        {ClassConstant     c = m_clzObject;       if (c == null) {m_clzObject       = c = (ClassConstant) getImplicitlyImportedIdentity("Object"     );} return c;}
     public ClassConstant     clzRef()           {ClassConstant     c = m_clzRef;          if (c == null) {m_clzRef          = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"        );} return c;}
     public ClassConstant     clzVar()           {ClassConstant     c = m_clzVar;          if (c == null) {m_clzVar          = c = (ClassConstant) getImplicitlyImportedIdentity("Var"        );} return c;}
+    public ClassConstant     clzAnnotateVar()   {ClassConstant     c = m_clzAnnoVar;      if (c == null) {m_clzAnnoVar      = c = (ClassConstant) getImplicitlyImportedIdentity("AnnotateVar");} return c;}
     public ClassConstant     clzStruct()        {ClassConstant     c = m_clzStruct;       if (c == null) {m_clzStruct       = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"     );} return c;}
     public ClassConstant     clzType()          {ClassConstant     c = m_clzType;         if (c == null) {m_clzType         = c = (ClassConstant) getImplicitlyImportedIdentity("Type"       );} return c;}
     public ClassConstant     clzClass()         {ClassConstant     c = m_clzClass;        if (c == null) {m_clzClass        = c = (ClassConstant) getImplicitlyImportedIdentity("Class"      );} return c;}
@@ -1789,6 +1791,7 @@ public class ConstantPool
     public TypeConstant      typeObject()       {TypeConstant      c = m_typeObject;      if (c == null) {m_typeObject      = c = ensureTerminalTypeConstant(clzObject()                     );} return c;}
     public TypeConstant      typeRef()          {TypeConstant      c = m_typeRef;         if (c == null) {m_typeRef         = c = ensureTerminalTypeConstant(clzRef()                        );} return c;}
     public TypeConstant      typeVar()          {TypeConstant      c = m_typeVar;         if (c == null) {m_typeVar         = c = ensureTerminalTypeConstant(clzVar()                        );} return c;}
+    public TypeConstant      typeAnnotateVar()  {TypeConstant      c = m_typeAnnoVar;     if (c == null) {m_typeAnnoVar     = c = ensureTerminalTypeConstant(clzAnnotateVar()                );} return c;}
     public TypeConstant      typeStruct()       {TypeConstant      c = m_typeStruct;      if (c == null) {m_typeStruct      = c = ensureTerminalTypeConstant(clzStruct()                     );} return c;}
     public TypeConstant      typeType()         {TypeConstant      c = m_typeType;        if (c == null) {m_typeType        = c = ensureTerminalTypeConstant(clzType()                       );} return c;}
     public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                      );} return c;}
@@ -2396,6 +2399,7 @@ public class ConstantPool
         m_clzObject       = null;
         m_clzRef          = null;
         m_clzVar          = null;
+        m_clzAnnoVar      = null;
         m_clzStruct       = null;
         m_clzType         = null;
         m_clzClass        = null;
@@ -2447,6 +2451,7 @@ public class ConstantPool
         m_typeObject      = null;
         m_typeRef         = null;
         m_typeVar         = null;
+        m_typeAnnoVar     = null;
         m_typeStruct      = null;
         m_typeType        = null;
         m_typeClass       = null;
@@ -2708,6 +2713,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzObject;
     private transient ClassConstant     m_clzRef;
     private transient ClassConstant     m_clzVar;
+    private transient ClassConstant     m_clzAnnoVar;
     private transient ClassConstant     m_clzType;
     private transient ClassConstant     m_clzStruct;
     private transient ClassConstant     m_clzClass;
@@ -2760,6 +2766,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeRef;
     private transient TypeConstant      m_typeVar;
+    private transient TypeConstant      m_typeAnnoVar;
     private transient TypeConstant      m_typeType;
     private transient TypeConstant      m_typeStruct;
     private transient TypeConstant      m_typeClass;

@@ -134,7 +134,6 @@ public class PropertyInfo
         int            cAdd  = aAdd.length;
         if (cAdd == 0)
             {
-            assert !fSelf;
             return this;
             }
 

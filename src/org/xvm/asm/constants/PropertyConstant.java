@@ -48,6 +48,7 @@ public class PropertyConstant
         if (    !( constParent.getFormat() == Format.Module
                 || constParent.getFormat() == Format.Package
                 || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.Property
                 || constParent.getFormat() == Format.Method ))
             {
             throw new IllegalArgumentException("parent module, package, class, or method required");
@@ -126,6 +127,13 @@ public class PropertyConstant
                 : null;
         }
 
+    @Override
+    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return getConstantPool().ensurePropertyConstant(
+                getParentConstant().ensureNestedIdentity(that), getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -157,7 +165,25 @@ public class PropertyConstant
     @Override
     public String getDescription()
         {
-        return "property=" + getValueString();
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName());
+        IdentityConstant idParent = getNamespace();
+        while (idParent != null)
+            {
+            switch (idParent.getFormat())
+                {
+                case Method:
+                case Property:
+                    sb.insert(0, idParent.getName() + '#');
+                    idParent = idParent.getNamespace();
+                    break;
+
+                default:
+                    idParent = null;
+                }
+            }
+
+        return "property=" + sb.toString();
         }
 
 

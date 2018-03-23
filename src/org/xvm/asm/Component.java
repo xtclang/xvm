@@ -1671,7 +1671,7 @@ public abstract class Component
             return errs.toString();
             }
 
-        return info.toString();
+        return info.toString() + "\n\n" + errs.toString();
         }
 
 

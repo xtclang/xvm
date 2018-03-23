@@ -631,6 +631,8 @@ public class ClassStructure
                         {
                         continue nextContribution;
                         }
+                    break;
+
                 case Annotation:
                 case Incorporates:
                 case Extends:

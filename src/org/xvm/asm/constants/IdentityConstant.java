@@ -276,7 +276,7 @@ public abstract class IdentityConstant
             }
         else if (nid instanceof NestedIdentity)
             {
-            // TODO
+            return ((NestedIdentity) nid).getIdentityConstant().ensureNestedIdentity(this);
             }
         else if (nid == null)
             {
@@ -284,6 +284,11 @@ public abstract class IdentityConstant
             }
 
         throw new IllegalArgumentException("illegal nid: " + nid);
+        }
+
+    protected IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return that;
         }
 
     /**
