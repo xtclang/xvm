@@ -108,6 +108,11 @@ interface Service()
     @RO CriticalSection? criticalSection;
 
     /**
+     * The current AsyncSection for the service, if any.
+     */
+    @RO AsyncSection? asyncSection;
+
+    /**
      * Optional re-entrancy settings for a service:
      *
      * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
@@ -139,14 +144,18 @@ interface Service()
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
      * service is subject to.
+     *
+     * The default value for the _incomingTimeout_ is determined based on the remaining timeout
+     * value of the calling execution thread (a.k.a. fiber) and could be changed via the
+     * {@link #registerTimeout} method.
      */
     @RO Timeout? incomingTimeout;
 
     /**
      * The current Timeout that will be used by the service when it invokes other services.
      *
-     * By default, this is the same as the incoming Timeout, but can be overridden by creating a new
-     * Timeout.
+     * By default, this is the same as the incoming Timeout, but can be overridden by registering
+     * a new Timeout via the {@link #registerTimeout} method.
      */
     @RO Timeout? timeout;
 
@@ -185,7 +194,6 @@ interface Service()
      * property may not correctly reflect the presence and/or amount of contention.
      */
     @RO Int backlogDepth;
-
     /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
      * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.
@@ -209,7 +217,7 @@ interface Service()
      * respect to calls from outside of the service, all such calls are treated similarly _as if_
      * they were queued in the backlog via this method.
      *
-     * Exceptions raised by the {@code doLater} function are considered _unhandled_.
+     * Exceptions raised by the {@code doLater} function are ignored and lost by the runtime.
      */
     Void invokeLater(function Void doLater());
 
@@ -257,12 +265,18 @@ interface Service()
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
+     *
+     * If the call is made from within this service, then it only affects the {@link #timeout}
+     * of the current execution thread (a.k.a. fiber). Otherwise, the timeout of the service
+     * itself will be changed.
      */
     Void registerTimeout(Timeout? timeout);
 
     /**
      * Register a CriticalSection for the service, replacing any previously registered
      * CriticalSection.
+     *
+     * Calling this method from the outside of the service is not allowed.
      */
     Void registerCriticalSection(CriticalSection? criticalSection);
 
@@ -270,21 +284,32 @@ interface Service()
      * Register a function to invoke when the service is shutting down. This notification is not
      * invoked if the service is killed.
      *
-     * Exceptions raised by the notification function are considered _unhandled_.
+     * Exceptions raised by the {@code notify} function are ignored and lost by the runtime.
      */
     Void registerShuttingDownNotification(function Void notify());
 
     /**
+     * Register an AsyncSection to process unhandled exceptions. An unhandled exception can occur
+     * when an unguarded asynchronous call originates from within this service, and the result
+     * is not explicitly captured using a {@code @Future} reference. An exception resulting from
+     * such a call will trigger an invocation of the `notify` function of the AsyncSection, passing
+     * the exception as the argument.
+     *
+     * When this method is called within this service, it will block the current execution thread
+     * until all unguarded asynchronous calls issued while the previously registered AsyncSection
+     * was active have completed or timed out.
+     *
+     * Calling this method from the outside of the service is not allowed.
+     */
+    Void registerAsyncSection(AsyncSection? newAsyncSection);
+
+    /**
      * Register a function to invoke when an unhandled exception occurs. An unhandled exception can
      * occur when an unguarded asynchronous call originates from within this service, and the result
-     * is not explicitly captured using a {@code @Future} reference. An exception resulting from
-     * such a call will trigger an invocation of the specified function, passing the exception as
-     * the argument.
-     *
-     * REVIEW semantics of "unguarded" / contract+mechanism for guarding async calls
-     * a) could it be explicit: catch (AsyncException e) {...}
-     * b) is "try { asyncCall(); } catch (...)" a similarly "blocking" construct as "Int i = asyncCall();"?
-     * c) similar to timeout: "using (new AsyncHandler(fn)) {...}" ?
+     * is not explicitly captured using a {@code @Future} or explicitly registered AsyncSection.
+     * An exception resulting from such a call will trigger an invocation of the specified function,
+     * on a new execution thread passing the exception as the argument. No ordering guarantees of
+     * any kind are provided.
      *
      * This notification is provided primarily for logging or debugging purposes.
      *
@@ -292,6 +317,7 @@ interface Service()
      */
     Void registerUnhandledExceptionNotification(function Void notify(Exception));
 
+    @Override
     immutable Service to<immutable Service>()
         {
         throw new UnsupportedOperationException();

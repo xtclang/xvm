@@ -1,11 +1,9 @@
 package org.xvm.runtime;
 
 
-import java.util.Map;
 import java.util.Queue;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.xvm.asm.ConstantPool;
@@ -20,8 +18,6 @@ import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
-import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
@@ -29,7 +25,6 @@ import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
-import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -94,7 +89,7 @@ public class ServiceContext
     // get a next frame ready for execution
     public Frame nextFiber()
         {
-        // responses have the highest priority and no user code runs there;
+        // responses have the highest priority and no natural code runs there;
         // process all we've got so far
         Queue<Response> qResponse = f_queueResponse;
         Response response;
@@ -114,7 +109,7 @@ public class ServiceContext
             suspendFiber(frame);
             }
 
-        // allow initial timeouts to be processed always, since they won't run any used code
+        // allow initial timeouts to be processed always, since they won't run any natural code
         // TODO: return ?f_queueSuspended.getInitialTimeout();
 
         Frame frameCurrent = m_frameCurrent;
@@ -197,34 +192,32 @@ public class ServiceContext
         m_frameCurrent = frame;
         s_tloContext.set(this);
 
-        if (fiber.isTimedOut())
+        switch (fiber.prepareRun(frame))
             {
-            iPC = frame.raiseException(xException.makeHandle("The service has timed-out"));
+            case Op.R_NEXT:
+                // proceed as is
+                break;
+
+            case Op.R_CALL:
+                // there was a deferred action
+                frame = m_frameCurrent = frame.m_frameNext;
+                iPC = 0;
+                break;
+
+            case Op.R_EXCEPTION:
+                iPC = Op.R_EXCEPTION;
+                break;
+
+            case Op.R_BLOCK:
+                // there are still some "waiting" registers
+                return frame;
+
+            default:
+                throw new IllegalStateException();
             }
-        else if (fiber.getStatus() == FiberStatus.Waiting)
-            {
-            switch (frame.checkWaitingRegisters())
-                {
-                case Op.R_BLOCK:
-                    // there are still some "waiting" registers
-                    return frame;
-
-                case Op.R_EXCEPTION:
-                    iPC = Op.R_EXCEPTION;
-                    break;
-
-                case Op.R_NEXT:
-                    // proceed as is
-                    break;
-                }
-            }
-
-        fiber.setStatus(FiberStatus.Running);
-        fiber.m_fResponded = false;
 
         Op[] abOp = frame.f_aOp;
-
-        int nOps = 0;
+        int  nOps = 0;
 
     nextOp:
         while (true)
@@ -260,9 +253,7 @@ public class ServiceContext
                     break;
 
                 case Op.R_BLOCK_RETURN:
-                    fiber.setStatus(FiberStatus.Waiting);
                     // fall through
-
                 case Op.R_RETURN:
                     {
                     Frame.Continuation continuation = frame.m_continuation;
@@ -288,9 +279,18 @@ public class ServiceContext
                                 m_frameCurrent = frame.m_frameNext;
                                 frame.m_frameNext = null;
                                 frame = m_frameCurrent;
+
+                                if (iPC == Op.R_BLOCK_RETURN)
+                                    {
+                                    frame.setContinuation(frameCaller -> Op.R_BLOCK_RETURN);
+                                    }
                                 abOp = frame.f_aOp;
                                 iPC = 0;
                                 continue nextOp;
+
+                            case Op.R_BLOCK_RETURN:
+                                iPC = Op.R_BLOCK_RETURN;
+                                break;
 
                             default:
                                 throw new IllegalStateException();
@@ -304,8 +304,9 @@ public class ServiceContext
                         return null;
                         }
 
-                    if (fiber.getStatus() == FiberStatus.Waiting)
+                    if (iPC == Op.R_BLOCK_RETURN)
                         {
+                        fiber.setStatus(FiberStatus.Waiting);
                         return frame;
                         }
                     abOp = frame.f_aOp;
@@ -440,10 +441,11 @@ public class ServiceContext
 
         if (cReturns == 0)
             {
-            ServiceContext ctxCaller = frameCaller == null
-                ? this // primordial or "callLater" invocation
-                : frameCaller.f_context;
-            ctxCaller.registerUncapturedRequest(future, hFunction);
+            // primordial or "callLater" invocations are not guarded
+            if (frameCaller != null)
+                {
+                frameCaller.f_fiber.registerUncapturedRequest(future);
+                }
             return null;
             }
         return future;
@@ -459,7 +461,7 @@ public class ServiceContext
 
         if (cReturns == 0)
             {
-            frameCaller.f_context.registerUncapturedRequest(future, hFunction);
+            frameCaller.f_fiber.registerUncapturedRequest(future);
             return null;
             }
         return future;
@@ -484,7 +486,7 @@ public class ServiceContext
 
         addRequest(new PropertyOpRequest(frameCaller, sPropName, hValue, 0, future, op));
 
-        frameCaller.f_context.registerUncapturedRequest(future, sPropName);
+        frameCaller.f_fiber.registerUncapturedRequest(future);
         }
 
     // send and asynchronous "constant initialization" message
@@ -504,55 +506,6 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
-    protected void registerUncapturedRequest(CompletableFuture<?> future, Object oInfo)
-        {
-        m_mapPendingFutures.put(future, oInfo);
-
-        future.whenComplete((_void, ex) ->
-            {
-            if (ex != null)
-                {
-                callUnhandledExceptionHandler(
-                    ((ExceptionHandle.WrapperException) ex).getExceptionHandle());
-                }
-            m_mapPendingFutures.remove(future);
-            });
-        }
-
-    protected int callUnhandledExceptionHandler(ExceptionHandle hException)
-        {
-        FunctionHandle hFunction = m_hExceptionHandler;
-        if (hFunction == null)
-            {
-            // TODO: this should terminate the service, or if "main" - the container
-
-            hFunction = new xFunction.NativeMethodHandle((frame, ahArg, iReturn) ->
-                {
-                switch (Utils.callToString(frame, ahArg[0]))
-                    {
-                    case Op.R_NEXT:
-                        Utils.log(frame,
-                            "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
-                        return Op.R_NEXT;
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(
-                            frameCaller ->
-                                {
-                                Utils.log(frameCaller,
-                                    "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
-                                return Op.R_NEXT;
-                                }
-                            );
-                        return Op.R_CALL;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                });
-            }
-        return callLater(hFunction, new ObjectHandle[] {hException});
-        }
 
     // ----- helpers ------
 
@@ -988,12 +941,6 @@ public class ServiceContext
 
     private Frame m_frameCurrent;
     private FiberQueue f_queueSuspended = new FiberQueue(); // suspended fibers
-
-    // pending uncaptured futures
-    private Map<CompletableFuture, Object> m_mapPendingFutures = new ConcurrentHashMap<>();
-
-    // the unhandled exception notification
-    public FunctionHandle m_hExceptionHandler;
 
     enum Reentrancy {Prioritized, Open, Exclusive, Forbidden}
     volatile Reentrancy m_reentrancy = Reentrancy.Prioritized;
