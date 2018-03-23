@@ -909,7 +909,7 @@ public class MethodStructure
 
                         // the class must have a no-params constructor to call
                         // or have a native constant initializer
-                        MethodStructure constructor = clz.findMethod(Utils.SIG_CONSTRUCT);
+                        MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
                         if (constructor == null)
                             {
                             hValue = template.createConstHandle(frame, constSingleton);

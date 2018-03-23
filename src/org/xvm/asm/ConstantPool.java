@@ -1827,11 +1827,11 @@ public class ConstantPool
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
     public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                      );} return c;}
 
-    public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES      );} return c;}
-    public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte()       );} return c;}
-    public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray()                );} return c;}
+    public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES);} return c;}
+    public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte());} return c;}
+    public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray());} return c;}
 
-    public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException()                 );} return c;}
+    public TypeConstant      typeException१()   {TypeConstant      c = m_typeException१;  if (c == null) {m_typeException१  = c = ensureNullableTypeConstant(typeException());} return c;}
     public TypeConstant      typeString१()      {TypeConstant      c = m_typeString१;     if (c == null) {m_typeString१     = c = ensureNullableTypeConstant(typeString()                    );} return c;}
 
     public IntConstant       val0()             {IntConstant       c = m_val0;            if (c == null) {m_val0            = c = ensureIntConstant(0)                                        ;} return c;}
@@ -1843,6 +1843,9 @@ public class ConstantPool
     public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
     public ArrayConstant     valVoid()          {ArrayConstant     c = m_valVoid;         if (c == null) {m_valVoid         = c = ensureTupleConstant(typeVoid(), Constant.NO_CONSTS)         ;} return c;}
+
+    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("to", NO_TYPES, new TypeConstant[] {typeString()});} return c;}
+    public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = ensureSignatureConstant("construct", NO_TYPES, NO_TYPES)    ;} return c;}
 
     public SingletonConstant valOf(boolean f)
         {
@@ -2811,6 +2814,8 @@ public class ConstantPool
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
     private transient ArrayConstant     m_valVoid;
+    private transient SignatureConstant m_sigToString;
+    private transient SignatureConstant m_sigConstruct;
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
