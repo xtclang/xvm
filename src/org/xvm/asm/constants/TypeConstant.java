@@ -2345,11 +2345,16 @@ public abstract class TypeConstant
                 // string together the annotations on the property
                 int          iFirstAnno;
                 TypeConstant typeProp;
-                if (fVar && !fVarAnno)
+                if (fVar && (cAnnos == 0 || !fVarAnno))
                     {
                     // insert a "fake into Var" annotation at the end of the list to force the
                     // resulting chains to have "into Var" contents
                     typeProp   = pool.typeAnnotateVar();
+                    iFirstAnno = cAnnos - 1;
+                    }
+                else if (cAnnos == 0)
+                    {
+                    typeProp   = pool.typeAnnotateRef();
                     iFirstAnno = cAnnos - 1;
                     }
                 else
