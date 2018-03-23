@@ -1835,8 +1835,11 @@ public abstract class TypeConstant
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
-                createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE, struct,
-                        resolver, mapContribProps, mapContribMethods, errs);
+                if (!createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE, struct,
+                        resolver, mapContribProps, mapContribMethods, errs))
+                    {
+                    fIncomplete = true;
+                    }
                 }
             else
                 {
@@ -2274,7 +2277,7 @@ public abstract class TypeConstant
      * @param mapMethods        the methods of the class
      * @param errs              the error list to log any errors to
      */
-    private void createMemberInfo(
+    private boolean createMemberInfo(
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           struct,
@@ -2283,6 +2286,8 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo  > mapMethods,
             ErrorListener                       errs)
         {
+        boolean fComplete = true;
+
         if (struct instanceof MethodStructure)
             {
             MethodStructure   method       = (MethodStructure) struct;
@@ -2297,7 +2302,16 @@ public abstract class TypeConstant
                     fHasAbstract             ? Implementation.Abstract :
                     fHasNoCode               ? Implementation.SansCode :
                                                Implementation.Explicit  );
-            mapMethods.put(id, new MethodInfo(body));
+            MethodInfo infoNew = new MethodInfo(body);
+            MethodInfo infoOld = mapMethods.put(id, infoNew);
+            if (infoOld != null)
+                {
+                // this can occur when a property has both custom code, because the property
+                // explodes any annotations on top of an "into" for Ref or Var, which shows up as
+                // the "infoOld" that we just found, with the custom code on the property being the
+                // "infoNew" that we just created
+                MethodInfo infoMerged = infoOld.layerOn(infoNew, true, errs);
+                }
             }
         else if (struct instanceof PropertyStructure)
             {
@@ -2305,13 +2319,51 @@ public abstract class TypeConstant
             PropertyConstant  id   = prop.getIdentityConstant();
             PropertyInfo      info = prop.isTypeParameter()
                     ? new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(id.getName())))
-                    : createPropertyInfo(prop, constId, fInterface, resolver, errs));
+                    : createPropertyInfo(prop, constId, fInterface, resolver, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
                 {
-                // "explode" the property
-                // TODO for (info.getRefAnnotations())
+                // determine if the property will need to be "into Ref" or "into Var"
+                Annotation[] aAnnos  = info.getRefAnnotations();
+                int          cAnnos  = aAnnos.length;
+                ConstantPool pool    = getConstantPool();
+                TypeConstant typeVar = pool.typeVar();
+                boolean      fVar    = info.isVar();
+                for (int i = 0; !fVar && i < cAnnos; ++i)
+                    {
+                    fVar = aAnnos[i].getAnnotationType().getExplicitClassInto().isA(typeVar);
+                    }
+
+                // string together the annotations on the property
+                TypeConstant typeProp = fVar ? typeVar : pool.typeRef();
+                for (int i = cAnnos - 1; i >= 0; --i)
+                    {
+                    typeProp = pool.ensureAnnotatedTypeConstant(aAnnos[i], typeProp);
+                    }
+
+                // build the "into" layer of the Ref/Var for the property, and copy its contents
+                // into the structures representing the type that this member is being created for
+                TypeInfo infoRef = typeProp.ensureTypeInfoInternal(errs);
+                if (infoRef == null)
+                    {
+                    fComplete = false;
+                    }
+                else
+                    {
+                    for (Entry<PropertyConstant, PropertyInfo> entry : infoRef.getProperties().entrySet())
+                        {
+                        // glue together PropertyConstant "id" plus the "nid" from the sub-prop
+                        mapProps.put((PropertyConstant) id.appendNestedIdentity(
+                                entry.getKey().getNestedIdentity()), entry.getValue());
+                        }
+                    for (Entry<MethodConstant, MethodInfo> entry : infoRef.getMethods().entrySet())
+                        {
+                        // glue together PropertyConstant "id" plus the "nid" from the sub-method
+                        mapMethods.put((MethodConstant) id.appendNestedIdentity(
+                                entry.getKey().getNestedIdentity()), entry.getValue());
+                        }
+                    }
                 }
             }
 
@@ -2322,14 +2374,16 @@ public abstract class TypeConstant
                 {
                 for (MethodStructure method : child.getMethodByConstantMap().values())
                     {
-                    createMemberInfo(constId, fInterface, method, resolver, mapProps, mapMethods, errs);
+                    fComplete &= createMemberInfo(constId, fInterface, method, resolver, mapProps, mapMethods, errs);
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
-                createMemberInfo(constId, fInterface, child, resolver, mapProps, mapMethods, errs);
+                fComplete &= createMemberInfo(constId, fInterface, child, resolver, mapProps, mapMethods, errs);
                 }
             }
+
+        return fComplete;
         }
 
     /**

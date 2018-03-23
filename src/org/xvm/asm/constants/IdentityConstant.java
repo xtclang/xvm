@@ -194,6 +194,9 @@ public abstract class IdentityConstant
     /**
      * Determine if two nested identities refer to members that are nested within the same
      * component container.
+     * <p/>
+     * Note: Makes some big assumptions, e.g. like that the two nids both refer to methods (since
+     * depths for methods are +1 compared to properties).
      *
      * @param nid1  the first nested identity
      * @param nid2  the second nested identity
@@ -251,6 +254,36 @@ public abstract class IdentityConstant
         {
         assert !isNested();
         return clz;
+        }
+
+    /**
+     * Apply the specified "relative" identity starting from this identity, and return the resulting
+     * identity.
+     *
+     * @param nid
+     *
+     * @return
+     */
+    public IdentityConstant appendNestedIdentity(Object nid)
+        {
+        if (nid instanceof String)
+            {
+            return getConstantPool().ensurePropertyConstant(this, (String) nid);
+            }
+        else if (nid instanceof SignatureConstant)
+            {
+            return getConstantPool().ensureMethodConstant(this, (SignatureConstant) nid);
+            }
+        else if (nid instanceof NestedIdentity)
+            {
+            // TODO
+            }
+        else if (nid == null)
+            {
+            return this;
+            }
+
+        throw new IllegalArgumentException("illegal nid: " + nid);
         }
 
     /**
