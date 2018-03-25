@@ -1814,6 +1814,8 @@ public abstract class TypeConstant
      * @param mapVirtProps         the virtual properties of the type, keyed by nested id
      * @param mapVirtMethods       the virtual methods of the type, keyed by nested id
      * @param errs                 the error list to log any errors to
+     *
+     * @return true iff the processing was able to obtain all of its dependencies
      */
     private boolean collectMemberInfo(
             IdentityConstant                    constId,
@@ -1837,22 +1839,53 @@ public abstract class TypeConstant
             Map<PropertyConstant, PropertyInfo> mapContribProps;
             Map<MethodConstant  , MethodInfo  > mapContribMethods;
 
-            Composition composition = contrib.getComposition();
-            boolean     fSelf       = composition == Composition.Equal;
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            Composition  composition = contrib.getComposition();
+            boolean      fSelf       = composition == Composition.Equal;
             if (fSelf)
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
-                if (!createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE, struct,
-                        resolver, mapContribProps, mapContribMethods, errs))
+                ArrayList<PropertyConstant> listExplode = new ArrayList<>();
+                if (!createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE,
+                        struct, resolver, mapContribProps, mapContribMethods, listExplode, errs))
                     {
                     fIncomplete = true;
+                    }
+
+                // the order in which the properties are layered on and exploded is extremely
+                // important in order for (a) the result to be correct and (b) errors to be
+                // correctly identified. in general, we work from the top of the hierarchy (the
+                // containing class) down (the nested properties), so that the "explosion" never
+                // can occur before we layer on the property, but also that the "explosion" must
+                // always occur before we layer on any properties nested thereunder. since the
+                // createMembers() method recurses, it provides an ideal order for us in the
+                // listExplode, and since any properties that remain in the contribution when we're
+                // done with this will naturally layer on top of any artifacts from the explosion,
+                // we only have to process the specific properties that explode here, and make sure
+                // that they don't get processed later when we process the rest of the properties
+                for (PropertyConstant idProp : listExplode)
+                    {
+                    // remove the property from the contrib map (so that we can process it now)
+                    PropertyInfo prop = mapContribProps.remove(idProp);
+                    assert prop != null;
+
+                    // layer on the property so its information is all correct before we have to
+                    // make any decisions about how to process the property
+                    layerOnProp(constId, fSelf, mapProps, mapVirtProps,
+                            typeContrib, idProp, prop, errs);
+
+                    // now that the necessary data is in place, explode the property
+                    if (!explodeProperty(constId, idProp, prop, mapProps, mapVirtProps,
+                            mapMethods, mapVirtMethods, errs))
+                        {
+                        fIncomplete = true;
+                        }
                     }
                 }
             else
                 {
-                TypeConstant typeContrib = contrib.getTypeConstant();
-                TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
                 if (infoContrib == null)
                     {
                     fIncomplete = true;
@@ -1935,45 +1968,9 @@ public abstract class TypeConstant
             // that same level.
 
             // process properties
-            for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
-                {
-                PropertyConstant idContrib   = entry.getKey();
-                PropertyInfo     propContrib = entry.getValue();
-                Object           nidContrib  = idContrib.getNestedIdentity();
-                PropertyConstant idResult    = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
-
-                // the property is not virtual if it is a constant, if it is private/private, or if
-                // it is inside a method (which coincidentally must be private/private). in this
-                // case, the properties are always "fully scoped" (they have only one identity), so
-                // there is no chance of a collision
-                boolean fVirtual = propContrib.isVirtual();
-
-                // look for a property of the same name (using its nested identity); only virtually
-                // composable properties are registered using their nested identities
-                PropertyInfo propBase   = fVirtual
-                        ? mapVirtProps.get(nidContrib)
-                        : null;
-                PropertyInfo propResult = propBase == null
-                        ? propContrib
-                        : propBase.layerOn(propContrib, fSelf, errs);
-
-                // check if there's supposed to be a property by this same identity
-                if (propBase == null && propContrib.isOverride())
-                    {
-                    log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-                            contrib.getTypeConstant().getValueString(), propContrib.getName());
-                    }
-
-                // the property is stored both by its absolute (fully qualified) ID and its nested
-                // ID, which is useful for example when trying to find it when building the actual
-                // call chains
-                mapProps.put(idResult, propResult);
-                if (fVirtual)
-                    {
-                    mapVirtProps.put(nidContrib, propResult);
-                    }
-                }
-
+            layerOnProps(constId, fSelf, mapProps, mapVirtProps,
+                    typeContrib, mapContribProps, errs);
+            
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
             // analyzed to determine if they require fields, etc.
@@ -1998,163 +1995,381 @@ public abstract class TypeConstant
                 }
 
             // process methods
-            if (mapContribMethods.isEmpty())
+            if (!mapContribMethods.isEmpty())
                 {
-                continue;
-                }
-
-            // the challenge here is that the methods being contributed may @Override a method that
-            // does not have the same exact signature, in which case the method signature is
-            // _narrowed_. there are a few different possible outcomes when this occurs:
-            // 1) there is only one method in the contribution that narrows the method signature,
-            //    and no method in the contribution that has the same signature: this is the
-            //    typical case, in which the method signature is truly narrowed, but the resulting
-            //    data structure carries a record of that choice. first, the method that is being
-            //    narrowed is *capped*, which is to say that it can no longer be extended (although
-            //    it still exists and can be found by the un-narrowed signature, since it is
-            //    necessary for the system to be able to find the method chain that corresponds to
-            //    that un-narrowed signature, because that is the signature that will appear in any
-            //    code that was comipled against the base type). further, the cap indicates what
-            //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
-            //    narrowed signature, which in turn will be able to walk up its super chain to the
-            //    bottom-most narrowing method, which then supers to the method chain that is under
-            //    the cap.
-            // 2) there are one or more methods in the contribution that narrow the method
-            //    signature, and there is also a method in the contribution that has the same
-            //    exact non-narrowed signature: this is a less common case, but it is one that is
-            //    expected to occur whenever the loss of the non-narrowed method is undesirable.
-            //    the result is that, instead of a "cap" on the un-narrowed method chain, the method
-            //    from the contribution with the exact same signature is placed onto the top of that
-            //    un-narrowed method chain, as one would expect. additionally, any method that
-            //    selects the un-narrowed method chain as its super will super to the un-narrowed
-            //    method chain, starting with the method that was on top of that chain *before*
-            //    this contribution was added.
-            // 3) if there is more than one method in the contribution that narrow the method
-            //    signature, and no method in the contribution that has the same signature: this is
-            //    a compiler and verifier error, because there is no single signature that is doing
-            //    the narrowing, and thus there is ambiguity in terms of which signature the cap
-            //    should virtually invoke.
-            // to accurately collect this information, including sufficient information to report
-            // any errors, all changes to virtual method chains are recorded in a separate map, so
-            // that the "pre-contribution" view is not modified until all of the information has
-            // been collected. additionally, if any method signatures are narrowed, the un-narrowed
-            // signatures are recorded in a separate set, so that it is possible to determine if
-            // they should be capped (and to identify any errors).
-            Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
-            Map<Object, Set<Object>> mapNarrowedNids = null;
-            for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
-                {
-                MethodConstant idContrib     = entry.getKey();
-                MethodInfo     methodContrib = entry.getValue();
-                Object         nidContrib    = idContrib.getNestedIdentity();
-
-                // the method is not virtual if it is a function, if it is private, or if it is
-                // contained inside a method or some other structure (such as a property) that is
-                // non-virtual
-                if (!methodContrib.isVirtual())
-                    {
-                    // TODO check for collision, because a function could theoretically replace a virtual method
-                    // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
-                    // TODO we'll also have to check similar conditions below
-                    mapMethods.put((MethodConstant) constId.appendNestedIdentity(nidContrib), methodContrib);
-                    continue;
-                    }
-
-                // look for a method of the same signature (using its nested identity); only
-                // virtual methods are registered using their nested identities
-                MethodInfo methodBase   = mapVirtMethods.get(nidContrib);
-                MethodInfo methodResult = methodContrib;
-                if (methodBase == null)
-                    {
-                    if (methodContrib.isOverride())
-                        {
-                        // the @Override tag gives us permission to look for a method with a
-                        // different signature that can be narrowed to the signature of the
-                        // contribution (because @Override means there MUST be a super method)
-                        Object nidBase = findRequiredSuper(
-                                nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
-                        if (nidBase != null)
-                            {
-                            methodBase = mapVirtMethods.get(nidBase);
-                            assert methodBase != null;
-
-                            // there exists a method that this method will narrow, so add this
-                            // method to the set of methods that are narrowing the super method
-                            if (mapNarrowedNids == null)
-                                {
-                                mapNarrowedNids = new HashMap<>();
-                                }
-                            Set<Object> setNarrowing = mapNarrowedNids.get(nidBase);
-                            if (setNarrowing == null)
-                                {
-                                setNarrowing = new HashSet<>();
-                                mapNarrowedNids.put(nidBase, setNarrowing);
-                                }
-                            setNarrowing.add(nidContrib);
-                            }
-                        }
-                    }
-
-                if (methodBase != null)
-                    {
-                    methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
-                    }
-
-                mapVirtMods.put(nidContrib, methodResult);
-                }
-
-            if (mapNarrowedNids != null)
-                {
-                // find every narrowed method signature that did *not* receive a contribution of its
-                // own (i.e. same method signature), because any that did receive a contribution at
-                // this level can be safely ignored
-                mapNarrowedNids.keySet().removeAll(mapVirtMods.keySet());
-
-                // for each remaining nid that was narrowed, if it was narrowed by exactly one
-                // method, then cap the nid by redirecting to the narrowed method, otherwise it is
-                // an error
-                for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet())
-                    {
-                    Object      nidNarrowed  = entry.getKey();
-                    Set<Object> setNarrowing = entry.getValue();
-                    if (setNarrowing.size() == 1)
-                        {
-                        // cap the method
-                        Object     nidNarrowing  = setNarrowing.iterator().next();
-                        MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
-                        MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
-                        mapVirtMods.put(nidNarrowed, infoNarrowed.cappedBy(infoNarrowing));
-                        }
-                    else
-                        {
-                        for (Object nidNarrowing : setNarrowing)
-                            {
-                            log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
-                                    contrib.getTypeConstant().getValueString(),
-                                    mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
-                                    mapVirtMods.get(nidNarrowing).getIdentity().getSignature().getValueString());
-                            }
-                        }
-                    }
-                }
-
-            // the method is stored both by its absolute (fully qualified) ID and its nested
-            // ID, which is useful for example when trying to find it when building the actual
-            // call chains
-            for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet())
-                {
-                Object         nid  = entry.getKey();
-                MethodInfo     info = entry.getValue();
-                MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(nid);
-
-                mapMethods.put(id, info);
-                mapVirtMethods.put(nid, info);
+                layerOnMethods(constId, fSelf, mapMethods, mapVirtMethods,
+                        typeContrib, mapContribMethods, errs);
                 }
             }
 
         return !fIncomplete;
         }
 
+    /**
+     * Explode a single property that could be composed of (1) an "into Ref" or "into Var", (2) a
+     * sequence of annotations, and (3) custom code. Basically, a property is a "class within a
+     * class", and we are working through multiple contributions embedded in a single contribution
+     * of the containing class.
+     *
+     * @param constId         TODO
+     * @param idProp          TODO
+     * @param info            TODO
+     * @param mapProps        TODO
+     * @param mapVirtProps    TODO
+     * @param mapMethods      TODO
+     * @param mapVirtMethods  TODO
+     * @param errs            TODO
+     *
+     * @return TODO
+     */
+    protected boolean explodeProperty(
+            IdentityConstant                    constId,
+            PropertyConstant                    idProp,
+            PropertyInfo                        info,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<MethodConstant, MethodInfo>     mapMethods,
+            Map<Object, MethodInfo>             mapVirtMethods,
+            ErrorListener                       errs)
+        {
+        boolean fComplete = true;
+
+        // layer on an "into" of either "into Ref" or "into Var"
+        ConstantPool pool     = getConstantPool();
+        TypeConstant typeInto = info.isVar() ? pool.typeVar() : pool.typeRef();
+        TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
+        if (infoInto == null)
+            {
+            fComplete = false;
+            }
+        else
+            {
+            nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
+                    typeInto, infoInto.asInto(), errs);
+            }
+
+        // layer on any annotations, if any
+        Annotation[] aAnnos   = info.getRefAnnotations();
+        int          cAnnos   = aAnnos.length;
+        for (int i = cAnnos - 1; i >= 0; --i)
+            {
+            TypeConstant typeAnno = aAnnos[i].getAnnotationType();
+            TypeInfo     infoAnno = typeAnno.ensureTypeInfoInternal(errs);
+            if (infoAnno == null)
+                {
+                fComplete = false;
+                }
+            else
+                {
+                nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
+                        typeAnno, infoAnno, errs);
+                }
+            }
+
+        // the custom logic will get overlaid later by layerOnMethods()
+        return fComplete;
+        }
+
+    /**
+     * TODO
+     *
+     * @param constId         TODO
+     * @param idProp          TODO
+     * @param mapProps        TODO
+     * @param mapVirtProps    TODO
+     * @param mapMethods      TODO
+     * @param mapVirtMethods  TODO
+     * @param typeContrib     TODO
+     * @param infoContrib     TODO
+     * @param errs            TODO
+     */
+    protected void nestAndLayerOn(
+            IdentityConstant                    constId,
+            PropertyConstant                    idProp,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            Map<MethodConstant, MethodInfo>     mapMethods,
+            Map<Object, MethodInfo>             mapVirtMethods,
+            TypeConstant                        typeContrib,
+            TypeInfo                            infoContrib,
+            ErrorListener                       errs)
+        {
+        // basically, everything in infoContrib needs to be "indented" (nested) within the nested
+        // identity of the property
+        Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>();
+        for (Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
+            {
+            Object           nidContrib = entry.getKey().getNestedIdentity();
+            PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(nidContrib);
+            mapContribProps.put(idContrib, entry.getValue());
+            }
+        layerOnProps(constId, false, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
+
+        Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
+        for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
+            {
+            Object         nidContrib = entry.getKey().getNestedIdentity();
+            MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(nidContrib);
+            mapContribMethods.put(idContrib, entry.getValue());
+            }
+        layerOnMethods(constId, false, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+        }
+
+    /**
+     * Layer on the passed property contributions onto the property information already collected.
+     *
+     * @param constId          identity of the class
+     * @param mapProps         properties of the class
+     * @param mapVirtProps     the virtual properties of the type, keyed by nested id
+     * @param typeContrib      the type whose members are being contributed
+     * @param mapContribProps  the property information to add to the existing properties
+     * @param fSelf            true if the layer being added represents the "Equals" contribution of
+     *                         the type
+     * @param errs             the error list to log any errors to
+     */
+    protected void layerOnProps(
+            IdentityConstant                    constId,
+            boolean                             fSelf,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            TypeConstant                        typeContrib,
+            Map<PropertyConstant, PropertyInfo> mapContribProps,
+            ErrorListener                       errs)
+        {
+        for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+            {
+            layerOnProp(constId, fSelf, mapProps, mapVirtProps, typeContrib, entry.getKey(), entry.getValue(), errs);
+            }
+        }
+
+    /**
+     * Layer on the passed property contribution onto the property information already collected.
+     *
+     * @param constId       identity of the class
+     * @param fSelf         true if the layer being added represents the "Equals" contribution of
+     *                      the type
+     * @param mapProps      properties of the class
+     * @param mapVirtProps  the virtual properties of the type, keyed by nested id
+     * @param typeContrib   the type whose members are being contributed
+     * @param idContrib     the identity of the property contribution
+     * @param propContrib   the PropertyInfo for the property contribution to layer on
+     * @param errs          the error list to log any errors to
+     */
+    protected void layerOnProp(
+            IdentityConstant                    constId,
+            boolean                             fSelf,
+            Map<PropertyConstant, PropertyInfo> mapProps,
+            Map<Object, PropertyInfo>           mapVirtProps,
+            TypeConstant                        typeContrib,
+            PropertyConstant                    idContrib,
+            PropertyInfo                        propContrib,
+            ErrorListener                       errs)
+        {
+        Object           nidContrib  = idContrib.getNestedIdentity();
+        PropertyConstant idResult    = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
+
+        // the property is not virtual if it is a constant, if it is private/private, or if
+        // it is inside a method (which coincidentally must be private/private). in this
+        // case, the properties are always "fully scoped" (they have only one identity), so
+        // there is no chance of a collision
+        boolean fVirtual = propContrib.isVirtual();
+
+        // look for a property of the same name (using its nested identity); only virtually
+        // composable properties are registered using their nested identities
+        PropertyInfo propBase   = fVirtual
+                ? mapVirtProps.get(nidContrib)
+                : null;
+        PropertyInfo propResult = propBase == null
+                ? propContrib
+                : propBase.layerOn(propContrib, fSelf, errs);
+
+        // check if there's supposed to be a property by this same identity
+        if (propBase == null && propContrib.isOverride())
+            {
+            log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
+                    typeContrib.getValueString(), propContrib.getName());
+            }
+
+        // the property is stored both by its absolute (fully qualified) ID and its nested
+        // ID, which is useful for example when trying to find it when building the actual
+        // call chains
+        mapProps.put(idResult, propResult);
+        if (fVirtual)
+            {
+            mapVirtProps.put(nidContrib, propResult);
+            }
+        }
+
+    /**
+     * Layer on the passed method contributions onto the method information already collected.
+     *
+     * @param constId            identity of the class
+     * @param fSelf              true if the layer being added represents the "Equals" contribution of
+     *                           the type
+     * @param mapMethods         methods of the class
+     * @param mapVirtMethods     the virtual methods of the type, keyed by nested id
+     * @param typeContrib        the type whose members are being contributed
+     * @param mapContribMethods  the method information to add to the existing methods
+     * @param errs               the error list to log any errors to
+     */
+    protected void layerOnMethods(
+            IdentityConstant                constId,
+            boolean                         fSelf,
+            Map<MethodConstant, MethodInfo> mapMethods,
+            Map<Object, MethodInfo>         mapVirtMethods,
+            TypeConstant                    typeContrib,
+            Map<MethodConstant, MethodInfo> mapContribMethods,
+            ErrorListener                   errs)
+        {
+        // the challenge here is that the methods being contributed may @Override a method that
+        // does not have the same exact signature, in which case the method signature is
+        // _narrowed_. there are a few different possible outcomes when this occurs:
+        // 1) there is only one method in the contribution that narrows the method signature,
+        //    and no method in the contribution that has the same signature: this is the
+        //    typical case, in which the method signature is truly narrowed, but the resulting
+        //    data structure carries a record of that choice. first, the method that is being
+        //    narrowed is *capped*, which is to say that it can no longer be extended (although
+        //    it still exists and can be found by the un-narrowed signature, since it is
+        //    necessary for the system to be able to find the method chain that corresponds to
+        //    that un-narrowed signature, because that is the signature that will appear in any
+        //    code that was comipled against the base type). further, the cap indicates what
+        //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
+        //    narrowed signature, which in turn will be able to walk up its super chain to the
+        //    bottom-most narrowing method, which then supers to the method chain that is under
+        //    the cap.
+        // 2) there are one or more methods in the contribution that narrow the method
+        //    signature, and there is also a method in the contribution that has the same
+        //    exact non-narrowed signature: this is a less common case, but it is one that is
+        //    expected to occur whenever the loss of the non-narrowed method is undesirable.
+        //    the result is that, instead of a "cap" on the un-narrowed method chain, the method
+        //    from the contribution with the exact same signature is placed onto the top of that
+        //    un-narrowed method chain, as one would expect. additionally, any method that
+        //    selects the un-narrowed method chain as its super will super to the un-narrowed
+        //    method chain, starting with the method that was on top of that chain *before*
+        //    this contribution was added.
+        // 3) if there is more than one method in the contribution that narrow the method
+        //    signature, and no method in the contribution that has the same signature: this is
+        //    a compiler and verifier error, because there is no single signature that is doing
+        //    the narrowing, and thus there is ambiguity in terms of which signature the cap
+        //    should virtually invoke.
+        // to accurately collect this information, including sufficient information to report
+        // any errors, all changes to virtual method chains are recorded in a separate map, so
+        // that the "pre-contribution" view is not modified until all of the information has
+        // been collected. additionally, if any method signatures are narrowed, the un-narrowed
+        // signatures are recorded in a separate set, so that it is possible to determine if
+        // they should be capped (and to identify any errors).
+        Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
+        Map<Object, Set<Object>> mapNarrowedNids = null;
+        for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+            {
+            MethodConstant idContrib     = entry.getKey();
+            MethodInfo     methodContrib = entry.getValue();
+            Object         nidContrib    = idContrib.getNestedIdentity();
+
+            // the method is not virtual if it is a function, if it is private, or if it is
+            // contained inside a method or some other structure (such as a property) that is
+            // non-virtual
+            if (!methodContrib.isVirtual())
+                {
+                // TODO check for collision, because a function could theoretically replace a virtual method
+                // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
+                // TODO we'll also have to check similar conditions below
+                mapMethods.put((MethodConstant) constId.appendNestedIdentity(nidContrib), methodContrib);
+                continue;
+                }
+
+            // look for a method of the same signature (using its nested identity); only
+            // virtual methods are registered using their nested identities
+            MethodInfo methodBase   = mapVirtMethods.get(nidContrib);
+            MethodInfo methodResult = methodContrib;
+            if (methodBase == null)
+                {
+                if (methodContrib.isOverride())
+                    {
+                    // the @Override tag gives us permission to look for a method with a
+                    // different signature that can be narrowed to the signature of the
+                    // contribution (because @Override means there MUST be a super method)
+                    Object nidBase = findRequiredSuper(
+                            nidContrib, methodContrib.getSignature(), mapVirtMethods, errs);
+                    if (nidBase != null)
+                        {
+                        methodBase = mapVirtMethods.get(nidBase);
+                        assert methodBase != null;
+
+                        // there exists a method that this method will narrow, so add this
+                        // method to the set of methods that are narrowing the super method
+                        if (mapNarrowedNids == null)
+                            {
+                            mapNarrowedNids = new HashMap<>();
+                            }
+                        Set<Object> setNarrowing = mapNarrowedNids.get(nidBase);
+                        if (setNarrowing == null)
+                            {
+                            setNarrowing = new HashSet<>();
+                            mapNarrowedNids.put(nidBase, setNarrowing);
+                            }
+                        setNarrowing.add(nidContrib);
+                        }
+                    }
+                }
+
+            if (methodBase != null)
+                {
+                methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
+                }
+
+            mapVirtMods.put(nidContrib, methodResult);
+            }
+
+        if (mapNarrowedNids != null)
+            {
+            // find every narrowed method signature that did *not* receive a contribution of its
+            // own (i.e. same method signature), because any that did receive a contribution at
+            // this level can be safely ignored
+            mapNarrowedNids.keySet().removeAll(mapVirtMods.keySet());
+
+            // for each remaining nid that was narrowed, if it was narrowed by exactly one
+            // method, then cap the nid by redirecting to the narrowed method, otherwise it is
+            // an error
+            for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet())
+                {
+                Object      nidNarrowed  = entry.getKey();
+                Set<Object> setNarrowing = entry.getValue();
+                if (setNarrowing.size() == 1)
+                    {
+                    // cap the method
+                    Object     nidNarrowing  = setNarrowing.iterator().next();
+                    MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
+                    MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
+                    mapVirtMods.put(nidNarrowed, infoNarrowed.cappedBy(infoNarrowing));
+                    }
+                else
+                    {
+                    for (Object nidNarrowing : setNarrowing)
+                        {
+                        log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
+                                typeContrib.getValueString(),
+                                mapVirtMethods.get(nidNarrowed).getIdentity().getValueString(),
+                                mapVirtMods.get(nidNarrowing).getIdentity().getSignature().getValueString());
+                        }
+                    }
+                }
+            }
+
+        // the method is stored both by its absolute (fully qualified) ID and its nested
+        // ID, which is useful for example when trying to find it when building the actual
+        // call chains
+        for (Entry<Object, MethodInfo> entry : mapVirtMods.entrySet())
+            {
+            Object         nid  = entry.getKey();
+            MethodInfo     info = entry.getValue();
+            MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(nid);
+
+            mapMethods.put(id, info);
+            mapVirtMethods.put(nid, info);
+            }
+        }
+    
     /**
      * Find the method that would be the "super" of the specified method signature. A super is
      * required to exist, and one super must be the unambiguously best choice, otherwise an error
@@ -2276,26 +2491,29 @@ public abstract class TypeConstant
      *
      * @param constId           the identity of the class (used for logging error information)
      * @param fInterface        if the class is an interface type
-     * @param struct            the class structure, property structure, or method structure REVIEW or typedef?
+     * @param structContrib     the class structure, property structure, or method structure REVIEW or typedef?
      * @param resolver          the GenericTypeResolver that uses the known type parameters
      * @param mapProps          the properties of the class
      * @param mapMethods        the methods of the class
      * @param errs              the error list to log any errors to
+     *
+     * @return true iff the processing was able to obtain all of its dependencies
      */
     private boolean createMemberInfo(
             IdentityConstant                    constId,
             boolean                             fInterface,
-            Component                           struct,
+            Component                           structContrib,
             ParamInfo.TypeResolver              resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo  > mapMethods,
+            List<PropertyConstant>              listExplode,
             ErrorListener                       errs)
         {
         boolean fComplete = true;
 
-        if (struct instanceof MethodStructure)
+        if (structContrib instanceof MethodStructure)
             {
-            MethodStructure   method       = (MethodStructure) struct;
+            MethodStructure   method       = (MethodStructure) structContrib;
             boolean           fHasNoCode   = method.isAbstract();
             boolean           fHasAbstract = method.findAnnotation(getConstantPool().clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
@@ -2308,19 +2526,11 @@ public abstract class TypeConstant
                     fHasNoCode               ? Implementation.SansCode :
                                                Implementation.Explicit  );
             MethodInfo infoNew = new MethodInfo(body);
-            MethodInfo infoOld = mapMethods.put(id, infoNew);
-            if (infoOld != null)
-                {
-                // this can occur when a property has both custom code, because the property
-                // explodes any annotations on top of an "into" for Ref or Var, which shows up as
-                // the "infoOld" that we just found, with the custom code on the property being the
-                // "infoNew" that we just created
-                mapMethods.put(id, infoOld.layerOn(infoNew, true, errs));
-                }
+            mapMethods.put(id, infoNew);
             }
-        else if (struct instanceof PropertyStructure)
+        else if (structContrib instanceof PropertyStructure)
             {
-            PropertyStructure prop = (PropertyStructure) struct;
+            PropertyStructure prop = (PropertyStructure) structContrib;
             PropertyConstant  id   = prop.getIdentityConstant();
             PropertyInfo      info = prop.isTypeParameter()
                     ? new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(id.getName())))
@@ -2329,83 +2539,26 @@ public abstract class TypeConstant
 
             if ((info.isCustomLogic() || info.isRefAnnotated()) && !constId.equals(getConstantPool().clzObject()))
                 {
-                // determine if the property will need to be "into Ref" or "into Var"
-                Annotation[] aAnnos   = info.getRefAnnotations();
-                int          cAnnos   = aAnnos.length;
-                ConstantPool pool     = getConstantPool();
-                TypeConstant typeVar  = pool.typeVar();
-                boolean      fVar     = info.isVar();
-                boolean      fVarAnno = false;
-                for (int i = 0; !fVarAnno && i < cAnnos; ++i)
-                    {
-                    fVarAnno = aAnnos[i].getAnnotationType().getExplicitClassInto().isA(typeVar);
-                    }
-                fVar |= fVarAnno;
-
-                // string together the annotations on the property
-                int          iFirstAnno;
-                TypeConstant typeProp;
-                if (fVar && (cAnnos == 0 || !fVarAnno))
-                    {
-                    // insert a "fake into Var" annotation at the end of the list to force the
-                    // resulting chains to have "into Var" contents
-                    typeProp   = pool.typeAnnotateVar();
-                    iFirstAnno = cAnnos - 1;
-                    }
-                else if (cAnnos == 0)
-                    {
-                    typeProp   = pool.typeAnnotateRef();
-                    iFirstAnno = cAnnos - 1;
-                    }
-                else
-                    {
-                    typeProp   = aAnnos[cAnnos - 1].getAnnotationType();
-                    iFirstAnno = cAnnos - 2;
-                    }
-
-                for (int i = iFirstAnno; i >= 0; --i)
-                    {
-                    typeProp = pool.ensureAnnotatedTypeConstant(aAnnos[i], typeProp);
-                    }
-
-                // build the "into" layer of the Ref/Var for the property, and copy its contents
-                // into the structures representing the type that this member is being created for
-                TypeInfo infoRef = typeProp.ensureTypeInfoInternal(errs);
-                if (infoRef == null)
-                    {
-                    fComplete = false;
-                    }
-                else
-                    {
-                    for (Entry<PropertyConstant, PropertyInfo> entry : infoRef.getProperties().entrySet())
-                        {
-                        // glue together PropertyConstant "id" plus the "nid" from the sub-prop
-                        mapProps.put((PropertyConstant) id.appendNestedIdentity(
-                                entry.getKey().getNestedIdentity()), entry.getValue());
-                        }
-                    for (Entry<MethodConstant, MethodInfo> entry : infoRef.getMethods().entrySet())
-                        {
-                        // glue together PropertyConstant "id" plus the "nid" from the sub-method
-                        mapMethods.put((MethodConstant) id.appendNestedIdentity(
-                                entry.getKey().getNestedIdentity()), entry.getValue());
-                        }
-                    }
+                // this property needs to be "exploded"
+                listExplode.add(id);
                 }
             }
 
         // recurse through children
-        for (Component child : struct.ensureChildByNameMap().values())
+        for (Component child : structContrib.ensureChildByNameMap().values())
             {
             if (child instanceof MultiMethodStructure)
                 {
                 for (MethodStructure method : child.getMethodByConstantMap().values())
                     {
-                    fComplete &= createMemberInfo(constId, fInterface, method, resolver, mapProps, mapMethods, errs);
+                    fComplete &= createMemberInfo(constId, fInterface, method, resolver,
+                            mapProps, mapMethods, listExplode, errs);
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
-                fComplete &= createMemberInfo(constId, fInterface, child, resolver, mapProps, mapMethods, errs);
+                fComplete &= createMemberInfo(constId, fInterface, child, resolver,
+                        mapProps, mapMethods, listExplode, errs);
                 }
             }
 

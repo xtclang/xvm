@@ -130,7 +130,7 @@ public class PropertyConstant
     @Override
     public IdentityConstant ensureNestedIdentity(IdentityConstant that)
         {
-        return getConstantPool().ensurePropertyConstant(
+        return that.getConstantPool().ensurePropertyConstant(
                 getParentConstant().ensureNestedIdentity(that), getName());
         }
 

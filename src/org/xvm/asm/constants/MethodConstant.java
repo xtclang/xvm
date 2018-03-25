@@ -210,7 +210,7 @@ public class MethodConstant
     @Override
     public IdentityConstant ensureNestedIdentity(IdentityConstant that)
         {
-        return getConstantPool().ensureMethodConstant(
+        return that.getConstantPool().ensureMethodConstant(
                 getParentConstant().ensureNestedIdentity(that), getSignature());
         }
 

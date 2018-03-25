@@ -156,6 +156,7 @@ module Ecstasy.xtclang.org
         mixin Override into Property | Method {}
         mixin InjectedRef<RefType> into Ref<RefType> {}
         mixin UncheckedInt into Int64 {}
+        mixin AnnotateRef<RefType> into Var<RefType> {}
         mixin AnnotateVar<RefType> into Var<RefType> {}
         mixin LazyVar<RefType>(function RefType ()? calculate)
                 into Var<RefType>
