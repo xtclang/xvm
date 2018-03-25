@@ -2054,6 +2054,7 @@ public abstract class TypeConstant
         for (int i = cAnnos - 1; i >= 0; --i)
             {
             TypeConstant typeAnno = aAnnos[i].getAnnotationType();
+            typeAnno = typeAnno.getConstantPool().ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
             TypeInfo     infoAnno = typeAnno.ensureTypeInfoInternal(errs);
             if (infoAnno == null)
                 {
