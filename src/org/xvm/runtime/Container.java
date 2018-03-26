@@ -71,7 +71,6 @@ public class Container
             {
             throw new IllegalStateException("Already started");
             }
-        Utils.registerGlobalSignatures(f_pool);
 
         f_templates.loadNativeTemplates();
 
