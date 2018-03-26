@@ -54,7 +54,7 @@ public class xClass
 
             return m_mapHandles.computeIfAbsent(typeTarget, type ->
                 new ClassHandle(f_templates.resolveClass(
-                    type.getPosition(), frame.getGenericsResolver())));
+                    type.resolveGenerics(frame.getGenericsResolver()))));
             }
         return null;
         }

@@ -35,9 +35,6 @@ public abstract class Utils
     public final static int[] ARGS_NONE = new int[0];
     public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
 
-    public static SignatureConstant SIG_CONSTRUCT; // no-parameter constructor
-    public static SignatureConstant SIG_TO_STRING; // to<String>()
-
     public static void log(Frame frame, String sMsg)
         {
         if (sMsg.charAt(0) == '\n')
@@ -62,17 +59,6 @@ public abstract class Utils
 
         System.out.println(new Timestamp(System.currentTimeMillis())
             + " " + ctx + ", fiber " + lFiberId + ": " + sMsg);
-        }
-
-    public static void registerGlobalSignatures(ConstantPool pool)
-        {
-        TypeConstant tString = pool.getImplicitlyImportedComponent("String").getIdentityConstant().asTypeConstant();
-
-        TypeConstant[] atVoid = ConstantPool.NO_TYPES;
-        TypeConstant[] atString = new TypeConstant[] {tString};
-
-        SIG_CONSTRUCT = pool.ensureSignatureConstant("construct", atVoid, atVoid);
-        SIG_TO_STRING = pool.ensureSignatureConstant("to", atVoid, atString);
         }
 
     /**
@@ -147,7 +133,7 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.getComposition();
-        CallChain chain = clzValue.getMethodCallChain(SIG_TO_STRING, Access.PUBLIC);
+        CallChain chain = clzValue.getMethodCallChain(frame.f_context.f_pool.sigToString(), Access.PUBLIC);
 
         if (chain.isNative())
             {
