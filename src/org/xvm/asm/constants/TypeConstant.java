@@ -31,6 +31,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
 import org.xvm.asm.constants.TypeInfo.Progress;
@@ -876,7 +877,7 @@ public abstract class TypeConstant
 
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
-        Map<String, ParamInfo> mapTypeParams = new HashMap<>();
+        Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
         TypeResolver resolver = createInitialTypeResolver(constId, struct, mapTypeParams, errs);
 
         // walk through each of the contributions, starting from the implied contributions that are
@@ -922,7 +923,7 @@ public abstract class TypeConstant
             }
 
         // validate the type parameters against the properties
-        checkTypeParameterProperties(mapTypeParams, mapProps, errs);
+        checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
         return new TypeInfo(this, struct, 0, fAbstract, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
@@ -1068,7 +1069,7 @@ public abstract class TypeConstant
     private TypeResolver createInitialTypeResolver(
             IdentityConstant       constId,
             ClassStructure         struct,
-            Map<String, ParamInfo> mapTypeParams,
+            Map<Object, ParamInfo> mapTypeParams,
             ErrorListener          errs)
         {
         TypeResolver resolver = new TypeResolver(mapTypeParams, errs);
@@ -1698,7 +1699,7 @@ public abstract class TypeConstant
     private boolean createCallChains(
             IdentityConstant                  constId,
             ClassStructure                    struct,
-            Map<String, ParamInfo>            mapTypeParams,
+            Map<Object, ParamInfo>            mapTypeParams,
             List<Contribution>                listProcess,
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
@@ -2011,16 +2012,17 @@ public abstract class TypeConstant
      * class", and we are working through multiple contributions embedded in a single contribution
      * of the containing class.
      *
-     * @param constId         TODO
-     * @param idProp          TODO
-     * @param info            TODO
-     * @param mapProps        TODO
-     * @param mapVirtProps    TODO
-     * @param mapMethods      TODO
-     * @param mapVirtMethods  TODO
-     * @param errs            TODO
+     * @param constId         identity of the class
+     * @param idProp          the identity of the property being exploded
+     * @param info            the PropertyInfo for the property being exploded
+     * @param mapProps        properties of the class
+     * @param mapVirtProps    the virtual properties of the type, keyed by nested id
+     * @param mapMethods      methods of the class
+     * @param mapVirtMethods  the virtual methods of the type, keyed by nested id
+     * @param errs            the error list to log any errors to
      *
-     * @return TODO
+     * @return true iff the process was able to obtain all of the necessary TypeInfo information
+     *         required to explode the property
      */
     protected boolean explodeProperty(
             IdentityConstant                    constId,
@@ -2035,8 +2037,10 @@ public abstract class TypeConstant
         boolean fComplete = true;
 
         // layer on an "into" of either "into Ref" or "into Var"
+        {
         ConstantPool pool     = getConstantPool();
-        TypeConstant typeInto = info.isVar() ? pool.typeVar() : pool.typeRef();
+        TypeConstant typeInto = pool.ensureAccessTypeConstant(pool.ensureParameterizedTypeConstant(
+                info.isVar() ? pool.typeVar() : pool.typeRef(), info.getType()), Access.PROTECTED);
         TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
         if (infoInto == null)
             {
@@ -2047,15 +2051,24 @@ public abstract class TypeConstant
             nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
                     typeInto, infoInto.asInto(), errs);
             }
+        }
 
         // layer on any annotations, if any
         Annotation[] aAnnos   = info.getRefAnnotations();
         int          cAnnos   = aAnnos.length;
         for (int i = cAnnos - 1; i >= 0; --i)
             {
-            TypeConstant typeAnno = aAnnos[i].getAnnotationType();
-            typeAnno = typeAnno.getConstantPool().ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
-            TypeInfo     infoAnno = typeAnno.ensureTypeInfoInternal(errs);
+            Annotation     anno     = aAnnos[i];
+            ConstantPool   pool     = anno.getConstantPool();
+            TypeConstant   typeAnno = anno.getAnnotationType();
+            ClassStructure clzAnno  = (ClassStructure) ((IdentityConstant) anno.getAnnotationClass()).getComponent();
+            if (clzAnno.indexOfGenericParameter("RefType") == 0)
+                {
+                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, info.getType());
+                }
+            typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
+
+            TypeInfo infoAnno = typeAnno.ensureTypeInfoInternal(errs);
             if (infoAnno == null)
                 {
                 fComplete = false;
@@ -2072,17 +2085,19 @@ public abstract class TypeConstant
         }
 
     /**
-     * TODO
+     * Take information being contributed to a property from a class, and "indent" that information
+     * so that it can apply to the property (which itself is _nested_ under a class). Then layer
+     * that properly indented (nested) information onto the property.
      *
-     * @param constId         TODO
-     * @param idProp          TODO
-     * @param mapProps        TODO
-     * @param mapVirtProps    TODO
-     * @param mapMethods      TODO
-     * @param mapVirtMethods  TODO
-     * @param typeContrib     TODO
-     * @param infoContrib     TODO
-     * @param errs            TODO
+     * @param constId         identity of the class
+     * @param idProp          the property being contributed to
+     * @param mapProps        properties of the class
+     * @param mapVirtProps    the virtual properties of the type, keyed by nested id
+     * @param mapMethods      methods of the class
+     * @param mapVirtMethods  the virtual methods of the type, keyed by nested id
+     * @param typeContrib     the type whose members are being contributed
+     * @param infoContrib     the information to add to the specified property
+     * @param errs            the error list to log any errors to
      */
     protected void nestAndLayerOn(
             IdentityConstant                    constId,
@@ -2504,7 +2519,7 @@ public abstract class TypeConstant
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           structContrib,
-            ParamInfo.TypeResolver              resolver,
+            TypeInfo.TypeResolver               resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<MethodConstant  , MethodInfo  > mapMethods,
             List<PropertyConstant>              listExplode,
@@ -2533,16 +2548,38 @@ public abstract class TypeConstant
             {
             PropertyStructure prop = (PropertyStructure) structContrib;
             PropertyConstant  id   = prop.getIdentityConstant();
-            PropertyInfo      info = prop.isTypeParameter()
-                    ? new PropertyInfo(new PropertyBody(prop, resolver.parameters.get(id.getName())))
-                    : createPropertyInfo(prop, constId, fInterface, resolver, errs);
+            PropertyInfo      info;
+            if (prop.isTypeParameter())
+                {
+                // this only knows how to create a type-param PropertyInfo for the type parameters
+                // of the class
+                assert id.getNestedDepth() == 1;
+                info = new PropertyInfo(new PropertyBody(prop, resolver.findParamInfo(id.getName())));
+                }
+            else
+                {
+                info = createPropertyInfo(prop, constId, fInterface, resolver, errs);
+                }
             mapProps.put(id, info);
 
-            if ((info.isCustomLogic() || info.isRefAnnotated()) && !constId.equals(getConstantPool().clzObject()))
+            if ((info.isCustomLogic() || info.isRefAnnotated()))
                 {
                 // this property needs to be "exploded"
                 listExplode.add(id);
+
+                // create a ParamInfo and a type-param PropertyInfo for the RefType type parameter
+                ConstantPool     pool      = id.getConstantPool();
+                PropertyConstant idParam   = pool.ensurePropertyConstant(id, "RefType");
+                Object           nidParam  = idParam.getNestedIdentity();
+                ParamInfo        param     = new ParamInfo(nidParam, "RefType", pool.typeObject(), info.getType());
+                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param));
+                resolver.registerParamInfo(nidParam, param);
+                mapProps.put(idParam, propParam);
                 }
+
+            // we're about to go down inside of the property, so create a type resolver that knows
+            // how to resolve the property's type params (specifically, "RefType")
+            resolver = info.new TypeResolver(resolver);
             }
 
         // recurse through children
@@ -2578,20 +2615,21 @@ public abstract class TypeConstant
      * @return a new PropertyInfo for the passed PropertyStructure
      */
     private PropertyInfo createPropertyInfo(
-            PropertyStructure       prop,
-            IdentityConstant        constId,
-            boolean                 fInterface,
-            ParamInfo.TypeResolver  resolver,
-            ErrorListener           errs)
+            PropertyStructure     prop,
+            IdentityConstant      constId,
+            boolean               fInterface,
+            TypeInfo.TypeResolver resolver,
+            ErrorListener         errs)
         {
         ConstantPool pool      = getConstantPool();
         String       sName     = prop.getName();
 
         // scan the Property annotations
-        Annotation[] aPropAnno    = prop.getPropertyAnnotations();     // TODO BUGBUG InjectedRef shows up in this list e.g. Object.meta
+        Annotation[] aPropAnno    = prop.getPropertyAnnotations();
         boolean      fHasRO       = false;
         boolean      fHasAbstract = false;
         boolean      fHasOverride = false;
+        boolean      fHasInject   = false;
         for (int i = 0, c = aPropAnno.length; i < c; ++i)
             {
             Annotation annotation = aPropAnno[i];
@@ -2606,6 +2644,7 @@ public abstract class TypeConstant
             fHasRO       |= constMixin.equals(pool.clzRO());
             fHasAbstract |= constMixin.equals(pool.clzAbstract());
             fHasOverride |= constMixin.equals(pool.clzOverride());
+            fHasInject   |= constMixin.equals(pool.clzInject());
             }
 
         // check the non-Property annotations (including checking for verifier errors, since the
@@ -2614,7 +2653,6 @@ public abstract class TypeConstant
         Annotation[] aRefAnno    = prop.getRefAnnotations();
         boolean      fHasRefAnno = false;
         boolean      fHasVarAnno = false;
-        boolean      fHasInject  = false;
         for (int i = 0, c = aRefAnno.length; i < c; ++i)
             {
             Annotation   annotation = aRefAnno[i];
@@ -2654,7 +2692,6 @@ public abstract class TypeConstant
 
             fHasRefAnno   = true;
             fHasVarAnno  |= typeInto.isA(pool.typeVar());
-            fHasInject   |= constMixin.equals(pool.clzInject());
             }
 
         // functions and constants cannot have properties; methods cannot have constants
@@ -2984,39 +3021,30 @@ public abstract class TypeConstant
      * @param errs           the error list to log any errors to
      */
     private void checkTypeParameterProperties(
-            Map<String, ParamInfo>              mapTypeParams,
-            Map<PropertyConstant, PropertyInfo> mapProps,
-            ErrorListener                       errs)
+            Map<Object, ParamInfo>    mapTypeParams,
+            Map<Object, PropertyInfo> mapProps,
+            ErrorListener             errs)
         {
         ConstantPool pool = getConstantPool();
         for (ParamInfo param : mapTypeParams.values())
             {
+            if (param.getNestedIdentity() instanceof NestedIdentity)
+                {
+                continue;
+                }
+
             String  sParam = param.getName();
             boolean fFound = false;
-            for (PropertyInfo prop : mapProps.values())
-                {
-                if (prop.getName().equals(sParam))
-                    {
-                    if (fFound)
-                        {
-                        throw new IllegalStateException("duplicate or colliding type-param property "
-                                + sParam + " on " + this.getValueString());
-                        }
-                    else if (prop.isTypeParam() && prop.getType().equals(
-                            pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
-                        {
-                        fFound = true;
-                        }
-                    else
-                        {
-                        log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
-                                this.getValueString(), sParam);
-                        }
-                    }
-                }
-            if (!fFound)
+            PropertyInfo prop = mapProps.get(sParam);
+            if (prop == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
+                        this.getValueString(), sParam);
+                }
+            else if (!prop.isTypeParam() || !prop.getType().equals(
+                    pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
+                {
+                log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.getValueString(), sParam);
                 }
             }

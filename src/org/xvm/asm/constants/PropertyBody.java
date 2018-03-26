@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -87,11 +88,13 @@ public class PropertyBody
      */
     public PropertyBody(PropertyStructure struct, ParamInfo param)
         {
-        assert struct != null;
         assert param  != null;
-        assert struct.getName().equals(param.getName());
+        assert struct == null || struct.getName().equals(param.getName());
+        assert struct != null || param.getNestedIdentity() instanceof NestedIdentity;
 
-        ConstantPool pool = struct.getConstantPool();
+        ConstantPool pool = struct == null
+                ? ((NestedIdentity) param.getNestedIdentity()).getIdentityConstant().getConstantPool()
+                : struct.getConstantPool();
 
         m_structProp    = struct;
         m_impl          = Implementation.Native;
@@ -120,11 +123,13 @@ public class PropertyBody
      */
     public PropertyConstant getIdentity()
         {
-        return m_structProp.getIdentityConstant();
+        return m_structProp == null
+                ? (PropertyConstant) ((NestedIdentity) m_paraminfo.getNestedIdentity()).getIdentityConstant()
+                : m_structProp.getIdentityConstant();
         }
 
     /**
-     * @return the PropertyStructure for the property body
+     * @return the PropertyStructure for the property body; may be null for nested type params
      */
     public PropertyStructure getStructure()
         {
@@ -136,7 +141,9 @@ public class PropertyBody
      */
     public String getName()
         {
-        return m_structProp.getName();
+        return m_structProp == null
+                ? m_paraminfo.getName()
+                : m_structProp.getName();
         }
 
     /**
@@ -208,7 +215,9 @@ public class PropertyBody
      */
     public Access getRefAccess()
         {
-        return getStructure().getAccess();
+        return m_structProp == null
+                ? Access.PUBLIC
+                : m_structProp.getAccess();
         }
 
     /**
@@ -216,7 +225,9 @@ public class PropertyBody
      */
     public Access getVarAccess()
         {
-        return getStructure().getVarAccess();
+        return m_structProp == null
+                ? null
+                : m_structProp.getVarAccess();
         }
 
     /**
@@ -296,7 +307,9 @@ public class PropertyBody
      */
     public boolean hasRefAnnotations()
         {
-        return getStructure().getRefAnnotations().length > 0;
+        return m_structProp == null
+                ? false
+                : m_structProp.getRefAnnotations().length > 0;
         }
 
     /**
@@ -304,7 +317,9 @@ public class PropertyBody
      */
     public Annotation[] getRefAnnotations()
         {
-        return getStructure().getRefAnnotations();
+        return m_structProp == null
+                ? Annotation.NO_ANNOTATIONS
+                : m_structProp.getRefAnnotations();
         }
 
     /**
@@ -394,7 +409,8 @@ public class PropertyBody
      */
     public boolean isExplicitAbstract()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Abstract");
+        return m_structProp != null && TypeInfo.containsAnnotation(
+                m_structProp.getPropertyAnnotations(), "Abstract");
         }
 
     /**
@@ -402,7 +418,7 @@ public class PropertyBody
      */
     public boolean isExplicitOverride()
         {
-        return m_impl != Implementation.Implicit
+        return m_structProp != null && m_impl != Implementation.Implicit
                 && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
         }
 
@@ -411,7 +427,7 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly()
         {
-        return m_impl != Implementation.Implicit
+        return m_structProp != null && m_impl != Implementation.Implicit
                 && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
         }
 
@@ -420,8 +436,8 @@ public class PropertyBody
      */
     public boolean isInjected()
         {
-        return m_impl != Implementation.Implicit
-                && TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
+        return m_structProp != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Inject");
         }
 
 
@@ -447,7 +463,7 @@ public class PropertyBody
             }
 
         PropertyBody that = (PropertyBody) obj;
-        return this.m_structProp.equals(that.m_structProp)
+        return Handy.equals(this.m_structProp, that.m_structProp)
             && this.m_type      .equals(that.m_type)
             && this.m_fRO       == that.m_fRO
             && this.m_fRW       == that.m_fRW

@@ -191,8 +191,9 @@ public class MethodInfo
             boolean fRetain;
             switch (body.getImplementation())
                 {
-// TODO review this considering all the other change ... is this still correct?
                 case Implicit:
+                    fRetain = true;
+
                 case Declared:
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;

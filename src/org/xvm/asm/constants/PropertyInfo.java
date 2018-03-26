@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -13,6 +14,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -739,6 +742,10 @@ public class PropertyInfo
         return access;
         }
 
+    /**
+     * @return true iff the property at some base level is actually a Var, but that Var is
+     *         unreachable due to insufficient access
+     */
     public boolean isSetterUnreachable()
         {
         return m_fSuppressVar;
@@ -919,7 +926,7 @@ public class PropertyInfo
      */
     public boolean isInjected()
         {
-        return getHead().isInjected();   // REVIEW inject is a Ref annotation
+        return getHead().isInjected();
         }
 
 
@@ -978,6 +985,66 @@ public class PropertyInfo
             }
 
         return sb.toString();
+        }
+
+
+    // ----- inner class: TypeResolver -------------------------------------------------------------
+
+    /**
+     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
+     */
+    public class TypeResolver
+            implements TypeInfo.TypeResolver
+        {
+        /**
+         * Construct a GenericTypeResolver that will use the enclosing property as its source of
+         * type resolution information for the "RefType" type parameter, while delegating all other
+         * type resolution to the passed type resolver.
+         *
+         * @param resolver  a resolver to delegate most requests to
+         */
+        public TypeResolver(TypeInfo.TypeResolver resolver)
+            {
+            assert resolver != null;
+
+            this.resolver = resolver;
+            }
+
+        @Override
+        public TypeConstant resolveGenericType(PropertyConstant constProperty)
+            {
+            // TODO this may suffice for the time being, but is not necessarily correct, as there
+            //      may conceivably be other type parameters on the property, and there is a
+            //      possibility of the passed property identifying a _different_ RefType type param
+            //      than the one that we assume (need to check the full identity?)
+
+            return constProperty.getName().equals("RefType")
+                    ? PropertyInfo.this.getType()
+                    : resolver.resolveGenericType(constProperty);
+            }
+
+        @Override
+        public ParamInfo findParamInfo(Object nid)
+            {
+            if (nid instanceof String && nid.equals("RefType"))
+                {
+                PropertyConstant id = PropertyInfo.this.getIdentity();
+                nid = id.getConstantPool().ensurePropertyConstant(id, "RefType").getNestedIdentity();
+                }
+
+            return resolver.findParamInfo(nid);
+            }
+
+        @Override
+        public void registerParamInfo(Object nid, ParamInfo param)
+            {
+            resolver.registerParamInfo(nid, param);
+            }
+
+        /*
+         * The resolver to delegat to.
+         */
+        public final TypeInfo.TypeResolver resolver;
         }
 
 

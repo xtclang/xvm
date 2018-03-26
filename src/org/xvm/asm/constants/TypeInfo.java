@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
@@ -22,6 +23,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
@@ -60,7 +62,7 @@ public class TypeInfo
             ClassStructure                      struct,
             int                                 cDepth,
             boolean                             fAbstract,
-            Map<String, ParamInfo>              mapTypeParams,
+            Map<Object, ParamInfo>              mapTypeParams,
             Annotation[]                        aannoClass,
             TypeConstant                        typeExtends,
             TypeConstant                        typeRebases,
@@ -267,8 +269,28 @@ public class TypeInfo
                     }
                 }
 
-            // REVIEW capping has no body, so getComponent() could result in a NPE (need to follow the "redirect" from the cap)
-            if (idParent.getComponent().getAccess().isLessAccessibleThan(access))
+            Component component = idParent.getComponent();
+            if (component == null)
+                {
+                // a method cap will not have a real component because it is a fake identity
+                if (idParent instanceof MethodConstant)
+                    {
+                    MethodInfo method = m_mapVirtMethods.get(idParent.getNestedIdentity());
+                    assert method != null;
+                    assert method.getHead().getImplementation() == Implementation.Capped;
+
+                    // look under the cap
+                    idParent  = method.getChain()[1].getIdentity();
+                    component = idParent.getComponent();
+                    assert component != null;
+                    }
+                else
+                    {
+                    throw new IllegalStateException("missing component for id: " + idParent);
+                    }
+                }
+
+            if (component.getAccess().isLessAccessibleThan(access))
                 {
                 return false;
                 }
@@ -286,14 +308,14 @@ public class TypeInfo
      *
      * @return a GenericTypeResolver
      */
-    public GenericTypeResolver ensureTypeResolver(ErrorListener errs)
+    public ParamInfo.TypeResolver ensureTypeResolver(ErrorListener errs)
         {
         assert errs != null;
 
-        TypeResolver resolver = m_resolver;
+        ParamInfo.TypeResolver resolver = m_resolver;
         if (resolver == null || resolver.errs != errs)
             {
-            m_resolver = resolver = new TypeResolver(m_mapTypeParams, errs);
+            m_resolver = resolver = new ParamInfo.TypeResolver(m_mapTypeParams, errs);
             }
         return resolver;
         }
@@ -449,7 +471,7 @@ public class TypeInfo
     /**
      * @return the complete set of type parameters declared within the type
      */
-    public Map<String, ParamInfo> getTypeParams()
+    public Map<Object, ParamInfo> getTypeParams()
         {
         return m_mapTypeParams;
         }
@@ -613,6 +635,24 @@ public class TypeInfo
             ++i;
             }
         return -1;
+        }
+
+    /**
+     * Given an identity (or nested identity) of a property, obtain a TypeInfo that represents the
+     * entirety of the information about that property, including what properties and methods it
+     * contains, what their call chains are, etc. The reason that this method combines the "id" and
+     * the "nid" lookups is because a nested identity is not particularly type-safe, thus making it
+     * relatively simple to combine the two requests into one (albeit untyped).
+     *
+     * @param idOrNid  either the PropertyConstant for the property, or the nested identity of the
+     *                 property
+     *
+     * @return a TypeInfo for the property, or null if the property does not exist
+     */
+    public TypeInfo getPropertyAsTypeInfo(Object idOrNid)
+        {
+        // TODO
+        throw new UnsupportedOperationException();
         }
 
     /**
@@ -1059,7 +1099,7 @@ public class TypeInfo
               .append(m_mapTypeParams.size())
               .append(')');
             int i = 0;
-            for (Entry<String, ParamInfo> entry : m_mapTypeParams.entrySet())
+            for (Entry<Object, ParamInfo> entry : m_mapTypeParams.entrySet())
                 {
                 sb.append("\n  [")
                   .append(i++)
@@ -1260,6 +1300,19 @@ public class TypeInfo
         }
 
 
+    // ----- inner class: TypeResolver -------------------------------------------------------------
+
+    /**
+     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
+     */
+    public interface TypeResolver
+            extends GenericTypeResolver
+        {
+        ParamInfo findParamInfo(Object nid);
+        void registerParamInfo(Object nid, ParamInfo param);
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     public enum Progress {Absent, Building, Incomplete, Complete}
@@ -1295,7 +1348,7 @@ public class TypeInfo
     /**
      * The type parameters for this TypeInfo.
      */
-    private final Map<String, ParamInfo> m_mapTypeParams;
+    private final Map<Object, ParamInfo> m_mapTypeParams;
 
     /**
      * The class annotations.
@@ -1382,7 +1435,7 @@ public class TypeInfo
     /**
      * A cached type resolver.
      */
-    private transient TypeResolver m_resolver;
+    private transient ParamInfo.TypeResolver m_resolver;
 
     // cached query results
     private transient TypeInfo            m_into;
