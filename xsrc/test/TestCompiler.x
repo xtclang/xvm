@@ -1,3 +1,5 @@
+import X.Number;
+
 class TestCompiler<TestType1 extends Number,
                    TestType2 extends TestType1,
                    TestType3 extends TestType2>
