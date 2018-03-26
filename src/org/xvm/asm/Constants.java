@@ -376,9 +376,9 @@ public interface Constants
      */
     public static final String VE_PROPERTY_READONLY_NOT_VAR           = "VERIFY-48";
     /**
-     * {0} contains an @Inject property {1} that has a "set()" that uses "super", or a Var annotation.
+     * {0} contains an @Inject property {1} that also implements "get()", "set()", or has a Ref or Var annotation.
      */
-    public static final String VE_PROPERTY_INJECT_NOT_VAR             = "VERIFY-49";
+    public static final String VE_PROPERTY_INJECT_NOT_OVERRIDEABLE    = "VERIFY-49";
     /**
      * {0} contains an @RO property {1} that does not have a "get()" and is not annotated with "@Abstract", "@Override", or "@Inject".
      */

@@ -23,8 +23,6 @@ public class PropertyBody
     /**
      * Construct a PropertyBody from the passed information.
      *
-     * TODO hasGetter, hasSetter, isGetterBlockingSuper, isSetterBlockingSuper (or: None, BlocksSuper, MayUseSuper)
-     *
      * @param struct         the property structure that this body is derived from
      * @param impl           one of Implicit, Declared, Delegating, or Explicit
      * @param constDelegate  the property constant that provides the reference to delegate to
@@ -35,6 +33,7 @@ public class PropertyBody
      *                       indicate that the property is read-write
      * @param fCustomCode    true to indicate that the property has custom code that overrides
      *                       the underlying Ref/Var implementation
+
      * @param fReqField      true iff the property requires the presence of a field
      * @param fConstant      true iff the property represents a named constant value
      * @param constInitVal   the initial value for the property
@@ -48,6 +47,8 @@ public class PropertyBody
             boolean           fRO,
             boolean           fRW,
             boolean           fCustomCode,
+            Effect            effectGet,
+            Effect            effectSet,
             boolean           fReqField,
             boolean           fConstant,
             Constant          constInitVal,
@@ -65,6 +66,7 @@ public class PropertyBody
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
         assert constInitVal == null || constInitFunc == null;
         assert !fConstant || (constInitVal == null ^ constInitFunc == null);
+        assert effectGet != null && effectSet != null;
 
         m_structProp    = struct;
         m_impl          = impl;
@@ -74,6 +76,8 @@ public class PropertyBody
         m_fRO           = fRO;
         m_fRW           = fRW;
         m_fCustom       = fCustomCode;
+        m_effectGet     = effectGet;
+        m_effectSet     = effectSet;
         m_fField        = fReqField;
         m_fConstant     = fConstant;
         m_constInitVal  = constInitVal;
@@ -108,6 +112,8 @@ public class PropertyBody
         m_fConstant     = false;
         m_constInitVal  = null;
         m_constInitFunc = null;
+        m_effectGet     = Effect.None;
+        m_effectSet     = Effect.None;
         }
 
     /**
@@ -155,7 +161,7 @@ public class PropertyBody
      * properties of {@code Object} in the context of an interface, for example;</li>
      * <li><b>Declared</b> - the property body represents an interface-declared property;</li>
      * <li><b>Default</b> - the property body represents an interface-declared property with a
-     * default implementation of {@code get()};</li> TODO
+     * default implementation of {@code get()};</li>
      * <li><b>Delegating</b> - the property body delegates the Ref/Var functionality;</li>
      * <li><b>Native</b> - indicates a type param or a constant;</li>
      * <li><b>SansCode</b> - a property body that was created to represent the implicit adoption of
@@ -307,9 +313,7 @@ public class PropertyBody
      */
     public boolean hasRefAnnotations()
         {
-        return m_structProp == null
-                ? false
-                : m_structProp.getRefAnnotations().length > 0;
+        return m_structProp != null && m_structProp.getRefAnnotations().length > 0;
         }
 
     /**
@@ -351,8 +355,7 @@ public class PropertyBody
      */
     public boolean hasGetter()
         {
-        // TODO
-        return false;
+        return m_effectGet != Effect.None;
         }
 
     /**
@@ -360,8 +363,7 @@ public class PropertyBody
      */
     public boolean hasSetter()
         {
-        // TODO
-        return false;
+        return m_effectSet != Effect.None;
         }
 
     /**
@@ -370,8 +372,7 @@ public class PropertyBody
      */
     public boolean isGetterBlockingSuper()
         {
-        // TODO
-        return false;
+        return m_effectGet == Effect.BlocksSuper;
         }
 
     /**
@@ -380,8 +381,7 @@ public class PropertyBody
      */
     public boolean isSetterBlockingSuper()
         {
-        // TODO
-        return false;
+        return m_effectSet == Effect.BlocksSuper;
         }
 
     /**
@@ -550,6 +550,11 @@ public class PropertyBody
     // ----- fields --------------------------------------------------------------------------------
 
     /**
+     * Represents the presence and effect of a "get()" or "set()" method.
+     */
+    enum Effect {None, BlocksSuper, MayUseSuper}
+
+    /**
      * The property's underlying structure.
      */
     private final PropertyStructure m_structProp;
@@ -590,6 +595,16 @@ public class PropertyBody
      * implementation.
      */
     private final boolean m_fCustom;
+
+    /**
+     * Represents the presence and effect of a "get()".
+     */
+    private final Effect m_effectGet;
+
+    /**
+     * Represents the presence and effect of a "set()".
+     */
+    private final Effect m_effectSet;
 
     /**
      * True iff the property requires a field. A field is assumed to exist iff the property is a

@@ -34,6 +34,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.ParamInfo.TypeResolver;
+import org.xvm.asm.constants.PropertyBody.Effect;
 import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.runtime.Frame;
@@ -1971,7 +1972,7 @@ public abstract class TypeConstant
             // process properties
             layerOnProps(constId, fSelf, mapProps, mapVirtProps,
                     typeContrib, mapContribProps, errs);
-            
+
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
             // analyzed to determine if they require fields, etc.
@@ -2385,7 +2386,7 @@ public abstract class TypeConstant
             mapVirtMethods.put(nid, info);
             }
         }
-    
+
     /**
      * Find the method that would be the "super" of the specified method signature. A super is
      * required to exist, and one super must be the unambiguously best choice, otherwise an error
@@ -2840,6 +2841,8 @@ public abstract class TypeConstant
         boolean         fRW       = false;
         boolean         fRO       = false;
         boolean         fField    = false;
+        Effect          effectGet = Effect.None;
+        Effect          effectSet = Effect.None;
         Implementation  impl;
         if (fConstant)
             {
@@ -2948,6 +2951,7 @@ public abstract class TypeConstant
             boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
             boolean fSetSupers      = methodSet != null && methodSet.usesSuper();
             boolean fGetBlocksSuper = methodGet != null && !methodGet.isAbstract() && !fGetSupers;
+            boolean fSetBlocksSuper = methodSet != null && !methodGet.isAbstract() && !fSetSupers;
 
             if (fHasRO && (fSetSupers || fHasVarAnno))
                 {
@@ -2962,10 +2966,10 @@ public abstract class TypeConstant
                         getValueString(), sName);
                 }
 
-            if (fHasInject && (fSetSupers || fHasVarAnno))   // TODO inject should not have ANY other Ref/Var annotations
+            // @Inject should not have ANY other Ref/Var annotations, and shouldn't override get/set
+            if (fHasInject && (methodGet != null || methodSet != null || fHasRefAnno))
                 {
-                // the @Inject conflicts with the annotations that require a Var
-                log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_VAR,
+                log(errs, Severity.ERROR, VE_PROPERTY_INJECT_NOT_OVERRIDEABLE,
                         getValueString(), sName);
                 }
 
@@ -2978,6 +2982,9 @@ public abstract class TypeConstant
             fRO |= !fHasVarAnno && (fHasRO || (fGetBlocksSuper && methodSet == null));
 
             fRW |= fHasVarAnno | accessVar != null | methodSet != null;
+
+            effectGet = effectOf(fGetSupers, fGetBlocksSuper);
+            effectSet = effectOf(fSetSupers, fSetBlocksSuper);
             }
 
         if (fRO && fRW)
@@ -2988,8 +2995,16 @@ public abstract class TypeConstant
             }
 
         return new PropertyInfo(new PropertyBody(prop, impl, null,
-                prop.getType().resolveGenerics(resolver), fRO, fRW, cCustomMethods > 0, fField, fConstant,
-                prop.getInitialValue(), methodInit == null ? null : methodInit.getIdentityConstant()));
+                prop.getType().resolveGenerics(resolver), fRO, fRW, cCustomMethods > 0,
+                effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
+                methodInit == null ? null : methodInit.getIdentityConstant()));
+        }
+
+    private Effect effectOf(boolean fSupers, boolean fBlocks)
+        {
+        return fSupers ? Effect.MayUseSuper :
+               fBlocks ? Effect.BlocksSuper :
+                         Effect.None;
         }
 
     /**
