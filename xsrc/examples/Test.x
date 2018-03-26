@@ -230,13 +230,19 @@ module Test
 
     interface I
         {
-        @RO Int x;
+        @RO Int x.get()
+            {
+            return 0;
+            }
         }
 
     class DumpC1
         implements I
         {
-        @Lazy Int y;
+        @Lazy Int y.calc()
+            {
+            return 4;
+            }
         }
 
     class DumpC12

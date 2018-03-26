@@ -882,13 +882,13 @@ public class CommandLine
                     {
                     c++;
                     // TODO: temporary until the compiler works
-                    if (c < 5)
+                    if (opts.verbose || c < 5)
                         {
                         err(" [" + c + "] " + err);
                         }
                     }
 
-                if (c >= 5)
+                if (!opts.verbose && c >= 5)
                     {
                     err("Total " + c + " errors");
                     }

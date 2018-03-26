@@ -151,6 +151,13 @@ public class MethodConstant
         }
 
     @Override
+    protected StringBuilder buildPath()
+        {
+        return getParentConstant().buildPath()
+                .append(getPathElementString());
+        }
+
+    @Override
     public Object getPathElement()
         {
         return m_constSig;
@@ -198,6 +205,13 @@ public class MethodConstant
         return parent == null
                 ? null
                 : parent.findMethod(getSignature());
+        }
+
+    @Override
+    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureMethodConstant(
+                getParentConstant().ensureNestedIdentity(that), getSignature());
         }
 
 
@@ -274,7 +288,25 @@ public class MethodConstant
     @Override
     public String getDescription()
         {
-        return "name=" + getName()
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName());
+        IdentityConstant idParent = getNamespace();
+        while (idParent != null)
+            {
+            switch (idParent.getFormat())
+                {
+                case Method:
+                case Property:
+                    sb.insert(0, idParent.getName() + '#');
+                    idParent = idParent.getNamespace();
+                    break;
+
+                default:
+                    idParent = null;
+                }
+            }
+
+        return "name=" + sb.toString()
                 + ", signature=" + getSignature().getValueString();
         }
 

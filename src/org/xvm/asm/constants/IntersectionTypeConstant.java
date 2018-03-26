@@ -12,6 +12,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.util.Handy;
 
 
 /**
@@ -206,6 +207,38 @@ public class IntersectionTypeConstant
         {
         return getUnderlyingType().isIntoPropertyType()
             || getUnderlyingType2().isIntoPropertyType();
+        }
+
+    @Override
+    public TypeConstant getIntoPropertyType()
+        {
+        TypeConstant type1 = getUnderlyingType().getIntoPropertyType();
+        TypeConstant type2 = getUnderlyingType2().getIntoPropertyType();
+        if (type1 == null && type2 == null)
+            {
+            return null;
+            }
+
+        ConstantPool pool     = getConstantPool();
+        TypeConstant typeProp = pool.typeProperty();
+        if (typeProp.equals(type1) || typeProp.equals(type2))
+            {
+            return typeProp;
+            }
+
+        TypeConstant typeVar = pool.typeVar();
+        if (type1 != null && type1.isA(typeVar) || type2 != null && type2.isA(typeVar))
+            {
+            return typeVar;
+            }
+
+        TypeConstant typeRef = pool.typeRef();
+        if (this.isA(typeRef))
+            {
+            return typeRef;
+            }
+
+        return null;
         }
 
     @Override

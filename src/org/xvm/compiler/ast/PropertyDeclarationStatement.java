@@ -3,14 +3,12 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.*;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Parameter;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;

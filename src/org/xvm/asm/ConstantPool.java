@@ -1056,9 +1056,11 @@ public class ConstantPool
                 sClz = "Operator";
                 break;
 
+            case "AnnotateRef":
+            case "AnnotateVar":
             case "Override":
                 sPkg = "annotations";
-                sClz = "Override";
+                sClz = sName;
                 break;
 
             case "RO":
@@ -2272,19 +2274,6 @@ public class ConstantPool
                 if (type != null)
                     {
                     TypeInfo info = type.ensureTypeInfo(errlist);
-
-                    // TODO temporary for debugging; REMOVE LATER!!!
-                    String sSub = System.getProperty("CP");
-                    if (sSub == null || sSub.length() == 0)
-                        {
-                        sSub = "Dump";
-                        }
-                    if (type.toString().contains(sSub))
-                        {
-                        System.out.println("*** TypeInfo for " + type.getValueString() + ":");
-                        System.out.println(info);
-                        }
-
                     if (errlist.isAbortDesired())
                         {
                         return true;

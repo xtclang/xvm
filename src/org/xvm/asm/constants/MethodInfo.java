@@ -79,7 +79,7 @@ public class MethodInfo
                 }
             }
 
-        MethodConstant idCap = pool().ensureMethodConstant(idThat.getParentConstant(), sigThis);
+        MethodConstant idCap = idThat.getConstantPool().ensureMethodConstant(idThat.getParentConstant(), sigThis);
 
         MethodBody[] aOld = m_aBody;
         int          cOld = aOld.length;
@@ -108,17 +108,6 @@ public class MethodInfo
         assert !this.isFunction() && !that.isFunction();
         assert this.getAccess().isAsAccessibleAs(Access.PROTECTED) && that.getAccess().isAsAccessibleAs(Access.PROTECTED);
 
-        if (!isOverrideable())
-            {
-            // it is not possible to override the base method
-            MethodConstant id = getIdentity();
-            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
-                    that.getIdentity().getNamespace().getValueString(),
-                    id.getSignature().getValueString(),
-                    id.getNamespace().getValueString());
-            return this;
-            }
-
         MethodBody[] aBase = this.m_aBody;
         MethodBody[] aAdd  = that.m_aBody;
         int          cBase = aBase.length;
@@ -128,7 +117,7 @@ public class MethodInfo
         if (fSelf)
             {
             // should only have one layer (or zero layers, in which case we wouldn't have been
-            // called) of property body for the "self" layer
+            // called) of method body for the "self" layer
             assert cAdd == 1;
 
             // check @Override
@@ -168,6 +157,17 @@ public class MethodInfo
             return this;
             }
 
+        if (!isOverrideable())
+            {
+            // it is not possible to override the base method
+            MethodConstant id = getIdentity();
+            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                    that.getIdentity().getNamespace().getValueString(),
+                    id.getSignature().getValueString(),
+                    id.getNamespace().getValueString());
+            return this;
+            }
+
         Collections.addAll(listMerge, aBase);
         return new MethodInfo(listMerge.toArray(new MethodBody[listMerge.size()]));
         }
@@ -191,8 +191,9 @@ public class MethodInfo
             boolean fRetain;
             switch (body.getImplementation())
                 {
-// TODO review this considering all the other change ... is this still correct?
                 case Implicit:
+                    fRetain = true;
+
                 case Declared:
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
@@ -226,6 +227,18 @@ public class MethodInfo
         return list.isEmpty()
                 ? null
                 : new MethodInfo(list.toArray(new MethodBody[list.size()]));
+        }
+
+    /**
+     * @return the "into" version of this MethodInfo
+     */
+    public MethodInfo asInto()
+        {
+        // basically, if the method is a function, it stays as-is; otherwise, it needs to be
+        // "flattened" into a single implicit entry with the right signature
+        return isFunction()
+                ? this
+                : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
         }
 
     /**

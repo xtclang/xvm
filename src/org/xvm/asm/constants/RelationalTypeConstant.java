@@ -275,6 +275,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant getIntoPropertyType()
+        {
+        return null;
+        }
+
+
+    @Override
     public boolean isIntoMethodType()
         {
         return false;

@@ -4,7 +4,6 @@ package org.xvm.asm.constants;
 import java.util.Map;
 
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.GenericTypeResolver;
 
 
 /**
@@ -26,9 +25,25 @@ public class ParamInfo
      */
     public ParamInfo(String sName, TypeConstant typeConstraint, TypeConstant typeActual)
         {
+        this(sName, sName, typeConstraint, typeActual);
+        }
+
+    /**
+     * Construct a ParamInfo.
+     *
+     * @param sName           the name of the type parameter (required)
+     * @param typeConstraint  the type constraint for the type parameter (required)
+     * @param typeActual      the actual type of the type parameter; pass null to indicate that the
+     *                        type parameter does not have a specified actual type, which causes
+     *                        the actual type to default to the constraint type
+     */
+    public ParamInfo(Object nid, String sName, TypeConstant typeConstraint, TypeConstant typeActual)
+        {
+        assert nid != null;
         assert sName != null;
         assert typeConstraint != null;
 
+        m_nid            = nid;
         m_sName          = sName;
         m_typeConstraint = typeConstraint;
         m_typeActual     = typeActual;
@@ -66,6 +81,11 @@ public class ParamInfo
         return m_typeActual != null;
         }
 
+    public Object getNestedIdentity()
+        {
+        return m_nid;
+        }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -95,16 +115,16 @@ public class ParamInfo
      * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
      */
     public static class TypeResolver
-            implements GenericTypeResolver
+            implements TypeInfo.TypeResolver
         {
         /**
          * Construct a GenericTypeResolver that will use the passed map as its source of type
          * resolution information, reporting any errors to the passed error list.
          *
-         * @param parameters  a map from parameter name to ParamInfo
+         * @param parameters  a map from nested identity (parameter name) to ParamInfo
          * @param errs        the error listener to log any errors to
          */
-        public TypeResolver(Map<String, ParamInfo> parameters, ErrorListener errs)
+        public TypeResolver(Map<Object, ParamInfo> parameters, ErrorListener errs)
             {
             assert parameters != null;
             assert errs != null;
@@ -122,10 +142,22 @@ public class ParamInfo
                     : constProperty.asTypeConstant();
             }
 
+        @Override
+        public ParamInfo findParamInfo(Object nid)
+            {
+            return parameters.get(nid);
+            }
+
+        @Override
+        public void registerParamInfo(Object nid, ParamInfo param)
+            {
+            parameters.put(nid, param);
+            }
+
         /*
          * The map from parameter name to ParamInfo to use to resolve generic types.
          */
-        public final Map<String, ParamInfo> parameters;
+        public final Map<Object, ParamInfo> parameters;
 
         /*
          * The error listener to log any errors to.
@@ -135,6 +167,11 @@ public class ParamInfo
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The nested identity of the type parameter's property.
+     */
+    private final Object m_nid;
 
     /**
      * The name of the type parameter.

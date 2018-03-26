@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
@@ -22,8 +23,6 @@ public class PropertyBody
     /**
      * Construct a PropertyBody from the passed information.
      *
-     * TODO hasGetter, hasSetter, isGetterBlockingSuper, isSetterBlockingSuper (or: None, BlocksSuper, MayUseSuper)
-     *
      * @param struct         the property structure that this body is derived from
      * @param impl           one of Implicit, Declared, Delegating, or Explicit
      * @param constDelegate  the property constant that provides the reference to delegate to
@@ -34,6 +33,7 @@ public class PropertyBody
      *                       indicate that the property is read-write
      * @param fCustomCode    true to indicate that the property has custom code that overrides
      *                       the underlying Ref/Var implementation
+
      * @param fReqField      true iff the property requires the presence of a field
      * @param fConstant      true iff the property represents a named constant value
      * @param constInitVal   the initial value for the property
@@ -47,6 +47,8 @@ public class PropertyBody
             boolean           fRO,
             boolean           fRW,
             boolean           fCustomCode,
+            Effect            effectGet,
+            Effect            effectSet,
             boolean           fReqField,
             boolean           fConstant,
             Constant          constInitVal,
@@ -64,6 +66,7 @@ public class PropertyBody
         assert (impl == Implementation.Delegating) ^ (constDelegate == null);
         assert constInitVal == null || constInitFunc == null;
         assert !fConstant || (constInitVal == null ^ constInitFunc == null);
+        assert effectGet != null && effectSet != null;
 
         m_structProp    = struct;
         m_impl          = impl;
@@ -73,6 +76,8 @@ public class PropertyBody
         m_fRO           = fRO;
         m_fRW           = fRW;
         m_fCustom       = fCustomCode;
+        m_effectGet     = effectGet;
+        m_effectSet     = effectSet;
         m_fField        = fReqField;
         m_fConstant     = fConstant;
         m_constInitVal  = constInitVal;
@@ -87,11 +92,13 @@ public class PropertyBody
      */
     public PropertyBody(PropertyStructure struct, ParamInfo param)
         {
-        assert struct != null;
         assert param  != null;
-        assert struct.getName().equals(param.getName());
+        assert struct == null || struct.getName().equals(param.getName());
+        assert struct != null || param.getNestedIdentity() instanceof NestedIdentity;
 
-        ConstantPool pool = struct.getConstantPool();
+        ConstantPool pool = struct == null
+                ? ((NestedIdentity) param.getNestedIdentity()).getIdentityConstant().getConstantPool()
+                : struct.getConstantPool();
 
         m_structProp    = struct;
         m_impl          = Implementation.Native;
@@ -105,6 +112,8 @@ public class PropertyBody
         m_fConstant     = false;
         m_constInitVal  = null;
         m_constInitFunc = null;
+        m_effectGet     = Effect.None;
+        m_effectSet     = Effect.None;
         }
 
     /**
@@ -120,11 +129,13 @@ public class PropertyBody
      */
     public PropertyConstant getIdentity()
         {
-        return m_structProp.getIdentityConstant();
+        return m_structProp == null
+                ? (PropertyConstant) ((NestedIdentity) m_paraminfo.getNestedIdentity()).getIdentityConstant()
+                : m_structProp.getIdentityConstant();
         }
 
     /**
-     * @return the PropertyStructure for the property body
+     * @return the PropertyStructure for the property body; may be null for nested type params
      */
     public PropertyStructure getStructure()
         {
@@ -136,7 +147,9 @@ public class PropertyBody
      */
     public String getName()
         {
-        return m_structProp.getName();
+        return m_structProp == null
+                ? m_paraminfo.getName()
+                : m_structProp.getName();
         }
 
     /**
@@ -148,7 +161,7 @@ public class PropertyBody
      * properties of {@code Object} in the context of an interface, for example;</li>
      * <li><b>Declared</b> - the property body represents an interface-declared property;</li>
      * <li><b>Default</b> - the property body represents an interface-declared property with a
-     * default implementation of {@code get()};</li> TODO
+     * default implementation of {@code get()};</li>
      * <li><b>Delegating</b> - the property body delegates the Ref/Var functionality;</li>
      * <li><b>Native</b> - indicates a type param or a constant;</li>
      * <li><b>SansCode</b> - a property body that was created to represent the implicit adoption of
@@ -208,7 +221,9 @@ public class PropertyBody
      */
     public Access getRefAccess()
         {
-        return getStructure().getAccess();
+        return m_structProp == null
+                ? Access.PUBLIC
+                : m_structProp.getAccess();
         }
 
     /**
@@ -216,7 +231,9 @@ public class PropertyBody
      */
     public Access getVarAccess()
         {
-        return getStructure().getVarAccess();
+        return m_structProp == null
+                ? null
+                : m_structProp.getVarAccess();
         }
 
     /**
@@ -296,7 +313,7 @@ public class PropertyBody
      */
     public boolean hasRefAnnotations()
         {
-        return getStructure().getRefAnnotations().length > 0;
+        return m_structProp != null && m_structProp.getRefAnnotations().length > 0;
         }
 
     /**
@@ -304,7 +321,9 @@ public class PropertyBody
      */
     public Annotation[] getRefAnnotations()
         {
-        return getStructure().getRefAnnotations();
+        return m_structProp == null
+                ? Annotation.NO_ANNOTATIONS
+                : m_structProp.getRefAnnotations();
         }
 
     /**
@@ -336,8 +355,7 @@ public class PropertyBody
      */
     public boolean hasGetter()
         {
-        // TODO
-        return false;
+        return m_effectGet != Effect.None;
         }
 
     /**
@@ -345,8 +363,7 @@ public class PropertyBody
      */
     public boolean hasSetter()
         {
-        // TODO
-        return false;
+        return m_effectSet != Effect.None;
         }
 
     /**
@@ -355,8 +372,7 @@ public class PropertyBody
      */
     public boolean isGetterBlockingSuper()
         {
-        // TODO
-        return false;
+        return m_effectGet == Effect.BlocksSuper;
         }
 
     /**
@@ -365,8 +381,7 @@ public class PropertyBody
      */
     public boolean isSetterBlockingSuper()
         {
-        // TODO
-        return false;
+        return m_effectSet == Effect.BlocksSuper;
         }
 
     /**
@@ -394,7 +409,8 @@ public class PropertyBody
      */
     public boolean isExplicitAbstract()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Abstract");
+        return m_structProp != null && TypeInfo.containsAnnotation(
+                m_structProp.getPropertyAnnotations(), "Abstract");
         }
 
     /**
@@ -402,7 +418,8 @@ public class PropertyBody
      */
     public boolean isExplicitOverride()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
+        return m_structProp != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Override");
         }
 
     /**
@@ -410,7 +427,8 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
+        return m_structProp != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "RO");
         }
 
     /**
@@ -418,7 +436,8 @@ public class PropertyBody
      */
     public boolean isInjected()
         {
-        return TypeInfo.containsAnnotation(m_structProp.getRefAnnotations(), "Inject");
+        return m_structProp != null && m_impl != Implementation.Implicit
+                && TypeInfo.containsAnnotation(m_structProp.getPropertyAnnotations(), "Inject");
         }
 
 
@@ -444,7 +463,7 @@ public class PropertyBody
             }
 
         PropertyBody that = (PropertyBody) obj;
-        return this.m_structProp.equals(that.m_structProp)
+        return Handy.equals(this.m_structProp, that.m_structProp)
             && this.m_type      .equals(that.m_type)
             && this.m_fRO       == that.m_fRO
             && this.m_fRW       == that.m_fRW
@@ -465,7 +484,8 @@ public class PropertyBody
           .append(' ')
           .append(getName())
           .append("; (id=")
-          .append(getIdentity().getValueString());
+          .append(getIdentity().getValueString())
+          .append(", impl=" + m_impl);
 
         if (m_paraminfo != null)
             {
@@ -491,6 +511,24 @@ public class PropertyBody
             {
             sb.append(", has-code");
             }
+
+        if (isInjected())
+            {
+            sb.append(", @Inject");
+            }
+        if (isExplicitAbstract())
+            {
+            sb.append(", @Abstract");
+            }
+        if (isExplicitOverride())
+            {
+            sb.append(", @Override");
+            }
+        if (isExplicitReadOnly())
+            {
+            sb.append(", @RO");
+            }
+
         if (m_constInitVal != null)
             {
             sb.append(", has-init-value");
@@ -499,12 +537,22 @@ public class PropertyBody
             {
             sb.append(", has-init-fn");
             }
+        if (m_constDelegate != null)
+            {
+            sb.append(", delegate=")
+              .append(m_constDelegate);
+            }
 
         return sb.append(')').toString();
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Represents the presence and effect of a "get()" or "set()" method.
+     */
+    enum Effect {None, BlocksSuper, MayUseSuper}
 
     /**
      * The property's underlying structure.
@@ -547,6 +595,16 @@ public class PropertyBody
      * implementation.
      */
     private final boolean m_fCustom;
+
+    /**
+     * Represents the presence and effect of a "get()".
+     */
+    private final Effect m_effectGet;
+
+    /**
+     * Represents the presence and effect of a "set()".
+     */
+    private final Effect m_effectSet;
 
     /**
      * True iff the property requires a field. A field is assumed to exist iff the property is a

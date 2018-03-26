@@ -12,11 +12,7 @@ class Object
     /**
      * The meta-data for each object is represented by the Meta interface.
      */
-    protected Meta<Object:public, Object:protected, Object:private> meta.get()
-        {
-        // the Meta object is provided by the runtime
-        return super();
-        }
+    @Inject protected Meta<Object:public, Object:protected, Object:private> meta;
 
     /**
      * By default, comparing any two objects will only result in equality if they are the

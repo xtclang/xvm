@@ -84,6 +84,13 @@ public class TypedefConstant
                 : null;
         }
 
+    @Override
+    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureTypedefConstant(
+                getParentConstant().ensureNestedIdentity(that), getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

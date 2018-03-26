@@ -296,7 +296,7 @@ public class MethodDeclarationStatement
                             Constant constReturn = type.getDefiningConstant();
                             if (constReturn.getFormat() == Constant.Format.UnresolvedName)
                                 {
-                                // mot yet resolved; come back later
+                                // not yet resolved; come back later
                                 listRevisit.add(this);
                                 return this;
                                 }
@@ -315,8 +315,10 @@ public class MethodDeclarationStatement
                     org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
                     // the parameters were already matched; no need to re-check
+                    org.xvm.asm.Annotation[] annos = new org.xvm.asm.Annotation[]
+                            {new org.xvm.asm.Annotation(pool.clzOverride(), Constant.NO_CONSTS)};
                     MethodStructure method = container.createMethod(
-                            false, Access.PUBLIC, null, aReturns, sName, aParams, usesSuper());
+                            false, methodSuper.getAccess(), annos, aReturns, sName, aParams, usesSuper());
                     setComponent(method);
                     }
                 }

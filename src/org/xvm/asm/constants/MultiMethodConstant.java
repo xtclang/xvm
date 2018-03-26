@@ -78,6 +78,13 @@ public class MultiMethodConstant
                 : null;
         }
 
+    @Override
+    public IdentityConstant ensureNestedIdentity(IdentityConstant that)
+        {
+        return that.getConstantPool().ensureMultiMethodConstant(
+                getParentConstant().ensureNestedIdentity(that), getName());
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
