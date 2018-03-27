@@ -181,10 +181,11 @@ public abstract class Expression
      * Before generating the code for the method body, resolve names and verify definite assignment,
      * etc.
      *
-     * @param ctx    the compilation context for the statement
-     * @param typeRequired
-     *@param errs   the error listener to log to
-     *  @return true iff the compilation can proceed
+     * @param ctx           the compilation context for the statement
+     * @param typeRequired  TODO
+     * @param errs          the error listener to log to
+     *
+     * @return true iff the compilation can proceed
      */
     protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {

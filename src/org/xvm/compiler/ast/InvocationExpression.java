@@ -10,6 +10,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -95,6 +97,17 @@ public class InvocationExpression
         {
         // assume all invocations can have side effects
         return false;
+        }
+
+    @Override
+    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        // TODO we have an "expr" that represents the thing being invoked, and we have "args" that represents the things being passed
+        // TODO we may need one to validate the other, i.e. we may need to know the arg types to find the method, the the method to validate the args by required type
+
+        // if (expr.validate(ctx, pool().typeFunction(), errs))
+        // TODO
+        return true;
         }
 
 
