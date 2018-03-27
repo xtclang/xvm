@@ -53,6 +53,7 @@ public class xService
         markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
         markNativeMethod("registerAsyncSection", new String[]{"AsyncSection?"}, VOID);
+        markNativeMethod("registerUnhandledExceptionNotification", new String[]{"Function"}, VOID);
         }
 
     @Override
@@ -124,7 +125,15 @@ public class xService
                 }
 
             case "registerAsyncSection":
+                if (frame.f_context != hService.m_context)
+                    {
+                    return frame.raiseException(xException.makeHandle("Call out of context"));
+                    }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
+
+            case "registerUnhandledExceptionNotification":
+                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
+                return Op.R_NEXT;
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);

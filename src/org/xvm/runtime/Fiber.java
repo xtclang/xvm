@@ -269,31 +269,7 @@ public class Fiber
         ObjectHandle hAsyncSection = m_hAsyncSection;
         if (hAsyncSection == xNullable.NULL)
             {
-            FunctionHandle hNotify = new NativeMethodHandle((frame, ahArg, iReturn) ->
-                {
-                switch (Utils.callToString(frame, ahArg[0]))
-                    {
-                    case Op.R_NEXT:
-                        Utils.log(frame,
-                            "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
-                        return Op.R_NEXT;
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.setContinuation(
-                            frameCaller ->
-                                {
-                                Utils.log(frameCaller,
-                                    "\nUnhandled exception: " + ((StringHandle) frame.getFrameLocal()).getValue());
-                                return Op.R_NEXT;
-                                }
-                            );
-                        return Op.R_CALL;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                });
-            f_context.callLater(hNotify, new ObjectHandle[]{hException});
+            f_context.callUnhandledExceptionHandler(hException);
             }
         else
             {

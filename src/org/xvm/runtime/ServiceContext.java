@@ -19,12 +19,14 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
+import org.xvm.runtime.template.xFunction.NativeMethodHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation;
 import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.PropertyOperation11;
 import org.xvm.runtime.template.xService.ServiceHandle;
+import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -506,6 +508,39 @@ public class ServiceContext
         return Op.R_NEXT;
         }
 
+    protected int callUnhandledExceptionHandler(ExceptionHandle hException)
+        {
+        FunctionHandle hFunction = m_hExceptionHandler;
+        if (hFunction == null)
+            {
+            hFunction = new NativeMethodHandle((frame, ahArg, iReturn) ->
+                {
+                switch (Utils.callToString(frame, ahArg[0]))
+                    {
+                    case Op.R_NEXT:
+                        Utils.log(frame, "\nUnhandled exception: " +
+                            ((StringHandle) frame.getFrameLocal()).getValue());
+                        return Op.R_NEXT;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.setContinuation(
+                            frameCaller ->
+                                {
+                                Utils.log(frameCaller, "\nUnhandled exception: " +
+                                    ((StringHandle) frame.getFrameLocal()).getValue());
+                                return Op.R_NEXT;
+                                }
+                            );
+                        return Op.R_CALL;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                });
+            }
+        return callLater(hFunction, new ObjectHandle[] {hException});
+        }
+
 
     // ----- helpers ------
 
@@ -928,6 +963,9 @@ public class ServiceContext
     public final String f_sName; // the service name
 
     protected ServiceHandle m_hService;
+
+    // the unhandled exception notification
+    public FunctionHandle m_hExceptionHandler;
 
     public int m_iFrameCounter; // used to create the Frame id
 
