@@ -48,10 +48,11 @@ public class xService
     public void initDeclared()
         {
         markNativeGetter("serviceName");
+        markNativeGetter("asyncSection");
         markNativeMethod("yield", VOID);
         markNativeMethod("invokeLater", new String[]{"Function"});
         markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
-        markNativeMethod("registerUnhandledExceptionNotification", new String[]{"Function"}, VOID);
+        markNativeMethod("registerAsyncSection", new String[]{"AsyncSection?"}, VOID);
         }
 
     @Override
@@ -109,15 +110,21 @@ public class xService
 
             case "registerTimeout":
                 {
-                long lDelay = ((JavaLong) hArg).getValue();
-
-                frame.f_fiber.m_ldtTimeout = lDelay <= 0 ? 0 : System.currentTimeMillis() + lDelay;
+                long cDelayMillis = ((JavaLong) hArg).getValue();
+                if (frame.f_context == hService.m_context)
+                    {
+                    frame.f_fiber.m_ldtTimeout = cDelayMillis <= 0 ? 0 :
+                        System.currentTimeMillis() + cDelayMillis;
+                    }
+                else
+                    {
+                    hService.m_context.m_cTimeoutMillis = Math.max(0, cDelayMillis);
+                    }
                 return Op.R_NEXT;
                 }
 
-            case "registerUnhandledExceptionNotification":
-                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
-                return Op.R_NEXT;
+            case "registerAsyncSection":
+                return frame.f_fiber.registerAsyncSection(frame, hArg);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -146,6 +153,9 @@ public class xService
             case "serviceName":
                 return frame.assignValue(iReturn,
                     xString.makeHandle(hTarget.getComposition().getTemplate().f_sName));
+
+            case "asyncSection":
+                return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
             }
         return super.invokeNativeGet(frame, property, hTarget, iReturn);
         }

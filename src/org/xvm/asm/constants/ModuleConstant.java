@@ -152,6 +152,12 @@ public class ModuleConstant
         }
 
     @Override
+    public String getPathString()
+        {
+        return "";
+        }
+
+    @Override
     protected StringBuilder buildPath()
         {
         return new StringBuilder();

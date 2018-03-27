@@ -129,7 +129,7 @@ interface Number
 
         return new Sequence<Nibble>()
             {
-            @Override Int length.get()
+            @Override @RO Int size.get()
                 {
                 return Number.this.bitCount / 4;
                 }
@@ -157,7 +157,7 @@ interface Number
 
         return new Sequence<Byte>()
             {
-            @Override Int length.get()
+            @Override @RO Int size.get()
                 {
                 return Number.this.bitCount / 8;
                 }

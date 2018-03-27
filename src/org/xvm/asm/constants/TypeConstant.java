@@ -1734,18 +1734,28 @@ public abstract class TypeConstant
                 case Delegates:
                 case Extends:
                 case RebasesOnto:
+                // "into" contains only implicit methods, so it is not part of a call chain;
+                // however, it may contribute type parameters
+                case Into:
                     {
                     // append to the call chain
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
                     TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+
                     if (infoContrib == null)
                         {
-                        // skip this one (it has been deferred)
-                        fIncomplete = true;
+                        // skip this one (it has been deferred); an "into" represents a "right to
+                        // left" resolution (from mixin to class), which presents a potential
+                        // infinite cycle if we consider it to be incomplete; only consider it
+                        // deferred (requiring a retry) iff the resolution is moving left to right
+                        fIncomplete = compContrib != Composition.Into;
                         break;
                         }
 
-                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
+                    if (compContrib != Composition.Into)
+                        {
+                        infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
+                        }
 
                     // collect type parameters
                     for (ParamInfo paramNew : infoContrib.getTypeParams().values())
@@ -1786,13 +1796,8 @@ public abstract class TypeConstant
                                 }
                             }
                         }
+                    break;
                     }
-                    break;
-
-                case Into:
-                    // "into" contains only implicit methods, so it is not part of a chain;
-                    // "into" does not contribute type parameters
-                    break;
 
                 default:
                     throw new IllegalStateException("composition=" + compContrib);
