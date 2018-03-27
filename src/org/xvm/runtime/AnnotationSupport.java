@@ -271,8 +271,10 @@ public class AnnotationSupport
                     TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
                     CallChain chain = clzAnno.
                         getMethodCallChain(constMethod.getSignature(), Constants.Access.PUBLIC);
-                    assert !chain.isNative();
-                    return chain;
+                    if (chain.getDepth() > 0)
+                        {
+                        return chain;
+                        }
                     }
                 }
             }
