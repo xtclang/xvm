@@ -19,6 +19,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
+import org.xvm.asm.constants.PropertyBody.Effect;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -338,7 +339,7 @@ public class PropertyInfo
         fRO &= idGet != null;
 
         PropertyBody bodyNew = new PropertyBody(bodyOld.getStructure(), Implementation.SansCode,
-                null, getType(), fRO, false, false, !fRO, false, null, null);
+                null, getType(), fRO, false, false, Effect.None, Effect.None, !fRO, false, null, null);
         return layerOn(new PropertyInfo(bodyNew), false, errs);
         }
 
@@ -475,8 +476,8 @@ public class PropertyInfo
             fRW |= body.isRW();
             }
 
-        PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit,
-                null, getType(), fRO, fRW, false, hasField(), false, null, null);
+        PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit, null,
+                getType(), fRO, fRW, false, Effect.None, Effect.None, hasField(), false, null, null);
         return new PropertyInfo(new PropertyBody[] {body}, m_type, m_fRequireField, m_fSuppressVar);
         }
 
