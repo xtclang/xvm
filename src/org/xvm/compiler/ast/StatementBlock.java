@@ -167,9 +167,10 @@ public class StatementBlock
         {
         RootContext ctx = new RootContext(code.getMethodStructure(), this);
 
-        if (validate(ctx.validatingContext(), errs))
+        Statement that = validate(ctx.validatingContext(), errs);
+        if (!errs.isAbortDesired())
             {
-            boolean fCompletes = completes(ctx.emittingContext(), true, code, errs);
+            boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
 
             if (fCompletes)
                 {
@@ -188,17 +189,23 @@ public class StatementBlock
         }
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
-        int cErrs = 0;
-
         List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty())
             {
             ctx = ctx.enterScope();
-            for (Statement stmt : stmts)
+            for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
-                if (!stmt.validate(ctx, errs) && ++cErrs > 10)
+                Statement stmtOld = stmts.get(i);
+                Statement stmtNew = stmtOld.validate(ctx, errs);
+                if (stmtNew != stmtOld)
+                    {
+                    this.stmts = ensureArrayList(stmts);
+                    stmts.set(i, stmtNew);
+                    }
+
+                if (errs.isAbortDesired())
                     {
                     break;
                     }
@@ -206,7 +213,7 @@ public class StatementBlock
             ctx = ctx.exitScope();
             }
 
-        return cErrs == 0;
+        return this;
         }
 
     @Override

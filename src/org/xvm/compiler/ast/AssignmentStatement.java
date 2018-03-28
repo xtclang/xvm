@@ -80,7 +80,7 @@ public class AssignmentStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = lvalue.validate(ctx, null, errs);
 
@@ -88,7 +88,7 @@ public class AssignmentStatement
         // and can validate that assignment can occur
         fValid &= rvalue.validate(ctx, lvalue.getImplicitType(), errs);
 
-        return fValid;
+        return this;
         }
 
     @Override

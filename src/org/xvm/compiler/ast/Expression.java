@@ -182,7 +182,8 @@ public abstract class Expression
      * etc.
      *
      * @param ctx           the compilation context for the statement
-     * @param typeRequired  TODO
+     * @param typeRequired  the type that the expression is expected to be able to provide, or null
+     *                      if no particular type is expected
      * @param errs          the error listener to log to
      *
      * @return true iff the compilation can proceed
@@ -247,6 +248,11 @@ public abstract class Expression
         return fValid & validate(ctx, typeRequired, errs);
         }
 
+    public boolean hasImplicitType()
+        {
+        return false;
+        }
+
     /**
      * Determine the implicit (or "natural") type of the expression, which is the type that the
      * expression would naturally compile to if no type were specified. For a multi-value
@@ -291,6 +297,8 @@ public abstract class Expression
             return type.getParamTypesArray();
             }
         }
+
+    public boolean canInferFrom()
 
     /**
      * Determine if the expression represents an L-Value, which means that this expression can be

@@ -101,7 +101,7 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
         // let the conditional statement know that it is indeed being used as a condition
         cond.markConditional(Usage.While, new Label());

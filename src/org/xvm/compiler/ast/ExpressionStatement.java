@@ -96,9 +96,9 @@ public class ExpressionStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = expr.validate(ctx, null, errs);
+        boolean fValid = expr.validate(ctx, null, errs);   // REVIEW why not Boolean if != Usage.Standalone
 
         if (getUsage() != Usage.Standalone)
             {

@@ -118,7 +118,7 @@ public class VariableDeclarationStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 

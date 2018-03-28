@@ -1,7 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -110,7 +112,7 @@ public abstract class Statement
      *
      * @return true iff the compilation can proceed
      */
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs) // TODO make abstract
         {
         throw notImplemented();
         }
@@ -167,10 +169,23 @@ public abstract class Statement
      *
      * @return true iff the statement completes
      */
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) // TODO make abstract
         {
-        // TODO temporary -- this will be abstract
         throw notImplemented();
+        }
+
+    /**
+     * TODO
+     *
+     * @param list
+     *
+     * @return
+     */
+    protected static <T> ArrayList<T> ensureArrayList(List<T> list)
+        {
+        return list instanceof ArrayList
+                ? (ArrayList<T>) list
+                : new ArrayList<T>(list);
         }
 
 
