@@ -228,98 +228,122 @@ module Test
 //            }
 //        }
 
-    interface I
+    // problem #21 - calling a method
+    Void foo()
         {
-        @RO Int x.get()
-            {
-            return 0;
-            }
         }
 
-    class DumpC1
-        implements I
+    Void bar()
         {
-        @Lazy Int y.calc()
-            {
-            return 4;
-            }
+        foo();
         }
 
-    class DumpC12
-        extends DumpC1
-        {
-        Int z;
-        }
-
-    class DumpC2
-        implements I
-        {
-        @Override
-        public/private Int x;
-        }
-
-    class DumpC3
-        implements I
-        {
-        @Override
-        public Int x.get()
-            {
-            return 0;
-            }
-        }
-
-    class B
-        {
-        Object foo() {return "hello";}
-        }
-
-    // this will fail (compiler error), because there is no exact sig match for the super (and no
-    // @Override)
-//    class D1 extends B
+//    // problem #22 - calling a function
+//    static Void foo()
 //        {
-//        String foo() {return super();}
+//        }
+//
+//    static Void bar()
+//        {
+//        foo();
 //        }
 
-    // this will succeed, because even though there is no exact sig match for the super, the
-    // @Override annotation indicates that it may use (i.e. must find) a compatible signature.
-    // because it overrides the "Object foo()" method, it "caps" that method chain, such that it would
-    // redirect to this chain); calls to "Object foo()" will redirect to "String foo()" now
-    class D2 extends B
-        {
-        @Override
-        String foo()
-            {
-            // could just say "return super()" and the compiler will know to insert a cast because
-            // of the presence of the @Override
-//            Object o = super();
-            return "test"; // TODOo.to<String>();
-            }
-        }
-
-    // this will fail, because even though @Override was used, there is now no unambiguous method
-    // to call to support "Object foo()"
-//    class D3 extends B
+//    // TypeInfo testing
+//
+//    interface I
 //        {
+//        @RO Int x.get()
+//            {
+//            return 0;
+//            }
+//        }
+//
+//    class DumpC1
+//        implements I
+//        {
+//        @Lazy Int y.calc()
+//            {
+//            return 4;
+//            }
+//        }
+//
+//    class DumpC12
+//        extends DumpC1
+//        {
+//        Int z;
+//        }
+//
+//    class DumpC2
+//        implements I
+//        {
+//        @Override
+//        public/private Int x;
+//        }
+//
+//    class DumpC3
+//        implements I
+//        {
+//        @Override
+//        public Int x.get()
+//            {
+//            return 0;
+//            }
+//        }
+
+//    // TypeInfo testing
+//
+//    class B
+//        {
+//        Object foo() {return "hello";}
+//        }
+//
+//    // this will fail (compiler error), because there is no exact sig match for the super (and no
+//    // @Override)
+////    class D1 extends B
+////        {
+////        String foo() {return super();}
+////        }
+//
+//    // this will succeed, because even though there is no exact sig match for the super, the
+//    // @Override annotation indicates that it may use (i.e. must find) a compatible signature.
+//    // because it overrides the "Object foo()" method, it "caps" that method chain, such that it would
+//    // redirect to this chain); calls to "Object foo()" will redirect to "String foo()" now
+//    class D2 extends B
+//        {
+//        @Override
+//        String foo()
+//            {
+//            // could just say "return super()" and the compiler will know to insert a cast because
+//            // of the presence of the @Override
+////            Object o = super();
+//            return "test"; // TODOo.to<String>();
+//            }
+//        }
+//
+//    // this will fail, because even though @Override was used, there is now no unambiguous method
+//    // to call to support "Object foo()"
+////    class D3 extends B
+////        {
+////        @Override
+////        String foo() {return "hello";}
+////
+////        @Override
+////        Int foo() {return 4;}
+////        }
+//
+//    // this will succeed, because it provides an unambiguous (exact signature match) method to call
+//    // to support "Object foo()"
+//    class DumpD4 extends B
+//        {
+//        @Override
+//        Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
+//
 //        @Override
 //        String foo() {return "hello";}
 //
 //        @Override
 //        Int foo() {return 4;}
 //        }
-
-    // this will succeed, because it provides an unambiguous (exact signature match) method to call
-    // to support "Object foo()"
-    class DumpD4 extends B
-        {
-        @Override
-        Object foo();   // no {} required here .. this just indicates that the call chain isn't "capped"
-
-        @Override
-        String foo() {return "hello";}
-
-        @Override
-        Int foo() {return 4;}
-        }
 
 
 //    // type info for nested children

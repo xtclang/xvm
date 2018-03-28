@@ -29,7 +29,7 @@
  * implement the hash code calculation for a {@code const} class, as a default implementation is
  * provided.)
  */
-mixin LazyVar<RefType>(function RefType ()? calculate)
+mixin LazyVar<RefType>(function RefType ()? calculate = null)
         into Var<RefType>
     {
     private function RefType ()? calculate;
