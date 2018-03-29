@@ -528,3 +528,15 @@ static service FAService
     }
 
 
+// --- inference
+
+// legal of course
+List<Person> list = new ArrayList<Person>()
+
+// we did NOT want to do this (Java hack), because "<>" has a meaning in Ecstasy
+List<Person> list = new ArrayList<>() // error (because the <> _specifies_ "no type specified")
+
+// could do this, because "<Person>" is inferable
+List<Person> list = new ArrayList()
+
+Map<String, Int> map = new HashMap<String>(); // error
