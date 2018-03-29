@@ -682,6 +682,7 @@ public class Compiler
         Loading,
         Loaded,
         Resolving,
+        Resolvable,
         Resolved,
         Validating,
         Validated,

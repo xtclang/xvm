@@ -174,20 +174,6 @@ public abstract class Statement
         throw notImplemented();
         }
 
-    /**
-     * TODO
-     *
-     * @param list
-     *
-     * @return
-     */
-    protected static <T> ArrayList<T> ensureArrayList(List<T> list)
-        {
-        return list instanceof ArrayList
-                ? (ArrayList<T>) list
-                : new ArrayList<T>(list);
-        }
-
 
     // ----- inner class: compiler Context ---------------------------------------------------------
 
