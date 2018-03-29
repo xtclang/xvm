@@ -134,7 +134,43 @@ public abstract class Expression
         }
 
 
-    // ----- compilation ---------------------------------------------------------------------------
+    // ----- Expression compilation ----------------------------------------------------------------
+
+    // Expressions go through a few stages of compilation. Initially, the expressions must determine
+    // its arity and its type(s) etc., but there exists more than one possible result in some cases,
+    // based on what type is expected or required of the expression. Similarly, the resulting type
+    // of this expression can affect the type of a containing expression. To accomodate this, the
+    // expression has to be able to answer some hypothetical questions _before_ it validates, and
+    // _all_ questions after it validates.
+
+    enum TypeFit {NoFit, Conv, Fit}
+
+    /**
+     * (Pre-validation) Determine if the expression can yield the specified type.
+     *
+     * @param ctx           the compilation context for the statement
+     * @param typeRequired  the type that the expression is being asked if it can provide
+     *
+     * @return 0 means no, 1 means conversion required, 2 means that the expression yields the type
+     */
+    public TypeFit couldBe(Context ctx, TypeConstant typeRequired) // TODO make abstract
+        {
+        return TypeFit.NoFit;
+        }
+
+    public TypeFit couldBeMulti(Context ctx, TypeConstant[] atypeRequired)
+        {
+        switch (atypeRequired.length)
+            {
+            case 0:
+
+            case 1:
+                return couldBe(ctx, atypeRequired[0]);
+
+            default:
+                return TypeFit.NoFit;
+            }
+        }
 
     /**
      * Determine the number of values represented by the expression.
@@ -297,8 +333,6 @@ public abstract class Expression
             return type.getParamTypesArray();
             }
         }
-
-    public boolean canInferFrom()
 
     /**
      * Determine if the expression represents an L-Value, which means that this expression can be

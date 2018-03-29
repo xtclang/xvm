@@ -376,11 +376,12 @@ public abstract class AstNode
      */
     public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
+        ensureReached(Stage.Registered);
         setStage(Stage.Resolving);
 
         // before resolving any children, mark this node as resolved, so that it is able to help
         // resolve things on requests from children
-        setStage(Stage.Resolved);
+        setStage(Stage.Resolvable);
 
         ChildIterator children = children();
         for (AstNode node : children)
@@ -396,6 +397,7 @@ public abstract class AstNode
                 }
             }
 
+        setStage(Stage.Resolved);
         return this;
         }
 
@@ -502,7 +504,6 @@ public abstract class AstNode
                 // (see MethodDeclarationStatement.validateExpressions())
                 if (node.alreadyReached(Stage.Resolved) && !node.alreadyReached(Stage.Validated))
                     {
-                    // TODO: remove when fully implemented
                     try
                         {
                         AstNode nodeNew = node.validateExpressions(listRevisit, errs);
@@ -511,7 +512,7 @@ public abstract class AstNode
                             children.replaceWith(nodeNew);
                             }
                         }
-                    catch (UnsupportedOperationException e)
+                    catch (UnsupportedOperationException e) // TODO: remove when fully implemented
                         {
                         node.setStage(Stage.Validated);
                         }
@@ -541,7 +542,6 @@ public abstract class AstNode
         ChildIterator children = children();
         for (AstNode node : children)
             {
-            // TODO: remove when fully implemented
             try
                 {
                 AstNode nodeNew = node.generateCode(listRevisit, errs);
@@ -550,7 +550,7 @@ public abstract class AstNode
                     children.replaceWith(nodeNew);
                     }
                 }
-            catch (UnsupportedOperationException e)
+            catch (UnsupportedOperationException e) // TODO: remove when fully implemented
                 {
                 node.setStage(Stage.Emitted);
                 }
@@ -607,7 +607,7 @@ public abstract class AstNode
         // for all other components (that don't override this method because they know more about
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
-        return alreadyReached(Stage.Resolved);
+        return alreadyReached(Stage.Resolvable);
         }
 
 
@@ -848,6 +848,28 @@ public abstract class AstNode
         throw new UnsupportedOperationException("not implemented by: " + this.getClass().getSimpleName());
         }
 
+    /**
+     * TODO
+     *
+     * @param list
+     *
+     * @return
+     */
+    protected static <T> ArrayList<T> ensureArrayList(List<T> list)
+        {
+        return list instanceof ArrayList
+                ? (ArrayList<T>) list
+                : new ArrayList<T>(list);
+        }
+
+    /**
+     * TODO
+     *
+     * @param clz
+     * @param names
+     *
+     * @return
+     */
     protected static Field[] fieldsForNames(Class clz, String... names)
         {
         if (names == null || names.length == 0)
