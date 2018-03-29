@@ -36,7 +36,7 @@ public class TestDriver
 
         ModuleRepository repository = cmd.build();
 
-        String sApp = asArg[0];
+        String sApp = asArg.length > 0 ? asArg[0] : null;
         if (sApp == null || sApp.trim().length() == 0)
             {
             sApp = "TestApp";

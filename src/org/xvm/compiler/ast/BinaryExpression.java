@@ -53,7 +53,7 @@ public class BinaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         // a literal is validated by the lexer/parser, and there is nothing left to validate at this
         // point
@@ -61,7 +61,7 @@ public class BinaryExpression
         }
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         return pool().typeBinary();
         }

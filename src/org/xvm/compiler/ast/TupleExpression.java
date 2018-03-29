@@ -85,7 +85,7 @@ public class TupleExpression
         }
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -159,7 +159,7 @@ public class TupleExpression
 
             if (fBuildType)
                 {
-                atypeImplied[i] = type == null ? expr.getImplicitType() : type;
+                atypeImplied[i] = type == null ? expr.getType() : type;
                 }
             }
 
@@ -251,7 +251,7 @@ public class TupleExpression
         }
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         TypeConstant constType = m_constType;
         if (constType == null)
@@ -269,7 +269,7 @@ public class TupleExpression
 
         if (!isAssignableTo(type))
             {
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getImplicitType(), type);
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getType(), type);
             return generateFakeConstant(type);
             }
 
@@ -277,7 +277,7 @@ public class TupleExpression
         // field types (in which case we'll use the implicit type)
         TypeConstant typeTuple = type.isTuple() && type.isParamsSpecified()
                 ? type
-                : getImplicitType();
+                : getType();
 
         // for each field, generate an argument representing the value of that field
         List<Expression> listExprs = exprs;
@@ -302,7 +302,7 @@ public class TupleExpression
 
         if (!isAssignableTo(type))
             {
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getImplicitType(), type);
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, getType(), type);
             return generateBlackHole(type);
             }
 
@@ -310,7 +310,7 @@ public class TupleExpression
         // field types (in which case we'll use the implicit type)
         TypeConstant typeTuple = type.isTuple() && type.isParamsSpecified()
                 ? type
-                : getImplicitType();
+                : getType();
 
         // for each field, generate an argument representing the value of that field
         List<Expression> listExprs = exprs;

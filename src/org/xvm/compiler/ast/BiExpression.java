@@ -182,7 +182,7 @@ public class BiExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         // so let's talk about "+"
         // 1) any T1 that wants to support "+" has to have either:
@@ -228,8 +228,8 @@ public class BiExpression
         fValid &= expr2.validate(ctx, null, errs);      // TODO need a type here
 
         // validation of a constant expression is simpler, so do it first
-        TypeConstant type1 = expr1.getImplicitType();
-        TypeConstant type2 = expr2.getImplicitType();
+        TypeConstant type1 = expr1.getType();
+        TypeConstant type2 = expr2.getType();
         if (isConstant())
             {
             // first determine the type of the result, and pick a suitable default value just in
@@ -316,7 +316,7 @@ public class BiExpression
         switch (operator.getId())
             {
             case COND_ELSE:
-                m_constType = expr1.getImplicitType().nonNullable();
+                m_constType = expr1.getType().nonNullable();
                 if (fValid)
                     {
                     // the left side must be nullable, and the right expression must be assignable
@@ -362,7 +362,7 @@ public class BiExpression
                 break;
 
             case DOTDOT:
-                m_constType = IntervalConstant.getIntervalTypeFor(expr1.getImplicitType());
+                m_constType = IntervalConstant.getIntervalTypeFor(expr1.getType());
                 if (fValid)
                     {
                     // the left side and right side types must be "the same", and that type must
@@ -373,7 +373,7 @@ public class BiExpression
 
             case DIVMOD:
                 m_constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                        expr1.getImplicitType(), expr1.getImplicitType());
+                        expr1.getType(), expr1.getType());
                 if (fValid)
                     {
                     // find the operator on the type and determine the result of the operator
@@ -397,7 +397,7 @@ public class BiExpression
                     // find the operator on the type and determine the result of the operator
                     // TODO these are all overridable Op
                     }
-                m_constType = expr1.getImplicitType();
+                m_constType = expr1.getType();
                 break;
 
             case COLON:
@@ -405,12 +405,12 @@ public class BiExpression
                 // type of the left expression, otherwise we cannot determine an "implicit type"
                 // (the error is deferred until the compilation stage, so if the type is pushed
                 // to this expression, it can use that, i.e. type inference)
-                m_constType = expr1.getImplicitType();
+                m_constType = expr1.getType();
                 break;
 
             default:
                 operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-                m_constType = expr1.getImplicitType();
+                m_constType = expr1.getType();
                 fValid = false;
                 break;
             }
@@ -426,7 +426,7 @@ public class BiExpression
         }
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         TypeConstant type = m_constType;
         assert type != null;
@@ -445,7 +445,7 @@ public class BiExpression
         }
 
     @Override
-    public boolean isCompletable()
+    public boolean isAborting()
         {
         switch (operator.getId())
             {
@@ -454,12 +454,13 @@ public class BiExpression
             case COND_OR:
             case COND_AND:
                 // these can complete if the first expression can complete, because the result can
-                // be calculated from the first expression, depending on what its answer is
-                return expr1.isCompletable();
+                // be calculated from the first expression, depending on what its answer is; thus
+                // the expression aborts if the first of the two expressions aborts
+                return expr1.isAborting();
 
             default:
                 // these can only complete if both sub-expressions can complete
-                return expr1.isCompletable() && expr2.isCompletable();
+                return expr1.isAborting() || expr2.isAborting();
             }
         }
 
@@ -616,8 +617,8 @@ public class BiExpression
             // determine the types to request from the sub-expressions
             // TODO right now just use their implicit types, but for type inference to work, this should be based on the type that we're asked for
             assert LVal.getType().isCongruentWith(m_constType) || m_constType.isA(LVal.getType());
-            TypeConstant type1 = expr1.getImplicitType();
-            TypeConstant type2 = expr2.getImplicitType();
+            TypeConstant type1 = expr1.getType();
+            TypeConstant type2 = expr2.getType();
 
             // evaluate the sub-expressions
             // TODO if (LVal.isTemp() && LVal.getType().equals(type1)) -> genAssign, IP_ADD

@@ -3,13 +3,14 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -143,7 +144,188 @@ public abstract class Expression
     // expression has to be able to answer some hypothetical questions _before_ it validates, and
     // _all_ questions after it validates.
 
-    enum TypeFit {NoFit, Conv, Fit}
+    /**
+     * Represents the ability of an expression to yield a requested type:
+     * <ul>
+     * <li>{@code NoFit} - the expression can <b>not</b> yield the requested type</li>
+     * <li>{@code Conv} - the expression can yield the requested type via @Auto type conversion</li>
+     * <li>{@code Fit} - the expression can yield the requested type</li>
+     * </ul>
+     */
+    public enum TypeFit
+        {
+        NoFit         (0b0000),
+        ConvPackUnpack(0b1111),
+        ConvPack      (0b1011),
+        ConvUnpack    (0b0111),
+        Conv          (0b0011),
+        PackUnpack    (0b1101),
+        Pack          (0b0101),
+        Unpack        (0b1001),
+        Fit           (0b0001);
+
+        /**
+         * Constructor.
+         *
+         * @param nFlags  bit flags defining how good a fit the TypeFit is
+         */
+        TypeFit(int nFlags)
+            {
+            FLAGS = nFlags;
+            }
+
+        /**
+         * @return true iff the type fits, regardless of whether it needs conversion or packing or
+         *         unpacking
+         */
+        public boolean isFit()
+            {
+            return (FLAGS & FITS) != 0;
+            }
+
+        /**
+         * @return true iff the type goes through at least one "@Auto" conversion in order to fit
+         */
+        public boolean isConverted()
+            {
+            return (FLAGS & CONVERTS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         */
+        public TypeFit convert()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | CONVERTS)
+                    : NoFit;
+            }
+
+        /**
+         * @return true iff the type goes through at least one tuple creation in order to fit
+         */
+        public boolean isPacked()
+            {
+            return (FLAGS & PACKS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         */
+        public TypeFit pack()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | PACKS)
+                    : NoFit;
+            }
+
+        /**
+         * @return true iff the type goes through at least one tuple extraction in order to fit
+         */
+        public boolean isUnpacked()
+            {
+            return (FLAGS & UNPACKS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         */
+        public TypeFit unpack()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | UNPACKS)
+                    : NoFit;
+            }
+
+        /**
+         * Determine if another fit is better than this fit.
+         *
+         * @param that  the other fit
+         *
+         * @return true iff the other fit is considered to be a better fit than this fit
+         */
+        public boolean betterThan(TypeFit that)
+            {
+            return this.ordinal() > that.ordinal();
+            }
+
+        /**
+         * Determine if another fit is worse than this fit.
+         *
+         * @param that  the other fit
+         *
+         * @return true iff the other fit is considered to be a worse fit than this fit
+         */
+        public boolean worseThan(TypeFit that)
+            {
+            return this.ordinal() < that.ordinal();
+            }
+
+        /**
+         * Look up a TypeFit enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the TypeFit enum for the specified ordinal
+         */
+        public static TypeFit valueOf(int i)
+            {
+            return BY_ORDINAL[i];
+            }
+
+        /**
+         * Look up a TypeFit enum by its flags.
+         *
+         * @param nFlags  the flags
+         *
+         * @return the TypeFit enum for the specified ordinal
+         */
+        public static TypeFit forFlags(int nFlags)
+            {
+            if (nFlags >= 0 && nFlags <= BY_FLAGS.length)
+                {
+                TypeFit fit = BY_FLAGS[nFlags];
+                if (fit != null)
+                    {
+                    return fit;
+                    }
+                }
+
+            throw new IllegalStateException("no fit for flag value: " + nFlags);
+            }
+
+        /**
+         * All of the TypeFit enums, by ordinal.
+         */
+        private static final TypeFit[] BY_ORDINAL = TypeFit.values();
+
+        /**
+         * All of the TypeFit enums, by flags.
+         */
+        private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
+
+        public static final int FITS     = 0b0001;
+        public static final int CONVERTS = 0b0011;
+        public static final int PACKS    = 0b0101;
+        public static final int UNPACKS  = 0b1001;
+
+        /**
+         * Represents the state of the TypeFit.
+         */
+        public final int FLAGS;
+        }
+
+    /**
+     * Represents the form that the Expression can or does yield a tuple:
+     * <ul>
+     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type</li>
+     * <li>{@code Accepted} - the expression should yield a tuple if not yielding a tuple would
+     *                        involve additional cost</li>
+     * <li>{@code Desired}  - the expression should yield a tuple if it can do with no cost</li>
+     * <li>{@code Required} - the expression must <b>always</b> yields a tuple</li>
+     * </ul>
+     */
+    public enum TuplePref {Rejected, Accepted, Desired, Required}
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified type.
@@ -151,100 +333,90 @@ public abstract class Expression
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
      *
-     * @return 0 means no, 1 means conversion required, 2 means that the expression yields the type
+     * @return one of: NoFit, Conv, or Fit
      */
-    public TypeFit couldBe(Context ctx, TypeConstant typeRequired) // TODO make abstract
+    public TypeFit couldBe(Context ctx, TypeConstant typeRequired)
         {
-        return TypeFit.NoFit;
+        checkDepth();
+
+        return couldBeMulti(ctx, new TypeConstant[] {typeRequired});
         }
 
+    /**
+     * (Pre-validation) Determine if the expression can yield the specified types.
+     *
+     * @param ctx            the compilation context for the statement
+     * @param atypeRequired  the types that the expression is being asked if it can provide
+     *
+     * @return one of: NoFit, Conv, or Fit
+     */
     public TypeFit couldBeMulti(Context ctx, TypeConstant[] atypeRequired)
         {
+        checkDepth();
+
         switch (atypeRequired.length)
             {
             case 0:
+                // all expressions are required to be able to yield a Void result
+                return TypeFit.Fit;
 
             case 1:
                 return couldBe(ctx, atypeRequired[0]);
 
             default:
-                return TypeFit.NoFit;
+                // anything that can yield separate values should override this method; otherwise,
+                // if the expression can yield a tuple of those values, then it will result in the
+                // expansion of that tuple (which is what we're testing here)
+                return couldBe(ctx, pool().ensureParameterizedTypeConstant(
+                        pool().typeTuple(), atypeRequired)).unpack();
             }
         }
 
     /**
-     * Determine the number of values represented by the expression.
-     * <ul>
-     * <li>A {@code Void} expression represents no values</li>
-     * <li>An {@link #isSingle() isSingle()==true} expression represents exactly one value (most common)</li>
-     * <li>A multi-value expression represents more than one value</li>
-     * </ul>
+     * Given the specified required type for the expression, resolve names, values, verify definite
+     * assignment, etc.
      * <p/>
-     * This method must be overridden by any expression that represents any number of values other
-     * than one, or that could be composed of other expressions in such a way that the result is
-     * that this expression could represent a number of values other than one.
-     *
-     * @return the number of values represented by the expression
-     */
-    public int getValueCount()
-        {
-        return 1;
-        }
-
-    /**
-     * @return true iff the Expression represents exactly one value
-     */
-    public boolean isSingle()
-        {
-        return getValueCount() == 1;
-        }
-
-    /**
-     * Determine if the expression represents a {@code conditional} result.
-     * <p/>
-     * This method must be overridden by any expression that represents or could represent a
-     * conditional result, including as the result of composition of other expressions that could
-     * represent a conditional result.
-     *
-     * @return true iff the Expression represents a conditional value
-     */
-    public boolean isConditional()
-        {
-        return false;
-        }
-
-    /**
-     * Before generating the code for the method body, resolve names and verify definite assignment,
-     * etc.
+     * This method transitions the expression from "pre-validated" to "validated".
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is expected to be able to provide, or null
-     *                      if no particular type is expected
+     *                      if no particular type is expected (which requires the expression to
+     *                      settle on a type on its own)
+     * @param tuplepref     indicates what options the Expression has in terms of resulting in a
+     *                      tuple
      * @param errs          the error listener to log to
      *
-     * @return true iff the compilation can proceed
+     * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref tuplepref, ErrorListener errs)
         {
-        throw notImplemented();
+        checkDepth();
+
+        return validateMulti(ctx, new TypeConstant[] {typeRequired}, tuplepref, errs);
         }
 
     /**
-     * Before generating the code for the method body, resolve names and verify definite assignment,
-     * etc.
+     * Given the specified required type(s) for the expression, resolve names, values, verify
+     * definite assignment, etc.
      * <p/>
      * This method should be overridden by any Expression type that expects to result in multiple
      * values.
+     * <p/>
+     * This method transitions the expression from "pre-validated" to "validated".
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  an array of required types
+     * @param tuplepref      indicates what options the Expression has in terms of resulting in a
+     *                       tuple
      * @param errs           the error listener to log to
      *
-     * @return true iff the compilation can proceed
+     * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected boolean validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref tuplepref, ErrorListener errs)
         {
-        boolean      fValid       = true;
+        checkDepth();
+
+        boolean fValid = true;
         TypeConstant typeRequired = null;
         if (atypeRequired != null)
             {
@@ -281,46 +453,89 @@ public abstract class Expression
                 }
             }
 
-        return fValid & validate(ctx, typeRequired, errs);
+        Expression exprResult = validate(ctx, typeRequired, errs);
+        return fValid ? exprResult : null;
         }
 
-    public boolean hasImplicitType()
+    /**
+     * (Post-validation) Determine the number of values represented by the expression.
+     * <ul>
+     * <li>A {@code Void} expression represents no values</li>
+     * <li>An {@link #isSingle() isSingle()==true} expression represents exactly one value (most
+     *     common)</li>
+     * <li>A multi-value expression represents more than one value</li>
+     * </ul>
+     * <p/>
+     * This method must be overridden by any expression that represents any number of values other
+     * than one, or that could be composed of other expressions in such a way that the result is
+     * that this expression could represent a number of values other than one.
+     *
+     * @return the number of values represented by the expression
+     */
+    public int getValueCount()
+        {
+        return 1;
+        }
+
+    /**
+     * (Post-validation) Determine if the Expression represents exactly one value.
+     *
+     * @return true iff the Expression represents exactly one value
+     */
+    public boolean isSingle()
+        {
+        return getValueCount() == 1;
+        }
+
+    /**
+     * (Post-validation) Determine if the expression represents a {@code conditional} result. A
+     * conditional result is one in which there are multiple results, the first of which is a
+     * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
+     * first boolean is {@code false}.
+     * <p/>
+     * This method must be overridden by any expression that represents or could represent a
+     * conditional result, including as the result of composition of other expressions that could
+     * represent a conditional result.
+     * REVIEW who needs this method?
+     *
+     * @return true iff the Expression represents a conditional value
+     */
+    public boolean isConditional()
         {
         return false;
         }
 
     /**
-     * Determine the implicit (or "natural") type of the expression, which is the type that the
-     * expression would naturally compile to if no type were specified. For a multi-value
-     * expression, the TypeConstant is returned as a tuple of the types of the multiple values.
-     * A Void type is indicated by a parameterized tuple type of zero parameters (fields).
+     * (Post-validation) Determine the type of the expression. For a multi-value expression, the
+     * TypeConstant is returned as a tuple of the types of the multiple values. A Void type is
+     * indicated by a parameterized tuple type of zero parameters (fields).
      * <p/>
-     * Either this method or {@link #getImplicitTypes()} must be overridden.
+     * Either this method or {@link #getTypes()} must be overridden.
      *
      * @return the implicit type of the expression
      */
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         checkDepth();
 
         return isSingle()
-                ? getImplicitTypes()[0]
-                : pool().ensureParameterizedTypeConstant(pool().typeTuple(), getImplicitTypes());
+                ? getTypes()[0]
+                : pool().ensureParameterizedTypeConstant(pool().typeTuple(), getTypes());
         }
 
     /**
-     * Obtain an array of types, one for each value that this expression represents.
+     * (Post-validation) Obtain an array of types, one for each value that this expression represents.
      * <p/>
-     * Either this method or {@link #getImplicitType()} must be overridden.
+     * Either this method or {@link #getType()} must be overridden.
      *
      * @return the implicit types of the multiple values of the expression; a zero-length array
      *         indicates a Void type
      */
-    public TypeConstant[] getImplicitTypes()
+    public TypeConstant[] getTypes()
         {
         checkDepth();
 
-        TypeConstant type = getImplicitType();
+        TypeConstant type = getType();
         if (isSingle())
             {
             return new TypeConstant[] {type};
@@ -335,7 +550,7 @@ public abstract class Expression
         }
 
     /**
-     * Determine if the expression represents an L-Value, which means that this expression can be
+     * (Post-validation) Determine if the expression represents an L-Value, which means that this expression can be
      * assigned to.
      * <p/>
      * This method must be overridden by any expression that represents an L-Value, or that could
@@ -349,20 +564,20 @@ public abstract class Expression
         }
 
     /**
-     * Determine if the expression can complete.
+     * (Post-validation) Determine if the expression aborts.
      * <p/>
      * This method must be overridden by any expression does not complete, or that contains
      * another expression that may not be completable.
      *
      * @return true iff the expression is capable of completing normally
      */
-    public boolean isCompletable()
+    public boolean isAborting()
         {
-        return true;
+        return false;
         }
 
     /**
-     * Determine if the expression can short-circuit.
+     * (Post-validation) Determine if the expression can short-circuit.
      * <p/>
      * This method must be overridden by any expression can short circuit, or that contains
      * another expression that may be short-circuiting.
@@ -375,115 +590,135 @@ public abstract class Expression
         }
 
     /**
-     * Determine if the expression is constant.
+     * (Post-validation) Determine if the expression is constant that can be fully resolved and
+     * calculated at compile time.
      * <p/>
-     * This method must be overridden by any expression is not guaranteed to be constant.
+     * This method must be overridden by any expression that could evaluate to a compile-time
+     * constant.
      *
-     * @return true iff the Expression is a constant value
+     * @return true iff the Expression is a constant value that is representable by a constant in
+     *         the ConstantPool
      */
     public boolean isConstant()
         {
-        return true;    // TODO shouldn't this default to false?
+        return false;
         }
 
     /**
-     * For a constant expression, create a constant representations of the value. The type of the
-     * constant will match the result of {@link #getImplicitType()}.
+     * (Post-validation) For a expression that provides a compile-time constant, create a constant
+     * representations of the value. If {@link #isConstant()} returns true, then the type
+     * of the constant will match the result of {@link #getType()}; otherwise there is no such
+     * guarantee.
      * <p/>
-     * An exception is generated if the expression is not constant.
+     * If the exception has more than one value, then this will return a constant tuple of those
+     * constant values.
+     * <p/>
+     * An exception is thrown if the expression is not capable of producing a compile-time constant.
      *
-     * @return the default constant form of the expression, iff the expression is constant
+     * @return the constant value of the expression
      */
     public Constant toConstant()
         {
-        if (!isConstant() || !isSingle())
+        checkDepth();
+
+        if (!isConstant())
             {
             throw new IllegalStateException();
             }
 
-        throw notImplemented();
+        return isSingle()
+                ? toConstants()[0]
+                : pool().ensureTupleConstant(getType(), toConstants());
         }
 
     /**
-     * Convert this expression to a constant value, which is possible iff {@link #isConstant}
-     * returns true.
+     * (Post-validation) For a expression that provides compile-time constants, create a constant
+     * representations of the values. If {@link #isConstant()} returns true, then the
+     * types of the constant values will match the result of {@link #getTypes()}.; otherwise there
+     * is no such guarantee.
      * <p/>
-     * This method may be overridden by any expression that can produce better code than the default
-     * constant conversion code, or can do so more efficiently.
+     * An exception is thrown if the expression is not capable of producing a compile-time constant.
      *
-     * @param code  the code block
-     * @param type  the constant type required
-     * @param errs  the error list to log any errors to if this expression cannot be made into
-     *              a constant value of the specified type
-     *
-     * @return a constant of the specified type
+     * @return the compile-times constant values of the expression
      */
-    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Constant[] toConstants()
         {
         checkDepth();
 
-        if (isConstant())
+        if (!isConstant())
             {
-            if (isAssignableTo(type))
-                {
-                return validateAndConvertConstant(toConstant(), type, errs);
-                }
-
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE, type, toConstant().getType());
-            }
-        else
-            {
-            log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+            throw new IllegalStateException();
             }
 
-        return generateFakeConstant(type);
+        switch (getValueCount())
+            {
+            case 0:
+                return Constant.NO_CONSTS;
+
+            case 1:
+                return new Constant[] {toConstant()};
+
+            default:
+                Constant constant = toConstant();
+                assert constant != null && constant.getFormat() == Format.Tuple;
+                return ((ArrayConstant) constant).getValue();
+            }
         }
 
-    // TODO do we need generateConstants? (for "/%" operator for example)
-
     /**
-     * Generate an argument that represents the result of this expression.
+     * (Post-validation) Generate an argument that represents the result of this expression.
      * <p/>
      * This method must be overridden by any expression that is not always constant.
      *
      * @param code      the code block
-     * @param type      the type that the expression must evaluate to
-     * @param fTupleOk  true if the result can be a tuple of the the specified type
+     * @param fTupleOk  true if the result can be delivered wrapped in a tuple
      * @param errs      the error list to log any errors to
      *
      * @return a resulting argument of the specified type, or of a tuple of the specified type if
      *         that is both allowed and "free" to produce
      */
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fTupleOk, ErrorListener errs)
         {
         checkDepth();
 
         if (isConstant())
             {
-            return generateConstant(code, type, errs);
+            return validateAndConvertConstant(toConstant(), getType(), errs);
             }
 
-        throw notImplemented();
+        if (isSingle())
+            {
+            generateArguments(code, fTupleOk, errs)[0];
+            }
+                ?
+                :
+        if (getValueCount() == 1)
+            {
+            // note that this can return either a tuple or multiple values, and both work
+            return
+            }
+
+        throw new IllegalStateException();
         }
 
     /**
      * Generate arguments of the specified types for this expression, or generate an error if that
      * is not possible.
      * <p/>
-     * This method may be overridden by any expression that is multi-value-aware.
+     * This method must be overridden by any expression that is multi-value-aware.
      *
      * @param code      the code block
-     * @param atype     an array of types that the expression must evaluate to
-     * @param fTupleOk  true if the result can be a tuple of the the specified types
+     * @param fTupleOk  true if the result can be delivered wrapped in a tuple
      * @param errs      the error list to log any errors to
      *
      * @return a list of resulting arguments, which will either be the same size as the passed list,
      *         or size 1 for a tuple result if that is both allowed and "free" to produce
      */
-    public Argument[] generateArguments(Code code, TypeConstant[] atype, boolean fTupleOk, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fTupleOk, ErrorListener errs)
         {
         checkDepth();
 
+        TypeConstant[] atype = getTypes();
         switch (atype.length)
             {
             case 0:
@@ -492,20 +727,12 @@ public abstract class Expression
                 return NO_RVALUES;
 
             case 1:
-                return new Argument[] {generateArgument(code, atype[0], fTupleOk, errs)};
+                return new Argument[] {generateArgument(code, fTupleOk, errs)};
 
             default:
-                if (fTupleOk)
-                    {
-                    ConstantPool pool = pool();
-                    TypeConstant typeTuple =
-                            pool.ensureParameterizedTypeConstant(pool.typeTuple(), atype);
-                    return new Argument[] {generateArgument(code, typeTuple, false, errs)};
-                    }
+                // this must be overridden
+                throw notImplemented();
             }
-
-        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atype.length);
-        return NO_RVALUES;
         }
 
     /**
@@ -583,7 +810,7 @@ public abstract class Expression
 
         if (isConstant())
             {
-            Constant constant = generateConstant(code, getImplicitType(), errs);
+            Constant constant = generateConstant(code, getType(), errs);
             assert constant != null; // the constant is ignored
             return;
             }
@@ -695,7 +922,7 @@ public abstract class Expression
      */
     public boolean isAssignableTo(TypeConstant typeThat)
         {
-        TypeConstant typeImplicit = getImplicitType();
+        TypeConstant typeImplicit = getType();
         return typeImplicit.isA(typeThat)
                 || typeImplicit.ensureTypeInfo().findConversion(typeThat) != null;
         }
@@ -705,7 +932,7 @@ public abstract class Expression
      */
     public boolean isTypeBoolean()
         {
-        return getImplicitType().isEcstasy("Boolean") || isAssignableTo(pool().typeBoolean());
+        return getType().isEcstasy("Boolean") || isAssignableTo(pool().typeBoolean());
         }
 
     /**
@@ -845,7 +1072,7 @@ public abstract class Expression
      */
     protected void checkDepth()
         {
-        if (++m_cDepth > 20)
+        if (++m_cDepth > 40)
             {
             throw notImplemented();
             }

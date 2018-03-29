@@ -63,7 +63,7 @@ public class TodoExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -80,7 +80,7 @@ public class TodoExpression
         }
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         // it would be really nice to know what type they actually want, because we'd be glad to
         // pretend that we can provide one of those
@@ -95,10 +95,10 @@ public class TodoExpression
         }
 
     @Override
-    public boolean isCompletable()
+    public boolean isAborting()
         {
         // a T0D0 cannot complete; it always throws
-        return false;
+        return true;
         }
 
     @Override

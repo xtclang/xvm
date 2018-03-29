@@ -412,7 +412,7 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 

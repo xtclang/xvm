@@ -173,7 +173,7 @@ public class NameExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -223,7 +223,7 @@ public class NameExpression
         }
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         return m_type == null
                 ? m_arg == null

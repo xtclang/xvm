@@ -86,7 +86,7 @@ public class AssignmentStatement
 
         // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
         // and can validate that assignment can occur
-        fValid &= rvalue.validate(ctx, lvalue.getImplicitType(), errs);
+        fValid &= rvalue.validate(ctx, lvalue.getType(), errs);
 
         return this;
         }
