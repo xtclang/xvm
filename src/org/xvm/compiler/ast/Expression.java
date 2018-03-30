@@ -147,9 +147,20 @@ public abstract class Expression
     /**
      * Represents the ability of an expression to yield a requested type:
      * <ul>
-     * <li>{@code NoFit} - the expression can <b>not</b> yield the requested type</li>
-     * <li>{@code Conv} - the expression can yield the requested type via @Auto type conversion</li>
-     * <li>{@code Fit} - the expression can yield the requested type</li>
+     * <li>{@code NoFit} - the expression can <b>not</b> yield the requested type;</li>
+     * <li>{@code ConvPackUnpack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion, tuple packing, and tuple unpacking;</li>
+     * <li>{@code ConvPack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion and tuple packing;</li>
+     * <li>{@code ConvUnpack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion and tuple unpacking;</li>
+     * <li>{@code Conv} - the expression can yield the requested type via {@code @Auto} type
+     *     conversion;</li>
+     * <li>{@code PackUnpack} - the expression can yield the requested type via a combination of
+     *     tuple packing and tuple unpacking;</li>
+     * <li>{@code Pack} - the expression can yield the requested type via tuple packing;</li>
+     * <li>{@code Unpack} - the expression can yield the requested type via tuple unpacking;</li>
+     * <li>{@code Fit} - the expression can yield the requested type.</li>
      * </ul>
      */
     public enum TypeFit
@@ -335,11 +346,11 @@ public abstract class Expression
      *
      * @return one of: NoFit, Conv, or Fit
      */
-    public TypeFit couldBe(Context ctx, TypeConstant typeRequired)
+    public TypeFit calcFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
         checkDepth();
 
-        return couldBeMulti(ctx, new TypeConstant[] {typeRequired});
+        return calcFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
         }
 
     /**
@@ -350,7 +361,7 @@ public abstract class Expression
      *
      * @return one of: NoFit, Conv, or Fit
      */
-    public TypeFit couldBeMulti(Context ctx, TypeConstant[] atypeRequired)
+    public TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
         {
         checkDepth();
 
@@ -361,13 +372,13 @@ public abstract class Expression
                 return TypeFit.Fit;
 
             case 1:
-                return couldBe(ctx, atypeRequired[0]);
+                return calcFit(ctx, atypeRequired[0], pref);
 
             default:
                 // anything that can yield separate values should override this method; otherwise,
                 // if the expression can yield a tuple of those values, then it will result in the
                 // expansion of that tuple (which is what we're testing here)
-                return couldBe(ctx, pool().ensureParameterizedTypeConstant(
+                return calcFit(ctx, pool().ensureParameterizedTypeConstant(
                         pool().typeTuple(), atypeRequired)).unpack();
             }
         }
