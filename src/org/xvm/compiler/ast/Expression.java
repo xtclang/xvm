@@ -195,6 +195,16 @@ public abstract class Expression
             }
 
         /**
+         * @return a TypeFit that does everything this TypeFit does, plus fits
+         */
+        public TypeFit fit()
+            {
+            return isFit()
+                    ? this
+                    : forFlags(FITS);
+            }
+
+        /**
          * @return true iff the type goes through at least one "@Auto" conversion in order to fit
          */
         public boolean isConverted()
@@ -246,6 +256,48 @@ public abstract class Expression
             return isFit()
                     ? forFlags(FLAGS | UNPACKS)
                     : NoFit;
+            }
+
+        /**
+         * Produce a fit that combines this fit and that fit.
+         *
+         * @param that  the other fit
+         *
+         * @return a fit that combines all the attributes of this fit and that fit
+         */
+        public TypeFit combineWith(TypeFit that)
+            {
+            return forFlags(this.FLAGS | that.FLAGS);
+            }
+        
+        public TypeFit applyPref(TuplePref pref)    // TODO this may be the wrong way to do this ...
+            {
+            if (!isFit())
+                {
+                return this;
+                }
+            
+            switch (pref)
+                {
+                case Rejected:
+                    if (isPacked())
+                case Accepted:
+                case Desired:
+                case Required:
+
+                }
+            }
+
+        /**
+         * Determine which is the best fit, and return that best fit.
+         *
+         * @param that  the other fit
+         *
+         * @return whichever fit is considered better
+         */
+        public TypeFit betterOf(TypeFit that)
+            {
+            return this.ordinal() > that.ordinal() ? this : that;
             }
 
         /**
@@ -329,28 +381,37 @@ public abstract class Expression
     /**
      * Represents the form that the Expression can or does yield a tuple:
      * <ul>
-     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type</li>
+     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type(s) in a tuple
+     *                        form</li>
      * <li>{@code Accepted} - the expression should yield a tuple if not yielding a tuple would
      *                        involve additional cost</li>
      * <li>{@code Desired}  - the expression should yield a tuple if it can do with no cost</li>
-     * <li>{@code Required} - the expression must <b>always</b> yields a tuple</li>
+     * <li>{@code Required} - the expression must <b>always</b> yields a tuple of the requested
+     *                        type(s)</li>
      * </ul>
      */
     public enum TuplePref {Rejected, Accepted, Desired, Required}
 
     /**
-     * (Pre-validation) Determine if the expression can yield the specified type.
+     * (Pre-validation) Determine if the expression can yield the specified type. Note that if a
+     * caller wants to test for a potential tuple result when the tuple would contain more than one
+     * value, it must <b>not</b> call this method with a tuple type, but instead it should use the
+     * {@link #testFitMulti} method asking for the individual types with the correct TuplePref
+     * specified. (A tuple type passed to this method will always return a tuple, and may even
+     * result in a tuple inside a tuple, depending on the TuplePref.)
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
+     * @param pref          the TuplePref defining how the caller wants the result
      *
-     * @return one of: NoFit, Conv, or Fit
+     * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
+     *         the required type
      */
-    public TypeFit calcFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
         checkDepth();
 
-        return calcFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
+        return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
         }
 
     /**
@@ -358,10 +419,12 @@ public abstract class Expression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked if it can provide
+     * @param pref           the TuplePref defining how the caller wants the result
      *
-     * @return one of: NoFit, Conv, or Fit
+     * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
+     *         the required type(s)
      */
-    public TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
         {
         checkDepth();
 
@@ -372,15 +435,185 @@ public abstract class Expression
                 return TypeFit.Fit;
 
             case 1:
-                return calcFit(ctx, atypeRequired[0], pref);
+                return testFit(ctx, atypeRequired[0], pref);
 
             default:
-                // anything that can yield separate values should override this method; otherwise,
-                // if the expression can yield a tuple of those values, then it will result in the
-                // expansion of that tuple (which is what we're testing here)
-                return calcFit(ctx, pool().ensureParameterizedTypeConstant(
-                        pool().typeTuple(), atypeRequired)).unpack();
+                // anything that can yield separate values must override this method
+                return TypeFit.NoFit;
             }
+        }
+
+    /**
+     * Helper for testFit() method.
+     *
+     * @param ctx      the compilation context for the statement
+     * @param typeIn   the type being tested for fit
+     * @param typeOut  the type that the expression is being asked if it can provide
+     * @param pref     the TuplePref defining how the caller wants the result
+     *
+     * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
+     *         from the specified type
+     */
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut, TuplePref pref)
+        {
+        // there are two simple cases to consider:
+        // 1) the most common case is that the type-in is compatible with the type-out
+        // 2) another common case is "to void", which is always a fit
+        if (typeIn.equals(typeOut) || typeIn.isA(typeOut) || typeOut.isVoid())
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.Pack
+                    : TypeFit.Fit;
+            }
+
+        // three tuple cases:
+        // 1) type-in is a tuple: first tuple field type of type-in must be assignable to
+        //    type-out
+        // 2) type-out is a tuple: type-out must only have one tuple field, and the type of
+        //    type-in must be assignable to the type of that one field
+        // 3) type-in is a tuple AND type-out is a tuple: for each tuple field of the type-out 
+        //    tuple type, there must be a corresponding tuple field in type-in, and the field 
+        //    from type-in must be assignable to the field in type-out
+        boolean        fTupleIn  = typeIn.isTuple();
+        boolean        fTupleOut = typeOut.isTuple();
+        TypeConstant[] atypeIn   = fTupleIn  ? typeIn .getParamTypesArray() : null;
+        TypeConstant[] atypeOut  = fTupleOut ? typeOut.getParamTypesArray() : null;
+
+        // if the type-in is a tuple, it can be disassembled into its separate values; for
+        // example, a type-in of Tuple<Int, String> would "Unpack" into a type-out of Int
+        if (fTupleIn && atypeIn.length > 0 && atypeIn[0].isA(typeOut))
+            {
+            return pref == TuplePref.Rejected
+                    ? TypeFit.Unpack
+                    : TypeFit.Fit;
+            }
+
+        // if the type-out is a tuple, and only has one field, then type-in might be packable
+        // into a suitable tuple; for example, a type-in of String would "Pack" a type-out
+        // of Tuple<String>
+        if (fTupleOut && atypeOut.length == 1 && typeIn.isA(atypeOut[0]))
+            {
+            // note: if pref == TuplePref.Required, then packing will get done 2x REVIEW PackPack?
+            return TypeFit.Pack;
+            }
+            
+        // if both type-in and type-out are tuples, then for each field of type-out, there must
+        // be a field of type-in that is assignable to the field of type-out; for example, a
+        // type-in of Tuple<String, Int, Boolean> would "Fit" a type-out of Tuple<String, Int>
+        // REVIEW this processing probably gets handled (or should get handled) by isA()
+        if (fTupleIn && fTupleOut)
+            {
+            boolean fFit = true;
+            for (int i = 0, cIn = atypeIn.length, cOut = atypeOut.length; i < cOut; ++i)
+                {
+                if (!(i < cIn && atypeOut[i].isA(atypeIn[i])))
+                    {
+                    fFit = false;
+                    break;
+                    }
+                }
+            if (fFit)
+                {
+                return pref == TuplePref.Required
+                        ? TypeFit.Pack
+                        : TypeFit.Fit;
+                }
+            }
+
+        // check for the existence of an @Auto conversion
+        if (typeIn.ensureTypeInfo().findConversion(typeOut) != null)
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.ConvPack
+                    : TypeFit.Conv;
+            }
+
+        // if the type-in is a tuple, it can be disassembled into its separate values; for
+        // example, a type-in of Tuple<IntLiteral> would "ConvUnpack" into a type-out of Int
+        if (fTupleIn && atypeIn.length > 0 && atypeIn[0].getConverterTo(typeOut) != null)
+            {
+            return pref == TuplePref.Rejected
+                    ? TypeFit.ConvUnpack
+                    : TypeFit.Conv;
+            }
+
+        // if the type-out is a tuple, and only has one field, then type-in might be packable
+        // into a suitable tuple; for example, a type-in of IntLiteral would "ConvPack" a type-out
+        // of Tuple<Int>
+        if (fTupleOut && atypeOut.length == 1 && typeIn.getConverterTo(atypeOut[0]) != null)
+            {
+            // note: if pref == TuplePref.Required, then packing will get done 2x REVIEW PackPack?
+            return TypeFit.ConvPack;
+            }
+
+        // if both type-in and type-out are tuples, then for each field of type-out, there must
+        // be a field of type-in that is convertable to the field of type-out; for example, a
+        // type-in of Tuple<String, IntLiteral, Boolean> would "Conv" into a type-out of
+        // Tuple<String, Int>
+        if (fTupleIn && fTupleOut)
+            {
+            boolean fFit = true;
+            for (int i = 0, cIn = atypeIn.length, cOut = atypeOut.length; i < cOut; ++i)
+                {
+                if (!(i < cIn && atypeOut[i].isAssignableTo(atypeIn[i])))
+                    {
+                    fFit = false;
+                    break;
+                    }
+                }
+            if (fFit)
+                {
+                return pref == TuplePref.Required
+                        ? TypeFit.ConvPack
+                        : TypeFit.Conv;
+                }
+            }
+
+        return TypeFit.NoFit;
+        }
+
+    /**
+     * Helper for testFit() method.
+     *
+     * @param ctx       the compilation context for the statement
+     * @param atypeOut  the types that the expression is being asked if it can provide
+     * @param pref      the TuplePref defining how the caller wants the result;
+     * @param atypeIn   the type(s) being tested for fit
+     * @param fitIn     the fit (if any) that would result from obtaining values corresponding to
+     *                  the types specified by atypeIn
+     *
+     * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
+     *         from the specified type
+     */
+    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeOut, TuplePref pref, TypeConstant[] atypeIn, TypeFit fitIn)
+        {
+        if (fitIn == TypeFit.NoFit)
+            {
+            return TypeFit.NoFit;
+            }
+
+        int cTypesOut = atypeOut.length;
+        int cTypesIn  = atypeIn.length;
+        if (cTypesOut <= 1)
+            {
+            return cTypesOut == 0
+                    ? fitIn
+                    : calcFit(ctx, atypeOut[0], pref, atypeIn[0], fitIn);
+            }
+
+        TypeFit fitOut = fitIn;
+        for (int i = 0; i < cTypesOut; ++i)
+            {
+            fitOut = calcFit(ctx, atypeOut[i], TuplePref.Rejected, atypeIn[i], fitOut);
+            if (fitOut == TypeFit.NoFit)
+                {
+                return TypeFit.NoFit;
+                }
+            }
+
+        return pref == TuplePref.Required
+                ? fitOut.pack()
+                : fitOut;
         }
 
     /**
