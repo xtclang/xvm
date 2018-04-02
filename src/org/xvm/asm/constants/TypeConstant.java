@@ -3747,6 +3747,11 @@ public abstract class TypeConstant
     // -----fields ---------------------------------------------------------------------------------
 
     /**
+     * An immutable, empty, zero-length array of types.
+     */
+    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
+
+    /**
      * Relationship options.
      */
     public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE}

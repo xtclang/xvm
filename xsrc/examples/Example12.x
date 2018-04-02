@@ -540,3 +540,38 @@ List<Person> list = new ArrayList<>() // error (because the <> _specifies_ "no t
 List<Person> list = new ArrayList()
 
 Map<String, Int> map = new HashMap<String>(); // error
+
+// ---- expression type analysis / validation
+
+(Int, String) foo();
+Tuple<Int, String> bar();
+Tuple<Int, String> t;
+
+t = foo();          // allowed (packing)
+t = bar();          // allowed (direct assignment)
+
+Int i = foo();      // allowed (String is discarded)
+Int i = bar();      // error (Tuple cannot be assigned to Int)
+
+// ---- expression type analysis / validation (2)
+
+(IntLiteral, String) foo();
+Tuple<IntLiteral, String> bar();
+Tuple<Int, String> zoo();
+
+Tuple<Int, String> t;
+
+t = (4, "hello");                   // allowed (conv pack)
+(Int i, String s) = (4, "hello");   // allowed (conv pack unpack)
+t = foo();                          // allowed (conv pack)
+t = bar();                          // error
+(Int i, String s) = foo();          // allowed
+(Int i, String s) = zoo();          // allowed
+Int i = zoo();                      // error
+(Int i, String s) = bar();          // error
+
+Int i = foo();      // sure, this is OK (String is discarded)
+Int i = bar();      // error
+
+
+

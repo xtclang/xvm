@@ -197,25 +197,25 @@ public abstract class Expression
         /**
          * @return a TypeFit that does everything this TypeFit does, plus fits
          */
-        public TypeFit fit()
+        public TypeFit ensureFit()
             {
             return isFit()
                     ? this
-                    : forFlags(FITS);
+                    : Fit;
             }
 
         /**
          * @return true iff the type goes through at least one "@Auto" conversion in order to fit
          */
-        public boolean isConverted()
+        public boolean isConverting()
             {
             return (FLAGS & CONVERTS) != 0;
             }
 
         /**
-         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         * @return a TypeFit that does everything this TypeFit does, plus type conversion
          */
-        public TypeFit convert()
+        public TypeFit addConversion()
             {
             return isFit()
                     ? forFlags(FLAGS | CONVERTS)
@@ -223,17 +223,27 @@ public abstract class Expression
             }
 
         /**
-         * @return true iff the type goes through at least one tuple creation in order to fit
+         * @return a TypeFit that does everything this TypeFit does, minus type conversion
          */
-        public boolean isPacked()
+        public TypeFit removeConversion()
+            {
+            return isConverting()
+                    ? forFlags(FLAGS & ~CONVERTS)
+                    : this;
+            }
+
+        /**
+         * @return true iff the type goes through a tuple creation
+         */
+        public boolean isPacking()
             {
             return (FLAGS & PACKS) != 0;
             }
 
         /**
-         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         * @return a TypeFit that does everything this TypeFit does, plus Tuple packing
          */
-        public TypeFit pack()
+        public TypeFit addPack()
             {
             return isFit()
                     ? forFlags(FLAGS | PACKS)
@@ -241,21 +251,41 @@ public abstract class Expression
             }
 
         /**
-         * @return true iff the type goes through at least one tuple extraction in order to fit
+         * @return a TypeFit that does everything this TypeFit does, minus Tuple packing
          */
-        public boolean isUnpacked()
+        public TypeFit removePack()
+            {
+            return isPacking()
+                    ? forFlags(FLAGS & ~PACKS)
+                    : this;
+            }
+
+        /**
+         * @return true iff the type goes through a tuple extraction
+         */
+        public boolean isUnpacking()
             {
             return (FLAGS & UNPACKS) != 0;
             }
 
         /**
-         * @return a TypeFit that does everything this TypeFit does, plus unpacks a Tuple
+         * @return a TypeFit that does everything this TypeFit does, plus Tuple unpacking
          */
-        public TypeFit unpack()
+        public TypeFit addUnpack()
             {
             return isFit()
                     ? forFlags(FLAGS | UNPACKS)
                     : NoFit;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, minus Tuple unpacking
+         */
+        public TypeFit removeUnpack()
+            {
+            return isConverting()
+                    ? forFlags(FLAGS & ~UNPACKS)
+                    : this;
             }
 
         /**
@@ -268,24 +298,6 @@ public abstract class Expression
         public TypeFit combineWith(TypeFit that)
             {
             return forFlags(this.FLAGS | that.FLAGS);
-            }
-        
-        public TypeFit applyPref(TuplePref pref)    // TODO this may be the wrong way to do this ...
-            {
-            if (!isFit())
-                {
-                return this;
-                }
-            
-            switch (pref)
-                {
-                case Rejected:
-                    if (isPacked())
-                case Accepted:
-                case Desired:
-                case Required:
-
-                }
             }
 
         /**
@@ -366,11 +378,18 @@ public abstract class Expression
          * All of the TypeFit enums, by flags.
          */
         private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
+        static
+            {
+            for (TypeFit fit : BY_ORDINAL)
+                {
+                BY_FLAGS[fit.FLAGS] = fit;
+                }
+            }
 
         public static final int FITS     = 0b0001;
-        public static final int CONVERTS = 0b0011;
-        public static final int PACKS    = 0b0101;
-        public static final int UNPACKS  = 0b1001;
+        public static final int CONVERTS = 0b0010;
+        public static final int PACKS    = 0b0100;
+        public static final int UNPACKS  = 0b1000;
 
         /**
          * Represents the state of the TypeFit.
@@ -390,6 +409,7 @@ public abstract class Expression
      *                        type(s)</li>
      * </ul>
      */
+    // REVIEW could it simplify to: Never, Either, Always?
     public enum TuplePref {Rejected, Accepted, Desired, Required}
 
     /**
@@ -399,6 +419,9 @@ public abstract class Expression
      * {@link #testFitMulti} method asking for the individual types with the correct TuplePref
      * specified. (A tuple type passed to this method will always return a tuple, and may even
      * result in a tuple inside a tuple, depending on the TuplePref.)
+     * <p/>
+     * This method should be overridden by any Expression type that only expects to result in a
+     * single value.
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
@@ -416,6 +439,9 @@ public abstract class Expression
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified types.
+     * <p/>
+     * This method must be overridden by any Expression type that expects to result in multiple
+     * values.
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked if it can provide
@@ -444,7 +470,7 @@ public abstract class Expression
         }
 
     /**
-     * Helper for testFit() method.
+     * Helper for testFit() and validate() methods.
      *
      * @param ctx      the compilation context for the statement
      * @param typeIn   the type being tested for fit
@@ -457,67 +483,13 @@ public abstract class Expression
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut, TuplePref pref)
         {
         // there are two simple cases to consider:
-        // 1) the most common case is that the type-in is compatible with the type-out
-        // 2) another common case is "to void", which is always a fit
-        if (typeIn.equals(typeOut) || typeIn.isA(typeOut) || typeOut.isVoid())
+        // 1) it is always a fit for an expression to go "to void"
+        // 2) the most common / desired case is that the type-in is compatible with the type-out
+        if (typeOut == null || typeOut.isVoid() || typeIn.isA(typeOut))
             {
             return pref == TuplePref.Required
                     ? TypeFit.Pack
                     : TypeFit.Fit;
-            }
-
-        // three tuple cases:
-        // 1) type-in is a tuple: first tuple field type of type-in must be assignable to
-        //    type-out
-        // 2) type-out is a tuple: type-out must only have one tuple field, and the type of
-        //    type-in must be assignable to the type of that one field
-        // 3) type-in is a tuple AND type-out is a tuple: for each tuple field of the type-out 
-        //    tuple type, there must be a corresponding tuple field in type-in, and the field 
-        //    from type-in must be assignable to the field in type-out
-        boolean        fTupleIn  = typeIn.isTuple();
-        boolean        fTupleOut = typeOut.isTuple();
-        TypeConstant[] atypeIn   = fTupleIn  ? typeIn .getParamTypesArray() : null;
-        TypeConstant[] atypeOut  = fTupleOut ? typeOut.getParamTypesArray() : null;
-
-        // if the type-in is a tuple, it can be disassembled into its separate values; for
-        // example, a type-in of Tuple<Int, String> would "Unpack" into a type-out of Int
-        if (fTupleIn && atypeIn.length > 0 && atypeIn[0].isA(typeOut))
-            {
-            return pref == TuplePref.Rejected
-                    ? TypeFit.Unpack
-                    : TypeFit.Fit;
-            }
-
-        // if the type-out is a tuple, and only has one field, then type-in might be packable
-        // into a suitable tuple; for example, a type-in of String would "Pack" a type-out
-        // of Tuple<String>
-        if (fTupleOut && atypeOut.length == 1 && typeIn.isA(atypeOut[0]))
-            {
-            // note: if pref == TuplePref.Required, then packing will get done 2x REVIEW PackPack?
-            return TypeFit.Pack;
-            }
-            
-        // if both type-in and type-out are tuples, then for each field of type-out, there must
-        // be a field of type-in that is assignable to the field of type-out; for example, a
-        // type-in of Tuple<String, Int, Boolean> would "Fit" a type-out of Tuple<String, Int>
-        // REVIEW this processing probably gets handled (or should get handled) by isA()
-        if (fTupleIn && fTupleOut)
-            {
-            boolean fFit = true;
-            for (int i = 0, cIn = atypeIn.length, cOut = atypeOut.length; i < cOut; ++i)
-                {
-                if (!(i < cIn && atypeOut[i].isA(atypeIn[i])))
-                    {
-                    fFit = false;
-                    break;
-                    }
-                }
-            if (fFit)
-                {
-                return pref == TuplePref.Required
-                        ? TypeFit.Pack
-                        : TypeFit.Fit;
-                }
             }
 
         // check for the existence of an @Auto conversion
@@ -528,91 +500,50 @@ public abstract class Expression
                     : TypeFit.Conv;
             }
 
-        // if the type-in is a tuple, it can be disassembled into its separate values; for
-        // example, a type-in of Tuple<IntLiteral> would "ConvUnpack" into a type-out of Int
-        if (fTupleIn && atypeIn.length > 0 && atypeIn[0].getConverterTo(typeOut) != null)
-            {
-            return pref == TuplePref.Rejected
-                    ? TypeFit.ConvUnpack
-                    : TypeFit.Conv;
-            }
-
-        // if the type-out is a tuple, and only has one field, then type-in might be packable
-        // into a suitable tuple; for example, a type-in of IntLiteral would "ConvPack" a type-out
-        // of Tuple<Int>
-        if (fTupleOut && atypeOut.length == 1 && typeIn.getConverterTo(atypeOut[0]) != null)
-            {
-            // note: if pref == TuplePref.Required, then packing will get done 2x REVIEW PackPack?
-            return TypeFit.ConvPack;
-            }
-
-        // if both type-in and type-out are tuples, then for each field of type-out, there must
-        // be a field of type-in that is convertable to the field of type-out; for example, a
-        // type-in of Tuple<String, IntLiteral, Boolean> would "Conv" into a type-out of
-        // Tuple<String, Int>
-        if (fTupleIn && fTupleOut)
-            {
-            boolean fFit = true;
-            for (int i = 0, cIn = atypeIn.length, cOut = atypeOut.length; i < cOut; ++i)
-                {
-                if (!(i < cIn && atypeOut[i].isAssignableTo(atypeIn[i])))
-                    {
-                    fFit = false;
-                    break;
-                    }
-                }
-            if (fFit)
-                {
-                return pref == TuplePref.Required
-                        ? TypeFit.ConvPack
-                        : TypeFit.Conv;
-                }
-            }
-
         return TypeFit.NoFit;
         }
 
     /**
-     * Helper for testFit() method.
+     * Helper for testFit() and validate() methods.
      *
      * @param ctx       the compilation context for the statement
+     * @param atypeIn   the type(s) being tested for fit
      * @param atypeOut  the types that the expression is being asked if it can provide
      * @param pref      the TuplePref defining how the caller wants the result;
-     * @param atypeIn   the type(s) being tested for fit
-     * @param fitIn     the fit (if any) that would result from obtaining values corresponding to
-     *                  the types specified by atypeIn
      *
      * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
      *         from the specified type
      */
-    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeOut, TuplePref pref, TypeConstant[] atypeIn, TypeFit fitIn)
+    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeIn, TypeConstant[] atypeOut, TuplePref pref)
         {
-        if (fitIn == TypeFit.NoFit)
+        int cTypesIn  = atypeIn.length;
+        int cTypesOut = atypeOut.length;
+        if (cTypesIn == 1 && cTypesOut <= 1)
+            {
+            return calcFit(ctx, atypeIn[0], cTypesOut == 0 ? null : atypeOut[0], pref);
+            }
+
+        if (cTypesIn < cTypesOut)
             {
             return TypeFit.NoFit;
             }
 
-        int cTypesOut = atypeOut.length;
-        int cTypesIn  = atypeIn.length;
-        if (cTypesOut <= 1)
-            {
-            return cTypesOut == 0
-                    ? fitIn
-                    : calcFit(ctx, atypeOut[0], pref, atypeIn[0], fitIn);
-            }
-
-        TypeFit fitOut = fitIn;
+        TypeFit fitOut = TypeFit.Fit;
         for (int i = 0; i < cTypesOut; ++i)
             {
-            fitOut = calcFit(ctx, atypeOut[i], TuplePref.Rejected, atypeIn[i], fitOut);
-            if (fitOut == TypeFit.NoFit)
+            TypeConstant typeIn    = atypeIn [i];
+            TypeConstant typeOut   = atypeOut[i];
+            TypeFit      fitSingle = calcFit(ctx, typeIn, typeOut, TuplePref.Rejected);
+            if (!fitOut.isFit())
                 {
                 return TypeFit.NoFit;
                 }
+
+            fitOut = fitOut.combineWith(fitSingle);
             }
 
         return pref == TuplePref.Required
-                ? fitOut.pack()
+                ? fitOut.addPack()
                 : fitOut;
         }
 
@@ -621,6 +552,9 @@ public abstract class Expression
      * assignment, etc.
      * <p/>
      * This method transitions the expression from "pre-validated" to "validated".
+     * <p/>
+     * This method should be overridden by any Expression type that only expects to result in a
+     * single value.
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is expected to be able to provide, or null
@@ -643,10 +577,10 @@ public abstract class Expression
      * Given the specified required type(s) for the expression, resolve names, values, verify
      * definite assignment, etc.
      * <p/>
-     * This method should be overridden by any Expression type that expects to result in multiple
-     * values.
-     * <p/>
      * This method transitions the expression from "pre-validated" to "validated".
+     * <p/>
+     * This method must be overridden by any Expression type that expects to result in multiple
+     * values.
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  an array of required types
@@ -660,45 +594,71 @@ public abstract class Expression
         {
         checkDepth();
 
-        boolean fValid = true;
-        TypeConstant typeRequired = null;
-        if (atypeRequired != null)
+        switch (atypeRequired.length)
             {
-            switch (atypeRequired.length)
-                {
-                case 0:
-                    // no type expected
-                    break;
+            case 0:
+                return validate(ctx, pool().typeVoid(), tuplepref, errs);
 
-                case 1:
-                    // single type expected
-                    typeRequired = atypeRequired[0];
-                    break;
+            case 1:
+                // single type expected
+                return validate(ctx, atypeRequired[0], tuplepref, errs);
 
-                default:
-                    if (getValueCount() >= atypeRequired.length)
-                        {
-                        // since this method was not overridden, see if the expression can deliver
-                        // the tuple form of the multiple requested types; if it's not supported,
-                        // the error may get detected by either the validate or the generate phase
-                        typeRequired = pool().ensureParameterizedTypeConstant(
-                                pool().typeTuple(), atypeRequired);
-                        }
-                    else
-                        {
-                        // log the error, but allow validation to continue (with no particular
-                        // expected type) so that we get as many errors exposed as possible in the
-                        // validate phase
-                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                                atypeRequired.length, getValueCount());
-                        fValid = false;
-                        }
-                    break;
-                }
+            default:
+                // log the error, but allow validation to continue (with no particular
+                // expected type) so that we get as many errors exposed as possible in the
+                // validate phase
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                        atypeRequired.length, 1);
+                finishValidation(atypeRequired, TypeFit.Fit);
+                return null;
+            }
+        }
+
+    /**
+     * Store the result of validating the Expression.
+     *
+     * @param type  the single type that results from the Expression
+     * @param fit   the fit of that type that was determined by the validation
+     */
+    protected void finishValidation(TypeConstant type, TypeFit fit)
+        {
+        finishValidation(new TypeConstant[] {type}, fit);
+        }
+
+    /**
+     * Store the result of validating the Expression.
+     *
+     * @param atype  the types that result from the Expression
+     * @param fit   the fit of those types that was determined by the validation
+     */
+    protected void finishValidation(TypeConstant[] atype, TypeFit fit)
+        {
+        if (m_aType != null)
+            {
+            throw new IllegalStateException("Expression has already been validated: " + this);
             }
 
-        Expression exprResult = validate(ctx, typeRequired, errs);
-        return fValid ? exprResult : null;
+        m_aType = atype == null ? TypeConstant.NO_TYPES : atype;
+        m_fit   = fit == null ? TypeFit.Fit : fit;
+        }
+
+    /**
+     * @return true iff the Expression has been validated
+     */
+    public boolean isValidated()
+        {
+        return m_aType != null;
+        }
+
+    /**
+     * Throw an exception if the Expression has not been validated
+     */
+    protected void checkValidated()
+        {
+        if (!isValidated())
+            {
+            throw new IllegalStateException("Expression has not been validated: " + this);
+            }
         }
 
     /**
@@ -718,7 +678,22 @@ public abstract class Expression
      */
     public int getValueCount()
         {
-        return 1;
+        checkValidated();
+
+        final Object type = m_aType;
+        return type instanceof TypeConstant
+                ? 1
+                : ((TypeConstant[]) type).length;
+        }
+
+    /**
+     * (Post-validation) Determine if the Expression represents no resulting value.
+     *
+     * @return true iff the Expression represents a "void" expression
+     */
+    public boolean isVoid()
+        {
+        return getValueCount() == 0;
         }
 
     /**
@@ -731,66 +706,72 @@ public abstract class Expression
         return getValueCount() == 1;
         }
 
-    /**
-     * (Post-validation) Determine if the expression represents a {@code conditional} result. A
-     * conditional result is one in which there are multiple results, the first of which is a
-     * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
-     * first boolean is {@code false}.
-     * <p/>
-     * This method must be overridden by any expression that represents or could represent a
-     * conditional result, including as the result of composition of other expressions that could
-     * represent a conditional result.
-     * REVIEW who needs this method?
-     *
-     * @return true iff the Expression represents a conditional value
-     */
-    public boolean isConditional()
-        {
-        return false;
-        }
+    // REVIEW who needs this method?
+//    /**
+//     * (Post-validation) Determine if the expression represents a {@code conditional} result. A
+//     * conditional result is one in which there are multiple results, the first of which is a
+//     * boolean, and the remainder of which cannot be safely accessed if the runtime value of that
+//     * first boolean is {@code false}.
+//     * <p/>
+//     * This method must be overridden by any expression that represents or could represent a
+//     * conditional result, including as the result of composition of other expressions that could
+//     * represent a conditional result.
+//     *
+//     * @return true iff the Expression represents a conditional value
+//     */
+//    public boolean isConditional()
+//        {
+//        return false;
+//        }
 
     /**
      * (Post-validation) Determine the type of the expression. For a multi-value expression, the
-     * TypeConstant is returned as a tuple of the types of the multiple values. A Void type is
-     * indicated by a parameterized tuple type of zero parameters (fields).
-     * <p/>
-     * Either this method or {@link #getTypes()} must be overridden.
+     * first TypeConstant is returned. For a void expression, the result is null.
      *
-     * @return the implicit type of the expression
+     * @return the type of the validated Expression, which is null for a Expression that yields a
+     *         Void result, otherwise the type of the <i>first</i> (and typically <i>only</i>) value
+     *         resulting from the Expression
      */
     public TypeConstant getType()
         {
-        checkDepth();
+        checkValidated();
 
-        return isSingle()
-                ? getTypes()[0]
-                : pool().ensureParameterizedTypeConstant(pool().typeTuple(), getTypes());
+        final Object type = m_aType;
+        if (type instanceof TypeConstant)
+            {
+            return (TypeConstant) type;
+            }
+
+        TypeConstant[] atype = (TypeConstant[]) type;
+        return atype.length == 0
+                ? null
+                : atype[0];
         }
 
     /**
-     * (Post-validation) Obtain an array of types, one for each value that this expression represents.
-     * <p/>
-     * Either this method or {@link #getType()} must be overridden.
+     * (Post-validation) Obtain an array of types, one for each value that this expression yields.
+     * For a void expression, the result is a zero-length array.
      *
-     * @return the implicit types of the multiple values of the expression; a zero-length array
+     * @return the types of the multiple values yielded by the expression; a zero-length array
      *         indicates a Void type
      */
     public TypeConstant[] getTypes()
         {
-        checkDepth();
+        checkValidated();
 
-        TypeConstant type = getType();
-        if (isSingle())
-            {
-            return new TypeConstant[] {type};
-            }
-        else
-            {
-            // it's reasonable to expect that classes will override this method as appropriate to
-            // avoid this type of inefficiency
-            assert type.isTuple() && type.isParamsSpecified();
-            return type.getParamTypesArray();
-            }
+        final Object type = m_aType;
+        return type instanceof TypeConstant
+                ? new TypeConstant[] {(TypeConstant) type}
+                : (TypeConstant[]) type;
+        }
+
+    /**
+     * @return the TypeFit that was determined during validation
+     */
+    public TypeFit getTypeFit()
+        {
+        checkValidated();
+        return m_fit;
         }
 
     /**
@@ -1663,4 +1644,7 @@ public abstract class Expression
 
     public static final Assignable[] NO_LVALUES = new Assignable[0];
     public static final Argument[]   NO_RVALUES = new Argument[0];
+
+    private TypeFit        m_fit;
+    private TypeConstant[] m_aType;
     }
