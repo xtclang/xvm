@@ -1099,15 +1099,17 @@ public abstract class Expression
         switch (cLVals)
             {
             case 0:
-                generateVoid(code, errs);
+                if (!m_fInAssignment)
+                    {
+                    m_fInAssignment = true;
+                    generateVoid(code, errs);
+                    m_fInAssignment = false;
+                    }
                 break;
 
             case 1:
                 if (!m_fInAssignment)
                     {
-                    // this allows a sub-class to not override either generateAssignment() method,
-                    // by having a relatively inefficient implementation be provided by default, or
-                    // alternatively implementing one and/or the other of the two methods
                     m_fInAssignment = true;
                     generateAssignment(code, aLVal[0], errs);
                     m_fInAssignment = false;
@@ -1125,8 +1127,6 @@ public abstract class Expression
             }
         }
 
-    private transient boolean m_fInAssignment;
-
     /**
      * Generate the necessary code that jumps to the specified label if this expression evaluates
      * to the boolean value indicated in <tt>fWhenTrue</tt>.
@@ -1137,7 +1137,8 @@ public abstract class Expression
      *                   whether to jump when this expression evaluates to false
      * @param errs       the error list to log any errors to
      */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
+            ErrorListener errs)
         {
         checkDepth();
 
@@ -1212,7 +1213,8 @@ public abstract class Expression
      *
      * @return the constant to use
      */
-    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut,
+            ErrorListener errs)
         {
         TypeConstant typeIn = constIn.getType();
         if (typeIn.isA(typeOut))
@@ -1229,7 +1231,8 @@ public abstract class Expression
         catch (ArithmeticException e)
             {
             // conversion failure due to range etc.
-            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeOut, constIn.getValueString());
+            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeOut,
+                    constIn.getValueString());
             return generateFakeConstant(typeOut);
             }
 
@@ -1319,10 +1322,10 @@ public abstract class Expression
             throw notImplemented();
             }
         }
-    private int m_cDepth;
 
 
     // ----- inner class: Assignable ---------------------------------------------------------------
+
 
     /**
      * Assignable represents an L-Value.
@@ -1347,7 +1350,7 @@ public abstract class Expression
         public Assignable(Register regVar)
             {
             m_nForm = LocalVar;
-            m_reg   = regVar;
+            m_reg = regVar;
             }
 
         /**
@@ -1359,8 +1362,8 @@ public abstract class Expression
         public Assignable(Register regTarget, PropertyConstant constProp)
             {
             m_nForm = regTarget.getIndex() == Op.A_TARGET ? LocalProp : TargetProp;
-            m_reg   = regTarget;
-            m_prop  = constProp;
+            m_reg = regTarget;
+            m_prop = constProp;
             }
 
         /**
@@ -1371,8 +1374,8 @@ public abstract class Expression
          */
         public Assignable(Register argArray, Argument index)
             {
-            m_nForm  = Indexed;
-            m_reg    = argArray;
+            m_nForm = Indexed;
+            m_reg = argArray;
             m_oIndex = index;
             }
 
@@ -1386,8 +1389,8 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm  = indexes.length == 1 ? Indexed : IndexedN;
-            m_reg    = regArray;
+            m_nForm = indexes.length == 1 ? Indexed : IndexedN;
+            m_reg = regArray;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
@@ -1399,9 +1402,9 @@ public abstract class Expression
          */
         public Assignable(Register argArray, PropertyConstant constProp, Argument index)
             {
-            m_nForm  = IndexedProp;
-            m_reg    = argArray;
-            m_prop   = constProp;
+            m_nForm = IndexedProp;
+            m_reg = argArray;
+            m_prop = constProp;
             m_oIndex = index;
             }
 
@@ -1415,9 +1418,9 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
-            m_reg    = regArray;
-            m_prop   = constProp;
+            m_nForm = indexes.length == 1 ? IndexedProp : IndexedNProp;
+            m_reg = regArray;
+            m_prop = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
@@ -1662,7 +1665,31 @@ public abstract class Expression
     public static final Assignable[] NO_LVALUES = new Assignable[0];
     public static final Argument[]   NO_RVALUES = new Argument[0];
 
-    private TypeFit        m_fit;
+    /**
+     * After validation, contains the TypeFit determined during the validation.
+     */
+    private TypeFit m_fit;
+
+    /**
+     * After validation, contains the type(s) of the expression.
+     */
     private TypeConstant[] m_aType;
-    private Constant[]     m_aConst;
+
+    /**
+     * After validation, contains the constant value(s) of the expression, iff the expression is a
+     * constant.
+     */
+    private Constant[] m_aConst;
+
+    /**
+     * This allows a sub-class to not override either generateAssignment() method, by having a
+     * relatively inefficient and/or non-effective implementation being provided by default (without
+     * infinite recursion), or alternatively implementing one and/or the other of the two methods.
+     */
+    private transient boolean m_fInAssignment;
+
+    /**
+     * (Temporary) Infinite recursion prevention.
+     */
+    private int m_cDepth;
     }

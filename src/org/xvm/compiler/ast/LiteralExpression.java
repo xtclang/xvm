@@ -69,6 +69,14 @@ public class LiteralExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref tuplepref,
+            ErrorListener errs)
+        {
+        // TODO
+        }
+
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
