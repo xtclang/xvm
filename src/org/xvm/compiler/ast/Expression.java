@@ -2,15 +2,14 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Arrays;
+
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -30,6 +29,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.util.Handy.checkElementsNonNull;
 
 
 /**
@@ -609,7 +610,7 @@ public abstract class Expression
                 // validate phase
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
                         atypeRequired.length, 1);
-                finishValidation(atypeRequired, TypeFit.Fit);
+                finishValidation(TypeFit.Fit, atypeRequired, null);
                 return null;
             }
         }
@@ -617,29 +618,45 @@ public abstract class Expression
     /**
      * Store the result of validating the Expression.
      *
-     * @param type  the single type that results from the Expression
-     * @param fit   the fit of that type that was determined by the validation
+     * @param fit       the fit of that type that was determined by the validation
+     * @param type      the single type that results from the Expression
+     * @param constVal  a constant value, iff this expression is constant
      */
-    protected void finishValidation(TypeConstant type, TypeFit fit)
+    protected void finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
         {
-        finishValidation(new TypeConstant[] {type}, fit);
+        finishValidation(
+                fit,
+                type == null ? null : new TypeConstant[] {type},
+                constVal == null ? null : new Constant[] {constVal});
         }
 
     /**
      * Store the result of validating the Expression.
      *
-     * @param atype  the types that result from the Expression
-     * @param fit   the fit of those types that was determined by the validation
+     * @param fit        the fit of those types that was determined by the validation
+     * @param aType      the types that result from the Expression
+     * @param aconstVal  an array of constant values, equal in length to the array of types, iff
+     *                   this expression is constant
      */
-    protected void finishValidation(TypeConstant[] atype, TypeFit fit)
+    protected void finishValidation(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
         {
+        if (aType == null)
+            {
+            aType = TypeConstant.NO_TYPES;
+            }
+
         if (m_aType != null)
             {
             throw new IllegalStateException("Expression has already been validated: " + this);
             }
 
-        m_aType = atype == null ? TypeConstant.NO_TYPES : atype;
-        m_fit   = fit == null ? TypeFit.Fit : fit;
+        assert checkElementsNonNull(aType);
+        assert aconstVal == null ||
+                (aconstVal.length == aType.length && checkElementsNonNull(aconstVal));
+
+        m_fit    = fit == null ? TypeFit.Fit : fit;
+        m_aType  = aType;
+        m_aConst = aconstVal;
         }
 
     /**
@@ -680,10 +697,7 @@ public abstract class Expression
         {
         checkValidated();
 
-        final Object type = m_aType;
-        return type instanceof TypeConstant
-                ? 1
-                : ((TypeConstant[]) type).length;
+        return m_aType.length;
         }
 
     /**
@@ -725,6 +739,16 @@ public abstract class Expression
 //        }
 
     /**
+     * @return the TypeFit that was determined during validation
+     */
+    public TypeFit getTypeFit()
+        {
+        checkValidated();
+
+        return m_fit;
+        }
+
+    /**
      * (Post-validation) Determine the type of the expression. For a multi-value expression, the
      * first TypeConstant is returned. For a void expression, the result is null.
      *
@@ -736,13 +760,7 @@ public abstract class Expression
         {
         checkValidated();
 
-        final Object type = m_aType;
-        if (type instanceof TypeConstant)
-            {
-            return (TypeConstant) type;
-            }
-
-        TypeConstant[] atype = (TypeConstant[]) type;
+        TypeConstant[] atype = m_aType;
         return atype.length == 0
                 ? null
                 : atype[0];
@@ -759,19 +777,7 @@ public abstract class Expression
         {
         checkValidated();
 
-        final Object type = m_aType;
-        return type instanceof TypeConstant
-                ? new TypeConstant[] {(TypeConstant) type}
-                : (TypeConstant[]) type;
-        }
-
-    /**
-     * @return the TypeFit that was determined during validation
-     */
-    public TypeFit getTypeFit()
-        {
-        checkValidated();
-        return m_fit;
+        return getTypes();
         }
 
     /**
@@ -804,8 +810,8 @@ public abstract class Expression
     /**
      * (Post-validation) Determine if the expression can short-circuit.
      * <p/>
-     * This method must be overridden by any expression can short circuit, or that contains
-     * another expression that may be short-circuiting.
+     * This method must be overridden by any expression can short circuit, or any expression that
+     * can short circuit as a result of containing another expression that may short-circuit.
      *
      * @return true iff the expression is capable of short-circuiting
      */
@@ -817,16 +823,13 @@ public abstract class Expression
     /**
      * (Post-validation) Determine if the expression is constant that can be fully resolved and
      * calculated at compile time.
-     * <p/>
-     * This method must be overridden by any expression that could evaluate to a compile-time
-     * constant.
      *
      * @return true iff the Expression is a constant value that is representable by a constant in
      *         the ConstantPool
      */
     public boolean isConstant()
         {
-        return false;
+        return m_aConst != null;
         }
 
     /**
@@ -844,86 +847,64 @@ public abstract class Expression
      */
     public Constant toConstant()
         {
-        checkDepth();
-
         if (!isConstant())
             {
             throw new IllegalStateException();
             }
 
-        return isSingle()
-                ? toConstants()[0]
-                : pool().ensureTupleConstant(getType(), toConstants());
+        return isVoid()
+                ? null
+                : toConstants()[0];
         }
 
     /**
-     * (Post-validation) For a expression that provides compile-time constants, create a constant
+     * (Post-validation) For a expression that provides compile-time constants, obtain a constant
      * representations of the values. If {@link #isConstant()} returns true, then the
-     * types of the constant values will match the result of {@link #getTypes()}.; otherwise there
-     * is no such guarantee.
+     * types of the constant values will match the result of {@link #getTypes()}.
      * <p/>
-     * An exception is thrown if the expression is not capable of producing a compile-time constant.
+     * An exception is thrown if the expression does not producing a compile-time constant.
      *
      * @return the compile-times constant values of the expression
      */
     public Constant[] toConstants()
         {
-        checkDepth();
-
         if (!isConstant())
             {
             throw new IllegalStateException();
             }
 
-        switch (getValueCount())
-            {
-            case 0:
-                return Constant.NO_CONSTS;
-
-            case 1:
-                return new Constant[] {toConstant()};
-
-            default:
-                Constant constant = toConstant();
-                assert constant != null && constant.getFormat() == Format.Tuple;
-                return ((ArrayConstant) constant).getValue();
-            }
+        return m_aConst;
         }
+
+    // REVIEW - could values of "const" form (requiring one-time instantiation/initialization at runtime), that are NOT ConstantPool Constant values, be used e.g. for a CASE statement?
 
     /**
      * (Post-validation) Generate an argument that represents the result of this expression.
      * <p/>
-     * This method must be overridden by any expression that is not always constant.
+     * This method (or the plural version) must be overridden by any expression that is not always
+     * constant.
      *
-     * @param code      the code block
-     * @param fTupleOk  true if the result can be delivered wrapped in a tuple
-     * @param errs      the error list to log any errors to
+     * @param code   the code block
+     * @param fPack  true if the result must be delivered wrapped in a tuple
+     * @param errs   the error list to log any errors to
      *
      * @return a resulting argument of the specified type, or of a tuple of the specified type if
      *         that is both allowed and "free" to produce
      */
-    public Argument generateArgument(Code code, boolean fTupleOk, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
         {
         checkDepth();
+        assert !isVoid();
 
         if (isConstant())
             {
-            return validateAndConvertConstant(toConstant(), getType(), errs);
+            return fPack
+                    ? pool().ensureTupleConstant(pool().ensureParameterizedTypeConstant(
+                            pool().typeTuple(), getTypes()), toConstants())
+                    : toConstant();
             }
 
-        if (isSingle())
-            {
-            generateArguments(code, fTupleOk, errs)[0];
-            }
-                ?
-                :
-        if (getValueCount() == 1)
-            {
-            // note that this can return either a tuple or multiple values, and both work
-            return
-            }
-
-        throw new IllegalStateException();
+        return generateArguments(code, fPack, errs)[0];
         }
 
     /**
@@ -932,16 +913,27 @@ public abstract class Expression
      * <p/>
      * This method must be overridden by any expression that is multi-value-aware.
      *
-     * @param code      the code block
-     * @param fTupleOk  true if the result can be delivered wrapped in a tuple
-     * @param errs      the error list to log any errors to
+     * @param code   the code block
+     * @param fPack  true if the result must be delivered wrapped in a tuple
+     * @param errs   the error list to log any errors to
      *
-     * @return a list of resulting arguments, which will either be the same size as the passed list,
-     *         or size 1 for a tuple result if that is both allowed and "free" to produce
+     * @return an array of resulting arguments, which will either be the same length as the value
+     *         count of the expression, or length 1 for a tuple result iff fPack is true
      */
-    public Argument[] generateArguments(Code code, boolean fTupleOk, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
         {
         checkDepth();
+
+        if (isConstant())
+            {
+            return fPack
+                    ? new Argument[]
+                            {
+                            pool().ensureTupleConstant(pool().ensureParameterizedTypeConstant(
+                                    pool().typeTuple(), getTypes()), toConstants())
+                            }
+                    : toConstants();
+            }
 
         TypeConstant[] atype = getTypes();
         switch (atype.length)
@@ -952,7 +944,7 @@ public abstract class Expression
                 return NO_RVALUES;
 
             case 1:
-                return new Argument[] {generateArgument(code, fTupleOk, errs)};
+                return new Argument[] {generateArgument(code, fPack, errs)};
 
             default:
                 // this must be overridden
@@ -971,13 +963,13 @@ public abstract class Expression
      * @param code  the code block
      * @param errs  the error list to log any errors to
      *
-     * @return
+     * @return an Assignable object
      */
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
         checkDepth();
 
-        if (!isAssignable() || !isSingle())
+        if (!isAssignable() || isVoid())
             {
             throw new IllegalStateException();
             }
@@ -1009,7 +1001,8 @@ public abstract class Expression
         switch (getValueCount())
             {
             case 0:
-                return new Assignable[0];
+                generateVoid(code, errs);
+                return NO_LVALUES;
 
             case 1:
                 return new Assignable[] {generateAssignable(code, errs)};
@@ -1033,22 +1026,18 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (isConstant())
+        if (!isConstant() && !isVoid())
             {
-            Constant constant = generateConstant(code, getType(), errs);
-            assert constant != null; // the constant is ignored
-            return;
-            }
-
-        if (isSingle())
-            {
-            generateAssignment(code, new Assignable(), errs);
-            }
-        else
-            {
-            Assignable[] asnVoid = new Assignable[getValueCount()];
-            Arrays.fill(asnVoid, new Assignable());
-            generateAssignments(code, asnVoid, errs);
+            if (isSingle())
+                {
+                generateAssignment(code, new Assignable(), errs);
+                }
+            else
+                {
+                Assignable[] asnVoid = new Assignable[getValueCount()];
+                Arrays.fill(asnVoid, new Assignable());
+                generateAssignments(code, asnVoid, errs);
+                }
             }
         }
 
@@ -1067,9 +1056,16 @@ public abstract class Expression
         {
         checkDepth();
 
-        // this will be overridden by classes that can push down the work
-        Argument arg = generateArgument(code, LVal.getType(), false, errs);
-        LVal.assign(arg, code, errs);
+        if (isSingle())
+            {
+            // this will be overridden by classes that can push down the work
+            Argument arg = generateArgument(code, false, errs);
+            LVal.assign(arg, code, errs);
+            }
+        else
+            {
+            generateAssignments(code, new Assignable[] {LVal}, errs);
+            }
         }
 
     /**
@@ -1088,29 +1084,48 @@ public abstract class Expression
         checkDepth();
 
         int cLVals = aLVal.length;
-        if (cLVals == 0)
+        int cRVals = getValueCount();
+        assert cLVals <= cRVals;
+        if (cLVals < cRVals)
             {
-            generateVoid(code, errs);
-            return;
+            // blackhole the missing LVals
+            Assignable[] aLValNew = new Assignable[cRVals];
+            Arrays.fill(aLValNew, new Assignable());
+            System.arraycopy(aLVal, 0, aLValNew, 0, cLVals);
+            aLVal  = aLValNew;
+            cLVals = cRVals;
             }
 
-        if (cLVals == 1)
+        switch (cLVals)
             {
-            generateAssignment(code, aLVal[0], errs);
-            return;
-            }
+            case 0:
+                generateVoid(code, errs);
+                break;
 
-        TypeConstant[] aType = new TypeConstant[cLVals];
-        for (int i = 0; i < cLVals; ++i)
-            {
-            aType[i] = aLVal[i].getType();
-            }
-        Argument[] aArg = generateArguments(code, aType, false, errs);
-        for (int i = 0; i < cLVals; ++i)
-            {
-            aLVal[i].assign(aArg[i], code, errs);
+            case 1:
+                if (!m_fInAssignment)
+                    {
+                    // this allows a sub-class to not override either generateAssignment() method,
+                    // by having a relatively inefficient implementation be provided by default, or
+                    // alternatively implementing one and/or the other of the two methods
+                    m_fInAssignment = true;
+                    generateAssignment(code, aLVal[0], errs);
+                    m_fInAssignment = false;
+                    break;
+                    }
+                // fall through
+
+            default:
+                Argument[] aArg = generateArguments(code, false, errs);
+                for (int i = 0; i < cLVals; ++i)
+                    {
+                    aLVal[i].assign(aArg[i], code, errs);
+                    }
+                break;
             }
         }
+
+    private transient boolean m_fInAssignment;
 
     /**
      * Generate the necessary code that jumps to the specified label if this expression evaluates
@@ -1126,9 +1141,11 @@ public abstract class Expression
         {
         checkDepth();
 
+        assert !isVoid() && getType().isA(pool().typeBoolean());
+
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, pool().typeBoolean(), false, errs);
+        Argument arg = generateArgument(code, false, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
@@ -1647,4 +1664,5 @@ public abstract class Expression
 
     private TypeFit        m_fit;
     private TypeConstant[] m_aType;
+    private Constant[]     m_aConst;
     }
