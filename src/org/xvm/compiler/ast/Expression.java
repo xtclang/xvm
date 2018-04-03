@@ -561,17 +561,17 @@ public abstract class Expression
      * @param typeRequired  the type that the expression is expected to be able to provide, or null
      *                      if no particular type is expected (which requires the expression to
      *                      settle on a type on its own)
-     * @param tuplepref     indicates what options the Expression has in terms of resulting in a
+     * @param pref          indicates what options the Expression has in terms of resulting in a
      *                      tuple
      * @param errs          the error listener to log to
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref tuplepref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         checkDepth();
 
-        return validateMulti(ctx, new TypeConstant[] {typeRequired}, tuplepref, errs);
+        return validateMulti(ctx, new TypeConstant[] {typeRequired}, pref, errs);
         }
 
     /**
@@ -686,10 +686,6 @@ public abstract class Expression
      *     common)</li>
      * <li>A multi-value expression represents more than one value</li>
      * </ul>
-     * <p/>
-     * This method must be overridden by any expression that represents any number of values other
-     * than one, or that could be composed of other expressions in such a way that the result is
-     * that this expression could represent a number of values other than one.
      *
      * @return the number of values represented by the expression
      */
