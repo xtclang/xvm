@@ -30,7 +30,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * A TypeConstant that represents the type of a module, package, or class.
+ * A TypeConstant that represents a parameterized type.
  */
 public class ParameterizedTypeConstant
         extends TypeConstant
@@ -66,7 +66,7 @@ public class ParameterizedTypeConstant
         }
 
     /**
-     * Construct a constant whose value is a type-parameterized data type.
+     * Construct a constant whose value is a type-parameterized type.
      *
      * @param pool             the ConstantPool that will contain this Constant
      * @param constType        a TypeConstant representing the parameterized type
@@ -89,11 +89,13 @@ public class ParameterizedTypeConstant
             {
             throw new IllegalArgumentException("must refer to a terminal type");
             }
+        if (constTypeParams == null)
+            {
+            throw new IllegalArgumentException("must have parameters");
+            }
 
         m_constType   = constType;
-        m_atypeParams = constTypeParams == null || constTypeParams.length == 0
-                ? ConstantPool.NO_TYPES
-                : constTypeParams;
+        m_atypeParams = constTypeParams;
         }
 
 
@@ -146,7 +148,11 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant getExplicitClassInto()
         {
-        return getUnderlyingType().getExplicitClassInto();
+        TypeConstant constResolved = m_constType.getExplicitClassInto();
+
+        return constResolved.isParamsSpecified()
+            ? constResolved.resolveGenerics(this)
+            : constResolved;
         }
 
     @Override
@@ -193,11 +199,20 @@ public class ParameterizedTypeConstant
             TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
             if (constParamOriginal != constParamResolved)
                 {
-                if (aconstResolved == aconstOriginal)
+                if (constParamResolved instanceof TupleElementsTypeConstant)
                     {
-                    aconstResolved = aconstOriginal.clone();
+                    // we are replacing tuple's "ElementTypes"
+                    assert constOriginal.isTuple() && aconstOriginal.length == 1;
+                    aconstResolved = constParamResolved.getParamTypesArray();
                     }
-                aconstResolved[i] = constParamResolved;
+                else
+                    {
+                    if (aconstResolved == aconstOriginal)
+                        {
+                        aconstResolved = aconstOriginal.clone();
+                        }
+                    aconstResolved[i] = constParamResolved;
+                    }
                 fDiff = true;
                 }
             }
@@ -638,6 +653,8 @@ public class ParameterizedTypeConstant
     @Override
     public Constant simplify()
         {
+        checkDepth(true);
+
         m_constType = (TypeConstant) m_constType.simplify();
 
         TypeConstant[] atypeParams = m_atypeParams;
@@ -650,7 +667,7 @@ public class ParameterizedTypeConstant
                 atypeParams[i] = constNew;
                 }
             }
-
+        checkDepth(false);
         return this;
         }
 
@@ -720,6 +737,27 @@ public class ParameterizedTypeConstant
 
         return sb.toString();
         }
+
+    /**
+     * Temporary to prevent stack overflow.
+     *
+     * @throws IllegalStateException if it appears that there is an infinite recursion
+     */
+    protected void checkDepth(boolean fBefore)
+        {
+        if (fBefore)
+            {
+            if (++m_cDepth > 20)
+                {
+                throw new IllegalStateException();
+                }
+            }
+        else
+            {
+            --m_cDepth;
+            }
+        }
+    private static int m_cDepth;
 
 
     // ----- XvmStructure methods ------------------------------------------------------------------

@@ -24,7 +24,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
-import org.xvm.asm.constants.ParamInfo.TypeResolver;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.util.ListMap;
@@ -554,17 +553,17 @@ public class TypeInfo
         if (map == null)
             {
             map = new HashMap<>();
-            for (PropertyInfo prop : m_mapProps.values())
+            for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
                 {
+                PropertyConstant id   = entry.getKey();
+                PropertyInfo     prop = entry.getValue();
+
                 // only include the non-nested properties
-                if (prop.getIdentity().getNestedDepth() == m_cDepth + 1)
+                if (id.getNestedDepth() == m_cDepth + 1)
                     {
-                    PropertyInfo propPrev = map.put(prop.getName(), prop);
-                    if (propPrev != null && propPrev.isVirtual())
-                        {
-                        // have to pick one that is more visible than the other
-                        map.put(prop.getName(), selectVisible(prop, propPrev));
-                        }
+                    // have to pick one that is more visible than the other
+                    map.compute(prop.getName(), (sName, propPrev) ->
+                        propPrev == null ? prop : selectVisible(prop, propPrev));
                     }
                 }
 
@@ -868,6 +867,36 @@ public class TypeInfo
         return info == null
                 ? null
                 : info.ensureOptimizedMethodChain(this);
+        }
+
+    /**
+     * Obtain the method chain for the property getter for the specified property id.
+     *
+     * @param id  the property id
+     *
+     * @return the method chain iff the property exists; otherwise null
+     */
+    public MethodBody[] getOptimizedGetChain(PropertyConstant id)
+        {
+        PropertyInfo prop  = findProperty(id);
+        return prop == null
+                ? null
+                : prop.ensureOptimizedGetChain(this);
+        }
+
+    /**
+     * Obtain the method chain for the property setter for the specified property id.
+     *
+     * @param id  the property id
+     *
+     * @return the method chain iff the property exists and is a Var; otherwise null
+     */
+    public MethodBody[] getOptimizedSetChain(PropertyConstant id)
+        {
+        PropertyInfo prop  = findProperty(id);
+        return prop == null
+                ? null
+                : prop.ensureOptimizedSetChain(this);
         }
 
 

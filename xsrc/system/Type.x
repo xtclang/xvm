@@ -289,19 +289,21 @@ const Type<DataType>
 
     // ----- ConstAble interface -------------------------------------------------------------------
 
-    @Override
-    immutable Type<DataType> ensureConst()
-        {
-        return this instanceof immutable Object
-                ? this
-                : new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
-        }
-
-    @Override
-    immutable Type<DataType> makeConst()
-        {
-        allMethods = allMethods.makeConst();
-        meta.immutable_ = true;
-        return this;
-        }
+// REVIEW: Cam, this makes no sense since Type is const; did you mean to create an immutable Type?
+//
+//    @Override
+//    immutable Type<DataType> ensureConst()
+//        {
+//        return this instanceof immutable Object
+//                ? this
+//                : new Type<DataType>(allMethods, explicitlyImmutable).makeConst();
+//        }
+//
+//    @Override
+//    immutable Type<DataType> makeConst()
+//        {
+//        allMethods = allMethods.makeConst();
+//        meta.immutable_ = true;
+//        return this;
+//        }
     }

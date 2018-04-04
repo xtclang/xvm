@@ -20,6 +20,7 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.TupleElementsTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.L_Set;
@@ -992,6 +993,7 @@ public class ClassStructure
                                                             List<TypeConstant> listLeft)
         {
         Set<SignatureConstant> setMiss = new HashSet<>();
+        GenericTypeResolver resolver = null;
 
         for (Component child : children())
             {
@@ -999,18 +1001,32 @@ public class ClassStructure
                 {
                 PropertyStructure prop = (PropertyStructure) child;
 
-                // TODO: check access
-
-                SignatureConstant sig = prop.getIdentityConstant().getSignature();
-                if (!listLeft.isEmpty())
+                if (prop.isTypeParameter())
                     {
-                    sig = sig.resolveGenericTypes(new SimpleTypeResolver(listLeft));
+                    if (!typeRight.isGenericType(prop.getName()))
+                        {
+                        setMiss.add(prop.getIdentityConstant().getSignature());
+                        }
                     }
-
-                if (!typeRight.containsSubstitutableMethod(sig,
-                        Access.PUBLIC, Collections.EMPTY_LIST))
+                else
                     {
-                    setMiss.add(sig);
+                    // TODO: check access
+
+                    SignatureConstant sig = prop.getIdentityConstant().getSignature();
+                    if (!listLeft.isEmpty())
+                        {
+                        if (resolver == null)
+                            {
+                            resolver = new SimpleTypeResolver(listLeft);
+                            }
+                        sig = sig.resolveGenericTypes(resolver);
+                        }
+
+                    if (!typeRight.containsSubstitutableMethod(sig,
+                            Access.PUBLIC, Collections.EMPTY_LIST))
+                        {
+                        setMiss.add(sig);
+                        }
                     }
                 }
             else if (child instanceof MultiMethodStructure)
@@ -1026,7 +1042,11 @@ public class ClassStructure
                     SignatureConstant sig = method.getIdentityConstant().getSignature();
                     if (!listLeft.isEmpty())
                         {
-                        sig = sig.resolveGenericTypes(new SimpleTypeResolver(listLeft));
+                        if (resolver == null)
+                            {
+                            resolver = new SimpleTypeResolver(listLeft);
+                            }
+                        sig = sig.resolveGenericTypes(resolver);
                         }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
@@ -1457,13 +1477,10 @@ public class ClassStructure
                     "Failed to find " + constProperty.getName() + " in " + this);
                 }
 
-            if (m_fTuple)
-                {
-                ConstantPool pool = getConstantPool();
-                return pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-                    m_listActual.toArray(new TypeConstant[m_listActual.size()]));
-                }
-            return m_listActual.get(ix);
+            return m_fTuple
+                ? new TupleElementsTypeConstant(getConstantPool(),
+                    m_listActual.toArray(new TypeConstant[m_listActual.size()]))
+                : m_listActual.get(ix);
             }
 
         private boolean m_fTuple;

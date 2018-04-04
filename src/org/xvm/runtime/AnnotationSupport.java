@@ -2,7 +2,6 @@ package org.xvm.runtime;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -270,7 +269,7 @@ public class AnnotationSupport
                     {
                     TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
                     CallChain chain = clzAnno.
-                        getMethodCallChain(constMethod.getSignature(), Constants.Access.PUBLIC);
+                        getMethodCallChain(constMethod.getSignature());
                     if (chain.getDepth() > 0)
                         {
                         return chain;

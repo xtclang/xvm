@@ -47,6 +47,8 @@ class Array<ElementType>
         }
 
     public/private Int capacity = 0;
+
+    @Override
     public/private Int size     = 0;
 
     @Override
@@ -128,7 +130,7 @@ class Array<ElementType>
      * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
-    Array!<ElementType> ensureFixedSize();
+    Array!<ElementType> ensureFixedSize(Boolean inPlace = false);
 
     /**
      * Return a persistent array of the same element types and values as are present in this array.
@@ -138,7 +140,7 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
-    Array!<ElementType> ensurePersistent();
+    Array!<ElementType> ensurePersistent(Boolean inPlace = false);
 
     /**
      * Return a {@code const} array of the same type and contents as this array.
@@ -150,5 +152,11 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    Const+Array!<ElementType> ensureConst();
+    immutable Array!<ElementType> ensureConst(Boolean inPlace = false);
+
+    @Override
+    Array<ElementType> to<Array<ElementType>>()
+        {
+        return this;
+        }
     }

@@ -12,7 +12,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.util.Handy;
 
 
 /**

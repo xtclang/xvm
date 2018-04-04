@@ -53,6 +53,7 @@ const String
 
     // TODO Sequence<Char>
 
+    @Override
     Int size.get()
         {
         return chars.length;

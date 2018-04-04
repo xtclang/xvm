@@ -1444,7 +1444,10 @@ public abstract class ClassTemplate
     // Note: this also makes the property "calculated" (no storage)
     public void markNativeGetter(String sPropName)
         {
-        MethodStructure methodGet = Adapter.getGetter(ensureProperty(sPropName));
+        PropertyStructure prop = getProperty(sPropName);
+        assert prop != null;
+
+        MethodStructure methodGet = Adapter.getGetter(prop);
         if (methodGet == null)
             {
             ensurePropertyInfo(sPropName).m_fNativeGetter = true;

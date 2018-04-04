@@ -27,4 +27,7 @@ interface Const
      * TODO
      */
     Byte[] to<Byte[]>();
+
+    @Override
+    @RO Int hash;
     }

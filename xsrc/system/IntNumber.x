@@ -171,11 +171,13 @@ interface IntNumber
     /**
      * Obtain the number as an array of boolean values.
      */
+    @Override
     Boolean[] to<Boolean[]>()
         {
-        return new Sequence<Boolean>()
+        class SequenceImpl
+                implements Sequence<Boolean>
             {
-            @Override Int length.get()
+            @Override @RO Int size.get()
                 {
                 return IntNumber.this.bitCount;
                 }
@@ -184,6 +186,8 @@ interface IntNumber
                 {
                 return IntNumber.this.to<Bit[]>()[index].to<Boolean>();
                 }
-            };
+            }
+
+        return new SequenceImpl();
         }
     }

@@ -385,7 +385,8 @@ public class SignatureConstant
         // replace a void return with no return
         if (m_aconstReturns.length == 1)
             {
-            if (m_aconstReturns[0].isVoid())
+            TypeConstant type = m_aconstReturns[0];
+            if (!type.containsUnresolved() && type.isVoid())
                 {
                 m_aconstReturns = ConstantPool.NO_TYPES;
                 }

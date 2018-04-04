@@ -14,6 +14,7 @@ const Exception(String? text, Exception? cause = null)
 
     @Inject Iterable<StackFrame> stackTrace;
 
+    @Override
     String to<String>()
         {
         return formatExceptionString(null);

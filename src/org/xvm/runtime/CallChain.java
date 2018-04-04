@@ -1,10 +1,11 @@
 package org.xvm.runtime;
 
 
-import java.util.List;
-
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
+
+import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 
 
 /**
@@ -12,60 +13,28 @@ import org.xvm.asm.PropertyStructure;
  */
 public class CallChain
     {
-    // an optimization for a single method chain;
-    // also holds a "top"
-    private final MethodStructure f_method;
+    // an array of method bodies
+    private final MethodBody[] f_aMethods;
 
-    // an array of methods (only if m_method == null)
-    private final MethodStructure[] f_aMethods;
-
-    private final int f_cDepth;
-
-    // a constructor for a single-method chain
-    public CallChain(MethodStructure method)
+    // Construct the CallChain
+    public CallChain(MethodBody[] aMethods)
         {
-        f_method = method;
-        f_aMethods = null;
-        f_cDepth = 1;
-        }
-
-    // a generic constructor for a method chain
-    public CallChain(List<MethodStructure> listMethods)
-        {
-        int cDepth = f_cDepth = listMethods.size();
-        switch (cDepth)
-            {
-            case 0:
-                f_aMethods = null;
-                f_method = null;
-                break;
-
-            case 1:
-                f_aMethods = null;
-                f_method = listMethods.get(0);
-                break;
-
-            default:
-                f_aMethods = listMethods.toArray(new MethodStructure[cDepth]);
-                f_method = f_aMethods[0];
-                break;
-            }
+        f_aMethods = aMethods;
         }
 
     public int getDepth()
         {
-        return f_cDepth;
+        return f_aMethods.length;
         }
 
     public MethodStructure getMethod(int nDepth)
         {
-        return nDepth == 0       ? f_method :
-               nDepth < f_cDepth ? f_aMethods[nDepth] : null;
+        return f_aMethods[nDepth].getMethodStructure();
         }
 
     public MethodStructure getTop()
         {
-        return f_method;
+        return f_aMethods[0].getMethodStructure();
         }
 
     public MethodStructure getSuper(Frame frame)
@@ -75,22 +44,12 @@ public class CallChain
 
     public boolean isNative()
         {
-        MethodStructure method = f_method;
-        if (method == null)
-            {
-            return isNativeProperty();
-            }
-        return Adapter.isNative(method);
+        return f_aMethods[0].getImplementation() == Implementation.Native;
         }
 
     public PropertyStructure getProperty()
         {
-        return null;
-        }
-
-    protected boolean isNativeProperty()
-        {
-        throw new IllegalStateException();
+        return (PropertyStructure) f_aMethods[0].getIdentity().getNamespace().getComponent();
         }
 
     // natural chain invocation with zero args and one return value
@@ -119,26 +78,32 @@ public class CallChain
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
 
-        MethodStructure methodSuper = getMethod(nDepth);
-        if (methodSuper == null)
+        MethodBody bodySuper = f_aMethods[nDepth];
+        switch (bodySuper.getImplementation())
             {
-            return getField(frame, hThis, iReturn);
+            case Field:
+                return getField(frame, hThis, iReturn);
+
+            case Native:
+                return hThis.getTemplate().invokeNativeN(frame, bodySuper.getMethodStructure(),
+                    hThis, Utils.OBJECTS_NONE, iReturn);
+
+            case Explicit:
+                {
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
+
+                return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+                }
+
+            default:
+                throw new IllegalStateException();
             }
-
-        if (Adapter.isNative(methodSuper))
-            {
-            return hThis.getTemplate().
-                    invokeNativeN(frame, methodSuper, hThis, Utils.OBJECTS_NONE, iReturn);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
-
-        return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
         }
 
     protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
         {
-        throw new IllegalStateException();
+        return hThis.getTemplate().getFieldValue(frame, hThis, getProperty(), iReturn);
         }
 
     public int callSuper10(Frame frame, ObjectHandle hArg)
@@ -146,27 +111,33 @@ public class CallChain
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
 
-        MethodStructure methodSuper = getMethod(nDepth);
-        if (methodSuper == null)
+        MethodBody bodySuper = f_aMethods[nDepth];
+        switch (bodySuper.getImplementation())
             {
-            return setField(frame, hThis, hArg);
+            case Field:
+                return setField(frame, hThis, hArg);
+
+            case Native:
+                return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
+                    hThis, hArg, Frame.RET_UNUSED);
+
+            case Explicit:
+                {
+                MethodStructure methodSuper = bodySuper.getMethodStructure();
+                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
+                ahVar[1] = hArg;
+
+                return frame.invoke1(this, nDepth, hThis, ahVar, Frame.RET_UNUSED);
+                }
+
+            default:
+                throw new IllegalStateException();
             }
-
-        if (Adapter.isNative(methodSuper))
-            {
-            return hThis.getTemplate().
-                    invokeNative1(frame, methodSuper, hThis, hArg, Frame.RET_UNUSED);
-            }
-
-        ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
-        ahVar[1] = hArg;
-
-        return frame.invoke1(this, nDepth, hThis, ahVar, Frame.RET_UNUSED);
         }
 
     protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
         {
-        throw new IllegalStateException();
+        return hThis.getTemplate().setFieldValue(frame, hThis, getProperty(), hArg);
         }
 
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn,
@@ -175,24 +146,28 @@ public class CallChain
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
 
-        MethodStructure methodSuper = getMethod(nDepth);
-        if (methodSuper == null)
+        MethodBody bodySuper = f_aMethods[nDepth];
+        MethodStructure methodSuper = bodySuper.getMethodStructure();
+
+        switch (bodySuper.getImplementation())
             {
-            throw new IllegalStateException();
+            case Native:
+                return fReturnTuple
+                    ? hThis.getTemplate().invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
+                    : hThis.getTemplate().invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
+
+            case Explicit:
+                {
+                ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
+
+                return fReturnTuple
+                    ? frame.invoke1(this, nDepth, hThis, ahVar, iReturn)
+                    : frame.invokeT(this, nDepth, hThis, ahVar, iReturn);
+                }
+
+            default:
+                throw new IllegalStateException();
             }
-
-        if (Adapter.isNative(methodSuper))
-            {
-            return fReturnTuple
-                ? hThis.getTemplate().invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn)
-                : hThis.getTemplate().invokeNativeT(frame, methodSuper, hThis, ahArg, iReturn);
-            }
-
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
-
-        return fReturnTuple
-            ? frame.invoke1(this, nDepth, hThis, ahVar, iReturn)
-            : frame.invokeT(this, nDepth, hThis, ahVar, iReturn);
         }
 
     public int callSuperNN(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
@@ -200,65 +175,20 @@ public class CallChain
         ObjectHandle hThis = frame.getThis();
         int nDepth = frame.m_nDepth + 1;
 
-        MethodStructure methodSuper = getMethod(nDepth);
-        if (methodSuper == null)
+        MethodBody bodySuper = f_aMethods[nDepth];
+        MethodStructure methodSuper = bodySuper.getMethodStructure();
+
+        switch (bodySuper.getImplementation())
             {
-            throw new IllegalStateException();
-            }
+            case Native:
+                return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
-        if (Adapter.isNative(methodSuper))
-            {
-            return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
-            }
+            case Explicit:
+                return frame.invokeN(this, nDepth, hThis,
+                    Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
-
-        return frame.invokeN(this, nDepth, hThis, ahVar, aiReturn);
-        }
-
-    // ----- PropertyCallChain -----
-
-    public static class PropertyCallChain
-            extends CallChain
-        {
-        // a property representing the field access
-        private final PropertyStructure f_property;
-
-        // get vs. set
-        private final boolean f_fGet;
-
-        // a constructor for a property access chain
-        public PropertyCallChain(List<MethodStructure> listMethods, PropertyStructure property, boolean fGet)
-            {
-            super(listMethods);
-
-            f_property = property;
-            f_fGet = fGet;
-            }
-
-        @Override
-        public PropertyStructure getProperty()
-            {
-            return f_property;
-            }
-
-        @Override
-        protected boolean isNativeProperty()
-            {
-            ClassTemplate.PropertyInfo info = f_property.getInfo();
-            return info != null && (f_fGet ? info.m_fNativeGetter : info.m_fNativeSetter);
-            }
-
-        @Override
-        protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
-            {
-            return hThis.getTemplate().getFieldValue(frame, hThis, f_property, iReturn);
-            }
-
-        @Override
-        protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
-            {
-            return hThis.getTemplate().setFieldValue(frame, hThis, f_property, hArg);
+            default:
+                throw new IllegalStateException();
             }
         }
     }

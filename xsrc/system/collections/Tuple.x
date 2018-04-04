@@ -131,7 +131,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * contents as this tuple. If this tuple is already a fixed-size tuple, then _this_ is returned.
      */
     @Override
-    Tuple<ElementTypes> ensureFixedSize();
+    Tuple<ElementTypes> ensureFixedSize(Boolean inPlace = false);
 
     /**
      * Return a persistent tuple of the same element types and values as are present in this tuple.
@@ -141,7 +141,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new tuple.
      */
     @Override
-    Tuple<ElementTypes> ensurePersistent();
+    Tuple<ElementTypes> ensurePersistent(Boolean inPlace = false);
 
     /**
      * Return a {@code const} tuple of the same element types and values as are present in this
@@ -154,5 +154,11 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      *         {@link ConstAble}
      */
     @Override
-    Tuple<ElementTypes> ensureConst();
+    immutable Tuple<ElementTypes> ensureConst(Boolean inPlace = false);
+
+    @Override
+    Tuple<ElementTypes> to<Tuple<ElementTypes>>()
+        {
+        return this;
+        }
     }

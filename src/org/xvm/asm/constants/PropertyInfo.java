@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -14,12 +13,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
-
 import org.xvm.asm.constants.PropertyBody.Effect;
+
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -154,7 +151,8 @@ public class PropertyInfo
             assert cAdd == 1;
 
             // check @Override
-            if (!aAdd[0].isExplicitOverride())
+            PropertyBody bodyAdd = aAdd[0];
+            if (!bodyAdd.isExplicitOverride() && !this.containsBody(bodyAdd.getIdentity()))
                 {
                 constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
                         constId.getValueString(),
@@ -506,6 +504,21 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff any body of this info has the specified property id
+     */
+    public boolean containsBody(PropertyConstant id)
+        {
+        for (PropertyBody body : m_aBody)
+            {
+            if (id.equals(body.getIdentity()))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return the first PropertyBody of this PropertyInfo; in a loose sense, the meaning of the
      *         term "first" corresponds to the order of the call chain
      */
@@ -774,6 +787,36 @@ public class PropertyInfo
         }
 
     /**
+     * @return the identity selected for the field of the property, or null iff the property does
+     *         not have a field
+     */
+    public PropertyConstant getFieldIdentity()
+        {
+        if (!hasField())
+            {
+            return null;
+            }
+
+        PropertyConstant idBest = null;
+        for (int i = m_aBody.length - 1; i >= 0; --i)
+            {
+            PropertyBody body = m_aBody[i];
+            if (body.hasField())
+                {
+                return body.getIdentity();
+                }
+
+            if (idBest == null && body.getImplementation().compareTo(Implementation.Abstract) >= 0)
+                {
+                idBest = body.getIdentity();
+                }
+            }
+
+        assert idBest != null;
+        return idBest;
+        }
+
+    /**
      * @return an array of the non-virtual annotations on the property declaration itself
      */
     public Annotation[] getPropertyAnnotations()
@@ -886,6 +929,24 @@ public class PropertyInfo
         }
 
     /**
+     * Obtain the method chain for the property getter represented by this property info.
+     *
+     * @param type  the enclosing TypeInfo
+     *
+     * @return the method chain iff the property exists; otherwise null
+     */
+    public MethodBody[] ensureOptimizedGetChain(TypeInfo type)
+        {
+        MethodBody[] chain = m_chainGet;
+        if (chain == null)
+            {
+            m_chainGet = chain = ensurePropertyChain(type, getGetterId());
+            }
+
+        return chain;
+        }
+
+    /**
      * @return the MethodConstant that will identify the setter (but not necessarily a
      *         MethodConstant that actually exists, because there may not be a setter, but also
      *         because the fully resolved type is used in the MethodConstant)
@@ -895,6 +956,24 @@ public class PropertyInfo
         PropertyConstant constId = getIdentity();
         ConstantPool     pool    = constId.getConstantPool();
         return pool.ensureMethodConstant(constId, "set", new TypeConstant[]{getType()}, ConstantPool.NO_TYPES);
+        }
+
+    /**
+     * Obtain the method chain for the property getter represented by this property info.
+     *
+     * @param type  the enclosing TypeInfo
+     *
+     * @return the method chain iff the property exists; otherwise null
+     */
+    public MethodBody[] ensureOptimizedSetChain(TypeInfo type)
+        {
+        MethodBody[] chain = m_chainSet;
+        if (chain == null)
+            {
+            m_chainSet = chain = ensurePropertyChain(type, getSetterId());
+            }
+
+        return chain;
         }
 
     /**
@@ -928,6 +1007,67 @@ public class PropertyInfo
     public boolean isInjected()
         {
         return getHead().isInjected();
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Validate the property accessor chain represented by this property info.
+     *
+     * REVIEW some of this could be done by the TypeInfo "build" process
+     *
+     * @param type     the enclosing TypeInfo
+     * @param constId  the accessor method constant
+     *
+     * @return the method chain iff the property exists; otherwise null
+     */
+    private MethodBody[] ensurePropertyChain(TypeInfo type, MethodConstant constId)
+        {
+        MethodBody[] chain = type.getOptimizedMethodChain(constId);
+
+        if (chain == null)
+            {
+            if (hasField())
+                {
+                chain = new MethodBody[]
+                    {
+                    new MethodBody(constId, constId.getSignature(),
+                            Implementation.Field, getFieldIdentity())
+                    };
+                }
+            else
+                {
+                chain = MethodBody.NO_BODIES;
+                }
+            }
+        else if (hasField())
+            {
+            int cBodies = chain.length;
+            if (cBodies > 0)
+                {
+                int ixTail = cBodies - 1;
+
+                Implementation implTail = chain[ixTail].getImplementation();
+                if (implTail != Implementation.Field)
+                    {
+                    if (implTail == Implementation.Default)
+                        {
+                        chain = chain.clone();
+                        }
+                    else
+                        {
+                        MethodBody[] chainNew = new MethodBody[cBodies + 1];
+                        System.arraycopy(chain, 0, chainNew, 0, cBodies);
+                        chain = chainNew;
+                        ixTail++;
+                        }
+                    }
+                chain[ixTail] = new MethodBody(constId, constId.getSignature(),
+                        Implementation.Field, getFieldIdentity());
+                }
+            }
+        return chain;
         }
 
 
@@ -1043,7 +1183,7 @@ public class PropertyInfo
             }
 
         /*
-         * The resolver to delegat to.
+         * The resolver to delegate to.
          */
         public final TypeInfo.TypeResolver resolver;
         }
@@ -1071,4 +1211,14 @@ public class PropertyInfo
      * treated as a Ref.
      */
     private final boolean m_fSuppressVar;
+
+    /**
+     * Cached "get" chain.
+     */
+    private MethodBody[] m_chainGet;
+
+    /**
+     * Cached "set" chain.
+     */
+    private MethodBody[] m_chainSet;
     }

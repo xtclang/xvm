@@ -569,15 +569,15 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff the type is a tuple type
+     * @return true iff the type is a Tuple type
      */
     public boolean isTuple()
         {
-        return isSingleDefiningConstant() && getDefiningConstant().equals(getConstantPool().clzTuple());
+        return isSingleDefiningConstant() && getUnderlyingType().isTuple();
         }
 
     /**
-     * @return true iff the type is a tuple type
+     * @return true iff the type is an Array type
      */
     public boolean isArray()
         {
@@ -587,12 +587,14 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff the type is a tuple type
+     * @return true iff the type is a Sequence type
      */
     public boolean isSequence()
         {
         TypeConstant constThis = (TypeConstant) this.simplify();
         assert !constThis.containsUnresolved();
+
+        constThis = constThis.resolveAutoNarrowing();
         return     constThis.isEcstasy("String")
                 || constThis.isEcstasy("Array")
                 || constThis.isEcstasy("List")
@@ -669,10 +671,25 @@ public abstract class TypeConstant
 
         // since this can only be used "from the outside", there should be no deferred TypeInfo
         // objects at this point
-        assert !hasDeferredTypeInfo();
+        if (hasDeferredTypeInfo())
+            {
+            throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
+                    + this + "; deferred types=" + takeDeferredTypeInfo());
+            }
 
         // build the TypeInfo for this type
         info = buildTypeInfo(errs);
+
+        // info here can't be null, because we should be at the "zero level"; in other words, anyone
+        // who calls ensureTypeInfo() should get a usable result, because nothing is already on the
+        // stack blocking it from finishing correctly (which is why we can't use ensureTypeInfo()
+        // ourselves within this process of creating type infos)
+        if (info == null)
+            {
+            throw new IllegalStateException("Failure to produce a TypeInfo for "
+                    + this + "; deferred types=" + takeDeferredTypeInfo());
+            }
+
         setTypeInfo(info);
 
         if (hasDeferredTypeInfo())
@@ -728,8 +745,11 @@ public abstract class TypeConstant
             {
             setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
             info = buildTypeInfo(errs);
-            setTypeInfo(info);
-            if (!info.isComplete())
+            if (info != null)
+                {
+                setTypeInfo(info);
+                }
+            if (!isComplete(info))
                 {
                 addDeferredTypeInfo(this);
                 }
@@ -819,7 +839,9 @@ public abstract class TypeConstant
      *
      * @param errs  the error list to log any errors to
      *
-     * @return a new TypeInfo representing this TypeConstant
+     * @return a new TypeInfo representing this TypeConstant, or null iff building a type info for
+     *         this type is currently impossible because it requires a different TypeInfo that is
+     *         already in the process of being built
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
@@ -847,10 +869,11 @@ public abstract class TypeConstant
 
             case PUBLIC:
                 assert !isAccessSpecified();
-                // note: this uses ensureTypeInfo() instead of ensureTypeInfoInternal(), which may
-                //       need to be carefully REVIEW'd, in the off chance of circular dependencies
-                return getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
-                        .ensureTypeInfo(errs).limitAccess(Access.PUBLIC);
+                TypeInfo info = getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
+                        .ensureTypeInfoInternal(errs);
+                return info == null
+                        ? null
+                        : info.limitAccess(Access.PUBLIC);
             }
 
         // this implementation only deals with modifying (not including immutable) and terminal type
@@ -885,10 +908,10 @@ public abstract class TypeConstant
         // represented by annotations in this type constant itself, followed by the annotations in
         // the class structure, followed by the class structure (as its own pseudo-contribution),
         // followed by the remaining contributions
-        List<Contribution> listProcess    = new ArrayList<>();
-        List<Annotation>   listClassAnnos = new ArrayList<>();
-        TypeConstant[]     atypeSpecial   = createContributionList(
-                constId, struct, listProcess, listClassAnnos, resolver, errs);
+        List<Contribution> listProcess  = new ArrayList<>();
+        List<Annotation>   listAnnos    = new ArrayList<>();
+        TypeConstant[]     atypeSpecial = createContributionList(
+                constId, struct, listProcess, listAnnos, resolver, errs);
         TypeConstant typeInto    = atypeSpecial[0];
         TypeConstant typeExtends = atypeSpecial[1];
         TypeConstant typeRebase  = atypeSpecial[2];
@@ -902,7 +925,7 @@ public abstract class TypeConstant
                 listProcess, listmapClassChain, listmapDefaultChain, errs);
 
         // determine if the type is explicitly abstract
-        Annotation[] aannoClass = listClassAnnos.toArray(new Annotation[listClassAnnos.size()]);
+        Annotation[] aannoClass = listAnnos.toArray(new Annotation[listAnnos.size()]);
         boolean      fAbstract  = struct.getFormat() == Component.Format.INTERFACE
                 || TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
@@ -952,7 +975,13 @@ public abstract class TypeConstant
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
 
         ConstantPool pool    = getConstantPool();
-        TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).ensureTypeInfo(errs);
+        TypeInfo     infoPri = pool.ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE).
+                               ensureTypeInfoInternal(errs);
+        if (infoPri == null)
+            {
+            return null;
+            }
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
             // the properties that show up in structure types are those that have a field; however,
@@ -963,6 +992,7 @@ public abstract class TypeConstant
                 {
                 PropertyConstant id = entry.getKey();
                 // REVIEW do we need to transform "prop" into some sort of "struct" form?
+                // REVIEW if we do, then we need to explicitly retain the PropertyInfo.getFieldIdentity()
                 if (prop.isVirtual())
                     {
                     mapVirtProps.put(id.getNestedIdentity(), prop);
@@ -1021,7 +1051,6 @@ public abstract class TypeConstant
                                     || prop.hasField())
                                 {
                                 PropertyConstant id = entry.getKey();
-                                // REVIEW do we need to transform "prop" into some sort of "struct" form?
                                 if (prop.isVirtual())
                                     {
                                     Object nid = id.getNestedIdentity();
@@ -1079,18 +1108,20 @@ public abstract class TypeConstant
         TypeConstant[] atypeParams = getParamTypesArray();
         int            cTypeParams = atypeParams.length;
 
-        // obtain the type parameters declared by the class
-        List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
-        int                                       cClassParams    = listClassParams.size();
         if (isTuple())
             {
             // warning: turtles
-            ParamInfo param = new ParamInfo("ElementTypes", this, this);
+            TypeConstant typeElements = new TupleElementsTypeConstant(getConstantPool(), atypeParams);
+            ParamInfo param = new ParamInfo("ElementTypes", this, typeElements);
             mapTypeParams.put(param.getName(), param);
             }
         else
             {
-            if (cTypeParams  > cClassParams)
+            // obtain the type parameters declared by the class
+            List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
+            int                                       cClassParams    = listClassParams.size();
+
+            if (cTypeParams > cClassParams)
                 {
                 if (cClassParams == 0)
                     {
@@ -1143,13 +1174,13 @@ public abstract class TypeConstant
      * Fill in the passed list of contributions to process, and also collect a list of all the
      * annotations.
      *
-     * @param constId         the identity constant of the class that the type is based on
-     * @param struct          the structure of the class that the type is based on
-     * @param listProcess     a list of contributions, which will be filled by this method in the
-     *                        order that they should be processed
-     * @param listClassAnnos  a list of annotations, which will be filled by this method
-     * @param resolver        the GenericTypeResolver for the type
-     * @param errs            the error list to log to
+     * @param constId      the identity constant of the class that the type is based on
+     * @param struct       the structure of the class that the type is based on
+     * @param listProcess  a list of contributions, which will be filled by this method in the
+     *                     order that they should be processed
+     * @param listAnnos    a list of annotations, which will be filled by this method
+     * @param resolver     the GenericTypeResolver for the type
+     * @param errs         the error list to log to
      *
      * @return an array containing the "into", "extends" and "rebase" types
      */
@@ -1157,7 +1188,7 @@ public abstract class TypeConstant
             IdentityConstant    constId,
             ClassStructure      struct,
             List<Contribution>  listProcess,
-            List<Annotation>    listClassAnnos,
+            List<Annotation>    listAnnos,
             GenericTypeResolver resolver,
             ErrorListener       errs)
         {
@@ -1177,9 +1208,11 @@ public abstract class TypeConstant
 
                 case AnnotatedType:
                     // has to be an explicit class identity
-                    Annotation   annotation = ((AnnotatedTypeConstant) typeClass).getAnnotation();
-                    TypeConstant typeMixin  = annotation.getAnnotationType();
-                    if (!typeMixin.isExplicitClassIdentity(false))
+                    AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeClass;
+                    Annotation            annotation = typeAnno.getAnnotation();
+                    TypeConstant          typeMixin  = typeAnno.getAnnotationType();
+
+                    if (!typeMixin.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                                 constId.getPathString(), typeMixin.getValueString());
@@ -1200,7 +1233,7 @@ public abstract class TypeConstant
                     if (typeInto.isIntoClassType())
                         {
                         // check for duplicate class annotation
-                        if (listClassAnnos.stream().anyMatch(annoPrev ->
+                        if (listAnnos.stream().anyMatch(annoPrev ->
                                 annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
                             {
                             log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
@@ -1208,7 +1241,7 @@ public abstract class TypeConstant
                             }
                         else
                             {
-                            listClassAnnos.add(annotation);
+                            listAnnos.add(annotation);
                             }
                         break;
                         }
@@ -1234,7 +1267,7 @@ public abstract class TypeConstant
                         {
                         // apply annotation
                         listProcess.add(new Contribution(annotation, pool.ensureAccessTypeConstant(
-                                annotation.getAnnotationType(), Access.PROTECTED)));
+                                typeMixin, Access.PROTECTED)));
                         }
                     break;
 
@@ -1285,7 +1318,7 @@ public abstract class TypeConstant
             if (typeInto.isIntoClassType())
                 {
                 // check for duplicate class annotation
-                if (listClassAnnos.stream().anyMatch(annoPrev ->
+                if (listAnnos.stream().anyMatch(annoPrev ->
                         annoPrev.getAnnotationClass().equals(annotation.getAnnotationClass())))
                     {
                     log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
@@ -1293,7 +1326,7 @@ public abstract class TypeConstant
                     }
                 else
                     {
-                    listClassAnnos.add(annotation);
+                    listAnnos.add(annotation);
                     }
                 continue;
                 }
@@ -1760,11 +1793,11 @@ public abstract class TypeConstant
                     // collect type parameters
                     for (ParamInfo paramNew : infoContrib.getTypeParams().values())
                         {
-                        String    sParam   = paramNew.getName();
-                        ParamInfo paramOld = mapTypeParams.get(sParam);
+                        Object    nid      = paramNew.getNestedIdentity();
+                        ParamInfo paramOld = mapTypeParams.get(nid);
                         if (paramOld == null)
                             {
-                            mapTypeParams.put(sParam, paramNew);
+                            mapTypeParams.put(nid, paramNew);
                             }
                         else
                             {
@@ -1774,14 +1807,14 @@ public abstract class TypeConstant
                                 if (paramOld.isActualTypeSpecified())
                                     {
                                     log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
-                                            this.getValueString(), sParam,
+                                            this.getValueString(), nid,
                                             paramOld.getActualType().getValueString(),
                                             typeContrib.getValueString());
                                     }
                                 else
                                     {
                                     log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
-                                            this.getValueString(), sParam,
+                                            this.getValueString(), nid,
                                             typeContrib.getValueString(),
                                             paramNew.getActualType().getValueString());
                                     }
@@ -1789,7 +1822,7 @@ public abstract class TypeConstant
                             else if (!paramNew.getActualType().equals(paramOld.getActualType()))
                                 {
                                 log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                                        this.getValueString(), sParam,
+                                        this.getValueString(), nid,
                                         paramOld.getActualType().getValueString(),
                                         typeContrib.getValueString(),
                                         paramNew.getActualType().getValueString());
@@ -2254,7 +2287,7 @@ public abstract class TypeConstant
         //    it still exists and can be found by the un-narrowed signature, since it is
         //    necessary for the system to be able to find the method chain that corresponds to
         //    that un-narrowed signature, because that is the signature that will appear in any
-        //    code that was comipled against the base type). further, the cap indicates what
+        //    code that was compiled against the base type). further, the cap indicates what
         //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
         //    narrowed signature, which in turn will be able to walk up its super chain to the
         //    bottom-most narrowing method, which then supers to the method chain that is under
@@ -3053,15 +3086,14 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            String  sParam = param.getName();
-            boolean fFound = false;
-            PropertyInfo prop = mapProps.get(sParam);
+            String       sParam = param.getName();
+            PropertyInfo prop   = mapProps.get(sParam);
             if (prop == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.getValueString(), sParam);
                 }
-            else if (!prop.isTypeParam() || !prop.getType().equals(
+            else if (!prop.isTypeParam() || !prop.getType().isA(
                     pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,

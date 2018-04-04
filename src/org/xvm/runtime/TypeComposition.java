@@ -16,14 +16,13 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.runtime.CallChain.PropertyCallChain;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xRefImpl.RefHandle;
@@ -73,10 +72,10 @@ public class TypeComposition
     private Map<SignatureConstant, CallChain> m_mapMethods = new HashMap<>();
 
     // cached property getter call chain (the top-most method first)
-    private Map<String, PropertyCallChain> m_mapGetters = new HashMap<>();
+    private Map<String, CallChain> m_mapGetters = new HashMap<>();
 
     // cached property setter call chain (the top-most method first)
-    private Map<String, PropertyCallChain> m_mapSetters = new HashMap<>();
+    private Map<String, CallChain> m_mapSetters = new HashMap<>();
 
     // cached map of fields (values are always nulls)
     private Map<String, ObjectHandle> m_mapFields;
@@ -487,107 +486,46 @@ public class TypeComposition
         }
 
     // retrieve the call chain for the specified method
-    public CallChain getMethodCallChain(SignatureConstant constSignature, Access access)
+    public CallChain getMethodCallChain(SignatureConstant constSignature)
         {
-        // TODO: this will be replaced whit the TypeInfo
         // we only cache the PUBLIC access chains; all others are only cached at the op-code level
-        return access == Access.PUBLIC
-            ? m_mapMethods.computeIfAbsent(constSignature, sig -> collectMethodCallChain(sig, access))
-            : collectMethodCallChain(constSignature, access);
+        return m_mapMethods.computeIfAbsent(constSignature, this::collectMethodCallChain);
         }
 
-    // find a matching method and add to the list
-    protected CallChain collectMethodCallChain(SignatureConstant constSignature, Access access)
+    protected CallChain collectMethodCallChain(SignatureConstant constSignature)
         {
-        List<MethodStructure> list = new ArrayList<>();
-
         TypeConstant typeActual = f_typeInception;
         if (typeActual.isParamsSpecified())
             {
             constSignature = constSignature.resolveGenericTypes(typeActual);
             }
 
-        nextInChain:
-        for (TypeComposition clz : getCallChain())
-            {
-            MultiMethodStructure mms = (MultiMethodStructure)
-                clz.getTemplate().f_struct.getChild(constSignature.getName());
-            if (mms != null)
-                {
-                for (MethodStructure method : mms.methods())
-                    {
-                    if (method.getAccess().compareTo(access) <= 0 &&
-                        method.isSubstitutableFor(constSignature, typeActual))
-                        {
-                        list.add(method);
-
-                        if (!method.usesSuper())
-                            {
-                            break nextInChain;
-                            }
-                        // no need to check other methods; it would be an error anyway...
-                        break;
-                        }
-
-                    if (false) // debug only
-                        {
-                        System.out.println("non-match: \nprovided: " + constSignature +
-                                "\n found: " + method.getIdentityConstant().getSignature());
-                        }
-                    }
-                }
-            }
-        return new CallChain(list);
+        TypeInfo info = typeActual.ensureTypeInfo();
+        return new CallChain(info.getOptimizedMethodChain(constSignature));
         }
 
-    public PropertyCallChain getPropertyGetterChain(String sProperty)
+    // retrieve the call chain for the specified property
+    public CallChain getPropertyGetterChain(String sProperty)
         {
-        // TODO: this will be replaced whit the TypeInfo
         return m_mapGetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, true));
         }
 
-    public PropertyCallChain getPropertySetterChain(String sProperty)
+    public CallChain getPropertySetterChain(String sProperty)
         {
-        // TODO: this will be replaced whit the TypeInfo
         return m_mapSetters.computeIfAbsent(sProperty, sPropName ->
                 collectPropertyCallChain(sPropName, false));
         }
 
-    protected PropertyCallChain collectPropertyCallChain(String sPropName, boolean fGetter)
+    protected CallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
-        PropertyStructure propertyBase = null;
-        List<MethodStructure> list = new ArrayList<>();
+        TypeInfo     type = f_typeInception.ensureTypeInfo();
+        PropertyInfo prop = type.findProperty(sPropName);
+        PropertyConstant id = prop.getIdentity();
 
-        for (TypeComposition clz : getCallChain())
-            {
-            ClassTemplate template = clz.getTemplate();
-            PropertyStructure property = template.getProperty(sPropName);
-            if (property != null)
-                {
-                MultiMethodStructure mms = (MultiMethodStructure) property.getChild(
-                        fGetter ? "get" : "set");
-                if (mms != null)
-                    {
-                    // TODO: compare the signature; see ClassTemplate#getDeclaredMethod
-                    MethodStructure method = mms.methods().get(0);
-
-                    list.add(method);
-                    }
-
-                if (template.isStateful())
-                    {
-                    propertyBase = property;
-                    }
-                }
-            }
-
-        if (propertyBase == null)
-            {
-            throw new IllegalStateException("Class " + this + " missing property " + sPropName);
-            }
-
-        return new PropertyCallChain(list, propertyBase, fGetter);
+        return new CallChain(fGetter
+            ? type.getOptimizedGetChain(id)
+            : type.getOptimizedSetChain(id));
         }
 
     // retrieve the property structure for the specified property

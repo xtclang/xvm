@@ -58,8 +58,8 @@ public class MethodInfo
     MethodInfo cappedBy(MethodInfo that)
         {
         // both method chains must be virtual, and neither can already be capped
-        assert this.isOverrideable();
-        assert that.isOverrideable();
+        assert this.isOverridable();
+        assert that.isOverridable();
 
         // create a MethodConstant for the cap that will sit next to the method body that caused the
         // narrowing to occur
@@ -121,7 +121,8 @@ public class MethodInfo
             assert cAdd == 1;
 
             // check @Override
-            if (!aAdd[0].isOverride())
+            MethodBody bodyAdd = aAdd[0];
+            if (!bodyAdd.isOverride() && !this.containsBody(bodyAdd.getIdentity()))
                 {
                 MethodConstant id = getIdentity();
                 id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
@@ -157,7 +158,7 @@ public class MethodInfo
             return this;
             }
 
-        if (!isOverrideable())
+        if (!isOverridable())
             {
             // it is not possible to override the base method
             MethodConstant id = getIdentity();
@@ -248,6 +249,21 @@ public class MethodInfo
     public MethodConstant getIdentity()
         {
         return getHead().getIdentity();
+        }
+
+    /**
+     * @return true iff any body of this info has the specified method id
+     */
+    public boolean containsBody(MethodConstant id)
+        {
+        for (MethodBody body : m_aBody)
+            {
+            if (id.equals(body.getIdentity()))
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**
@@ -357,7 +373,7 @@ public class MethodInfo
      *
      * @return true iff the method is virtual and not capped
      */
-    public boolean isOverrideable()
+    public boolean isOverridable()
         {
         return isVirtual() && !isCapped();
         }

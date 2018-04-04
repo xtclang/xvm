@@ -102,6 +102,7 @@ class TestApp
             throw new Exception(s);
             }
 
+        @Override
         String to<String>()
             {
             return super() + ": prop1=" + prop1;
@@ -132,6 +133,7 @@ class TestApp
             return temp + prop2;
             }
 
+        @Override
         String to<String>()
             {
             return super() + ": prop2=" + prop2;
@@ -314,6 +316,7 @@ class TestApp
                 }
             }
 
+        @Override
         String to<String>()
             {
             return super() + ": counter2=" + counter2;
@@ -434,11 +437,13 @@ class TestApp
         Int x; // TODO: remove
         Int y; // TODO: remove
 
+        @Override
         Int hash.get()
             {
             return x + y;
             }
 
+        @Override
         String to<String>()
             {
             return "(" + x + ", " + y + ")";
@@ -460,6 +465,7 @@ class TestApp
             pix = i;
             }
 
+        @Override
         String to<String>()
             {
             return super() + " " + pix;
@@ -496,6 +502,7 @@ class TestApp
         {
         String prefix; // TODO: remove
 
+        @Override
         String to<String>()
             {
             return prefix + super();

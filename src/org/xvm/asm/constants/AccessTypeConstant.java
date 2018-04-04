@@ -120,8 +120,11 @@ public class AccessTypeConstant
         Access access = m_access;
         if (access == Access.PUBLIC || access == Access.PROTECTED)
             {
-            return getConstantPool().ensureAccessTypeConstant(getUnderlyingType(), Access.PRIVATE)
-                    .ensureTypeInfo(errs).limitAccess(access);
+            TypeInfo info = getConstantPool().ensureAccessTypeConstant(
+                    getUnderlyingType(), Access.PRIVATE).ensureTypeInfoInternal(errs);
+            return info == null
+                    ? null
+                    : info.limitAccess(access);
             }
 
         return super.buildTypeInfo(errs);

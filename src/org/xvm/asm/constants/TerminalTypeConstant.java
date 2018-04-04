@@ -160,9 +160,6 @@ public class TerminalTypeConstant
                 return clz.getTypeParams().size();
                 }
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).getMaxParamsCount();
-
             case ThisClass:
             case ParentClass:
             case ChildClass:
@@ -267,9 +264,6 @@ public class TerminalTypeConstant
                 idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
                 break;
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).normalizeParametersInternal(listParams);
-
             case Property:
             case Register:
                 return this;
@@ -337,6 +331,37 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isTuple()
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+                return false;
+
+            case Class:
+                break;
+
+            case Register:
+                constant = getRegisterTypeConstant((RegisterConstant) constant);
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                constant = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            default:
+                // let's be tolerant to unresolved constants
+                return false;
+            }
+        return constant.equals(getConstantPool().clzTuple());
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         Constant constant = getDefiningConstant();
@@ -346,9 +371,6 @@ public class TerminalTypeConstant
             case Package:
             case Class:
                 return super.buildTypeInfo(errs);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).buildTypeInfo(errs);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).buildTypeInfo(errs);
@@ -403,9 +425,6 @@ public class TerminalTypeConstant
                 return ((ClassStructure) ((IdentityConstant) constant)
                         .getComponent()).extendsClass(constClass);
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).extendsClass(constClass);
-
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).extendsClass(constClass);
 
@@ -440,9 +459,6 @@ public class TerminalTypeConstant
                 ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
                 return clz.getFormat() != Component.Format.INTERFACE;
                 }
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).isClassType();
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).isClassType();
@@ -480,10 +496,6 @@ public class TerminalTypeConstant
                 ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
                 return fAllowInterface || clz.getFormat() != Component.Format.INTERFACE;
                 }
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).
-                    isSingleUnderlyingClass(fAllowInterface);
 
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).
@@ -526,10 +538,6 @@ public class TerminalTypeConstant
                     }
                 return (IdentityConstant) constant;
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).
-                    getSingleUnderlyingClass(fAllowInterface);
-
             case Property:
                 return getPropertyTypeConstant((PropertyConstant) constant).
                     getSingleUnderlyingClass(fAllowInterface);
@@ -562,7 +570,6 @@ public class TerminalTypeConstant
             case ChildClass:
                 return true;
 
-            case Typedef:
             case Property:
             case Register:
                 return false;
@@ -594,7 +601,6 @@ public class TerminalTypeConstant
                 // follow the indirection to the class structure
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
 
-            case Typedef:
             case Property:
             case Register:
             default:
@@ -650,9 +656,6 @@ public class TerminalTypeConstant
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constant).isConstant();
-
             case Property:
             case Register:
                 return false;
@@ -757,10 +760,6 @@ public class TerminalTypeConstant
                 break;
                 }
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdRight).
-                    collectContributions(typeLeft, listRight, chains);
-
             case Property:
                 // scenarios we can handle here are:
                 // 1. r-value (this) = T (formal parameter type), constrained by U (other formal type)
@@ -846,10 +845,6 @@ public class TerminalTypeConstant
                 break;
                 }
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdLeft).
-                    collectClassContributions(clzRight, listRight, chains);
-
             case Property:
             case Register:
                 // r-value (that) is a real type; it cannot have a formal type contribution
@@ -898,10 +893,6 @@ public class TerminalTypeConstant
                 return clzLeft.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
                 }
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdLeft).
-                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdLeft).
                     isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
@@ -933,10 +924,6 @@ public class TerminalTypeConstant
 
                 return clzThis.containsSubstitutableMethod(signature, access, listParams);
                 }
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    containsSubstitutableMethod(signature, access, listParams);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
@@ -992,10 +979,6 @@ public class TerminalTypeConstant
                     }
                 return Usage.NO;
                 }
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    checkConsumption(sTypeName, access, listParams);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
@@ -1056,10 +1039,6 @@ public class TerminalTypeConstant
                 return Usage.NO;
                 }
 
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).
-                    checkProduction(sTypeName, access, listParams);
-
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
                     checkProduction(sTypeName, access, listParams);
@@ -1087,9 +1066,6 @@ public class TerminalTypeConstant
             case Package:
             case Class:
                 return registry.getTemplate((IdentityConstant) constIdThis);
-
-            case Typedef:
-                return getTypedefTypeConstant((TypedefConstant) constIdThis).getOpSupport(registry);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).getOpSupport(registry);
@@ -1270,7 +1246,6 @@ public class TerminalTypeConstant
                 case Module:
                 case Package:
                 case Class:
-                case Typedef:
                 case Property:
                 case Register:
                 case ThisClass:
