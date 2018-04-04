@@ -6,15 +6,10 @@ import java.math.BigDecimal;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.CharConstant;
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.Float16Constant;
-import org.xvm.asm.constants.ImmutableTypeConstant;
-import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -84,34 +79,35 @@ public class LiteralExpression
         {
         TypeConstant typeLiteral  = getLiteralType();
         Constant     constLiteral = getLiteralConstant();
-        if (typeRequired != null && !typeLiteral.isA(typeRequired))
-            {
-            // need to find a conversion
-            MethodConstant idMethod = typeLiteral.ensureTypeInfo().findConversion(typeRequired);
-            if (idMethod == null)
-                {
-                // TODO log error
-                finishValidation(TypeFit.Fit, typeRequired, generateFakeConstant(typeRequired));
-                return null;
-                }
-            else
-                {
-                // use the return value from the conversion function to figure out what type the
-                // literal should be converted to, and then do the conversion here in the compiler
-                // (eventually, once boot-strapped into Ecstasy, the compiler will be able to rely
-                // on the runtime itself to do conversions, and using containers, can even do so for
-                // user code)
-                TypeConstant typeConv = idMethod.getSignature().getRawReturns()[0];
 
+        TypeFit fit = TypeFit.Fit;
+        if (typeRequired != null)
+            {
+            // determine whether or not the constant can provide the requested type
+            fit = calcFit(ctx, typeLiteral, typeRequired, pref);
+            if (!fit.isFit() || fit.isConverting())
+                {
+                // need to find a conversion (or in the case of "no fit", just pretend we're trying
+                // to find a conversion, since there is none, and then when we try to convert, we
+                // will log the appropriate error)
+                MethodConstant idMethod = typeLiteral.ensureTypeInfo().findConversion(typeRequired);
+                if (idMethod != null)
+                    {
+                    // use the return value from the conversion function to figure out what type the
+                    // literal should be converted to, and then do the conversion here in the
+                    // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
+                    // able to rely on the runtime itself to do conversions, and using containers,
+                    // can even do so for user code)
+                    typeRequired = idMethod.getSignature().getRawReturns()[0];
+                    }
+
+                constLiteral = convertConstant(constLiteral, typeRequired, errs);
+                typeLiteral  = fit.isFit() ? constLiteral.getType() : typeRequired;
                 }
             }
 
-
-//        TypeFit      fit         = calcFit(ctx, typeLiteral, typeRequired, pref);
-//        if (fit == TypeFit.NoFit)
-//            {
-//            }
-//        finishValidation(fit, );
+        finishValidation(fit, typeLiteral, constLiteral);
+        return this;
         }
 
 
@@ -515,7 +511,8 @@ public class LiteralExpression
                 throw new UnsupportedOperationException("var-len binary floating point not implemented");
 
             default:
-                log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                        type.getValueString(), val.getType().getValueString());
                 return Constant.defaultValue(type);
             }
         }

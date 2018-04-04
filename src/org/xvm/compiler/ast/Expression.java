@@ -36,6 +36,13 @@ import static org.xvm.util.Handy.checkElementsNonNull;
 /**
  * Base class for all Ecstasy expressions.
  * <p/>
+ * Expressions go through a few stages of compilation. Initially, the expressions must determine
+ * its arity and its type(s) etc., but there exists more than one possible result in some cases,
+ * based on what type is expected or required of the expression. Similarly, the resulting type
+ * of this expression could affect the type of a containing expression. To accommodate this, the
+ * expression has to be able to answer some hypothetical questions _before_ it validates, and
+ * _all_ questions after it validates.
+ * <p/>
  * Concepts:
  * <pre>
  * 1. You've got to be able to ask an expression some simple, obvious questions:
@@ -137,281 +144,6 @@ public abstract class Expression
 
 
     // ----- Expression compilation ----------------------------------------------------------------
-
-    // Expressions go through a few stages of compilation. Initially, the expressions must determine
-    // its arity and its type(s) etc., but there exists more than one possible result in some cases,
-    // based on what type is expected or required of the expression. Similarly, the resulting type
-    // of this expression can affect the type of a containing expression. To accomodate this, the
-    // expression has to be able to answer some hypothetical questions _before_ it validates, and
-    // _all_ questions after it validates.
-
-    /**
-     * Represents the ability of an expression to yield a requested type:
-     * <ul>
-     * <li>{@code NoFit} - the expression can <b>not</b> yield the requested type;</li>
-     * <li>{@code ConvPackUnpack} - the expression can yield the requested type via a combination of
-     *     {@code @Auto} type conversion, tuple packing, and tuple unpacking;</li>
-     * <li>{@code ConvPack} - the expression can yield the requested type via a combination of
-     *     {@code @Auto} type conversion and tuple packing;</li>
-     * <li>{@code ConvUnpack} - the expression can yield the requested type via a combination of
-     *     {@code @Auto} type conversion and tuple unpacking;</li>
-     * <li>{@code Conv} - the expression can yield the requested type via {@code @Auto} type
-     *     conversion;</li>
-     * <li>{@code PackUnpack} - the expression can yield the requested type via a combination of
-     *     tuple packing and tuple unpacking;</li>
-     * <li>{@code Pack} - the expression can yield the requested type via tuple packing;</li>
-     * <li>{@code Unpack} - the expression can yield the requested type via tuple unpacking;</li>
-     * <li>{@code Fit} - the expression can yield the requested type.</li>
-     * </ul>
-     */
-    public enum TypeFit
-        {
-        NoFit         (0b0000),
-        ConvPackUnpack(0b1111),
-        ConvPack      (0b1011),
-        ConvUnpack    (0b0111),
-        Conv          (0b0011),
-        PackUnpack    (0b1101),
-        Pack          (0b0101),
-        Unpack        (0b1001),
-        Fit           (0b0001);
-
-        /**
-         * Constructor.
-         *
-         * @param nFlags  bit flags defining how good a fit the TypeFit is
-         */
-        TypeFit(int nFlags)
-            {
-            FLAGS = nFlags;
-            }
-
-        /**
-         * @return true iff the type fits, regardless of whether it needs conversion or packing or
-         *         unpacking
-         */
-        public boolean isFit()
-            {
-            return (FLAGS & FITS) != 0;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, plus fits
-         */
-        public TypeFit ensureFit()
-            {
-            return isFit()
-                    ? this
-                    : Fit;
-            }
-
-        /**
-         * @return true iff the type goes through at least one "@Auto" conversion in order to fit
-         */
-        public boolean isConverting()
-            {
-            return (FLAGS & CONVERTS) != 0;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, plus type conversion
-         */
-        public TypeFit addConversion()
-            {
-            return isFit()
-                    ? forFlags(FLAGS | CONVERTS)
-                    : NoFit;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, minus type conversion
-         */
-        public TypeFit removeConversion()
-            {
-            return isConverting()
-                    ? forFlags(FLAGS & ~CONVERTS)
-                    : this;
-            }
-
-        /**
-         * @return true iff the type goes through a tuple creation
-         */
-        public boolean isPacking()
-            {
-            return (FLAGS & PACKS) != 0;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, plus Tuple packing
-         */
-        public TypeFit addPack()
-            {
-            return isFit()
-                    ? forFlags(FLAGS | PACKS)
-                    : NoFit;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, minus Tuple packing
-         */
-        public TypeFit removePack()
-            {
-            return isPacking()
-                    ? forFlags(FLAGS & ~PACKS)
-                    : this;
-            }
-
-        /**
-         * @return true iff the type goes through a tuple extraction
-         */
-        public boolean isUnpacking()
-            {
-            return (FLAGS & UNPACKS) != 0;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, plus Tuple unpacking
-         */
-        public TypeFit addUnpack()
-            {
-            return isFit()
-                    ? forFlags(FLAGS | UNPACKS)
-                    : NoFit;
-            }
-
-        /**
-         * @return a TypeFit that does everything this TypeFit does, minus Tuple unpacking
-         */
-        public TypeFit removeUnpack()
-            {
-            return isConverting()
-                    ? forFlags(FLAGS & ~UNPACKS)
-                    : this;
-            }
-
-        /**
-         * Produce a fit that combines this fit and that fit.
-         *
-         * @param that  the other fit
-         *
-         * @return a fit that combines all the attributes of this fit and that fit
-         */
-        public TypeFit combineWith(TypeFit that)
-            {
-            return forFlags(this.FLAGS | that.FLAGS);
-            }
-
-        /**
-         * Determine which is the best fit, and return that best fit.
-         *
-         * @param that  the other fit
-         *
-         * @return whichever fit is considered better
-         */
-        public TypeFit betterOf(TypeFit that)
-            {
-            return this.ordinal() > that.ordinal() ? this : that;
-            }
-
-        /**
-         * Determine if another fit is better than this fit.
-         *
-         * @param that  the other fit
-         *
-         * @return true iff the other fit is considered to be a better fit than this fit
-         */
-        public boolean betterThan(TypeFit that)
-            {
-            return this.ordinal() > that.ordinal();
-            }
-
-        /**
-         * Determine if another fit is worse than this fit.
-         *
-         * @param that  the other fit
-         *
-         * @return true iff the other fit is considered to be a worse fit than this fit
-         */
-        public boolean worseThan(TypeFit that)
-            {
-            return this.ordinal() < that.ordinal();
-            }
-
-        /**
-         * Look up a TypeFit enum by its ordinal.
-         *
-         * @param i  the ordinal
-         *
-         * @return the TypeFit enum for the specified ordinal
-         */
-        public static TypeFit valueOf(int i)
-            {
-            return BY_ORDINAL[i];
-            }
-
-        /**
-         * Look up a TypeFit enum by its flags.
-         *
-         * @param nFlags  the flags
-         *
-         * @return the TypeFit enum for the specified ordinal
-         */
-        public static TypeFit forFlags(int nFlags)
-            {
-            if (nFlags >= 0 && nFlags <= BY_FLAGS.length)
-                {
-                TypeFit fit = BY_FLAGS[nFlags];
-                if (fit != null)
-                    {
-                    return fit;
-                    }
-                }
-
-            throw new IllegalStateException("no fit for flag value: " + nFlags);
-            }
-
-        /**
-         * All of the TypeFit enums, by ordinal.
-         */
-        private static final TypeFit[] BY_ORDINAL = TypeFit.values();
-
-        /**
-         * All of the TypeFit enums, by flags.
-         */
-        private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
-        static
-            {
-            for (TypeFit fit : BY_ORDINAL)
-                {
-                BY_FLAGS[fit.FLAGS] = fit;
-                }
-            }
-
-        public static final int FITS     = 0b0001;
-        public static final int CONVERTS = 0b0010;
-        public static final int PACKS    = 0b0100;
-        public static final int UNPACKS  = 0b1000;
-
-        /**
-         * Represents the state of the TypeFit.
-         */
-        public final int FLAGS;
-        }
-
-    /**
-     * Represents the form that the Expression can or does yield a tuple:
-     * <ul>
-     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type(s) in a tuple
-     *                        form</li>
-     * <li>{@code Accepted} - the expression should yield a tuple if not yielding a tuple would
-     *                        involve additional cost</li>
-     * <li>{@code Desired}  - the expression should yield a tuple if it can do with no cost</li>
-     * <li>{@code Required} - the expression must <b>always</b> yields a tuple of the requested
-     *                        type(s)</li>
-     * </ul>
-     */
-    // REVIEW could it simplify to: Never, Either, Always?
-    public enum TuplePref {Rejected, Accepted, Desired, Required}
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified type. Note that if a
@@ -571,7 +303,11 @@ public abstract class Expression
         {
         checkDepth();
 
-        return validateMulti(ctx, new TypeConstant[] {typeRequired}, pref, errs);
+        TypeConstant[] aTypes = typeRequired == null
+                ? TypeConstant.NO_TYPES
+                : new TypeConstant[] {typeRequired};
+
+        return validateMulti(ctx, aTypes, pref, errs);
         }
 
     /**
@@ -585,24 +321,24 @@ public abstract class Expression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  an array of required types
-     * @param tuplepref      indicates what options the Expression has in terms of resulting in a
+     * @param pref           indicates what options the Expression has in terms of resulting in a
      *                       tuple
      * @param errs           the error listener to log to
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref tuplepref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
         {
         checkDepth();
 
         switch (atypeRequired.length)
             {
             case 0:
-                return validate(ctx, pool().typeVoid(), tuplepref, errs);
+                return validate(ctx, pool().typeVoid(), pref, errs);
 
             case 1:
                 // single type expected
-                return validate(ctx, atypeRequired[0], tuplepref, errs);
+                return validate(ctx, atypeRequired[0], pref, errs);
 
             default:
                 // log the error, but allow validation to continue (with no particular
@@ -610,7 +346,7 @@ public abstract class Expression
                 // validate phase
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
                         atypeRequired.length, 1);
-                finishValidation(TypeFit.Fit, atypeRequired, null);
+                finishValidations(TypeFit.Fit, atypeRequired, null);
                 return null;
             }
         }
@@ -624,7 +360,7 @@ public abstract class Expression
      */
     protected void finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
         {
-        finishValidation(
+        finishValidations(
                 fit,
                 type == null ? null : new TypeConstant[] {type},
                 constVal == null ? null : new Constant[] {constVal});
@@ -638,7 +374,7 @@ public abstract class Expression
      * @param aconstVal  an array of constant values, equal in length to the array of types, iff
      *                   this expression is constant
      */
-    protected void finishValidation(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
+    protected void finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
         {
         if (aType == null)
             {
@@ -1656,6 +1392,280 @@ public abstract class Expression
         }
 
 
+    // ----- TypeFit enumeration -------------------------------------------------------------------
+
+    /**
+     * Represents the ability of an expression to yield a requested type:
+     * <ul>
+     * <li>{@code NoFit} - the expression can <b>not</b> yield the requested type;</li>
+     * <li>{@code ConvPackUnpack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion, tuple packing, and tuple unpacking;</li>
+     * <li>{@code ConvPack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion and tuple packing;</li>
+     * <li>{@code ConvUnpack} - the expression can yield the requested type via a combination of
+     *     {@code @Auto} type conversion and tuple unpacking;</li>
+     * <li>{@code Conv} - the expression can yield the requested type via {@code @Auto} type
+     *     conversion;</li>
+     * <li>{@code PackUnpack} - the expression can yield the requested type via a combination of
+     *     tuple packing and tuple unpacking;</li>
+     * <li>{@code Pack} - the expression can yield the requested type via tuple packing;</li>
+     * <li>{@code Unpack} - the expression can yield the requested type via tuple unpacking;</li>
+     * <li>{@code Fit} - the expression can yield the requested type.</li>
+     * </ul>
+     */
+    public enum TypeFit
+        {
+            NoFit         (0b0000),
+            ConvPackUnpack(0b1111),
+            ConvPack      (0b1011),
+            ConvUnpack    (0b0111),
+            Conv          (0b0011),
+            PackUnpack    (0b1101),
+            Pack          (0b0101),
+            Unpack        (0b1001),
+            Fit           (0b0001);
+
+        /**
+         * Constructor.
+         *
+         * @param nFlags  bit flags defining how good a fit the TypeFit is
+         */
+        TypeFit(int nFlags)
+            {
+            FLAGS = nFlags;
+            }
+
+        /**
+         * @return true iff the type fits, regardless of whether it needs conversion or packing or
+         *         unpacking
+         */
+        public boolean isFit()
+            {
+            return (FLAGS & FITS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus fits
+         */
+        public TypeFit ensureFit()
+            {
+            return isFit()
+                    ? this
+                    : Fit;
+            }
+
+        /**
+         * @return true iff the type goes through at least one "@Auto" conversion in order to fit
+         */
+        public boolean isConverting()
+            {
+            return (FLAGS & CONVERTS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus type conversion
+         */
+        public TypeFit addConversion()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | CONVERTS)
+                    : NoFit;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, minus type conversion
+         */
+        public TypeFit removeConversion()
+            {
+            return isConverting()
+                    ? forFlags(FLAGS & ~CONVERTS)
+                    : this;
+            }
+
+        /**
+         * @return true iff the type goes through a tuple creation
+         */
+        public boolean isPacking()
+            {
+            return (FLAGS & PACKS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus Tuple packing
+         */
+        public TypeFit addPack()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | PACKS)
+                    : NoFit;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, minus Tuple packing
+         */
+        public TypeFit removePack()
+            {
+            return isPacking()
+                    ? forFlags(FLAGS & ~PACKS)
+                    : this;
+            }
+
+        /**
+         * @return true iff the type goes through a tuple extraction
+         */
+        public boolean isUnpacking()
+            {
+            return (FLAGS & UNPACKS) != 0;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, plus Tuple unpacking
+         */
+        public TypeFit addUnpack()
+            {
+            return isFit()
+                    ? forFlags(FLAGS | UNPACKS)
+                    : NoFit;
+            }
+
+        /**
+         * @return a TypeFit that does everything this TypeFit does, minus Tuple unpacking
+         */
+        public TypeFit removeUnpack()
+            {
+            return isConverting()
+                    ? forFlags(FLAGS & ~UNPACKS)
+                    : this;
+            }
+
+        /**
+         * Produce a fit that combines this fit and that fit.
+         *
+         * @param that  the other fit
+         *
+         * @return a fit that combines all the attributes of this fit and that fit
+         */
+        public TypeFit combineWith(TypeFit that)
+            {
+            return forFlags(this.FLAGS | that.FLAGS);
+            }
+
+        /**
+         * Determine which is the best fit, and return that best fit.
+         *
+         * @param that  the other fit
+         *
+         * @return whichever fit is considered better
+         */
+        public TypeFit betterOf(TypeFit that)
+            {
+            return this.ordinal() > that.ordinal() ? this : that;
+            }
+
+        /**
+         * Determine if another fit is better than this fit.
+         *
+         * @param that  the other fit
+         *
+         * @return true iff the other fit is considered to be a better fit than this fit
+         */
+        public boolean betterThan(TypeFit that)
+            {
+            return this.ordinal() > that.ordinal();
+            }
+
+        /**
+         * Determine if another fit is worse than this fit.
+         *
+         * @param that  the other fit
+         *
+         * @return true iff the other fit is considered to be a worse fit than this fit
+         */
+        public boolean worseThan(TypeFit that)
+            {
+            return this.ordinal() < that.ordinal();
+            }
+
+        /**
+         * Look up a TypeFit enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the TypeFit enum for the specified ordinal
+         */
+        public static TypeFit valueOf(int i)
+            {
+            return BY_ORDINAL[i];
+            }
+
+        /**
+         * Look up a TypeFit enum by its flags.
+         *
+         * @param nFlags  the flags
+         *
+         * @return the TypeFit enum for the specified ordinal
+         */
+        public static TypeFit forFlags(int nFlags)
+            {
+            if (nFlags >= 0 && nFlags <= BY_FLAGS.length)
+                {
+                TypeFit fit = BY_FLAGS[nFlags];
+                if (fit != null)
+                    {
+                    return fit;
+                    }
+                }
+
+            throw new IllegalStateException("no fit for flag value: " + nFlags);
+            }
+
+        /**
+         * All of the TypeFit enums, by ordinal.
+         */
+        private static final TypeFit[] BY_ORDINAL = TypeFit.values();
+
+        /**
+         * All of the TypeFit enums, by flags.
+         */
+        private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
+        static
+            {
+            for (TypeFit fit : BY_ORDINAL)
+                {
+                BY_FLAGS[fit.FLAGS] = fit;
+                }
+            }
+
+        public static final int FITS     = 0b0001;
+        public static final int CONVERTS = 0b0010;
+        public static final int PACKS    = 0b0100;
+        public static final int UNPACKS  = 0b1000;
+
+        /**
+         * Represents the state of the TypeFit.
+         */
+        public final int FLAGS;
+        }
+
+
+    // ----- TuplePref enumeration -----------------------------------------------------------------
+
+    /**
+     * Represents the form that the Expression can or does yield a tuple:
+     * <ul>
+     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type(s) in a tuple
+     *                        form</li>
+     * <li>{@code Accepted} - the expression should yield a tuple if not yielding a tuple would
+     *                        involve additional cost</li>
+     * <li>{@code Desired}  - the expression should yield a tuple if it can do with no cost</li>
+     * <li>{@code Required} - the expression must <b>always</b> yields a tuple of the requested
+     *                        type(s)</li>
+     * </ul>
+     */
+    // REVIEW could it simplify to: Never, Either, Always?
+    public enum TuplePref {Rejected, Accepted, Desired, Required}
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     public static final Assignable[] NO_LVALUES = new Assignable[0];
@@ -1687,5 +1697,5 @@ public abstract class Expression
     /**
      * (Temporary) Infinite recursion prevention.
      */
-    private int m_cDepth;
+    private transient int m_cDepth;
     }
