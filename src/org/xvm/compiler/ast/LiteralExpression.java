@@ -15,6 +15,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.Float16Constant;
 import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -177,57 +178,21 @@ public class LiteralExpression
             }
         }
 
-//    switch (val.getType().getEcstasyClassName())
-//    {
-//    case "Char":
-//    {
-//    int ch = ((CharConstant) val).getValue();
-//    if (ch < Character.MIN_VALUE || ch > Character.MAX_VALUE)
-//        {
-//        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-//                val.getType().getValueString(), ch);
-//        ch = '?';
-//        }
-//
-//    switch (type.getEcstasyClassName())
-//        {
-//        case "String":
-//            return pool.ensureStringConstant(Character.valueOf((char) ch).toString());
-//        }
-//
-//    break;
-//    }
-//
-//    case "String":
-//        switch (type.getEcstasyClassName())
-//            {
-//            }
-//        break;
-//
-//    case "IntLiteral":
-//        PackedInteger piVal = ((IntConstant) val).getValue();
-//        switch (type.getEcstasyClassName())
-//            {
-//            case "Bit":
-//            {
-//            int n = 0;
-//            PackedInteger piVal = ((IntConstant) val).getValue();
-//            if (isIntInRange(piVal, 0, 1))
-//                {
-//                n = piVal.getInt();
-//                }
-//            else
-//                {
-//                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-//                        val.getType().getValueString(), val.getValueString());
-//                }
-//            return pool.ensureBitConstant(n);
-//            }
-
-    public static Constant convertConstant(Constant val, TypeConstant type, ErrorListener errs)
+    /**
+     * Convert a constant value to the specified type.
+     *
+     * @param val   the constant value
+     * @param type  the desired type
+     * @param errs  the error listener to log to
+     *
+     * @return the converted constant value
+     */
+    public Constant convertConstant(Constant val, TypeConstant type, ErrorListener errs)
         {
+        // TODO @Auto to<Object()>() - wraps around each of these
+
         ConstantPool pool = pool();
-        switch (val.getType() + "->" + type.getEcstasyClassName())
+        switch (val.getFormat() + "->" + type.getEcstasyClassName())
             {
             case "Char->String":
                 {
@@ -244,15 +209,14 @@ public class LiteralExpression
 
             case "IntLiteral->Bit":
                 {
-                int n;
-                PackedInteger piVal = ((IntConstant) val).getValue();
+                int n = 0;
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
                 if (isIntInRange(piVal, 0, 1))
                     {
                     n = piVal.getInt();
                     }
                 else
                     {
-                    n = 0;
                     log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
                             val.getType().getValueString(), val.getValueString());
                     }
@@ -261,27 +225,27 @@ public class LiteralExpression
 
             case "IntLiteral->Nibble":
                 {
-                int n;
-                if (isIntInRange(0x0, 0xF))
+                int n = 0;
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (isIntInRange(piVal, 0x0, 0xF))
                     {
-                    n = ((PackedInteger) literal.getValue()).getInt();
+                    n = piVal.getInt();
                     }
                 else
                     {
-                    n = 0;
                     log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                            sName, literal.getString(getSource()));
+                            val.getType().getValueString(), val.getValueString());
                     }
                 return pool.ensureNibbleConstant(n);
                 }
 
             case "IntLiteral->Int8":
                 {
-                PackedInteger piVal = (PackedInteger) literal.getValue();
-                if (!isIntInRange(Byte.MIN_VALUE, Byte.MAX_VALUE))
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, Byte.MIN_VALUE, Byte.MAX_VALUE))
                     {
                     log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                            sName, literal.getString(getSource()));
+                            val.getType().getValueString(), val.getValueString());
                     piVal = PackedInteger.ZERO;
                     }
                 return pool.ensureInt8Constant(piVal.getInt());
@@ -289,11 +253,11 @@ public class LiteralExpression
 
             case "IntLiteral->Int16":
                 {
-                PackedInteger piVal = (PackedInteger) literal.getValue();
-                if (!isIntInRange(Short.MIN_VALUE, Short.MAX_VALUE))
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, Short.MIN_VALUE, Short.MAX_VALUE))
                     {
                     log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                            sName, literal.getString(getSource()));
+                            val.getType().getValueString(), val.getValueString());
                     piVal = PackedInteger.ZERO;
                     }
                 return pool.ensureIntConstant(piVal, Format.Int16);
@@ -301,249 +265,244 @@ public class LiteralExpression
 
             case "IntLiteral->Int32":
                 {
-                PackedInteger piVal = (PackedInteger) literal.getValue();
-                if (!isIntInRange(Integer.MIN_VALUE, Integer.MAX_VALUE))
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, Integer.MIN_VALUE, Integer.MAX_VALUE))
                     {
                     log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                            sName, literal.getString(getSource()));
+                            val.getType().getValueString(), val.getValueString());
                     piVal = PackedInteger.ZERO;
                     }
                 return pool.ensureIntConstant(piVal, Format.Int32);
                 }
 
             case "IntLiteral->Int64":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, Long.MIN_VALUE, Long.MAX_VALUE))
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (!isIntInRange(Long.MIN_VALUE, Long.MAX_VALUE))
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
+                return pool.ensureIntConstant(piVal);
+                }
 
             case "IntLiteral->Int128":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (piVal.isBig() && piVal.getSignedByteSize() > 16)
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (piVal.isBig() && piVal.getSignedByteSize() > 16)
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.Int128);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
-                break;
+                return pool.ensureIntConstant(piVal, Format.Int128);
+                }
 
             case "IntLiteral->VarInt":
-                    {
-                    return pool.ensureIntConstant(
-                            (PackedInteger) literal.getValue(), Format.VarInt);
-                    }
-                break;
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                return pool.ensureIntConstant(piVal, Format.VarInt);
+                }
 
             case "IntLiteral->UInt8":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, 0x00, 0xFF))
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (!isIntInRange(0x00, 0xFF))
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureUInt8Constant(piVal.getInt());
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
-                break;
+                return pool.ensureUInt8Constant(piVal.getInt());
+                }
 
             case "IntLiteral->UInt16":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, 0x0000, 0xFFFF))
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (!isIntInRange(0x0000, 0xFFFF))
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.UInt16);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
-                break;
+                return pool.ensureIntConstant(piVal, Format.UInt16);
+                }
 
             case "IntLiteral->UInt32":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (!isIntInRange(piVal, 0x00000000L, 0xFFFFFFFFL))
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (!isIntInRange(0x00000000L, 0xFFFFFFFFL))
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.UInt32);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
-                break;
+                return pool.ensureIntConstant(piVal, Format.UInt32);
+                }
 
             case "IntLiteral->UInt64":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (piVal.isNegative() || piVal.isBig() && piVal.getUnsignedByteSize() > 8)
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (piVal.isNegative() || piVal.isBig() && piVal.getUnsignedByteSize() > 8)
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.UInt64);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
+                return pool.ensureIntConstant(piVal, Format.UInt64);
+                }
 
             case "IntLiteral->UInt128":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (piVal.isNegative() || piVal.isBig() && piVal.getUnsignedByteSize() > 16)
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (piVal.isNegative() || piVal.isBig() && piVal.getUnsignedByteSize() > 16)
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.UInt128);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
+                return pool.ensureIntConstant(piVal, Format.UInt128);
+                }
 
             case "IntLiteral->VarUInt":
+                {
+                PackedInteger piVal = ((LiteralConstant) val).getPackedInteger();
+                if (piVal.isNegative())
                     {
-                    PackedInteger piVal = (PackedInteger) literal.getValue();
-                    if (piVal.isNegative())
-                        {
-                        log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                sName, literal.getString(getSource()));
-                        piVal = PackedInteger.ZERO;
-                        }
-                    return pool.ensureIntConstant(piVal, Format.VarUInt);
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    piVal = PackedInteger.ZERO;
                     }
+                return pool.ensureIntConstant(piVal, Format.VarUInt);
+                }
 
             case "IntLiteral->Dec32":
             case "FPLiteral->Dec32":
+                {
+                try
                     {
-                        BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return pool.ensureDecimalConstant(new Decimal32(bigdec));
-                            }
-                        catch (ArithmeticException e) {}
+                    BigDecimal bigdec = ((LiteralConstant) val).getBigDecimal();
+                    return pool.ensureDecimalConstant(new Decimal32(bigdec));
                     }
-                break;
+                catch (ArithmeticException e)
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    return pool.ensureDecimalConstant(new Decimal32(BigDecimal.ZERO));
+                    }
+                }
 
             case "IntLiteral->Dec64":
             case "FPLiteral->Dec64":
+                {
+                try
                     {
-                        BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return pool.ensureDecimalConstant(new Decimal64(bigdec));
-                            }
-                        catch (ArithmeticException e) {}
+                    BigDecimal bigdec = ((LiteralConstant) val).getBigDecimal();
+                    return pool.ensureDecimalConstant(new Decimal64(bigdec));
                     }
-                break;
+                catch (ArithmeticException e)
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    return pool.ensureDecimalConstant(new Decimal64(BigDecimal.ZERO));
+                    }
+                }
 
             case "IntLiteral->Dec128":
             case "FPLiteral->Dec128":
+                {
+                try
                     {
-                        BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        try
-                            {
-                            return pool.ensureDecimalConstant(new Decimal128(bigdec));
-                            }
-                        catch (ArithmeticException e) {}
+                    BigDecimal bigdec = ((LiteralConstant) val).getBigDecimal();
+                    return pool.ensureDecimalConstant(new Decimal128(bigdec));
                     }
-                break;
+                catch (ArithmeticException e)
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    return pool.ensureDecimalConstant(new Decimal128(BigDecimal.ZERO));
+                    }
+                }
 
             case "IntLiteral->VarDec":
             case "FPLiteral->VarDec":
-                    {
-                        BigDecimal bigdec = literal.getId() == Id.LIT_INT
-                                ? new BigDecimal(((PackedInteger) literal.getValue()).getBigInteger())
-                                : (BigDecimal) literal.getValue();
-                        // TODO - support variable-length decimal
-                        throw new UnsupportedOperationException("var-len decimal not implemented");
-                    }
-                break;
+                {
+                BigDecimal bigdec = ((LiteralConstant) val).getBigDecimal();
+                // TODO - support variable-length decimal
+                throw new UnsupportedOperationException("var-len decimal not implemented");
+                }
 
             case "IntLiteral->Float16":
             case "FPLiteral->Float16":
+                {
+                // TODO add support for *purposeful* NaN/infinity
+                float   flVal = 0;
+                boolean fErr  = false;
+                try
                     {
-                        // TODO add support for *purposeful* NaN/infinity
-                        float   flVal = 0;
-                        boolean fErr  = false;
-                        try
-                            {
-                            flVal = Float.parseFloat(literal.getValue().toString());
-                            }
-                        catch (NumberFormatException e)
-                            {
-                            fErr = true;
-                            }
-                        // convert to/from 16-bit to test for overflow/underflow
-                        if (fErr || !Float.isFinite(flVal) || !Float.isFinite(
-                                Float16Constant.toFloat(Float16Constant.toHalf(flVal))))
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                    sName, literal.getString(getSource()));
-                            flVal = 0;
-                            }
-                        return pool.ensureFloat16Constant(flVal);
+                    flVal = ((LiteralConstant) val).getFloat();
                     }
-                break;
+                catch (NumberFormatException e)
+                    {
+                    fErr = true;
+                    }
+                // convert to/from 16-bit to test for overflow/underflow
+                if (fErr || !Float.isFinite(flVal) || !Float.isFinite(
+                        Float16Constant.toFloat(Float16Constant.toHalf(flVal))))
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    flVal = 0;
+                    }
+                return pool.ensureFloat16Constant(flVal);
+                }
 
             case "IntLiteral->Float32":
             case "FPLiteral->Float32":
+                {
+                // TODO add support for *purposeful* NaN/infinity
+                float   flVal = 0;
+                boolean fErr  = false;
+                try
                     {
-                        // TODO add support for *purposeful* NaN/infinity
-                        float   flVal = 0;
-                        boolean fErr  = false;
-                        try
-                            {
-                            flVal = Float.parseFloat(literal.getValue().toString());
-                            }
-                        catch (NumberFormatException e)
-                            {
-                            fErr = true;
-                            }
-                        if (fErr || !Float.isFinite(flVal))
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                    sName, literal.getString(getSource()));
-                            flVal = 0;
-                            }
-                        return pool.ensureFloat32Constant(flVal);
+                    flVal = ((LiteralConstant) val).getFloat();
                     }
-                break;
+                catch (NumberFormatException e)
+                    {
+                    fErr = true;
+                    }
+                if (fErr || !Float.isFinite(flVal))
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    flVal = 0;
+                    }
+                return pool.ensureFloat32Constant(flVal);
+                }
 
             case "IntLiteral->Float64":
             case "FPLiteral->Float64":
+                {
+                // TODO add support for *purposeful* NaN/infinity
+                double  flVal = 0;
+                boolean fErr  = false;
+                try
                     {
-                        // TODO add support for *purposeful* NaN/infinity
-                        double  flVal = 0;
-                        boolean fErr  = false;
-                        try
-                            {
-                            flVal = Double.parseDouble(literal.getValue().toString());
-                            }
-                        catch (NumberFormatException e)
-                            {
-                            fErr = true;
-                            }
-                        if (fErr || !Double.isFinite(flVal))
-                            {
-                            log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
-                                    sName, literal.getString(getSource()));
-                            flVal = 0;
-                            }
-                        return pool.ensureFloat64Constant(flVal);
+                    flVal = ((LiteralConstant) val).getDouble();
                     }
-                break;
+                catch (NumberFormatException e)
+                    {
+                    fErr = true;
+                    }
+                if (fErr || !Double.isFinite(flVal))
+                    {
+                    log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE,
+                            val.getType().getValueString(), val.getValueString());
+                    flVal = 0;
+                    }
+                return pool.ensureFloat64Constant(flVal);
+                }
 
             case "IntLiteral->Float128":
             case "FPLiteral->Float128":
@@ -554,6 +513,10 @@ public class LiteralExpression
             case "FPLiteral->VarFloat":
                 // TODO - support var-len float
                 throw new UnsupportedOperationException("var-len binary floating point not implemented");
+
+            default:
+                log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                return Constant.defaultValue(type);
             }
         }
 
