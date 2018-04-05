@@ -61,6 +61,8 @@ public class ListExpression
     // ----- compilation ---------------------------------------------------------------------------
 
 
+    // TODO must implement the genArgumentMulti version even if validated with single
+
     @Override
     public TypeConstant getType()
         {

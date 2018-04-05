@@ -6,11 +6,10 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
-import java.util.function.Function;
-
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
@@ -29,6 +28,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+import org.xvm.compiler.ast.Expression.TuplePref;
+import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
 
@@ -122,35 +123,89 @@ public class VariableDeclarationStatement
         {
         boolean fValid = true;
 
+        // right hand side must have a value if this is not a standalone declaration
         if (getUsage() != Usage.Standalone && value == null)
             {
-            // right hand side must have a conditional return
             log(errs, Severity.ERROR, Compiler.VALUE_REQUIRED);
             fValid = false;
             }
 
-        // TODO peel ref-specific annotations off of the type (e.g. "@Future")
-        // TODO make sure that # exprs == # type fields for tuple type
-        // TODO make sure that # type fields == 1 for sequence type
-
-        fValid &= type.validate(ctx, null, errs);
+        ConstantPool   pool    = pool();
+        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
+        if (typeNew != type)
+            {
+            fValid &= typeNew != null;
+            if (typeNew != null)
+                {
+                type = typeNew;
+                }
+            }
 
         TypeConstant typeVar = type.ensureTypeConstant();
         if (value != null)
             {
-            fValid &= value.validate(ctx, typeVar, errs);
+            if (typeVar.isTuple())
+                {
+                TypeFit fitTup = value.testFit(ctx, typeVar, TuplePref.Rejected);
+                TypeFit fitSep = TypeFit.NoFit;
+                if (typeVar.isParamsSpecified())
+                    {
+                    fitSep = value.testFitMulti(ctx, typeVar.getParamTypesArray(), TuplePref.Desired);
+                    }
+
+                if (fitSep.isFit() && (!fitTup.isFit() || fitTup.isPacking()))
+                    {
+                    // special case: we'll do the packing ourselves
+                    m_fPackingInit = true;
+                    }
+                }
+
+            Expression valueNew = m_fPackingInit
+                    ? value.validateMulti(ctx, typeVar.getParamTypesArray(), TuplePref.Rejected, errs)
+                    : value.validate(ctx, typeVar, TuplePref.Rejected, errs);
+            if (valueNew != value)
+                {
+                fValid &= valueNew != null;
+                if (valueNew != null)
+                    {
+                    value = valueNew;
+                    }
+                }
+
+            // conditional declarations (e.g. inside a while clause) must yield a boolean as the
+            // first value
+            if (isConditional() && !value.isTypeBoolean())
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                        pool.typeBoolean().getValueString(),
+                        (value.isVoid() ? pool.typeVoid() : value.getTypes()[0]).getValueString());
+                fValid = false;
+                }
+
+            // use the type of the RValue to update the type of the LValue, if desired
+            if (fValid)
+                {
+                typeVar = m_fPackingInit
+                        ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), value.getTypes())
+                        : value.getType();
+
+                type    = type.inferTypeFrom(typeVar);
+                typeVar = type.ensureTypeConstant();
+                }
             }
 
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
-        return fValid;
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable && (value == null || value.isCompletable());
+        boolean fCompletes = fReachable && (value == null || !value.isAborting());
 
         switch (getUsage())
             {
@@ -184,6 +239,7 @@ public class VariableDeclarationStatement
 
         // TODO DVAR support
 
+        // no value: declare named var
         StringConstant constName = pool().ensureStringConstant((String) name.getValue());
         if (value == null)
             {
@@ -191,50 +247,43 @@ public class VariableDeclarationStatement
             return fCompletes;
             }
 
-        // tuple or array initialization: use this for NON-constant values, since with constant
-        // values, we can just use VAR_IN and point to the constant itself
-        TypeConstant typeV = type.ensureTypeConstant();
-        if (typeV.isParamsSpecified() && !value.isConstant())
+        // constant value: declare and initialize named var
+        if (value.hasConstantValue())
             {
-            int                             nOp    = -1;
-            List<Expression>                vals   = null;
-            Function<Integer, TypeConstant> typeOf = null;
-            if (value instanceof TupleExpression && typeV.isTuple())
+            Constant constVal;
+            if (m_fPackingInit)
                 {
-                // VAR_TN TYPE, STRING, #values:(rvalue)
-                nOp    = Op.OP_VAR_TN;
-                vals   = ((TupleExpression) value).getExpressions();
-                TypeConstant[] atype = typeV.getParamTypesArray();
-                typeOf = i -> atype[i];
+                ConstantPool pool = pool();
+                constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
+                        pool.typeTuple(), value.getTypes()), value.toConstants());
                 }
-            else if (value instanceof ListExpression && typeV.isA(pool().typeSequence()))
+            else
                 {
-                // VAR_SN TYPE, STRING, #values:(rvalue)
-                nOp    = Op.OP_VAR_SN;
-                vals   = ((ListExpression) value).getExpressions();
-                TypeConstant typeElement = typeV.getParamTypesArray()[0];
-                typeOf = i -> typeElement;
+                constVal = value.toConstant();
                 }
-
-            if (nOp >= 0)
-                {
-                int        cArgs = vals.size();
-                Argument[] aArgs = new Argument[cArgs];
-                for (int i = 0; i < cArgs; ++i)
-                    {
-                    aArgs[i] = vals.get(i).generateArgument(code, typeOf.apply(i), false, errs);
-                    }
-                code.add(nOp == Op.OP_VAR_TN
-                        ? new Var_TN(m_reg, constName, aArgs)
-                        : new Var_SN(m_reg, constName, aArgs));
-                return fCompletes;
-                }
+            code.add(new Var_IN(m_reg, constName, constVal));
+            return fCompletes;
             }
 
         // declare and initialize named var
-        if (value.isConstant())
+        TypeConstant typeVar = m_reg.getRefType();
+        if (m_fPackingInit)
             {
-            code.add(new Var_IN(m_reg, constName, value.generateConstant(code, typeV, errs)));
+            Argument[] aArgs = value.generateArguments(code, false, errs);
+            code.add(new Var_TN(m_reg, constName, aArgs));
+            }
+        else if (value instanceof ListExpression && typeVar.isA(pool().typeSequence()))
+            {
+            // even though we validated the ListExpression to give us a single list value, it is
+            // tolerant of us asking for the values as individual values
+            List<Expression> listVals = ((ListExpression) value).getExpressions();
+            int              cVals    = listVals.size();
+            Argument[]       aArgs    = new Argument[cVals];
+            for (int i = 0; i < cVals; ++i)
+                {
+                aArgs[i] = listVals.get(i).generateArgument(code, false, errs);
+                }
+            code.add(new Var_SN(m_reg, constName, aArgs));
             }
         else
             {
@@ -289,6 +338,7 @@ public class VariableDeclarationStatement
     protected boolean        term;
 
     private Register m_reg;
+    private boolean  m_fPackingInit;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }

@@ -553,33 +553,48 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) Determine if the expression is constant that can be fully resolved and
-     * calculated at compile time.
+     * (Post-validation) Determine if the expression should be treated as a constant value. There
+     * are a few exceptions, such as the TodoExpression (which claim to be constant, but must
+     * actually produce code), or expressions that require code to produce a constant (or at least
+     * idempotent) value; as a result, a separate method, {@link #hasConstantValue()}, indicates
+     * that not only is the expression a constant, but it can provide its constant values to the
+     * compiler.
      *
      * @return true iff the Expression is a constant value that is representable by a constant in
      *         the ConstantPool
      */
     public boolean isConstant()
         {
+        return hasConstantValue();
+        }
+
+    /**
+     * (Post-validation) Determine if the expression has a constant value available for use by the
+     * compiler. Some expressions may be constant, but may not be able to provide their value at
+     * compile time, because code needs to be generated on behalf of the expression.
+     *
+     * @return true iff the expression
+     */
+    public boolean hasConstantValue()
+        {
         return m_aConst != null;
         }
 
     /**
-     * (Post-validation) For a expression that provides a compile-time constant, create a constant
-     * representations of the value. If {@link #isConstant()} returns true, then the type
-     * of the constant will match the result of {@link #getType()}; otherwise there is no such
-     * guarantee.
+     * (Post-validation) For a expression that provides a compile-time constant, indicated by the
+     * {@link #hasConstantValue()} method returning true, obtain a constant representation of the
+     * value.
      * <p/>
-     * If the exception has more than one value, then this will return a constant tuple of those
-     * constant values.
+     * If the Expression has more than one value, then this will return the first constant value. If
+     * the Expression is <i>Void</i>, then this will return null.
      * <p/>
-     * An exception is thrown if the expression is not capable of producing a compile-time constant.
+     * An exception is thrown if the expression does not produce a compile-time constant.
      *
      * @return the constant value of the expression
      */
     public Constant toConstant()
         {
-        if (!isConstant())
+        if (!hasConstantValue())
             {
             throw new IllegalStateException();
             }
@@ -590,25 +605,25 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) For a expression that provides compile-time constants, obtain a constant
-     * representations of the values. If {@link #isConstant()} returns true, then the
-     * types of the constant values will match the result of {@link #getTypes()}.
+     * (Post-validation) For a expression that provides compile-time constants, indicated by the
+     * {@link #hasConstantValue()} method returning true, obtain an array of constants that
+     * represent the value of the Expression.
      * <p/>
-     * An exception is thrown if the expression does not producing a compile-time constant.
+     * If the Expression is <i>Void</i>, then this will return an empty array.
+     * <p/>
+     * An exception is thrown if the expression does not produce a compile-time constant.
      *
      * @return the compile-times constant values of the expression
      */
     public Constant[] toConstants()
         {
-        if (!isConstant())
+        if (!hasConstantValue())
             {
             throw new IllegalStateException();
             }
 
         return m_aConst;
         }
-
-    // REVIEW - could values of "const" form (requiring one-time instantiation/initialization at runtime), that are NOT ConstantPool Constant values, be used e.g. for a CASE statement?
 
     /**
      * (Post-validation) Generate an argument that represents the result of this expression.
@@ -628,7 +643,7 @@ public abstract class Expression
         checkDepth();
         assert !isVoid();
 
-        if (isConstant())
+        if (hasConstantValue())
             {
             return fPack
                     ? pool().ensureTupleConstant(pool().ensureParameterizedTypeConstant(
@@ -656,7 +671,7 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (isConstant())
+        if (hasConstantValue())
             {
             return fPack
                     ? new Argument[]
@@ -758,7 +773,7 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (!isConstant() && !isVoid())
+        if (!hasConstantValue() && !isVoid())
             {
             if (isSingle())
                 {
@@ -907,7 +922,7 @@ public abstract class Expression
      */
     public boolean isTypeBoolean()
         {
-        return getType().isEcstasy("Boolean") || isAssignableTo(pool().typeBoolean());
+        return getType().isEcstasy("Boolean");
         }
 
     /**
@@ -915,7 +930,7 @@ public abstract class Expression
      */
     public boolean isConstantFalse()
         {
-        return isConstant() && toConstant().equals(pool().valFalse());
+        return hasConstantValue() && toConstant().equals(pool().valFalse());
         }
 
     /**
@@ -923,7 +938,7 @@ public abstract class Expression
      */
     public boolean isConstantTrue()
         {
-        return isConstant() && toConstant().equals(pool().valTrue());
+        return hasConstantValue() && toConstant().equals(pool().valTrue());
         }
 
     /**
@@ -931,7 +946,7 @@ public abstract class Expression
      */
     public boolean isConstantNull()
         {
-        return isConstant() && toConstant().equals(pool().valNull());
+        return hasConstantValue() && toConstant().equals(pool().valNull());
         }
 
     /**

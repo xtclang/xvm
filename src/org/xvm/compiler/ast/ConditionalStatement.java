@@ -130,6 +130,10 @@ public abstract class ConditionalStatement
         assert stmtDeclOnly != null && stmtNonDecl != null;
         assert m_stmtDeclOnly == null && m_stmtNonDecl == null;
 
+        Statement stmtParent = (Statement) getParent();
+        stmtParent.introduceParentage(stmtDeclOnly);
+        stmtParent.introduceParentage(stmtNonDecl);
+
         m_stmtDeclOnly = stmtDeclOnly;
         m_stmtNonDecl  = stmtNonDecl;
         }

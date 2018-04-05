@@ -3,16 +3,15 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Token;
+
+import org.xvm.compiler.ast.Expression.TuplePref;
 
 
 /**
@@ -57,15 +56,21 @@ public class ThrowStatement
     protected Statement validate(Context ctx, ErrorListener errs)
         {
         // validate the throw value expressions
-        return expr.validate(ctx, pool().typeException(), errs);
+        Expression exprNew = expr.validate(ctx, pool().typeException(), TuplePref.Rejected, errs);
+        if (exprNew != expr && exprNew != null)
+            {
+            expr = exprNew;
+            }
+
+        return exprNew == null
+                ? null
+                : this;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        ConstantPool pool  = pool();
-        TypeConstant typeE = pool.typeException();
-        Argument     argE  = expr.generateArgument(code, typeE, false, errs);
+        Argument     argE  = expr.generateArgument(code, false, errs);
         code.add(new Throw(argE));
 
         // throw never completes

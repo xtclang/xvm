@@ -75,7 +75,6 @@ public class IfStatement
             ctx = ctx.enterScope();
             }
 
-        // TODO consider what to do when the condition is always true or false (is a fork still required?)
         Context              ctxThen     = ctx.fork();
         ConditionalStatement condNew     = (ConditionalStatement) cond.validate(ctxThen, errs);
         Statement            stmtThenNew = stmtThen.validate(ctxThen, errs);
@@ -89,7 +88,8 @@ public class IfStatement
         else
             {
             Context ctxElse = ctx.fork();
-            fValid &= stmtElse.validate(ctxElse, errs);
+            stmtElseNew = stmtElse.validate(ctxElse, errs);
+            fValid &= stmtElseNew != null;
             ctx.join(ctxThen, ctxElse);
             }
 
@@ -111,7 +111,9 @@ public class IfStatement
             stmtElse = stmtElseNew;
             }
 
-        return fValid;
+        return fValid
+                ? this
+                : null;
         }
 
     @Override

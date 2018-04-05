@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -62,29 +61,44 @@ public class TodoExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+        {
+        // sure, whatever you want
+        return TypeFit.Fit;
+        }
+
+    @Override
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
         {
         boolean fValid = true;
 
         if (message != null)
             {
-            // note: the required type is ignored, since this is a T0D0 ...
-            fValid &= message.validate(ctx, null, errs);
+            Expression exprNew = message.validate(ctx, pool().typeString(), TuplePref.Rejected, errs);
+            if (exprNew != message)
+                {
+                fValid &= exprNew != null;
+                if (exprNew != null)
+                    {
+                    message = exprNew;
+                    }
+                }
             }
 
-        // pretend that we fulfill the type requirement
-        m_type = typeRequired;
+        // note: the required type is ignored, since this is a T0D0 ... but we pretend to provide
+        // whatever they want
+        if (atypeRequired == null)
+            {
+            // some arbitrary default ...
+            atypeRequired = new TypeConstant[] {pool().typeBoolean()};
+            }
 
-        return fValid;
-        }
-
-    @Override
-    public TypeConstant getType()
-        {
-        // it would be really nice to know what type they actually want, because we'd be glad to
-        // pretend that we can provide one of those
-        return m_type == null ? pool().typeObject() : m_type;
+        finishValidations(fValid ? TypeFit.Fit : TypeFit.NoFit, atypeRequired, null);
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
@@ -104,33 +118,42 @@ public class TodoExpression
     @Override
     public boolean isConstant()
         {
-        // sure, you can use this where a constant is required, i.e. a "case" statement
+        // sure, you can use this where a constant is required, although it does NOT have a compile
+        // time constant available (i.e. the expression still requires code generation)
         return true;
         }
 
     @Override
-    public Constant generateConstant(Code code, TypeConstant type, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
         {
         generateTodo(code, errs);
-        return generateFakeConstant(type);
+
+        TypeConstant[] aTypes = getTypes();
+        int            cArgs  = aTypes.length;
+        Register[]     aArgs  = new Register[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArgs[i] = generateBlackHole(aTypes[i]);
+            }
+        return aArgs;
         }
 
     @Override
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
+    public Assignable[] generateAssignables(Code code, ErrorListener errs)
         {
         generateTodo(code, errs);
-        return generateBlackHole(type);
+
+        int          cAsns = getValueCount();
+        Assignable[] aAsns = new Assignable[cAsns];
+        for (int i = 0; i < cAsns; ++i)
+            {
+            aAsns[i] = new Assignable();
+            }
+        return aAsns;
         }
 
     @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
-        {
-        generateTodo(code, errs);
-        return new Assignable();
-        }
-
-    @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
         {
         generateTodo(code, errs);
         }
@@ -156,7 +179,7 @@ public class TodoExpression
         Argument       argEx    = new Register(constEx.asTypeConstant());
         Argument       argMsg   = message == null
                 ? pool.valNull()
-                : message.generateArgument(code, pool.typeString(), false, errs);
+                : message.generateArgument(code, false, errs);
 
         code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         code.add(new Throw(argEx));

@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -64,6 +65,25 @@ public abstract class TypeExpression
         {
         // store the new type constant
         m_constType = constType;
+        }
+
+    /**
+     * Perform right-to-left inference of type information, if possible.
+     *
+     * @param type  a type constant from an expression related to this TypeExpression, in such a
+     *              way that this TypeExpression can steal information from the TypeConstant, such
+     *              as parameter types
+     *
+     * @return a TypeExpression to use instead of this TypeExpression
+     */
+    public TypeExpression inferTypeFrom(TypeConstant type)
+        {
+        assert m_constType != null;
+        assert type.isA(m_constType);
+
+        // REVIEW this is where we could also add support for a "var" (and/or "val") keyword
+
+        return this;
         }
 
 

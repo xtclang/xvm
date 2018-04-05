@@ -412,8 +412,7 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         boolean fValid = true;
 
