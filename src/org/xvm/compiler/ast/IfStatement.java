@@ -76,9 +76,11 @@ public class IfStatement
             }
 
         // TODO consider what to do when the condition is always true or false (is a fork still required?)
-        Context ctxThen = ctx.fork();
-        boolean fValid  = cond.validate(ctxThen, errs)
-                        & stmtThen.validate(ctxThen, errs);
+        Context              ctxThen     = ctx.fork();
+        ConditionalStatement condNew     = (ConditionalStatement) cond.validate(ctxThen, errs);
+        Statement            stmtThenNew = stmtThen.validate(ctxThen, errs);
+        Statement            stmtElseNew = null;
+        boolean              fValid      = condNew != null && stmtThenNew != null;
 
         if (stmtElse == null)
             {
@@ -94,6 +96,19 @@ public class IfStatement
         if (fScope)
             {
             ctx = ctx.exitScope();
+            }
+
+        if (condNew != null & condNew != cond)
+            {
+            cond = condNew;
+            }
+        if (stmtThenNew != null & stmtThenNew != stmtThen)
+            {
+            stmtThen = stmtThenNew;
+            }
+        if (stmtElseNew != null & stmtElseNew != stmtElse)
+            {
+            stmtElse = stmtElseNew;
             }
 
         return fValid;
