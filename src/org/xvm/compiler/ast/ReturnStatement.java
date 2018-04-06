@@ -104,7 +104,16 @@ public class ReturnStatement
                 // check the expressions anyhow (even though they can't be used)
                 for (int i = 0; i < cExprs; ++i)
                     {
-                    listExprs.get(i).validate(ctx, null, TuplePref.Accepted, errs);
+                    Expression exprOld = listExprs.get(i);
+                    Expression exprNew = exprOld.validate(ctx, null, TuplePref.Accepted, errs);
+                    if (exprNew != exprOld)
+                        {
+                        fValid &= exprNew != null;
+                        if (exprNew != null)
+                            {
+                            listExprs.set(i, exprNew);
+                            }
+                        }
                     }
 
                 // allow the (strange) use of T0D0 or the (strange) return of a Void expression
@@ -150,41 +159,51 @@ public class ReturnStatement
             }
         else // cExprs == 1
             {
-            Expression expr       = listExprs.get(0);
-
-            // TODO TODO TODO
-
-            int        cValues    = expr.getValueCount();
-            boolean    fCondFalse = false;
-            if (cValues > 1 && cRets > 1)
+            Expression exprOld = listExprs.get(0);
+            Expression exprNew = null;
+            // several possibilities:
+            // 1) most likely the expression provides a single value, which matches the single
+            //    return type for the method
+            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0], TuplePref.Rejected).isFit())
                 {
-                // there is exactly 1 expression, and it results in multiple values, so allow a
-                // tuple return that will generate a RETURN_T op
-                fValid &= expr.validateMulti(ctx, structMethod.getReturnTypes(), errs);
-                m_fTupleReturn = true;
-                }
-            else if (fConditional)
-                {
-                // it's allowed to have a single conditional return value, as long as it's False
-                assert aRetTypes[0].getType().equals(pool().typeBoolean());
-
-                fValid &= expr.validate(ctx, pool().typeBoolean(), errs);
-
-                fCondFalse = fValid && expr.isConstant() && expr.toConstant().equals(pool().valFalse());
+                exprNew = exprOld.validate(ctx, aRetTypes[0], TuplePref.Rejected, errs);
                 }
             else
                 {
-                // assume a simple 1:1 expression to return value mapping
-                fValid &= expr.validate(ctx, aRetTypes[0].getType(), errs);
+                // 2) it could be a tuple return
+                ConstantPool pool      = pool();
+                TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
+                if (exprOld.testFit(ctx, typeTuple, TuplePref.Rejected).isFit())
+                    {
+                    exprNew = exprOld.validate(ctx, typeTuple, TuplePref.Rejected, errs);
+                    m_fTupleReturn = true;
+                    }
+                // 3) it could be a conditional false
+                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), TuplePref.Rejected).isFit())
+                    {
+                    exprNew = exprOld.validate(ctx, pool.typeFalse(), TuplePref.Rejected, errs);
+                    if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))
+                        {
+                        // it's not clear how this could happen; it's more like an assertion
+                        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        fValid = false;
+                        }
+                    }
+                // 4) otherwise it's an error (so force validation based on the return types, which
+                // will log the error)
+                else
+                    {
+                    exprNew = exprOld.validateMulti(ctx, aRetTypes, TuplePref.Required, errs);
+                    }
                 }
 
-            // verify that we had enough arguments from the expression to satisfy the # of returns
-            // (we could treat extras as an error, but consider the example of the expression being
-            // a method invocation returning 4 items, and we just want 3 of them, so we'll
-            // black-hole them)
-            if (!expr.isAborting() && cValues < cRets && !fCondFalse)
+            if (exprNew != exprOld)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
+                fValid &= exprNew != null;
+                if (exprNew != null)
+                    {
+                    listExprs.set(0, exprNew);
+                    }
                 }
             }
 
@@ -199,8 +218,8 @@ public class ReturnStatement
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = ctx.getMethod();
-        int              cReturns     = structMethod.getReturnCount();
-        List<Parameter>  listRets     = structMethod.getReturns();
+        TypeConstant[]   aRetTypes    = structMethod.getReturnTypes();
+        int              cRets        = aRetTypes.length;
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
@@ -208,15 +227,8 @@ public class ReturnStatement
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
-            TypeConstant[] atypeR = new TypeConstant[cReturns];
-            for (int i = 0; i < cReturns; ++i)
-                {
-                atypeR[i] = listRets.get(i).getType();
-                }
-
-            ConstantPool pool   = pool();
-            TypeConstant typeT  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeR);
-            Argument     arg    = listExprs.get(0).generateArgument(code, typeT, false, errs);
+            ConstantPool pool = pool();
+            Argument     arg  = listExprs.get(0).generateArgument(code, false, errs);
             code.add(new Return_T(arg));
             }
         else
@@ -228,8 +240,7 @@ public class ReturnStatement
                     break;
 
                 case 1:
-                    Argument arg = listExprs.get(0).generateArgument(
-                            code, listRets.get(0).getType(), false, errs);
+                    Argument arg = listExprs.get(0).generateArgument(code, false, errs);
                     code.add(new Return_1(arg));
                     break;
 
@@ -237,8 +248,7 @@ public class ReturnStatement
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
-                        args[i] = listExprs.get(i).generateArgument(
-                                code, listRets.get(i).getType(), false, errs);
+                        args[i] = listExprs.get(i).generateArgument(code, false, errs);
                         }
                     code.add(new Return_N(args));
                     break;

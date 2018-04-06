@@ -334,7 +334,7 @@ public abstract class Expression
         switch (atypeRequired.length)
             {
             case 0:
-                return validate(ctx, pool().typeVoid(), pref, errs);
+                return validate(ctx, null, pref, errs);
 
             case 1:
                 // single type expected

@@ -247,7 +247,7 @@ public class PropertyDeclarationStatement
 
                 // the initial value has to be resolved; we have to decide either to use the expression
                 // to create a constant value or an initializer function
-                if (value.isCompletable() && value.isConstant())
+                if (!value.isAborting() && value.isConstant())
                     {
                     Constant constValue = value.toConstant();
                     assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();

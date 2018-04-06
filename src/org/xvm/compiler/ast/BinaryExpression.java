@@ -3,10 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.util.Map;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -53,53 +51,18 @@ public class BinaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        // a literal is validated by the lexer/parser, and there is nothing left to validate at this
-        // point
-        return true;
+        // TODO
+        return TypeFit.Fit;
         }
 
     @Override
-    public TypeConstant getType()
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        return pool().typeBinary();
-        }
-
-    @Override
-    public boolean isAssignableTo(TypeConstant typeThat)
-        {
-        if (typeThat instanceof ImmutableTypeConstant)
-            {
-            // a binary literal is a "const" objects, so immutable is OK
-            return isAssignableTo(typeThat.getUnderlyingType());
-            }
-
-        switch (typeThat.getEcstasyClassName())
-            {
-            case "Object":
-            case "Const":
-            case "Orderable":
-            case "collections.Hashable":
-                return true;
-
-            case "collections.Array":
-            case "collections.List":
-            case "collections.Collection":
-            case "collections.Sequence":
-            case "Iterable":
-                return !typeThat.isParamsSpecified() || (typeThat.getParamsCount() == 1
-                        && typeThat.getParamTypesArray()[0].isA(pool().typeByte()));
-
-            default:
-                return super.isAssignableTo(typeThat);
-            }
-        }
-
-    @Override
-    public Constant toConstant()
-        {
-        return pool().ensureByteStringConstant(bytes);
+        // TODO
+        finishValidation(TypeFit.Fit, pool().typeBinary(), pool().ensureByteStringConstant(bytes));
+        return this;
         }
 
 
