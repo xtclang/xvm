@@ -13,6 +13,10 @@ import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.GP_Add;
+import org.xvm.asm.op.GP_Div;
+import org.xvm.asm.op.GP_Mod;
+import org.xvm.asm.op.GP_Mul;
+import org.xvm.asm.op.GP_Sub;
 import org.xvm.asm.op.Var;
 
 import org.xvm.compiler.Compiler;
@@ -153,10 +157,39 @@ public class RelOpExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
+        // all of these operators work the same way, in terms of types and left associativity:
+        // 1) there is a "required type", which is optional. if a required type is provided:
+        //
+        //    a) determine an implied type from the required type; for example, if the required type
+        //       is Range<Int> and the operator is DOTDOT, then the type implies "Int", while if the
+        //       required type is String and the operator is ADD, then the type implies "String".
+        //
+        //       * in most cases, the implied type is the same as the required type, with the
+        //         possible exceptions being the DOTDOT (uses first type parameter), DIVMOD (uses
+        //         type of first value), COND_AND (no implied type), and COND_OR (no implied type)
+        //         operators
+        //
+        //    b) if there is an implied type, then find the appropriate op(s) on the implied type
+        //       that yield(s) the required type
+        //
+        //    c) if any such op exists, test if the first expression can yield the implied type
+        //       necessary left hand type
+        //
+        //    d) if it can yield the implied type, then check the second expression to see if it
+        //       can yield the necessary right hand type (i.e. the parameter to the operator method)
+        //       for each potential op
+        //
+        //    e) select the best match, if any match, with ambiguity resulting in an error, and no
+        //       matches falling through to phase 2
+        //
+        // 2) if no op method and types were already determined, then the op method will have to be
+        //    determined from the left hand type
+        //
+        // TODO
+
         // so let's talk about "+"
         // 1) any T1 that wants to support "+" has to have either:
         //    a) @Op T3 add(T2)
@@ -353,10 +386,13 @@ public class RelOpExpression
             {
             switch (operator.getId())
                 {
+                case DIVMOD:
+                    if (!isSingle())
+                        {
+                        // TODO
+                        throw new UnsupportedOperationException();
+                        }
                 case DOTDOT:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
                 case ADD:
                 case SUB:
                 case MUL:
@@ -374,10 +410,6 @@ public class RelOpExpression
                     Register regResult = code.lastRegister();
                     generateAssignment(code, new Assignable(regResult), errs);
                     return regResult;
-
-                case DIVMOD:
-                    // TODO
-                    throw new UnsupportedOperationException();
                 }
             }
 
@@ -450,12 +482,12 @@ public class RelOpExpression
                     break;
 
                 case SUB:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case MUL:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case DIVMOD:
                     if (LVal.getType().isTuple())
@@ -465,12 +497,12 @@ public class RelOpExpression
                         }
                     // fall through
                 case DIV:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
+                    break;
 
                 case MOD:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
+                    break;
                 }
 
             return;
