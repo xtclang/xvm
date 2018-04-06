@@ -3,15 +3,21 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
+
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
@@ -23,26 +29,51 @@ import org.xvm.runtime.VarSupport;
 /**
  * TODO:
  */
-public class xVarImpl
-        extends xRefImpl
+public class xVar
+        extends xRef
         implements VarSupport
     {
-    public static xVarImpl INSTANCE;
+    public static xVar INSTANCE;
+    public static TypeConstant INCEPTION_TYPE;
 
-    public xVarImpl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
         if (fInstance)
             {
             INSTANCE = this;
+            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
+                asTypeConstant().normalizeParameters();
             }
         }
 
     @Override
     public void initDeclared()
         {
-        markNativeMethod("set", new String[]{"RefType"}, VOID);
+        }
+
+    @Override
+    protected TypeComposition ensureCanonicalClass()
+        {
+        return ensureClass(INCEPTION_TYPE, getCanonicalType());
+        }
+
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        return ensureClass(INCEPTION_TYPE, typeActual);
+        }
+
+    @Override
+    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
+        {
+        ConstantPool pool = f_struct.getConstantPool();
+
+        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
+            INCEPTION_TYPE, typeParams).normalizeParameters();
+
+        return ensureClass(typeInception, getCanonicalType());
         }
 
     @Override

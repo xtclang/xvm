@@ -921,12 +921,13 @@ public abstract class TypeConstant
         // 2) collect all of the type parameter data from the various contributions
         ListMap<IdentityConstant, Origin> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
+
         boolean fComplete = createCallChains(constId, struct, mapTypeParams,
                 listProcess, listmapClassChain, listmapDefaultChain, errs);
 
         // determine if the type is explicitly abstract
         Annotation[] aannoClass = listAnnos.toArray(new Annotation[listAnnos.size()]);
-        boolean      fAbstract  = struct.getFormat() == Component.Format.INTERFACE
+        boolean      fAbstract  = isInterface(constId, struct)
                 || TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
         // next, we need to process the list of contributions in order, asking each for its
@@ -935,6 +936,7 @@ public abstract class TypeConstant
         Map<MethodConstant   , MethodInfo  > mapMethods     = new HashMap<>();
         Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
         Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
+
         fComplete &= collectMemberInfo(constId, struct, resolver,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, errs);
@@ -1501,10 +1503,27 @@ public abstract class TypeConstant
                 break;
 
             case INTERFACE:
-                // an interface implies the set of methods present in Object
-                // (use the "Into" composition to make the Object methods implicit-only, as opposed
-                // to explicitly being present in this interface)
-                typeInto = pool.typeObject();
+                if (constId instanceof NativeRebaseConstant)
+                    {
+                    // for a native rebase, the interface becomes a class, and that class implements
+                    // the original interface
+                    TypeConstant typeNatural = ((NativeRebaseConstant) constId).getClassConstant().asTypeConstant();
+                    if (isParamsSpecified())
+                        {
+                        typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
+                        }
+                    listProcess.add(new Contribution(Composition.Implements, typeNatural));
+
+                    // since we're a class (not an interface), we need to extend Object somehow
+                    typeExtends = pool.typeObject();
+                    }
+                else
+                    {
+                    // an interface implies the set of methods present in Object
+                    // (use the "Into" composition to make the Object methods implicit-only, as
+                    // opposed to explicitly being present in this interface)
+                    typeInto = pool.typeObject();
+                    }
                 break;
 
             default:
@@ -1752,7 +1771,7 @@ public abstract class TypeConstant
                     assert !listmapDefaultChain.containsKey(constId);
 
                     // append self to the call chain
-                    (struct.getFormat() == Component.Format.INTERFACE
+                    (isInterface(constId, struct)
                             ? listmapDefaultChain
                             : listmapClassChain
                         ).put(constId, new Origin(true));
@@ -1841,6 +1860,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the type defined by the constId and corresponding struct refers to an
+     *         interface type
+     */
+    private static boolean isInterface(IdentityConstant constId, ClassStructure struct)
+        {
+        return struct.getFormat() == Component.Format.INTERFACE
+                && !(constId instanceof NativeRebaseConstant);
+        }
+
+    /**
      * Collect the properties and methods (including scoped properties and method) for this type.
      *
      * @param constId              identity of the class
@@ -1887,7 +1916,7 @@ public abstract class TypeConstant
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                if (!createMemberInfo(constId, struct.getFormat() == Component.Format.INTERFACE,
+                if (!createMemberInfo(constId, isInterface(constId, struct),
                         struct, resolver, mapContribProps, mapContribMethods, listExplode, errs))
                     {
                     fIncomplete = true;
@@ -2014,7 +2043,7 @@ public abstract class TypeConstant
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
             // analyzed to determine if they require fields, etc.
-            if (fSelf && struct.getFormat() != Component.Format.INTERFACE)
+            if (fSelf && !isInterface(constId, struct))
                 {
                 for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
                     {
@@ -2565,6 +2594,7 @@ public abstract class TypeConstant
             ErrorListener                       errs)
         {
         boolean fComplete = true;
+        boolean fNative   = constId instanceof NativeRebaseConstant;
 
         if (structContrib instanceof MethodStructure)
             {
@@ -2574,12 +2604,12 @@ public abstract class TypeConstant
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(resolver);
             MethodBody        body         = new MethodBody(id, sig,
-                    fInterface && fHasNoCode ? Implementation.Declared :
-                    fInterface               ? Implementation.Default  :
-                    method.isNative()        ? Implementation.Native   :
-                    fHasAbstract             ? Implementation.Abstract :
-                    fHasNoCode               ? Implementation.SansCode :
-                                               Implementation.Explicit  );
+                    fInterface && fHasNoCode    ? Implementation.Declared :
+                    fInterface                  ? Implementation.Default  :
+                    fNative | method.isNative() ? Implementation.Native   :
+                    fHasAbstract                ? Implementation.Abstract :
+                    fHasNoCode                  ? Implementation.SansCode :
+                                                  Implementation.Explicit  );
             MethodInfo infoNew = new MethodInfo(body);
             mapMethods.put(id, infoNew);
             }
@@ -2597,7 +2627,7 @@ public abstract class TypeConstant
                 }
             else
                 {
-                info = createPropertyInfo(prop, constId, fInterface, resolver, errs);
+                info = createPropertyInfo(prop, constId, fNative, fInterface, resolver, errs);
                 }
             mapProps.put(id, info);
 
@@ -2656,6 +2686,7 @@ public abstract class TypeConstant
     private PropertyInfo createPropertyInfo(
             PropertyStructure     prop,
             IdentityConstant      constId,
+            boolean               fNative,
             boolean               fInterface,
             TypeInfo.TypeResolver resolver,
             ErrorListener         errs)
@@ -2983,7 +3014,7 @@ public abstract class TypeConstant
             }
         else
             {
-            impl = Implementation.Explicit;
+            impl = fNative ? Implementation.Native : Implementation.Explicit;
 
             // determine if the get explicitly calls super, or explicitly blocks super
             boolean fGetSupers      = methodGet != null && methodGet.usesSuper();
@@ -2998,7 +3029,7 @@ public abstract class TypeConstant
                         getValueString(), sName);
                 }
 
-            if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
+            if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null || fNative))
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
                         getValueString(), sName);
@@ -3013,7 +3044,7 @@ public abstract class TypeConstant
 
             // we assume a field if @Inject is not specified, @RO is not specified,
             // @Override is not specified, and get() doesn't block going to its super
-            fField = !fHasInject && !fHasRO && !fHasAbstract && !fHasOverride && !fGetBlocksSuper;
+            fField = !fHasInject & !fHasRO & !fHasAbstract & !fHasOverride & !fGetBlocksSuper & !fNative;
 
             // we assume Ref-not-Var if @RO is specified, or if there is a get() with no
             // super and no set() (or Var-implying annotations)

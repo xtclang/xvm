@@ -183,6 +183,13 @@ public class MethodInfo
      */
     public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
         {
+        // functions are, by definition, non-virtual, so they are not affected by yanking,
+        // de-duping (they naturally de-dup by having a fixed identity), etc.
+        if (isFunction())
+            {
+            return this;
+            }
+
         ArrayList<MethodBody> list  = null;
         MethodBody[]          aBody = m_aBody;
         for (int i = 0, c = aBody.length; i < c; ++i)
@@ -190,10 +197,13 @@ public class MethodInfo
             MethodBody       body     = aBody[i];
             IdentityConstant constClz = body.getIdentity().getClassIdentity();
             boolean fRetain;
+
             switch (body.getImplementation())
                 {
                 case Implicit:
+                case Native:
                     fRetain = true;
+                    break;
 
                 case Declared:
                     fRetain = setClass.contains(constClz) || setDefault.contains(constClz);

@@ -43,7 +43,7 @@ public class xTuple
         if (fInstance)
             {
             INSTANCE = this;
-            H_VOID = makeHandle(ensureCanonicalClass(), Utils.OBJECTS_NONE);
+            H_VOID = makeHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
             }
         }
 

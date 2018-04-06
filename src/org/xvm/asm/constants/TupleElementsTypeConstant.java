@@ -42,12 +42,6 @@ public class TupleElementsTypeConstant
         }
 
     @Override
-    public TypeConstant getUnderlyingType()
-        {
-        throw new IllegalStateException();
-        }
-
-    @Override
     public Format getFormat()
         {
         throw new IllegalStateException();

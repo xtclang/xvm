@@ -44,7 +44,8 @@ public class CallChain
 
     public boolean isNative()
         {
-        return f_aMethods[0].getImplementation() == Implementation.Native;
+        return f_aMethods.length == 0 ||
+               f_aMethods[0].getImplementation() == Implementation.Native;
         }
 
     public PropertyStructure getProperty()

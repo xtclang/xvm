@@ -44,7 +44,7 @@ public class xInt64
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof IntConstant ? new JavaLong(ensureCanonicalClass(),
+        return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),
                 (((IntConstant) constant).getValue().getLong())) : null;
         }
 
@@ -180,6 +180,6 @@ public class xInt64
     public static JavaLong makeHandle(long lValue)
         {
         // TODO: use a cache of common values
-        return new JavaLong(INSTANCE.ensureCanonicalClass(), lValue);
+        return new JavaLong(INSTANCE.getCanonicalClass(), lValue);
         }
     }

@@ -17,14 +17,14 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xVarImpl;
+import org.xvm.runtime.template.xVar;
 
 
 /**
  * TODO:
  */
 public class xAtomicVar
-        extends xVarImpl
+        extends xVar
     {
     public xAtomicVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

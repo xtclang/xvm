@@ -130,6 +130,7 @@ public class AccessTypeConstant
         return super.buildTypeInfo(errs);
         }
 
+
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override

@@ -296,6 +296,7 @@ public class TemplateRegistry
     // produce a TypeComposition based on the specified TypeConstant
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        return typeActual.getOpSupport(this).getTemplate(typeActual).ensureClass(typeActual);
+        return typeActual.getOpSupport(this).getTemplate(typeActual).
+            ensureClass(typeActual.normalizeParameters());
         }
     }

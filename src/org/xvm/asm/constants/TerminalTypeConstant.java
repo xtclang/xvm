@@ -103,6 +103,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
+            case NativeClass:
             case UnresolvedName:
                 break;
 
@@ -255,6 +256,7 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case Class:
+            case NativeClass:
                 idClz = (IdentityConstant) constant;
                 break;
 
@@ -370,6 +372,7 @@ public class TerminalTypeConstant
             case Module:
             case Package:
             case Class:
+            case NativeClass:
                 return super.buildTypeInfo(errs);
 
             case Property:
@@ -488,6 +491,7 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case NativeClass:
                 // these are always class types (not interface types)
                 return fAllowInterface;
 
@@ -531,6 +535,7 @@ public class TerminalTypeConstant
                 return (IdentityConstant) constant;
 
             case Class:
+            case NativeClass:
                 if (!fAllowInterface)
                     {
                     // must not be an interface
@@ -568,6 +573,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
+            case NativeClass:
                 return true;
 
             case Property:
@@ -751,6 +757,7 @@ public class TerminalTypeConstant
                 break;
 
             case Class:
+            case NativeClass:
                 {
                 ClassStructure clzRight = (ClassStructure)
                     ((IdentityConstant) constIdRight).getComponent();
@@ -1251,6 +1258,7 @@ public class TerminalTypeConstant
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
+                case NativeClass:
                     break;
 
                 case UnresolvedName:

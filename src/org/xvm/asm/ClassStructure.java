@@ -17,6 +17,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -452,28 +453,35 @@ public class ClassStructure
      */
     public TypeConstant getRebaseType()
         {
-        switch (getFormat())
+        ConstantPool pool   = getConstantPool();
+        Format       format = getFormat();
+
+        switch (format)
             {
             case MODULE:
-                return getConstantPool().typeModule();
+                return pool.typeModule();
 
             case PACKAGE:
-                return getConstantPool().typePackage();
+                return pool.typePackage();
 
             case ENUM:
-                return getConstantPool().typeEnum();
+                return pool.typeEnum();
 
             case CONST:
             case SERVICE:
                 // only if the format differs from the format of the super
                 ClassStructure structSuper = (ClassStructure)
                         getExtendsType().getSingleUnderlyingClass(false).getComponent();
-                return getFormat() == structSuper.getFormat()
-                        ? null
-                        : getFormat() == Format.CONST
-                                ? getConstantPool().typeConst()
-                                : getConstantPool().typeService();
 
+                if (format != structSuper.getFormat())
+                    {
+                    ClassConstant constRebase = format == Format.CONST
+                        ? pool.clzConst()
+                        : pool.clzService();
+
+                    return new NativeRebaseConstant(constRebase).asTypeConstant();
+                    }
+                // break through
             default:
                 return null;
             }

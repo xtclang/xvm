@@ -47,10 +47,10 @@ public class PropertyInfo
             boolean        fRequireField,
             boolean        fSuppressVar)
         {
-        m_aBody             = aBody;
-        m_type              = type;
-        m_fRequireField     = fRequireField;
-        m_fSuppressVar      = fSuppressVar;
+        m_aBody          = aBody;
+        m_type           = type;
+        m_fRequireField  = fRequireField;
+        m_fSuppressVar   = fSuppressVar;
         }
 
     /**
@@ -259,7 +259,7 @@ public class PropertyInfo
         // is extended, the private setter is no longer accessible, so while the underlying property
         // itself is not changed, the ability to access the property as a Var disappears; this is
         // referred to as "suppressing the Var".
-        boolean fSuppressVar  = this.m_fSuppressVar | that.m_fSuppressVar;
+        boolean fSuppressVar = this.m_fSuppressVar | that.m_fSuppressVar;
 
         // the property extension cannot re-introduce a Var if it has been suppressed by the base
         if (this.isSetterUnreachable() && that.isVar())

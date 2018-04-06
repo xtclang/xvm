@@ -749,6 +749,7 @@ public abstract class Constant
         ChildClass,
         Register,
         Signature,
+        NativeClass,
 
         /*
          * Types.

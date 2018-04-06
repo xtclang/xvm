@@ -11,14 +11,14 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xRefImpl;
+import org.xvm.runtime.template.xRef;
 
 
 /**
  * TODO:
  */
 public class xInjectedRef
-        extends xRefImpl
+        extends xRef
     {
     public static xInjectedRef INSTANCE;
 

@@ -4,7 +4,6 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -56,7 +55,7 @@ public class xUncheckedInt64
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         // TODO: assert IntConstant.getFormat() == UncheckedInt
-        return constant instanceof IntConstant ? new JavaLong(ensureCanonicalClass(),
+        return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),
                 (((IntConstant) constant).getValue().getLong())) : null;
         }
 
@@ -186,17 +185,17 @@ public class xUncheckedInt64
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         JavaLong hThis = (JavaLong) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "hash":
                 return frame.assignValue(iReturn, hThis);
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -240,6 +239,6 @@ public class xUncheckedInt64
     public static JavaLong makeHandle(long lValue)
         {
         // TODO: use a cache of common values
-        return new JavaLong(INSTANCE.ensureCanonicalClass(), lValue);
+        return new JavaLong(INSTANCE.getCanonicalClass(), lValue);
         }
     }

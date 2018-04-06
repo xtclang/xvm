@@ -2,7 +2,6 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -27,7 +26,7 @@ public class xObject
         if (fInstance)
             {
             INSTANCE = this;
-            CLASS = ensureCanonicalClass();
+            CLASS = getCanonicalClass();
             }
         }
 
@@ -39,14 +38,14 @@ public class xObject
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        switch (property.getName())
+        switch (sPropName)
             {
             case "meta":
                 return frame.assignValue(iReturn, hTarget);
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
     }

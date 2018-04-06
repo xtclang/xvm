@@ -16,7 +16,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;

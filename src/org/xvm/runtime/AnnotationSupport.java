@@ -9,9 +9,9 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.template.xRefImpl;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
-import org.xvm.runtime.template.xVarImpl;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
+import org.xvm.runtime.template.xVar;
 
 /**
  * An OpSupport and VarSupport implementation for annotated types.
@@ -27,7 +27,7 @@ public class AnnotationSupport
         OpSupport supportAnno = registry.getTemplate(constIdAnno);
 
         // if the annotation itself is native, it overrides the base type template (support)
-        if (supportAnno instanceof xRefImpl) // TODO: isNative()?
+        if (supportAnno instanceof xRef) // TODO: isNative()?
             {
             f_support = supportAnno.getTemplate(typeBase);
             f_fNative = true;
@@ -39,11 +39,11 @@ public class AnnotationSupport
             ConstantPool pool = typeBase.getConstantPool();
             if (constIdBase.equals(pool.clzVar()))
                 {
-                f_support = xVarImpl.INSTANCE;
+                f_support = xVar.INSTANCE;
                 }
             else if (constIdBase.equals(pool.clzRef()))
                 {
-                f_support = xRefImpl.INSTANCE;
+                f_support = xRef.INSTANCE;
                 }
             else
                 {

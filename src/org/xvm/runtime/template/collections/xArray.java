@@ -366,7 +366,7 @@ public class xArray
 
     public static GenericArrayHandle makeHandle(long cCapacity)
         {
-        return new GenericArrayHandle(INSTANCE.ensureCanonicalClass(), cCapacity);
+        return new GenericArrayHandle(INSTANCE.getCanonicalClass(), cCapacity);
         }
 
     public static GenericArrayHandle makeHandle(TypeConstant typeEl, ObjectHandle[] ahValue)

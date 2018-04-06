@@ -25,7 +25,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
 
@@ -157,7 +157,7 @@ public class TypeComposition
                 }
             }
 
-        return m_clzSuper = templateSuper.ensureCanonicalClass();
+        return m_clzSuper = templateSuper.getCanonicalClass();
         }
 
     /**
@@ -209,7 +209,7 @@ public class TypeComposition
         TypeConstant typeInception = f_typeInception;
 
         // struct is not "revealable"
-        return typeInception == f_typeRevealed|| isStruct()
+        return typeInception == f_typeRevealed || isStruct()
             ? handle : handle.cloneAs(f_template.ensureClass(typeInception, typeInception));
         }
 
@@ -405,7 +405,7 @@ public class TypeComposition
         if (templateCategory != xObject.INSTANCE)
             {
             // all categories are non-generic
-            list.add(templateCategory.ensureCanonicalClass());
+            list.add(templateCategory.getCanonicalClass());
             }
 
         // 1.5
@@ -495,10 +495,6 @@ public class TypeComposition
     protected CallChain collectMethodCallChain(SignatureConstant constSignature)
         {
         TypeConstant typeActual = f_typeInception;
-        if (typeActual.isParamsSpecified())
-            {
-            constSignature = constSignature.resolveGenericTypes(typeActual);
-            }
 
         TypeInfo info = typeActual.ensureTypeInfo();
         return new CallChain(info.getOptimizedMethodChain(constSignature));
@@ -519,13 +515,14 @@ public class TypeComposition
 
     protected CallChain collectPropertyCallChain(String sPropName, boolean fGetter)
         {
-        TypeInfo     type = f_typeInception.ensureTypeInfo();
-        PropertyInfo prop = type.findProperty(sPropName);
-        PropertyConstant id = prop.getIdentity();
+        TypeInfo     info = f_typeInception.ensureTypeInfo();
+        PropertyInfo prop = info.findProperty(sPropName);
+
+        PropertyConstant constProp = prop.getIdentity(); // TODO: this should be passed in
 
         return new CallChain(fGetter
-            ? type.getOptimizedGetChain(id)
-            : type.getOptimizedSetChain(id));
+            ? info.getOptimizedGetChain(constProp)
+            : info.getOptimizedSetChain(constProp));
         }
 
     // retrieve the property structure for the specified property

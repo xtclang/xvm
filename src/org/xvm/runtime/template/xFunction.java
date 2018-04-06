@@ -56,7 +56,7 @@ public class xFunction
 
             // TODO: assert if a method
             // TODO: construct the correct TypeComposition
-            return new FunctionHandle(ensureCanonicalClass(), function);
+            return new FunctionHandle(getCanonicalClass(), function);
             }
         return null;
         }
@@ -265,7 +265,7 @@ public class xFunction
 
         public NativeMethodHandle(xService.NativeOperation op)
             {
-            super(INSTANCE.ensureCanonicalClass(), null);
+            super(INSTANCE.getCanonicalClass(), null);
 
             f_op = op;
             }
@@ -442,7 +442,7 @@ public class xFunction
             }
 
         public static FullyBoundHandle NO_OP = new FullyBoundHandle(
-                INSTANCE.ensureCanonicalClass(), null, null, null)
+                INSTANCE.getCanonicalClass(), null, null, null)
             {
             @Override
             public int callChain(Frame frame, Constants.Access access, Frame.Continuation continuation)
@@ -565,16 +565,16 @@ public class xFunction
 
     public static AsyncHandle makeAsyncHandle(CallChain chain, int nDepth)
         {
-        return new AsyncHandle(INSTANCE.ensureCanonicalClass(), chain, nDepth);
+        return new AsyncHandle(INSTANCE.getCanonicalClass(), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)
         {
-        return new FunctionHandle(INSTANCE.ensureCanonicalClass(), chain, nDepth);
+        return new FunctionHandle(INSTANCE.getCanonicalClass(), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(MethodStructure function)
         {
-        return new FunctionHandle(INSTANCE.ensureCanonicalClass(), function);
+        return new FunctionHandle(INSTANCE.getCanonicalClass(), function);
         }
     }

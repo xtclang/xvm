@@ -1248,6 +1248,7 @@ public class ConstantPool
             case Module:
             case Package:
             case Class:
+            case NativeClass:
             case Method:
             case Property:
                 constMultiMethod = ensureMultiMethodConstant(constParent, constSig.getName());
