@@ -15,6 +15,7 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
@@ -223,31 +224,32 @@ public class NameExpression
             }
         else
             {
-            // TODO resolve subsequent names
+            // TODO resolve subsequent names (will return another expression type at any point that a name is not resolving to an arg)
             notImplemented();
             }
 
-        TypeConstant type = arg.getRefType();
-
         // validate that the expression can be of the required type
-        TypeFit fit = TypeFit.Fit;
+        TypeConstant type = arg.getRefType();
+        TypeFit      fit  = TypeFit.Fit;
         if (fValid && typeRequired != null && !type.isA(typeRequired))
             {
             // check if conversion in required
-            if ()
+            MethodConstant idMethod = type.ensureTypeInfo().findConversion(typeRequired);
+            if (idMethod == null)
                 {
-                // TODO
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
+                fValid = false;
                 }
             else
                 {
-                arg.getRefType()
-                if (arg != null && !arg.getRefType().isAssignableTo(typeRequired))
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
-                    fValid = false;
-                    }
+                // use the return value from the conversion function to figure out what type the
+                // literal should be converted to, and then do the conversion here in the
+                // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
+                // able to rely on the runtime itself to do conversions, and using containers,
+                // can even do so for user code)
+                type = idMethod.getSignature().getRawReturns()[0];
+                fit  = fit.addConversion();
                 }
-
             }
 
         if (!fValid)
@@ -261,7 +263,7 @@ public class NameExpression
 
             fit = TypeFit.NoFit;
             }
-        else  if (pref == TuplePref.Required)
+        else if (pref == TuplePref.Required)
             {
             fit = fit.addPack();
             }
@@ -275,47 +277,19 @@ public class NameExpression
         }
 
     @Override
-    public TypeConstant getType()
-        {
-        return m_type == null
-                ? m_arg == null
-                        ? pool().typeObject()
-                        : m_arg.getRefType()
-                : m_type;
-        }
-
-    @Override
     public boolean isAssignable()
         {
         return m_fAssignable;
         }
 
     @Override
-    public boolean isConstant()
+    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
         {
-        return m_arg != null && m_arg instanceof Constant && !isAssignable();
+        return m_arg == null
+                ? generateBlackHole(getType())
+                : m_arg;
         }
 
-    @Override
-    public Constant toConstant()
-        {
-        assert isConstant();
-        return (Constant) m_arg;
-        }
-
-    @Override
-    public Argument generateArgument(Code code, TypeConstant type, boolean fTupleOk, ErrorListener errs)
-        {
-        if (m_arg == null)
-            {
-            // TODO log error
-            return generateBlackHole(type);
-            }
-
-        return isConstant()
-                ? super.generateArgument(code, type, fTupleOk, errs)
-                : validateAndConvertSingle(m_arg, code, type, errs);
-        }
 
     @Override
     public Assignable generateAssignable(Code code, ErrorListener errs)

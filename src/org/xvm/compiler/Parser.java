@@ -278,7 +278,7 @@ public class Parser
                 else
                     {
                     tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                    parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprIf), compositions);
+                    parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprIf), compositions);
                     }
                 expect(Id.R_CURLY);
 
@@ -299,7 +299,7 @@ public class Parser
                         }
                     else
                         {
-                        parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprElse), compositions);
+                        parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprElse), compositions);
                         }
                     if (!fElseIf)
                         {
@@ -566,7 +566,7 @@ public class Parser
                     else
                         {
                         tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                        parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
+                        parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
                         }
                     // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
@@ -587,7 +587,7 @@ public class Parser
                             }
                         else
                             {
-                            parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
+                            parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
                             }
                         // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
@@ -2077,7 +2077,7 @@ public class Parser
         Expression expr = parseTernaryExpression();
         if (peek().getId() == Id.COLON)
             {
-            expr = new BiExpression(expr, current(), parseExpression());
+            expr = new ElseExpression(expr, current(), parseExpression());
             }
         return expr;
         }
@@ -2123,7 +2123,7 @@ s     *
         Expression expr = parseOrExpression();
         if (peek().getId() == Id.COND_ELSE)
             {
-            expr = new BiExpression(expr, current(), parseElvisExpression());
+            expr = new ElseExpression(expr, current(), parseElvisExpression());
             }
         return expr;
         }
@@ -2144,7 +2144,7 @@ s     *
         Expression expr = parseAndExpression();
         while (peek().getId() == Id.COND_OR)
             {
-            expr = new BiExpression(expr, current(), parseAndExpression());
+            expr = new RelOpExpression(expr, current(), parseAndExpression());
             }
         return expr;
         }
@@ -2165,7 +2165,7 @@ s     *
         Expression expr = parseBitOrExpression();
         while (peek().getId() == Id.COND_AND)
             {
-            expr = new BiExpression(expr, current(), parseBitOrExpression());
+            expr = new RelOpExpression(expr, current(), parseBitOrExpression());
             }
         return expr;
         }
@@ -2186,7 +2186,7 @@ s     *
         Expression expr = parseBitXorExpression();
         while (peek().getId() == Id.BIT_OR)
             {
-            expr = new BiExpression(expr, current(), parseBitXorExpression());
+            expr = new RelOpExpression(expr, current(), parseBitXorExpression());
             }
         return expr;
         }
@@ -2207,7 +2207,7 @@ s     *
         Expression expr = parseBitAndExpression();
         while (peek().getId() == Id.BIT_XOR)
             {
-            expr = new BiExpression(expr, current(), parseBitAndExpression());
+            expr = new RelOpExpression(expr, current(), parseBitAndExpression());
             }
         return expr;
         }
@@ -2228,7 +2228,7 @@ s     *
         Expression expr = parseEqualityExpression();
         while (peek().getId() == Id.BIT_AND)
             {
-            expr = new BiExpression(expr, current(), parseEqualityExpression());
+            expr = new RelOpExpression(expr, current(), parseEqualityExpression());
             }
         return expr;
         }
@@ -2250,7 +2250,7 @@ s     *
         Expression expr = parseRelationalExpression();
         while (peek().getId() == Id.COMP_EQ || peek().getId() == Id.COMP_NEQ)
             {
-            expr = new BiExpression(expr, current(), parseRelationalExpression());
+            expr = new CmpExpression(expr, current(), parseRelationalExpression());
             }
         return expr;
         }
@@ -2284,13 +2284,16 @@ s     *
                 case COMP_LTEQ:
                 case COMP_GTEQ:
                 case COMP_ORD:
-                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    expr = new CmpExpression(expr, current(), parseRangeExpression());
                     break;
 
                 case AS:
                 case IS:
+                    expr = new AsExpression(expr, current(), parseTypeExpression());
+                    break;
+
                 case INSTANCEOF:
-                    expr = new BiExpression(expr, current(), parseTypeExpression());
+                    expr = new IsExpression(expr, current(), parseTypeExpression());
                     break;
 
                 default:
@@ -2315,7 +2318,7 @@ s     *
         Expression expr = parseShiftExpression();
         while (peek().getId() == Id.DOTDOT)
             {
-            expr = new BiExpression(expr, current(), parseShiftExpression());
+            expr = new RelOpExpression(expr, current(), parseShiftExpression());
             }
         return expr;
         }
@@ -2343,7 +2346,7 @@ s     *
                 case SHL:
                 case SHR:
                 case USHR:
-                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    expr = new RelOpExpression(expr, current(), parseRangeExpression());
                     break;
 
                 default:
@@ -2369,7 +2372,7 @@ s     *
         Expression expr = parseMultiplicativeExpression();
         while (peek().getId() == Id.ADD || peek().getId() == Id.SUB)
             {
-            expr = new BiExpression(expr, current(), parseMultiplicativeExpression());
+            expr = new RelOpExpression(expr, current(), parseMultiplicativeExpression());
             }
         return expr;
         }
@@ -2399,7 +2402,7 @@ s     *
                 case DIV:
                 case MOD:
                 case DIVMOD:
-                    expr = new BiExpression(expr, current(), parsePrefixExpression());
+                    expr = new RelOpExpression(expr, current(), parsePrefixExpression());
                     break;
 
                 default:
@@ -2527,7 +2530,9 @@ s     *
                             {
                             Token keyword = current();
                             expect(Id.L_PAREN);
-                            expr = new BiExpression(expr, keyword, parseTypeExpression());
+                            expr = keyword.getId() == Id.AS
+                                    ? new AsExpression(expr, keyword, parseTypeExpression())
+                                    : new IsExpression(expr, keyword, parseTypeExpression());
                             expect(Id.R_PAREN);
                             break;
                             }
