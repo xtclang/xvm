@@ -172,22 +172,52 @@ public class NameExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         boolean fValid = true;
 
-        Token    name  = names.get(0);
-        String   sName = name.getValue().toString();
-        Argument arg   = ctx.resolveName(name, errs);
+        // a name expression has params from the construct:
+        //      QualifiedNameName TypeParameterTypeList-opt
+        ConstantPool pool = pool();
+        if (params != null)
+            {
+            for (int i = 0, c = params.size(); i < c; ++i)
+                {
+                TypeExpression typeOld = params.get(i);
+                TypeExpression typeNew = (TypeExpression) typeOld.validate(
+                        ctx, pool.typeType(), TuplePref.Rejected, errs);
+                fValid &= typeNew != null;
+                if (typeNew != typeOld && typeNew != null)
+                    {
+                    params.set(i, typeNew);
+                    }
+                }
+            }
+
+        // resolve the initial name
+        Token        name  = names.get(0);
+        String       sName = name.getValue().toString();
+        Argument     arg   = ctx.resolveName(name, errs);
         if (arg == null)
             {
-            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING, sName,
-                ctx.getMethod().getIdentityConstant().getSignature());
+            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
+                    sName, ctx.getMethod().getIdentityConstant().getSignature());
             fValid = false;
             }
-        else if (names.size() == 1)
+
+        // if anything has failed already, we won't be able to complete the validation
+        if (!fValid)
             {
+            finishValidation(TypeFit.NoFit, typeRequired, arg instanceof Constant ? (Constant) arg : null);
+            return null;
+            }
+
+        // resolve the name to an argument, and determine assignability
+        if (names.size() == 1)
+            {
+            // TODO incorporate params, if any
             m_arg         = arg;
             m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
             }
@@ -197,29 +227,51 @@ public class NameExpression
             notImplemented();
             }
 
-        // TODO figure out under what conditions a NameExpression has "params"
-        // TODO make sure that the "params" are being handled correctly
-        if (params != null)
-            {
-            for (TypeExpression type : params)
-                {
-                fValid &= type.validate(ctx, null, errs);
-                }
-            }
+        TypeConstant type = arg.getRefType();
 
         // validate that the expression can be of the required type
-        if (typeRequired != null)
+        TypeFit fit = TypeFit.Fit;
+        if (fValid && typeRequired != null && !type.isA(typeRequired))
             {
-            if (arg != null && !arg.getRefType().isAssignableTo(typeRequired))
+            // check if conversion in required
+            if ()
                 {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
-                fValid = false;
+                // TODO
+                }
+            else
+                {
+                arg.getRefType()
+                if (arg != null && !arg.getRefType().isAssignableTo(typeRequired))
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
+                    fValid = false;
+                    }
                 }
 
-            m_type = typeRequired;
             }
 
-        return fValid;
+        if (!fValid)
+            {
+            // if there's any problem computing the type, and the expression is already invalid,
+            // then just agree to whatever was asked
+            if (typeRequired != null)
+                {
+                type = typeRequired;
+                }
+
+            fit = TypeFit.NoFit;
+            }
+        else  if (pref == TuplePref.Required)
+            {
+            fit = fit.addPack();
+            }
+
+        boolean fConstant = m_arg != null && m_arg instanceof Constant && !m_fAssignable;
+        finishValidation(fit, type, fConstant ? (Constant) m_arg : null);
+
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
