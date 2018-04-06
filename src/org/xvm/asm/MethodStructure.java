@@ -923,7 +923,7 @@ public class MethodStructure
                             }
 
                         template.construct(frame, constructor,
-                            template.ensureCanonicalClass(), Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                            template.getCanonicalClass(), Utils.OBJECTS_NONE, Frame.RET_LOCAL);
                         frame.m_frameNext.setContinuation(frameCaller ->
                             {
                             constSingleton.setHandle(frameCaller.getFrameLocal());

@@ -2,10 +2,15 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.ClassConstant;
+
+import org.xvm.asm.constants.NativeRebaseConstant;
+
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -17,43 +22,59 @@ import org.xvm.runtime.VarSupport;
 /**
  * TODO:
  */
-public class xRefImpl
+public class xRef
         extends ClassTemplate
         implements VarSupport
     {
-    public static xRefImpl INSTANCE;
+    public static xRef INSTANCE;
+    public static TypeConstant INCEPTION_TYPE;
 
-    public xRefImpl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
         if (fInstance)
             {
             INSTANCE = this;
+            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
+                asTypeConstant().normalizeParameters();
             }
         }
 
     @Override
     public void initDeclared()
         {
-        markNativeGetter("assigned");
-        markNativeMethod("get", VOID, new String[]{"RefType"});
-        markNativeGetter("name");
-        markNativeGetter("selfContained");
-
-        // extends Referent
-        markNativeGetter("ActualType");
-        markNativeGetter("service_");
-        markNativeGetter("const_");
-        markNativeGetter("immutable_");
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    protected TypeComposition ensureCanonicalClass()
+        {
+        return ensureClass(INCEPTION_TYPE, getCanonicalType());
+        }
+
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        return ensureClass(INCEPTION_TYPE, typeActual);
+        }
+
+    @Override
+    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
+        {
+        ConstantPool pool = f_struct.getConstantPool();
+
+        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
+            INCEPTION_TYPE, typeParams).normalizeParameters();
+
+        return ensureClass(typeInception, getCanonicalType());
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         RefHandle hRef = (RefHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "ActualType":
                 switch (get(frame, hRef, Frame.RET_LOCAL))
@@ -162,7 +183,7 @@ public class xRefImpl
                         throw new IllegalStateException();
                     }
             }
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

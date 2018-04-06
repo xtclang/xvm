@@ -10,7 +10,7 @@ import org.xvm.asm.OpInPlaceAssign;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**

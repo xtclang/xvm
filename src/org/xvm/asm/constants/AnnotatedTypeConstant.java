@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -119,6 +120,30 @@ public class AnnotatedTypeConstant
     public Annotation getAnnotation()
         {
         return m_annotation;
+        }
+
+    /**
+     * REVIEW find all the places that call getAnnotation() and then call getType() on that, and eval which should use this instead
+     *
+     * @return the annotation type with any type parameters resolved that overlap with the
+     *         underlying TypeConstant
+     */
+    public TypeConstant getAnnotationType()
+        {
+        Constant constAnno = m_annotation.getAnnotationClass();
+
+        if (constAnno instanceof ClassConstant)
+            {
+            ClassStructure struct = (ClassStructure) ((ClassConstant) constAnno).getComponent();
+
+            return struct.getFormalType().resolveGenerics(m_constType);
+            }
+
+        // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual
+        //        child / sibling that is a mix-in, so some form of "virtual annotation" that has not
+        //        yet been defined / evaluated for inclusion in the language)
+
+        return m_annotation.getAnnotationType();
         }
 
     /**
@@ -335,8 +360,8 @@ public class AnnotatedTypeConstant
                 }
 
             // verify that the underlying type can be annotated by this annotation
-            TypeConstant typeMixin = m_annotation.getAnnotationType();
-            if (!fBad && !fHalt && typeMixin.isExplicitClassIdentity(false)
+            TypeConstant typeMixin = getAnnotationType();
+            if (!fBad && !fHalt && typeMixin.isExplicitClassIdentity(true)
                     && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN)
                 {
                 TypeConstant typeInto = typeMixin.getExplicitClassInto();

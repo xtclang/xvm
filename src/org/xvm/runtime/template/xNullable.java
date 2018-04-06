@@ -32,7 +32,7 @@ public class xNullable
             ConstantPool pool = f_templates.f_container.f_pool;
             f_templates.registerNativeTemplate(pool.typeNull(), this);
 
-            NULL = new NullHandle(ensureCanonicalClass());
+            NULL = new NullHandle(getCanonicalClass());
 
             m_listNames = Collections.singletonList("Null");
             m_listHandles = Collections.singletonList(NULL);

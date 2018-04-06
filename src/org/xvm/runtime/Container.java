@@ -76,7 +76,7 @@ public class Container
 
         m_contextMain = createServiceContext(f_sAppName);
         xService.makeHandle(m_contextMain,
-            xService.INSTANCE.ensureCanonicalClass(),
+            xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
 
         initResources();
@@ -116,7 +116,7 @@ public class Container
 
             Supplier<ObjectHandle> supplierClock = () ->
                 xService.makeHandle(createServiceContext("RuntimeClock"),
-                    templateRTClock.ensureCanonicalClass(), typeClock);
+                    templateRTClock.getCanonicalClass(), typeClock);
 
             f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
             }
@@ -131,7 +131,7 @@ public class Container
 
             Supplier<ObjectHandle> supplierConsole = () ->
                 xService.makeHandle(createServiceContext("Console"),
-                    templateRTConsole.ensureCanonicalClass(), typeConsole);
+                    templateRTConsole.getCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }

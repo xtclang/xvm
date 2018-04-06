@@ -8,7 +8,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.SingletonConstant;
 
@@ -62,7 +61,7 @@ public class xEnum
                     {
                     listNames.add(child.getName());
 
-                    EnumHandle hValue = new EnumHandle(ensureCanonicalClass(), cValues++);
+                    EnumHandle hValue = new EnumHandle(getCanonicalClass(), cValues++);
                     listHandles.add(hValue);
 
                     pool.ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
@@ -88,11 +87,11 @@ public class xEnum
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "name":
                 return frame.assignValue(iReturn,
@@ -102,7 +101,7 @@ public class xEnum
                 return frame.assignValue(iReturn, xInt64.makeHandle(hEnum.getValue()));
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

@@ -122,7 +122,7 @@ public class ThisClassConstant
     @Override
     public String getValueString()
         {
-        return THIS_CLASS;
+        return THIS_CLASS + '(' + m_constClass.getValueString() + ')';
         }
 
 

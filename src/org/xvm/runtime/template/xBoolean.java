@@ -44,8 +44,8 @@ public class xBoolean
             f_templates.registerNativeTemplate(pool.typeTrue(), this);
             f_templates.registerNativeTemplate(pool.typeFalse(), this);
 
-            FALSE = new BooleanHandle(ensureCanonicalClass(), false);
-            TRUE = new BooleanHandle(ensureCanonicalClass(), true);
+            FALSE = new BooleanHandle(getCanonicalClass(), false);
+            TRUE = new BooleanHandle(getCanonicalClass(), true);
 
             pool.valTrue().setHandle(TRUE);
             pool.valFalse().setHandle(FALSE);

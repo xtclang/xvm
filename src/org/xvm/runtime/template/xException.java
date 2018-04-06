@@ -64,7 +64,7 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeMutableHandle(INSTANCE.ensureCanonicalClass(), null, null);
+        ExceptionHandle hException = makeMutableHandle(INSTANCE.getCanonicalClass(), null, null);
 
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 

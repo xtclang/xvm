@@ -8,6 +8,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
@@ -33,6 +35,7 @@ public class xService
         extends ClassTemplate
     {
     public static xService INSTANCE;
+    public static TypeConstant INCEPTION_TYPE;
 
     public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -41,18 +44,22 @@ public class xService
         if (fInstance)
             {
             INSTANCE = this;
+            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
+                asTypeConstant().normalizeParameters();
             }
         }
 
     @Override
     public void initDeclared()
         {
-        markNativeGetter("serviceName");
-        markNativeGetter("asyncSection");
-        markNativeMethod("yield", VOID);
-        markNativeMethod("invokeLater", new String[]{"Function"});
-        markNativeMethod("registerTimeout", new String[]{"Timeout?"}, VOID);
-        markNativeMethod("registerAsyncSection", new String[]{"AsyncSection?"}, VOID);
+        }
+
+    @Override
+    protected TypeComposition ensureCanonicalClass()
+        {
+        return this == INSTANCE
+            ? ensureClass(INCEPTION_TYPE, getCanonicalType())
+            : super.ensureCanonicalClass();
         }
 
     @Override
@@ -124,7 +131,15 @@ public class xService
                 }
 
             case "registerAsyncSection":
+                if (frame.f_context != hService.m_context)
+                    {
+                    return frame.raiseException(xException.makeHandle("Call out of context"));
+                    }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
+
+            case "registerUnhandledExceptionNotification":
+                hService.m_context.m_hExceptionHandler = (FunctionHandle) hArg;
+                return Op.R_NEXT;
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -146,9 +161,9 @@ public class xService
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        switch (property.getName())
+        switch (sPropName)
             {
             case "serviceName":
                 return frame.assignValue(iReturn,
@@ -157,7 +172,7 @@ public class xService
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
             }
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

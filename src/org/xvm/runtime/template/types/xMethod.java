@@ -69,11 +69,11 @@ public class xMethod
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         MethodHandle hMethod = (MethodHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "name":
                 return frame.assignValue(iReturn, xString.makeHandle(hMethod.f_method.getName()));
@@ -83,7 +83,7 @@ public class xMethod
                 // Constant.Access starts with "Struct"
                 return frame.assignValue(iReturn, ACCESS.getEnumByOrdinal(access.ordinal() + 1));
             }
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)

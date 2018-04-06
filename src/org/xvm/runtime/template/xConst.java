@@ -6,7 +6,6 @@ import java.util.Iterator;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -57,16 +56,16 @@ public class xConst
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property,
+    public int invokeNativeGet(Frame frame, String sPropName,
                                ObjectHandle hTarget, int iReturn)
         {
-        switch (property.getName())
+        switch (sPropName)
             {
             case "hash":
                 return buildHashCode(frame, hTarget, iReturn);
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

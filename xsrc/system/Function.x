@@ -62,7 +62,7 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
      * executed in a synchronous manner, and the future will have completed by the time that this
      * method returns.
      */
-    @Future ReturnTypes invokeService(ParamTypes args);
+    FutureVar<ReturnTypes> invokeService(ParamTypes args);
 
     /**
      * Override the automatic conversion-to-function method from Object, removing the "@Auto"

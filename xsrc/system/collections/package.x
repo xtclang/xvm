@@ -116,6 +116,6 @@ package collections
          * @param inPlace  (optional) specify that the object should convert itself to {@code const}
          *                 if it supports that form of variable mutability
          */
-        immutable (ConstAble+Const) ensureConst(Boolean inPlace = false);
+        immutable ConstAble ensureConst(Boolean inPlace = false);
         }
     }

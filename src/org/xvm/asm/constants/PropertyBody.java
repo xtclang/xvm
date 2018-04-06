@@ -464,13 +464,17 @@ public class PropertyBody
 
         PropertyBody that = (PropertyBody) obj;
         return Handy.equals(this.m_structProp, that.m_structProp)
-            && this.m_type      .equals(that.m_type)
+            && this.m_type .equals(that.m_type)
+            && this.m_impl      == that.m_impl
+            && this.m_effectGet == that.m_effectGet
+            && this.m_effectSet == that.m_effectSet
             && this.m_fRO       == that.m_fRO
             && this.m_fRW       == that.m_fRW
             && this.m_fCustom   == that.m_fCustom
             && this.m_fField    == that.m_fField
             && this.m_fConstant == that.m_fConstant
             && Handy.equals(this.m_paraminfo    , that.m_paraminfo    )
+            && Handy.equals(this.m_constDelegate, that.m_constDelegate)
             && Handy.equals(this.m_constInitVal , that.m_constInitVal )
             && Handy.equals(this.m_constInitFunc, that.m_constInitFunc);
         }
@@ -485,7 +489,8 @@ public class PropertyBody
           .append(getName())
           .append("; (id=")
           .append(getIdentity().getValueString())
-          .append(", impl=" + m_impl);
+          .append(", impl=")
+          .append(m_impl);
 
         if (m_paraminfo != null)
             {

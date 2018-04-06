@@ -33,7 +33,7 @@ public class xByte
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof IntConstant ? new JavaLong(ensureCanonicalClass(),
+        return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),
             (((IntConstant) constant).getValue().getLong() | 0xFF)) : null;
         }
 

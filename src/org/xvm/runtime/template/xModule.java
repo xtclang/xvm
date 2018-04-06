@@ -47,7 +47,7 @@ public class xModule
             ModuleConstant constModule = (ModuleConstant) constant;
 
             return f_mapModules.computeIfAbsent(constModule.getName(),
-                    sName -> new ModuleHandle(ensureCanonicalClass(), sName));
+                    sName -> new ModuleHandle(getCanonicalClass(), sName));
             }
         return null;
         }

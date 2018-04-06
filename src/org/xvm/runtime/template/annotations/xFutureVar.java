@@ -4,10 +4,10 @@ package org.xvm.runtime.template.annotations;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -24,17 +24,19 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xVarImpl;
+import org.xvm.runtime.template.xVar;
 
 
 /**
  * TODO:
  */
 public class xFutureVar
-        extends xVarImpl
+        extends xVar
     {
     public static xFutureVar INSTANCE;
+    public static TypeConstant INCEPTION_TYPE;
     public static TypeConstant TYPE;
+
     public static EnumHandle Pending;
     public static EnumHandle Result;
     public static EnumHandle Error;
@@ -46,7 +48,7 @@ public class xFutureVar
         if (fInstance)
             {
             INSTANCE = this;
-            TYPE = getCanonicalType();
+            TYPE     = getCanonicalType();
             }
         }
 
@@ -64,13 +66,31 @@ public class xFutureVar
         Error = enumCompletion.getEnumByName("Error");
         }
 
+    protected TypeConstant getInceptionType()
+        {
+        return f_struct.getConstantPool().ensureAnnotatedTypeConstant(
+            new Annotation(TYPE.getDefiningConstant(), null), xVar.INCEPTION_TYPE);
+        }
+
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    protected TypeComposition ensureCanonicalClass()
+        {
+        return ensureClass(getInceptionType(), getCanonicalType());
+        }
+
+    @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        return ensureClass(getInceptionType(), typeActual);
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
         CompletableFuture cf = hThis.m_future;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "assignable":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(cf == null || !cf.isDone()));
@@ -118,7 +138,7 @@ public class xFutureVar
                 return frame.assignValue(iReturn, xNullable.NULL);
 
             }
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -309,6 +329,6 @@ public class xFutureVar
 
     public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
         {
-        return new FutureHandle(INSTANCE.ensureCanonicalClass(), null, future);
+        return new FutureHandle(INSTANCE.getCanonicalClass(), null, future);
         }
     }

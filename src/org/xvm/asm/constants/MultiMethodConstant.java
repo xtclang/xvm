@@ -47,6 +47,7 @@ public class MultiMethodConstant
         if (    !( constParent.getFormat() == Format.Module
                 || constParent.getFormat() == Format.Package
                 || constParent.getFormat() == Format.Class
+                || constParent.getFormat() == Format.NativeClass
                 || constParent.getFormat() == Format.Property
                 || constParent.getFormat() == Format.Method ))
             {

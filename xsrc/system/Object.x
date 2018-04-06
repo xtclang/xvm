@@ -59,6 +59,12 @@ class Object
         return () -> this;
         }
 
+//     REVIEW: clone/makeImmutable vs. immutable clone
+//    immutable Object makeImmutable(Boolean clone = false)
+//        {
+//        TODO native
+//        }
+
     immutable Object to<immutable Object>()
         {
         meta.immutable_ = true;

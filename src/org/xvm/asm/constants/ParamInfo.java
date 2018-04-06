@@ -97,10 +97,11 @@ public class ParamInfo
         sb.append("<")
           .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
 
-        if (!getConstraintType().isEcstasy("Object"))
+        TypeConstant typeConstraint = getConstraintType();
+        if (!typeConstraint.isEcstasy("Object") && !typeConstraint.isTuple())
             {
             sb.append(" extends ")
-              .append(getConstraintType().getValueString());
+              .append(typeConstraint.getValueString());
             }
 
         sb.append(">");

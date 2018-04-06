@@ -5,7 +5,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.StringConstant;
 
@@ -44,7 +43,7 @@ public class xString
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof StringConstant ? new StringHandle(ensureCanonicalClass(),
+        return constant instanceof StringConstant ? new StringHandle(getCanonicalClass(),
                 ((StringConstant) constant).getValue()) : null;
         }
 
@@ -58,17 +57,17 @@ public class xString
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hThis.m_sValue.length()));
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -225,6 +224,6 @@ public class xString
 
     public static StringHandle makeHandle(String sValue)
         {
-        return new StringHandle(INSTANCE.ensureCanonicalClass(), sValue);
+        return new StringHandle(INSTANCE.getCanonicalClass(), sValue);
         }
     }

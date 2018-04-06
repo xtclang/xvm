@@ -130,15 +130,7 @@ public abstract class OpInvocable extends Op
 
         TypeComposition clazz = m_clazz = hTarget.getComposition();
 
-        Access access = constMethod.getComponent().getAccess();
-        if (access == Access.PRIVATE)
-            {
-            m_chain = new CallChain((MethodStructure) constMethod.getComponent());
-            }
-        else
-            {
-            m_chain = clazz.getMethodCallChain(constMethod.getSignature(), access);
-            }
+        m_chain = clazz.getMethodCallChain(constMethod.getSignature());
 
         return m_chain;
         }

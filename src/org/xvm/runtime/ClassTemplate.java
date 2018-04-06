@@ -38,11 +38,11 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRefImpl;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
-import org.xvm.runtime.template.xVarImpl;
+import org.xvm.runtime.template.xVar;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xArray;
@@ -155,15 +155,22 @@ public abstract class ClassTemplate
     /**
      * Obtain the canonical class for this template.
      */
-    public TypeComposition ensureCanonicalClass()
+    public TypeComposition getCanonicalClass()
         {
         TypeComposition clz = m_clazzCanonical;
         if (clz == null)
             {
-            clz = ensureClass(getCanonicalType());
+            m_clazzCanonical = clz = ensureCanonicalClass();
             }
-
         return clz;
+        }
+
+    /**
+     * Ensure the canonical class for this template.
+     */
+    protected TypeComposition ensureCanonicalClass()
+        {
+        return ensureClass(getCanonicalType());
         }
 
     /**
@@ -176,11 +183,15 @@ public abstract class ClassTemplate
         ClassStructure struct = f_struct;
         TypeConstant type = struct.getConstantPool().ensureParameterizedTypeConstant(
             struct.getIdentityConstant().asTypeConstant(), typeParams);
-        return ensureClass(type);
+        return ensureClass(type.normalizeParameters());
         }
 
     /**
-     * Produce a TypeComposition using the specified actual (inception) type.
+     * Produce a TypeComposition using the specified actual type.
+     *
+     * Note: the passed type should be fully resolved and normalized
+     *       (all formal parameters resolved)
+     * Note2: this method is overridden by some native templates to substitute the inception type
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
@@ -191,14 +202,14 @@ public abstract class ClassTemplate
      * Produce a TypeComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
-     * Note: the passed actual type should be fully resolved (no formal parameters)
-     * Note2: the following should always hold true: typeActual.getOpSupport() == this;
+     * Note: the passed inception type should be fully resolved and normalized
+     *       (all formal parameters resolved)
+     * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    public TypeComposition ensureClass(TypeConstant typeActual, TypeConstant typeMask)
+    public TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        assert typeActual.getAccess() == Access.PUBLIC;
-
-        TypeConstant typeInception = typeActual.normalizeParameters();
+        assert typeInception.getAccess() == Access.PUBLIC;
+        assert typeInception.normalizeParameters() == typeInception;
 
         OpSupport support = typeInception.isAnnotated() ?
             typeInception.getOpSupport(f_templates) : this;
@@ -247,7 +258,7 @@ public abstract class ClassTemplate
             }
 
         PropertyStructure propSuper = null;
-        for (TypeComposition clzSuper : ensureCanonicalClass().getCallChain())
+        for (TypeComposition clzSuper : getCanonicalClass().getCallChain())
             {
             propSuper = clzSuper.getTemplate().getProperty(sPropName);
             if (propSuper != null)
@@ -724,7 +735,7 @@ public abstract class ClassTemplate
         CallChain chain = hTarget.getComposition().getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
-            return invokeNativeGet(frame, chain.getProperty(), hTarget, iReturn);
+            return invokeNativeGet(frame, sPropName, hTarget, iReturn);
             }
 
         MethodStructure method = hTarget.isStruct() ? null : chain.getTop();
@@ -758,13 +769,6 @@ public abstract class ClassTemplate
             }
 
         String sName = property.getName();
-
-        if (hTarget.getComposition().isGenericType(sName))
-            {
-            TypeConstant type = hTarget.getComposition().getActualParamType(sName);
-
-            return frame.assignValue(iReturn, type.getTypeHandle());
-            }
 
         GenericHandle hThis = (GenericHandle) hTarget;
         ObjectHandle hValue = hThis.getField(sName);
@@ -889,16 +893,23 @@ public abstract class ClassTemplate
      * Invoke a native property "get" operation.
      *
      * @param frame     the current frame
-     * @param property  the PropertyStructure representing the property
+     * @param sPropName the PropertyStructure representing the property
      * @param hTarget   the target handle
      * @param iReturn   the register id to place the result of invocation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    protected int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        throw new IllegalStateException("Unknown property: " + property.getName() + " on " + this);
+        if (hTarget.getComposition().isGenericType(sPropName))
+            {
+            TypeConstant type = hTarget.getComposition().getActualParamType(sPropName);
+
+            return frame.assignValue(iReturn, type.getTypeHandle());
+            }
+
+        throw new IllegalStateException("Unknown property: " + sPropName + " on " + this);
         }
 
     /**
@@ -1169,8 +1180,8 @@ public abstract class ClassTemplate
         TypeConstant typeReferent = constProp.getRefType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
-            ? xRefImpl.INSTANCE.ensureParameterizedClass(typeReferent)
-            : xVarImpl.INSTANCE.ensureParameterizedClass(typeReferent);
+            ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
+            : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
 
         return new RefHandle(clzRef, hThis, sPropName);
         }
@@ -1444,7 +1455,10 @@ public abstract class ClassTemplate
     // Note: this also makes the property "calculated" (no storage)
     public void markNativeGetter(String sPropName)
         {
-        MethodStructure methodGet = Adapter.getGetter(ensureProperty(sPropName));
+        PropertyStructure prop = getProperty(sPropName);
+        assert prop != null;
+
+        MethodStructure methodGet = Adapter.getGetter(prop);
         if (methodGet == null)
             {
             ensurePropertyInfo(sPropName).m_fNativeGetter = true;
@@ -1589,12 +1603,12 @@ public abstract class ClassTemplate
      */
     protected ClassTemplate f_templateCategory;
 
+    // ----- caches ------
+
     /**
-     * Public non-parameterized TypeComposition.
+     * Canonical type composition.
      */
     protected TypeComposition m_clazzCanonical;
-
-    // ----- caches ------
 
     /**
      * A cache of TypeCompositions keyed by the "revealed type".

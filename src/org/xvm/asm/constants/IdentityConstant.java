@@ -445,6 +445,7 @@ public abstract class IdentityConstant
             case Class:
             case Typedef:
             case Property:
+            case NativeClass:
                 return getConstantPool().ensureTerminalTypeConstant(this);
 
             default:

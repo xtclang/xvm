@@ -42,9 +42,6 @@ public abstract class PseudoConstant
         return this.equals(that);
         }
 
-
-    // ----- Constant methods ----------------------------------------------------------------------
-
     /**
      * Note: This only applies to {@link ThisClassConstant}, {@link ChildClassConstant}, and
      * {@link ParentClassConstant}.
@@ -56,6 +53,9 @@ public abstract class PseudoConstant
         {
         throw new UnsupportedOperationException();
         }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     protected Object getLocator()

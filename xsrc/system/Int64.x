@@ -1,4 +1,3 @@
-
 /**
  * An Int64 is a 64-bit signed integer.
  */
@@ -13,16 +12,19 @@ const Int64
 
     private Bit[] bits;
 
+    @Override
     Int64 bitLength.get()
         {
         return 64;
         }
 
+    @Override
     Int64 byteLength.get()
         {
         return 8;
         }
 
+    @Override
     Signum sign.get()
         {
         if (bits[0x3F] == 1)
@@ -41,7 +43,7 @@ const Int64
     /**
      * The minimum value for an Int64.
      */
-    static IntLiteral minvalue = -0x8000000000000000;
+    static IntLiteral minvalue = 0; // TODO -0x8000000000000000;
 
     /**
      * The maximum value for an Int64.
@@ -153,6 +155,7 @@ const Int64
         return new Int(bits);
         }
 
+    @Override
     Boolean[] to<Boolean[]>()
         {
         Boolean[] bools = new Boolean[0x40];
@@ -163,6 +166,7 @@ const Int64
         return bools;
         }
 
+    @Override
     Bit[] to<Bit[]>()
         {
         Bit[] copy = new Bit[0x40];

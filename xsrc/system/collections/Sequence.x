@@ -56,6 +56,7 @@ interface Sequence<ElementType>
      *
      * @return a new Iterator that will iterate over the contents of this Sequence
      */
+    @Override
     Iterator<ElementType> iterator()
         {
         return new Iterator<ElementType>()

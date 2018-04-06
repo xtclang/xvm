@@ -151,12 +151,12 @@ public class xIntArray
 
     public static IntArrayHandle makeIntArrayInstance(long[] alValue)
         {
-        return new IntArrayHandle(INSTANCE.ensureCanonicalClass(), alValue);
+        return new IntArrayHandle(INSTANCE.getCanonicalClass(), alValue);
         }
 
     public static IntArrayHandle makeIntArrayInstance(long cCapacity)
         {
-        return new IntArrayHandle(INSTANCE.ensureCanonicalClass(), cCapacity);
+        return new IntArrayHandle(INSTANCE.getCanonicalClass(), cCapacity);
         }
 
     public static class IntArrayHandle

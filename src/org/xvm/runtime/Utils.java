@@ -5,12 +5,9 @@ import java.sql.Timestamp;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -19,7 +16,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xOrdered;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef.RefHandle;
 import org.xvm.runtime.template.xString.StringHandle;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
@@ -133,7 +130,7 @@ public abstract class Utils
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
         TypeComposition clzValue = hValue.getComposition();
-        CallChain chain = clzValue.getMethodCallChain(frame.f_context.f_pool.sigToString(), Access.PUBLIC);
+        CallChain chain = clzValue.getMethodCallChain(frame.f_context.f_pool.sigToString());
 
         if (chain.isNative())
             {

@@ -127,24 +127,27 @@ interface Number
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always Number.this.bitLength == (Number.this.bitLength & ~0x7).leftmostBit;
 
-        return new Sequence<Nibble>()
+        class SequenceImpl(Number num)
+                implements Sequence<Nibble>
             {
             @Override @RO Int size.get()
                 {
-                return Number.this.bitCount / 4;
+                return num.bitCount / 4;
                 }
 
             @Override Nibble get(Int index)
                 {
-                assert:always index >= 0 && index < length;
+                assert:always index >= 0 && index < size;
 
                 // the nibble array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while nibble 0 is the leftmost nibble
-                Bit[] bits = Number.this.to<Bit[]>();
+                Bit[] bits = num.to<Bit[]>();
                 Int   of   = bit.length - index * 4 -  1;
                 return new Nibble({bits[of], bits[of-1], bits[of-2], bits[of-3]}.as(Bit[]));
                 }
-            };
+            }
+
+        return new SequenceImpl();
         }
 
     /**
@@ -155,25 +158,28 @@ interface Number
         // make sure the bit length is at least 8, and also a power-of-two
         assert:always bitLength == (bitLength & ~0x7).leftmostBit;
 
-        return new Sequence<Byte>()
+        class SequenceImpl(Number num)
+                implements Sequence<Byte>
             {
             @Override @RO Int size.get()
                 {
-                return Number.this.bitCount / 8;
+                return num.bitCount / 8;
                 }
 
             @Override Boolean get(Int index)
                 {
-                assert:always index >= 0 && index < length;
+                assert:always index >= 0 && index < size;
 
                 // the byte array is in the opposite (!!!) sequence of the bit array; bit 0 is
                 // the least significant (rightmost) bit, while byte 0 is the leftmost byte
-                Bit[] bits = Number.this.to<Bit[]>();
+                Bit[] bits = num.to<Bit[]>();
                 Int   of   = bit.length - index * 8 -  1;
                 return new Byte({bits[of], bits[of-1], bits[of-2], bits[of-3],
                          bits[of-4], bits[of-5], bits[of-6], bits[of-7]}.as(Bit[]));
                 }
-            };
+            }
+
+        return new SequenceImpl();
         }
 
     /**

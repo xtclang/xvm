@@ -3,7 +3,6 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -44,16 +43,16 @@ public class xType
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         TypeHandle hThis = (TypeHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "allMethods":
                 return frame.assignValue(iReturn, getAllMethods(hThis));
             }
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     public xArray.GenericArrayHandle getAllMethods(TypeHandle hType)

@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -60,18 +59,18 @@ public class xClass
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, PropertyStructure property,
+    public int invokeNativeGet(Frame frame, String sPropName,
                                ObjectHandle hTarget, int iReturn)
         {
         ClassHandle hThis = (ClassHandle) hTarget;
 
-        switch (property.getName())
+        switch (sPropName)
             {
             case "hash":
                 return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getType().hashCode()));
             }
 
-        return super.invokeNativeGet(frame, property, hTarget, iReturn);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override

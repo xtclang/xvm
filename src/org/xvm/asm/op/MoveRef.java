@@ -10,8 +10,8 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xRefImpl;
-import org.xvm.runtime.template.xRefImpl.RefHandle;
+import org.xvm.runtime.template.xRef;
+import org.xvm.runtime.template.xRef.RefHandle;
 
 
 /**
@@ -85,7 +85,7 @@ public class MoveRef
             }
         else
             {
-            TypeComposition clzRef = xRefImpl.INSTANCE.ensureParameterizedClass(infoSrc.getType());
+            TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 
