@@ -69,15 +69,40 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    public TypeConstant getImplicitType()
+        {
+        ConstantPool pool = pool();
+        switch (literal.getId())
+            {
+            case LIT_CHAR:
+                return pool.typeChar();
+
+            case TODO:              // the T0D0 keyword has a String text for the token's value
+            case LIT_STRING:
+                return pool.typeString();
+
+            case LIT_INT:
+                return pool.typeIntLiteral();
+
+            case LIT_DEC:
+            case LIT_BIN:
+                return pool.typeFPLiteral();
+
+            default:
+                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
+            }
+        }
+
+    @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        return calcFit(ctx, getLiteralType(), typeRequired, pref);
+        return calcFit(ctx, getImplicitType(), typeRequired, pref);
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        TypeConstant typeLiteral  = getLiteralType();
+        TypeConstant typeLiteral  = getImplicitType();
         Constant     constLiteral = getLiteralConstant();
 
         TypeFit fit = TypeFit.Fit;
@@ -112,33 +137,6 @@ public class LiteralExpression
 
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * @return the type that is implied by the literal token
-     */
-    public TypeConstant getLiteralType()
-        {
-        ConstantPool pool = pool();
-        switch (literal.getId())
-            {
-            case LIT_CHAR:
-                return pool.typeChar();
-
-            case TODO:              // the T0D0 keyword has a String text for the token's value
-            case LIT_STRING:
-                return pool.typeString();
-
-            case LIT_INT:
-                return pool.typeIntLiteral();
-
-            case LIT_DEC:
-            case LIT_BIN:
-                return pool.typeFPLiteral();
-
-            default:
-                throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
-            }
-        }
 
     /**
      * @return the constant value of the literal token

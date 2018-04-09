@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -144,6 +145,39 @@ public abstract class Expression
 
 
     // ----- Expression compilation ----------------------------------------------------------------
+
+    /**
+     * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
+     * type inference information.
+     *
+     * @return the type of the expression, or the first type of the expression if it yields multiple
+     *         types, or null if the expression is void (or if the type cannot be determined)
+     */
+    public TypeConstant getImplicitType()
+        {
+        checkDepth();
+
+        TypeConstant[] aTypes = getImplicitTypes();
+        return aTypes.length == 0
+                ? null
+                : aTypes[0];
+        }
+
+    /**
+     * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
+     * type inference information.
+     *
+     * @return an array of the types produced by the expression
+     */
+    public TypeConstant[] getImplicitTypes()
+        {
+        checkDepth();
+
+        TypeConstant type = getImplicitType();
+        return type == null
+                ? TypeConstant.NO_TYPES
+                : new TypeConstant[] {type};
+        }
 
     /**
      * (Pre-validation) Determine if the expression can yield the specified type. Note that if a

@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -10,8 +11,10 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IntervalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_Mod;
@@ -157,20 +160,59 @@ public class RelOpExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    public TypeConstant getImplicitType()
+        {
+        TypeConstant typeLeft = expr1.getImplicitType();
+        if (typeLeft == null)
+            {
+            // if the type of the left hand expression cannot be determined, then the result of the
+            // op cannot be determined
+            return null;
+            }
+
+        Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
+                getDefaultMethodName(), getOperatorString(), 1);
+        if (setOps.isEmpty())
+            {
+            // if there are no ops, then a type cannot be determined
+            return null;
+            }
+
+        // if there is one op method, then assume that is the one
+
+        // multiple ops: use the right hand expression to reduce the potential ops
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+        {
+
+        return super.testFit(ctx, typeRequired, pref);
+        }
+
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         // all of these operators work the same way, in terms of types and left associativity:
-        // 1) there is a "required type", which is optional. if a required type is provided:
+        //
+        // 1) there is a "required type", which is optional. if a required type is provided, then
+        //    we want to optimize for it, which means to get the expression tree using that type as
+        //    early (deep in the tree) as possible, to enhance some combination of precision and
+        //    (possibly) performance:
         //
         //    a) determine an implied type from the required type; for example, if the required type
         //       is Range<Int> and the operator is DOTDOT, then the type implies "Int", while if the
         //       required type is String and the operator is ADD, then the type implies "String".
         //
         //       * in most cases, the implied type is the same as the required type, with the
-        //         possible exceptions being the DOTDOT (uses first type parameter), DIVMOD (uses
-        //         type of first value), COND_AND (no implied type), and COND_OR (no implied type)
-        //         operators
+        //         possible exceptions being the DOTDOT (uses first type parameter) and DIVMOD
+        //         (uses type of first value)
+        //
+        //       * the algorithm is simple: first test the expression to see if it can produce the
+        //         required type, and if not, then test each type parameters of the required type
+        //         (first one wins)
         //
         //    b) if there is an implied type, then find the appropriate op(s) on the implied type
         //       that yield(s) the required type
@@ -186,7 +228,33 @@ public class RelOpExpression
         //       matches falling through to phase 2
         //
         // 2) if no op method and types were already determined, then the op method will have to be
-        //    determined from the left hand type
+        //    determined from the left hand type, which is validated "naturally" (no required type)
+        TypeConstant typeTarget = null;
+        if (typeRequired != null)
+            {
+            if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+                {
+                typeTarget = typeRequired;
+                }
+            else if (typeRequired.isParamsSpecified())
+                {
+                for (TypeConstant typeParam : typeRequired.getParamTypesArray())
+                    {
+                    if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+                        {
+                        typeTarget = typeParam;
+                        break;
+                        }
+                    }
+                }
+            // TODO
+            }
+
+        Expression exprNew = expr1.validate(ctx, typeTarget, TuplePref.Rejected, errs);
+        if (typeTarget == null)
+            {
+            typeTarget =
+            }
         //
         // TODO
 
@@ -361,6 +429,13 @@ public class RelOpExpression
                 : null;
         }
 
+    private boolean doesTypeProduce(TypeConstant typeLeft, TypeConstant typeResult)
+        {
+        if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+        }
+
+    private Set
+
     @Override
     public boolean isAborting()
         {
@@ -522,6 +597,64 @@ public class RelOpExpression
             }
 
         super.generateAssignments(code, aLVal, errs);
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    public String getDefaultMethodName()
+        {
+        switch (operator.getId())
+            {
+            case BIT_AND:
+            case COND_AND:      // it uses the same operator method, but the compiler short-circuits
+                return "and";
+
+            case BIT_OR:
+            case COND_OR:       // it uses the same operator method, but the compiler short-circuits
+                return "or";
+
+            case BIT_XOR:
+                return "xor";
+
+            case DOTDOT:
+                return "to";    // REVIEW or "through"?
+
+            case SHL:
+                return "shiftLeft";
+
+            case SHR:
+                return "shiftRight";
+
+            case USHR:
+                return "shiftAllRight";
+
+            case ADD:
+                return "add";
+
+            case SUB:
+                return "sub";
+
+            case MUL:
+                return "mul";
+
+            case DIV:
+                return "div";
+
+            case MOD:
+                return "mod";
+
+            case DIVMOD:
+                return "divmod";
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    public String getOperatorString()
+        {
+        return operator.getId().TEXT;
         }
 
 
