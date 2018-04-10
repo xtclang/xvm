@@ -587,3 +587,91 @@ Int sqkm = (PI * (r * r) / (1000 * 1000)).to<Int>();    // ok iff r is of FP typ
 
 // how to handle this one?
 Int zero = (1/3) * 10;
+
+
+// --- switch expression
+
+// for constant value match:
+Int x = switch (y)
+    {
+    case 0:     0;
+    case 1:
+    case 2:     -1;
+    case 3:     {
+                Int j = 99;
+                for (Int i : 5..10)
+                    {
+                    j += i;
+                    }
+                return j;
+                }
+    case 4:     12;
+    default:    17;
+    }
+
+// (as ternary instead)
+Int x = y == 0 ? 0
+      : y == 1 ||
+        y == 2 ? -1
+      : y == 3 ? () -> {
+                    Int j = 99;
+                    for (Int i : 5..10)
+                        {
+                        j += i;
+                        }
+                    return j;
+                    }               // how to ".run()" it?
+      : y == 4 ? 12;
+               : 17;
+    }
+
+// (as switch statement instead)
+Int x;
+switch (y)
+    {
+    case 0:     x=0;
+    case 1:
+    case 2:     x=-1;
+    case 3:     {
+                    x = 99;
+                    for (Int i : 5..10)
+                        {
+                        x += i;
+                        }
+                    }
+    case 4:     x=12;
+    default:    x=17;
+    }
+
+// for first boolean expression match:
+Int x = switch ()
+    {
+    case (a > 3):   0;
+    case (b < 0):   75;
+    default:        17;
+    }
+
+Int x = (a > 3) ? 0
+      : (b < 0) ? 75
+                : 17
+
+// To consider: "right side of lambda expression", i.e. "()->{...}();" (define AND invoke)
+// name it "statement expression"?
+Int x = {
+        Int j = 99;
+        for (Int i : 5..10)
+            {
+            j += i;
+            }
+        return j;
+        }
+
+// (semantically equivalent to this)
+Int x = () -> {
+        Int j = 99;
+        for (Int i : 5..10)
+            {
+            j += i;
+            }
+        return j;
+        }();

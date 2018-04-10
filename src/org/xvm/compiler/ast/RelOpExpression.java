@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -158,6 +159,32 @@ public class RelOpExpression
     @Override
     public TypeConstant getImplicitType()
         {
+        MethodConstant method = getImplicitMethod();
+        return method == null
+                ? null
+                : method.getRawReturns()[0];
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes()
+        {
+        if (operator.getId() == Id.DIVMOD)
+            {
+            MethodConstant method = getImplicitMethod();
+            return method == null
+                    ? null
+                    : method.getRawReturns();
+            }
+
+        return super.getImplicitTypes();
+        }
+
+    /**
+     * @return the method that the op will use implicitly if it is not provided an overriding type
+     *         for inference purposes
+     */
+    protected MethodConstant getImplicitMethod()
+        {
         TypeConstant typeLeft = expr1.getImplicitType();
         if (typeLeft == null)
             {
@@ -177,7 +204,7 @@ public class RelOpExpression
         // if there is one op method, then assume that is the one
         if (setOps.size() == 1)
             {
-            return setOps.iterator().next().getRawReturns()[0];
+            return setOps.iterator().next();
             }
 
         // multiple ops: use the right hand expression to reduce the potential ops
@@ -227,10 +254,8 @@ public class RelOpExpression
             assert idBest != null;
             }
 
-        return idBest.getRawReturns()[0];
+        return idBest;
         }
-
-     // TODO "/%" -> getImplicitTypes()
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
@@ -381,7 +406,7 @@ public class RelOpExpression
         Expression expr2New = expr2.validate(ctx, type2, TuplePref.Rejected, errs);
         if (expr1New == null || expr2New == null)
             {
-            finishValidation(TypeFit.NoFit, typeRequired, null);
+            finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeBoolean() : typeRequired, null);
             return null;
             }
 
@@ -401,13 +426,85 @@ public class RelOpExpression
         TypeInfo            info1    = type1.ensureTypeInfo(errs);
         for (MethodConstant method : info1.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
             {
-            // TODO
+            // determine if this method satisfies the types (param and return)
+            if (type2.isA(method.getRawParams()[0]))
+                {
+                // check for a perfect match
+                if (typeRequired == null || method.getRawReturns()[0].isA(typeRequired))
+                    {
+                    if (setOps != null)
+                        {
+                        setOps.add(method);
+                        }
+                    else if (idOp == null)
+                        {
+                        idOp = method;
+                        }
+                    else
+                        {
+                        setOps = new HashSet<>();
+                        setOps.add(idOp);
+                        setOps.add(method);
+                        idOp = null;
+                        }
+                    }
+                // check if @Auto conversion of the return value would satisfy the required type
+                else if (method.getRawParams()[0].ensureTypeInfo().findConversion(typeRequired) != null)
+                    {
+                    if (setConvs != null)
+                        {
+                        setConvs.add(method);
+                        }
+                    else if (idConv == null)
+                        {
+                        idConv = method;
+                        }
+                    else
+                        {
+                        setConvs = new HashSet<>();
+                        setConvs.add(idConv);
+                        setConvs.add(method);
+                        idConv = null;
+                        }
+                    }
+                }
             }
 
-        // TODO set up:
-        // - m_methodOp
-        // - m_convert
+        // having collected all of the possible ops that could be used, select the one method to use
+        if (idOp != null)
+            {
+            m_methodOp = idOp;
+            }
+        else if (setOps != null)
+            {
+            // find the best op method out of the multiple options
+            notImplemented(); // TODO
+            }
+        else if (idConv != null)
+            {
+            assert typeRequired != null;
+            m_methodOp = idOp;
+            m_convert  = idOp.getRawParams()[0].ensureTypeInfo().findConversion(typeRequired);
+            assert m_convert != null;
+            }
+        else if (setConvs != null)
+            {
+            // find the best op method and conversion out of the multiple options
+            notImplemented(); // TODO
+            }
+        else
+            {
+            // error: somehow, we got this far, but we couldn't find an op that matched the
+            // necessary types
+            operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+            finishValidation(TypeFit.NoFit, typeRequired == null ? type1 : typeRequired, null);
+            return null;
+            }
 
+        // determine the actual result type
+        TypeConstant typeResult = m_convert == null
+                ? m_methodOp.getRawReturns()[0]
+                : m_convert.getRawReturns()[0];
 
         // determine if the result of this expression is itself constant
         if (expr1New.hasConstantValue() && expr2New.hasConstantValue())
@@ -418,115 +515,35 @@ public class RelOpExpression
             Constant constResult;
             try
                 {
-                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
-                m_constVal  = const1.apply(operator.getId(), const2);
-                return fValid;
+                constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                 }
             catch (ArithmeticException e)
                 {
-                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
+                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeResult,
                         getSource().toString(getStartPosition(), getEndPosition()));
-                constResult = Constant.defaultValue()
+                constResult = Constant.defaultValue(typeResult);
                 }
             catch (UnsupportedOperationException | IllegalStateException e)
                 {
-//                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-//                m_constType = expr1.getType();
-//                fValid = false;
-
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+                constResult = Constant.defaultValue(typeResult);
                 }
 
             finishValidation(TypeFit.Fit, constResult.getType(), constResult);
             return this;
             }
 
-        //
-        // TODO finishValidation(fitResult, typeResult, null);
-
-        // TODO
-
-        ConstantPool pool   = pool();
-        boolean      fValid = true;
-
-//        if (isConstant())
-//            {
-//            // first determine the type of the result, and pick a suitable default value just in
-//            // case everything blows up
-//            Constant const1 = expr1.toConstant();
-//            Constant const2 = expr2.toConstant();
-//            switch (operator.getId())
-//                {
-//                case ADD:
-//                case SUB:
-//                case MUL:
-//                case DIV:
-//                case MOD:
-//                case BIT_AND:
-//                case BIT_OR:
-//                case BIT_XOR:
-//                    {
-//                    TypeConstant typeResult = const1.resultType(operator.getId(), const2);
-//                    m_constType = typeResult;
-//                    // pick a default value just in case of an exception
-//                    m_constVal  = typeResult.isCongruentWith(type1) ? const1
-//                                : typeResult.isCongruentWith(type2) ? const2
-//                                : const1.defaultValue(typeResult);
-//                    }
-//                    break;
-//
-//                case SHL:
-//                case SHR:
-//                case USHR:
-//                    // always use the type on the left hand side, since the numeric shifts all
-//                    // take Int64 as the shift amount
-//                    m_constType = type1;
-//                    m_constVal  = const1;
-//                    break;
-//
-//                case DOTDOT:
-//                    m_constType = IntervalConstant.getIntervalTypeFor(const1);
-//                    m_constVal  = new IntervalConstant(pool, const1, const1);
-//                    break;
-//
-//                default:
-//                    operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-//                    return false;
-//                }
-//
-//            }
-
-//                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-//                m_constType = expr1.getType();
-//                fValid = false;
-
-        return fValid
-                ? this
-                : null;
+        finishValidation(m_convert == null ? TypeFit.Fit : TypeFit.Conv, typeResult, null);
+        return this;
         }
 
-    private boolean doesTypeProduce(TypeConstant typeLeft, TypeConstant typeResult)
-        {
-        if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
-        }
-
-    private Set
+    // TODO "/%" -> validateMulti()
 
     @Override
     public boolean isAborting()
         {
-        switch (operator.getId())
-            {
-            case COND_OR:
-            case COND_AND:
-                // these can complete if the first expression can complete, because the result can
-                // be calculated from the first expression, depending on what its answer is; thus
-                // the expression aborts if the first of the two expressions aborts
-                return expr1.isAborting();
-
-            default:
-                // these can only complete if both sub-expressions can complete
-                return expr1.isAborting() || expr2.isAborting();
-            }
+        // these can only complete if both sub-expressions can complete
+        return expr1.isAborting() || expr2.isAborting();
         }
 
     @Override
@@ -618,14 +635,17 @@ public class RelOpExpression
                     throw new UnsupportedOperationException();
 
                 case ADD:
+// TODO convert?
                     code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case SUB:
+// TODO convert?
                     code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case MUL:
+// TODO convert?
                     code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
@@ -637,10 +657,12 @@ public class RelOpExpression
                         }
                     // fall through
                 case DIV:
+// TODO convert?
                     code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case MOD:
+// TODO convert?
                     code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
                     break;
                 }

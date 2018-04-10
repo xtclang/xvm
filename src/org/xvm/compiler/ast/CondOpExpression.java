@@ -60,34 +60,34 @@ public class CondOpExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the expression is a conditional "and" expression
+     */
+    public boolean isAnd()
+        {
+        return operator.getId() == Id.COND_AND;
+        }
+
+    /**
+     * @return true iff the expression is a conditional "or" expression
+     */
+    public boolean isOr()
+        {
+        return operator.getId() == Id.COND_OR;
+        }
+
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        switch (operator.getId())
-            {
-            case COND_AND:
-            case COND_OR:
-                return expr1.validateCondition(errs) && expr2.validateCondition(errs);
-
-            default:
-                return super.validateCondition(errs);
-            }
+        return expr1.validateCondition(errs) && expr2.validateCondition(errs);
         }
 
     @Override
     public ConditionalConstant toConditionalConstant()
         {
-        switch (operator.getId())
-            {
-            case COND_AND:
-                return expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant());
-
-            case COND_OR:
-                return expr1.toConditionalConstant().addOr(expr2.toConditionalConstant());
-
-            default:
-                return super.toConditionalConstant();
-            }
+        return isAnd()
+                ? expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant())
+                : expr1.toConditionalConstant().addOr (expr2.toConditionalConstant());
         }
 
 
@@ -102,6 +102,7 @@ public class CondOpExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
+        // TODO what about @Auto? need a simple way to tack on a conversion check to each expression type
         return pool().typeBoolean().isA(typeRequired)
                 ? TypeFit.Fit
                 : TypeFit.NoFit;
@@ -117,29 +118,13 @@ public class CondOpExpression
                 : null;
         }
 
-    private boolean doesTypeProduce(TypeConstant typeLeft, TypeConstant typeResult)
-        {
-        if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
-        }
-
-    private Set
-
     @Override
     public boolean isAborting()
         {
-        switch (operator.getId())
-            {
-            case COND_OR:
-            case COND_AND:
-                // these can complete if the first expression can complete, because the result can
-                // be calculated from the first expression, depending on what its answer is; thus
-                // the expression aborts if the first of the two expressions aborts
-                return expr1.isAborting();
-
-            default:
-                // these can only complete if both sub-expressions can complete
-                return expr1.isAborting() || expr2.isAborting();
-            }
+        // these can complete if the first expression can complete, because the result can
+        // be calculated from the first expression, depending on what its answer is; thus
+        // the expression aborts if the first of the two expressions aborts
+        return expr1.isAborting();
         }
 
     @Override
@@ -147,202 +132,68 @@ public class CondOpExpression
         {
         if (!isConstant())
             {
-            switch (operator.getId())
-                {
-                case DIVMOD:
-                    if (!isSingle())
-                        {
-                        // TODO
-                        throw new UnsupportedOperationException();
-                        }
-                case DOTDOT:
-                case ADD:
-                case SUB:
-                case MUL:
-                case DIV:
-                case MOD:
-                case COND_OR:
-                case COND_AND:
-                case BIT_OR:
-                case BIT_XOR:
-                case BIT_AND:
-                case SHL:
-                case SHR:
-                case USHR:
-                    code.add(new Var(getType()));
-                    Register regResult = code.lastRegister();
-                    generateAssignment(code, new Assignable(regResult), errs);
-                    return regResult;
-                }
+            // REVIEW
+            code.add(new Var(getType()));
+            Register regResult = code.lastRegister();
+            generateAssignment(code, new Assignable(regResult), errs);
+            return regResult;
             }
 
         return super.generateArgument(code, fPack, errs);
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
-        {
-        if (getValueCount() == 2)
-            {
-            assert operator.getId() == Id.DIVMOD;
-            // TODO
-            throw new UnsupportedOperationException();
-            }
-
-        return super.generateArguments(code, fPack, errs);
-        }
-
-    @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isLocalArgument())
+        if (LVal.isLocalArgument()) // REVIEW what other options are there?
             {
             // evaluate the sub-expressions
             Argument arg1 = expr1.generateArgument(code, false, errs);
             Argument arg2 = expr2.generateArgument(code, false, errs);
 
             // generate the op that combines the two sub-expressions
-            switch (operator.getId())
+            if (isAnd())
                 {
-                case COND_OR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case COND_AND:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case BIT_OR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case BIT_XOR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case BIT_AND:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case DOTDOT:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case SHL:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case SHR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case USHR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case ADD:
-                    code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case SUB:
-                    code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case MUL:
-                    code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case DIVMOD:
-                    if (LVal.getType().isTuple())
-                        {
-                        // TODO
-                        throw new UnsupportedOperationException();
-                        }
-                    // fall through
-                case DIV:
-                    code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case MOD:
-                    code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
-                    break;
+                // TODO
+                throw new UnsupportedOperationException();
                 }
-
-            return;
+            else
+                {
+                // TODO
+                throw new UnsupportedOperationException();
+                }
             }
-
-        super.generateAssignment(code, LVal, errs);
-        }
-
-    @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
-        {
-        if (getValueCount() == 2)
+        else
             {
-            assert operator.getId() == Id.DIVMOD;
-            // TODO
-            throw new UnsupportedOperationException();
+            super.generateAssignment(code, LVal, errs);
             }
-
-        super.generateAssignments(code, aLVal, errs);
         }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
+    /**
+     * @return the default name of the "@Op" method
+     */
     public String getDefaultMethodName()
         {
-        switch (operator.getId())
-            {
-            case BIT_AND:
-            case COND_AND:      // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
-                return "and";
-
-            case BIT_OR:
-            case COND_OR:       // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
-                return "or";
-
-            case BIT_XOR:
-                return "xor";
-
-            case DOTDOT:
-                return "through";
-
-            case SHL:
-                return "shiftLeft";
-
-            case SHR:
-                return "shiftRight";
-
-            case USHR:
-                return "shiftAllRight";
-
-            case ADD:
-                return "add";
-
-            case SUB:
-                return "sub";
-
-            case MUL:
-                return "mul";
-
-            case DIV:
-                return "div";
-
-            case MOD:
-                return "mod";
-
-            case DIVMOD:
-                return "divmod";
-
-            default:
-                throw new IllegalStateException();
-            }
+        // it uses the same operator method name as the non-conditional operator, but this
+        // expression type short-circuits
+        return isAnd()
+                ? "and"
+                : "or";
         }
 
+    /**
+     * @return the default operator symbol for the "@Op" method
+     */
     public String getOperatorString()
         {
-        return operator.getId().TEXT;
+        // it uses the same operator method name as the non-conditional operator, but this
+        // expression type short-circuits
+        return isAnd()
+                ? "&"
+                : "|";
         }
 
 
