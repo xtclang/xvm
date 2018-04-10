@@ -575,3 +575,15 @@ Int i = bar();      // error
 
 
 
+// precision and conversions
+
+Int x = 4/3;        // 1
+Dec d = 4/3;        // 1.3333... (conversion of 4->Dec and 3->Dec and THEN the division)
+Byte b = 300-50;    // compiler error (300 is out of byte range)
+
+Dec sqkm = PI * (r * r) / (1000 * 1000);
+Int sqkm = PI * (r * r) / (1000 * 1000);                // compiler error (PI can't convert to Int)
+Int sqkm = (PI * (r * r) / (1000 * 1000)).to<Int>();    // ok iff r is of FP type (calc done with that type)
+
+// how to handle this one?
+Int zero = (1/3) * 10;

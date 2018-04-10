@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -12,9 +15,11 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypeInfo;
+
 import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_Mod;
@@ -160,7 +165,6 @@ public class RelOpExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     public TypeConstant getImplicitType()
         {
@@ -181,16 +185,126 @@ public class RelOpExpression
             }
 
         // if there is one op method, then assume that is the one
+        if (setOps.size() == 1)
+            {
+            return setOps.iterator().next().getRawReturns()[0];
+            }
 
         // multiple ops: use the right hand expression to reduce the potential ops
+        TypeConstant typeRight = expr2.getImplicitType();
+        if (typeRight == null)
+            {
+            return null;
+            }
+
+        MethodConstant                         idBest  = null;
+        Map<SignatureConstant, MethodConstant> mapBest = null;
+        for (MethodConstant idMethod : setOps)
+            {
+            TypeConstant typeParam = idMethod.getRawReturns()[1];
+            if (typeRight.isA(typeParam))
+                {
+                if (mapBest != null)
+                    {
+                    mapBest.put(idMethod.getSignature(), idMethod);
+                    }
+                else if (idBest == null || typeParam.isA(idBest.getRawReturns()[0]))
+                    {
+                    idBest = idMethod;
+                    }
+                else if (!idBest.getRawReturns()[0].isA(typeParam))
+                    {
+                    // ambiguous at this point
+                    mapBest = new HashMap<>();
+                    mapBest.put(idBest  .getSignature(), idBest  );
+                    mapBest.put(idMethod.getSignature(), idMethod);
+                    idBest = null;
+                    }
+                }
+            }
+
+        // if there are multiple possible options, pick the unambiguously best one
+        if (mapBest != null)
+            {
+            SignatureConstant sigBest = typeLeft.selectBest(
+                    mapBest.keySet().toArray(new SignatureConstant[mapBest.size()]));
+            if (sigBest == null)
+                {
+                return null;
+                }
+
+            idBest = mapBest.get(sigBest);
+            assert idBest != null;
+            }
+
+        return idBest.getRawReturns()[0];
         }
+
+     // TODO "/%" -> getImplicitTypes()
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
+        // testing the fit of a particular type for the expression involves starting with an
+        // implicit type, and determining if it:
+        //
+        //   i) yields the typeRequired (Fit), or
+        //  ii) yields something that converts to the typeRequired (Conv), or
+        // iii) converts to something that yields the typeRequired (Conv)
+        //
+        // this logic must conform to the rules used by validate()
 
-        return super.testFit(ctx, typeRequired, pref);
+        TypeConstant typeLeft = expr1.getImplicitType();
+        if (typeLeft == null)
+            {
+            return TypeFit.NoFit;
+            }
+
+        TypeFit             fitVia   = TypeFit.NoFit;
+        TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
+        Set<MethodConstant> setOps   = infoLeft.findOpMethods(
+                getDefaultMethodName(), getOperatorString(), 1);
+        for (MethodConstant idMethod : setOps)
+            {
+            TypeConstant[] aRets = idMethod.getRawReturns();
+            if (aRets.length > 0)
+                {
+                TypeConstant typeResult = aRets[0];
+                if (typeResult.isA(typeRequired))
+                    {
+                    return TypeFit.Fit;
+                    }
+                else if (!fitVia.isFit() && typeResult.ensureTypeInfo().findConversion(typeRequired) != null)
+                    {
+                    // there is a solution via conversion on the result of an operator
+                    fitVia = TypeFit.Conv;
+                    }
+                }
+            }
+        if (fitVia.isFit())
+            {
+            return fitVia;
+            }
+
+        for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos())
+            {
+            TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
+            TypeInfo     infoConv = typeConv.ensureTypeInfo();
+            for (MethodConstant idMethod : infoConv.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
+                {
+                TypeConstant[] aRets = idMethod.getRawReturns();
+                if (aRets.length > 0 && aRets[0].isA(typeRequired))
+                    {
+                    // there is a solution via an operator on the result of a conversion
+                    return TypeFit.Conv;
+                    }
+                }
+            }
+
+        return TypeFit.NoFit;
         }
+
+    // TODO "/%" -> testFitMulti()
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
@@ -229,82 +343,108 @@ public class RelOpExpression
         //
         // 2) if no op method and types were already determined, then the op method will have to be
         //    determined from the left hand type, which is validated "naturally" (no required type)
-        TypeConstant typeTarget = null;
-        if (typeRequired != null)
+        TypeConstant type1 = null;
+        TypeConstant type2 = null;
+        TypeInference: if (typeRequired != null)
             {
             if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
                 {
-                typeTarget = typeRequired;
-                }
-            else if (typeRequired.isParamsSpecified())
-                {
-                for (TypeConstant typeParam : typeRequired.getParamTypesArray())
+                Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
+                        getDefaultMethodName(), getOperatorString(), 1);
+                for (MethodConstant idMethod : setOps)
                     {
-                    if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+                    if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                            && idMethod.getRawReturns()[0].isA(typeRequired))
                         {
-                        typeTarget = typeParam;
-                        break;
+                        type1 = typeRequired;
+                        type2 = idMethod.getRawParams()[0];
+                        break TypeInference; // TODO find the "best", not just the first
                         }
                     }
                 }
-            // TODO
+
+            if (typeRequired.isParamsSpecified())
+                {
+                for (TypeConstant typeParam : typeRequired.getParamTypesArray())
+                    {
+                    if (expr1.testFit(ctx, typeParam, TuplePref.Rejected).isFit())
+                        {
+                        Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
+                                getDefaultMethodName(), getOperatorString(), 1);
+                        for (MethodConstant idMethod : setOps)
+                            {
+                            if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                                    && idMethod.getRawReturns()[0].isA(typeRequired))
+                                {
+                                type1 = typeParam;
+                                type2 = idMethod.getRawParams()[0];
+                                break TypeInference; // TODO find the "best", not just the first
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-        Expression exprNew = expr1.validate(ctx, typeTarget, TuplePref.Rejected, errs);
-        if (typeTarget == null)
+        // using the inferred types (if any), validate the expressions
+        Expression expr1New = expr1.validate(ctx, type1, TuplePref.Rejected, errs);
+        Expression expr2New = expr2.validate(ctx, type2, TuplePref.Rejected, errs);
+        if (expr1New == null || expr2New == null)
             {
-            typeTarget =
+            finishValidation(TypeFit.NoFit, typeRequired, null);
+            return null;
             }
-        //
+
+        // store the updates to the expressions (if any)
+        expr1 = expr1New;
+        expr2 = expr2New;
+
+        // get the exact types of the expressions
+        type1 = expr1New.getType();
+        type2 = expr2New.getType();
+
+        // select the method on expr1 that will be used to implement the op
         // TODO
 
-        // so let's talk about "+"
-        // 1) any T1 that wants to support "+" has to have either:
-        //    a) @Op T3 add(T2)
-        //    b) @Op("+") T3 foo(T2)
-        //    ... where T2 and/or T3 may or may not be the same as T1
-        // 2) within this expression, T1 is represented by expr1, and T2 by expr2, and T3 is
-        //    represented by this expression itself (or is specified by typeRequired, passed in)
-        // 3) so the first thing to do is to validate expr1 (the "this" of the op) to determine its
-        //    type
-        // 4) having determined its type, the type is asked to enumerate the various potential
-        //    matching ops -- i.e. any @Op-annotated method named "add", and any @Op-annotated
-        //    method whose annotation specifies the constant "+", and has one parameter and one
-        //    return value
-        // 5) having determined the possible set of ops (methods), we need to reduce it by
-        //    evaluating the typeRequired, if a typeRequired is specified:
-        //    a) if the return value type of the op "isA" typeRequired, then that op is a possible
-        //    b) if the return value type of the op "is assignable to" (i.e. there exists a to<>()
-        //       conversion) to the typeRequired, then that op is a possible
-        //    c) all other ops are eliminated
-        // 6) if there is only one op left at this point, then validate expr2 using the type
-        //    specified as the parameter for the op method
-        // 7) otherwise, if there's more than one possibility, then validate expr2 passing null for
-        //    the required-type to determine the implicit type
-        //    a) for each remaining op, eliminate those that the implicit type of expr2 fails with
-        //       both "isA" and "is assignable to"
-        //    b) if more than one remains, then we have to find the "closest" using the method
-        //       matching rules:
-        //       i) exact match wins
-        //       ii) "isA" beats "is assignable to"; if there are any "isA" left, then discard all
-        //           "is assignable to" options
-        //       iii) for any two remaining op candidates, if the parameter type PT1 of one op "isA"
-        //            the other PT2, but the reverse is not true, then rank PT1 higher; if they are
-        //            both "isA" the other, or neither isA the other, then rank them the same; using
-        //            this approach, form a total ranking of the remaining ops
-        //       iv) if only one op remains, or if one "isA" rises above all others in the total
-        //           ranking, then that is the op to use; otherwise it is an error (ambiguous)
+        // determine if the result of this expression is itself constant
+        if (expr1New.hasConstantValue() && expr2New.hasConstantValue())
+            {
+            // delegate the operation to the constants
+            Constant const1 = expr1New.toConstant();
+            Constant const2 = expr2New.toConstant();
+            Constant constResult;
+            try
+                {
+                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                m_constVal  = const1.apply(operator.getId(), const2);
+                return fValid;
+                }
+            catch (ArithmeticException e)
+                {
+                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
+                        getSource().toString(getStartPosition(), getEndPosition()));
+                constResult = Constant.defaultValue()
+                }
+            catch (UnsupportedOperationException | IllegalStateException e)
+                {
+//                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
+//                m_constType = expr1.getType();
+//                fValid = false;
+
+                }
+
+            finishValidation(TypeFit.Fit, constResult.getType(), constResult);
+            return this;
+            }
+
+        //
+        // TODO finishValidation(fitResult, typeResult, null);
+
         // TODO
 
         ConstantPool pool   = pool();
         boolean      fValid = true;
 
-//        expr1.validate(ctx, null, errs);
-//        fValid &= expr2.validate(ctx, null, errs);      // TODO need a type here
-//
-//        // validation of a constant expression is simpler, so do it first
-//        TypeConstant type1 = expr1.getType();
-//        TypeConstant type2 = expr2.getType();
 //        if (isConstant())
 //            {
 //            // first determine the type of the result, and pick a suitable default value just in
@@ -350,79 +490,11 @@ public class RelOpExpression
 //                    return false;
 //                }
 //
-//            // delegate the operation to the constants
-//            try
-//                {
-//                m_constVal  = const1.apply(operator.getId(), const2);
-//                return fValid;
-//                }
-//            catch (ArithmeticException e)
-//                {
-//                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
-//                        getSource().toString(getStartPosition(), getEndPosition()));
-//                return false;
-//                }
 //            }
 
-//        // determine the type of this expression; this is even done if the sub-expressions did not
-//        // validate, so that compilation doesn't have to grind to a halt for just one error
-//        switch (operator.getId())
-//            {
-//            case COND_OR:
-//            case COND_AND:
-//                m_constType = pool.typeBoolean();
-//                if (fValid)
-//                    {
-//                    // the left side and right side types must be comparable
-//                    // TODO
-//                    }
-//                break;
-//
-//            case DOTDOT:
-//                m_constType = IntervalConstant.getIntervalTypeFor(expr1.getType());
-//                if (fValid)
-//                    {
-//                    // the left side and right side types must be "the same", and that type must
-//                    // be orderable
-//                    // TODO
-//                    }
-//                break;
-//
-//            case DIVMOD:
-//                m_constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(),
-//                        expr1.getType(), expr1.getType());
-//                if (fValid)
-//                    {
-//                    // find the operator on the type and determine the result of the operator
-//                    // TODO this is an overridable Op
-//                    }
-//                break;
-//
-//            case BIT_OR:
-//            case BIT_XOR:
-//            case BIT_AND:
-//            case SHL:
-//            case SHR:
-//            case USHR:
-//            case ADD:
-//            case SUB:
-//            case MUL:
-//            case DIV:
-//            case MOD:
-//                if (fValid)
-//                    {
-//                    // find the operator on the type and determine the result of the operator
-//                    // TODO these are all overridable Op
-//                    }
-//                m_constType = expr1.getType();
-//                break;
-//
-//            default:
 //                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
 //                m_constType = expr1.getType();
 //                fValid = false;
-//                break;
-//            }
 
         return fValid
                 ? this
@@ -607,18 +679,18 @@ public class RelOpExpression
         switch (operator.getId())
             {
             case BIT_AND:
-            case COND_AND:      // it uses the same operator method, but the compiler short-circuits
+            case COND_AND:      // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
                 return "and";
 
             case BIT_OR:
-            case COND_OR:       // it uses the same operator method, but the compiler short-circuits
+            case COND_OR:       // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
                 return "or";
 
             case BIT_XOR:
                 return "xor";
 
             case DOTDOT:
-                return "to";    // REVIEW or "through"?
+                return "through";
 
             case SHL:
                 return "shiftLeft";

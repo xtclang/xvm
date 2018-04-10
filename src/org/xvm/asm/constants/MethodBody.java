@@ -311,7 +311,7 @@ public class MethodBody
     public boolean isOp(String sName, String sOp, int cParams)
         {
         // the number of parameters must match
-        if (m_id.getRawParams().length != cParams)
+        if (m_id.getRawParams().length != cParams || m_id.getRawReturns().length == 0)
             {
             return false;
             }

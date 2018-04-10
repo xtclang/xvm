@@ -148,7 +148,10 @@ public abstract class Expression
 
     /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
-     * type inference information.
+     * type inference information. If an expression is not able to determine an implicit type, that
+     * indicates that a compile time error is likely to occur when the expression is validated, but
+     * such an error is not guaranteed, since validation can introduce a required type that could be
+     * utilized to validate the expression.
      *
      * @return the type of the expression, or the first type of the expression if it yields multiple
      *         types, or null if the expression is void (or if the type cannot be determined)
@@ -167,7 +170,8 @@ public abstract class Expression
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information.
      *
-     * @return an array of the types produced by the expression
+     * @return an array of the types produced by the expression, or an empty array if the expression
+     *         is void (or if its type cannot be determined)
      */
     public TypeConstant[] getImplicitTypes()
         {
