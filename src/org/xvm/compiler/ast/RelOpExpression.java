@@ -41,8 +41,6 @@ import org.xvm.util.Severity;
  * "expression operator expression".
  *
  * <ul>
- * <li><tt>COND_OR:    "||"</tt> - </li>
- * <li><tt>COND_AND:   "&&"</tt> - </li>
  * <li><tt>BIT_OR:     "|"</tt> - </li>
  * <li><tt>BIT_XOR:    "^"</tt> - </li>
  * <li><tt>BIT_AND:    "&"</tt> - </li>
@@ -61,8 +59,6 @@ import org.xvm.util.Severity;
  * TODO remove cut&paste:
     switch (operator.getId())
         {
-        case COND_OR:
-        case COND_AND:
         case BIT_OR:
         case BIT_XOR:
         case BIT_AND:
@@ -89,8 +85,6 @@ public class RelOpExpression
 
         switch (operator.getId())
             {
-            case COND_OR:
-            case COND_AND:
             case BIT_OR:
             case BIT_XOR:
             case BIT_AND:
@@ -134,9 +128,7 @@ public class RelOpExpression
         switch (operator.getId())
             {
             case BIT_AND:
-            case COND_AND:
             case BIT_OR:
-            case COND_OR:
                 return expr1.validateCondition(errs) && expr2.validateCondition(errs);
 
             default:
@@ -150,11 +142,9 @@ public class RelOpExpression
         switch (operator.getId())
             {
             case BIT_AND:
-            case COND_AND:
                 return expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant());
 
             case BIT_OR:
-            case COND_OR:
                 return expr1.toConditionalConstant().addOr(expr2.toConditionalConstant());
 
             default:
@@ -404,7 +394,20 @@ public class RelOpExpression
         type2 = expr2New.getType();
 
         // select the method on expr1 that will be used to implement the op
-        // TODO
+        MethodConstant      idOp     = null;
+        Set<MethodConstant> setOps   = null;
+        MethodConstant      idConv   = null;
+        Set<MethodConstant> setConvs = null;
+        TypeInfo            info1    = type1.ensureTypeInfo(errs);
+        for (MethodConstant method : info1.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
+            {
+            // TODO
+            }
+
+        // TODO set up:
+        // - m_methodOp
+        // - m_convert
+
 
         // determine if the result of this expression is itself constant
         if (expr1New.hasConstantValue() && expr2New.hasConstantValue())
@@ -545,8 +548,6 @@ public class RelOpExpression
                 case MUL:
                 case DIV:
                 case MOD:
-                case COND_OR:
-                case COND_AND:
                 case BIT_OR:
                 case BIT_XOR:
                 case BIT_AND:
@@ -588,14 +589,6 @@ public class RelOpExpression
             // generate the op that combines the two sub-expressions
             switch (operator.getId())
                 {
-                case COND_OR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case COND_AND:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
                 case BIT_OR:
                     // TODO
                     throw new UnsupportedOperationException();
@@ -679,11 +672,9 @@ public class RelOpExpression
         switch (operator.getId())
             {
             case BIT_AND:
-            case COND_AND:      // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
                 return "and";
 
             case BIT_OR:
-            case COND_OR:       // it uses the same operator method, but the compiler short-circuits  TODO move to ShortCircuitingBooleanRelOpExpression
                 return "or";
 
             case BIT_XOR:
@@ -732,4 +723,6 @@ public class RelOpExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private transient MethodConstant m_methodOp;
+    private transient MethodConstant m_convert;
     }
