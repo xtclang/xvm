@@ -1,32 +1,20 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.op.GP_Add;
-import org.xvm.asm.op.GP_Div;
-import org.xvm.asm.op.GP_Mod;
-import org.xvm.asm.op.GP_Mul;
-import org.xvm.asm.op.GP_Sub;
+
 import org.xvm.asm.op.Var;
-import org.xvm.compiler.Compiler;
+
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.compiler.ast.Statement.Context;
-import org.xvm.util.Severity;
 
 
 /**

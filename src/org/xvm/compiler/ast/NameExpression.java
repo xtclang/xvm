@@ -175,6 +175,28 @@ public class NameExpression
 
 
     @Override
+    public TypeConstant[] getImplicitTypes()
+        {
+        // TODO
+        return super.getImplicitTypes();
+        }
+
+    @Override
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+        {
+        // TODO
+        return super.testFitMulti(ctx, atypeRequired, pref);
+        }
+
+    @Override
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref,
+            ErrorListener errs)
+        {
+        // TODO
+        return super.validateMulti(ctx, atypeRequired, pref, errs);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         boolean fValid = true;
