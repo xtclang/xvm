@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
-import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -153,14 +152,16 @@ public abstract class Expression
      * such an error is not guaranteed, since validation can introduce a required type that could be
      * utilized to validate the expression.
      *
+     * @param ctx  the compilation context for the statement
+     *
      * @return the type of the expression, or the first type of the expression if it yields multiple
      *         types, or null if the expression is void (or if the type cannot be determined)
      */
-    public TypeConstant getImplicitType()
+    public TypeConstant getImplicitType(Context ctx)
         {
         checkDepth();
 
-        TypeConstant[] aTypes = getImplicitTypes();
+        TypeConstant[] aTypes = getImplicitTypes(ctx);
         return aTypes.length == 0
                 ? null
                 : aTypes[0];
@@ -170,14 +171,16 @@ public abstract class Expression
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information.
      *
+     * @param ctx  the compilation context for the statement
+     *
      * @return an array of the types produced by the expression, or an empty array if the expression
      *         is void (or if its type cannot be determined)
      */
-    public TypeConstant[] getImplicitTypes()
+    public TypeConstant[] getImplicitTypes(Context ctx)
         {
         checkDepth();
 
-        TypeConstant type = getImplicitType();
+        TypeConstant type = getImplicitType(ctx);
         return type == null
                 ? TypeConstant.NO_TYPES
                 : new TypeConstant[] {type};

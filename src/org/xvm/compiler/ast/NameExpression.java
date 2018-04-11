@@ -32,6 +32,30 @@ import org.xvm.util.Severity;
 /**
  * A name expression specifies a name. This handles both a simple name, a qualified name, and a name
  * with type parameters.
+ * <p/>
+ * A simple name can refer to:
+ * <ul>
+ * <li>A local variable (register) available from the Context;</li>
+ * <li>A capturable variable or constant value available from the Context;</li>
+ * <li>A method parameter from the current method;</li>
+ * <li>A capturable name available to the current method, if the method is a lambda;</li>
+ * <li>A property name;</li>
+ * <li>A class identity;</li>
+ * <li>A typedef identity;</li>
+ * <li>A multi-method identity;</li>
+ * <li>The "construct" keyword (indicating a call to a constructor function on this type);</li>
+ * <li>A parameter name preceding the lambda operator ("->").</li>
+ * </ul>
+ *
+ * After the first name:
+ * <p/>
+ * Subsequent simple names can refer to:
+ * <ul>
+ * <li>class name ... ending with "construct"</li>
+ * <li></li>
+ * <li></li>
+ * <li></li>
+ * </ul>
  */
 public class NameExpression
         extends Expression
@@ -173,12 +197,31 @@ public class NameExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
-    public TypeConstant[] getImplicitTypes()
+    public TypeConstant[] getImplicitTypes(Context ctx)
         {
         // TODO
-        return super.getImplicitTypes();
+        return super.getImplicitTypes(ctx);
+        }
+
+    protected Object resolveNameInternal(Context ctx, ErrorListener errs)
+        {
+        final List<Token>          names  = this.names;
+        final List<TypeExpression> params = this.params;
+
+        int cNames  = names.size();
+        int cParams = params == null ? 0 : params.size();
+
+        // resolve initial name
+        Token    name  = names.get(0);
+        String   sName = name.getValue().toString();
+        Argument arg   = ctx.resolveName(name, errs);
+        if (arg == null)
+            {
+            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
+                    sName, ctx.getMethod().getIdentityConstant().getSignature());
+            fValid = false;
+            }
         }
 
     @Override

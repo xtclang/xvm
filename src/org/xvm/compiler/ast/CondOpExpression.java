@@ -82,7 +82,7 @@ public class CondOpExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getImplicitType(Context ctx)
         {
         return pool().typeBoolean();
         }

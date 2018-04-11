@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import org.xvm.compiler.Source;
+
 import org.xvm.util.Severity;
 
 
@@ -56,13 +57,14 @@ public interface ErrorListener
         }
 
 
-    // ----- inner classes -------------------------------------------------------------------------
+    // ----- inner class: BlackholeErrorListener ---------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
-     * and non-errors will go to standard out.
+     * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
+     * objects and routes them to a single sink method.
      */
-    public static final ErrorListener RUNTIME = new ErrorListener()
+    public class BlackholeErrorListener
+            implements ErrorListener
         {
         @Override
         public boolean log(Severity severity, String sCode, Object[] aoParam,
@@ -77,6 +79,31 @@ public interface ErrorListener
             return log(new ErrorList.ErrorInfo(severity, sCode, aoParam, xs));
             }
 
+        /**
+         * This is the sink method for errors.
+         *
+         * @param err  the error being logged
+         *
+         * @return true if the ErrorListener has decided to abort the process that reported the
+         *         error
+         */
+        protected boolean log(ErrorList.ErrorInfo err)
+            {
+            return isAbortDesired();
+            }
+        }
+
+
+    // ----- inner class: Runtime ErrorListener ----------------------------------------------------
+
+    /**
+     * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
+     * and non-errors will go to standard out.
+     */
+    public class RuntimeErrorListener
+            extends BlackholeErrorListener
+        {
+        @Override
         protected boolean log(ErrorList.ErrorInfo err)
             {
             String s = err.toString();
@@ -91,4 +118,45 @@ public interface ErrorListener
                 }
             }
         };
+
+
+    // ----- inner class: SilentErrorListener ------------------------------------------------------
+
+    /**
+     * A simple implementation of the ErrorListener that can be used to capture errors. The first
+     * error gets saved.
+     */
+    public class SilentErrorListener
+            extends BlackholeErrorListener
+        {
+        @Override
+        public boolean isAbortDesired()
+            {
+            return m_err != null;
+            }
+
+        public ErrorList.ErrorInfo getFirstError()
+            {
+            return m_err;
+            }
+
+        @Override
+        protected boolean log(ErrorList.ErrorInfo err)
+            {
+            if (m_err == null && err.getSeverity().ordinal() >= Severity.ERROR.ordinal())
+                {
+                m_err = err;
+                }
+
+            return super.log(err);
+            }
+
+        private ErrorList.ErrorInfo m_err;
+        }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    public static final ErrorListener BLACKHOLE = new BlackholeErrorListener();
+    public static final ErrorListener RUNTIME   = new RuntimeErrorListener();
     }

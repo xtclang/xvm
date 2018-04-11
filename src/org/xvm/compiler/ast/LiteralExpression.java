@@ -69,7 +69,7 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getImplicitType(Context ctx)
         {
         ConstantPool pool = pool();
         switch (literal.getId())
@@ -96,13 +96,13 @@ public class LiteralExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        return calcFit(ctx, getImplicitType(), typeRequired, pref);
+        return calcFit(ctx, getImplicitType(ctx), typeRequired, pref);
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        TypeConstant typeLiteral  = getImplicitType();
+        TypeConstant typeLiteral  = getImplicitType(ctx);
         Constant     constLiteral = getLiteralConstant();
 
         TypeFit fit = TypeFit.Fit;

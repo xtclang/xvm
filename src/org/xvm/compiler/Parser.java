@@ -2801,7 +2801,10 @@ s     *
                     putBack(colon);
                     }
 
-                return access == null
+                // note to future self: the reason that we have NameExpression with <params>
+                // (which seems almost self-evident to ALWAYS be a type and not a name) is because
+                // we have the ability to do this: "String s = o.to<String>();" (redundant return)
+                return access == null && tokNarrow == null
                         ? new NameExpression(names, params, lEndPos)
                         : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos);
                 }

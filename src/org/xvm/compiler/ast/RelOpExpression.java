@@ -7,14 +7,12 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IntervalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -157,35 +155,35 @@ public class RelOpExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getImplicitType(Context ctx)
         {
-        MethodConstant method = getImplicitMethod();
+        MethodConstant method = getImplicitMethod(ctx);
         return method == null
                 ? null
                 : method.getRawReturns()[0];
         }
 
     @Override
-    public TypeConstant[] getImplicitTypes()
+    public TypeConstant[] getImplicitTypes(Context ctx)
         {
         if (operator.getId() == Id.DIVMOD)
             {
-            MethodConstant method = getImplicitMethod();
+            MethodConstant method = getImplicitMethod(ctx);
             return method == null
                     ? null
                     : method.getRawReturns();
             }
 
-        return super.getImplicitTypes();
+        return super.getImplicitTypes(ctx);
         }
 
     /**
      * @return the method that the op will use implicitly if it is not provided an overriding type
      *         for inference purposes
      */
-    protected MethodConstant getImplicitMethod()
+    protected MethodConstant getImplicitMethod(Context ctx)
         {
-        TypeConstant typeLeft = expr1.getImplicitType();
+        TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null)
             {
             // if the type of the left hand expression cannot be determined, then the result of the
@@ -208,7 +206,7 @@ public class RelOpExpression
             }
 
         // multiple ops: use the right hand expression to reduce the potential ops
-        TypeConstant typeRight = expr2.getImplicitType();
+        TypeConstant typeRight = expr2.getImplicitType(ctx);
         if (typeRight == null)
             {
             return null;
@@ -269,7 +267,7 @@ public class RelOpExpression
         //
         // this logic must conform to the rules used by validate()
 
-        TypeConstant typeLeft = expr1.getImplicitType();
+        TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null)
             {
             return TypeFit.NoFit;
