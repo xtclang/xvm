@@ -217,26 +217,32 @@ public class TypeComposition
         {
         assert handle.getComposition() == this;
 
-        TypeConstant typeCurrent = f_typeRevealed;
+        TypeConstant typeInception = f_typeInception;
+        TypeConstant typeCurrent   = f_typeRevealed;
         TypeConstant typeTarget;
+
+        // TODO: it should be a "super-private", allowing private access per inheritance level
+        assert typeInception.getAccess() == Access.PRIVATE;
 
         ConstantPool pool = typeCurrent.getConstantPool();
         switch (access)
             {
             case PUBLIC:
-                typeTarget = f_typeInception;
+                typeTarget = typeInception.getUnderlyingType();
                 break;
 
             case PROTECTED:
-                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.PROTECTED);
+                typeTarget = pool.ensureAccessTypeConstant(
+                    typeInception.getUnderlyingType(), Access.PROTECTED);
                 break;
 
             case PRIVATE:
-                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.PRIVATE);
+                typeTarget = typeInception;
                 break;
 
             case STRUCT:
-                typeTarget = pool.ensureAccessTypeConstant(f_typeInception, Access.STRUCT);
+                typeTarget = pool.ensureAccessTypeConstant(
+                    typeInception.getUnderlyingType(), Access.STRUCT);
                 break;
 
             default:
@@ -244,7 +250,7 @@ public class TypeComposition
             }
 
         return typeCurrent.equals(typeTarget) ?
-            handle : handle.cloneAs(f_template.ensureClass(f_typeInception, typeTarget));
+            handle : handle.cloneAs(f_template.ensureClass(typeInception, typeTarget));
         }
 
     public boolean isStruct()
@@ -563,40 +569,27 @@ public class TypeComposition
         Map mapCached = m_mapFields;
         if (mapCached == null)
             {
-            m_mapFields = mapCached = new HashMap<>();
+            m_mapFields = mapCached = new ListMap<>();
 
-            for (TypeComposition clz : collectDeclaredCallChain(true))
+            TypeInfo infoType = f_typeInception.ensureTypeInfo();
+            for (Map.Entry<PropertyConstant, PropertyInfo> entry :
+                    infoType.getProperties().entrySet())
                 {
-                ClassTemplate template = clz.getTemplate();
+                String sPropName = entry.getKey().getName();
+                PropertyInfo infoProp = entry.getValue();
 
-                for (Component child : template.f_struct.children())
+                RefHandle hRef = null;
+                if (infoProp.hasField())
                     {
-                    if (child instanceof PropertyStructure)
+                    if (infoProp.isRefAnnotated())
                         {
-                        PropertyStructure prop = (PropertyStructure) child;
+                        TypeComposition clzRef =
+                            f_template.f_templates.resolveClass(infoProp.getIdentity().getType());
 
-                        ClassTemplate.PropertyInfo info = prop.getInfo();
-
-                        RefHandle hRef = null;
-                        if (info != null && info.isRef())
-                            {
-                            TypeComposition clzRef =
-                                template.f_templates.resolveClass(info.getRefType());
-
-                            hRef = ((VarSupport) clzRef.getSupport()).
-                                createRefHandle(clzRef, prop.getName());
-                            }
-
-                        if (template.isCalculated(prop))
-                            {
-                            // compensate for the lack of "isDeclaredAtThisLevel" API
-                            mapCached.remove(prop.getName());
-                            }
-                        else
-                            {
-                            mapCached.put(prop.getName(), hRef);
-                            }
+                        hRef = ((VarSupport) clzRef.getSupport()).
+                            createRefHandle(clzRef, sPropName);
                         }
+                    mapCached.put(sPropName, hRef);
                     }
                 }
             }

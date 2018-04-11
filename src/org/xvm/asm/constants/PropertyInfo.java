@@ -901,6 +901,22 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff the property has an Atomic annotation
+     */
+    public boolean isAtomic()
+        {
+        IdentityConstant idAtomic = m_type.getConstantPool().clzAtomic();
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAtomic))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
@@ -1026,7 +1042,7 @@ public class PropertyInfo
         {
         MethodBody[] chain = type.getOptimizedMethodChain(constId);
 
-        if (chain == null)
+        if (chain == null || chain.length == 0)
             {
             if (hasField())
                 {
@@ -1034,6 +1050,16 @@ public class PropertyInfo
                     {
                     new MethodBody(constId, constId.getSignature(),
                             Implementation.Field, getFieldIdentity())
+                    };
+                }
+            else if (isInjected())
+                {
+                // injection is currently implemented at the field access level
+                // (see ClassTemplate.getFieldValue)
+                chain = new MethodBody[]
+                    {
+                    new MethodBody(constId, constId.getSignature(),
+                            Implementation.Field, getHead().getIdentity())
                     };
                 }
             else
@@ -1044,28 +1070,25 @@ public class PropertyInfo
         else if (hasField())
             {
             int cBodies = chain.length;
-            if (cBodies > 0)
-                {
-                int ixTail = cBodies - 1;
+            int ixTail  = cBodies - 1;
 
-                Implementation implTail = chain[ixTail].getImplementation();
-                if (implTail != Implementation.Field)
+            Implementation implTail = chain[ixTail].getImplementation();
+            if (implTail != Implementation.Field)
+                {
+                if (implTail == Implementation.Default)
                     {
-                    if (implTail == Implementation.Default)
-                        {
-                        chain = chain.clone();
-                        }
-                    else
-                        {
-                        MethodBody[] chainNew = new MethodBody[cBodies + 1];
-                        System.arraycopy(chain, 0, chainNew, 0, cBodies);
-                        chain = chainNew;
-                        ixTail++;
-                        }
+                    chain = chain.clone();
                     }
-                chain[ixTail] = new MethodBody(constId, constId.getSignature(),
-                        Implementation.Field, getFieldIdentity());
+                else
+                    {
+                    MethodBody[] chainNew = new MethodBody[cBodies + 1];
+                    System.arraycopy(chain, 0, chainNew, 0, cBodies);
+                    chain = chainNew;
+                    ixTail++;
+                    }
                 }
+            chain[ixTail] = new MethodBody(constId, constId.getSignature(),
+                    Implementation.Field, getFieldIdentity());
             }
         return chain;
         }
@@ -1167,6 +1190,7 @@ public class PropertyInfo
         @Override
         public ParamInfo findParamInfo(Object nid)
             {
+            // REVIEW: is this really necessary?
             if (nid instanceof String && nid.equals("RefType"))
                 {
                 PropertyConstant id = PropertyInfo.this.getIdentity();

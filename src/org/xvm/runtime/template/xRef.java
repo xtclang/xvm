@@ -36,8 +36,8 @@ public class xRef
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
-                asTypeConstant().normalizeParameters();
+            INCEPTION_TYPE = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
             }
         }
 
@@ -49,13 +49,22 @@ public class xRef
     @Override
     protected TypeComposition ensureCanonicalClass()
         {
-        return ensureClass(INCEPTION_TYPE, getCanonicalType());
+        return ensureClass(INCEPTION_TYPE.normalizeParameters(), getCanonicalType());
         }
 
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        return ensureClass(INCEPTION_TYPE, typeActual);
+        TypeConstant typeInception = INCEPTION_TYPE;
+
+        // adopt parameters from the actual type into the inception type
+        if (typeActual.isParamsSpecified())
+            {
+            typeInception = typeActual.getConstantPool().
+                ensureParameterizedTypeConstant(INCEPTION_TYPE, typeActual.getParamTypesArray());
+            }
+
+        return ensureClass(typeInception.normalizeParameters(), typeActual);
         }
 
     @Override

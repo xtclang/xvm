@@ -50,12 +50,6 @@ public class xConst
         }
 
     @Override
-    public boolean isStateful()
-        {
-        return true;
-        }
-
-    @Override
     public int invokeNativeGet(Frame frame, String sPropName,
                                ObjectHandle hTarget, int iReturn)
         {

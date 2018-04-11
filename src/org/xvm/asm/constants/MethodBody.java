@@ -167,7 +167,7 @@ public class MethodBody
      */
     public boolean isOverride()
         {
-        return findAnnotation(pool().clzOverride()) != null;
+        return m_impl != Implementation.Implicit && findAnnotation(pool().clzOverride()) != null;
         }
 
     /**

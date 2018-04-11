@@ -70,9 +70,9 @@ public class TypedefConstant
         }
 
     @Override
-    public TypedefStructure resolveNestedIdentity(ClassStructure clz)
+    public TypedefStructure relocateNestedIdentity(ClassStructure clz)
         {
-        Component parent = getNamespace().resolveNestedIdentity(clz);
+        Component parent = getNamespace().relocateNestedIdentity(clz);
         if (parent == null)
             {
             return null;

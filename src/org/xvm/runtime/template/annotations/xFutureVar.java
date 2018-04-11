@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -60,28 +61,43 @@ public class xFutureVar
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
 
+        markNativeMethod("get", VOID, new String[] {"RefType"});
+        markNativeMethod("set", new String[] {"RefType"}, VOID);
+
         xEnum enumCompletion = (xEnum) getChildTemplate("Completion");
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");
         }
 
-    protected TypeConstant getInceptionType()
+    protected TypeConstant getCanonicalInceptionType()
         {
         return f_struct.getConstantPool().ensureAnnotatedTypeConstant(
-            new Annotation(TYPE.getDefiningConstant(), null), xVar.INCEPTION_TYPE);
+            new Annotation(TYPE.getDefiningConstant(), null), xVar.INCEPTION_TYPE.normalizeParameters());
         }
 
     @Override
     protected TypeComposition ensureCanonicalClass()
         {
-        return ensureClass(getInceptionType(), getCanonicalType());
+        return ensureClass(getCanonicalInceptionType(), getCanonicalType());
         }
 
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        return ensureClass(getInceptionType(), typeActual);
+        TypeConstant typeInception = getCanonicalInceptionType();
+
+        // adopt parameters from the actual type into the inception type
+        if (typeActual.isParamsSpecified())
+            {
+            ConstantPool pool = typeActual.getConstantPool();
+
+            typeInception = pool.ensureAnnotatedTypeConstant(
+                new Annotation(TYPE.getDefiningConstant(), null),
+                    pool.ensureParameterizedTypeConstant(xVar.INCEPTION_TYPE,
+                        typeActual.getParamTypesArray()));
+            }
+        return ensureClass(typeInception, typeActual);
         }
 
     @Override

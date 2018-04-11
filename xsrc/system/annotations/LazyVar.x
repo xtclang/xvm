@@ -35,6 +35,7 @@ mixin LazyVar<RefType>(function RefType ()? calculate = null)
     private function RefType ()? calculate;
     private Boolean assignable = false;
 
+    @Override
     RefType get()
         {
         if (!assigned)
@@ -56,6 +57,7 @@ mixin LazyVar<RefType>(function RefType ()? calculate = null)
         return super();
         }
 
+    @Override
     Void set(RefType value)
         {
         assert !assigned && assignable;

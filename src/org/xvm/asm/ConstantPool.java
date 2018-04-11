@@ -1784,6 +1784,7 @@ public class ConstantPool
     public ClassConstant     clzRO()            {ClassConstant     c = m_clzRO;           if (c == null) {m_clzRO           = c = (ClassConstant) getImplicitlyImportedIdentity("RO"         );} return c;}
     public ClassConstant     clzInject()        {ClassConstant     c = m_clzInject;       if (c == null) {m_clzInject       = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"     );} return c;}
     public ClassConstant     clzAbstract()      {ClassConstant     c = m_clzAbstract;     if (c == null) {m_clzAbstract     = c = (ClassConstant) getImplicitlyImportedIdentity("Abstract"   );} return c;}
+    public ClassConstant     clzAtomic()        {ClassConstant     c = m_clzAtomic;       if (c == null) {m_clzAtomic       = c = (ClassConstant) getImplicitlyImportedIdentity("Atomic"     );} return c;}
     public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"   );} return c;}
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"  );} return c;}
     public ClassConstant     clzObscure()       {ClassConstant     c = m_clzObscure;      if (c == null) {m_clzObscure      = c = (ClassConstant) getImplicitlyImportedIdentity("Obscure"    );} return c;}
@@ -2433,6 +2434,7 @@ public class ConstantPool
         m_clzRO           = null;
         m_clzInject       = null;
         m_clzAbstract     = null;
+        m_clzAtomic       = null;
         m_clzOverride     = null;
         m_clzUnchecked    = null;
         m_clzObscure      = null;
@@ -2746,6 +2748,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzRO;
     private transient ClassConstant     m_clzInject;
     private transient ClassConstant     m_clzAbstract;
+    private transient ClassConstant     m_clzAtomic;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzUnchecked;
     private transient ClassConstant     m_clzObscure;

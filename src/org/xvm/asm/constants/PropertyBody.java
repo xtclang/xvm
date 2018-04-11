@@ -100,11 +100,20 @@ public class PropertyBody
                 ? ((NestedIdentity) param.getNestedIdentity()).getIdentityConstant().getConstantPool()
                 : struct.getConstantPool();
 
+        TypeConstant typeActual = param.getActualType();
+        TypeConstant typeType   = typeActual instanceof TupleElementsTypeConstant
+                // when we're dealing with a tuple type, "ActualType" that comes from the param info
+                // provides the type of each tuple field (see TC.createInitialTypeResolver)
+                ? pool.ensureParameterizedTypeConstant(pool.typeType(),
+                        pool.ensureParameterizedTypeConstant(
+                            pool.typeTuple(), typeActual.getParamTypesArray()))
+                : pool.ensureParameterizedTypeConstant(pool.typeType(), typeActual);
+
         m_structProp    = struct;
         m_impl          = Implementation.Native;
         m_constDelegate = null;
         m_paraminfo     = param;
-        m_type          = pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType());
+        m_type          = typeType;
         m_fRO           = true;
         m_fRW           = false;
         m_fCustom       = false;

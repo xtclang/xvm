@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
 
@@ -89,8 +90,12 @@ public class PropertyConstant
     @Override
     public TypeConstant getType()
         {
-        // TODO return Property<> or Ref<>
-        throw new IllegalStateException("TODO: property type?!");
+        TypeConstant type = m_typeRef;
+        if (type == null)
+            {
+            m_typeRef = type = ((PropertyStructure) getComponent()).getRefType();
+            }
+        return type;
         }
 
     @Override
@@ -114,9 +119,18 @@ public class PropertyConstant
         }
 
     @Override
-    public PropertyStructure resolveNestedIdentity(ClassStructure clz)
+    public Object resolveNestedIdentity(GenericTypeResolver resolver)
         {
-        Component parent = getNamespace().resolveNestedIdentity(clz);
+        // property can be identified with only a name, assuming it is not recursively nested
+        return getNamespace().isNested()
+                ? new NestedIdentity(resolver)
+                : getName();
+        }
+
+    @Override
+    public PropertyStructure relocateNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().relocateNestedIdentity(clz);
         if (parent == null)
             {
             return null;
@@ -194,6 +208,11 @@ public class PropertyConstant
      * Cached type.
      */
     private transient TypeConstant m_type;
+
+    /**
+     * Cached Ref type.
+     */
+    private transient TypeConstant m_typeRef;
 
     /**
      * Cached constant that represents the signature of this property.

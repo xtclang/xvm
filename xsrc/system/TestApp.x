@@ -267,11 +267,13 @@ class TestApp
         {
         Int counter
             {
+            @Override
             Int get()
                 {
                 print("In counter.get");
                 return super();
                 }
+            @Override
             Void set(Int c)
                 {
                 print("In counter.set");

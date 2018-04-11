@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -394,6 +395,33 @@ public class MethodInfo
     public boolean isOverride()
         {
         return getTail().isOverride();
+        }
+
+    /**
+     * Pre-populate the "info by id" and "info by nid" lookup caches. The caches may contain many
+     * entries for the same MethodInfo.
+     *
+     * @param mapMethods      lookup cache by id
+     * @param mapVirtMethods  lookup cache by nid
+     */
+    public void populateCache(
+            MethodConstant                  idMethod,
+            Map<MethodConstant, MethodInfo> mapMethods,
+            Map<Object, MethodInfo>         mapVirtMethods)
+        {
+        int cDepth = idMethod.getNestedDepth();
+        for (MethodBody body : m_aBody)
+            {
+            MethodConstant id = body.getIdentity();
+            if (id.getNestedDepth() == cDepth)
+                {
+                mapMethods.putIfAbsent(id, this);
+                if (isVirtual())
+                    {
+                    mapVirtMethods.putIfAbsent(id.getNestedIdentity(), this);
+                    }
+                }
+            }
         }
 
     /**

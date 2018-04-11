@@ -1376,7 +1376,7 @@ public class ClassStructure
             return findMethod((SignatureConstant) id);
             }
 
-        return ((NestedIdentity) id).getIdentityConstant().resolveNestedIdentity(this);
+        return ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
         }
 
 

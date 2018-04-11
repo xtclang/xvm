@@ -65,9 +65,9 @@ public class MultiMethodConstant
         }
 
     @Override
-    public MultiMethodStructure resolveNestedIdentity(ClassStructure clz)
+    public MultiMethodStructure relocateNestedIdentity(ClassStructure clz)
         {
-        Component parent = getNamespace().resolveNestedIdentity(clz);
+        Component parent = getNamespace().relocateNestedIdentity(clz);
         if (parent == null)
             {
             return null;

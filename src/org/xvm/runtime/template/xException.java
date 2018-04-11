@@ -66,10 +66,7 @@ public class xException
         {
         ExceptionHandle hException = makeMutableHandle(INSTANCE.getCanonicalClass(), null, null);
 
-        Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
-
-        INSTANCE.setFieldValue(frame, hException,
-            INSTANCE.getProperty("text"), xString.makeHandle(sMessage));
+        hException.setField("text", xString.makeHandle(sMessage));
 
         hException.makeImmutable();
         return hException;
@@ -82,10 +79,8 @@ public class xException
 
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();
 
-        INSTANCE.setFieldValue(frame, hException, INSTANCE.getProperty("stackTrace"),
-            xString.makeHandle(frame.getStackTrace()));
-        INSTANCE.setFieldValue(frame, hException, INSTANCE.getProperty("cause"),
-            hCause == null ? xNullable.NULL : hCause);
+        hException.setField("stackTrace", xString.makeHandle(frame.getStackTrace()));
+        hException.setField("cause", hCause == null ? xNullable.NULL : hCause);
 
         return hException;
         }

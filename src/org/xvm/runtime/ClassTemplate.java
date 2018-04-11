@@ -10,7 +10,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -21,6 +20,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -208,30 +208,20 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        assert typeInception.getAccess() == Access.PUBLIC;
+        assert !typeInception.isAccessSpecified() || typeInception.getAccess() == Access.PRIVATE;
         assert typeInception.normalizeParameters() == typeInception;
 
-        OpSupport support = typeInception.isAnnotated() ?
-            typeInception.getOpSupport(f_templates) : this;
-
         return m_mapCompositions.computeIfAbsent(typeMask, (type) ->
-            new TypeComposition(support, typeInception, type));
-        }
-
-    // should we generate fields for this class
-    public boolean isStateful()
-        {
-        switch (f_struct.getFormat())
             {
-            case CLASS:
-            case CONST:
-            case MIXIN:
-            case SERVICE:
-                return true;
+            TypeConstant typeI   = typeInception;
+            OpSupport    support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            default:
-                return false;
-            }
+            if (!typeI.isAccessSpecified())
+                {
+                typeI = typeI.getConstantPool().ensureAccessTypeConstant(typeI, Access.PRIVATE);
+                }
+            return new TypeComposition(support, typeI, type);
+            });
         }
 
     protected boolean isConstructImmutable()
@@ -741,7 +731,7 @@ public abstract class ClassTemplate
         MethodStructure method = hTarget.isStruct() ? null : chain.getTop();
         if (method == null)
             {
-            return getFieldValue(frame, hTarget, chain.getProperty(), iReturn);
+            return getFieldValue(frame, hTarget, sPropName, iReturn);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
@@ -754,49 +744,47 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param property   the PropertyStructure representing the property
+     * @param sPropName  the property name
      * @param iReturn    the register id to place a result of the operation into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
-    public int getFieldValue(Frame frame, ObjectHandle hTarget,
-                              PropertyStructure property, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
-        if (property == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
-        String sName = property.getName();
-
         GenericHandle hThis = (GenericHandle) hTarget;
-        ObjectHandle hValue = hThis.getField(sName);
+        ObjectHandle hValue = hThis.getField(sPropName);
+
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
 
         if (hValue == null)
             {
             String sErr;
-            if (isInjectable(property))
+            if (info.isInjected())
                 {
-                hValue = frame.f_context.f_container.getInjectable(sName, property.getType());
+                hValue = frame.f_context.f_container.getInjectable(sPropName, info.getType());
                 if (hValue != null)
                     {
-                    hThis.setField(sName, hValue);
+                    hThis.setField(sPropName, hValue);
                     return frame.assignValue(iReturn, hValue);
                     }
                 sErr = "Unknown injectable property ";
                 }
             else
                 {
-                sErr = hThis.containsField(sName) ?
+                sErr = hThis.containsField(sPropName) ?
                         "Un-initialized property \"" : "Invalid property \"";
                 }
 
-            return frame.raiseException(xException.makeHandle(sErr + sName + '"'));
+            return frame.raiseException(xException.makeHandle(sErr + sPropName + '"'));
             }
 
-        PropertyInfo info = property.getInfo();
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             RefHandle hRef = (RefHandle) hValue;
             return hRef.getVarSupport().get(frame, hRef, iReturn);
@@ -832,13 +820,13 @@ public abstract class ClassTemplate
                 xException.makeHandle("Immutable object: " + hTarget));
             }
 
-        if (isCalculated(property))
-            {
-            return frame.raiseException(
-                xException.makeHandle("Read-only property: " + property.getName()));
-            }
+//        if (chain.getDepth() == 0)
+//            {
+//            return frame.raiseException(
+//                xException.makeHandle("Read-only property: " + property.getName()));
+//            }
 
-        if (isNativeSetter(property))
+        if (chain.isNative())
             {
             return invokeNativeSet(frame, hTarget, property, hValue);
             }
@@ -846,7 +834,7 @@ public abstract class ClassTemplate
         MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
         if (method == null)
             {
-            return setFieldValue(frame, hTarget, property, hValue);
+            return setFieldValue(frame, hTarget, sPropName, hValue);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
@@ -860,32 +848,32 @@ public abstract class ClassTemplate
      *
      * @param frame      the current frame
      * @param hTarget    the target handle
-     * @param property   the PropertyStructure representing the property
+     * @param sPropName  the property name
      * @param hValue     the new value
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
      */
     public int setFieldValue(Frame frame, ObjectHandle hTarget,
-                              PropertyStructure property, ObjectHandle hValue)
+                              String sPropName, ObjectHandle hValue)
         {
-        if (property == null)
+        if (sPropName == null)
             {
             throw new IllegalStateException(f_sName);
             }
 
         GenericHandle hThis = (GenericHandle) hTarget;
 
-        assert hThis.containsField(property.getName());
+        assert hThis.containsField(sPropName);
 
-        PropertyInfo info = property.getInfo();
-        if (info != null && info.isRef())
+        PropertyInfo info = hThis.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
-            RefHandle hRef = (RefHandle) hThis.getField(property.getName());
+            RefHandle hRef = (RefHandle) hThis.getField(sPropName);
             return hRef.getVarSupport().set(frame, hRef, hValue);
             }
 
-        hThis.setField(property.getName(), hValue);
+        hThis.setField(sPropName, hValue);
         return Op.R_NEXT;
         }
 
@@ -942,7 +930,7 @@ public abstract class ClassTemplate
     public int invokePreInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -966,7 +954,7 @@ public abstract class ClassTemplate
     public int invokePostInc(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -990,7 +978,7 @@ public abstract class ClassTemplate
     public int invokePreDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1014,7 +1002,7 @@ public abstract class ClassTemplate
     public int invokePostDec(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(sPropName);
@@ -1037,8 +1025,8 @@ public abstract class ClassTemplate
      */
     public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1062,8 +1050,8 @@ public abstract class ClassTemplate
      */
     public int invokePropertySub(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1087,8 +1075,8 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMul(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1112,8 +1100,8 @@ public abstract class ClassTemplate
      */
     public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1137,8 +1125,8 @@ public abstract class ClassTemplate
      */
     public int invokePropertyMod(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hArg)
         {
-        ClassTemplate.PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
+        if (info.isRefAnnotated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(sPropName);
@@ -1172,7 +1160,7 @@ public abstract class ClassTemplate
             }
 
         PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        if (info != null && info.isRef())
+        if (info.isRefAnnotated())
             {
             return ((RefHandle) hThis.getField(sPropName));
             }
@@ -1377,38 +1365,6 @@ public abstract class ClassTemplate
         }
 
 
-    // ----- to be replaced when the structure support is added
-
-    protected boolean isInjectable(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_fInjectable;
-        }
-
-    protected boolean isAtomicProperty(ObjectHandle hTarget, String sPropName)
-        {
-        PropertyInfo info = hTarget.getPropertyInfo(sPropName);
-        return info != null && info.m_fAtomic;
-        }
-
-    protected boolean isCalculated(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_fCalculated;
-        }
-
-    protected boolean isNativeSetter(PropertyStructure property)
-        {
-        PropertyInfo info = property.getInfo();
-        return info != null && info.m_fNativeSetter;
-        }
-
-    // is the specified generic property declared at this level
-    protected boolean isGenericType(String sProperty)
-        {
-        return f_struct.indexOfGenericParameter(sProperty) >= 0;
-        }
-
     // =========== TEMPORARY ========
 
     public void markNativeMethod(String sName, String[] asParamType)
@@ -1436,54 +1392,13 @@ public abstract class ClassTemplate
         return method;
         }
 
-    public void markInjectable(String sPropName)
-        {
-        ensurePropertyInfo(sPropName).m_fInjectable = true;
-        }
-
-    public void markCalculated(String sPropName)
-        {
-        ensurePropertyInfo(sPropName).m_fCalculated = true;
-        }
-
-    public void markAtomic(String sPropName)
-        {
-        ensurePropertyInfo(sPropName).markAtomic();
-        }
-
     // mark the property getter as native
     // Note: this also makes the property "calculated" (no storage)
     public void markNativeGetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
         assert prop != null;
-
-        MethodStructure methodGet = Adapter.getGetter(prop);
-        if (methodGet == null)
-            {
-            ensurePropertyInfo(sPropName).m_fNativeGetter = true;
-            }
-        else
-            {
-            methodGet.setNative(true);
-            }
-        ensurePropertyInfo(sPropName).m_fCalculated = true;
-        }
-
-    // mark the property setter as native
-    // Note: this also makes the property "calculated" (no storage)
-    public void markNativeSetter(String sPropName)
-        {
-        MethodStructure methodSet = Adapter.getSetter(ensureProperty(sPropName));
-        if (methodSet == null)
-            {
-            ensurePropertyInfo(sPropName).m_fNativeSetter = true;
-            }
-        else
-            {
-            methodSet.setNative(true);
-            }
-        ensurePropertyInfo(sPropName).m_fCalculated = false;
+        prop.markNativeGetter();
         }
 
     public MethodStructure ensureGetter(String sPropName)
@@ -1500,70 +1415,11 @@ public abstract class ClassTemplate
         return Adapter.getSetter(prop);
         }
 
-    public PropertyInfo ensurePropertyInfo(String sPropName)
+    // is the specified generic property declared at this level
+    protected boolean isGenericType(String sProperty)
         {
-        PropertyStructure property = ensureProperty(sPropName);
-
-        PropertyInfo info = property.getInfo();
-        if (info == null)
-            {
-            property.setInfo(info = new PropertyInfo(f_templates.f_container.f_pool, property));
-            }
-        return info;
+        return f_struct.indexOfGenericParameter(sProperty) >= 0;
         }
-
-    public static class PropertyInfo
-        {
-        protected final ConstantPool      f_pool;
-        protected final PropertyStructure f_property;
-        protected       boolean           m_fAtomic;
-        protected       boolean           m_fInjectable;
-        protected       boolean           m_fCalculated;
-        protected       boolean           m_fNativeGetter;
-        protected       boolean           m_fNativeSetter;
-        protected       TypeConstant      m_typeRef;
-
-        public PropertyInfo(ConstantPool pool, PropertyStructure property)
-            {
-            f_pool = pool;
-            f_property = property;
-            }
-
-        protected void markAtomic()
-            {
-            m_fAtomic = true;
-
-            TypeConstant typeProp = f_property.getType();
-
-            TypeConstant typeRef = typeProp.isEcstasy("Int")
-                ? f_pool.ensureEcstasyClassConstant("annotations.AtomicIntNumber").asTypeConstant()
-                : f_pool.ensureEcstasyClassConstant("annotations.AtomicVar").asTypeConstant();
-
-            setRefType(f_pool.ensureParameterizedTypeConstant(typeRef, typeProp));
-            }
-
-        public boolean isAtomic()
-            {
-            return m_fAtomic;
-            }
-
-        public boolean isRef()
-            {
-            return m_typeRef != null;
-            }
-
-        public TypeConstant getRefType()
-            {
-            return m_typeRef;
-            }
-
-        // specifies that the property value is held by the ref
-        protected void setRefType(TypeConstant typeRef)
-            {
-            m_typeRef = typeRef;
-            }
-        }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

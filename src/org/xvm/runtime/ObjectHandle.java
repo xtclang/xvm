@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.xvm.asm.Constants;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.ListMap;
@@ -116,11 +117,9 @@ public abstract class ObjectHandle
         return m_clazz.ensureAccess(this, access);
         }
 
-    public ClassTemplate.PropertyInfo getPropertyInfo(String sPropName)
+    public PropertyInfo getPropertyInfo(String sPropName)
         {
-        // TODO: replace with TypeInfo.getPropertyInfo() when done
-        CallChain chain = getComposition().getPropertySetterChain(sPropName);
-        return chain.getProperty().getInfo();
+        return getType().ensureTypeInfo().findProperty(sPropName);
         }
 
     @Override

@@ -984,6 +984,7 @@ public abstract class TypeConstant
             return null;
             }
 
+        ParamInfo.TypeResolver resolver = infoPri.ensureTypeResolver(errs);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoPri.getProperties().entrySet())
             {
             // the properties that show up in structure types are those that have a field; however,
@@ -997,7 +998,7 @@ public abstract class TypeConstant
                 // REVIEW if we do, then we need to explicitly retain the PropertyInfo.getFieldIdentity()
                 if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(resolver), prop);
                     }
                 mapProps.put(id, prop);
                 }
@@ -1055,7 +1056,7 @@ public abstract class TypeConstant
                                 PropertyConstant id = entry.getKey();
                                 if (prop.isVirtual())
                                     {
-                                    Object nid = id.getNestedIdentity();
+                                    Object nid = id.resolveNestedIdentity(resolver);
                                     if (mapVirtProps.containsKey(nid))
                                         {
                                         continue;
@@ -1941,11 +1942,11 @@ public abstract class TypeConstant
 
                     // layer on the property so its information is all correct before we have to
                     // make any decisions about how to process the property
-                    layerOnProp(constId, fSelf, mapProps, mapVirtProps,
+                    layerOnProp(constId, fSelf, resolver, mapProps, mapVirtProps,
                             typeContrib, idProp, prop, errs);
 
                     // now that the necessary data is in place, explode the property
-                    if (!explodeProperty(constId, idProp, prop, mapProps, mapVirtProps,
+                    if (!explodeProperty(constId, idProp, prop, resolver, mapProps, mapVirtProps,
                             mapMethods, mapVirtMethods, errs))
                         {
                         fIncomplete = true;
@@ -2037,7 +2038,7 @@ public abstract class TypeConstant
             // that same level.
 
             // process properties
-            layerOnProps(constId, fSelf, mapProps, mapVirtProps,
+            layerOnProps(constId, fSelf, resolver, mapProps, mapVirtProps,
                     typeContrib, mapContribProps, errs);
 
             // if there are any remaining declared-but-not-overridden properties originating from
@@ -2055,7 +2056,7 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object       nid       = entry.getKey().getNestedIdentity();
+                            Object       nid       = entry.getKey().resolveNestedIdentity(resolver);
                             PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
                             assert infoOld == infoCheck;
                             }
@@ -2066,7 +2067,7 @@ public abstract class TypeConstant
             // process methods
             if (!mapContribMethods.isEmpty())
                 {
-                layerOnMethods(constId, fSelf, mapMethods, mapVirtMethods,
+                layerOnMethods(constId, fSelf, resolver, mapMethods, mapVirtMethods,
                         typeContrib, mapContribMethods, errs);
                 }
             }
@@ -2083,6 +2084,7 @@ public abstract class TypeConstant
      * @param constId         identity of the class
      * @param idProp          the identity of the property being exploded
      * @param info            the PropertyInfo for the property being exploded
+     * @param resolver        the GenericTypeResolver that uses the known type parameters
      * @param mapProps        properties of the class
      * @param mapVirtProps    the virtual properties of the type, keyed by nested id
      * @param mapMethods      methods of the class
@@ -2096,6 +2098,7 @@ public abstract class TypeConstant
             IdentityConstant                    constId,
             PropertyConstant                    idProp,
             PropertyInfo                        info,
+            TypeResolver                        resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
@@ -2116,14 +2119,14 @@ public abstract class TypeConstant
             }
         else
             {
-            nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
-                    typeInto, infoInto.asInto(), errs);
+            nestAndLayerOn(constId, idProp, resolver, mapProps, mapVirtProps, mapMethods,
+                mapVirtMethods, typeInto, infoInto.asInto(), errs);
             }
         }
 
         // layer on any annotations, if any
-        Annotation[] aAnnos   = info.getRefAnnotations();
-        int          cAnnos   = aAnnos.length;
+        Annotation[] aAnnos = info.getRefAnnotations();
+        int          cAnnos = aAnnos.length;
         for (int i = cAnnos - 1; i >= 0; --i)
             {
             Annotation     anno     = aAnnos[i];
@@ -2143,8 +2146,8 @@ public abstract class TypeConstant
                 }
             else
                 {
-                nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
-                        typeAnno, infoAnno, errs);
+                nestAndLayerOn(constId, idProp, resolver, mapProps, mapVirtProps, mapMethods,
+                    mapVirtMethods, typeAnno, infoAnno, errs);
                 }
             }
 
@@ -2159,6 +2162,7 @@ public abstract class TypeConstant
      *
      * @param constId         identity of the class
      * @param idProp          the property being contributed to
+     * @param resolver        the TypeResolver that uses the known type parameters
      * @param mapProps        properties of the class
      * @param mapVirtProps    the virtual properties of the type, keyed by nested id
      * @param mapMethods      methods of the class
@@ -2170,6 +2174,7 @@ public abstract class TypeConstant
     protected void nestAndLayerOn(
             IdentityConstant                    constId,
             PropertyConstant                    idProp,
+            TypeResolver                        resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<MethodConstant, MethodInfo>     mapMethods,
@@ -2183,26 +2188,28 @@ public abstract class TypeConstant
         Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
             {
-            Object           nidContrib = entry.getKey().getNestedIdentity();
+            Object           nidContrib = entry.getKey().resolveNestedIdentity(resolver);
             PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(nidContrib);
             mapContribProps.put(idContrib, entry.getValue());
             }
-        layerOnProps(constId, false, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
+        layerOnProps(constId, false, resolver, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
 
         Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
             {
-            Object         nidContrib = entry.getKey().getNestedIdentity();
+            Object         nidContrib = entry.getKey().resolveNestedIdentity(resolver);
             MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(nidContrib);
             mapContribMethods.put(idContrib, entry.getValue());
             }
-        layerOnMethods(constId, false, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+        layerOnMethods(constId, false, resolver, mapMethods, mapVirtMethods,
+            typeContrib, mapContribMethods, errs);
         }
 
     /**
      * Layer on the passed property contributions onto the property information already collected.
      *
      * @param constId          identity of the class
+     * @param resolver         the TypeResolver that uses the known type parameters
      * @param mapProps         properties of the class
      * @param mapVirtProps     the virtual properties of the type, keyed by nested id
      * @param typeContrib      the type whose members are being contributed
@@ -2214,6 +2221,7 @@ public abstract class TypeConstant
     protected void layerOnProps(
             IdentityConstant                    constId,
             boolean                             fSelf,
+            TypeResolver                        resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
             TypeConstant                        typeContrib,
@@ -2222,7 +2230,8 @@ public abstract class TypeConstant
         {
         for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
             {
-            layerOnProp(constId, fSelf, mapProps, mapVirtProps, typeContrib, entry.getKey(), entry.getValue(), errs);
+            layerOnProp(constId, fSelf, resolver, mapProps, mapVirtProps,
+                typeContrib, entry.getKey(), entry.getValue(), errs);
             }
         }
 
@@ -2232,6 +2241,7 @@ public abstract class TypeConstant
      * @param constId       identity of the class
      * @param fSelf         true if the layer being added represents the "Equals" contribution of
      *                      the type
+     * @param resolver      the TypeResolver that uses the known type parameters
      * @param mapProps      properties of the class
      * @param mapVirtProps  the virtual properties of the type, keyed by nested id
      * @param typeContrib   the type whose members are being contributed
@@ -2242,6 +2252,7 @@ public abstract class TypeConstant
     protected void layerOnProp(
             IdentityConstant                    constId,
             boolean                             fSelf,
+            TypeResolver                        resolver,
             Map<PropertyConstant, PropertyInfo> mapProps,
             Map<Object, PropertyInfo>           mapVirtProps,
             TypeConstant                        typeContrib,
@@ -2249,8 +2260,8 @@ public abstract class TypeConstant
             PropertyInfo                        propContrib,
             ErrorListener                       errs)
         {
-        Object           nidContrib  = idContrib.getNestedIdentity();
-        PropertyConstant idResult    = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
+        Object           nidContrib = idContrib.resolveNestedIdentity(resolver);
+        PropertyConstant idResult   = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
 
         // the property is not virtual if it is a constant, if it is private/private, or if
         // it is inside a method (which coincidentally must be private/private). in this
@@ -2290,6 +2301,7 @@ public abstract class TypeConstant
      * @param constId            identity of the class
      * @param fSelf              true if the layer being added represents the "Equals" contribution of
      *                           the type
+     * @param resolver           the TypeResolver that uses the known type parameters
      * @param mapMethods         methods of the class
      * @param mapVirtMethods     the virtual methods of the type, keyed by nested id
      * @param typeContrib        the type whose members are being contributed
@@ -2299,6 +2311,7 @@ public abstract class TypeConstant
     protected void layerOnMethods(
             IdentityConstant                constId,
             boolean                         fSelf,
+            TypeResolver                    resolver,
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
             TypeConstant                    typeContrib,
@@ -2348,7 +2361,7 @@ public abstract class TypeConstant
             {
             MethodConstant idContrib     = entry.getKey();
             MethodInfo     methodContrib = entry.getValue();
-            Object         nidContrib    = idContrib.getNestedIdentity();
+            Object         nidContrib    = idContrib.resolveNestedIdentity(resolver);
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or some other structure (such as a property) that is
@@ -2637,9 +2650,17 @@ public abstract class TypeConstant
                 listExplode.add(id);
 
                 // create a ParamInfo and a type-param PropertyInfo for the RefType type parameter
+                // note: while this is very hard-coded and dense and inelegant, it basically is
+                //       compensating for the fact that we're about to treat the property (id/info)
+                //       as it's own ***class***, just like the type for which we are currently
+                //       producing a TypeInfo. however, unlike the top level class & TypeInfo, the
+                //       property doesn't have a chance to go through the createInitialTypeResolver
+                //       method, so lacking that, this "jams in" the additional type parameters that
+                //       the property relies on (as if they had been correctly populated by going
+                //       through createInitialTypeResolver)
                 ConstantPool     pool      = id.getConstantPool();
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "RefType");
-                Object           nidParam  = idParam.getNestedIdentity();
+                Object           nidParam  = idParam.resolveNestedIdentity(resolver);
                 ParamInfo        param     = new ParamInfo(nidParam, "RefType", pool.typeObject(), info.getType());
                 PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param));
                 resolver.registerParamInfo(nidParam, param);

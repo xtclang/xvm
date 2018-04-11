@@ -34,9 +34,6 @@ public class xTestService extends xService
         {
         adapter.addMethod(f_struct, "construct", INT, VOID);
 
-        markInjectable("runtimeClock");
-        markAtomic("counter2");
-
         MethodStructure mtGetCounter = ensureGetter("counter");
         mtGetCounter.setOps(new Op[]
             {

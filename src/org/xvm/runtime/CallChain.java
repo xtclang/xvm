@@ -104,7 +104,7 @@ public class CallChain
 
     protected int getField(Frame frame, ObjectHandle hThis, int iReturn)
         {
-        return hThis.getTemplate().getFieldValue(frame, hThis, getProperty(), iReturn);
+        return hThis.getTemplate().getFieldValue(frame, hThis, getProperty().getName(), iReturn);
         }
 
     public int callSuper10(Frame frame, ObjectHandle hArg)
@@ -138,7 +138,7 @@ public class CallChain
 
     protected int setField(Frame frame, ObjectHandle hThis, ObjectHandle hArg)
         {
-        return hThis.getTemplate().setFieldValue(frame, hThis, getProperty(), hArg);
+        return hThis.getTemplate().setFieldValue(frame, hThis, getProperty().getName(), hArg);
         }
 
     public int callSuperN1(Frame frame, ObjectHandle[] ahArg, int iReturn,
