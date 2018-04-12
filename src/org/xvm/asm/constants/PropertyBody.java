@@ -32,8 +32,9 @@ public class PropertyBody
      * @param fRW            true iff the property has any of a number of indicators that would
      *                       indicate that the property is read-write
      * @param fCustomCode    true to indicate that the property has custom code that overrides
-     *                       the underlying Ref/Var implementation
-
+     *                       the underlying Ref/Var implementation (including native accessors)
+     * @param effectGet      the Effect of the getter
+     * @param effectSet      the Effect of the setter
      * @param fReqField      true iff the property requires the presence of a field
      * @param fConstant      true iff the property represents a named constant value
      * @param constInitVal   the initial value for the property

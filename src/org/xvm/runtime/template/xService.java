@@ -54,11 +54,9 @@ public class xService
         }
 
     @Override
-    protected TypeComposition ensureCanonicalClass()
+    protected TypeConstant getInceptionType()
         {
-        return this == INSTANCE
-            ? ensureClass(INCEPTION_TYPE, getCanonicalType())
-            : super.ensureCanonicalClass();
+        return this == INSTANCE ? INCEPTION_TYPE : super.getInceptionType();
         }
 
     @Override

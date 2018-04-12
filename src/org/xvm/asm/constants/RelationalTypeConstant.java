@@ -9,6 +9,7 @@ import java.util.List;
 
 import java.util.function.Consumer;
 
+import java.util.function.Function;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -224,12 +225,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
+    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.normalizeParametersInternal(listParams);
-        TypeConstant constResolved2 = constOriginal2.normalizeParametersInternal(listParams);
+        TypeConstant constResolved1 = constOriginal1.adoptParameters(atypeParams);
+        TypeConstant constResolved2 = constOriginal2.adoptParameters(atypeParams);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
@@ -260,6 +261,19 @@ public abstract class RelationalTypeConstant
         return constInferred1 == constOriginal1 && constInferred2 == constOriginal2
                 ? this
                 : cloneRelational(constInferred1, constInferred2);
+        }
+
+    @Override
+    public TypeConstant transform(Function<TypeConstant, TypeConstant> transformer)
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = transformer.apply(constOriginal1);
+        TypeConstant constResolved2 = transformer.apply(constOriginal2);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(constResolved1, constResolved2);
         }
 
     @Override

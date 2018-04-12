@@ -14,6 +14,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import java.util.function.Function;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;
@@ -223,20 +224,13 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
+    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
-        assert listParams.isEmpty();
+        TypeConstant constOriginal = m_constType;
 
-        TypeConstant typeOld = m_constType;
-        TypeConstant typeNew = typeOld.normalizeParametersInternal(getParamTypes());
-        if (typeNew == typeOld)
-            {
-            return this;
-            }
+        assert constOriginal instanceof TerminalTypeConstant;
 
-        return typeNew.isParamsSpecified()
-                ? typeNew
-                : cloneSingle(typeNew);
+        return constOriginal.adoptParameters(atypeParams == null ? m_atypeParams : atypeParams);
         }
 
     @Override
@@ -295,6 +289,35 @@ public class ParameterizedTypeConstant
         return fDiff
             ? getConstantPool().ensureParameterizedTypeConstant(constInferred, aconstInferred)
             : this;
+        }
+
+    @Override
+    public TypeConstant transform(Function<TypeConstant, TypeConstant> transformer)
+        {
+        TypeConstant constOriginal = m_constType;
+        TypeConstant constResolved = transformer.apply(constOriginal);
+        boolean      fDiff         = constOriginal != constResolved;
+
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = aconstOriginal;
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved =transformer.apply(constParamOriginal);
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
         }
 
     @Override

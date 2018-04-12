@@ -419,7 +419,8 @@ public abstract class IdentityConstant
      */
     public Component getComponent()
         {
-        return getParentConstant().getComponent().getChild(this);
+        Component parent = getParentConstant().getComponent();
+        return parent == null ? null : parent.getChild(this);
         }
 
     /**

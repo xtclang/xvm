@@ -90,12 +90,8 @@ public class PropertyConstant
     @Override
     public TypeConstant getType()
         {
-        TypeConstant type = m_typeRef;
-        if (type == null)
-            {
-            m_typeRef = type = ((PropertyStructure) getComponent()).getRefType();
-            }
-        return type;
+        // TODO return Property<> or Ref<>
+        throw new IllegalStateException("TODO: property type?!");
         }
 
     @Override
@@ -208,11 +204,6 @@ public class PropertyConstant
      * Cached type.
      */
     private transient TypeConstant m_type;
-
-    /**
-     * Cached Ref type.
-     */
-    private transient TypeConstant m_typeRef;
 
     /**
      * Cached constant that represents the signature of this property.

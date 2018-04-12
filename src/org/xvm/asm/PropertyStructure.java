@@ -14,8 +14,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
-
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -108,31 +106,6 @@ public class PropertyStructure
     public TypeConstant getType()
         {
         return m_type;
-        }
-
-    /**
-     * REVIEW: we assume that all Ref annotations are *only* parameterized by RefType
-     *
-     * @return the TypeConstant representing the data type of the property Ref
-     */
-    public TypeConstant getRefType()
-        {
-        TypeConstant typeRef = m_typeRef;
-        if (typeRef == null)
-            {
-            ConstantPool pool     = getConstantPool();
-            boolean      fRef     = getVarAccess() == null;
-            TypeConstant typeProp = getType();
-
-            typeRef = pool.ensureParameterizedTypeConstant(
-                                        fRef ? pool.typeRef() : pool.typeVar(), typeProp);
-            for (Annotation anno : getRefAnnotations())
-                {
-                typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
-                }
-            m_typeRef = typeRef;
-            }
-        return typeRef;
         }
 
     /**

@@ -402,7 +402,7 @@ public class xTestApp extends xModule
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 8)) // next register #8
             .add(new X_Print(8))
 
-            .add(new Var_N(adapter.getClassTypeConstId("annotations.AtomicIntNumber"),
+            .add(new Var_N(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
                 adapter.ensureValueConstantId("ari")))  // #9 (ari)
             .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 7, 9))
             .add(new X_Print(9))

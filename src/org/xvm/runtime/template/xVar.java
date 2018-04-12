@@ -3,28 +3,24 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.VarSupport;
 
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
 import org.xvm.runtime.Utils.UnaryAction;
 
-import org.xvm.runtime.VarSupport;
 
 
 /**
@@ -55,35 +51,23 @@ public class xVar
         }
 
     @Override
-    protected TypeComposition ensureCanonicalClass()
+    protected TypeConstant getInceptionType()
         {
-        return ensureClass(INCEPTION_TYPE.normalizeParameters(), getCanonicalType());
-        }
-
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
-        {
-        TypeConstant typeInception = INCEPTION_TYPE;
-
-        // adopt parameters from the actual type into the inception type
-        if (typeActual.isParamsSpecified())
+        if (this == INSTANCE)
             {
-            typeInception = typeActual.getConstantPool().
-                ensureParameterizedTypeConstant(INCEPTION_TYPE, typeActual.getParamTypesArray());
+            return INCEPTION_TYPE;
             }
 
-        return ensureClass(typeInception.normalizeParameters(), typeActual);
-        }
+        // there are no natural classes that extend Var, but there is a number of native templates
+        // that represent Var mixins that extend xVar
 
-    @Override
-    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
-        {
-        ConstantPool pool = f_struct.getConstantPool();
-
-        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            INCEPTION_TYPE, typeParams).normalizeParameters();
-
-        return ensureClass(typeInception, getCanonicalType());
+        TypeConstant type = m_typeInception;
+        if (type == null)
+            {
+            type = m_typeInception = f_struct.getConstantPool().ensureAnnotatedTypeConstant(
+                new Annotation(f_struct.getIdentityConstant(), null), INCEPTION_TYPE);
+            }
+        return type;
         }
 
     @Override

@@ -242,6 +242,90 @@ public class MethodInfo
         }
 
     /**
+     * When a method on a class originates on an interface which is then implemented by (or
+     * otherwise picked up by) a native rebase class, the method isn't marked as native naturally
+     * if nothing on the rebase class overrode (or otherwise declared) the method.
+     *
+     * @param fNative  true iff the type being assembled is a native rebase class
+     * @param errs     the error list to log any errors to
+     *
+     * @return a MethodInfo to use in place of this
+     */
+    public MethodInfo finishAdoption(boolean fNative, ErrorListener errs)
+        {
+        // param retained only to match PropertyInfo
+        assert fNative;
+
+        if (isFunction())
+            {
+            return this;
+            }
+
+        MethodBody bodyFirstDeclare = null;
+        MethodBody bodyFirstDefault = null;
+        for (MethodBody body : m_aBody)
+            {
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                    break;
+
+                case Declared:
+                case Abstract:
+                case SansCode:
+                    // methods that are declared but have no bodies (not even a default body) will
+                    // automatically be marked as native
+                    if (bodyFirstDeclare == null)
+                        {
+                        bodyFirstDeclare = body;
+                        }
+                    break;
+
+                case Default:
+                    // the first encountered default body is "made real" if there are no
+                    // non-interface bodies
+                    if (bodyFirstDefault == null)
+                        {
+                        bodyFirstDefault = body;
+                        }
+                    break;
+
+                case Native:
+                case Explicit:
+                case Capped:
+                    return this;
+
+                case Delegating:
+                case Field:
+                default:
+                    // it's not that this is a problem; it's just that it's unexpected, so this
+                    // acts as an assertion to flag any occurrences
+                    throw new IllegalStateException("Unexpected native class declaration: "
+                            + body.getSignature());
+                }
+            }
+
+        MethodBody bodyResult;
+        if (bodyFirstDefault != null)
+            {
+            bodyResult = new MethodBody(bodyFirstDefault.getIdentity(),
+                bodyFirstDefault.getSignature(), Implementation.Explicit);
+            }
+        else if (bodyFirstDeclare != null)
+            {
+            bodyResult = new MethodBody(bodyFirstDeclare.getIdentity(),
+                bodyFirstDeclare.getSignature(), Implementation.Native);
+            }
+        else
+            {
+            // nothing but "into" bodies
+            return this;
+            }
+
+        return layerOn(new MethodInfo(bodyResult), true, errs);
+        }
+
+    /**
      * @return the "into" version of this MethodInfo
      */
     public MethodInfo asInto()
@@ -555,7 +639,7 @@ public class MethodInfo
         }
 
     /**
-     * @return the access of the first method in the chain
+     * @return the access of the first method in the chain; Public if there are no "real" bodies
      */
     public Access getAccess()
         {
@@ -568,7 +652,7 @@ public class MethodInfo
                 }
             }
 
-        throw new IllegalStateException();
+        return Access.PUBLIC;
         }
 
     /**

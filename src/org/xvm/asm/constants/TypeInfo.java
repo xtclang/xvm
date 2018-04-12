@@ -869,7 +869,7 @@ public class TypeInfo
         MethodInfo info = m_cacheByNid.get(nid);
         if (info == null)
             {
-            throw new IllegalStateException("TODO: couldn't find " + nid);
+            throw new IllegalStateException("TODO: couldn't find " + nid + " at " + m_type);
             }
         return info;
         }

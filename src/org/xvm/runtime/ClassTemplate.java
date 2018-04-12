@@ -10,6 +10,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -86,13 +87,26 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain a canonical type that is represented by this {@link OpSupport} object
+     * Obtain the canonical type that is represented by this {@link ClassTemplate}
      *
      * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
      */
     public TypeConstant getCanonicalType()
         {
         return f_struct.getCanonicalType();
+        }
+
+    /**
+     * Obtain the inception type that is represented by this {@link ClassTemplate}.
+     *
+     * Note, that unlike the {@link #getCanonicalType()}, this always returns a "naked"
+     * (non-parameterized) TerminalTypeConstant.
+     *
+     * Note: the following should always hold true: getInceptionType().getOpSupport() == this;
+     */
+    protected TypeConstant getInceptionType()
+        {
+        return getTypeConstant();
         }
 
     /**
@@ -170,7 +184,7 @@ public abstract class ClassTemplate
      */
     protected TypeComposition ensureCanonicalClass()
         {
-        return ensureClass(getCanonicalType());
+        return ensureClass(getInceptionType().normalizeParameters(), getCanonicalType());
         }
 
     /**
@@ -180,10 +194,14 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
         {
-        ClassStructure struct = f_struct;
-        TypeConstant type = struct.getConstantPool().ensureParameterizedTypeConstant(
-            struct.getIdentityConstant().asTypeConstant(), typeParams);
-        return ensureClass(type.normalizeParameters());
+        ConstantPool pool = f_struct.getConstantPool();
+
+        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
+            getInceptionType(), typeParams).normalizeParameters();
+
+        TypeConstant typeMask = getCanonicalType().adoptParameters(typeParams);
+
+        return ensureClass(typeInception, typeMask);
         }
 
     /**
@@ -191,11 +209,14 @@ public abstract class ClassTemplate
      *
      * Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
-     * Note2: this method is overridden by some native templates to substitute the inception type
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        return ensureClass(typeActual, typeActual);
+        // adopt parameters from the actual type into the inception type
+        TypeConstant typeInception =
+            getInceptionType().adoptParameters(typeActual.getParamTypesArray());
+
+        return ensureClass(typeInception, typeActual);
         }
 
     /**
@@ -237,33 +258,6 @@ public abstract class ClassTemplate
     public PropertyStructure getProperty(String sPropName)
         {
         return (PropertyStructure) f_struct.getChild(sPropName);
-        }
-
-    public PropertyStructure ensureProperty(String sPropName)
-        {
-        PropertyStructure property = getProperty(sPropName);
-        if (property != null)
-            {
-            return property;
-            }
-
-        PropertyStructure propSuper = null;
-        for (TypeComposition clzSuper : getCanonicalClass().getCallChain())
-            {
-            propSuper = clzSuper.getTemplate().getProperty(sPropName);
-            if (propSuper != null)
-                {
-                break;
-                }
-            }
-
-        if (propSuper == null)
-            {
-            throw new IllegalArgumentException("Property is not defined " + f_sName + "#" + sPropName);
-            }
-
-        return f_struct.createProperty(false,
-            propSuper.getAccess(), propSuper.getVarAccess(), propSuper.getType(), sPropName);
         }
 
     public TypeConstant getTypeConstant()

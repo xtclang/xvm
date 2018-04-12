@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -321,7 +322,7 @@ public class ClassStructure
      *
      * @param  listActual  the list of actual types
      *
-     * @return the list of types that has exact size as the map of formal parameters for this class
+     * @return a list of types that has exact size as the map of formal parameters for this class
      */
     public List<TypeConstant> normalizeParameters(List<TypeConstant> listActual)
         {
@@ -331,6 +332,24 @@ public class ClassStructure
         return cActual == cFormal
             ? listActual
             : resolveType(listActual).getParamTypes();
+        }
+
+    /**
+     * If the specified array of actual parameters is missing some number of actual parameters,
+     * add the corresponding resolved canonical types to the end of the list.
+     *
+     * @param  atypeActual  the array of actual types
+     *
+     * @return an array of types that has exact size as the map of formal parameters for this class
+     */
+    public TypeConstant[] normalizeParameters(TypeConstant[] atypeActual)
+        {
+        int cActual = atypeActual.length;
+        int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+
+        return cActual == cFormal
+            ? atypeActual
+            : resolveType(Arrays.asList(atypeActual)).getParamTypesArray();
         }
 
 

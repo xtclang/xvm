@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -290,11 +291,13 @@ public class PropertyInfo
      * have been applied to the class, giving the properties a chance to replace themselves with an
      * appropriate PropertyInfo.
      *
-     * @param errs   the error list to log any errors to
+     *
+     * @param fNative  true iff the type being assembled is a native rebase class
+     * @param errs     the error list to log any errors to
      *
      * @return a PropertyInfo to use in place of this
      */
-    public PropertyInfo finishAdoption(ErrorListener errs)
+    public PropertyInfo finishAdoption(boolean fNative, ErrorListener errs)
         {
         // only modify normal properties that originate from interfaces and have not been
         // subsequently "layered on"
@@ -307,19 +310,22 @@ public class PropertyInfo
 
         // interface properties with a default get() and an @RO declaration become calculated
         // properties; all others become field-based properties
-        PropertyBody[] aBody   = m_aBody;
-        PropertyBody   bodyOld = null;
-        boolean        fRO     = true;
-        MethodConstant idGet   = null;
+        PropertyBody[]    aBody  = m_aBody;
+        PropertyStructure struct = null;
+        boolean           fRO    = true;
+        MethodConstant    idGet  = null;
         for (int i = 0, c = m_aBody.length; i < c; ++i)
             {
             PropertyBody body = aBody[i];
-            if (body.getExistence() == Existence.Interface)
+            if (body.getExistence() != Existence.Implied)
                 {
-                if (bodyOld == null)
+                assert body.getExistence() == Existence.Interface;
+
+                if (struct == null)
                     {
-                    bodyOld = body;
+                    struct = body.getStructure();
                     }
+
                 if (body.isExplicitReadOnly())
                     {
                     if (idGet == null && body.hasGetter())
@@ -334,10 +340,15 @@ public class PropertyInfo
                     }
                 }
             }
+
+        // can only be read-only if at least one interface property body has a default get()
         fRO &= idGet != null;
 
-        PropertyBody bodyNew = new PropertyBody(bodyOld.getStructure(), Implementation.SansCode,
-                null, getType(), fRO, false, false, Effect.None, Effect.None, !fRO, false, null, null);
+        PropertyBody bodyNew = fNative
+                ? new PropertyBody(struct, Implementation.Native, null, getType(), fRO, false, true,
+                    Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
+                : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
+                    Effect.None, Effect.None, !fRO, false, null, null);
         return layerOn(new PropertyInfo(bodyNew), false, errs);
         }
 
@@ -898,6 +909,24 @@ public class PropertyInfo
         return list == null
                 ? aAnnos
                 : list.toArray(new Annotation[list.size()]);
+        }
+
+    /**
+     * @return the TypeConstant representing the data type of the "box" (Ref/Var)
+     */
+    public TypeConstant getRefType()
+        {
+        TypeConstant typeProp = getType();
+        ConstantPool pool     = typeProp.getConstantPool();
+
+        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+            isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
+
+        for (Annotation anno : getRefAnnotations())
+            {
+            typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
+            }
+        return typeRef;
         }
 
     /**

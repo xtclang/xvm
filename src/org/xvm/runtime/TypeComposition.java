@@ -584,7 +584,7 @@ public class TypeComposition
                     if (infoProp.isRefAnnotated())
                         {
                         TypeComposition clzRef =
-                            f_template.f_templates.resolveClass(infoProp.getIdentity().getType());
+                            f_template.f_templates.resolveClass(infoProp.getRefType());
 
                         hRef = ((VarSupport) clzRef.getSupport()).
                             createRefHandle(clzRef, sPropName);

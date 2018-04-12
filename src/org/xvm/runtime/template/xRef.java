@@ -1,8 +1,8 @@
 package org.xvm.runtime.template;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -47,35 +47,23 @@ public class xRef
         }
 
     @Override
-    protected TypeComposition ensureCanonicalClass()
+    protected TypeConstant getInceptionType()
         {
-        return ensureClass(INCEPTION_TYPE.normalizeParameters(), getCanonicalType());
-        }
-
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
-        {
-        TypeConstant typeInception = INCEPTION_TYPE;
-
-        // adopt parameters from the actual type into the inception type
-        if (typeActual.isParamsSpecified())
+        if (this == INSTANCE)
             {
-            typeInception = typeActual.getConstantPool().
-                ensureParameterizedTypeConstant(INCEPTION_TYPE, typeActual.getParamTypesArray());
+            return INCEPTION_TYPE;
             }
 
-        return ensureClass(typeInception.normalizeParameters(), typeActual);
-        }
+        // the only natural class that extend Ref is Var, and xVar completely overrides this method;
+        // however there may be templates (xInjectRef) that represent Ref mixins that extend xRef
 
-    @Override
-    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
-        {
-        ConstantPool pool = f_struct.getConstantPool();
-
-        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            INCEPTION_TYPE, typeParams).normalizeParameters();
-
-        return ensureClass(typeInception, getCanonicalType());
+        TypeConstant type = m_typeInception;
+        if (type == null)
+            {
+            type = m_typeInception = f_struct.getConstantPool().ensureAnnotatedTypeConstant(
+                new Annotation(f_struct.getIdentityConstant(), null), INCEPTION_TYPE);
+            }
+        return type;
         }
 
     @Override
@@ -547,4 +535,11 @@ public class xRef
             // no op
             }
         }
+
+    // ----- fields -----
+
+    /**
+     * Cached inception type.
+     */
+    protected TypeConstant m_typeInception;
     }

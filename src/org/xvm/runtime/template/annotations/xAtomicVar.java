@@ -26,9 +26,16 @@ import org.xvm.runtime.template.xVar;
 public class xAtomicVar
         extends xVar
     {
+    public static xAtomicVar INSTANCE;
+
     public xAtomicVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override

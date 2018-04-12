@@ -4,9 +4,7 @@ package org.xvm.runtime.template.annotations;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -35,7 +33,6 @@ public class xFutureVar
         extends xVar
     {
     public static xFutureVar INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
     public static TypeConstant TYPE;
 
     public static EnumHandle Pending;
@@ -68,36 +65,6 @@ public class xFutureVar
         Pending = enumCompletion.getEnumByName("Pending");
         Result = enumCompletion.getEnumByName("Result");
         Error = enumCompletion.getEnumByName("Error");
-        }
-
-    protected TypeConstant getCanonicalInceptionType()
-        {
-        return f_struct.getConstantPool().ensureAnnotatedTypeConstant(
-            new Annotation(TYPE.getDefiningConstant(), null), xVar.INCEPTION_TYPE.normalizeParameters());
-        }
-
-    @Override
-    protected TypeComposition ensureCanonicalClass()
-        {
-        return ensureClass(getCanonicalInceptionType(), getCanonicalType());
-        }
-
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
-        {
-        TypeConstant typeInception = getCanonicalInceptionType();
-
-        // adopt parameters from the actual type into the inception type
-        if (typeActual.isParamsSpecified())
-            {
-            ConstantPool pool = typeActual.getConstantPool();
-
-            typeInception = pool.ensureAnnotatedTypeConstant(
-                new Annotation(TYPE.getDefiningConstant(), null),
-                    pool.ensureParameterizedTypeConstant(xVar.INCEPTION_TYPE,
-                        typeActual.getParamTypesArray()));
-            }
-        return ensureClass(typeInception, typeActual);
         }
 
     @Override

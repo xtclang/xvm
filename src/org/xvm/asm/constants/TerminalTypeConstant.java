@@ -247,7 +247,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant normalizeParametersInternal(List<TypeConstant> listParams)
+    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
         Constant         constant = getDefiningConstant();
         IdentityConstant idClz;
@@ -274,25 +274,26 @@ public class TerminalTypeConstant
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
 
-        // keep tuples as-is
-        if (!isTuple())
+        if (atypeParams == null)
             {
-            // if the type is parameterized, but it is missing some of its parameters, then default
-            // those type parameters to their constraint types
-            ClassStructure struct = (ClassStructure) idClz.getComponent();
-            Map<StringConstant, TypeConstant> mapClassParams = struct.getTypeParams();
-            if (mapClassParams.size() > listParams.size())
-                {
-                // build a "merged" list of type parameters
-                List<TypeConstant> listTypes = struct.normalizeParameters(listParams);
-                if (listTypes != listParams)
-                    {
-                    TypeConstant[] aTypes = listTypes.toArray(new TypeConstant[listTypes.size()]);
-                    return getConstantPool().ensureParameterizedTypeConstant(this, aTypes);
-                    }
-                }
+            // this is a "normalization" call
+            atypeParams = ConstantPool.NO_TYPES;
             }
 
+        if (isTuple())
+            {
+            // copy parameters as is
+            return getConstantPool().ensureParameterizedTypeConstant(this, atypeParams);
+            }
+
+        ClassStructure struct = (ClassStructure) idClz.getComponent();
+        if (struct.isParameterized())
+            {
+            return getConstantPool().ensureParameterizedTypeConstant(this,
+                struct.normalizeParameters(atypeParams));
+            }
+
+        assert atypeParams.length == 0;
         return this;
         }
 
@@ -1073,6 +1074,9 @@ public class TerminalTypeConstant
             case Package:
             case Class:
                 return registry.getTemplate((IdentityConstant) constIdThis);
+
+            case NativeClass:
+                return registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).getOpSupport(registry);
