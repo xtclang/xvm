@@ -1696,7 +1696,7 @@ public class Parser
      *
      * <p/><code><pre>
      * SwitchStatement
-     *     switch "(" SwitchCondition ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+     *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
      *
      * SwitchCondition
      *     VariableInitializer
@@ -1725,15 +1725,22 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-        // while the switch does not allow a conditional declaration, it does allow all of the
-        // other capabilities expressed in a conditional declaration
-        Statement cond = parseConditionalDeclaration(true);
-        if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).isConditional())
+
+        Statement cond = null;
+        if (match(Id.R_PAREN) == null)
             {
-            log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(), peek().getEndPosition());
-            throw new CompilerException("conditional is not allowed");
+            // while the switch does not allow a conditional declaration, it does allow all of the
+            // other capabilities expressed in a conditional declaration
+            cond = parseConditionalDeclaration(true);
+            if (cond instanceof VariableDeclarationStatement &&
+                    ((VariableDeclarationStatement) cond).isConditional())
+                {
+                log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(),
+                        peek().getEndPosition());
+                throw new CompilerException("conditional is not allowed");
+                }
+            expect(Id.R_PAREN);
             }
-        expect(Id.R_PAREN);
 
         Token tokLCurly = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
@@ -1742,7 +1749,7 @@ public class Parser
             switch (peek().getId())
                 {
                 case CASE:
-                    stmts.add(new CaseStatement(current(), parseTernaryExpression(), expect(Id.COLON)));
+                    stmts.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
                     break;
 
                 case DEFAULT:
@@ -2083,8 +2090,37 @@ public class Parser
         }
 
     /**
+     * Parse an expression list, but one that does not look for a trailing ':'.
+     *
+     * <p/><code><pre>
+     * TernaryExpressionList:
+     *     TernaryExpression
+     *     TernaryExpressionList "," TernaryExpression
+     * </pre></code>
+     *
+     * @return
+     */
+    List<Expression> parseTernaryExpressionList()
+        {
+        Expression expr = parseTypeExpression();
+        if (peek().getId() != Id.COMMA)
+            {
+            return Collections.singletonList(expr);
+            }
+
+        ArrayList<Expression> list = new ArrayList<>();
+        list.add(expr);
+        while (match(Id.COMMA) != null)
+            {
+            list.add(parseTypeExpression());
+            }
+
+        return list;
+        }
+
+    /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
-s     *
+     *
      * <p/><code><pre>
      * TernaryExpression
      *     ElvisExpression
@@ -2438,7 +2474,6 @@ s     *
             case SUB:
             case NOT:
             case BIT_NOT:
-            case BIT_AND:
                 return new PrefixExpression(current(), parsePrefixExpression());
 
             default:
@@ -2537,8 +2572,10 @@ s     *
                             break;
                             }
 
+                        case BIT_AND:
                         case IDENTIFIER:
                             {
+                            Token                noDeRef = match(Id.BIT_AND);
                             Token                name    = expect(Id.IDENTIFIER);
                             long                 lEndPos = name.getEndPosition();
                             List<TypeExpression> params  = null;
@@ -2559,7 +2596,7 @@ s     *
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new DotNameExpression(expr, name, params, lEndPos);
+                            expr = new DotNameExpression(expr, noDeRef, name, params, lEndPos);
                             break;
                             }
 
@@ -2635,15 +2672,16 @@ s     *
      * </li></ul>
      * <p/><code><pre>
      * PrimaryExpression
-     *     "new" TypeExpression ArgumentList-opt
-     *     "construct" QualifiedName
-     *     QualifiedNameName TypeParameterTypeList-opt
-     *     Literal
-     *     LambdaExpression
-     *     construct
-     *     "_"
      *     "(" Expression ")"
-     *     "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
+     *     "new" TypeExpression NewFinish
+     *     "construct" QualifiedName
+     *     "&"-opt QualifiedName TypeParameterTypeList-opt
+     *     StatementExpression
+     *     SwitchExpression
+     *     LambdaExpression
+     *     "_"
+     *     "T0D0" TodoFinish-opt
+     *     Literal
      * </pre></code>
      *
      * @return an expression
@@ -2678,20 +2716,22 @@ s     *
 
                 List<Token> qname = parseQualifiedName();
                 qname.add(keyword);
-                return new NameExpression(qname, null, keyword.getEndPosition());
+                return new NameExpression(null, qname, null, keyword.getEndPosition());
                 }
 
             default:
+            case BIT_AND:
             case IDENTIFIER:
                 {
-                List<Token> names = new ArrayList<>(3);
+                Token       noDeRef = match(Id.BIT_AND);
+                List<Token> names   = new ArrayList<>(3);
                 names.add(expect(Id.IDENTIFIER));
 
                 // test for single-param implicit lambda
                 if (peek().getId() == Id.LAMBDA)
                     {
                     return new LambdaExpression(Collections.singletonList(new NameExpression(
-                            names, null, names.get(names.size()-1).getEndPosition())),
+                            noDeRef, names, null, names.get(names.size()-1).getEndPosition())),
                             expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
 
@@ -2704,7 +2744,8 @@ s     *
                     if (name == null)
                         {
                         putBack(dot);
-                        return new NameExpression(names, null, names.get(names.size()-1).getEndPosition());
+                        long lEndName = names.get(names.size()-1).getEndPosition();
+                        return new NameExpression(noDeRef, names, null, lEndName);
                         }
                     else
                         {
@@ -2805,8 +2846,8 @@ s     *
                 // (which seems almost self-evident to ALWAYS be a type and not a name) is because
                 // we have the ability to do this: "String s = o.to<String>();" (redundant return)
                 return access == null && tokNarrow == null
-                        ? new NameExpression(names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos);
+                        ? new NameExpression(noDeRef, names, params, lEndPos)
+                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos); // TODO noDeRef must not be non-null in this case
                 }
 
             case L_PAREN:
@@ -2886,6 +2927,12 @@ s     *
                 }
 
             case L_CURLY:
+                throw new IllegalStateException("TODO statement expression"); // TODO
+
+            case SWITCH:
+                throw new IllegalStateException("TODO switch expression"); // TODO
+
+            case L_SQUARE:
                 return parseCustomLiteral(null);
 
             case LIT_CHAR:
@@ -3851,6 +3898,7 @@ s     *
      * # note: the "?" argument allows functions to specify arguments that they are NOT binding
      * ArgumentExpression
      *     "?"
+     *     "<" TypeExpression ">" "?"
      *     Expression
      *
      * NamedArgument
@@ -3881,6 +3929,7 @@ s     *
                     }
 
                 // special case where the parameter names are being specified with the arguments
+                Token label = null;
                 if (peek().getId() == Id.IDENTIFIER)
                     {
                     Token name = expect(Id.IDENTIFIER);
@@ -3891,12 +3940,27 @@ s     *
                         }
                     else
                         {
-                        args.add(new LabeledExpression(name, parseExpression()));
-                        continue;
+                        label = name;
                         }
                     }
 
-                args.add(parseExpression());
+                Expression expr;
+                switch (peek().getId())
+                    {
+                    case COND:
+                        expr = null; // TODO
+                        break;
+
+                    case COMP_LT:
+                        expr = null; // TODO
+                        break;
+
+                    default:
+                        expr = parseExpression();
+                        break;
+                    }
+
+                args.add(label == null ? expr : new LabeledExpression(label, expr));
                 }
             }
         return args;

@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -15,10 +17,10 @@ public class CaseStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CaseStatement(Token keyword, Expression expr, Token tokColon)
+    public CaseStatement(Token keyword, List<Expression> exprs, Token tokColon)
         {
         this.keyword = keyword;
-        this.expr    = expr;
+        this.exprs   = exprs;
         this.lEndPos = tokColon.getEndPosition();
         }
 
@@ -53,10 +55,16 @@ public class CaseStatement
 
         sb.append(keyword.getId().TEXT);
 
-        if (expr != null)
+        if (exprs != null)
             {
             sb.append(' ')
-              .append(expr);
+              .append(exprs.get(0));
+
+            for (int i = 1, c = exprs.size(); i < c; ++i)
+                {
+                sb.append(", ")
+                  .append(exprs.get(i));
+                }
             }
 
         sb.append(':');
@@ -73,9 +81,9 @@ public class CaseStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token      keyword;
-    protected Expression expr;
-    protected long       lEndPos;
+    protected Token            keyword;
+    protected List<Expression> exprs;
+    protected long             lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "expr");
     }

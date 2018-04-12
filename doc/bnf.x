@@ -54,6 +54,7 @@ Argument
 # note: the "?" argument allows functions to specify arguments that they are NOT binding
 ArgumentExpression
     "?"
+    "<" TypeExpression ">" "?"
     Expression
 
 NamedArgument
@@ -458,7 +459,7 @@ ReturnValue
     ExpressionList
 
 SwitchStatement
-    switch "(" SwitchCondition ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+    switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
 
 SwitchCondition
     VariableInitializer
@@ -475,11 +476,17 @@ SwitchLabels
     SwitchLabel
     SwitchLabels SwitchLabel
 
-# 1) expression must be a "constant expression", i.e. compiler has to be able to determine the value
-# 2) parse for TernaryExpression; cannot parse for Exception, because it has a possible trailing ':'
+# 1) for a SwitchStatement with a SwitchCondition, each "case" expression must be a
+#    "constant expression", i.e. compiler has to be able to determine the value
+# 2) for a SwitchStatement without a SwitchCondition, each "case" expression must be of type Boolean
+# 3) parse for TernaryExpression; cannot parse for Expression, because it has a possible trailing ':'
 SwitchLabel
-    "case" TernaryExpression ":"
+    "case" TernaryExpressionList ":"
     "default" ":"
+
+TernaryExpressionList:
+    TernaryExpression
+    TernaryExpressionList "," TernaryExpression
 
 TryStatement
     "try" ResourceDeclaration-opt StatementBlock TryFinish
@@ -633,7 +640,6 @@ PrefixExpression
     "-" PrefixExpression
     "!" PrefixExpression
     "~" PrefixExpression
-    "&" PrefixExpression
 
 NewFinish
      ArgumentList-opt
@@ -652,7 +658,7 @@ PostfixExpression
     PostfixExpression ArrayDims
     PostfixExpression ArrayIndex
     PostfixExpression NoWhitespace "?"
-    PostfixExpression "." Name TypeParameterTypeList-opt
+    PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
     PostfixExpression ".new" TypeExpression ArgumentList-opt
     PostfixExpression ".as" "(" TypeExpression ")"
     PostfixExpression ".instanceof" "(" TypeExpression ")"
@@ -692,11 +698,29 @@ PrimaryExpression
     "(" Expression ")"
     "new" TypeExpression NewFinish
     "construct" QualifiedName
-    QualifiedName TypeParameterTypeList-opt
+    "&"-opt QualifiedName TypeParameterTypeList-opt
+    StatementExpression
+    SwitchExpression
     LambdaExpression
     "_"
     "T0D0" TodoFinish-opt
     Literal
+
+# a statement expression is a lambda with an implicit "()->" preamble and with an implicit "()"
+# trailing invocation, i.e. it is a block of statements that executes, and at the end, it must
+# returns a value (it can not just be an expression, like lambda would support)
+StatementExpression
+    StatementBlock
+
+SwitchExpression
+    switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
+
+SwitchExpressionBlocks
+    SwitchExpressionBlock
+    SwitchExpressionBlocks SwitchExpressionBlock
+
+SwitchExpressionBlock
+    SwitchLabels Expression ;
 
 LambdaExpression
     LambdaInputs "->" LambdaBody
@@ -774,7 +798,7 @@ TupleLiteral
     "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
 
 ListLiteral
-    "{" ExpressionList-opt "}"
+    "[" ExpressionList-opt "]"
     "List" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":{" ExpressionList-opt "}"
 
 MapLiteral
@@ -811,7 +835,7 @@ CustomLiteral
 #
 #           U+2500
 # U+256D ╭─────╮ U+256E
-# U+2502 │          │ U+2502
+# U+2502 │     │ U+2502
 # U+2570 ╰─────╯ U+256F
 #           U+2500
 #

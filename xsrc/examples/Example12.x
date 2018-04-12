@@ -675,3 +675,91 @@ Int x = () -> {
             }
         return j;
         }();
+
+// try, using, etc.
+Int x =
+    {
+    try (Socket socket = createSocket())
+        {
+        return socket.readInt();
+        }
+    catch (Exception e)
+        {
+        return -1;
+        }
+    }
+
+// or even ..
+Int x = try (Socket socket = createSocket())
+        {
+        return socket.readInt();
+        }
+    catch (Exception e)
+        {
+        return -1;
+        }
+
+// or even ..
+Int x = using (Socket socket = createSocket())
+    {
+    return socket.readInt();
+    }
+
+// in C ...
+
+int x = 1, 2, 3;    // x = 3 ... stupid!
+
+// tuple
+switch (x, y)
+    {
+    case (0, 1):
+    case (1, 0):
+    case (2,4), (5,7):
+    }
+
+case 'a': case 'b': case 'c': ...   // bad
+case 'a', 'b', 'c':                 // good
+
+// no-deref
+
+class C
+    {
+    Void foo();
+    Void foo(String s);
+
+    Void bar(String s, Int i);
+    Void bar(Int h, Int i);
+
+    Int zoo();
+    String zoo();
+
+    Int x;
+    }
+
+C c = ...
+
+c.foo;          // error
+c.&foo;         // error
+
+c.&foo();       // Function<<>, <>>
+C.&foo();       // method
+c.&foo("x");    // Function<<>, <>>
+c.foo(?);       // Function<<String>, <>>
+c.&foo(?);      // error
+c.&foo(String); //
+
+c.bar(?, 5)             // error (ambiguous)
+
+c.&bar(Int,Int)(?, 5);  // ... how to know that Int is a parameter type and not an argument?
+c.&bar(?.as(Int), 5);   // ... ugh ugh ugly
+c.&bar(<Int>?, 5);      // ... reads well
+c.&bar(?<Int>, 5);      // ... and not so well
+
+c.bar("Hello", ?);      // not ambiguous
+
+c.zoo<Int>;     // bad (unreadable)
+c.&zoo<Int>();  // good
+
+c.x;            // Int
+c.&x;           // Var<Int>
+C.x;            // Property<Int>

@@ -23,9 +23,10 @@ public class DotNameExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public DotNameExpression(Expression expr, Token name, List<TypeExpression> params, long lEndPos)
+    public DotNameExpression(Expression expr, Token suppressDereference, Token name, List<TypeExpression> params, long lEndPos)
         {
         this.expr    = expr;
+        this.amp     = suppressDereference;
         this.name    = name;
         this.params  = params;
         this.lEndPos = lEndPos;
@@ -34,11 +35,26 @@ public class DotNameExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public boolean isSuppressDeref()
+        {
+        return amp != null;
+        }
+
+    public String getName()
+        {
+        return name.getValue().toString();
+        }
+
+    public List<TypeExpression> getParams()
+        {
+        return params;
+        }
+
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
         // TODO
-        return null;
+        throw new UnsupportedOperationException("build type for: " + this);
         }
 
     @Override
@@ -85,8 +101,14 @@ public class DotNameExpression
         StringBuilder sb = new StringBuilder();
 
         sb.append(expr)
-          .append('.')
-          .append(name.getValue());
+          .append('.');
+
+        if (amp != null)
+            {
+            sb.append('&');
+            }
+
+        sb.append(name.getValue());
 
         if (params != null)
             {
@@ -120,9 +142,11 @@ public class DotNameExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression           expr;
+    protected Token                amp;
     protected Token                name;
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(DotNameExpression.class, "expr", "params");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(DotNameExpression.class, "expr", "params");
     }

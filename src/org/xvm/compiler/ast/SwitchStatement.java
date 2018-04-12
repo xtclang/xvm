@@ -50,7 +50,8 @@ public class SwitchStatement
     @Override
     public String toString()
         {
-        return "switch (" + cond + ")\n" + indentLines(block.toString(), "    ");
+        return "switch (" + (cond == null ? "" : cond) + ")\n"
+                + indentLines(block.toString(), "    ");
         }
 
 

@@ -9,6 +9,7 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.SilentErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
@@ -47,11 +48,17 @@ import org.xvm.util.Severity;
  * <li>A parameter name preceding the lambda operator ("->").</li>
  * </ul>
  *
- * After the first name:
+ * <p/>
+ * A name with params can only be one of the following:
+ * <ul>
+ * <li>A method name with "redundant return" disambiguation; or</li>
+ * <li>A type.</li>
+ * </ul>
+ *
  * <p/>
  * Subsequent simple names can refer to:
  * <ul>
- * <li>class name ... ending with "construct"</li>
+ * <li>A nested class name ... ending with "construct"</li>
  * <li></li>
  * <li></li>
  * <li></li>
@@ -64,11 +71,12 @@ public class NameExpression
 
     public NameExpression(Token name)
         {
-        this(Collections.singletonList(name), null, name.getEndPosition());
+        this(null, Collections.singletonList(name), null, name.getEndPosition());
         }
 
-    public NameExpression(List<Token> names, List<TypeExpression> params, long lEndPos)
+    public NameExpression(Token amp, List<Token> names, List<TypeExpression> params, long lEndPos)
         {
+        this.amp     = amp;
         this.names   = names;
         this.params  = params;
         this.lEndPos = lEndPos;
@@ -140,6 +148,21 @@ public class NameExpression
         return aNames;
         }
 
+    public boolean isSuppressDeref()
+        {
+        return amp != null;
+        }
+
+    public List<Token> getNames()
+        {
+        return names;
+        }
+
+    public List<TypeExpression> getParams()
+        {
+        return params;
+        }
+
     /**
      * @return the number of dot-delimited names in the expression
      */
@@ -197,31 +220,21 @@ public class NameExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    protected Argument resolveNames(Context ctx, ErrorListener errs)
+        {
+        Argument arg = resolveFirstName(ctx, isSuppressDeref(), names.get(0), params, ErrorListener.BLACKHOLE);
+
+        }
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        // TODO
-        return super.getImplicitTypes(ctx);
-        }
-
-    protected Object resolveNameInternal(Context ctx, ErrorListener errs)
-        {
-        final List<Token>          names  = this.names;
-        final List<TypeExpression> params = this.params;
-
-        int cNames  = names.size();
-        int cParams = params == null ? 0 : params.size();
-
-        // resolve initial name
-        Token    name  = names.get(0);
-        String   sName = name.getValue().toString();
-        Argument arg   = ctx.resolveName(name, errs);
         if (arg == null)
             {
-            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
-                    sName, ctx.getMethod().getIdentityConstant().getSignature());
-            fValid = false;
+            return null;
             }
+
+        // TODO
+        return super.getImplicitTypes(ctx);
         }
 
     @Override
@@ -396,6 +409,10 @@ public class NameExpression
             if (first)
                 {
                 first = false;
+                if (amp != null)
+                    {
+                    sb.append('&');
+                    }
                 }
             else
                 {
@@ -435,6 +452,7 @@ public class NameExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Token                amp;
     protected List<Token>          names;
     protected List<TypeExpression> params;
     protected long                 lEndPos;

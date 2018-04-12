@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
+import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -26,6 +27,7 @@ import org.xvm.asm.op.P_Set;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -944,6 +946,63 @@ public abstract class Expression
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * TODO
+     *
+     * @param ctx
+     * @param fSuppressDeref
+     * @param tokName
+     * @param listTypes
+     * @param errs
+     *
+     * @return
+     */
+    protected Argument resolveFirstName(Context              ctx,
+                                        boolean              fSuppressDeref,
+                                        Token                tokName,
+                                        List<TypeExpression> listTypes,
+                                        ErrorListener        errs)
+        {
+        String sName = tokName.getValue().toString();
+
+        // resolve the name
+        Argument arg = ctx.resolveName(tokName, errs);
+        if (arg == null)
+            {
+            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
+                    sName, ctx.getMethod().getIdentityConstant().getSignature());
+            return null;
+            }
+
+        if (listTypes != null)
+            {
+            // int cTypes = aTypes == null ? 0 : aTypes.length;
+            }
+
+        return arg;
+        }
+
+    /**
+     * TODO
+     *
+     * @param arg
+     * @param fSuppressDeref
+     * @param tokName
+     * @param listTypes
+     * @param errs
+     *
+     * @return
+     */
+    protected Argument resolveNextName(Argument             arg,
+                                       boolean              fSuppressDeref,
+                                       Token                tokName,
+                                       List<TypeExpression> listTypes,
+                                       ErrorListener        errs)
+        {
+        // TODO
+        return null;
+        }
+
+    /**
      * Determine if this expression can generate an argument of the specified type, or that can be
      * assigned to the specified type.
      *
@@ -1114,6 +1173,24 @@ public abstract class Expression
 
     // ----- inner class: Assignable ---------------------------------------------------------------
 
+    /**
+     * TODO
+     */
+    public class PendingArgument
+            implements Argument
+        {
+        public PendingArgument(Argument arg)
+            {
+            m_arg = arg;
+            }
+
+        // TODO
+
+        private Argument m_arg;
+        }
+
+
+    // ----- inner class: Assignable ---------------------------------------------------------------
 
     /**
      * Assignable represents an L-Value.
