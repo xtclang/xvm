@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.Map;
+import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -1200,10 +1201,10 @@ public abstract class ClassTemplate
     /**
      * Compare for equality two object handles that both belong to the specified class.
      *
-     * @param frame      the current frame
-     * @param hValue1    the first value
-     * @param hValue2    the second value
-     * @param iReturn    the register id to place a Boolean result into
+     * @param frame    the current frame
+     * @param hValue1  the first value
+     * @param hValue2  the second value
+     * @param iReturn  the register id to place a Boolean result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -1232,10 +1233,10 @@ public abstract class ClassTemplate
     /**
      * Compare for order two object handles that both belong to the specified class.
      *
-     * @param frame      the current frame
-     * @param hValue1    the first value
-     * @param hValue2    the second value
-     * @param iReturn    the register id to place an Ordered result into
+     * @param frame    the current frame
+     * @param hValue1  the first value
+     * @param hValue2  the second value
+     * @param iReturn  the register id to place an Ordered result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
      *         or {@link Op#R_BLOCK} values
@@ -1279,65 +1280,71 @@ public abstract class ClassTemplate
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain("+").invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "+", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain("-").invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "-", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain("*").invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "*", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain("/").invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "/", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain("&").invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "&", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain("neg").invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "neg", 1).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain("next").invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "next", 1).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain("prev").invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "prev", 1).invoke(frame, hTarget, iReturn);
         }
 
     /**
      * @return a call chain for the specified op or null if non exists
      */
-    protected CallChain getOpChain(String sOp)
+    protected CallChain getOpChain(ObjectHandle hTarget, String sOp, int cArgs)
         {
-        TypeInfo info = getCanonicalType().ensureTypeInfo();
-        // TODO: use the TypeInfo to get the chain
-        CallChain chain = null;
+        TypeComposition clz = hTarget.getComposition();
+        TypeInfo info = clz.getType().ensureTypeInfo();
 
-        if (chain == null)
+        // TODO: what if there is more than one valid method?
+
+        for (MethodConstant constMethod: info.findOpMethods(sOp, sOp, cArgs))
             {
-            throw new IllegalStateException("Invalid op for " + this);
+            CallChain chain = clz.getMethodCallChain(constMethod.getSignature());
+            if (chain.getDepth() > 0)
+                {
+                return chain;
+                }
             }
-        return chain;
+
+        throw new IllegalStateException("Invalid op for " + this);
         }
 
 
@@ -1409,11 +1416,6 @@ public abstract class ClassTemplate
         return Adapter.getSetter(prop);
         }
 
-    // is the specified generic property declared at this level
-    protected boolean isGenericType(String sProperty)
-        {
-        return f_struct.indexOfGenericParameter(sProperty) >= 0;
-        }
 
     // ----- constants and fields ------------------------------------------------------------------
 

@@ -72,7 +72,7 @@ public class AnnotationSupport
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("+");
+        CallChain chain = getOpChain("+", 2);
         return chain == null
             ? f_support.invokeAdd(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -81,7 +81,7 @@ public class AnnotationSupport
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("-");
+        CallChain chain = getOpChain("-", 2);
         return chain == null
             ? f_support.invokeSub(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -90,7 +90,7 @@ public class AnnotationSupport
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("*");
+        CallChain chain = getOpChain("*", 2);
         return chain == null
             ? f_support.invokeMul(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -99,7 +99,7 @@ public class AnnotationSupport
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("/");
+        CallChain chain = getOpChain("/", 2);
         return chain == null
             ? f_support.invokeDiv(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -108,7 +108,7 @@ public class AnnotationSupport
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("%");
+        CallChain chain = getOpChain("%", 2);
         return chain == null
             ? f_support.invokeMod(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -117,7 +117,7 @@ public class AnnotationSupport
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("neg");
+        CallChain chain = getOpChain("neg", 1);
         return chain == null
             ? f_support.invokeNeg(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -126,7 +126,7 @@ public class AnnotationSupport
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("next");
+        CallChain chain = getOpChain("next", 1);
         return chain == null
             ? f_support.invokeNext(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -135,7 +135,7 @@ public class AnnotationSupport
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("prev");
+        CallChain chain = getOpChain("prev", 1);
         return chain == null
             ? f_support.invokePrev(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -153,7 +153,7 @@ public class AnnotationSupport
     @Override
     public int get(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("get");
+        CallChain chain = getOpChain("get", 1);
         return chain == null
             ? ensureVarSupport().get(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -162,7 +162,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preInc");
+        CallChain chain = getOpChain("preInc", 1);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -171,7 +171,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postInc");
+        CallChain chain = getOpChain("postInc", 1);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -180,7 +180,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preDec");
+        CallChain chain = getOpChain("preDec", 1);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -189,7 +189,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postDec");
+        CallChain chain = getOpChain("postDec", 1);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -198,7 +198,7 @@ public class AnnotationSupport
     @Override
     public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
-        CallChain chain = getOpChain("set");
+        CallChain chain = getOpChain("set", 1);
         return chain == null
             ? ensureVarSupport().set(frame, hTarget, hValue)
             : chain.invoke(frame, hTarget, hValue, Frame.RET_UNUSED);
@@ -207,7 +207,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("+=");
+        CallChain chain = getOpChain("+=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarAdd(frame, hTarget, hArg)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -216,7 +216,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("-=");
+        CallChain chain = getOpChain("-=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarSub(frame, hTarget, hArg)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -225,7 +225,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("*=");
+        CallChain chain = getOpChain("*=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarMul(frame, hTarget, hArg)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -234,7 +234,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("/=");
+        CallChain chain = getOpChain("/=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarDiv(frame, hTarget, hArg)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -243,7 +243,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("%=");
+        CallChain chain = getOpChain("%=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarMod(frame, hTarget, hArg)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -255,25 +255,22 @@ public class AnnotationSupport
     /**
      * @return a call chain for the specified op or null if non exists
      */
-    protected CallChain getOpChain(String sOp)
+    protected CallChain getOpChain(String sOp, int cArgs)
         {
         if (!f_fNative)
             {
             TypeInfo info = f_typeAnno.ensureTypeInfo();
-            // TODO: use the TypeInfo to get the chain
 
-            // temporary very silly implementation
-            for (MethodConstant constMethod: info.getMethods().keySet())
+            TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
+
+            // TODO: what if there is more than one valid method?
+
+            for (MethodConstant constMethod: info.findOpMethods(sOp, sOp, cArgs))
                 {
-                if (constMethod.getName().equals(sOp))
+                CallChain chain = clzAnno.getMethodCallChain(constMethod.getSignature());
+                if (chain.getDepth() > 0)
                     {
-                    TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
-                    CallChain chain = clzAnno.
-                        getMethodCallChain(constMethod.getSignature());
-                    if (chain.getDepth() > 0)
-                        {
-                        return chain;
-                        }
+                    return chain;
                     }
                 }
             }
