@@ -943,7 +943,7 @@ public class Parser
                     if (returns != null)
                         {
                         return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                                modifiers, annotations, null, null, returns, null, expect(Id.IDENTIFIER));
+                                modifiers, annotations, null, null, returns, expect(Id.IDENTIFIER));
                         }
                     }
 
@@ -970,7 +970,7 @@ public class Parser
                 List<TypeExpression> returns     = parseReturnList();
                 Token                name        = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, typeVars, conditional, returns, null, name);
+                        modifiers, annotations, typeVars, conditional, returns, name);
                 }
 
             case CONSTRUCT:
@@ -984,9 +984,8 @@ public class Parser
                     }
 
                 Token keyword = expect(Id.CONSTRUCT);
-                Token name    = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, null, null, null, keyword, name);
+                        modifiers, annotations, null, null, null, keyword);
                 }
 
             case CONDITIONAL:
@@ -1020,7 +1019,7 @@ public class Parser
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
                     return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                            annotations, null, conditional, Collections.singletonList(type), null, name);
+                            annotations, null, conditional, Collections.singletonList(type), name);
                     }
                 else
                     {
@@ -1120,7 +1119,7 @@ public class Parser
      */
     MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
             Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
-            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token keyword, Token name)
+            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
@@ -1131,7 +1130,7 @@ public class Parser
         if (body != null)
             {
             // check for "constructor finally" block
-            if (keyword != null && match(Id.FINALLY) != null)
+            if (name.getId() == Id.CONSTRUCT && match(Id.FINALLY) != null)
                 {
                 stmtFinally = parseStatementBlock();
                 lEndPos = stmtFinally.getEndPosition();
@@ -1143,7 +1142,7 @@ public class Parser
             }
 
         return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers, annotations,
-                typeVars, conditional, returns, keyword, name, redundantReturns, params, body, stmtFinally, doc);
+                typeVars, conditional, returns, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1179,8 +1178,8 @@ public class Parser
             List<Parameter>            params     = parseParameterList(true);
             StatementBlock             block      = parseStatementBlock();
             MethodDeclarationStatement method     = new MethodDeclarationStatement(
-                    methodName.getStartPosition(), block.getEndPosition(),
-                    null, null, null, null, null, null, null, methodName, null, params, block, null, null);
+                    methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
+                    null, null, methodName, null, params, block, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
@@ -2044,7 +2043,9 @@ public class Parser
      * Parse a list of expressions.
      *
      * <p/><code><pre>
-     *     TODO
+     * ExpressionList
+     *     Expression
+     *     ExpressionList "," Expression
      * </pre></code>
      *
      * @return an expression
@@ -2461,9 +2462,6 @@ public class Parser
         {
         switch (peek().getId())
             {
-            case THROW:
-                return new ThrowExpression(expect(Id.THROW), parseExpression());
-
             case INC:
             case DEC:
             case ADD:
@@ -2702,29 +2700,25 @@ public class Parser
                 return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
-            case CONSTRUCT:
-                {
-                Token keyword = expect(Id.CONSTRUCT);
-                if (peek().getId() == Id.L_PAREN)
-                    {
-                    return new NameExpression(keyword);
-                    }
+            case THROW:
+                return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());
 
-                List<Token> qname = parseQualifiedName();
-                qname.add(keyword);
-                return new NameExpression(null, qname, null, keyword.getEndPosition());
-                }
+            case TODO:
+                return parseTodoExpression();
 
             default:
             case BIT_AND:
+            case CONSTRUCT:
             case IDENTIFIER:
                 {
-                Token       noDeRef = match(Id.BIT_AND);
-                List<Token> names   = new ArrayList<>(3);
+                Token       noDeRef   = match(Id.BIT_AND);
+                Token       construct = match(Id.CONSTRUCT);
+                boolean     fNormal   = noDeRef == null && construct == null;
+                List<Token> names     = new ArrayList<>(3);
                 names.add(expect(Id.IDENTIFIER));
 
                 // test for single-param implicit lambda
-                if (peek().getId() == Id.LAMBDA)
+                if (fNormal && peek().getId() == Id.LAMBDA)
                     {
                     return new LambdaExpression(Collections.singletonList(new NameExpression(
                             noDeRef, names, null, names.get(names.size()-1).getEndPosition())),
@@ -2741,6 +2735,13 @@ public class Parser
                         {
                         putBack(dot);
                         long lEndName = names.get(names.size()-1).getEndPosition();
+
+                        // construct is added to the end of the list if it was specified
+                        if (construct != null)
+                            {
+                            names.add(construct);
+                            }
+
                         return new NameExpression(noDeRef, names, null, lEndName);
                         }
                     else
@@ -2750,39 +2751,49 @@ public class Parser
                         }
                     }
 
+                // construct is added to the end of the list if it was specified
+                if (construct != null)
+                    {
+                    names.add(construct);
+                    }
+
                 // test for an access-specified TypeExpression, i.e. ending with :public,
                 // :protected, :private, or :struct
                 Token access = null;
-                Token colon  = match(Id.COLON);
-                if (colon != null)
+                if (fNormal)
                     {
-                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                    Token colon = match(Id.COLON);
+                    if (colon != null)
                         {
-                        switch (peek().getId())
+                        if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                             {
-                            case PUBLIC:
-                            case PROTECTED:
-                            case PRIVATE:
-                            case STRUCT:
-                                // at this point, this MUST be a type expression
-                                access  = current();
-                                lEndPos = access.getEndPosition();
-                                break;
+                            switch (peek().getId())
+                                {
+                                case PUBLIC:
+                                case PROTECTED:
+                                case PRIVATE:
+                                case STRUCT:
+                                    // at this point, this MUST be a type expression
+                                    access = current();
+                                    lEndPos = access.getEndPosition();
+                                    break;
+                                }
                             }
-                        }
 
-                    if (access == null)
-                        {
-                        putBack(colon);
+                        if (access == null)
+                            {
+                            putBack(colon);
+                            }
                         }
                     }
 
                 // test for a non-auto-narrowing modifier ("!")
-                Token tokNarrow = !peek().hasLeadingWhitespace()
+                Token tokNoNarrow = fNormal && !peek().hasLeadingWhitespace()
                         ? match(Id.NOT)
                         : null;
 
-                // test to see if there is a type parameter list (implying the expression is a type)
+                // test to see if there is a type parameter list (implying the expression is a type,
+                // or a name of a method specifying "redundant return types"
                 List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
                     {
@@ -2804,46 +2815,49 @@ public class Parser
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:{"
-                colon = match(Id.COLON);
-                if (colon != null)
+                if (fNormal)
                     {
-                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                    Token colon = match(Id.COLON);
+                    if (colon != null)
                         {
-                        switch (peek().getId())
+                        if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                             {
-                            case L_PAREN:
-                                if (!(names.size() == 1 && names.get(0).getValue().equals("Tuple")))
-                                    {
-                                    break;
-                                    }
-                                // fall through
-                            case L_CURLY:
-                                return parseCustomLiteral(new NamedTypeExpression(
-                                        null, names, access, tokNarrow, params, lEndPos));
-
-                            case LIT_STRING:
-                                if (names.size() == 1)
-                                    {
-                                    String sName = (String) names.get(0).getValue();
-                                    if (sName.equals("v") || sName.equals("Version"))
+                            switch (peek().getId())
+                                {
+                                case L_PAREN:
+                                    if (!(names.size() == 1 && names.get(0).getValue().equals("Tuple")))
                                         {
-                                        return parseCustomLiteral(new NamedTypeExpression(
-                                                null, names, access, tokNarrow, params, lEndPos));
+                                        break;
                                         }
-                                    }
-                                break;
-                            }
-                        }
+                                    // fall through
+                                case L_CURLY:
+                                    return parseCustomLiteral(new NamedTypeExpression(
+                                            null, names, access, tokNoNarrow, params, lEndPos));
 
-                    putBack(colon);
+                                case LIT_STRING:
+                                    if (names.size() == 1)
+                                        {
+                                        String sName = (String) names.get(0).getValue();
+                                        if (sName.equals("v") || sName.equals("Version"))
+                                            {
+                                            return parseCustomLiteral(new NamedTypeExpression(
+                                                    null, names, access, tokNoNarrow, params, lEndPos));
+                                            }
+                                        }
+                                    break;
+                                }
+                            }
+
+                        putBack(colon);
+                        }
                     }
 
                 // note to future self: the reason that we have NameExpression with <params>
                 // (which seems almost self-evident to ALWAYS be a type and not a name) is because
                 // we have the ability to do this: "String s = o.to<String>();" (redundant return)
-                return access == null && tokNarrow == null
+                return access == null && tokNoNarrow == null
                         ? new NameExpression(noDeRef, names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos); // TODO noDeRef must not be non-null in this case
+                        : new NamedTypeExpression(null, names, access, tokNoNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -2937,9 +2951,6 @@ public class Parser
             case LIT_DEC:
             case LIT_BIN:
                 return new LiteralExpression(current());
-
-            case TODO:
-                return parseTodoExpression();
 
             case FUNCTION:
             case IMMUTABLE:
@@ -3944,12 +3955,10 @@ public class Parser
                 switch (peek().getId())
                     {
                     case COND:
-                        expr = null; // TODO
-                        break;
+                        throw new IllegalStateException("TODO '?' params"); // TODO
 
                     case COMP_LT:
-                        expr = null; // TODO
-                        break;
+                        throw new IllegalStateException("TODO '<T>?' params"); // TODO
 
                     default:
                         expr = parseExpression();

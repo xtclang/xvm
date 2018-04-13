@@ -36,9 +36,12 @@ import org.xvm.util.Severity;
  * <p/>
  * A simple name can refer to:
  * <ul>
- * <li>A local variable (register) available from the Context;</li>
- * <li>A capturable variable or constant value available from the Context;</li>
  * <li>A method parameter from the current method;</li>
+ * <li>A local variable (register) available from the Context;</li>
+ * <li>In the case of a lambda, a capturable variable from outside of the current MethodStructure
+ *     (but within the compiler context)  that must be captured (added as an implicit parameter to
+ *     the lambda);</li>
+ * <li>A constant value available from the Context;</li>
  * <li>A capturable name available to the current method, if the method is a lambda;</li>
  * <li>A property name;</li>
  * <li>A class identity;</li>
@@ -222,34 +225,56 @@ public class NameExpression
 
     protected Argument resolveNames(Context ctx, ErrorListener errs)
         {
-        Argument arg = resolveFirstName(ctx, isSuppressDeref(), names.get(0), params, ErrorListener.BLACKHOLE);
-
-        }
-    @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
-        if (arg == null)
+        // already did the first (0) name, so start with the second (1) and go to the last,
+        // resolving the name incrementally
+        Argument arg = null;
+        for (int i = 0, iLast = names.size() - 1; i <= iLast; ++i)
             {
-            return null;
+            arg = i == 0
+                    ? resolveFirstName(ctx, isSuppressDeref(), names.get(i), i == iLast ? params : null, errs)
+                    : resolveNextName(arg, false, names.get(i), i == iLast ? params : null, errs);
+            if (arg == null)
+                {
+                return null;
+                }
             }
 
-        // TODO
-        return super.getImplicitTypes(ctx);
+        return arg;
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO
-        return super.testFitMulti(ctx, atypeRequired, pref);
+        Argument arg = resolveNames(ctx, ErrorListener.BLACKHOLE);
+        return arg == null
+                ? null
+                : arg.getRefType();
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref,
-            ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        // TODO
-        return super.validateMulti(ctx, atypeRequired, pref, errs);
+        Argument arg = resolveNames(ctx, ErrorListener.BLACKHOLE);
+        if (arg == null)
+            {
+            return TypeFit.NoFit;
+            }
+
+        if (typeRequired == null || arg.getRefType().isA(typeRequired))
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.Pack
+                    : TypeFit.Fit;
+            }
+
+        if (arg.getRefType().getConverterTo(typeRequired) != null)
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.ConvPack
+                    : TypeFit.Conv;
+            }
+
+        return TypeFit.NoFit;
         }
 
     @Override

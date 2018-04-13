@@ -151,6 +151,8 @@ public interface ErrorListener
             return super.log(err);
             }
 
+        // TODO toString() to show the first error (if one occurred) for when in the debugger
+
         private ErrorList.ErrorInfo m_err;
         }
 

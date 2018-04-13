@@ -763,3 +763,80 @@ c.&zoo<Int>();  // good
 c.x;            // Int
 c.&x;           // Var<Int>
 C.x;            // Property<Int>
+
+// ---
+case throw a?.b?.c?.d?.e :
+
+class Q<T>
+    {
+    construct(Int x)
+        {
+        // ...
+        }
+    }
+
+class B
+    {
+    construct(Int x)
+        {
+        // ...
+        }
+    }
+
+class C extends B
+    {
+    construct(Int x)
+        {
+        construct C("hello");
+
+        // ...
+
+        construct B(x);
+        }
+    finally
+        {
+        foo();
+        }
+
+    construct(String s)
+        {
+        // ...
+        }
+
+    static Int bar(String s)
+        {
+        // ...
+        }
+
+    Void foo()
+        {
+        // ...
+        }
+
+    Void bar()
+        {
+        Function fFoo  = &foo();
+        Function fBar  = &bar();
+        Method   mFoo  = C.&foo();                  // can NOT omit the "C." because then it is a function
+        Function fCon  = C.&construct C(<Int>?);    // ugly
+        Function fCon2 =   &construct C(<Int>?);    // can omit the "C." because it is implicit (from this) and because we specify "C"
+        Function fCon3 = B.&construct B(<Int>?);    // ugly
+        Function fCon4 =   &construct B(<Int>?);    // can omit the "B." both because it is implicit (from this) and because we specify "B"
+        Function fCon5 =   &construct Q(<Int>?);    // OK
+        Function fCon6 =   &construct Q<Int>(<Int>?);    // OK
+        Function fCon7 =  Q<Int>.&construct Q(5);    // not wrong but ugly
+        Method   mToStr=  Q.&to<String>();
+
+        ... = &bar(?).conditionalResult);           // type of "&bar(?)" is Function, which has a "conditionalResult" property
+        ... = bar().maxvalue;                       // bar returns an Int64, and Int64 has a static constant "maxvalue"
+        ... = bar().&maxvalue;                      // this yields a Ref<IntLiteral>
+        ... = bar().sign;                           // bar returns an Int64, which has a "sign" property
+        ... = bar().&sign;                          // this yields a Ref<Signum>
+        }
+    }
+
+// list literal
+
+List l1 = {1,2,3};      // old (no longer supported; collides with StatementExpression)
+List l2 = [1,2,3];      // new
+Int i = [1,2,3][1];     // ugh! but ok
