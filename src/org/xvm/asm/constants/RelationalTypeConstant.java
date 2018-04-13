@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.util.List;
 
 import java.util.function.Consumer;
-
 import java.util.function.Function;
+
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;

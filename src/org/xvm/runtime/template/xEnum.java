@@ -44,8 +44,7 @@ public class xEnum
         {
         if (this == INSTANCE)
             {
-            markNativeGetter("ordinal");
-            markNativeGetter("name");
+            // all the methods are marked as native due to a "rebase"
             }
         else if (f_struct.getFormat() == Component.Format.ENUM)
             {

@@ -478,13 +478,13 @@ public class ClassStructure
         switch (format)
             {
             case MODULE:
-                return pool.typeModule();
+                return pool.typeModuleRB();
 
             case PACKAGE:
-                return pool.typePackage();
+                return pool.typePackageRB();
 
             case ENUM:
-                return pool.typeEnum();
+                return pool.typeEnumRB();
 
             case CONST:
             case SERVICE:
@@ -494,11 +494,7 @@ public class ClassStructure
 
                 if (format != structSuper.getFormat())
                     {
-                    ClassConstant constRebase = format == Format.CONST
-                        ? pool.clzConst()
-                        : pool.clzService();
-
-                    return new NativeRebaseConstant(constRebase).asTypeConstant();
+                    return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
                     }
                 // break through
             default:
@@ -558,10 +554,12 @@ public class ClassStructure
     /**
      * Recursively find the type for the specified formal name. Note that the formal name could
      * be introduced by some contributions, rather than this class itself.
+     * <p/>
+     * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
+     * functionality since the TypeInfo generation itself uses it.
      */
     public TypeConstant getGenericParamType(String sName, List<TypeConstant> listActual)
         {
-        // TODO: use the type info when done
         return getGenericParamTypeImpl(sName, listActual, true);
         }
 

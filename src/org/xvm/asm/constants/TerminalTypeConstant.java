@@ -347,6 +347,10 @@ public class TerminalTypeConstant
             case Class:
                 break;
 
+            case NativeClass:
+                constant = ((NativeRebaseConstant) constant).getClassConstant();
+                break;
+
             case Register:
                 constant = getRegisterTypeConstant((RegisterConstant) constant);
                 break;
@@ -824,6 +828,9 @@ public class TerminalTypeConstant
             case Package:
                 break;
 
+            case NativeClass:
+                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
+                // break through
             case Class:
                 {
                 ClassConstant constClzLeft = (ClassConstant) constIdLeft;

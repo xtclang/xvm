@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
-
 import java.util.function.Function;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ContributionChain;

@@ -1797,10 +1797,15 @@ public class ConstantPool
     public TypeConstant      typeType()         {TypeConstant      c = m_typeType;        if (c == null) {m_typeType        = c = ensureTerminalTypeConstant(clzType()                       );} return c;}
     public TypeConstant      typeClass()        {TypeConstant      c = m_typeClass;       if (c == null) {m_typeClass       = c = ensureTerminalTypeConstant(clzClass()                      );} return c;}
     public TypeConstant      typeConst()        {TypeConstant      c = m_typeConst;       if (c == null) {m_typeConst       = c = ensureTerminalTypeConstant(clzConst()                      );} return c;}
+    public TypeConstant      typeConstRB()      {TypeConstant      c = m_typeConstRB;     if (c == null) {m_typeConstRB     = c = makeNativeRebase(clzConst()                                );} return c;}
     public TypeConstant      typeService()      {TypeConstant      c = m_typeService;     if (c == null) {m_typeService     = c = ensureTerminalTypeConstant(clzService()                    );} return c;}
+    public TypeConstant      typeServiceRB()    {TypeConstant      c = m_typeServiceRB;   if (c == null) {m_typeServiceRB   = c = makeNativeRebase(clzService()                              );} return c;}
     public TypeConstant      typeModule()       {TypeConstant      c = m_typeModule;      if (c == null) {m_typeModule      = c = ensureTerminalTypeConstant(clzModule()                     );} return c;}
+    public TypeConstant      typeModuleRB()     {TypeConstant      c = m_typeModuleRB;    if (c == null) {m_typeModuleRB    = c = makeNativeRebase(clzModule()                               );} return c;}
     public TypeConstant      typePackage()      {TypeConstant      c = m_typePackage;     if (c == null) {m_typePackage     = c = ensureTerminalTypeConstant(clzPackage()                    );} return c;}
+    public TypeConstant      typePackageRB()    {TypeConstant      c = m_typePackageRB;   if (c == null) {m_typePackageRB   = c = makeNativeRebase(clzPackage()                              );} return c;}
     public TypeConstant      typeEnum()         {TypeConstant      c = m_typeEnum;        if (c == null) {m_typeEnum        = c = ensureTerminalTypeConstant(clzEnum()                       );} return c;}
+    public TypeConstant      typeEnumRB()       {TypeConstant      c = m_typeEnumRB;      if (c == null) {m_typeEnumRB      = c = makeNativeRebase(clzEnum()                                 );} return c;}
     public TypeConstant      typeEnumeration()  {TypeConstant      c = m_typeEnumeration; if (c == null) {m_typeEnumeration = c = ensureTerminalTypeConstant(clzEnumeration()                );} return c;}
     public TypeConstant      typeException()    {TypeConstant      c = m_typeException;   if (c == null) {m_typeException   = c = ensureTerminalTypeConstant(clzException()                  );} return c;}
     public TypeConstant      typeProperty()     {TypeConstant      c = m_typeProperty;    if (c == null) {m_typeProperty    = c = ensureTerminalTypeConstant(clzProperty()                   );} return c;}
@@ -1848,7 +1853,7 @@ public class ConstantPool
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
     public ArrayConstant     valVoid()          {ArrayConstant     c = m_valVoid;         if (c == null) {m_valVoid         = c = ensureTupleConstant(typeVoid(), Constant.NO_CONSTS)         ;} return c;}
 
-    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("to", NO_TYPES, new TypeConstant[] {typeString()});} return c;}
+    public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("to", NO_TYPES, new TypeConstant[]{typeString()});} return c;}
     public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = ensureSignatureConstant("construct", NO_TYPES, NO_TYPES)    ;} return c;}
 
     public SingletonConstant valOf(boolean f)
@@ -1870,6 +1875,11 @@ public class ConstantPool
             {
             return valGreater();
             }
+        }
+
+    private TypeConstant makeNativeRebase(ClassConstant constClass)
+        {
+        return new NativeRebaseConstant(constClass).asTypeConstant();
         }
 
 
@@ -2446,10 +2456,15 @@ public class ConstantPool
         m_typeType        = null;
         m_typeClass       = null;
         m_typeConst       = null;
+        m_typeConstRB     = null;
         m_typeService     = null;
+        m_typeServiceRB   = null;
         m_typeModule      = null;
+        m_typeModuleRB    = null;
         m_typePackage     = null;
+        m_typePackageRB   = null;
         m_typeEnum        = null;
+        m_typeEnumRB      = null;
         m_typeEnumeration = null;
         m_typeException   = null;
         m_typeException१  = null;
@@ -2760,10 +2775,15 @@ public class ConstantPool
     private transient TypeConstant      m_typeStruct;
     private transient TypeConstant      m_typeClass;
     private transient TypeConstant      m_typeConst;
+    private transient TypeConstant      m_typeConstRB;
     private transient TypeConstant      m_typeService;
+    private transient TypeConstant      m_typeServiceRB;
     private transient TypeConstant      m_typeModule;
+    private transient TypeConstant      m_typeModuleRB;
     private transient TypeConstant      m_typePackage;
+    private transient TypeConstant      m_typePackageRB;
     private transient TypeConstant      m_typeEnum;
+    private transient TypeConstant      m_typeEnumRB;
     private transient TypeConstant      m_typeEnumeration;
     private transient TypeConstant      m_typeException;
     private transient TypeConstant      m_typeException१;

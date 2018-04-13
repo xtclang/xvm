@@ -155,10 +155,4 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      */
     @Override
     immutable Tuple<ElementTypes> ensureConst(Boolean inPlace = false);
-
-    @Override
-    Tuple<ElementTypes> to<Tuple<ElementTypes>>()
-        {
-        return this;
-        }
     }

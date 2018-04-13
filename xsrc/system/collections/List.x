@@ -269,11 +269,13 @@ interface List<ElementType>
         @Override
         Int index
             {
+            @Override
             Int get()
                 {
                 return internalIndex.minOf(List.this.size);
                 }
 
+            @Override
             Void set(Int i)
                 {
                 if (i < 0 || i > List.this.size)
@@ -308,12 +310,14 @@ interface List<ElementType>
         @Override
         ElementType value
             {
+            @Override
             ElementType get()
                 {
                 // may throw BoundsException
                 return List.this[index];
                 }
 
+            @Override
             Void set(ElementType value)
                 {
                 Int i    = internalIndex;

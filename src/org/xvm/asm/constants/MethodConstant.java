@@ -200,6 +200,7 @@ public class MethodConstant
     @Override
     public Object resolveNestedIdentity(GenericTypeResolver resolver)
         {
+        // REVIEW: should we resolveAutoNarrowing()
         return getNamespace().isNested()
                 ? new NestedIdentity(resolver)
                 : getSignature().resolveGenericTypes(resolver);

@@ -8,8 +8,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -50,7 +48,6 @@ public class xConst
     @Override
     public void initDeclared()
         {
-        markNativeGetter("hash");
         }
 
     @Override

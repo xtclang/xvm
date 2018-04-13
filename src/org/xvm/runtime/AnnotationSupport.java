@@ -57,7 +57,7 @@ public class AnnotationSupport
             f_fNative = false;
             }
 
-        f_typeAnno = type.getAnnotation().getAnnotationType();
+        f_typeAnno = type.getAnnotationType();
         f_registry = registry;
         }
 

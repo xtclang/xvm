@@ -376,6 +376,7 @@ public abstract class IdentityConstant
 
         private Object resolve(Object element)
             {
+            // REVIEW: should we resolveAutoNarrowing()
             return m_resolver != null && element instanceof SignatureConstant
                     ? ((SignatureConstant) element).resolveGenericTypes(m_resolver)
                     : element;

@@ -58,7 +58,7 @@ public class PropertyInfo
      * Combine the information in this PropertyInfo with the information from a super type's
      * PropertyInfo.
      *
-     * @param that   a super-type's PropertyInfo
+     * @param that   the "contribution" PropertyInfo to layer on top of this property
      * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
      * @param errs   the error list to log any conflicts to
      *
@@ -131,18 +131,45 @@ public class PropertyInfo
 
         // first, determine what property bodies are duplicates, if any
         PropertyBody[] aBase = this.m_aBody;
-        PropertyBody[] aAdd  = dedupAdds(aBase, that.m_aBody);
+        PropertyBody[] aAdd  = that.m_aBody;
         int            cBase = aBase.length;
         int            cAdd  = aAdd.length;
-        if (cAdd == 0)
+
+        ArrayList<PropertyBody> listMerge = null;
+        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+            {
+            PropertyBody bodyAdd = aAdd[iAdd];
+
+            // allow duplicate interface properties to survive (see MethodInfo corollary)
+            if (bodyAdd.getImplementation().getExistence() != Existence.Interface)
+                {
+                for (int iThis = 0; iThis < cBase; ++iThis)
+                    {
+                    // discard duplicate "into" and class properties
+                    if (bodyAdd.equals(aBase[iThis]))
+                        {
+                        // we found a duplicate, so we can ignore it (it'll get added when we add
+                        // all of the bodies from this)
+                        continue NextLayer;
+                        }
+                    }
+                }
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyAdd);
+            }
+
+        if (listMerge == null)
             {
             return this;
             }
 
         // glue together the layers
-        PropertyBody[] aResult = append(aAdd, aBase);
+        Collections.addAll(listMerge, aBase);
+        PropertyBody[] aResult = listMerge.toArray(new PropertyBody[listMerge.size()]);
         int            cResult = aResult.length;
-        assert cResult == cBase + cAdd;
 
         // check @Override
         if (fSelf)
@@ -371,14 +398,10 @@ public class PropertyInfo
             boolean fRetain;
             switch (body.getImplementation())
                 {
-                case Implicit:
-                    // "into" isn't in the call chain
+                case Implicit:      // "into" isn't in the call chain
+                case Default:       // interface type - allow multiple copies to survive
+                case Declared:      // interface type - allow multiple copies to survive
                     fRetain = true;
-                    break;
-
-                case Declared:
-                    // interface type
-                    fRetain = setDefault.contains(constClz);
                     break;
 
                 case Native:

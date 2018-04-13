@@ -97,7 +97,7 @@ public class MethodInfo
      * the glass planes of "this", with the resulting combination of glass planes returned as a
      * MethodInfo.
      *
-     * @param that   the MethodInfo to layer onto this MethodInfo
+     * @param that   the "contribution" MethodInfo to layer onto this MethodInfo
      * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
      * @param errs   the error list to log any conflicts to
      *
@@ -137,13 +137,19 @@ public class MethodInfo
         NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat)
             {
             MethodBody bodyThat = aAdd[iThat];
-            for (int iThis = 0; iThis < cBase; ++iThis)
+            // allow duplicate interface methods to survive (we need the correct "default" to be on
+            // top, and we don't want to yank its duplicate from underneath)
+            if (bodyThat.getImplementation().getExistence() != MethodBody.Existence.Interface)
                 {
-                if (bodyThat.equals(aBase[iThis]))
+                for (int iThis = 0; iThis < cBase; ++iThis)
                     {
-                    // we found a duplicate, so we can ignore it (it'll get added when we add all of
-                    // the bodies from this)
-                    continue NextLayer;
+                    // discard duplicate "into" and class methods
+                    if (bodyThat.equals(aBase[iThis]))
+                        {
+                        // we found a duplicate, so we can ignore it (it'll get added when we add
+                        // all of the bodies from this)
+                        continue NextLayer;
+                        }
                     }
                 }
             if (listMerge == null)
@@ -202,16 +208,10 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
+                case Declared:      // this allows duplicates to survive (ignore retain set)
+                case Default:       // this allows duplicates to survive (ignore retain set)
                 case Native:
                     fRetain = true;
-                    break;
-
-                case Declared:
-                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
-                    break;
-
-                case Default:
-                    fRetain = setDefault.contains(constClz);
                     break;
 
                 default:

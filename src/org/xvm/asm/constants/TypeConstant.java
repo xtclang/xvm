@@ -1137,8 +1137,12 @@ public abstract class TypeConstant
         if (isTuple())
             {
             // warning: turtles
+            assert this instanceof AccessTypeConstant;
+
             TypeConstant typeElements = new TupleElementsTypeConstant(getConstantPool(), atypeParams);
-            ParamInfo param = new ParamInfo("ElementTypes", this, typeElements);
+            TypeConstant typePublic   = getUnderlyingType();
+
+            ParamInfo param = new ParamInfo("ElementTypes", typePublic, typeElements);
             mapTypeParams.put(param.getName(), param);
             }
         else
@@ -2201,9 +2205,9 @@ public abstract class TypeConstant
             }
 
         // the custom logic will get overlaid later by layerOnMethods(); in the case of a native
-        // getter, it needs to be added (ensured) at this point so that it will get picked up in
-        // that layer-on processing
-        if (!isInterface(constId, struct))
+        // getter for otherwise natural classes, it needs to be added (ensured) at this point so
+        // that it will get picked up in that layer-on processing
+        if (struct.getFormat() != Component.Format.INTERFACE)
             {
             PropertyStructure prop = (PropertyStructure) idProp.getComponent();
             if (prop != null && prop.isNativeGetter())

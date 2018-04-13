@@ -25,6 +25,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
 
 import org.xvm.util.ListMap;
@@ -560,11 +561,24 @@ public class TypeComposition
     // return the set of field names
     public Set<String> getFieldNames()
         {
-        return m_mapFields.keySet();
+        return ensureFields().keySet();
         }
 
     // create unassigned (with a null value) entries for all fields
     protected Map<String, ObjectHandle> createFields()
+        {
+        Map mapCached = ensureFields();
+        if (mapCached.isEmpty())
+            {
+            return null;
+            }
+
+        Map<String, ObjectHandle> mapFields = new ListMap<>();
+        mapFields.putAll(mapCached);
+        return mapFields;
+        }
+
+    private Map<String, ObjectHandle> ensureFields()
         {
         Map mapCached = m_mapFields;
         if (mapCached == null)
@@ -593,14 +607,7 @@ public class TypeComposition
                     }
                 }
             }
-
-        if (mapCached.isEmpty())
-            {
-            return null;
-            }
-        Map<String, ObjectHandle> mapFields = new ListMap<>();
-        mapFields.putAll(mapCached);
-        return mapFields;
+        return mapCached;
         }
 
     @Override
