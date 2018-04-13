@@ -1244,7 +1244,6 @@ public class Parser
      *     ImportStatement
      *     ReturnStatement
      *     SwitchStatement
-     *     "throw" Expression ";"
      *     TryStatement
      *     TypeDefStatement
      *     "using" ResourceDeclaration StatementBlock
@@ -1361,13 +1360,6 @@ public class Parser
 
             case SWITCH:
                 return parseSwitchStatement();
-
-            case THROW:
-                {
-                ThrowStatement stmt = new ThrowStatement(expect(Id.THROW), parseExpression());
-                expect(Id.SEMICOLON);
-                return stmt;
-                }
 
             case TRY:
                 return parseTryStatement();
@@ -2453,6 +2445,7 @@ public class Parser
      * <p/><code><pre>
      * PrefixExpression
      *     PostfixExpression
+     *     "throw" PrefixExpression
      *     "++" PrefixExpression
      *     "--" PrefixExpression
      *     "+" PrefixExpression
@@ -2468,6 +2461,9 @@ public class Parser
         {
         switch (peek().getId())
             {
+            case THROW:
+                return new ThrowExpression(expect(Id.THROW), parseExpression());
+
             case INC:
             case DEC:
             case ADD:

@@ -946,7 +946,21 @@ public abstract class Expression
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Using the provided context, resolve a simple name.
+     * <p/>
+     * A simple name can refer to:
+     * <ul>
+     * <li>A local variable (register) available from the Context;</li>
+     * <li>A capturable variable or constant value available from the Context;</li>
+     * <li>A method parameter from the current method;</li>
+     * <li>A capturable name available to the current method, if the method is a lambda;</li>
+     * <li>A property name;</li>
+     * <li>A class identity;</li>
+     * <li>A typedef identity;</li>
+     * <li>A multi-method identity;</li>
+     * <li>The "construct" keyword (indicating a call to a constructor function on this type);</li>
+     * <li>A parameter name preceding the lambda operator ("->").</li>
+     * </ul>
      *
      * @param ctx
      * @param fSuppressDeref
@@ -954,7 +968,7 @@ public abstract class Expression
      * @param listTypes
      * @param errs
      *
-     * @return
+     * @return the argument represented by the simple name
      */
     protected Argument resolveFirstName(Context              ctx,
                                         boolean              fSuppressDeref,
@@ -1182,6 +1196,13 @@ public abstract class Expression
         public PendingArgument(Argument arg)
             {
             m_arg = arg;
+            }
+
+        @Override
+        public TypeConstant getRefType()
+            {
+            // TODO
+            return null;
             }
 
         // TODO

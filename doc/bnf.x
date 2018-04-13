@@ -326,7 +326,6 @@ Statement
 	ImportStatement
 	ReturnStatement
     SwitchStatement
-    "throw" Expression ";"
     TryStatement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
@@ -634,6 +633,7 @@ MultiplicativeExpression
 
 PrefixExpression
     PostfixExpression
+    "throw" PrefixExpression
     "++" PrefixExpression
     "--" PrefixExpression
     "+" PrefixExpression

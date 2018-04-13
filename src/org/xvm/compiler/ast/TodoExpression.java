@@ -25,6 +25,9 @@ import org.xvm.compiler.ast.Statement.Context;
 /**
  * A to-do expression raises an exception indicating missing functionality, with an optional
  * message. It can be used as an expression, or as a statement.
+ *
+ * <p/>
+ * TODO re-mount on top of throw expression
  */
 public class TodoExpression
         extends Expression
