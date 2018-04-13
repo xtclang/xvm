@@ -7,6 +7,10 @@
  */
 class Array<ElementType>
         implements List<ElementType>
+        implements MutableAble
+        implements FixedSizeAble
+        implements PersistentAble
+        implements ConstAble
     {
     /**
      * Construct a dynamically growing array with the specified initial capacity.
@@ -153,10 +157,4 @@ class Array<ElementType>
      */
     @Override
     immutable Array!<ElementType> ensureConst(Boolean inPlace = false);
-
-    @Override
-    Array<ElementType> to<Array<ElementType>>()
-        {
-        return this;
-        }
     }

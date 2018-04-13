@@ -12,6 +12,7 @@ const String
 
     Char get(Int index);
 
+    @Override
     Iterator<Char> iterator()
         {
         TODO -- native

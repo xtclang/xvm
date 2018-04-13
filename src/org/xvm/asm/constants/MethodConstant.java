@@ -15,7 +15,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.MultiMethodStructure;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -199,9 +198,18 @@ public class MethodConstant
         }
 
     @Override
-    public MethodStructure resolveNestedIdentity(ClassStructure clz)
+    public Object resolveNestedIdentity(GenericTypeResolver resolver)
         {
-        Component parent = getNamespace().resolveNestedIdentity(clz);
+        // REVIEW: should we resolveAutoNarrowing()
+        return getNamespace().isNested()
+                ? new NestedIdentity(resolver)
+                : getSignature().resolveGenericTypes(resolver);
+        }
+
+    @Override
+    public MethodStructure relocateNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().relocateNestedIdentity(clz);
         return parent == null
                 ? null
                 : parent.findMethod(getSignature());

@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -57,7 +58,7 @@ public class PropertyInfo
      * Combine the information in this PropertyInfo with the information from a super type's
      * PropertyInfo.
      *
-     * @param that   a super-type's PropertyInfo
+     * @param that   the "contribution" PropertyInfo to layer on top of this property
      * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
      * @param errs   the error list to log any conflicts to
      *
@@ -130,18 +131,45 @@ public class PropertyInfo
 
         // first, determine what property bodies are duplicates, if any
         PropertyBody[] aBase = this.m_aBody;
-        PropertyBody[] aAdd  = dedupAdds(aBase, that.m_aBody);
+        PropertyBody[] aAdd  = that.m_aBody;
         int            cBase = aBase.length;
         int            cAdd  = aAdd.length;
-        if (cAdd == 0)
+
+        ArrayList<PropertyBody> listMerge = null;
+        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+            {
+            PropertyBody bodyAdd = aAdd[iAdd];
+
+            // allow duplicate interface properties to survive (see MethodInfo corollary)
+            if (bodyAdd.getImplementation().getExistence() != Existence.Interface)
+                {
+                for (int iThis = 0; iThis < cBase; ++iThis)
+                    {
+                    // discard duplicate "into" and class properties
+                    if (bodyAdd.equals(aBase[iThis]))
+                        {
+                        // we found a duplicate, so we can ignore it (it'll get added when we add
+                        // all of the bodies from this)
+                        continue NextLayer;
+                        }
+                    }
+                }
+            if (listMerge == null)
+                {
+                listMerge = new ArrayList<>();
+                }
+            listMerge.add(bodyAdd);
+            }
+
+        if (listMerge == null)
             {
             return this;
             }
 
         // glue together the layers
-        PropertyBody[] aResult = append(aAdd, aBase);
+        Collections.addAll(listMerge, aBase);
+        PropertyBody[] aResult = listMerge.toArray(new PropertyBody[listMerge.size()]);
         int            cResult = aResult.length;
-        assert cResult == cBase + cAdd;
 
         // check @Override
         if (fSelf)
@@ -290,11 +318,13 @@ public class PropertyInfo
      * have been applied to the class, giving the properties a chance to replace themselves with an
      * appropriate PropertyInfo.
      *
-     * @param errs   the error list to log any errors to
+     *
+     * @param fNative  true iff the type being assembled is a native rebase class
+     * @param errs     the error list to log any errors to
      *
      * @return a PropertyInfo to use in place of this
      */
-    public PropertyInfo finishAdoption(ErrorListener errs)
+    public PropertyInfo finishAdoption(boolean fNative, ErrorListener errs)
         {
         // only modify normal properties that originate from interfaces and have not been
         // subsequently "layered on"
@@ -307,19 +337,22 @@ public class PropertyInfo
 
         // interface properties with a default get() and an @RO declaration become calculated
         // properties; all others become field-based properties
-        PropertyBody[] aBody   = m_aBody;
-        PropertyBody   bodyOld = null;
-        boolean        fRO     = true;
-        MethodConstant idGet   = null;
+        PropertyBody[]    aBody  = m_aBody;
+        PropertyStructure struct = null;
+        boolean           fRO    = true;
+        MethodConstant    idGet  = null;
         for (int i = 0, c = m_aBody.length; i < c; ++i)
             {
             PropertyBody body = aBody[i];
-            if (body.getExistence() == Existence.Interface)
+            if (body.getExistence() != Existence.Implied)
                 {
-                if (bodyOld == null)
+                assert body.getExistence() == Existence.Interface;
+
+                if (struct == null)
                     {
-                    bodyOld = body;
+                    struct = body.getStructure();
                     }
+
                 if (body.isExplicitReadOnly())
                     {
                     if (idGet == null && body.hasGetter())
@@ -334,10 +367,15 @@ public class PropertyInfo
                     }
                 }
             }
+
+        // can only be read-only if at least one interface property body has a default get()
         fRO &= idGet != null;
 
-        PropertyBody bodyNew = new PropertyBody(bodyOld.getStructure(), Implementation.SansCode,
-                null, getType(), fRO, false, false, Effect.None, Effect.None, !fRO, false, null, null);
+        PropertyBody bodyNew = fNative
+                ? new PropertyBody(struct, Implementation.Native, null, getType(), fRO, false, true,
+                    Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
+                : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
+                    Effect.None, Effect.None, !fRO, false, null, null);
         return layerOn(new PropertyInfo(bodyNew), false, errs);
         }
 
@@ -360,14 +398,10 @@ public class PropertyInfo
             boolean fRetain;
             switch (body.getImplementation())
                 {
-                case Implicit:
-                    // "into" isn't in the call chain
+                case Implicit:      // "into" isn't in the call chain
+                case Default:       // interface type - allow multiple copies to survive
+                case Declared:      // interface type - allow multiple copies to survive
                     fRetain = true;
-                    break;
-
-                case Declared:
-                    // interface type
-                    fRetain = setDefault.contains(constClz);
                     break;
 
                 case Native:
@@ -901,6 +935,40 @@ public class PropertyInfo
         }
 
     /**
+     * @return the TypeConstant representing the data type of the "box" (Ref/Var)
+     */
+    public TypeConstant getRefType()
+        {
+        TypeConstant typeProp = getType();
+        ConstantPool pool     = typeProp.getConstantPool();
+
+        TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
+            isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
+
+        for (Annotation anno : getRefAnnotations())
+            {
+            typeRef = pool.ensureAnnotatedTypeConstant(anno, typeRef);
+            }
+        return typeRef;
+        }
+
+    /**
+     * @return true iff the property has an Atomic annotation
+     */
+    public boolean isAtomic()
+        {
+        IdentityConstant idAtomic = m_type.getConstantPool().clzAtomic();
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAtomic))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
@@ -1026,7 +1094,7 @@ public class PropertyInfo
         {
         MethodBody[] chain = type.getOptimizedMethodChain(constId);
 
-        if (chain == null)
+        if (chain == null || chain.length == 0)
             {
             if (hasField())
                 {
@@ -1034,6 +1102,16 @@ public class PropertyInfo
                     {
                     new MethodBody(constId, constId.getSignature(),
                             Implementation.Field, getFieldIdentity())
+                    };
+                }
+            else if (isInjected())
+                {
+                // injection is currently implemented at the field access level
+                // (see ClassTemplate.getFieldValue)
+                chain = new MethodBody[]
+                    {
+                    new MethodBody(constId, constId.getSignature(),
+                            Implementation.Field, getHead().getIdentity())
                     };
                 }
             else
@@ -1044,28 +1122,25 @@ public class PropertyInfo
         else if (hasField())
             {
             int cBodies = chain.length;
-            if (cBodies > 0)
-                {
-                int ixTail = cBodies - 1;
+            int ixTail  = cBodies - 1;
 
-                Implementation implTail = chain[ixTail].getImplementation();
-                if (implTail != Implementation.Field)
+            Implementation implTail = chain[ixTail].getImplementation();
+            if (implTail != Implementation.Field)
+                {
+                if (implTail == Implementation.Default)
                     {
-                    if (implTail == Implementation.Default)
-                        {
-                        chain = chain.clone();
-                        }
-                    else
-                        {
-                        MethodBody[] chainNew = new MethodBody[cBodies + 1];
-                        System.arraycopy(chain, 0, chainNew, 0, cBodies);
-                        chain = chainNew;
-                        ixTail++;
-                        }
+                    chain = chain.clone();
                     }
-                chain[ixTail] = new MethodBody(constId, constId.getSignature(),
-                        Implementation.Field, getFieldIdentity());
+                else
+                    {
+                    MethodBody[] chainNew = new MethodBody[cBodies + 1];
+                    System.arraycopy(chain, 0, chainNew, 0, cBodies);
+                    chain = chainNew;
+                    ixTail++;
+                    }
                 }
+            chain[ixTail] = new MethodBody(constId, constId.getSignature(),
+                    Implementation.Field, getFieldIdentity());
             }
         return chain;
         }
@@ -1167,6 +1242,7 @@ public class PropertyInfo
         @Override
         public ParamInfo findParamInfo(Object nid)
             {
+            // REVIEW: is this really necessary?
             if (nid instanceof String && nid.equals("RefType"))
                 {
                 PropertyConstant id = PropertyInfo.this.getIdentity();

@@ -195,7 +195,7 @@ public class xTestApp extends xModule
             .add(new X_Print(4))
 
             .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
-                adapter.ensureValueConstantId("rfc"))) // #5 (rfc2)
+                adapter.ensureValueConstantId("rfc2"))) // #5 (rfc2)
             .add(new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
                 adapter.ensureValueConstantId("rfc3"))) // #6 (rfc3)
             .add(new Invoke_01(0,
@@ -402,7 +402,7 @@ public class xTestApp extends xModule
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 8)) // next register #8
             .add(new X_Print(8))
 
-            .add(new Var_N(adapter.getClassTypeConstId("annotations.AtomicIntNumber"),
+            .add(new Var_N(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),
                 adapter.ensureValueConstantId("ari")))  // #9 (ari)
             .add(new P_Var(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 7, 9))
             .add(new X_Print(9))
@@ -585,7 +585,6 @@ public class xTestApp extends xModule
             .add(new Return_1(0));
 
         // Point.hash.get()
-        ctPoint.markCalculated("hash");
         MethodStructure mtGetHash = ctPoint.ensureGetter("hash");
         mtGetHash.createCode()
             .add(new L_Get(adapter.getPropertyConstId("TestApp.Point", "x"), 0)) // next register #0

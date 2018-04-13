@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -321,7 +322,7 @@ public class ClassStructure
      *
      * @param  listActual  the list of actual types
      *
-     * @return the list of types that has exact size as the map of formal parameters for this class
+     * @return a list of types that has exact size as the map of formal parameters for this class
      */
     public List<TypeConstant> normalizeParameters(List<TypeConstant> listActual)
         {
@@ -331,6 +332,24 @@ public class ClassStructure
         return cActual == cFormal
             ? listActual
             : resolveType(listActual).getParamTypes();
+        }
+
+    /**
+     * If the specified array of actual parameters is missing some number of actual parameters,
+     * add the corresponding resolved canonical types to the end of the list.
+     *
+     * @param  atypeActual  the array of actual types
+     *
+     * @return an array of types that has exact size as the map of formal parameters for this class
+     */
+    public TypeConstant[] normalizeParameters(TypeConstant[] atypeActual)
+        {
+        int cActual = atypeActual.length;
+        int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+
+        return cActual == cFormal
+            ? atypeActual
+            : resolveType(Arrays.asList(atypeActual)).getParamTypesArray();
         }
 
 
@@ -459,13 +478,13 @@ public class ClassStructure
         switch (format)
             {
             case MODULE:
-                return pool.typeModule();
+                return pool.typeModuleRB();
 
             case PACKAGE:
-                return pool.typePackage();
+                return pool.typePackageRB();
 
             case ENUM:
-                return pool.typeEnum();
+                return pool.typeEnumRB();
 
             case CONST:
             case SERVICE:
@@ -475,11 +494,7 @@ public class ClassStructure
 
                 if (format != structSuper.getFormat())
                     {
-                    ClassConstant constRebase = format == Format.CONST
-                        ? pool.clzConst()
-                        : pool.clzService();
-
-                    return new NativeRebaseConstant(constRebase).asTypeConstant();
+                    return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
                     }
                 // break through
             default:
@@ -539,10 +554,12 @@ public class ClassStructure
     /**
      * Recursively find the type for the specified formal name. Note that the formal name could
      * be introduced by some contributions, rather than this class itself.
+     * <p/>
+     * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
+     * functionality since the TypeInfo generation itself uses it.
      */
     public TypeConstant getGenericParamType(String sName, List<TypeConstant> listActual)
         {
-        // TODO: use the type info when done
         return getGenericParamTypeImpl(sName, listActual, true);
         }
 
@@ -1376,7 +1393,7 @@ public class ClassStructure
             return findMethod((SignatureConstant) id);
             }
 
-        return ((NestedIdentity) id).getIdentityConstant().resolveNestedIdentity(this);
+        return ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
         }
 
 

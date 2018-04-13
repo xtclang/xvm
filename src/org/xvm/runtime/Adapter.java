@@ -252,8 +252,9 @@ public class Adapter
         for (int i = 0; i < cTypes; i++)
             {
             String sType = asType[i].trim();
-            if (template != null && template.isGenericType(sType))
+            if (template != null && template.f_struct.indexOfGenericParameter(sType) >= 0)
                 {
+                // generic type property
                 PropertyStructure prop = template.getProperty(sType);
                 aType[i] = pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
                 }

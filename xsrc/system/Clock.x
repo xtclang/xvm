@@ -35,9 +35,10 @@ interface Clock
     static class RuntimeClock
             implements Clock
         {
+        @Override
         Cancellable scheduleAlarm(Alarm alarm, DateTime timeToWakeUp)
             {
-            TODO // TODO remove
+            TODO - native
             }
         }
     }

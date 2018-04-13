@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
@@ -55,17 +54,9 @@ public class xService
         }
 
     @Override
-    protected TypeComposition ensureCanonicalClass()
+    protected TypeConstant getInceptionType()
         {
-        return this == INSTANCE
-            ? ensureClass(INCEPTION_TYPE, getCanonicalType())
-            : super.ensureCanonicalClass();
-        }
-
-    @Override
-    public boolean isStateful()
-        {
-        return true;
+        return this == INSTANCE ? INCEPTION_TYPE : super.getInceptionType();
         }
 
     @Override
@@ -180,7 +171,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePreInc(frame, hTarget, sPropName, iReturn);
             }
@@ -196,7 +188,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePostInc(frame, hTarget, sPropName, iReturn);
             }
@@ -212,7 +205,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePreDec(frame, hTarget, sPropName, iReturn);
             }
@@ -228,7 +222,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePostDec(frame, hTarget, sPropName, iReturn);
             }
@@ -244,7 +239,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePropertyAdd(frame, hTarget, sPropName, hArg);
             }
@@ -258,7 +254,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.invokePropertySub(frame, hTarget, sPropName, hArg);
             }
@@ -272,7 +269,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.getPropertyValue(frame, hTarget, sPropName, iReturn);
             }
@@ -284,14 +282,14 @@ public class xService
         }
 
     @Override
-    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyStructure property, int iReturn)
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, String sPropName, int iReturn)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        PropertyInfo info = property.getInfo();
-        if (frame.f_context == hService.m_context || info != null && info.isAtomic())
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
-            return super.getFieldValue(frame, hTarget, property, iReturn);
+            return super.getFieldValue(frame, hTarget, sPropName, iReturn);
             }
         throw new IllegalStateException("Invalid context");
         }
@@ -302,7 +300,8 @@ public class xService
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
 
-        if (frame.f_context == hService.m_context || isAtomicProperty(hTarget, sPropName))
+        if (frame.f_context == hService.m_context ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
             return super.setPropertyValue(frame, hTarget, sPropName, hValue);
             }
@@ -313,7 +312,7 @@ public class xService
         }
 
     @Override
-    public int setFieldValue(Frame frame, ObjectHandle hTarget, PropertyStructure property,
+    public int setFieldValue(Frame frame, ObjectHandle hTarget, String sPropName,
                              ObjectHandle hValue)
         {
         ServiceHandle hService = (ServiceHandle) hTarget;
@@ -321,10 +320,10 @@ public class xService
         ServiceContext context = hService.m_context;
         ServiceContext contextCurrent = ServiceContext.getCurrentContext();
 
-        PropertyInfo info = property.getInfo();
-        if (context == null || context == contextCurrent || info != null && info.isAtomic())
+        if (context == null || context == contextCurrent ||
+                hService.getPropertyInfo(sPropName).isAtomic())
             {
-            return super.setFieldValue(frame, hTarget, property, hValue);
+            return super.setFieldValue(frame, hTarget, sPropName, hValue);
             }
 
         throw new IllegalStateException("Invalid context");

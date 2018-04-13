@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -96,7 +97,7 @@ public class MethodInfo
      * the glass planes of "this", with the resulting combination of glass planes returned as a
      * MethodInfo.
      *
-     * @param that   the MethodInfo to layer onto this MethodInfo
+     * @param that   the "contribution" MethodInfo to layer onto this MethodInfo
      * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
      * @param errs   the error list to log any conflicts to
      *
@@ -136,13 +137,19 @@ public class MethodInfo
         NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat)
             {
             MethodBody bodyThat = aAdd[iThat];
-            for (int iThis = 0; iThis < cBase; ++iThis)
+            // allow duplicate interface methods to survive (we need the correct "default" to be on
+            // top, and we don't want to yank its duplicate from underneath)
+            if (bodyThat.getImplementation().getExistence() != MethodBody.Existence.Interface)
                 {
-                if (bodyThat.equals(aBase[iThis]))
+                for (int iThis = 0; iThis < cBase; ++iThis)
                     {
-                    // we found a duplicate, so we can ignore it (it'll get added when we add all of
-                    // the bodies from this)
-                    continue NextLayer;
+                    // discard duplicate "into" and class methods
+                    if (bodyThat.equals(aBase[iThis]))
+                        {
+                        // we found a duplicate, so we can ignore it (it'll get added when we add
+                        // all of the bodies from this)
+                        continue NextLayer;
+                        }
                     }
                 }
             if (listMerge == null)
@@ -201,16 +208,10 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
+                case Declared:      // this allows duplicates to survive (ignore retain set)
+                case Default:       // this allows duplicates to survive (ignore retain set)
                 case Native:
                     fRetain = true;
-                    break;
-
-                case Declared:
-                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
-                    break;
-
-                case Default:
-                    fRetain = setDefault.contains(constClz);
                     break;
 
                 default:
@@ -238,6 +239,90 @@ public class MethodInfo
         return list.isEmpty()
                 ? null
                 : new MethodInfo(list.toArray(new MethodBody[list.size()]));
+        }
+
+    /**
+     * When a method on a class originates on an interface which is then implemented by (or
+     * otherwise picked up by) a native rebase class, the method isn't marked as native naturally
+     * if nothing on the rebase class overrode (or otherwise declared) the method.
+     *
+     * @param fNative  true iff the type being assembled is a native rebase class
+     * @param errs     the error list to log any errors to
+     *
+     * @return a MethodInfo to use in place of this
+     */
+    public MethodInfo finishAdoption(boolean fNative, ErrorListener errs)
+        {
+        // param retained only to match PropertyInfo
+        assert fNative;
+
+        if (isFunction())
+            {
+            return this;
+            }
+
+        MethodBody bodyFirstDeclare = null;
+        MethodBody bodyFirstDefault = null;
+        for (MethodBody body : m_aBody)
+            {
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                    break;
+
+                case Declared:
+                case Abstract:
+                case SansCode:
+                    // methods that are declared but have no bodies (not even a default body) will
+                    // automatically be marked as native
+                    if (bodyFirstDeclare == null)
+                        {
+                        bodyFirstDeclare = body;
+                        }
+                    break;
+
+                case Default:
+                    // the first encountered default body is "made real" if there are no
+                    // non-interface bodies
+                    if (bodyFirstDefault == null)
+                        {
+                        bodyFirstDefault = body;
+                        }
+                    break;
+
+                case Native:
+                case Explicit:
+                case Capped:
+                    return this;
+
+                case Delegating:
+                case Field:
+                default:
+                    // it's not that this is a problem; it's just that it's unexpected, so this
+                    // acts as an assertion to flag any occurrences
+                    throw new IllegalStateException("Unexpected native class declaration: "
+                            + body.getSignature());
+                }
+            }
+
+        MethodBody bodyResult;
+        if (bodyFirstDefault != null)
+            {
+            bodyResult = new MethodBody(bodyFirstDefault.getIdentity(),
+                bodyFirstDefault.getSignature(), Implementation.Explicit);
+            }
+        else if (bodyFirstDeclare != null)
+            {
+            bodyResult = new MethodBody(bodyFirstDeclare.getIdentity(),
+                bodyFirstDeclare.getSignature(), Implementation.Native);
+            }
+        else
+            {
+            // nothing but "into" bodies
+            return this;
+            }
+
+        return layerOn(new MethodInfo(bodyResult), true, errs);
         }
 
     /**
@@ -397,6 +482,33 @@ public class MethodInfo
         }
 
     /**
+     * Pre-populate the "info by id" and "info by nid" lookup caches. The caches may contain many
+     * entries for the same MethodInfo.
+     *
+     * @param mapMethods      lookup cache by id
+     * @param mapVirtMethods  lookup cache by nid
+     */
+    public void populateCache(
+            MethodConstant                  idMethod,
+            Map<MethodConstant, MethodInfo> mapMethods,
+            Map<Object, MethodInfo>         mapVirtMethods)
+        {
+        int cDepth = idMethod.getNestedDepth();
+        for (MethodBody body : m_aBody)
+            {
+            MethodConstant id = body.getIdentity();
+            if (id.getNestedDepth() == cDepth)
+                {
+                mapMethods.putIfAbsent(id, this);
+                if (isVirtual())
+                    {
+                    mapVirtMethods.putIfAbsent(id.getNestedIdentity(), this);
+                    }
+                }
+            }
+        }
+
+    /**
      * @return the method chain
      */
     public MethodBody[] getChain()
@@ -527,7 +639,7 @@ public class MethodInfo
         }
 
     /**
-     * @return the access of the first method in the chain
+     * @return the access of the first method in the chain; Public if there are no "real" bodies
      */
     public Access getAccess()
         {
@@ -540,7 +652,7 @@ public class MethodInfo
                 }
             }
 
-        throw new IllegalStateException();
+        return Access.PUBLIC;
         }
 
     /**

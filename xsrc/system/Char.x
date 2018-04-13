@@ -9,13 +9,12 @@ const Char
 
     construct Char(Byte b)
         {
-        assert codepoint <= 0x7F;
-        construct(b.to<UInt32>());
+        construct Char(b.to<UInt32>());
         }
 
     construct Char(Int n)
         {
-        construct(n.to<UInt32>());
+        construct Char(n.to<UInt32>());
         }
 
     UInt32 codepoint;

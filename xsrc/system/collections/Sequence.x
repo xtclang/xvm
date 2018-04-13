@@ -63,6 +63,7 @@ interface Sequence<ElementType>
             {
             private Int i = 0;
 
+            @Override
             conditional ElementType next()
                 {
                 if (i < Sequence.this.size)

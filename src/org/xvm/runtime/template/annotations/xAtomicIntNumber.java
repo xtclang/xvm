@@ -3,10 +3,13 @@ package org.xvm.runtime.template.annotations;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -16,6 +19,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
+import org.xvm.runtime.template.xVar;
 
 
 /**
@@ -42,6 +46,27 @@ public class xAtomicIntNumber
         // TODO: do we need to mark the VarOps as native?
         // TODO: how to implement checked/unchecked optimally?
         }
+
+    @Override
+    protected TypeConstant getInceptionType()
+        {
+        TypeConstant type = m_typeInception;
+        if (type == null)
+            {
+            // @AtomicIntNumber @AtomicVar Var<Int>
+            ClassStructure structAtomicInt = f_struct;
+            ClassStructure structAtomicVar = xAtomicVar.INSTANCE.f_struct;
+            ConstantPool   pool            = structAtomicInt.getConstantPool();
+            Annotation     annoAtomicInt   = new Annotation(structAtomicInt.getIdentityConstant(), null);
+            Annotation     annoAtomicVar   = new Annotation(structAtomicVar.getIdentityConstant(), null);
+
+            type = m_typeInception =
+                pool.ensureAnnotatedTypeConstant(annoAtomicInt,
+                    pool.ensureAnnotatedTypeConstant(annoAtomicVar, xVar.INCEPTION_TYPE));
+            }
+        return type;
+        }
+
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 

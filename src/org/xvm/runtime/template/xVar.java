@@ -1,29 +1,25 @@
 package org.xvm.runtime.template;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.VarSupport;
 
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
 import org.xvm.runtime.Utils.UnaryAction;
-
-import org.xvm.runtime.VarSupport;
 
 
 /**
@@ -43,8 +39,8 @@ public class xVar
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
-                asTypeConstant().normalizeParameters();
+            INCEPTION_TYPE = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
             }
         }
 
@@ -54,26 +50,23 @@ public class xVar
         }
 
     @Override
-    protected TypeComposition ensureCanonicalClass()
+    protected TypeConstant getInceptionType()
         {
-        return ensureClass(INCEPTION_TYPE, getCanonicalType());
-        }
+        if (this == INSTANCE)
+            {
+            return INCEPTION_TYPE;
+            }
 
-    @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
-        {
-        return ensureClass(INCEPTION_TYPE, typeActual);
-        }
+        // there are no natural classes that extend Var, but there is a number of native templates
+        // that represent Var mixins that extend xVar
 
-    @Override
-    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
-        {
-        ConstantPool pool = f_struct.getConstantPool();
-
-        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            INCEPTION_TYPE, typeParams).normalizeParameters();
-
-        return ensureClass(typeInception, getCanonicalType());
+        TypeConstant type = m_typeInception;
+        if (type == null)
+            {
+            type = m_typeInception = f_struct.getConstantPool().ensureAnnotatedTypeConstant(
+                new Annotation(f_struct.getIdentityConstant(), null), INCEPTION_TYPE);
+            }
+        return type;
         }
 
     @Override
@@ -95,7 +88,7 @@ public class xVar
     @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preInc");
+        CallChain chain = getOpChain(hTarget, "preInc", 1);
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.INC, hTarget, false, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -104,7 +97,7 @@ public class xVar
     @Override
     public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postInc");
+        CallChain chain = getOpChain(hTarget, "postInc", 1);
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.INC, hTarget, true, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -113,7 +106,7 @@ public class xVar
     @Override
     public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preDec");
+        CallChain chain = getOpChain(hTarget, "preDec", 1);
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, false, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -122,7 +115,7 @@ public class xVar
     @Override
     public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postDec");
+        CallChain chain = getOpChain(hTarget, "postDec", 1);
         return chain == null
             ? new InPlaceVarUnary(UnaryAction.DEC, hTarget, true, iReturn).doNext(frame)
             : chain.invoke(frame, hTarget, iReturn);
@@ -173,7 +166,7 @@ public class xVar
 
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("+=");
+        CallChain chain = getOpChain(hTarget, "+=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.ADD, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -182,7 +175,7 @@ public class xVar
     @Override
     public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("-=");
+        CallChain chain = getOpChain(hTarget, "-=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.SUB, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -191,7 +184,7 @@ public class xVar
     @Override
     public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("*=");
+        CallChain chain = getOpChain(hTarget, "*=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MUL, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -200,7 +193,7 @@ public class xVar
     @Override
     public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("/=");
+        CallChain chain = getOpChain(hTarget, "/=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.DIV, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
@@ -209,7 +202,7 @@ public class xVar
     @Override
     public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = getOpChain("%=");
+        CallChain chain = getOpChain(hTarget, "%=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MOD, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);

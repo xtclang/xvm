@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -23,7 +24,8 @@ import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
- * TODO:
+ * While this template represents a native interface, it never serves as an inception type
+ * by itself.
  */
 public class xConst
         extends ClassTemplate
@@ -46,13 +48,6 @@ public class xConst
     @Override
     public void initDeclared()
         {
-        markNativeGetter("hash");
-        }
-
-    @Override
-    public boolean isStateful()
-        {
-        return true;
         }
 
     @Override

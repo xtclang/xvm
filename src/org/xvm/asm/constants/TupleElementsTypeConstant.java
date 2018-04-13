@@ -3,6 +3,8 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
@@ -64,6 +66,13 @@ public class TupleElementsTypeConstant
             throws IOException
         {
         throw new IllegalStateException();
+        }
+
+    @Override
+    public boolean equals(Object that)
+        {
+        return that instanceof TupleElementsTypeConstant
+            && Arrays.equals(m_atypeElements, ((TupleElementsTypeConstant) that).m_atypeElements);
         }
 
     @Override

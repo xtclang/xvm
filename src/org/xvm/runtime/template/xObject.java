@@ -34,7 +34,6 @@ public class xObject
     public void initDeclared()
         {
         markNativeMethod("to", VOID, STRING);
-        markCalculated("meta");
         }
 
     @Override

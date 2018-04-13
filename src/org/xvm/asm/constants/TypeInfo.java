@@ -102,6 +102,14 @@ public class TypeInfo
         m_mapMethods            = mapMethods;
         m_mapVirtMethods        = mapVirtMethods;
         m_progress              = progress;
+
+        // pre-populate the method lookup caches
+        m_cacheById  = new HashMap<>(m_mapMethods);
+        m_cacheByNid = new HashMap<>(m_mapVirtMethods);
+        for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
+            {
+            entry.getValue().populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
+            }
         }
 
     /**
@@ -147,7 +155,7 @@ public class TypeInfo
 
                     if (fVirtual)
                         {
-                        mapVirtProps.put(id.getNestedIdentity(), prop);
+                        mapVirtProps.put(id.resolveNestedIdentity(ensureTypeResolver()), prop);
                         }
                     }
                 }
@@ -166,7 +174,7 @@ public class TypeInfo
 
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.getNestedIdentity(), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(ensureTypeResolver()), method);
                     }
                 }
             }
@@ -190,17 +198,16 @@ public class TypeInfo
             Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
             for (Entry<PropertyConstant, PropertyInfo> entry : m_mapProps.entrySet())
                 {
-                PropertyConstant id       = entry.getKey();
-                PropertyInfo     prop     = entry.getValue();
-                boolean          fVirtual = prop.isVirtual();
+                PropertyConstant id   = entry.getKey();
+                PropertyInfo     prop = entry.getValue();
 
                 // convert the property into an "into" property
                 prop = prop.asInto();
 
                 mapProps.put(id, prop);
-                if (fVirtual)
+                if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.getNestedIdentity(), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(ensureTypeResolver()), prop);
                     }
                 }
 
@@ -208,9 +215,8 @@ public class TypeInfo
             Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
             for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
                 {
-                MethodConstant id       = entry.getKey();
-                MethodInfo     method   = entry.getValue();
-                boolean        fVirtual = method.isVirtual();
+                MethodConstant id     = entry.getKey();
+                MethodInfo     method = entry.getValue();
 
                 // convert the method into an "into" method
                 method = method.asInto();
@@ -218,7 +224,7 @@ public class TypeInfo
                 mapMethods.put(id, method);
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.getNestedIdentity(), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(ensureTypeResolver()), method);
                     }
                 }
 
@@ -260,11 +266,13 @@ public class TypeInfo
                 // substitute a sub-class property or method if one is available
                 if (idParent instanceof PropertyConstant)
                     {
-                    idParent = m_mapVirtProps.get(idParent.getNestedIdentity()).getIdentity();
+                    idParent = m_mapVirtProps.get(idParent.resolveNestedIdentity(
+                        ensureTypeResolver())).getIdentity();
                     }
                 else if (idParent instanceof MethodConstant)
                     {
-                    idParent = m_mapVirtMethods.get(idParent.getNestedIdentity()).getIdentity();
+                    idParent = m_mapVirtMethods.get(idParent.resolveNestedIdentity(
+                        ensureTypeResolver())).getIdentity();
                     }
                 }
 
@@ -274,7 +282,8 @@ public class TypeInfo
                 // a method cap will not have a real component because it is a fake identity
                 if (idParent instanceof MethodConstant)
                     {
-                    MethodInfo method = m_mapVirtMethods.get(idParent.getNestedIdentity());
+                    MethodInfo method = m_mapVirtMethods.get(idParent.resolveNestedIdentity(
+                        ensureTypeResolver()));
                     assert method != null;
                     assert method.getHead().getImplementation() == Implementation.Capped;
 
@@ -315,6 +324,21 @@ public class TypeInfo
         if (resolver == null || resolver.errs != errs)
             {
             m_resolver = resolver = new ParamInfo.TypeResolver(m_mapTypeParams, errs);
+            }
+        return resolver;
+        }
+
+    /**
+     * (Internal)
+     *
+     * @return a type resolver, creating one if necessary (using the TypeConstant's error list)
+     */
+    private ParamInfo.TypeResolver ensureTypeResolver()
+        {
+        ParamInfo.TypeResolver resolver = m_resolver;
+        if (resolver == null)
+            {
+            resolver = ensureTypeResolver(getType().getErrorListener());
             }
         return resolver;
         }
@@ -733,7 +757,7 @@ public class TypeInfo
             return prop;
             }
 
-        prop = m_mapVirtProps.get(constId.getNestedIdentity());
+        prop = m_mapVirtProps.get(constId.resolveNestedIdentity(ensureTypeResolver()));
         return prop != null && prop.isIdentityValid(constId) ? prop : null;
         }
 
@@ -781,20 +805,22 @@ public class TypeInfo
      */
     public MethodInfo getMethodById(MethodConstant id)
         {
-        MethodInfo method = getMethods().get(id);
+        MethodInfo method = m_cacheById.get(id);
         if (method != null)
             {
             return method;
             }
 
         // try to find a method with the same signature
-        method = m_mapVirtMethods.get(id.getNestedIdentity());
+        method = m_mapVirtMethods.get(id.resolveNestedIdentity(ensureTypeResolver()));
         if (method != null)
             {
             for (MethodBody body : method.getChain())
                 {
                 if (body.getIdentity().equals(id))
                     {
+                    m_cacheById.put(id, method);
+                    m_cacheByNid.put(id.getNestedIdentity(), method);
                     return method;
                     }
                 }
@@ -802,6 +828,7 @@ public class TypeInfo
 
         // it is possible that the map lookup miss is caused by the passed id's signature NOT
         // having its generic types resolved, so brute-force search
+        // TODO this might no longer be necessary because the cache is now pre-populated
         String sName  = id.getName();
         int    cDepth = id.getNestedDepth();
         for (Iterator<MethodInfo> iter = m_mapVirtMethods.values().iterator(); iter.hasNext(); )
@@ -817,6 +844,8 @@ public class TypeInfo
                     {
                     if (body.getIdentity().equals(id))
                         {
+                        m_cacheById.put(id, method);
+                        m_cacheByNid.put(id.getNestedIdentity(), method);
                         return method;
                         }
                     }
@@ -830,13 +859,19 @@ public class TypeInfo
      * Find the MethodInfo for the specified nested identity.
      *
      * @param nid  a nested identity, as obtained from {@link MethodConstant#getNestedIdentity()}
+     *             or {@link MethodConstant#resolveNestedIdentity(GenericTypeResolver)}
      *
      * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
      *         nested identity
      */
     public MethodInfo getMethodByNestedId(Object nid)
         {
-        return m_mapVirtMethods.get(nid);
+        MethodInfo info = m_cacheByNid.get(nid);
+        if (info == null)
+            {
+            throw new IllegalStateException("TODO: couldn't find " + nid + " at " + m_type);
+            }
+        return info;
         }
 
     /**
@@ -1201,7 +1236,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (m_mapVirtProps.containsKey(entry.getKey().getNestedIdentity()))
+                if (m_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(ensureTypeResolver())))
                     {
                     sb.append("(v) ");
                     }
@@ -1222,7 +1257,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (m_mapVirtMethods.containsKey(entry.getKey().getNestedIdentity()))
+                if (m_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(ensureTypeResolver())))
                     {
                     sb.append("(v) ");
                     }
@@ -1425,10 +1460,11 @@ public class TypeInfo
     private final Map<PropertyConstant, PropertyInfo> m_mapProps;
 
     /**
-     * The properties of the type, indexed by nested identity. Properties nested immediately under
+     * The properties of the type, keyed by nested identity. Properties nested immediately under
      * a class are identified by their (String) name, while properties nested further below the
-     * class are identified by a NestedIdentity object. In either case, the index can be obtained by
-     * calling {@link PropertyConstant#getNestedIdentity()}.
+     * class are identified by a NestedIdentity object. In either case, the key can be obtained by
+     * calling {@link PropertyConstant#getNestedIdentity()} or
+     * {@link PropertyConstant#resolveNestedIdentity(GenericTypeResolver)}.
      */
     private final Map<Object, PropertyInfo> m_mapVirtProps;
 
@@ -1448,10 +1484,11 @@ public class TypeInfo
     private final Map<MethodConstant, MethodInfo> m_mapMethods;
 
     /**
-     * The virtual methods of the type, indexed by nested identity. Methods nested immediately under
+     * The virtual methods of the type, keyed by nested identity. Methods nested immediately under
      * a class are identified by their signature, while methods nested further below the class are
-     * identified by a NestedIdentity object. In either case, the index can be obtained by calling
-     * {@link MethodConstant#getNestedIdentity()}.
+     * identified by a NestedIdentity object. In either case, the key can be obtained by calling
+     * calling {@link PropertyConstant#getNestedIdentity()} or
+     * {@link PropertyConstant#resolveNestedIdentity(GenericTypeResolver)}.
      */
     private final Map<Object, MethodInfo> m_mapVirtMethods;
 
@@ -1466,7 +1503,11 @@ public class TypeInfo
      */
     private transient ParamInfo.TypeResolver m_resolver;
 
-    // cached query results
+    // cached query results REVIEW for thread safety
+    // REVIEW is this a reasonable way to cache these?
+    private final Map<MethodConstant, MethodInfo> m_cacheById;
+    private final Map<Object, MethodInfo>         m_cacheByNid;
+
     private transient TypeInfo            m_into;
     private transient Set<MethodInfo>     m_setAuto;
     private transient Set<MethodInfo>     m_setOps;

@@ -493,7 +493,8 @@ public class MethodStructure
         {
         if (m_cScopes == 0)
             {
-            if (m_fNative)
+            Code code = ensureCode();
+            if (code == null)
                 {
                 Scope scope = createInitialScope();
                 m_cVars   = scope.getMaxVars();
@@ -501,7 +502,7 @@ public class MethodStructure
                 }
             else
                 {
-                ensureCode().ensureAssembled();
+                code.ensureAssembled();
                 assert m_cScopes > 0;
                 }
             }

@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
 
@@ -114,9 +115,18 @@ public class PropertyConstant
         }
 
     @Override
-    public PropertyStructure resolveNestedIdentity(ClassStructure clz)
+    public Object resolveNestedIdentity(GenericTypeResolver resolver)
         {
-        Component parent = getNamespace().resolveNestedIdentity(clz);
+        // property can be identified with only a name, assuming it is not recursively nested
+        return getNamespace().isNested()
+                ? new NestedIdentity(resolver)
+                : getName();
+        }
+
+    @Override
+    public PropertyStructure relocateNestedIdentity(ClassStructure clz)
+        {
+        Component parent = getNamespace().relocateNestedIdentity(clz);
         if (parent == null)
             {
             return null;

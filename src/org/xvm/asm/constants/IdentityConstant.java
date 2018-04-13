@@ -10,6 +10,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.util.Handy;
 
@@ -177,6 +178,13 @@ public abstract class IdentityConstant
                 : null;
         }
 
+    public Object resolveNestedIdentity(GenericTypeResolver resolver)
+        {
+        return isNested()
+                ? new NestedIdentity(resolver)
+                : null;
+        }
+
     /**
      * Determine the nesting depth of a particular nested identity.
      *
@@ -250,7 +258,7 @@ public abstract class IdentityConstant
      *
      * @return the corresponding nested Component, or null
      */
-    public Component resolveNestedIdentity(ClassStructure clz)
+    public Component relocateNestedIdentity(ClassStructure clz)
         {
         assert !isNested();
         return clz;
@@ -297,6 +305,16 @@ public abstract class IdentityConstant
      */
     public class NestedIdentity
         {
+        public NestedIdentity()
+            {
+            this(null);
+            }
+
+        public NestedIdentity(GenericTypeResolver resolver)
+            {
+            m_resolver = resolver;
+            }
+
         /**
          * @return the IdentityConstant that created this NestedIdentity
          */
@@ -320,7 +338,7 @@ public abstract class IdentityConstant
             IdentityConstant id = IdentityConstant.this;
             while (id.isNested())
                 {
-                n ^= id.getPathElement().hashCode();
+                n ^= resolve(id.getPathElement()).hashCode();
                 id = id.getNamespace();
                 }
             return n;
@@ -344,7 +362,7 @@ public abstract class IdentityConstant
             IdentityConstant idThat = that.getIdentityConstant();
             while (idThis.isNested() && idThat.isNested())
                 {
-                if (!idThis.getPathElement().equals(idThat.getPathElement()))
+                if (!resolve(idThis.getPathElement()).equals(resolve(idThat.getPathElement())))
                     {
                     return false;
                     }
@@ -355,6 +373,16 @@ public abstract class IdentityConstant
 
             return idThis.isNested() == idThat.isNested();
             }
+
+        private Object resolve(Object element)
+            {
+            // REVIEW: should we resolveAutoNarrowing()
+            return m_resolver != null && element instanceof SignatureConstant
+                    ? ((SignatureConstant) element).resolveGenericTypes(m_resolver)
+                    : element;
+            }
+
+        private final GenericTypeResolver m_resolver;
         }
 
     /**
@@ -392,7 +420,8 @@ public abstract class IdentityConstant
      */
     public Component getComponent()
         {
-        return getParentConstant().getComponent().getChild(this);
+        Component parent = getParentConstant().getComponent();
+        return parent == null ? null : parent.getChild(this);
         }
 
     /**

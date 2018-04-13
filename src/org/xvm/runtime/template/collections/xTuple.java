@@ -10,6 +10,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -34,6 +36,7 @@ public class xTuple
         implements IndexSupport
     {
     public static xTuple INSTANCE;
+    public static TypeConstant INCEPTION_TYPE;
     public static xTuple.TupleHandle H_VOID;
 
     public xTuple(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
@@ -43,6 +46,8 @@ public class xTuple
         if (fInstance)
             {
             INSTANCE = this;
+            INCEPTION_TYPE = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
             H_VOID = makeHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
             }
         }
@@ -54,6 +59,12 @@ public class xTuple
         f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"collections.Sequence<Object>"}, VOID);
 
         markNativeMethod("construct", new String[]{"collections.Sequence<Object>"}, VOID);
+        }
+
+    @Override
+    protected TypeConstant getInceptionType()
+        {
+        return INCEPTION_TYPE;
         }
 
     @Override

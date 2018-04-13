@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
@@ -123,10 +126,12 @@ public class AnnotatedTypeConstant
         }
 
     /**
-     * REVIEW find all the places that call getAnnotation() and then call getType() on that, and eval which should use this instead
+     * Return the annotation type with any type parameters resolved that overlap with the
+     * underlying TypeConstant.
      *
-     * @return the annotation type with any type parameters resolved that overlap with the
-     *         underlying TypeConstant
+     * For example, an "@Atomic Var<Int>" type should yield AtomicVar<Int>.
+     *
+     * @return the resolved annotation type
      */
     public TypeConstant getAnnotationType()
         {
@@ -212,6 +217,61 @@ public class AnnotatedTypeConstant
         return m_constType.unwrapForCongruence();
         }
 
+
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    public List<Component.ContributionChain> collectContributions(
+            TypeConstant typeLeft, List<TypeConstant> listRight, List<Component.ContributionChain> chains)
+        {
+        // this logic is identical to the union of the annotation type and the underlying type
+        assert listRight.isEmpty();
+
+        TypeConstant typeAnno = getAnnotationType();
+        TypeConstant typeOrig = getUnderlyingType();
+
+        List<Component.ContributionChain> chains1 = typeAnno.collectContributions(typeLeft, listRight, new ArrayList<>());
+        List<Component.ContributionChain> chains2 = typeOrig.collectContributions(typeLeft, new ArrayList<>(), new ArrayList<>());
+
+        // any contribution would do
+        if (!chains1.isEmpty())
+            {
+            validateChains(chains1, typeAnno, typeLeft);
+            }
+
+        if (!chains2.isEmpty())
+            {
+            validateChains(chains2, typeOrig, typeLeft);
+            }
+
+        chains.addAll(chains1);
+        chains.addAll(chains2);
+
+        return chains;
+        }
+
+    @Override
+    protected List<Component.ContributionChain> collectClassContributions(
+            ClassStructure clzRight, List<TypeConstant> listRight, List<Component.ContributionChain> chains)
+        {
+        // this logic is identical to the union of the annotation type and the underlying type
+        assert listRight.isEmpty();
+
+        TypeConstant typeAnno = getUnderlyingType();
+        TypeConstant typeOrig = getUnderlyingType2();
+
+        List<Component.ContributionChain> chains1 = typeAnno.collectClassContributions(clzRight, listRight, new ArrayList<>());
+        List<Component.ContributionChain> chains2 = typeOrig.collectClassContributions(clzRight, new ArrayList<>(), new ArrayList<>());
+
+        // both branches have to have contributions
+        if (!chains1.isEmpty() && !chains2.isEmpty())
+            {
+            chains.addAll(chains1);
+            chains.addAll(chains2);
+            }
+
+        return chains;
+        }
 
     // ----- run-time support ----------------------------------------------------------------------
 

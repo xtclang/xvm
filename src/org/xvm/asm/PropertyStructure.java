@@ -14,8 +14,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassTemplate;
-
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -109,9 +107,6 @@ public class PropertyStructure
         {
         return m_type;
         }
-
-    // TODO what is the RefType of the Ref/Var for this at runtime? getRefType() (if it's not already taken)
-    // TODO this means that AnnotatedTypeConstant (hence Annotation) has to hold a type not a class, so that it can be parameterized for this use case
 
     /**
      * Configure the property's type.
@@ -297,23 +292,19 @@ public class PropertyStructure
         }
 
     /**
-     * @return the transient property info
+     * @return true iff the getter for the property is native
      */
-    public ClassTemplate.PropertyInfo getInfo()
+    public boolean isNativeGetter()
         {
-        return m_info;
+        return m_fNativeGetter;
         }
 
     /**
-     * Store the transient property info.
+     * Mark the getter for the property as native.
      */
-    public void setInfo(ClassTemplate.PropertyInfo info)
+    public void markNativeGetter()
         {
-        if (m_info != null)
-            {
-            throw new IllegalStateException("Info is not resettable");
-            }
-        m_info = info;
+        m_fNativeGetter = true;
         }
 
     /**
@@ -401,7 +392,7 @@ public class PropertyStructure
                     }
 
                 // see if the mixin applies to a Property or a Ref/Var, in which case it stays in
-                // this list; otherwise, move it
+                // this list; otherwise (e.g. UncheckedInt), move it into the type itself
                 boolean fMove = true;
                 if (contribInto != null)
                     {
@@ -547,6 +538,11 @@ public class PropertyStructure
     private Constant m_constVal;
 
     /**
+     * Indicates that the property has a native getter.
+     */
+    private transient boolean m_fNativeGetter;
+
+    /**
      * Indicates that the property has a value, even if it hasn't been determined yet.
      */
     private transient boolean m_fHasValue;
@@ -557,15 +553,12 @@ public class PropertyStructure
     private transient Annotation[] m_aPropAnno;
 
     /**
+     * A cached RefType.
+     */
+    private transient TypeConstant m_typeRef;
+
+    /**
      * A cached array of the annotations that apply to the Ref/Var of the property.
      */
     private transient Annotation[] m_aRefAnno;
-
-
-    // ----- TEMPORARY -----------------------------------------------------------------------------
-
-    /**
-     * The transient run-time method data.
-     */
-    private transient ClassTemplate.PropertyInfo m_info;
     }
