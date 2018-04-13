@@ -262,7 +262,7 @@ PropertyDeclarationFinish
 #
 
 MethodDeclarationStatement
-    MethodModifiers-opt TypeParameterList-opt NamePrecursor Name RedundantReturnSpecifier ParameterList MethodDeclarationFinish
+    MethodModifiers-opt TypeParameterList-opt MethodIdentity ParameterList MethodDeclarationFinish
 
 MethodModifiers
     MethodModifier
@@ -272,9 +272,9 @@ MethodModifier
     Modifier
     Annotation
 
-NamePrecursor
+MethodIdentity
     "construct"
-    "conditional"-opt ReturnList
+    "conditional"-opt ReturnList Name RedundantReturnSpecifier-opt
 
 ReturnList
     SingleReturnList
@@ -633,7 +633,6 @@ MultiplicativeExpression
 
 PrefixExpression
     PostfixExpression
-    "throw" PrefixExpression
     "++" PrefixExpression
     "--" PrefixExpression
     "+" PrefixExpression
@@ -697,13 +696,13 @@ ExpressionList
 PrimaryExpression
     "(" Expression ")"
     "new" TypeExpression NewFinish
-    "construct" QualifiedName
-    "&"-opt QualifiedName TypeParameterTypeList-opt
+    "throw" TernaryExpression
+    "T0D0" TodoFinish-opt
+    "&"-opt "construct"-opt QualifiedName TypeParameterTypeList-opt
     StatementExpression
     SwitchExpression
     LambdaExpression
     "_"
-    "T0D0" TodoFinish-opt
     Literal
 
 # a statement expression is a lambda with an implicit "()->" preamble and with an implicit "()"
