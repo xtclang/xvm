@@ -1563,25 +1563,8 @@ public abstract class TypeConstant
         NextContrib: for ( ; iContrib < cContribs; ++iContrib)
             {
             // only process annotations
-            Contribution contrib  = listContribs.get(iContrib);
-
-            // TODO GG clean up (should this be in a helper?)
-            TypeConstant typeContribRaw = contrib.getTypeConstant();
-            TypeConstant typeContrib;
-            if (typeContribRaw.isParamsSpecified())
-                {
-                List<TypeConstant> listIn  = this.getParamTypes();
-                List<TypeConstant> listOut = contrib.transformActualTypes(struct, listIn);
-                // TODO GG should this somehow use TC.cloneSingle instead of CP.ensure?
-                typeContrib = listOut == null
-                        ? null
-                        : pool.ensureParameterizedTypeConstant(typeContribRaw.getUnderlyingType(),
-                                listOut.toArray(new TypeConstant[listOut.size()]));
-                }
-            else
-                {
-                typeContrib = typeContribRaw;
-                }
+            Contribution contrib     = listContribs.get(iContrib);
+            TypeConstant typeContrib = contrib.resolveGenerics(this);
 
             switch (contrib.getComposition())
                 {
@@ -1609,18 +1592,18 @@ public abstract class TypeConstant
 
                 case Incorporates:
                     {
+                    if (typeContrib == null)
+                        {
+                        // the type contribution does not apply conditionally to "this" type
+                        continue NextContrib;
+                        }
+
                     if (struct.getFormat() == Component.Format.INTERFACE)
                         {
                         log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
                                 typeContrib.getValueString(),
                                 constId.getPathString());
                         break;
-                        }
-
-                    if (typeContrib == null)
-                        {
-                        // the type contribution does not apply conditionally to "this" type
-                        continue NextContrib;
                         }
 
                     if (!typeContrib.isExplicitClassIdentity(true))

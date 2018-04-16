@@ -28,12 +28,14 @@ class TestCompiler<TestType1 extends Number,
     class MyConsumer<VMC>
             implements Consumer<VMC>
         {
+        @Override
         Boolean containsValue(VMC value) {return true;}
         }
 
     mixin MyConsumer2<VMC>
             implements Consumer<VMC>
         {
+        @Override
         Boolean containsValue(VMC value) {return true;}
         }
 
@@ -43,6 +45,7 @@ class TestCompiler<TestType1 extends Number,
     class MyClass4<K4>
             implements Consumer<Number>
         {
+        @Override
         Boolean containsValue(Int value) {return false;}
         }
 
