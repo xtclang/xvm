@@ -2,7 +2,6 @@ package org.xvm.runtime;
 
 
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -224,25 +223,22 @@ public abstract class ClassTemplate
      * Produce a TypeComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
-     * Note: the passed inception type should be fully resolved and normalized
+     * Note: the passed inception and mask types should be fully resolved and normalized
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    public TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
+    protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        assert !typeInception.isAccessSpecified() || typeInception.getAccess() == Access.PRIVATE;
+        assert !typeInception.isAccessSpecified();
+        assert !typeMask.isAccessSpecified();
         assert typeInception.normalizeParameters() == typeInception;
+        assert typeMask.normalizeParameters() == typeMask;
 
-        return m_mapCompositions.computeIfAbsent(typeMask, (type) ->
+        return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
-            TypeConstant typeI   = typeInception;
-            OpSupport    support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
+            OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            if (!typeI.isAccessSpecified())
-                {
-                typeI = typeI.getConstantPool().ensureAccessTypeConstant(typeI, Access.PRIVATE);
-                }
-            return new TypeComposition(support, typeI, type);
+            return new TypeComposition(support, typeI, typeMask);
             });
         }
 
@@ -416,7 +412,7 @@ public abstract class ClassTemplate
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
-        ObjectHandle hStruct = createStruct(frame, clazz).ensureAccess(Access.STRUCT);
+        ObjectHandle hStruct = createStruct(frame, clazz);
 
         // assume that we have C1 with a default constructor (DC), a regular constructor (RC1),
         // and a finalizer (F1) that extends C0 with a constructor (RC0) and a finalizer (F0)
@@ -455,7 +451,7 @@ public abstract class ClassTemplate
         Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
         if (mapConstructors == null)
             {
-            mapConstructors = new ConcurrentHashMap<>();
+            mapConstructors = m_mapConstructors = new ConcurrentHashMap<>();
             }
 
         MethodStructure methodDC = mapConstructors.computeIfAbsent(
@@ -474,7 +470,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create an ObjectHandle for the specified clazz.
+     * Create an ObjectHandle of the "struct" access for the specified natural class.
      *
      * @param frame  the current frame
      * @param clazz  the TypeComposition for the newly created handle
@@ -486,6 +482,8 @@ public abstract class ClassTemplate
         assert clazz.getTemplate() == this &&
              (f_struct.getFormat() == Component.Format.CLASS ||
               f_struct.getFormat() == Component.Format.CONST);
+
+        clazz = clazz.ensureAccess(Access.STRUCT);
 
         return new GenericHandle(clazz);
         }
@@ -1463,17 +1461,24 @@ public abstract class ClassTemplate
     protected TypeComposition m_clazzCanonical;
 
     /**
-     * A cache of TypeCompositions keyed by the "revealed type".
+     * A cache of "instantiate-able" TypeCompositions keyed by the "inception type". Most of the
+     * time the revealed type is identical to the inception type and is defined by a
+     * {@link ClassConstant} referring to a concrete natural class (not an interface).
      *
-     * We assume that for a given template, there will never be two classes with the same
-     * revealed types, but different inception types.
+     * The only exceptions are the native types (e.g. Ref, Service), for which the inception type is
+     * defined by a {@link org.xvm.asm.constants.NativeRebaseConstant} class constant and the
+     * revealed type refers to the corresponding natural interface.
      *
-     * If that assumption breaks, we'd need to either change the key, or link-list the classes.
+     * We assume that for a given template, there will never be two instantiate-able classes with
+     * the same inception type, but different revealed type. OTOH, the TypeComposition may
+     * hide (or mask) its original identity via the {@link TypeComposition#maskAs(TypeConstant)}
+     * operation and later reveal it back. All those transformations are handled by the
+     * TypeComposition itself and are not known or controllable by the ClassTemplate.
      */
-    protected Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
+    private Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * A cache of default constructors.
      */
-    protected Map<TypeConstant, MethodStructure> m_mapConstructors;
+    private Map<TypeConstant, MethodStructure> m_mapConstructors;
     }

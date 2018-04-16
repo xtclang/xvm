@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -74,7 +75,10 @@ public class xService
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         // called via constructSync()
-        return makeHandle(frame.f_context, clazz, clazz.getType());
+        ServiceContext context = frame.f_context;
+        ServiceHandle hService = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
+        context.setService(hService);
+        return hService;
         }
 
     @Override
