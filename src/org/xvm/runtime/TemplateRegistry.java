@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -24,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -271,6 +271,10 @@ public class TemplateRegistry
 
                 case CONST:
                     template = new xConst(this, structClass, false);
+                    break;
+
+                case MODULE:
+                    template = new xModule(this, structClass, false);
                     break;
 
                 default:

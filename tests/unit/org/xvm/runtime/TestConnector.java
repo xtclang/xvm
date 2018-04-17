@@ -3,7 +3,6 @@ package org.xvm.runtime;
 
 import org.xvm.api.Connector;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleRepository;
 
 import org.xvm.compiler.CommandLine;
@@ -15,21 +14,28 @@ public class TestConnector
     {
     public static void main(String[] asArg) throws Exception
         {
-        if (asArg.length == 0)
+        if (asArg.length < 1)
             {
             System.err.println("Application name is missing");
             return;
             }
 
-        String sApp = asArg[0];
+        if (asArg.length < 2)
+            {
+            System.err.println("Module location is missing");
+            return;
+            }
+
+        String sModule = asArg[0];
+        String sFile = asArg[1];
 
         CommandLine cmd = new CommandLine(
-            new String[] {ConstantPool.ECSTASY_MODULE, sApp});
+            new String[] {"system", sFile});
 
         ModuleRepository repository = cmd.build();
 
         Connector connector = new Connector(repository);
-        connector.loadModule(sApp);
+        connector.loadModule(sModule);
         connector.start();
 
         connector.invoke0("run", Utils.OBJECTS_NONE);

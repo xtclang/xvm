@@ -28,11 +28,11 @@ import org.xvm.runtime.template.xModule.ModuleHandle;
  */
 public class Container
     {
-    final public Runtime f_runtime;
-    final public ModuleRepository f_repository;
-    final public TemplateRegistry f_templates;
-    final public Adapter f_adapter;
-    final public ObjectHeap f_heapGlobal;
+    public final Runtime f_runtime;
+    public final ModuleRepository f_repository;
+    public final TemplateRegistry f_templates;
+    public final Adapter f_adapter;
+    public final ObjectHeap f_heapGlobal;
 
     final protected ModuleStructure f_moduleRoot;
     final protected ModuleConstant f_constModule;
@@ -44,9 +44,9 @@ public class Container
     private ServiceContext m_contextMain;
 
     // the module
+    private final String f_sAppName;
     private ModuleHandle m_hModule;
-    private ObjectHandle m_hApp; // replace with m_hModule
-    private String f_sAppName;
+    private ClassTemplate m_app; // replace with m_hModule
 
     // the values are: ObjectHandle | Supplier<ObjectHandle>
     final Map<InjectionKey, Object> f_mapResources = new HashMap<>();
@@ -57,13 +57,23 @@ public class Container
         f_sAppName = sAppName;
 
         f_repository = repository;
-        f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);  // TODO: loadModule(sAppName)
-        f_constModule = (ModuleConstant) f_moduleRoot.getIdentityConstant();
+        f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
 
         ConstantPool poolRoot = f_moduleRoot.getConstantPool();
         f_templates = new TemplateRegistry(this);
         f_adapter = new Adapter(poolRoot, f_templates, f_moduleRoot);
         f_heapGlobal = new ObjectHeap(poolRoot, f_templates);
+
+        if (sAppName.equals("TestApp"))
+            {
+            // TODO: remove -- but for now TestApp is a part of the "system"
+            f_constModule = (ModuleConstant) f_moduleRoot.getIdentityConstant();
+            }
+        else
+            {
+            ModuleStructure module = repository.loadModule(sAppName);
+            f_constModule = (ModuleConstant) module.getIdentityConstant();
+            }
         }
 
     public void start()
@@ -74,6 +84,16 @@ public class Container
             }
 
         f_templates.loadNativeTemplates(f_moduleRoot);
+
+        if (f_sAppName.equals("TestApp"))
+            {
+            // TODO: remove -- but for now TestApp is a part of the "system"
+            m_app = f_templates.getTemplate(f_sAppName);
+            }
+        else
+            {
+            m_app = f_templates.getTemplate(f_constModule);
+            }
 
         m_contextMain = createServiceContext(f_sAppName, f_moduleRoot);
         xService.makeHandle(m_contextMain,
@@ -87,13 +107,11 @@ public class Container
         {
         try
             {
-            ClassTemplate app = f_templates.getTemplate(f_sAppName); // TODO: that should be a module
-
             // TODO: find a matching method
-            MethodStructure mtRun = app.getDeclaredMethod(sMethodName, TemplateRegistry.VOID, TemplateRegistry.VOID);
+            MethodStructure mtRun = m_app.getDeclaredMethod(sMethodName, TemplateRegistry.VOID, TemplateRegistry.VOID);
             if (mtRun == null)
                 {
-                System.err.println("Missing: " +  sMethodName + " method for " + f_sAppName);
+                System.err.println("Missing: " +  sMethodName + " method for " + m_app);
                 return;
                 }
 
