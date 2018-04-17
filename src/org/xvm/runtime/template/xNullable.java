@@ -29,7 +29,8 @@ public class xNullable
         {
         if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            ConstantPool pool = f_templates.f_container.f_pool;
+            ConstantPool pool = f_struct.getConstantPool();
+
             f_templates.registerNativeTemplate(pool.typeNull(), this);
 
             NULL = new NullHandle(getCanonicalClass());

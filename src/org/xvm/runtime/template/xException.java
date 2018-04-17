@@ -39,7 +39,7 @@ public class xException
     public void initDeclared()
         {
         // TODO: remove everything when compiler generates the constructors
-        f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
+        f_templates.f_container.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
 
         MethodStructure ct = getMethodStructure("construct", new String[]{"String", "Exception"}, VOID);
         ct.setOps(new Op[] // #0 - text, #1 - cause

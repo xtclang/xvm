@@ -88,7 +88,7 @@ public class xMethod
 
     public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)
         {
-        ConstantPool pool = INSTANCE.f_templates.f_container.f_pool;
+        ConstantPool pool = method.getConstantPool();
 
         TypeConstant typeRet = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getReturnTypes());
         TypeConstant typeArg = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getParamTypes());

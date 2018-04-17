@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -29,12 +29,11 @@ import org.xvm.runtime.template.xService;
 
 
 /**
- * The type registry.
+ * The template registry.
  */
 public class TemplateRegistry
     {
     public final Container f_container;
-    public final Adapter f_adapter;
 
     // cache - TypeConstant by name (only for core classes)
     private final Map<String, TypeConstant> f_mapTypesByName = new ConcurrentHashMap<>();
@@ -47,10 +46,9 @@ public class TemplateRegistry
     TemplateRegistry(Container container)
         {
         f_container = container;
-        f_adapter = container.f_adapter;
         }
 
-    protected void loadNativeTemplates()
+    void loadNativeTemplates(ModuleStructure moduleRoot)
         {
         Class clzObject = xObject.class;
         URL url = clzObject.getProtectionDomain().getCodeSource().getLocation();
@@ -60,8 +58,7 @@ public class TemplateRegistry
         Map<String, Class> mapTemplateClasses = new HashMap<>();
         scanNativeDirectory(dirNative, "", mapTemplateClasses);
 
-        ConstantPool pool = f_container.f_pool;
-        ModuleStructure module = f_container.f_module;
+        ConstantPool pool = moduleRoot.getConstantPool();
 
         // we need a number of INSTANCE static variables to be set up right away
         // (they are used by the ClassTemplate constructor)
@@ -72,7 +69,7 @@ public class TemplateRegistry
 
         for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet())
             {
-            ClassStructure structClass = (ClassStructure) module.getChildByPath(entry.getKey());
+            ClassStructure structClass = (ClassStructure) moduleRoot.getChildByPath(entry.getKey());
             if (structClass == null)
                 {
                 // this is a native class for a composite type;
@@ -177,19 +174,19 @@ public class TemplateRegistry
 
     // ----- templates and structures -----
 
+    // used only by the native templates
     public ClassStructure getClassStructure(String sName)
         {
-        // TODO: plug in module repositories
-        try
+        // this call (class by name) can only come from the root module
+        Component comp = f_container.f_moduleRoot.getChildByPath(sName);
+        if (comp instanceof ClassStructure)
             {
-            return (ClassStructure) f_container.f_module.getChildByPath(sName);
+            return (ClassStructure) comp;
             }
-        catch (ClassCastException e)
-            {
-            throw new IllegalArgumentException("Not a class: " + sName);
-            }
+        throw new IllegalArgumentException("Class not found: " + sName);
         }
 
+    // this call (template by name) can only come from the root module
     public TypeConstant getTypeConstant(String sName)
         {
         try
@@ -203,6 +200,7 @@ public class TemplateRegistry
             }
         }
 
+    // this call (template by name) can only come from the root module
     public ClassConstant getClassConstant(String sName)
         {
         try
@@ -215,9 +213,9 @@ public class TemplateRegistry
             }
         }
 
+    // this call (template by name) can only come from the root module
     public ClassTemplate getTemplate(String sName)
         {
-        // for core classes only
         return getTemplate(getTypeConstant(sName));
         }
 
@@ -283,15 +281,6 @@ public class TemplateRegistry
         }
 
     // ----- TypeCompositions -----
-
-    // ensure a TypeComposition for a type referred by a TypeConstant in the ConstantPool
-    public TypeComposition resolveClass(int nTypeConstId, GenericTypeResolver resolver)
-        {
-        TypeConstant type = (TypeConstant)
-                f_container.f_pool.getConstant(nTypeConstId); // must exist
-
-        return resolveClass(type.resolveGenerics(resolver));
-        }
 
     // produce a TypeComposition based on the specified TypeConstant
     public TypeComposition resolveClass(TypeConstant typeActual)

@@ -29,12 +29,12 @@ import org.xvm.runtime.template.xModule.ModuleHandle;
 public class Container
     {
     final public Runtime f_runtime;
+    final public ModuleRepository f_repository;
     final public TemplateRegistry f_templates;
-    final public ConstantPool f_pool;
     final public Adapter f_adapter;
     final public ObjectHeap f_heapGlobal;
 
-    final protected ModuleStructure f_module;
+    final protected ModuleStructure f_moduleRoot;
     final protected ModuleConstant f_constModule;
 
     // service context map (concurrent set)
@@ -56,13 +56,14 @@ public class Container
         f_runtime = runtime;
         f_sAppName = sAppName;
 
-        f_module = repository.loadModule(Constants.ECSTASY_MODULE);  // TODO: loadModule(sAppName)
-        f_constModule = (ModuleConstant) f_module.getIdentityConstant();
+        f_repository = repository;
+        f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);  // TODO: loadModule(sAppName)
+        f_constModule = (ModuleConstant) f_moduleRoot.getIdentityConstant();
 
-        f_pool = f_module.getConstantPool();
-        f_adapter = new Adapter(this);
+        ConstantPool poolRoot = f_moduleRoot.getConstantPool();
         f_templates = new TemplateRegistry(this);
-        f_heapGlobal = new ObjectHeap(f_pool, f_templates);
+        f_adapter = new Adapter(poolRoot, f_templates, f_moduleRoot);
+        f_heapGlobal = new ObjectHeap(poolRoot, f_templates);
         }
 
     public void start()
@@ -72,9 +73,9 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
-        f_templates.loadNativeTemplates();
+        f_templates.loadNativeTemplates(f_moduleRoot);
 
-        m_contextMain = createServiceContext(f_sAppName);
+        m_contextMain = createServiceContext(f_sAppName, f_moduleRoot);
         xService.makeHandle(m_contextMain,
             xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
@@ -115,7 +116,7 @@ public class Container
             ClassTemplate templateRTClock = f_templates.getTemplate("Clock.RuntimeClock");
 
             Supplier<ObjectHandle> supplierClock = () ->
-                xService.makeHandle(createServiceContext("RuntimeClock"),
+                xService.makeHandle(createServiceContext("RuntimeClock", f_moduleRoot),
                     templateRTClock.getCanonicalClass(), typeClock);
 
             f_mapResources.put(new InjectionKey("runtimeClock", typeClock), supplierClock);
@@ -130,16 +131,17 @@ public class Container
             ClassTemplate templateRTConsole = f_templates.getTemplate("io.Console.TerminalConsole");
 
             Supplier<ObjectHandle> supplierConsole = () ->
-                xService.makeHandle(createServiceContext("Console"),
+                xService.makeHandle(createServiceContext("Console", f_moduleRoot),
                     templateRTConsole.getCanonicalClass(), typeConsole);
 
             f_mapResources.put(new InjectionKey("console", typeConsole), supplierConsole);
             }
         }
 
-    public ServiceContext createServiceContext(String sName)
+    public ServiceContext createServiceContext(String sName, ModuleStructure module)
         {
-        ServiceContext context = new ServiceContext(this, sName, f_runtime.f_idProducer.getAndIncrement());
+        ServiceContext context = new ServiceContext(this, module, sName,
+            f_runtime.f_idProducer.getAndIncrement());
 
         f_mapServices.put(context, context);
         f_runtime.f_daemons.addService(context);

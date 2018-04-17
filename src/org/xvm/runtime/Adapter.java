@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
@@ -32,14 +33,18 @@ import org.xvm.util.Handy;
  */
 public class Adapter
     {
-    public final Container f_container;
+    public final ConstantPool f_pool;
+    protected final TemplateRegistry f_templates;
+    protected final ModuleStructure f_moduleRoot;
 
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
 
-    public Adapter(Container container)
+    public Adapter(ConstantPool pool, TemplateRegistry registry, ModuleStructure moduleRoot)
         {
-        f_container = container;
+        f_pool = pool;
+        f_templates = registry;
+        f_moduleRoot = moduleRoot;
         }
 
     // get a "relative" type id for the specified name in the context of the
@@ -70,7 +75,7 @@ public class Adapter
                 aconstTypes[i] = getClassType(asName[i], null);
                 }
 
-            ConstantPool pool = f_container.f_pool;
+            ConstantPool pool = f_pool;
             constType = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aconstTypes);
             }
 
@@ -84,7 +89,7 @@ public class Adapter
     // specified template
     public TypeConstant getClassType(String sName, ClassTemplate template)
         {
-        ConstantPool pool = f_container.f_pool;
+        ConstantPool pool = f_pool;
 
         if (sName.startsWith("@"))
             {
@@ -118,7 +123,7 @@ public class Adapter
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
                 }
 
-            ClassConstant constClass = f_container.f_templates.getClassConstant(sSimpleName);
+            ClassConstant constClass = f_templates.getClassConstant(sSimpleName);
             if (constClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
@@ -135,7 +140,15 @@ public class Adapter
                     pool.clzObject() : template.f_struct.getIdentityConstant();
                 return pool.ensureThisTypeConstant(constId, null);
                 }
-            Component component = f_container.f_module.getChildByPath(sName);
+
+            if (template != null && template.f_struct.indexOfGenericParameter(sName) >= 0)
+                {
+                // generic type property
+                PropertyStructure prop = template.getProperty(sName);
+                return pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
+                }
+
+            Component component = f_moduleRoot.getChildByPath(sName);
             if (component != null)
                 {
                 IdentityConstant constId = component.getIdentityConstant();
@@ -169,8 +182,8 @@ public class Adapter
 
     public SingletonConstant getSingletonConstant(String sClass)
         {
-        ClassConstant constClass = f_container.f_templates.getClassConstant(sClass);
-        return f_container.f_pool.ensureSingletonConstConstant(constClass);
+        ClassConstant constClass = f_templates.getClassConstant(sClass);
+        return f_pool.ensureSingletonConstConstant(constClass);
         }
 
     // get a "relative" method constant id
@@ -182,7 +195,7 @@ public class Adapter
     // get a "relative" method constant id
     public int getMethodConstId(String sClassName, String sMethName, String[] asArgType, String[] asRetType)
         {
-        ClassTemplate template = f_container.f_templates.getTemplate(sClassName);
+        ClassTemplate template = f_templates.getTemplate(sClassName);
 
         return Op.CONSTANT_OFFSET -
             getMethod(template, sMethName, asArgType, asRetType).getIdentityConstant().getPosition();
@@ -222,7 +235,7 @@ public class Adapter
         {
         try
             {
-            ClassConstant constClass = f_container.f_templates.getClassConstant(sClassName);
+            ClassConstant constClass = f_templates.getClassConstant(sClassName);
             ClassStructure struct = (ClassStructure) constClass.getComponent();
             PropertyStructure prop = (PropertyStructure) struct.getChild(sPropName);
             return Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition();
@@ -246,29 +259,18 @@ public class Adapter
             return null;
             }
 
-        ConstantPool pool = f_container.f_pool;
         int cTypes = asType.length;
         TypeConstant[] aType = new TypeConstant[cTypes];
         for (int i = 0; i < cTypes; i++)
             {
-            String sType = asType[i].trim();
-            if (template != null && template.f_struct.indexOfGenericParameter(sType) >= 0)
-                {
-                // generic type property
-                PropertyStructure prop = template.getProperty(sType);
-                aType[i] = pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
-                }
-            else
-                {
-                aType[i] = getClassType(sType, template);
-                }
+            aType[i] = getClassType(asType[i].trim(), template);
             }
         return aType;
         }
 
     private Parameter[] getTypeParameters(String[] asType, boolean fReturn)
         {
-        ConstantPool pool = f_container.f_pool;
+        ConstantPool pool = f_pool;
         int cTypes = asType.length;
         Parameter[] aType = new Parameter[cTypes];
         for (int i = 0; i < cTypes; i++)
@@ -283,7 +285,7 @@ public class Adapter
 
     public Constant ensureValueConstant(Object oValue)
         {
-        ConstantPool pool = f_container.f_pool;
+        ConstantPool pool = f_pool;
         if (oValue instanceof Integer || oValue instanceof Long)
             {
             return pool.ensureIntConstant(((Number) oValue).longValue());

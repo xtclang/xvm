@@ -64,7 +64,7 @@ public class xService
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
+        ServiceContext contextNew = frame.f_context.createContext(f_sName);
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 

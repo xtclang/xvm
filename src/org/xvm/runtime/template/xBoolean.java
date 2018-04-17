@@ -40,7 +40,8 @@ public class xBoolean
         {
         if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            ConstantPool pool = f_templates.f_container.f_pool;
+            ConstantPool pool = f_struct.getConstantPool();
+
             f_templates.registerNativeTemplate(pool.typeTrue(), this);
             f_templates.registerNativeTemplate(pool.typeFalse(), this);
 

@@ -1383,7 +1383,7 @@ public abstract class ClassTemplate
 
     public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
+        MethodStructure method = f_templates.f_container.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
             {
             throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);

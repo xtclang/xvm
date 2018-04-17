@@ -20,39 +20,37 @@ import org.xvm.asm.constants.TypeConstant;
 public class ObjectHeap
     {
     public final TemplateRegistry f_templates;
-    public final ConstantPool f_pool;
+    public final ConstantPool f_poolRoot;
 
-    private Map<Integer, ObjectHandle> m_mapConstants = new ConcurrentHashMap<>();
+    private Map<Constant, ObjectHandle> m_mapConstants = new ConcurrentHashMap<>();
 
     public ObjectHeap(ConstantPool pool, TemplateRegistry templates)
         {
+        f_poolRoot = pool;
         f_templates = templates;
-        f_pool = pool;
         }
 
     // nValueConstId -- "literal" (Int/String/etc.) Constant known by the ConstantPool
-    public ObjectHandle ensureConstHandle(Frame frame, int nValueConstId)
+    public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {
-        // we cannot use computeIfAbsent, since createConstHandle can be recursive,
+        // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,
         // and ConcurrentHashMap is not recursion friendly
-        Map<Integer, ObjectHandle> mapConstants = m_mapConstants;
-        ObjectHandle hValue = mapConstants.get(nValueConstId);
+        Map<Constant, ObjectHandle> mapConstants = m_mapConstants;
+        ObjectHandle hValue = mapConstants.get(constValue);
         if (hValue != null)
             {
             return hValue;
             }
 
-        hValue = createConstHandle(frame, nValueConstId);
+        hValue = createConstHandle(frame, constValue);
 
-        ObjectHandle hValue0 = mapConstants.putIfAbsent(nValueConstId, hValue);
+        ObjectHandle hValue0 = mapConstants.putIfAbsent(constValue, hValue);
 
         return hValue0 == null ? hValue : hValue0;
         }
 
-    private ObjectHandle createConstHandle(Frame frame, int nValueConstId)
+    private ObjectHandle createConstHandle(Frame frame, Constant constValue)
         {
-        Constant constValue = f_pool.getConstant(nValueConstId);
-
         if (constValue instanceof SingletonConstant)
             {
             ObjectHandle hValue = ((SingletonConstant) constValue).getHandle();
@@ -83,10 +81,10 @@ public class ObjectHeap
         switch (constValue.getFormat())
             {
             case Array:
-                return f_pool.typeArray();
+                return f_poolRoot.typeArray();
 
             case Int64:
-                return f_pool.typeInt();
+                return f_poolRoot.typeInt();
 
             case IntLiteral:
             case Int8:
@@ -116,7 +114,7 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case String:
-                return f_pool.typeString();
+                return f_poolRoot.typeString();
 
             case Date:
             case Time:
@@ -136,7 +134,7 @@ public class ObjectHeap
                 }
 
             case Tuple:
-                return f_pool.typeTuple();
+                return f_poolRoot.typeTuple();
 
             case UInt8Array:
                 throw new UnsupportedOperationException("TODO: " + constValue);
@@ -147,31 +145,31 @@ public class ObjectHeap
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Module:
-                return f_pool.typeModule();
+                return f_poolRoot.typeModule();
 
             case Package:
                 throw new UnsupportedOperationException("TODO: " + constValue);
 
             case Class:
-                return f_pool.typeClass();
+                return f_poolRoot.typeClass();
 
             case Property:
-                return f_pool.typeProperty();
+                return f_poolRoot.typeProperty();
 
             case Method:
-                return f_pool.typeFunction();
+                return f_poolRoot.typeFunction();
 
             case AnnotatedType:
             case ParameterizedType:
             case TerminalType:
-                return f_pool.typeClass(); // REVIEW type vs. class
+                return f_poolRoot.typeClass(); // REVIEW type vs. class
 
             case ImmutableType:
             case AccessType:
             case UnionType:
             case IntersectionType:
             case DifferenceType:
-                return f_pool.typeType();
+                return f_poolRoot.typeType();
 
             case MultiMethod:
             case Register:
