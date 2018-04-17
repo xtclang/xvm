@@ -752,3 +752,15 @@ class Employee
         List<Employee> emps = kids;
         }
     }
+
+// auto-narrowing and override
+interface I
+    {
+    I foo();   // the return type is "this:class"
+    }
+
+class C<T>
+    {
+    @Override
+    C<T> foo(); // the return type is "this:class<T>"
+    }
