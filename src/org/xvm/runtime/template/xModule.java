@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
@@ -63,5 +64,5 @@ public class xModule
             }
         }
 
-    private final Map<String, ModuleHandle> f_mapModules = new HashMap<>();
+    private final Map<String, ModuleHandle> f_mapModules = new ConcurrentHashMap<>(3);
     }
