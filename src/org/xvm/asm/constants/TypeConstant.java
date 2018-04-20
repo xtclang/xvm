@@ -557,13 +557,16 @@ public abstract class TypeConstant
         }
 
     /**
-     * Create a new type by transforming this according to the specified function.
+     * Create a new type by replacing the underlying type for this one according to the specified
+     * function.
+     *
+     * Note, that a TerminalTypeConstant doesn't have an underlying type and is not "transformable".
      *
      * @param transformer  the transformation function
      *
      * @return potentially transformed type
      */
-    public TypeConstant transform(Function<TypeConstant, TypeConstant> transformer)
+    public TypeConstant replaceUnderlying(Function<TypeConstant, TypeConstant> transformer)
         {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = transformer.apply(constOriginal);

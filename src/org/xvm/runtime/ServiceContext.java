@@ -235,7 +235,7 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++nOps > 20)
+                if (++nOps > 21)
                     {
                     fiber.setStatus(FiberStatus.Paused);
                     return frame;
@@ -450,12 +450,12 @@ public class ServiceContext
 
         if (cReturns == 0)
             {
-            // primordial or "callLater" invocations are not guarded
+            // "callLater" invocations are not guarded
             if (frameCaller != null)
                 {
                 frameCaller.f_fiber.registerUncapturedRequest(future);
+                return null;
                 }
-            return null;
             }
         return future;
         }
@@ -511,11 +511,20 @@ public class ServiceContext
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
-        sendInvoke1Request(null, hFunction, ahArg, 0);
+        CompletableFuture<ObjectHandle> future = sendInvoke1Request(null, hFunction, ahArg, 0);
+
+        future.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                callUnhandledExceptionHandler(
+                    ((ExceptionHandle.WrapperException) x).getExceptionHandle());
+                }
+            });
         return Op.R_NEXT;
         }
 
-    protected int callUnhandledExceptionHandler(ExceptionHandle hException)
+    protected void callUnhandledExceptionHandler(ExceptionHandle hException)
         {
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null)
@@ -545,7 +554,9 @@ public class ServiceContext
                     }
                 });
             }
-        return callLater(hFunction, new ObjectHandle[] {hException});
+
+        // ignore any exception coming out of the handler
+        sendInvoke1Request(null, hFunction, new ObjectHandle[]{hException}, 0);
         }
 
 

@@ -559,7 +559,7 @@ public class xTestApp extends xModule
         // ----- testConst()
 
         ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
-        adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
+        adapter.addMethod(ctPoint.f_struct, "construct", new String[]{"Int64", "Int64"}, VOID);
         MethodStructure mtConst = ctPoint.getMethodStructure("construct",
             new String[]{"Int64", "Int64"});
         mtConst.createCode()

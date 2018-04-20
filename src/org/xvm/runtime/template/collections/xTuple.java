@@ -36,7 +36,7 @@ public class xTuple
         implements IndexSupport
     {
     public static xTuple INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
+    public static ClassConstant INCEPTION_CLASS;
     public static xTuple.TupleHandle H_VOID;
 
     public xTuple(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
@@ -46,8 +46,8 @@ public class xTuple
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             H_VOID = makeHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
             }
         }
@@ -62,9 +62,9 @@ public class xTuple
         }
 
     @Override
-    protected TypeConstant getInceptionType()
+    protected ClassConstant getInceptionClassConstant()
         {
-        return INCEPTION_TYPE;
+        return INCEPTION_CLASS;
         }
 
     @Override

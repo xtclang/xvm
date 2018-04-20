@@ -35,7 +35,7 @@ public class xService
         extends ClassTemplate
     {
     public static xService INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
+    public static ClassConstant INCEPTION_CLASS;
 
     public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -44,8 +44,8 @@ public class xService
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
-                asTypeConstant().normalizeParameters();
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             }
         }
 
@@ -55,9 +55,9 @@ public class xService
         }
 
     @Override
-    protected TypeConstant getInceptionType()
+    protected ClassConstant getInceptionClassConstant()
         {
-        return this == INSTANCE ? INCEPTION_TYPE : super.getInceptionType();
+        return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();
         }
 
     @Override

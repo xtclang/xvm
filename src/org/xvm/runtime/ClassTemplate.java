@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -22,6 +23,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -33,7 +35,6 @@ import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
@@ -41,7 +42,6 @@ import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
@@ -88,8 +88,6 @@ public abstract class ClassTemplate
 
     /**
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
-     *
-     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
      */
     public TypeConstant getCanonicalType()
         {
@@ -97,16 +95,25 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain the inception type that is represented by this {@link ClassTemplate}.
-     *
-     * Note, that unlike the {@link #getCanonicalType()}, this always returns a "naked"
-     * (non-parameterized) TerminalTypeConstant.
-     *
-     * Note: the following should always hold true: getInceptionType().getOpSupport() == this;
+     * Obtain the ClassConstant for this {@link ClassTemplate}.
      */
-    protected TypeConstant getInceptionType()
+    public ClassConstant getClassConstant()
         {
-        return getTypeConstant();
+        return (ClassConstant) f_struct.getIdentityConstant();
+        }
+
+    /**
+     * Obtain the inception ClassConstant that is represented by this {@link ClassTemplate}.
+     *
+     * Most of the time the inception class is the same as the structure's class, except
+     * for a number of native rebased interfaces (Ref, Var, Const, Enum).
+     *
+     * Note: the following should always hold true:
+     *      getInceptionClass().asTypeConstant().getOpSupport() == this;
+     */
+    protected ClassConstant getInceptionClassConstant()
+        {
+        return getClassConstant();
         }
 
     /**
@@ -135,39 +142,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a category template
-     */
-    public ClassTemplate getTemplateCategory()
-        {
-        ClassTemplate templateCategory = f_templateCategory;
-        if (templateCategory == null)
-            {
-            templateCategory = xObject.INSTANCE;
-
-            if (f_structSuper == null || f_struct.getFormat() != f_structSuper.getFormat())
-                {
-                switch (f_struct.getFormat())
-                    {
-                    case SERVICE:
-                        templateCategory = xService.INSTANCE;
-                        break;
-
-                    case CONST:
-                        templateCategory = xConst.INSTANCE;
-                        break;
-
-                    case ENUM:
-                        templateCategory = xEnum.INSTANCE;
-                        break;
-                    }
-                }
-            f_templateCategory = templateCategory;
-            }
-        return templateCategory;
-        }
-
-    /**
-     * Obtain the canonical class for this template.
+     * Obtain the canonical TypeComposition for this template.
      */
     public TypeComposition getCanonicalClass()
         {
@@ -180,11 +155,11 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Ensure the canonical class for this template.
+     * Ensure the canonical TypeComposition for this template.
      */
     protected TypeComposition ensureCanonicalClass()
         {
-        return ensureClass(getInceptionType().normalizeParameters(), getCanonicalType());
+        return ensureClass(getCanonicalType());
         }
 
     /**
@@ -197,7 +172,7 @@ public abstract class ClassTemplate
         ConstantPool pool = f_struct.getConstantPool();
 
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionType(), typeParams).normalizeParameters();
+            getInceptionClassConstant().asTypeConstant(), typeParams).normalizeParameters();
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(typeParams);
 
@@ -212,11 +187,26 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        // adopt parameters from the actual type into the inception type
-        TypeConstant typeInception =
-            getInceptionType().adoptParameters(typeActual.getParamTypesArray());
+        ClassConstant constInception = getInceptionClassConstant();
 
-        return ensureClass(typeInception, typeActual);
+        if (typeActual.getDefiningConstant().equals(constInception))
+            {
+            return ensureClass(typeActual, typeActual);
+            }
+
+        // replace the TerminalType of the typeActual with the inception type
+        Function<TypeConstant, TypeConstant> transformer =
+                new Function<TypeConstant, TypeConstant>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type instanceof TerminalTypeConstant
+                    ? constInception.asTypeConstant()
+                    : type.replaceUnderlying(this);
+                }
+            };
+
+        return ensureClass(transformer.apply(typeActual), typeActual);
         }
 
     /**
@@ -255,11 +245,6 @@ public abstract class ClassTemplate
     public PropertyStructure getProperty(String sPropName)
         {
         return (PropertyStructure) f_struct.getChild(sPropName);
-        }
-
-    public TypeConstant getTypeConstant()
-        {
-        return f_struct.getIdentityConstant().asTypeConstant();
         }
 
     // get a method declared at this template level
@@ -339,7 +324,7 @@ public abstract class ClassTemplate
     public MethodStructure findCompareFunction(String sName, TypeConstant[] atRet)
         {
         ClassTemplate template = this;
-        TypeConstant typeThis = getTypeConstant();
+        TypeConstant typeThis = getClassConstant().asTypeConstant();
         TypeConstant[] atArg = new TypeConstant[] {typeThis, typeThis};
         do
             {

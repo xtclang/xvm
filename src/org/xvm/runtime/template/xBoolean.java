@@ -31,7 +31,7 @@ public class xBoolean
         if (fInstance)
             {
             TYPE = getCanonicalType();
-            PARAMETERS = new TypeConstant[] {getTypeConstant()};
+            PARAMETERS = new TypeConstant[] {structure.getIdentityConstant().asTypeConstant()};
             }
         }
 

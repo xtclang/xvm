@@ -103,7 +103,7 @@ public class Container
         initResources();
         }
 
-    public void invoke0(String sMethodName, ObjectHandle... hArg)
+    public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         try
             {
@@ -115,7 +115,7 @@ public class Container
                 return;
                 }
 
-            m_contextMain.callLater(xFunction.makeHandle(mtRun), hArg);
+            m_contextMain.callLater(xFunction.makeHandle(mtRun), ahArg);
             }
         catch (Exception e)
             {

@@ -26,7 +26,7 @@ public class xOrdered
 
         if (fInstance)
             {
-            TYPES = new TypeConstant[] {getTypeConstant()};
+            TYPES = new TypeConstant[] {structure.getIdentityConstant().asTypeConstant()};
             }
         }
 

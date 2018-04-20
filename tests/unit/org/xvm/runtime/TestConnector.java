@@ -9,6 +9,8 @@ import org.xvm.compiler.CommandLine;
 
 /**
  * The connector test,
+ *
+ * TestConnector [module name] [module path]
  */
 public class TestConnector
     {
@@ -34,8 +36,12 @@ public class TestConnector
 
         ModuleRepository repository = cmd.build();
 
+        // +++ that is the actual use +++
         Connector connector = new Connector(repository);
         connector.loadModule(sModule);
+
+        // configuration of the container happens here
+
         connector.start();
 
         connector.invoke0("run", Utils.OBJECTS_NONE);

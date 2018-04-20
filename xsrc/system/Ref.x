@@ -121,7 +121,7 @@ interface Ref<RefType>
      * named. For example, arguments, local variables, struct fields, and properties are almost
      * always named, but tuple elements are often not named, and array elements are never named.
      */
-    @RO String? name;
+    @RO String? refName;
 
     /**
      * The reference uses a number of bytes for its own storage; while the size of the reference is

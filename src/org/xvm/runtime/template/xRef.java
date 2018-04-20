@@ -1,7 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -27,7 +26,7 @@ public class xRef
         implements VarSupport
     {
     public static xRef INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
+    public static ClassConstant INCEPTION_CLASS;
 
     public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -36,8 +35,8 @@ public class xRef
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             }
         }
 
@@ -47,23 +46,9 @@ public class xRef
         }
 
     @Override
-    protected TypeConstant getInceptionType()
+    protected ClassConstant getInceptionClassConstant()
         {
-        if (this == INSTANCE)
-            {
-            return INCEPTION_TYPE;
-            }
-
-        // the only natural class that extend Ref is Var, and xVar completely overrides this method;
-        // however there may be templates (xInjectRef) that represent Ref mixins that extend xRef
-
-        TypeConstant type = m_typeInception;
-        if (type == null)
-            {
-            type = m_typeInception = f_struct.getConstantPool().ensureAnnotatedTypeConstant(
-                new Annotation(f_struct.getIdentityConstant(), null), INCEPTION_TYPE);
-            }
-        return type;
+        return INCEPTION_CLASS;
         }
 
     @Override
@@ -99,7 +84,7 @@ public class xRef
             case "assigned":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
 
-            case "name":
+            case "refName":
                 String sName = hRef.getName();
                 return frame.assignValue(iReturn, sName == null ?
                     xNullable.NULL : xString.makeHandle(sName));

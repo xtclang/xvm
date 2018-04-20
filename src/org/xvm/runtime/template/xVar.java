@@ -1,14 +1,12 @@
 package org.xvm.runtime.template;
 
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -30,7 +28,7 @@ public class xVar
         implements VarSupport
     {
     public static xVar INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
+    public static ClassConstant INCEPTION_CLASS;
 
     public xVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -39,8 +37,8 @@ public class xVar
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant(
-                (ClassConstant) structure.getIdentityConstant()).asTypeConstant();
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             }
         }
 
@@ -50,23 +48,9 @@ public class xVar
         }
 
     @Override
-    protected TypeConstant getInceptionType()
+    protected ClassConstant getInceptionClassConstant()
         {
-        if (this == INSTANCE)
-            {
-            return INCEPTION_TYPE;
-            }
-
-        // there are no natural classes that extend Var, but there is a number of native templates
-        // that represent Var mixins that extend xVar
-
-        TypeConstant type = m_typeInception;
-        if (type == null)
-            {
-            type = m_typeInception = f_struct.getConstantPool().ensureAnnotatedTypeConstant(
-                new Annotation(f_struct.getIdentityConstant(), null), INCEPTION_TYPE);
-            }
-        return type;
+        return INCEPTION_CLASS;
         }
 
     @Override

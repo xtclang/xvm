@@ -47,26 +47,6 @@ public class xAtomicIntNumber
         // TODO: how to implement checked/unchecked optimally?
         }
 
-    @Override
-    protected TypeConstant getInceptionType()
-        {
-        TypeConstant type = m_typeInception;
-        if (type == null)
-            {
-            // @AtomicIntNumber @AtomicVar Var<Int>
-            ClassStructure structAtomicInt = f_struct;
-            ClassStructure structAtomicVar = xAtomicVar.INSTANCE.f_struct;
-            ConstantPool   pool            = structAtomicInt.getConstantPool();
-            Annotation     annoAtomicInt   = new Annotation(structAtomicInt.getIdentityConstant(), null);
-            Annotation     annoAtomicVar   = new Annotation(structAtomicVar.getIdentityConstant(), null);
-
-            type = m_typeInception =
-                pool.ensureAnnotatedTypeConstant(annoAtomicInt,
-                    pool.ensureAnnotatedTypeConstant(annoAtomicVar, xVar.INCEPTION_TYPE));
-            }
-        return type;
-        }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 

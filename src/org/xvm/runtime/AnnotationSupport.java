@@ -1,17 +1,16 @@
 package org.xvm.runtime;
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xVar;
 
 /**
  * An OpSupport and VarSupport implementation for annotated types.
@@ -26,39 +25,37 @@ public class AnnotationSupport
         IdentityConstant constIdAnno = (IdentityConstant) type.getAnnotation().getAnnotationClass();
         OpSupport supportAnno = registry.getTemplate(constIdAnno);
 
-        // if the annotation itself is native, it overrides the base type template (support)
-        if (supportAnno instanceof xRef) // TODO: isNative()?
+        // if the annotation itself is native, it overrides the base type template (support);
+        // for now all native Ref implementations extend xRef
+        if (supportAnno instanceof xRef)
             {
             f_support = supportAnno.getTemplate(typeBase);
             f_fNative = true;
             }
-        else if (typeBase.isSingleDefiningConstant())
-            {
-            Constant constIdBase = typeBase.getDefiningConstant();
 
-            ConstantPool pool = typeBase.getConstantPool();
-            if (constIdBase.equals(pool.clzVar()))
-                {
-                f_support = xVar.INSTANCE;
-                }
-            else if (constIdBase.equals(pool.clzRef()))
-                {
-                f_support = xRef.INSTANCE;
-                }
-            else
-                {
-                f_support = typeBase.getOpSupport(registry);
-                }
-            f_fNative = false;
-            }
         else
             {
             f_support = typeBase.getOpSupport(registry);
             f_fNative = false;
             }
 
-        f_typeAnno = type.getAnnotationType();
-        f_registry = registry;
+        if (!f_fNative)
+            {
+            ConstantPool pool = type.getConstantPool();
+            TypeConstant typeAnno = type.getAnnotationType();
+            TypeComposition clzAnno = registry.resolveClass(typeAnno);
+
+            TypeInfo info = typeAnno.ensureTypeInfo();
+
+            TypeConstant[] atypeRef =
+                new TypeConstant[]{info.getTypeParams().get("RefType").getActualType()};
+
+            m_sigGet = new SignatureConstant(pool, "get", ConstantPool.NO_TYPES, atypeRef);
+            m_sigSet = new SignatureConstant(pool, "set", atypeRef, ConstantPool.NO_TYPES);
+
+            m_typeAnno = typeAnno;
+            m_clzAnno = clzAnno;
+            }
         }
 
     // ----- OpSupport implementation --------------------------------------------------------------
@@ -153,7 +150,7 @@ public class AnnotationSupport
     @Override
     public int get(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("get", 1);
+        CallChain chain = getGetChain();
         return chain == null
             ? ensureVarSupport().get(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -198,7 +195,7 @@ public class AnnotationSupport
     @Override
     public int set(Frame frame, RefHandle hTarget, ObjectHandle hValue)
         {
-        CallChain chain = getOpChain("set", 1);
+        CallChain chain = getSetChain();
         return chain == null
             ? ensureVarSupport().set(frame, hTarget, hValue)
             : chain.invoke(frame, hTarget, hValue, Frame.RET_UNUSED);
@@ -259,19 +256,49 @@ public class AnnotationSupport
         {
         if (!f_fNative)
             {
-            TypeInfo info = f_typeAnno.ensureTypeInfo();
-
-            TypeComposition clzAnno = f_registry.resolveClass(f_typeAnno);
+            TypeInfo info = m_typeAnno.ensureTypeInfo();
 
             // TODO: what if there is more than one valid method?
 
             for (MethodConstant constMethod: info.findOpMethods(sOp, sOp, cArgs))
                 {
-                CallChain chain = clzAnno.getMethodCallChain(constMethod.getSignature());
+                CallChain chain = m_clzAnno.getMethodCallChain(constMethod.getSignature());
                 if (chain.getDepth() > 0)
                     {
                     return chain;
                     }
+                }
+            }
+        return null;
+        }
+
+    /**
+     * @return a call chain for the "get" method
+     */
+    protected CallChain getGetChain()
+        {
+        if (!f_fNative)
+            {
+            CallChain chain = m_clzAnno.getMethodCallChain(m_sigGet);
+            if (chain.isExplicit())
+                {
+                return chain;
+                }
+            }
+        return null;
+        }
+
+    /**
+     * @return a call chain for the "set" method
+     */
+    protected CallChain getSetChain()
+        {
+        if (!f_fNative)
+            {
+            CallChain chain = m_clzAnno.getMethodCallChain(m_sigSet);
+            if (chain.isExplicit())
+                {
+                return chain;
                 }
             }
         return null;
@@ -305,10 +332,20 @@ public class AnnotationSupport
     /**
      * The underlying annotated type.
      */
-    private final TypeConstant f_typeAnno;
+    private TypeConstant m_typeAnno;
 
     /**
-     * The template registry.
+     * The underlying annotated class.
      */
-    private final TemplateRegistry f_registry;
+    private TypeComposition m_clzAnno;
+
+    /**
+     * Cached "get" signature.
+     */
+    private SignatureConstant m_sigGet;
+
+    /**
+     * Cached "set" signature.
+     */
+    private SignatureConstant m_sigSet;
     }
