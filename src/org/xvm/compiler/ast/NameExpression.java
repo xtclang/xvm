@@ -151,6 +151,7 @@ public class NameExpression
         return aNames;
         }
 
+    @Override
     public boolean isSuppressDeref()
         {
         return amp != null;

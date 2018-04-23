@@ -179,6 +179,8 @@ public abstract class Statement
 
     /**
      * Compiler context for compiling a method body.
+     *
+     * <p/>TODO need a "lambda context" that captures "this" (makes itself a method), params and vars (adds auto-bound params)
      */
     public abstract static class Context
         {
@@ -193,11 +195,22 @@ public abstract class Statement
             }
 
         /**
-         * @return the MethodStructure that the context represents
+         * @return the MethodStructure that the context represents (and specifically, not a
+         *         MethodStructure representing an implicit or explicit lambda, since those are
+         *         treated "transparently" because of captures)
          */
         public MethodStructure getMethod()
             {
             return m_ctxOuter.getMethod();
+            }
+
+        /**
+         * @return true iff the containing MethodStructure is a function (not a method), which means
+         *         that "this", "super", and other reserved registers are not available
+         */
+        public boolean isStatic()
+            {
+            return m_ctxOuter.isStatic();
             }
 
         /**
@@ -692,7 +705,7 @@ public abstract class Statement
             return mapByName;
             }
 
-        boolean isStatic()
+        public boolean isStatic()
             {
             Component parent = m_method;
             while (true)

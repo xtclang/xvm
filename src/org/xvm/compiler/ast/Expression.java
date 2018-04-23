@@ -596,6 +596,24 @@ public abstract class Expression
         }
 
     /**
+     * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
+     *         a class, property, or method name
+     */
+    public boolean isSuppressDeref()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff the expression represents a non-value ('?') used to explicitly indicate an
+     *         unbound parameter
+     */
+    public boolean isNonBinding()
+        {
+        return false;
+        }
+
+    /**
      * (Post-validation) Determine if the expression should be treated as a constant value. There
      * are a few exceptions, such as the TodoExpression (which claim to be constant, but must
      * actually produce code), or expressions that require code to produce a constant (or at least
@@ -1041,44 +1059,29 @@ public abstract class Expression
      *   - related   PseudoConstant     Error                ClassConstant       Error
      *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
      *
-     *   MMethod     MMethod +virt      MMethod -1 +virt     MMethod (static)    MMethod -1
-     *
      *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
+     *
+     *   MMethod     MMethod            MMethod -1           MMethod (static)    MMethod -1 (static)
      * </pre></code>
-     *
-     * TODO below is old stuff
+     * <p/>
+     * Method and function evaluation is the most complex of these scenarios, because the no-de-ref
+     * flag is on the name expression, but can also be implied by an argument of the
+     * NonBindingExpression type. As a result, the InvocationExpression is responsible for checking
+     * for a non-binding effect, which requires <i>at least</i> one of:
      * <ul>
-     * <li>Method or function argument - the name resolves to a read-only register;</li>
-     * <li>Local variable - the name resolves to a read/write register;</li>
-     * <li>Captured variable - the name resolves to a register that contains the effectively
-     *     constant value, a Ref providing the value, or a Var providing the value, as described
-     *     above;</li>
-     * <li></li>
+     * <li>The "left" expression being a name or dot-name expression with {@link #isSuppressDeref()}
+     *     evaluating to true; or</li>
+     * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
      * </ul>
+     * <p/>
      *
-     * <ul>
-     * <li>A reserved name, such as {@code this}, available as a {@code RefType}, or a
-     *     {@code Ref<RefType>};</li>
-     * <li>A method parameter (a register), available as a {@code RefType}, or a
-     *     {@code Ref<RefType>};</li>
-     * <li>A local variable (a register), available as a {@code RefType}, or a
-     *     {@code Var<RefType>};</li>
-     * <li>A capturable variable (if the current method body is a lambda), available as a
-     *     {@code RefType}, or a {@code Ref<RefType>} or {@code Var<RefType>};</li>
-     * <li>A capturable name available to the current method, if the method is a lambda;</li>
-     * <li>A property name;</li>
-     * <li>A class identity;</li>
-     * <li>A typedef identity;</li>
-     * <li>A multi-method identity;</li>
-     * <li>The "construct" keyword (indicating a call to a constructor function on this type);</li>
-     * <li>A parameter name preceding the lambda operator ("->").</li>
-     * </ul>
-     *
-     * @param ctx
-     * @param fSuppressDeref
-     * @param tokName
-     * @param listTypes
-     * @param errs
+     * @param ctx             the compilation context for the statement
+     * @param fSuppressDeref  true specifies that the expression should resolve the name without
+     *                        de-referencing it, explicitly suppressing the natural de-reference
+     * @param tokName         the token containing the name to resolve
+     * @param listTypes       the optional {@code <types>} following the name that could add
+     *                        information to the resolution
+     * @param errs            the error listener to log any errors to
      *
      * @return the argument represented by the simple name
      */
@@ -1099,12 +1102,19 @@ public abstract class Expression
             return null;
             }
 
-        listTypes.stream().forEach(::);
-
-        if (listTypes != null)
+        if (fSuppressDeref)
             {
-            // int cTypes = aTypes == null ? 0 : aTypes.length;
+            boolean fStatic = ctx.isStatic();
+            // TODO how to determine if we are "method context"? ctx.resolveName("this", errs)
+
+
             }
+        else
+            {
+
+            }
+
+        // TODO ???
 
         return arg;
         }
@@ -1112,16 +1122,19 @@ public abstract class Expression
     /**
      * TODO
      *
-     * remember ".this"
-     * "construct" (placed at end of list by parser)
+     * <p/>TODO remember ".this"
+     * <p/>TODO "construct" (placed at end of list by parser)
      *
-     * @param arg
-     * @param fSuppressDeref
-     * @param tokName
-     * @param listTypes
-     * @param errs
+     * @param arg             the "left hand side" argument providing context to resolve the next
+     *                        name
+     * @param fSuppressDeref  true specifies that the expression should resolve the name without
+     *                        de-referencing it, explicitly suppressing the natural de-reference
+     * @param tokName         the token containing the name to resolve
+     * @param listTypes       the optional {@code <types>} following the name that could add
+     *                        information to the resolution
+     * @param errs            the error listener to log any errors to
      *
-     * @return
+     * @return the argument represented by the name as relative to the previous arg
      */
     protected Argument resolveNextName(Argument             arg,
                                        boolean              fSuppressDeref,

@@ -386,7 +386,7 @@ public class Parser
                             }
                         type = new NamedTypeExpression(null, names, null, null, paramnames, getLastMatch().getEndPosition());
                         }
-                    List<Expression> args = parseArgumentList(false);
+                    List<Expression> args = parseArgumentList(false, false);
                     compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
@@ -405,7 +405,7 @@ public class Parser
                         {
                                          keyword = expect(Id.EXTENDS);
                         TypeExpression   type    = parseTypeExpression();
-                        List<Expression> args    = parseArgumentList(false);
+                        List<Expression> args    = parseArgumentList(false, false);
                         compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
                         fAny = true;
                         }
@@ -487,7 +487,7 @@ public class Parser
                 List<TypeExpression> typeParams = parseTypeParameterTypeList(false);
 
                 // argument list
-                List<Expression> args = parseArgumentList(false);
+                List<Expression> args = parseArgumentList(false, false);
 
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
@@ -2545,7 +2545,7 @@ public class Parser
                             {
                             Token            keyword = expect(Id.NEW);
                             TypeExpression   type    = parseTypeExpression();
-                            List<Expression> params  = parseArgumentList(false);
+                            List<Expression> params  = parseArgumentList(false, false);
                             long             lEndPos = params == null
                                     ? type.getEndPosition()
                                     : getLastMatch().getEndPosition();
@@ -2605,7 +2605,7 @@ public class Parser
 
                 case L_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true),
+                    expr = new InvocationExpression(expr, parseArgumentList(true, true),
                             getLastMatch().getEndPosition());
                     break;
 
@@ -2691,7 +2691,7 @@ public class Parser
                 {
                 Token            keyword = expect(Id.NEW);
                 TypeExpression   type    = parseTypeExpression();
-                List<Expression> args    = parseArgumentList(false);
+                List<Expression> args    = parseArgumentList(false, false);
                 StatementBlock   body    = null;
                 if (peek().getId() == Id.L_CURLY)
                     {
@@ -3695,7 +3695,7 @@ public class Parser
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {
-            args = parseArgumentList(true);
+            args = parseArgumentList(true, false);
             }
 
         long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
@@ -3913,11 +3913,12 @@ public class Parser
      * </pre></code>
      *
      *
-     * @param required  true iff the parenthesis are required
+     * @param required       true iff the parenthesis are required
+     * @param allowCurrying  true iff the "?" argument and its variations are allowed
      *
      * @return a list of arguments, or null if no parenthesis were encountered
      */
-    List<Expression> parseArgumentList(boolean required)
+    List<Expression> parseArgumentList(boolean required, boolean allowCurrying)
         {
         List<Expression> args = null;
         if (match(Id.L_PAREN, required) != null)
@@ -3952,17 +3953,37 @@ public class Parser
                     }
 
                 Expression expr;
-                switch (peek().getId())
+                if (allowCurrying)
                     {
-                    case COND:
-                        throw new IllegalStateException("TODO '?' params"); // TODO
+                    switch (peek().getId())
+                        {
+                        case COND:
+                            {
+                            Token tokUnbound = match(Id.COND);
+                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                                    tokUnbound.getEndPosition(), null);
+                            }
+                            break;
 
-                    case COMP_LT:
-                        throw new IllegalStateException("TODO '<T>?' params"); // TODO
+                        case COMP_LT:
+                            {
+                            Token          tokOpen    = match(Id.COMP_LT);
+                            TypeExpression type       = parseTypeExpression();
+                            Token          tokClose   = match(Id.COMP_GT);
+                            Token          tokUnbound = match(Id.COND);
+                            expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                                    tokUnbound.getEndPosition(), type);
+                            }
+                            break;
 
-                    default:
-                        expr = parseExpression();
-                        break;
+                        default:
+                            expr = parseExpression();
+                            break;
+                        }
+                    }
+                else
+                    {
+                    expr = parseExpression();
                     }
 
                 args.add(label == null ? expr : new LabeledExpression(label, expr));

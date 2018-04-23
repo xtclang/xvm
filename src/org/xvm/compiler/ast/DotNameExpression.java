@@ -35,6 +35,7 @@ public class DotNameExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
     public boolean isSuppressDeref()
         {
         return amp != null;

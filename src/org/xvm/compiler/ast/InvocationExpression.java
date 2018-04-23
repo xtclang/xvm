@@ -11,6 +11,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.ast.Statement.Context;
 
 
@@ -89,6 +90,13 @@ public class InvocationExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+
+        }
+
 
     // TODO getValueCount() - could be any #?
 

@@ -12,12 +12,14 @@ interface Meta<PublicType, ProtectedType, PrivateType, StructType>
     @RO Class<PublicType, ProtectedType, PrivateType, StructType> class_;
 
     /**
-     * The containing module.
+     * The containing module. REVIEW a composition could originate from multiple different modules - this could be removed?
      */
     @RO Module module_;
 
+    @RO Object? parent;
+
     /**
-     * The read-only struct for this object. Each property that has space allocated for
+     * The underlying struct for this object. Each property that has space allocated for
      * storage of the property's value will occur within this structure.
      */
     @RO StructType struct_;
