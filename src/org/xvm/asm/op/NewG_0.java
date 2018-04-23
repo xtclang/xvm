@@ -11,8 +11,6 @@ import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
 
-import org.xvm.asm.constants.TypeConstant;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;

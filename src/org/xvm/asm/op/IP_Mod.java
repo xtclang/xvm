@@ -63,6 +63,6 @@ public class IP_Mod
     @Override
     protected int completeWithProperty(Frame frame, ObjectHandle hTarget, String sProperty, ObjectHandle hValue)
         {
-        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, sProperty, hValue);
+        return hTarget.getTemplate().invokePropertyMod(frame, hTarget, sProperty, hValue);
         }
     }

@@ -51,7 +51,8 @@ public class xArray
         xIntArray template = new xIntArray(f_templates, f_struct, true);
         template.initDeclared();
 
-        ConstantPool pool = f_templates.f_container.f_pool;
+        ConstantPool pool = f_struct.getConstantPool();
+
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeArray(), pool.typeInt());
         f_templates.registerNativeTemplate(type, template); // Array<Int>
 
@@ -84,13 +85,13 @@ public class xArray
         ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
         IndexSupport templateArray = (IndexSupport) hArray.getOpSupport();
 
-        ObjectHeap heap = f_templates.f_container.f_heapGlobal;
+        ObjectHeap heap = frame.f_context.f_heapGlobal;
 
         for (int i = 0; i < cSize; i++)
             {
             Constant constValue = aconst[i];
 
-            ObjectHandle hValue = heap.ensureConstHandle(frame, constValue.getPosition());
+            ObjectHandle hValue = heap.ensureConstHandle(frame, constValue);
 
             if (templateArray.assignArrayValue(frame, hArray, i, hValue) == Op.R_EXCEPTION)
                 {

@@ -1106,7 +1106,7 @@ public class TerminalTypeConstant
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        TypeComposition clz = frame.f_context.f_templates.resolveClass(this);
+        TypeComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -1118,7 +1118,7 @@ public class TerminalTypeConstant
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        TypeComposition clz = frame.f_context.f_templates.resolveClass(this);
+        TypeComposition clz = frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 

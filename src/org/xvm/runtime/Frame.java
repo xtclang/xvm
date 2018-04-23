@@ -10,6 +10,7 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -40,7 +41,7 @@ public class Frame
     protected final MethodStructure f_function;
     protected final Op[]            f_aOp;          // the op-codes
     protected final ObjectHandle    f_hTarget;      // the passed in target
-    protected final ObjectHandle    f_hThis;        // the "private" view of the target
+    protected final ObjectHandle    f_hThis;        // the "inception" view of the target
 
     public final ObjectHandle[]     f_ahVar;        // arguments/local var registers
     public final VarInfo[]          f_aInfo;        // optional info for var registers
@@ -655,7 +656,7 @@ public class Frame
     // return R_NEXT, R_CALL, R_EXCEPTION or R_BLOCK
     public int assignTuple(int iVar, ObjectHandle[] ahValue)
         {
-        TypeComposition clazz = f_context.f_templates.resolveClass(getVarInfo(iVar).getType());
+        TypeComposition clazz = ensureClass(getVarInfo(iVar).getType());
 
         return assignValue(iVar, xTuple.makeHandle(clazz, ahValue));
         }
@@ -712,7 +713,7 @@ public class Frame
 
         int iReturn = f_aiReturn[0];
 
-        TypeComposition clazz = f_context.f_templates.resolveClass(f_framePrev.getVarInfo(iReturn).getType());
+        TypeComposition clazz = ensureClass(f_framePrev.getVarInfo(iReturn).getType());
         return returnValue(iReturn, xTuple.makeHandle(clazz, ahValue));
         }
 
@@ -781,7 +782,7 @@ public class Frame
 
     public ObjectHandle getConstHandle(int iArg)
         {
-        ObjectHandle hValue = f_context.f_heapGlobal.ensureConstHandle(this, Op.CONSTANT_OFFSET - iArg);
+        ObjectHandle hValue = f_context.f_heapGlobal.ensureConstHandle(this, getConstant(iArg));
         if (hValue == null)
             {
             throw new IllegalStateException("Unsupported constant " + getConstant(iArg));
@@ -882,23 +883,32 @@ public class Frame
         {
         if (iArg >= 0)
             {
-            return f_context.f_templates.resolveClass(getVarInfo(iArg).getType());
+            return ensureClass(getVarInfo(iArg).getType());
             }
 
         // "local property"
         TypeConstant typeProp = getConstant(iArg).getRefType();
-        return f_context.f_templates.resolveClass(typeProp.resolveGenerics(getGenericsResolver()));
+        return ensureClass(typeProp.resolveGenerics(getGenericsResolver()));
         }
 
     public TypeComposition resolveClass(int iArg)
         {
-        assert iArg < Op.CONSTANT_OFFSET;
-        return f_context.f_templates.resolveClass(Op.CONSTANT_OFFSET - iArg, getGenericsResolver());
+        return ensureClass(resolveType(iArg));
+        }
+
+    public TypeComposition ensureClass(TypeConstant type)
+        {
+        return f_context.f_templates.resolveClass(type);
+        }
+
+    public ClassTemplate ensureTemplate(IdentityConstant constClz)
+        {
+        return f_context.f_templates.getTemplate(constClz);
         }
 
     public TypeConstant resolveType(int iArg)
         {
-        TypeConstant type = (TypeConstant) getConstant(iArg);
+        TypeConstant type = (TypeConstant) getConstant(iArg); // must exist
         return type.resolveGenerics(getGenericsResolver());
         }
 

@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -37,10 +38,7 @@ public class xException
     @Override
     public void initDeclared()
         {
-        // TODO: remove everything when compiler generates the constructors
-        f_templates.f_adapter.addMethod(f_struct, "construct", new String[]{"String", "Exception"}, VOID);
-
-        MethodStructure ct = getMethodStructure("construct", new String[]{"String", "Exception"}, VOID);
+        MethodStructure ct = getMethodStructure("construct", new String[]{"String?", "Exception?"}, VOID);
         ct.setOps(new Op[] // #0 - text, #1 - cause
             {
             new L_Set(Op.CONSTANT_OFFSET - getProperty("text").getIdentityConstant().getPosition(), 0),
@@ -52,7 +50,7 @@ public class xException
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        return makeMutableHandle(clazz, null, null);
+        return makeMutableStruct(clazz, null, null);
         }
 
     // ---- ObjectHandle helpers -----
@@ -64,17 +62,20 @@ public class xException
 
     public static ExceptionHandle makeHandle(String sMessage)
         {
-        ExceptionHandle hException = makeMutableHandle(INSTANCE.getCanonicalClass(), null, null);
+        ExceptionHandle hException = makeMutableStruct(INSTANCE.getCanonicalClass(), null, null);
 
         hException.setField("text", xString.makeHandle(sMessage));
 
+        hException.ensureAccess(Access.PUBLIC);
         hException.makeImmutable();
         return hException;
         }
 
-    private static ExceptionHandle makeMutableHandle(TypeComposition clazz,
+    private static ExceptionHandle makeMutableStruct(TypeComposition clazz,
                                                      ExceptionHandle hCause, Throwable eCause)
         {
+        clazz = clazz.ensureAccess(Access.STRUCT);
+
         ExceptionHandle hException = new ExceptionHandle(clazz, true, eCause);
 
         Frame frame = ServiceContext.getCurrentContext().getCurrentFrame();

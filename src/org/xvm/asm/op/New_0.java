@@ -82,7 +82,7 @@ public class New_0
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
         IdentityConstant constClz = constructor.getParent().getParent().getIdentityConstant();
-        ClassTemplate template = frame.f_context.f_templates.getTemplate(constClz);
+        ClassTemplate template = frame.ensureTemplate(constClz);
         TypeComposition clzTarget = template.getCanonicalClass();
 
         if (frame.isNextRegister(m_nRetValue))

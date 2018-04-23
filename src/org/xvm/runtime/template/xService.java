@@ -4,6 +4,7 @@ package org.xvm.runtime.template;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -34,7 +35,7 @@ public class xService
         extends ClassTemplate
     {
     public static xService INSTANCE;
-    public static TypeConstant INCEPTION_TYPE;
+    public static ClassConstant INCEPTION_CLASS;
 
     public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
@@ -43,8 +44,8 @@ public class xService
         if (fInstance)
             {
             INSTANCE = this;
-            INCEPTION_TYPE = new NativeRebaseConstant((ClassConstant) structure.getIdentityConstant()).
-                asTypeConstant().normalizeParameters();
+            INCEPTION_CLASS = new NativeRebaseConstant(
+                (ClassConstant) structure.getIdentityConstant());
             }
         }
 
@@ -54,16 +55,16 @@ public class xService
         }
 
     @Override
-    protected TypeConstant getInceptionType()
+    protected ClassConstant getInceptionClassConstant()
         {
-        return this == INSTANCE ? INCEPTION_TYPE : super.getInceptionType();
+        return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();
         }
 
     @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
         {
-        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
+        ServiceContext contextNew = frame.f_context.createContext(f_sName);
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 
@@ -74,7 +75,10 @@ public class xService
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         // called via constructSync()
-        return makeHandle(frame.f_context, clazz, clazz.getType());
+        ServiceContext context = frame.f_context;
+        ServiceHandle hService = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
+        context.setService(hService);
+        return hService;
         }
 
     @Override

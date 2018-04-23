@@ -238,6 +238,67 @@ public class SignatureConstant
         }
 
     /**
+     * If any of the signature components are auto-narrowing (or have any references to auto-narrowing
+     * types), replace the any auto-narrowing portion with an explicit class identity.
+     *
+     * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public SignatureConstant resolveAutoNarrowing()
+        {
+        TypeConstant[] aconstParamOriginal = m_aconstParams;
+        TypeConstant[] aconstParamResolved = null;
+        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
+            {
+            TypeConstant constOriginal = aconstParamOriginal[i];
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+            if (constOriginal != constResolved)
+                {
+                if (aconstParamResolved == null)
+                    {
+                    aconstParamResolved = new TypeConstant[c];
+                    System.arraycopy(aconstParamOriginal, 0, aconstParamResolved, 0, c);
+                    }
+                aconstParamResolved[i] = constResolved;
+                }
+            }
+
+        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
+        TypeConstant[] aconstReturnResolved = null;
+        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
+            {
+            TypeConstant constOriginal = aconstReturnOriginal[i];
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+            if (constOriginal != constResolved)
+                {
+                if (aconstReturnResolved == null)
+                    {
+                    aconstReturnResolved = new TypeConstant[c];
+                    System.arraycopy(aconstReturnOriginal, 0, aconstReturnResolved, 0, c);
+                    }
+                aconstReturnResolved[i] = constResolved;
+                }
+            }
+
+        if (aconstParamResolved == null && aconstReturnResolved == null)
+            {
+            return this;
+            }
+
+        if (aconstParamResolved == null)
+            {
+            aconstParamResolved = aconstParamOriginal;
+            }
+        if (aconstReturnResolved == null)
+            {
+            aconstReturnResolved = aconstReturnOriginal;
+            }
+
+        return getConstantPool().
+            ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
+        }
+
+    /**
      * Check if this signature could be called via the specified signature.
      *
      * @param that      the signature of the matching method (resolved)

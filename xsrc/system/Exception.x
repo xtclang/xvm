@@ -7,12 +7,20 @@
  * hiding portions of the stack trace that represent information from outside of the current
  * container.
  */
-const Exception(String? text, Exception? cause = null)
+const Exception
     {
-    String? text;       // TODO: remove
-    Exception? cause;   // TODO: remove
+    construct Exception(String? text, Exception? cause = null)
+        {
+        @Inject Iterable<StackFrame> stackTrace;
 
-    @Inject Iterable<StackFrame> stackTrace;
+        this.text = text;
+        this.cause = cause;
+        this.stackTrace = stackTrace;
+        }
+
+    String? text;
+    Exception? cause;
+    Iterable<StackFrame> stackTrace;
 
     @Override
     String to<String>()

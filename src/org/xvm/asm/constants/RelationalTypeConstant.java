@@ -264,7 +264,7 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant transform(Function<TypeConstant, TypeConstant> transformer)
+    public TypeConstant replaceUnderlying(Function<TypeConstant, TypeConstant> transformer)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;

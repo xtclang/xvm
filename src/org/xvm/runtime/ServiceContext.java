@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -34,15 +35,16 @@ import org.xvm.runtime.template.xString.StringHandle;
  */
 public class ServiceContext
     {
-    ServiceContext(Container container, String sName, int nId)
+    ServiceContext(Container container, ModuleStructure module, String sName, int nId)
         {
         f_container = container;
+        f_module = module;
         f_sName = sName;
         f_nId = nId;
 
         f_heapGlobal = container.f_heapGlobal;
         f_templates = container.f_templates;
-        f_pool = container.f_pool;
+        f_pool = module.getConstantPool();
         f_queueMsg = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
         }
@@ -60,6 +62,11 @@ public class ServiceContext
     public ServiceContext getMainContext()
         {
         return f_container.getMainContext();
+        }
+
+    public ServiceContext createContext(String sName)
+        {
+        return f_container.createServiceContext(sName, f_module);
         }
 
     public ServiceHandle getService()
@@ -228,7 +235,7 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++nOps > 20)
+                if (++nOps > 21)
                     {
                     fiber.setStatus(FiberStatus.Paused);
                     return frame;
@@ -443,12 +450,12 @@ public class ServiceContext
 
         if (cReturns == 0)
             {
-            // primordial or "callLater" invocations are not guarded
+            // "callLater" invocations are not guarded
             if (frameCaller != null)
                 {
                 frameCaller.f_fiber.registerUncapturedRequest(future);
+                return null;
                 }
-            return null;
             }
         return future;
         }
@@ -504,11 +511,20 @@ public class ServiceContext
 
     public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
-        sendInvoke1Request(null, hFunction, ahArg, 0);
+        CompletableFuture<ObjectHandle> future = sendInvoke1Request(null, hFunction, ahArg, 0);
+
+        future.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                callUnhandledExceptionHandler(
+                    ((ExceptionHandle.WrapperException) x).getExceptionHandle());
+                }
+            });
         return Op.R_NEXT;
         }
 
-    protected int callUnhandledExceptionHandler(ExceptionHandle hException)
+    protected void callUnhandledExceptionHandler(ExceptionHandle hException)
         {
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null)
@@ -538,7 +554,9 @@ public class ServiceContext
                     }
                 });
             }
-        return callLater(hFunction, new ObjectHandle[] {hException});
+
+        // ignore any exception coming out of the handler
+        sendInvoke1Request(null, hFunction, new ObjectHandle[]{hException}, 0);
         }
 
 
@@ -637,7 +655,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     IdentityConstant constClass = f_constructor.getParent().getParent().getIdentityConstant();
-                    xService service = (xService) frame.f_context.f_templates.getTemplate(constClass);
+                    xService service = (xService) frame.ensureTemplate(constClass);
 
                     return service.constructSync(frame, f_constructor, f_clazz, f_ahArg, 0);
                     }
@@ -952,6 +970,7 @@ public class ServiceContext
     // ----- constants and fields ------------------------------------------------------------------
 
     public final Container f_container;
+    public final ModuleStructure f_module;
     public final TemplateRegistry f_templates;
     public final ObjectHeap f_heapGlobal;
     public final ConstantPool f_pool;

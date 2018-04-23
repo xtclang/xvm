@@ -119,7 +119,7 @@ public abstract class ObjectHandle
 
     public PropertyInfo getPropertyInfo(String sPropName)
         {
-        return getType().ensureTypeInfo().findProperty(sPropName);
+        return m_clazz.getPropertyInfo(sPropName);
         }
 
     @Override

@@ -2,9 +2,9 @@ package org.xvm.runtime;
 
 
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -23,6 +23,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -34,7 +35,6 @@ import org.xvm.runtime.Utils.UnaryAction;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FullyBoundHandle;
@@ -42,7 +42,6 @@ import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.xRef;
 import org.xvm.runtime.template.xRef.RefHandle;
-import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
@@ -89,8 +88,6 @@ public abstract class ClassTemplate
 
     /**
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
-     *
-     * Note: the following should always hold true: getCanonicalType().getOpSupport() == this;
      */
     public TypeConstant getCanonicalType()
         {
@@ -98,16 +95,25 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain the inception type that is represented by this {@link ClassTemplate}.
-     *
-     * Note, that unlike the {@link #getCanonicalType()}, this always returns a "naked"
-     * (non-parameterized) TerminalTypeConstant.
-     *
-     * Note: the following should always hold true: getInceptionType().getOpSupport() == this;
+     * Obtain the ClassConstant for this {@link ClassTemplate}.
      */
-    protected TypeConstant getInceptionType()
+    public ClassConstant getClassConstant()
         {
-        return getTypeConstant();
+        return (ClassConstant) f_struct.getIdentityConstant();
+        }
+
+    /**
+     * Obtain the inception ClassConstant that is represented by this {@link ClassTemplate}.
+     *
+     * Most of the time the inception class is the same as the structure's class, except
+     * for a number of native rebased interfaces (Ref, Var, Const, Enum).
+     *
+     * Note: the following should always hold true:
+     *      getInceptionClass().asTypeConstant().getOpSupport() == this;
+     */
+    protected ClassConstant getInceptionClassConstant()
+        {
+        return getClassConstant();
         }
 
     /**
@@ -136,39 +142,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a category template
-     */
-    public ClassTemplate getTemplateCategory()
-        {
-        ClassTemplate templateCategory = f_templateCategory;
-        if (templateCategory == null)
-            {
-            templateCategory = xObject.INSTANCE;
-
-            if (f_structSuper == null || f_struct.getFormat() != f_structSuper.getFormat())
-                {
-                switch (f_struct.getFormat())
-                    {
-                    case SERVICE:
-                        templateCategory = xService.INSTANCE;
-                        break;
-
-                    case CONST:
-                        templateCategory = xConst.INSTANCE;
-                        break;
-
-                    case ENUM:
-                        templateCategory = xEnum.INSTANCE;
-                        break;
-                    }
-                }
-            f_templateCategory = templateCategory;
-            }
-        return templateCategory;
-        }
-
-    /**
-     * Obtain the canonical class for this template.
+     * Obtain the canonical TypeComposition for this template.
      */
     public TypeComposition getCanonicalClass()
         {
@@ -181,11 +155,11 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Ensure the canonical class for this template.
+     * Ensure the canonical TypeComposition for this template.
      */
     protected TypeComposition ensureCanonicalClass()
         {
-        return ensureClass(getInceptionType().normalizeParameters(), getCanonicalType());
+        return ensureClass(getCanonicalType());
         }
 
     /**
@@ -198,7 +172,7 @@ public abstract class ClassTemplate
         ConstantPool pool = f_struct.getConstantPool();
 
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionType(), typeParams).normalizeParameters();
+            getInceptionClassConstant().asTypeConstant(), typeParams).normalizeParameters();
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(typeParams);
 
@@ -213,36 +187,48 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        // adopt parameters from the actual type into the inception type
-        TypeConstant typeInception =
-            getInceptionType().adoptParameters(typeActual.getParamTypesArray());
+        ClassConstant constInception = getInceptionClassConstant();
 
-        return ensureClass(typeInception, typeActual);
+        if (typeActual.getDefiningConstant().equals(constInception))
+            {
+            return ensureClass(typeActual, typeActual);
+            }
+
+        // replace the TerminalType of the typeActual with the inception type
+        Function<TypeConstant, TypeConstant> transformer =
+                new Function<TypeConstant, TypeConstant>()
+            {
+            public TypeConstant apply(TypeConstant type)
+                {
+                return type instanceof TerminalTypeConstant
+                    ? constInception.asTypeConstant()
+                    : type.replaceUnderlying(this);
+                }
+            };
+
+        return ensureClass(transformer.apply(typeActual), typeActual);
         }
 
     /**
      * Produce a TypeComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
-     * Note: the passed inception type should be fully resolved and normalized
+     * Note: the passed inception and mask types should be fully resolved and normalized
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    public TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
+    protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
-        assert !typeInception.isAccessSpecified() || typeInception.getAccess() == Access.PRIVATE;
+        assert !typeInception.isAccessSpecified();
+        assert !typeMask.isAccessSpecified();
         assert typeInception.normalizeParameters() == typeInception;
+        assert typeMask.normalizeParameters() == typeMask;
 
-        return m_mapCompositions.computeIfAbsent(typeMask, (type) ->
+        return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
-            TypeConstant typeI   = typeInception;
-            OpSupport    support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
+            OpSupport support = typeI.isAnnotated() ? typeI.getOpSupport(f_templates) : this;
 
-            if (!typeI.isAccessSpecified())
-                {
-                typeI = typeI.getConstantPool().ensureAccessTypeConstant(typeI, Access.PRIVATE);
-                }
-            return new TypeComposition(support, typeI, type);
+            return new TypeComposition(support, typeI, typeMask);
             });
         }
 
@@ -259,11 +245,6 @@ public abstract class ClassTemplate
     public PropertyStructure getProperty(String sPropName)
         {
         return (PropertyStructure) f_struct.getChild(sPropName);
-        }
-
-    public TypeConstant getTypeConstant()
-        {
-        return f_struct.getIdentityConstant().asTypeConstant();
         }
 
     // get a method declared at this template level
@@ -343,7 +324,7 @@ public abstract class ClassTemplate
     public MethodStructure findCompareFunction(String sName, TypeConstant[] atRet)
         {
         ClassTemplate template = this;
-        TypeConstant typeThis = getTypeConstant();
+        TypeConstant typeThis = getClassConstant().asTypeConstant();
         TypeConstant[] atArg = new TypeConstant[] {typeThis, typeThis};
         do
             {
@@ -416,7 +397,7 @@ public abstract class ClassTemplate
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahVar, int iReturn)
         {
-        ObjectHandle hStruct = createStruct(frame, clazz).ensureAccess(Access.STRUCT);
+        ObjectHandle hStruct = createStruct(frame, clazz);
 
         // assume that we have C1 with a default constructor (DC), a regular constructor (RC1),
         // and a finalizer (F1) that extends C0 with a constructor (RC0) and a finalizer (F0)
@@ -455,7 +436,7 @@ public abstract class ClassTemplate
         Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
         if (mapConstructors == null)
             {
-            mapConstructors = new ConcurrentHashMap<>();
+            mapConstructors = m_mapConstructors = new ConcurrentHashMap<>();
             }
 
         MethodStructure methodDC = mapConstructors.computeIfAbsent(
@@ -474,7 +455,7 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create an ObjectHandle for the specified clazz.
+     * Create an ObjectHandle of the "struct" access for the specified natural class.
      *
      * @param frame  the current frame
      * @param clazz  the TypeComposition for the newly created handle
@@ -486,6 +467,8 @@ public abstract class ClassTemplate
         assert clazz.getTemplate() == this &&
              (f_struct.getFormat() == Component.Format.CLASS ||
               f_struct.getFormat() == Component.Format.CONST);
+
+        clazz = clazz.ensureAccess(Access.STRUCT);
 
         return new GenericHandle(clazz);
         }
@@ -1385,7 +1368,7 @@ public abstract class ClassTemplate
 
     public MethodStructure getMethodStructure(String sName, String[] asParam, String[] asRet)
         {
-        MethodStructure method = f_templates.f_adapter.getMethod(this, sName, asParam, asRet);
+        MethodStructure method = f_templates.f_container.f_adapter.getMethod(this, sName, asParam, asRet);
         if (method == null)
             {
             throw new IllegalArgumentException("Method is not defined: " + f_sName + '#' + sName);
@@ -1463,17 +1446,24 @@ public abstract class ClassTemplate
     protected TypeComposition m_clazzCanonical;
 
     /**
-     * A cache of TypeCompositions keyed by the "revealed type".
+     * A cache of "instantiate-able" TypeCompositions keyed by the "inception type". Most of the
+     * time the revealed type is identical to the inception type and is defined by a
+     * {@link ClassConstant} referring to a concrete natural class (not an interface).
      *
-     * We assume that for a given template, there will never be two classes with the same
-     * revealed types, but different inception types.
+     * The only exceptions are the native types (e.g. Ref, Service), for which the inception type is
+     * defined by a {@link org.xvm.asm.constants.NativeRebaseConstant} class constant and the
+     * revealed type refers to the corresponding natural interface.
      *
-     * If that assumption breaks, we'd need to either change the key, or link-list the classes.
+     * We assume that for a given template, there will never be two instantiate-able classes with
+     * the same inception type, but different revealed type. OTOH, the TypeComposition may
+     * hide (or mask) its original identity via the {@link TypeComposition#maskAs(TypeConstant)}
+     * operation and later reveal it back. All those transformations are handled by the
+     * TypeComposition itself and are not known or controllable by the ClassTemplate.
      */
-    protected Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
+    private Map<TypeConstant, TypeComposition> m_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * A cache of default constructors.
      */
-    protected Map<TypeConstant, MethodStructure> m_mapConstructors;
+    private Map<TypeConstant, MethodStructure> m_mapConstructors;
     }

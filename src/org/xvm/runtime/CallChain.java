@@ -48,6 +48,12 @@ public class CallChain
                f_aMethods[0].getImplementation() == Implementation.Native;
         }
 
+    public boolean isExplicit()
+        {
+        return f_aMethods.length > 0 ||
+               f_aMethods[0].getImplementation() == Implementation.Explicit;
+        }
+
     public PropertyStructure getProperty()
         {
         return (PropertyStructure) f_aMethods[0].getIdentity().getNamespace().getComponent();

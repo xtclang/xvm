@@ -105,7 +105,7 @@ public class xTestService extends xService
             new Exit(), // optimize out; unreachable
 
             new Enter(),
-            new Var_DN(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
+            new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
                      adapter.ensureValueConstantId("iRet")), // #2 (iRet)
 
             new Var_I(adapter.getClassTypeConstId("Function"),

@@ -52,7 +52,7 @@ public class xClass
             TypeConstant typeTarget = (TypeConstant) constant;
 
             return m_mapHandles.computeIfAbsent(typeTarget, type ->
-                new ClassHandle(f_templates.resolveClass(
+                new ClassHandle(frame.ensureClass(
                     type.resolveGenerics(frame.getGenericsResolver()))));
             }
         return null;

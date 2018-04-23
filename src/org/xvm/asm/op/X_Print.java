@@ -1,20 +1,16 @@
 package org.xvm.asm.op;
 
 
-import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpInvocable;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.runtime.CallChain;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.types.xProperty.DeferredPropertyHandle;
-
 import org.xvm.runtime.template.xString;
 
 /**
@@ -73,9 +69,8 @@ public class X_Print
                 }
 
             // call the "to<String>()" method for the object to get the value
-            m_nMethodId = frame.f_context.f_templates.f_adapter.getMethodConstId("Object", "to",
-                ClassTemplate.VOID, ClassTemplate.STRING);
-            CallChain chain = getCallChain(frame, hValue);
+            ConstantPool pool = frame.f_context.f_pool;
+            CallChain chain = hValue.getComposition().getMethodCallChain(pool.sigToString());
 
             int iResult;
             if (chain.isNative())

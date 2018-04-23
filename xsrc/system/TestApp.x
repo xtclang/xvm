@@ -565,7 +565,7 @@ class TestApp
     static mixin BlackHole
             into Var<Int>
         {
-        Int get() {return 0;}
-        Void set(Int i) {}
+        @Override Int get() {return 0;}
+        @Override Void set(Int i) {}
         }
     }

@@ -321,7 +321,7 @@ public class xTestApp extends xModule
             .add(new Invoke_11(0,
                     adapter.getMethodConstId("TestApp.TestService", "exceptional"),
                     adapter.ensureValueConstantId(200000), 2))
-            .add(new Assert(adapter.f_container.f_pool.valFalse()))
+            .add(new Assert(adapter.f_pool.valFalse()))
             .add(new GuardEnd(+4))
             .add(new CatchStart()) // #4 (e)
             .add(new X_Print(4))
@@ -559,7 +559,7 @@ public class xTestApp extends xModule
         // ----- testConst()
 
         ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
-        adapter.addMethod(ctPoint.f_struct, "construct", new String[] {"Int64", "Int64"}, VOID);
+        adapter.addMethod(ctPoint.f_struct, "construct", new String[]{"Int64", "Int64"}, VOID);
         MethodStructure mtConst = ctPoint.getMethodStructure("construct",
             new String[]{"Int64", "Int64"});
         mtConst.createCode()

@@ -28,6 +28,7 @@
 *.iws
 *.ipr
 *.iml
+*.swp
 
 # Logs and databases #
 ######################

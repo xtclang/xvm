@@ -118,21 +118,27 @@ public class Connector
             }
         }
 
-    public void invoke0(String sMethodName, ObjectHandle... hArg)
+    /**
+     * Invoke a method with a void return and specified arguments.
+     *
+     * @param sMethodName  the method name
+     * @param ahArg        arguments
+     */
+    public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         if (!m_fStarted)
             {
             throw new IllegalStateException("The container has not been started");
             }
-        m_container.invoke0(sMethodName, hArg);
+        m_container.invoke0(sMethodName, ahArg);
         }
 
-    public ObjectHandle invoke1(String sMethodName, ObjectHandle... hArg)
+    public ObjectHandle invoke1(String sMethodName, ObjectHandle... ahArg)
         {
         return null;
         }
 
-    public ObjectHandle[] invokeN(String sMethodName, ObjectHandle... hArg)
+    public ObjectHandle[] invokeN(String sMethodName, ObjectHandle... ahArg)
         {
         return null;
         }
