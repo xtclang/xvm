@@ -33,7 +33,11 @@ public class xObject
     @Override
     public void initDeclared()
         {
-        markNativeMethod("to", VOID, STRING);
+        if (this == INSTANCE)
+            {
+            markNativeMethod("to", VOID, STRING);
+            getCanonicalType().ensureTypeInfo().findEqualsFunction().setNative(true);
+            }
         }
 
     @Override

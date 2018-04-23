@@ -22,6 +22,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
@@ -934,6 +935,152 @@ public class TypeInfo
                 : prop.ensureOptimizedSetChain(this);
         }
 
+    /**
+     * @return a MethodStructure for this type's "equals" function
+     */
+    public MethodStructure findEqualsFunction()
+        {
+        MethodStructure functionEquals = m_functionEquals;
+        if (functionEquals == null)
+            {
+            ConstantPool pool = m_type.getConstantPool();
+            for (Contribution contrib : m_listProcess)
+                {
+                TypeConstant typeThis = contrib.getTypeConstant();
+                ClassConstant clzThis = (ClassConstant) typeThis.getDefiningConstant();
+                if (clzThis instanceof NativeRebaseConstant)
+                    {
+                    clzThis = ((NativeRebaseConstant) clzThis).getClassConstant();
+                    }
+
+                for (Map.Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
+                    {
+                    MethodConstant constMethod = entry.getKey();
+
+                    // the signature we are looking for is:
+                    //  static <CompileType extends [this type]> Boolean equals(CompileType v1, CompileType v2)
+                    if (constMethod.getNestedDepth() != 2 ||
+                        !constMethod.getName().equals("equals"))
+                        {
+                        continue;
+                        }
+
+                    TypeConstant[] atypeReturn = constMethod.getRawReturns();
+                    if (atypeReturn.length != 1 && !atypeReturn[0].equals(pool.typeBoolean()))
+                        {
+                        continue;
+                        }
+
+                    if (isComparePattern(pool, constMethod.getRawParams(), clzThis))
+                        {
+                        functionEquals = entry.getValue().getHead().getMethodStructure();
+
+                        if (functionEquals.isFunction())
+                            {
+                            return m_functionEquals = functionEquals;
+                            }
+                        // else TODO: should there be a warning here?
+                        }
+                    }
+                }
+            }
+        return functionEquals;
+        }
+
+    /**
+     * @return a MethodStructure for this type's "compare" function
+     */
+    public MethodStructure findCompareFunction()
+        {
+        MethodStructure functionCompare = m_functionCompare;
+        if (functionCompare == null)
+            {
+            ConstantPool pool = m_type.getConstantPool();
+            for (Contribution contrib : m_listProcess)
+                {
+                TypeConstant typeThis = contrib.getTypeConstant();
+                ClassConstant clzThis = (ClassConstant) typeThis.getDefiningConstant();
+                if (clzThis instanceof NativeRebaseConstant)
+                    {
+                    clzThis = ((NativeRebaseConstant) clzThis).getClassConstant();
+                    }
+
+                for (Map.Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
+                    {
+                    MethodConstant constMethod = entry.getKey();
+
+                    // the signature we are looking for is:
+                    //  static <CompileType extends [this type]> Ordered compare(CompileType v1, CompileType v2)
+                    if (constMethod.getNestedDepth() != 2 ||
+                        !constMethod.getName().equals("compare"))
+                        {
+                        continue;
+                        }
+
+                    TypeConstant[] atypeReturn = constMethod.getRawReturns();
+                    if (atypeReturn.length != 1 && !atypeReturn[0].equals(pool.typeOrdered()))
+                        {
+                        continue;
+                        }
+
+                    if (isComparePattern(pool, constMethod.getRawParams(), clzThis))
+                        {
+                        functionCompare = entry.getValue().getHead().getMethodStructure();
+
+                        if (functionCompare.isFunction())
+                            {
+                            return m_functionCompare = functionCompare;
+                            }
+                        // else TODO: should there be a warning here?
+                        }
+                    }
+                }
+            }
+        return functionCompare;
+        }
+
+    /**
+     * Check if the specified parameters match the "equals" or "compare" functions parameters
+     * that have the following pattern:
+     *
+     *  <CompileType extends [this type]> [return type] equals(CompileType v1, CompileType v2)
+     */
+    private static boolean isComparePattern(
+            ConstantPool pool, TypeConstant[] atypeParam, ClassConstant clzThis)
+        {
+        if (atypeParam.length != 3)
+            {
+            return false;
+            }
+
+        TypeConstant typeType = atypeParam[0];
+        if (!typeType.isParamsSpecified() ||
+            !typeType.getUnderlyingType().equals(pool.typeType()) ||
+            !typeType.getParamTypesArray()[0].getDefiningConstant().
+                equals(clzThis))
+            {
+            return false;
+            }
+
+        TypeConstant typeParam = atypeParam[1];
+        if (!typeParam.equals(atypeParam[2]))
+            {
+            return false;
+            }
+
+        if (typeParam instanceof TerminalTypeConstant)
+            {
+            Constant constParam = typeParam.getDefiningConstant();
+            if (constParam.getFormat() == Constant.Format.Register &&
+                ((RegisterConstant) constParam).getRegister() == 0)
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
 
     // ----- compiler support ----------------------------------------------------------------------
 
@@ -1502,6 +1649,16 @@ public class TypeInfo
      * A cached type resolver.
      */
     private transient ParamInfo.TypeResolver m_resolver;
+
+    /**
+     * Cached "equals" function.
+     */
+    private MethodStructure m_functionEquals;
+
+    /**
+     * Cached "compare" function.
+     */
+    private MethodStructure m_functionCompare;
 
     // cached query results REVIEW for thread safety
     // REVIEW is this a reasonable way to cache these?

@@ -18,7 +18,7 @@ class Object
      * By default, comparing any two objects will only result in equality if they are the
      * same object, or if they are two constant objects with identical values.
      */
-    static Boolean equals(Object o1, Object o2)
+    static <CompileType> Boolean equals(CompileType o1, CompileType o2)
         {
         return &o1 == &o2;
         }

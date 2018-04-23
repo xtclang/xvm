@@ -91,14 +91,14 @@ class Array<ElementType>
     @Op Array!<ElementType> add(Array!<ElementType> that);
     @Op Array!<ElementType> replace(Int index, ElementType value);
 
-    static Boolean equals(Array a1, Array a2)
+    static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {
         if (a1.size != a2.size)
             {
             return false;
             }
 
-        for (ElementType v1 : a1, ElementType v2 : a2)
+        for (CompileType.ElementType v1 : a1, CompileType.ElementType v2 : a2)
             {
             if (v1 != v2)
                 {

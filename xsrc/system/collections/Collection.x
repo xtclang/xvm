@@ -277,7 +277,8 @@ interface Collection<ElementType>
     /**
      * Two collections are equal iff they are they contain the same values.
      */
-    static Boolean equals(Collection collection1, Collection collection2)
+    static <CompileType extends Collection>
+            Boolean equals(CompileType collection1, CompileType collection2)
         {
         // they must be of the same arity
         if (collection1.size != collection2.size)
@@ -287,16 +288,12 @@ interface Collection<ElementType>
 
         if (collection1.sortedBy() || collection2.sortedBy())
             {
-            // if either is sorted, then both must be of the same order
-            Iterator iter1 = collection1.iterator();
-            Iterator iter2 = collection2.iterator();
-            while (ElementType value1 : iter1.next())
+            // if either is sorted, then both must be of the same order;
+            // the collections were of the same arity, so the second iterator shouldn't run out
+            // before the first
+            for (CompileType.ElementType value1 : collection1.iterator(),
+                 CompileType.ElementType value2 : collection2.iterator())
                 {
-                // the collections were of the same arity, so the second iterator shouldn't run out
-                // before the first
-                ElementType value2;
-                assert value2 : iter2.next();
-
                 if (value1 != value2)
                     {
                     return false;

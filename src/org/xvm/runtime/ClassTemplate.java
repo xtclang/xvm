@@ -306,7 +306,7 @@ public abstract class ClassTemplate
         {
         if (tTest.isSingleDefiningConstant() && tParam.isSingleDefiningConstant())
             {
-            // compensate for "function"
+            // compensate for "function"; TODO: how to do it cleanly?
             ClassConstant constFunction = tParam.getConstantPool().clzFunction();
 
             if (tTest.getDefiningConstant().equals(constFunction) &&
@@ -1200,16 +1200,17 @@ public abstract class ClassTemplate
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.PARAMETERS);
-        if (functionEquals != null)
+        // if there is an "equals" function that is not native (on the Object itself),
+        // we need to call it
+        MethodStructure functionEquals = clazz.getType().ensureTypeInfo().findEqualsFunction();
+        if (functionEquals != null && !functionEquals.isNative())
             {
             return frame.call1(functionEquals, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
             }
 
         // only Const classes have an automatic implementation;
-        // for everyone else it's either a native method or a ref equality
+        // for everyone else it's either a natural method or a ref equality
         return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
@@ -1228,8 +1229,8 @@ public abstract class ClassTemplate
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = findCompareFunction("compare", xOrdered.TYPES);
-        if (functionCompare != null)
+        MethodStructure functionCompare = clazz.getType().ensureTypeInfo().findCompareFunction();;
+        if (functionCompare != null && !functionCompare.isNative())
             {
             return frame.call1(functionCompare, null,
                 new ObjectHandle[]{hValue1, hValue2}, iReturn);
@@ -1433,10 +1434,6 @@ public abstract class ClassTemplate
      */
     protected ClassTemplate m_templateSuper;
 
-    /**
-     * The native category (Service, Enum, etc).
-     */
-    protected ClassTemplate f_templateCategory;
 
     // ----- caches ------
 

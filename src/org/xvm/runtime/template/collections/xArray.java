@@ -154,18 +154,12 @@ public class xArray
             return frame.assignValue(iReturn, xBoolean.FALSE);
             }
 
-        // then compare the element types
-        TypeConstant type1 = getElementType(hArray1, 0);
-        TypeConstant type2 = getElementType(hArray2, 0);
+        // use the compile-time element type
+        // and compare arrays elements one-by-one
+        TypeConstant typeEl = clazz.getType().getParamTypesArray()[0];
 
-        if (type1.equals(type2))
-            {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
-            }
-
-        // now compare arrays elements one-by-one
         int[] holder = new int[] {0}; // the index holder
-        return new Equals(ah1, ah2, type1, cElements, holder, iReturn).doNext(frame);
+        return new Equals(ah1, ah2, typeEl, cElements, holder, iReturn).doNext(frame);
         }
 
     // ----- IndexSupport methods -----
