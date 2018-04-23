@@ -947,12 +947,124 @@ public abstract class Expression
 
     /**
      * Using the provided context, resolve a simple name.
+     *
      * <p/>
      * A simple name can refer to:
      * <ul>
-     * <li>A local variable (register) available from the Context;</li>
-     * <li>A capturable variable or constant value available from the Context;</li>
-     * <li>A method parameter from the current method;</li>
+     * <li>An import, which in turn refers to a module/package/class, property/constant,
+     *     multi-method, or typedef;</li>
+     * <li>A reserved identifier, such as "this";</li>
+     * <li>A variable;</li>
+     * <li>A parameter (other than being read-only, i.e. a Ref instead of a Var, this follows the
+     *     same rules as for variables);</li>
+     * <li>A property (i) defined within the current method body, (ii) defined by the current class
+     *     (or within one of the sequence of components between the current method and that class),
+     *     or (iii) defined by a containing class/package/module;</li>
+     * <li>A constant (i) defined by the current class (or within one of the sequence of components
+     *     between the current method and that class), or (ii) defined by a containing
+     *     class/package/module;</li>
+     * <li>A method (i) defined within the current method body, (ii) defined by the current class
+     *     (or within one of the sequence of components between the current method and that class),
+     *     or (iii) defined by a containing class/package/module;</li>
+     * <li>A function (i) defined within the current method body, (ii) defined by the current class
+     *     (or within one of the sequence of components between the current method and that class),
+     *     or (iii) defined by a containing class/package/module;</li>
+     * <li>A class (i) defined within the current method body, (ii) defined by the current class
+     *     (or within one of the sequence of components between the current method and that class),
+     *     or (iii) defined by a containing class/package/module, or (iv) the containing module
+     *     itself;</li>
+     * <li>A typedef (i) defined within the current method body, (ii) defined by the current class
+     *     (or within one of the sequence of components between the current method and that class),
+     *     or (iii) defined by a containing class/package/module;</li>
+     * </ul>
+     *
+     * <p/>
+     * The context either has a "this" (i.e. context from inside of an instance method), or it
+     * doesn't (i.e. context from inside of a function). Even a lambda within a method has a "this",
+     * since it can conceptually capture the "this" of the method. The presence of a "this" has to
+     * be tracked, because the interpretation of a name will differ in some cases based on whether
+     * there is a "this" or not.
+     * <p/>
+     * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
+     * suppression of the dereference using the "&" symbol). The result of the name being resolved
+     * will differ based on whether the name is implicitly deferenced, or explicitly not
+     * dereferenced.
+     *
+     * <p/>
+     * The starting point for dereferencing is within a "method body", which is one of:
+     * <ul>
+     * <li>A method;</li>
+     * <li>A function;</li>
+     * <li>An initializer (e.g. for a property), which is implicitly a constructor (for a property),
+     *     or a function (for a constant);</li>
+     * </ul>
+     *
+     * <p/>
+     * Furthermore, the starting point (i.e. the point at which the name to resolve is being used)
+     * may be nested within a lambda expression. The lambda boundary represents a point at which
+     * capture information must be accumulated, because each capture adds an implicit parameter to
+     * the lambda (and thus an implicit argument to be included by the initializer of the lambda).
+     * Assuming that the name resolves to a variable or parameter of type T:
+     * <ul>
+     * <li>A lambda that uses a captured variable name as an LVal adds an implicit type
+     *     {@code Var<T>} parameter of that name.</li>
+     * <li>A lambda that uses (i) a captured parameter name, or (ii) a captured effectively-constant
+     *     variable name, as an RVal, adds an implicit type {@code T} parameter of that name.
+     * <li>A lambda that uses a captured NOT-effectively-constant variable name as an RVal adds
+     *     an implicit type {@code Ref<T>} parameter of that name.</li>
+     * <li>If the lambda is nested within a lambda, and the name refers to a variable or parameter
+     *     outside of the outer lambda, then -- in addition to the above! -- the outer lambda must
+     *     capture the name on behalf of the inner lambda, allowing the inner lambda to capture it
+     *     from the outer lambda (and recursively so, if nested more than one level deep).</li>
+     * </ul>
+     *
+     * <p/>
+     * Lastly, there is the determination of the name itself. If the name refers to the name of an
+     * import, then that name is resolved first (recursively), such that the result is that the name
+     * no longer refers to the name of an import, but rather to the component (Module, Package,
+     * Class, Property, Multi-Method) being imported by that name.
+     * <p/>
+     * <code><pre>
+     *   Name        method             specifies            "static"            specifies
+     *   refers to   context            no-de-ref            context             no-de-ref
+     *   ---------   -----------------  -------------------  ------------------  -------------------
+     *   Reserved    T                  Error                T                   Error
+     *   - Virtual   T                  Error                Error               Error
+     *
+     *   Parameter   T                  <- Ref               T                   <- Ref
+     *   Local var   T                  <- Var               T                   <- Var
+     *
+     *   Property    T                  <- Ref/Var           Property            Error
+     *   Constant    T                  Error                T                   Error
+     *
+     *   Class       ClassConstant      Error                ClassConstant       Error
+     *   - related   PseudoConstant     Error                ClassConstant       Error
+     *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
+     *
+     *   MMethod     MMethod +virt      MMethod -1 +virt     MMethod (static)    MMethod -1
+     *
+     *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
+     * </pre></code>
+     *
+     * TODO below is old stuff
+     * <ul>
+     * <li>Method or function argument - the name resolves to a read-only register;</li>
+     * <li>Local variable - the name resolves to a read/write register;</li>
+     * <li>Captured variable - the name resolves to a register that contains the effectively
+     *     constant value, a Ref providing the value, or a Var providing the value, as described
+     *     above;</li>
+     * <li></li>
+     * </ul>
+     *
+     * <ul>
+     * <li>A reserved name, such as {@code this}, available as a {@code RefType}, or a
+     *     {@code Ref<RefType>};</li>
+     * <li>A method parameter (a register), available as a {@code RefType}, or a
+     *     {@code Ref<RefType>};</li>
+     * <li>A local variable (a register), available as a {@code RefType}, or a
+     *     {@code Var<RefType>};</li>
+     * <li>A capturable variable (if the current method body is a lambda), available as a
+     *     {@code RefType}, or a {@code Ref<RefType>} or {@code Var<RefType>};</li>
      * <li>A capturable name available to the current method, if the method is a lambda;</li>
      * <li>A property name;</li>
      * <li>A class identity;</li>
@@ -987,6 +1099,8 @@ public abstract class Expression
             return null;
             }
 
+        listTypes.stream().forEach(::);
+
         if (listTypes != null)
             {
             // int cTypes = aTypes == null ? 0 : aTypes.length;
@@ -997,6 +1111,9 @@ public abstract class Expression
 
     /**
      * TODO
+     *
+     * remember ".this"
+     * "construct" (placed at end of list by parser)
      *
      * @param arg
      * @param fSuppressDeref
