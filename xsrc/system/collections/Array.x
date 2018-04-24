@@ -111,13 +111,12 @@ class Array<ElementType>
 
     // ----- internal implementation details -------------------------------------------------------
 
-    private Element<ElementType>? head;
+    private Element? head;
 
-    private class Element(ElementType value)
+    private class Element(ElementType value, Element? next = null)
             delegates Ref<ElementType>(valueRef)
         {
-        Element<ElementType>? next;
-        private Ref<ElementType> valueRef.get()
+        Ref<ElementType> valueRef.get()
             {
             return &value;
             }
