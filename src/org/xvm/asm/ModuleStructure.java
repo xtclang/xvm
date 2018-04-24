@@ -71,9 +71,9 @@ public class ModuleStructure
      * @return the ModuleConstant representing the identity of this
      *         ModuleStructure
      */
-    public ModuleConstant getModuleConstant()
+    public ModuleConstant getIdentityConstant()
         {
-        return (ModuleConstant) getIdentityConstant();
+        return (ModuleConstant) super.getIdentityConstant();
         }
 
     /**
@@ -237,13 +237,13 @@ public class ModuleStructure
     @Override
     public String getName()
         {
-        return getModuleConstant().getName();
+        return getIdentityConstant().getName();
         }
 
     @Override
     public String getSimpleName()
         {
-        return getModuleConstant().getUnqualifiedName();
+        return getIdentityConstant().getUnqualifiedName();
         }
 
     @Override

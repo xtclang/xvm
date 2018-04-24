@@ -85,7 +85,7 @@ public class PackageStructure
         assert m_constModule == null;
         assert getChildByNameMap().isEmpty();
 
-        m_constModule = module.getModuleConstant();
+        m_constModule = module.getIdentityConstant();
         markModified();
         }
 

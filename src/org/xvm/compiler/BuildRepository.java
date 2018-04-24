@@ -33,7 +33,7 @@ public class BuildRepository
     @Override
     public void storeModule(ModuleStructure module)
         {
-        modulesByName.put(module.getModuleConstant().getName(), module);
+        modulesByName.put(module.getIdentityConstant().getName(), module);
         }
 
 

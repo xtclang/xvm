@@ -840,3 +840,21 @@ class C extends B
 List l1 = {1,2,3};      // old (no longer supported; collides with StatementExpression)
 List l2 = [1,2,3];      // new
 Int i = [1,2,3][1];     // ugh! but ok
+
+// --- isA() discussion
+
+class C<T1, T2 extends List<T1>> // any use of T2 (param or return) results in T1 being consumed and produced
+    {
+    // ...
+    T2 bar();
+    }
+
+C<Person> c = new C();
+
+class D<T3>
+    {
+    C<T3> foo()     // the result of this is that D both consumes and produces T3
+        {
+        // ...
+        }
+    }

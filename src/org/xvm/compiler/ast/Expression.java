@@ -1074,6 +1074,22 @@ public abstract class Expression
      * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
      * </ul>
      * <p/>
+     * This method results in an argument, and allows the caller to reference/dereference as
+     * appropriate; the value of {@code fSuppressDeref} is used only for error reporting. The result
+     * for each possible referent of the provided name is as follows:
+     * <p/>
+     * <code><pre>
+     *   Name
+     *   refers to   Result
+     *   ---------   -------------------------------------------------------------------------
+     *   Reserved    Argument index in the range [-0x01, -0x10]
+     *   Parameter   Argument index in the range [0, p), where p is the number of parameters
+     *   Local var   Argument index in the range >= p
+     *   Typedef     Argument index < -0x10 referring to TypedefConstant
+     *   Class       Argument index < -0x10 referring to ClassConstant
+     *   Property    Argument index < -0x10 referring to PropertyConstant
+     *   MMethod     Argument index < -0x10 referring to MultiMethodConstant
+     * </pre></code>
      *
      * @param ctx             the compilation context for the statement
      * @param fSuppressDeref  true specifies that the expression should resolve the name without
@@ -1083,7 +1099,7 @@ public abstract class Expression
      *                        information to the resolution
      * @param errs            the error listener to log any errors to
      *
-     * @return the argument represented by the simple name
+     * @return the argument represented by the simple name, as described above
      */
     protected Argument resolveFirstName(Context              ctx,
                                         boolean              fSuppressDeref,
@@ -1091,30 +1107,61 @@ public abstract class Expression
                                         List<TypeExpression> listTypes,
                                         ErrorListener        errs)
         {
-        String sName = tokName.getValue().toString();
-
         // resolve the name
-        Argument arg = ctx.resolveName(tokName, errs);
+        String   sName = tokName.getValue().toString();
+        Argument arg   = ctx.resolveName(tokName, errs);
+
+        // check for errors
         if (arg == null)
             {
             log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
                     sName, ctx.getMethod().getIdentityConstant().getSignature());
-            return null;
             }
-
-        if (fSuppressDeref)
+        else if (arg instanceof Register)
             {
-            boolean fStatic = ctx.isStatic();
-            // TODO how to determine if we are "method context"? ctx.resolveName("this", errs)
+            // this includes the unknown (TBD) register and actual register indexes (for parameters
+            // and local variables), and the reserved registers (for "this", etc.)
 
+            }
+        else if (arg instanceof Constant)
+            {
+            // need to determine if the constant is part of the current virtual scope, which
+            // requires the current context to be virtual, and the constant to be a virtualizable
+            // member (property, method, typedef) of
+            Constant constant = (Constant) arg;
+            // TODO
 
+            switch (constant.getFormat())
+                {
+                case Typedef:
+                    // TODO should not have <>
+                    break;
+
+                case Module:
+                case Package:
+                case Class:
+                    // TODO
+                    break;
+
+                case Property:
+                    // TODO
+                    break;
+
+                case MultiMethod:
+                    // TODO
+                    break;
+
+                default:
+                    throw new IllegalStateException("unsupported constant: " + constant);
+                }
+
+            // check for any errors
+                boolean fStatic = ctx.isStatic();
             }
         else
             {
-
+            throw new IllegalStateException("unsupported argument: " + arg);
             }
-
-        // TODO ???
 
         return arg;
         }
@@ -1315,10 +1362,10 @@ public abstract class Expression
         }
 
 
-    // ----- inner class: Assignable ---------------------------------------------------------------
+    // ----- inner class: PendingArgument ----------------------------------------------------------
 
     /**
-     * TODO
+     * TODO - what is this for?
      */
     public class PendingArgument
             implements Argument

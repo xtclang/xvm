@@ -1,9 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -14,15 +12,18 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -613,9 +614,9 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:private":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
-                    nReg  = Op.A_PRIVATE;
+                case "this:public":
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    nReg  = Op.A_PUBLIC;
                     fThis = true;
                     break;
 
@@ -625,9 +626,9 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:public":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
-                    nReg  = Op.A_PUBLIC;
+                case "this:private":
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    nReg  = Op.A_PRIVATE;
                     fThis = true;
                     break;
 
@@ -637,32 +638,35 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:type":
-                    type  = pool.ensureParameterizedTypeConstant(pool.typeType(), getThisType());
-                    nReg  = Op.A_TYPE;
-                    fThis = true;
-                    break;
-
-                case "this:frame":
-                    type = pool.typeFrame();
-                    nReg = Op.A_FRAME;
-                    break;
-
-                case "this:module":
-                    type = getModuleType();
-                    nReg = Op.A_MODULE;
-                    break;
-
                 case "this:service":
                     type = pool.typeService();
                     nReg = Op.A_SERVICE;
                     break;
 
                 case "super":
+                    TypeInfo infoThis = getThisType().ensureTypeInfo(errs);
+                    MethodStructure method = getMethod();
+                    MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
+                    if (abody == null || abody.length <= 1)
+                        {
+                        // TODO error
+                        }
+
+
+                    MethodStructure method = getMethod();
+                    // there can be a "super" for any class, but cannot be on an interface
+                    IdentityConstant idParent = getMethod().getParent().getIdentityConstant();
+                    while (idParent)
+                    // the method must be @Override; the type is based on this method
                     // TODO need to verify that there is a super
-                    type = pool().typeFunction(); // TODO need the actual sig of the super function
-                    nReg = Op.A_SUPER;
+                    type  = pool().typeFunction(); // TODO need the actual sig of the super function
+                    nReg  = Op.A_SUPER;
+                    fThis = true;
                     break;
+
+                case "this:module":
+                    // the module can be resolved to the actual module component at compile time
+                    return getModule().getIdentityConstant();
 
                 default:
                     return null;
@@ -742,66 +746,34 @@ public abstract class Statement
                 }
             }
 
-        TypeConstant getThisType()
+        ClassStructure getThisClass()
             {
             Component parent = m_method;
-            while (true)
+            while (!(parent instanceof ClassStructure))
                 {
-                switch (parent.getFormat())
-                    {
-                    case INTERFACE:
-                    case CLASS:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                    case SERVICE:
-                    case PACKAGE:
-                    case MODULE:
-                        return ((ClassStructure) parent).getFormalType();
-
-                    case METHOD:
-                    case PROPERTY:
-                    case MULTIMETHOD:
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
                 parent = parent.getParent();
                 }
+            return (ClassStructure) parent;
+            }
+
+        TypeConstant getThisType()
+            {
+            return getThisClass().getFormalType();
+            }
+
+        ModuleStructure getModule()
+            {
+            Component parent = m_method;
+            while (!(parent instanceof ModuleStructure))
+                {
+                parent = parent.getParent();
+                }
+            return (ModuleStructure) parent;
             }
 
         TypeConstant getModuleType()
             {
-            Component parent = m_method;
-            while (true)
-                {
-                switch (parent.getFormat())
-                    {
-                    case MODULE:
-                        return ((ClassStructure) parent).getFormalType();
-
-                    case INTERFACE:
-                    case CLASS:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                    case SERVICE:
-                    case PACKAGE:
-                    case METHOD:
-                    case PROPERTY:
-                    case MULTIMETHOD:
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
-                parent = parent.getParent();
-                }
+            return getModule().getFormalType();
             }
 
         @Override
@@ -852,6 +824,7 @@ public abstract class Statement
         private boolean         m_fEmitting;
         private boolean         m_fLoggedNoThis;
         }
+
 
     /**
      * A nested context, representing a separate scope and/or code path.

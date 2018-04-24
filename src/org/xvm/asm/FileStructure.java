@@ -631,7 +631,7 @@ public class FileStructure
     public String getName()
         {
         return file == null
-                ? getModule().getModuleConstant().getUnqualifiedName() + ".xtc"
+                ? getModule().getIdentityConstant().getUnqualifiedName() + ".xtc"
                 : file.getName();
         }
 
@@ -742,7 +742,7 @@ public class FileStructure
         out.writeShort(VERSION_MAJOR_CUR);
         out.writeShort(VERSION_MINOR_CUR);
         pool.assemble(out);
-        writePackedLong(out, getModule().getModuleConstant().getPosition());
+        writePackedLong(out, getModule().getIdentityConstant().getPosition());
         assembleChildren(out);
         }
 

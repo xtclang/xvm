@@ -403,6 +403,32 @@ public class SignatureConstant
         return true;
         }
 
+    /**
+     * @return the type of the function that corresponds to this SignatureConstant
+     */
+    public TypeConstant asFunctionType()
+        {
+        ConstantPool pool = getConstantPool();
+        pool.ensureTupleConstant()
+        m_aconstParams
+        m_aconstReturns
+        // TODO
+        return null;
+        }
+    // TODO make more mess for GG
+    public TypeConstant typeOfTupleOfNTypes
+    public Constant ensureTypeTuple()
+        {
+        ensureTupleConstant()
+        }
+
+    public TypeConstant ensureFunctionType(TypeConstant[] aParam, TypeConstant[] aReturn)
+        {
+        // (Boolean, Int) foo(String, Boolean) -> Function<<String, Boolean>, <Boolean, Int>>
+
+        ensureParameterizedTypeConstant()
+        ensureTupleConstant()
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

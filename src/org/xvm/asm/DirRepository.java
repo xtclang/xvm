@@ -79,10 +79,10 @@ public class DirRepository
             throw new IllegalStateException("repository is read-only: " + this);
             }
 
-        String name = module.getModuleConstant().getName();
+        String name = module.getIdentityConstant().getName();
         ModuleInfo info = modulesByName.get(name);
         File file = (info == null)
-                ? new File(m_dir, module.getModuleConstant().getUnqualifiedName() + ".xtc")
+                ? new File(m_dir, module.getIdentityConstant().getUnqualifiedName() + ".xtc")
                 : info.file;
 
         if (file.exists() && !file.delete())
@@ -230,7 +230,7 @@ public class DirRepository
                 }
             else
                 {
-                this.name     = module.getModuleConstant().getName();
+                this.name     = module.getIdentityConstant().getName();
                 this.versions = module.getFileStructure().getVersionTree();
                 this.err      = false;
                 }

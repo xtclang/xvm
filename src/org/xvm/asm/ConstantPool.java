@@ -522,6 +522,20 @@ public class ConstantPool
         return (ArrayConstant) register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
         }
 
+    public ArrayConstant ensureTupleOfTypes(int n)
+        {
+        // TODO cache?
+        // ArrayConstant cond = (ArrayConstant) ensureLocatorLookup(Format.Tuple).get(n);
+        // if (cond == null) ...
+        TypeConstant[] aconst = new TypeConstant[n];
+        for (int i = 0; i < n; ++i)
+            {
+            aconst[i] = typeType();
+            }
+        TypeConstant type = ensureParameterizedTypeConstant(typeTuple(), aconst);
+        return ensureTupleConstant(type, aconst);
+        }
+
     /**
      * Create a Map Entry constant.
      *
