@@ -135,7 +135,7 @@ public abstract class ClassTemplate
             else
                 {
                 templateSuper = m_templateSuper =
-                    f_templates.getTemplate(f_structSuper.getCanonicalType());
+                    f_templates.getTemplate(f_structSuper.getIdentityConstant());
                 }
             }
         return templateSuper;
