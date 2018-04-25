@@ -652,6 +652,8 @@ public abstract class Statement
                         // TODO error
                         }
 
+                    type = method.getIdentityConstant().getSignature().asFunctionType();
+
 
                     MethodStructure method = getMethod();
                     // there can be a "super" for any class, but cannot be on an interface

@@ -409,26 +409,11 @@ public class SignatureConstant
     public TypeConstant asFunctionType()
         {
         ConstantPool pool = getConstantPool();
-        pool.ensureTupleConstant()
-        m_aconstParams
-        m_aconstReturns
-        // TODO
-        return null;
-        }
-    // TODO make more mess for GG
-    public TypeConstant typeOfTupleOfNTypes
-    public Constant ensureTypeTuple()
-        {
-        ensureTupleConstant()
+        return pool.ensureParameterizedTypeConstant(pool.typeFunction(),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
         }
 
-    public TypeConstant ensureFunctionType(TypeConstant[] aParam, TypeConstant[] aReturn)
-        {
-        // (Boolean, Int) foo(String, Boolean) -> Function<<String, Boolean>, <Boolean, Int>>
-
-        ensureParameterizedTypeConstant()
-        ensureTupleConstant()
-        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
