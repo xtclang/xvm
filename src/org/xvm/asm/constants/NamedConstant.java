@@ -48,7 +48,7 @@ public abstract class NamedConstant
      * @param constParent  the module, package, class, or method that contains this property
      * @param sName        the property name
      */
-    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName)
+    public NamedConstant(ConstantPool pool, Constant constParent, String sName)
         {
         super(pool);
 
@@ -83,6 +83,18 @@ public abstract class NamedConstant
     public IdentityConstant getParentConstant()
         {
         return (IdentityConstant) m_constParent;
+        }
+
+    /**
+     * Helper that also conveniently allows the parent to be a TypeConstant.
+     *
+     * @return the type of the parent
+     */
+    public TypeConstant getParentType()
+        {
+        return m_constParent instanceof TypeConstant
+                ? (TypeConstant) m_constParent
+                : getParentConstant().asTypeConstant();
         }
 
     public StringConstant getNameConstant()
@@ -120,7 +132,7 @@ public abstract class NamedConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        int n = this.getParentConstant().compareTo(((NamedConstant) that).getParentConstant());
+        int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
         if (n == 0)
             {
             n = this.getName().compareTo(((NamedConstant) that).getName());
@@ -132,29 +144,45 @@ public abstract class NamedConstant
     public String getValueString()
         {
         String sParent;
+        char   chSep;
         final Constant constParent = m_constParent;
         switch (constParent.getFormat())
             {
             case Module:
                 sParent = ((ModuleConstant) constParent).getUnqualifiedName();
-                return sParent + ':' + m_constName.getValue();
+                chSep   = ':';
+                break;
 
             case Package:
             case Class:
                 sParent = constParent.getValueString();
-                return sParent + '.' + m_constName.getValue();
+                chSep   = '.';
+                break;
 
             case Property:
                 sParent = ((NamedConstant) constParent).getName();
-                return sParent + '#' + m_constName.getValue();
+                chSep   = '#';
+                break;
 
             case Method:
                 sParent = ((MethodConstant) constParent).getName() + "(?)";
-                return sParent + '#' + m_constName.getValue();
+                chSep   = '#';
+                break;
 
             default:
-                throw new IllegalStateException();
+                if (constParent instanceof TypeConstant)
+                    {
+                    sParent = ((TypeConstant) constParent).getValueString();
+                    chSep   = '#';
+                    }
+                else
+                    {
+                    throw new IllegalStateException();
+                    }
+                break;
             }
+
+        return sParent + chSep + m_constName.getValue();
         }
 
 
@@ -167,11 +195,15 @@ public abstract class NamedConstant
         final ConstantPool pool = getConstantPool();
         m_constParent = pool.getConstant(m_iParent);
         m_constName   = (StringConstant) pool.getConstant(m_iName);
+
+        assert m_constParent instanceof IdentityConstant;
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        assert m_constParent instanceof IdentityConstant;
+
         m_constParent = pool.register(m_constParent);
         m_constName   = (StringConstant) pool.register(m_constName);
         }
@@ -180,6 +212,8 @@ public abstract class NamedConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
+        assert m_constParent instanceof IdentityConstant;
+
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
         writePackedLong(out, m_constName.getPosition());

@@ -362,15 +362,6 @@ public class MethodStructure
         }
 
     /**
-     * @return the TypeConstant representing the type of the super function, assuming that this
-     *         method can have and actually has a super
-     */
-    public TypeConstant getSuperType()
-        {
-        return getConstantPool().e
-        }
-
-    /**
      * @return an array of types for the specified array of parameters
      */
     private static TypeConstant[] toTypeArray(Parameter[] aParam)

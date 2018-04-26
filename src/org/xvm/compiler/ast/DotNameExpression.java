@@ -43,10 +43,10 @@ public class DotNameExpression
 
     public String getName()
         {
-        return name.getValue().toString();
+        return name.getValueText();
         }
 
-    public List<TypeExpression> getParams()
+    public List<TypeExpression> getTrailingTypeParams()
         {
         return params;
         }

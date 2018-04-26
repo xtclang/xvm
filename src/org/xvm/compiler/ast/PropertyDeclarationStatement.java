@@ -57,7 +57,7 @@ public class PropertyDeclarationStatement
 
     public String getName()
         {
-        return name.getValue().toString();
+        return name.getValueText();
         }
 
     public TypeExpression getType()

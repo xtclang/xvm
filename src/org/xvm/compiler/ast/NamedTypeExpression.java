@@ -89,7 +89,7 @@ public class NamedTypeExpression
         String[]    as   = new String[c];
         for (int i = 0; i < c; ++i)
             {
-            as[i] = list.get(i).getValue().toString();
+            as[i] = list.get(i).getValueText();
             }
         return as;
         }

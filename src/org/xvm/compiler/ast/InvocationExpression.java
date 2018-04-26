@@ -94,7 +94,7 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-
+        return TypeConstant.NO_TYPES;
         }
 
 

@@ -296,18 +296,13 @@ public abstract class Statement
             {
             checkInnermost();
 
-            String sName = tokName.getValue().toString();
+            String sName = tokName.getValueText();
             if (isVarDeclaredInThisScope(sName))
                 {
                 tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
                 }
 
-            Map<String, Argument> mapByName = m_mapByName;
-            if (mapByName == null)
-                {
-                m_mapByName = mapByName = new HashMap<>();
-                }
-            mapByName.put(sName, reg);
+            ensureNameMap().put(sName, reg);
             }
 
         /**
@@ -321,7 +316,8 @@ public abstract class Statement
          */
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            return m_mapByName != null && m_mapByName.containsKey(sName);
+            Map<String, Argument> mapByName = getNameMap();
+            return mapByName != null && mapByName.containsKey(sName);
             }
 
         /**
@@ -356,6 +352,41 @@ public abstract class Statement
             }
 
         /**
+         * @return the map that provides a name-to-argument lookup, or null if it has not yet been
+         *         created
+         */
+        protected Map<String, Argument> getNameMap()
+            {
+            return m_mapByName;
+            }
+
+        /**
+         * @return the map that provides a name-to-argument lookup
+         */
+        protected Map<String, Argument> ensureNameMap()
+            {
+            Map<String, Argument> mapByName = m_mapByName;
+
+            if (mapByName == null)
+                {
+                mapByName = new HashMap<>();
+                initNameMap(mapByName);
+                m_mapByName = mapByName;
+                }
+
+            return mapByName;
+            }
+
+        /**
+         * Initialize the map that holds named arguments.
+         *
+         * @param mapByName  the map from simple name to argument
+         */
+        protected void initNameMap(Map<String, Argument> mapByName)
+            {
+            }
+
+        /**
          * Resolve a name (other than a reserved name) to an argument.
          *
          * @param name  the potentially reserved name token
@@ -365,8 +396,8 @@ public abstract class Statement
          */
         public Argument resolveRegularName(Token name, ErrorListener errs)
             {
-            String                sName     = name.getValue().toString();
-            Map<String, Argument> mapByName = m_mapByName;
+            String                sName     = name.getValueText();
+            Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
                 Argument arg = mapByName.get(sName);
@@ -442,12 +473,14 @@ public abstract class Statement
             if (m_ctxInner != this)
                 {
                 throw new IllegalStateException();
+
                 }
             }
 
-        Context               m_ctxOuter;
-        Context               m_ctxInner;
-        Map<String, Argument> m_mapByName;
+        Context m_ctxOuter;
+        Context m_ctxInner;
+
+        private Map<String, Argument> m_mapByName;
         }
 
     /**
@@ -515,7 +548,7 @@ public abstract class Statement
         @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            Argument arg = ensureMethodParameters().get(sName);
+            Argument arg = ensureNameMap().get(sName);
             return arg instanceof Register &&
                     (((Register) arg).getIndex() >= 0 || ((Register) arg).isUnknown());
             }
@@ -523,7 +556,7 @@ public abstract class Statement
         @Override
         public boolean isVarWritable(String sName)
             {
-            Argument arg = ensureMethodParameters().get(sName);
+            Argument arg = ensureNameMap().get(sName);
             if (arg instanceof Register)
                 {
                 return ((Register) arg).isWritable();
@@ -550,8 +583,8 @@ public abstract class Statement
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
-            String                sName     = name.getValue().toString();
-            Map<String, Argument> mapByName = ensureMethodParameters();
+            String                sName     = name.getValueText();
+            Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
@@ -559,35 +592,6 @@ public abstract class Statement
                 arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
                 if (arg != null)
                     {
-                    // while the name resolved to something, we need to apply the rules of what that
-                    // something means from this context
-                    if (arg instanceof Constant)
-                        {
-                        Constant constant = (Constant) arg;
-                        switch (constant.getFormat())
-                            {
-                            case Class:
-                                if (!((ClassStructure) ((IdentityConstant) constant).getComponent()).isSingleton())
-                                    {
-                                    arg = pool().ensureClassTypeConstant(constant, Access.PUBLIC);
-                                    break;
-                                    }
-                                // fall through
-                            case Module:
-                            case Package:
-                                // these are always singletons
-                                arg = pool().ensureSingletonConstConstant((IdentityConstant) constant);
-                                break;
-
-
-                            case ThisClass:
-                            case ParentClass:
-                            case ChildClass:
-                                // TODO not sure how to handle these yet, but should be easy ...
-                                throw new UnsupportedOperationException("constant=" + constant);
-                            }
-                        }
-
                     mapByName.put(sName, arg);
                     }
                 }
@@ -600,7 +604,7 @@ public abstract class Statement
             {
             checkValidating();
 
-            String       sName = name.getValue().toString();
+            String       sName = name.getValueText();
             boolean      fThis = false;
             ConstantPool pool  = pool();
             TypeConstant type;
@@ -649,19 +653,10 @@ public abstract class Statement
                     MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
                     if (abody == null || abody.length <= 1)
                         {
-                        // TODO error
+                        name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }
 
-                    type = method.getIdentityConstant().getSignature().asFunctionType();
-
-
-                    MethodStructure method = getMethod();
-                    // there can be a "super" for any class, but cannot be on an interface
-                    IdentityConstant idParent = getMethod().getParent().getIdentityConstant();
-                    while (idParent)
-                    // the method must be @Override; the type is based on this method
-                    // TODO need to verify that there is a super
-                    type  = pool().typeFunction(); // TODO need the actual sig of the super function
+                    type  = method.getIdentityConstant().getSignature().asFunctionType();
                     nReg  = Op.A_SUPER;
                     fThis = true;
                     break;
@@ -676,11 +671,11 @@ public abstract class Statement
 
             if (fThis && isStatic() && !m_fLoggedNoThis)
                 {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS, sName);
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 m_fLoggedNoThis = true;
                 }
 
-            Map<String, Argument> mapByName = ensureMethodParameters();
+            Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
@@ -690,25 +685,15 @@ public abstract class Statement
             return arg;
             }
 
-        protected Map<String, Argument> ensureMethodParameters()
+        @Override
+        protected void initNameMap(Map<String, Argument> mapByName)
             {
-            Map<String, Argument> mapByName = m_mapByName;
-
-            if (mapByName == null)
+            MethodStructure method = m_method;
+            for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
-                mapByName = new HashMap<>();
-
-                MethodStructure method = m_method;
-                for (int i = 0, c = method.getParamCount(); i < c; ++i)
-                    {
-                    Parameter param = method.getParam(i);
-                    mapByName.put(param.getName(), new Register(param.getType(), i));
-                    }
-
-                m_mapByName = mapByName;
+                Parameter param = method.getParam(i);
+                mapByName.put(param.getName(), new Register(param.getType(), i));
                 }
-
-            return mapByName;
             }
 
         public boolean isStatic()

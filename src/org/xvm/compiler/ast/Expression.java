@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import java.util.List;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -13,9 +14,13 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.JumpFalse;
@@ -1099,7 +1104,8 @@ public abstract class Expression
      *                        information to the resolution
      * @param errs            the error listener to log any errors to
      *
-     * @return the argument represented by the simple name, as described above
+     * @return the argument represented by the simple name, as described above, or null if the name
+     *         was not found
      */
     protected Argument resolveFirstName(Context              ctx,
                                         boolean              fSuppressDeref,
@@ -1108,15 +1114,145 @@ public abstract class Expression
                                         ErrorListener        errs)
         {
         // resolve the name
-        String   sName = tokName.getValue().toString();
+        String   sName = tokName.getValueText();
         Argument arg   = ctx.resolveName(tokName, errs);
-
-        // check for errors
         if (arg == null)
             {
             log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
                     sName, ctx.getMethod().getIdentityConstant().getSignature());
+            return null;
             }
+
+        return applyArgRules(arg, fSuppressDeref, tokName, listTypes, errs);
+        }
+
+    /**
+     * Given an argument and a "dot name" of that argument, determine what the "dot name" portion
+     * refers to.
+     * <p/>TODO remember ".this"
+     * <p/>TODO "construct" (placed at end of list by parser)
+     *
+     * @param arg             the "left hand side" argument providing context to resolve the next
+     *                        name
+     * @param fSuppressDeref  true specifies that the expression should resolve the name without
+     *                        de-referencing it, explicitly suppressing the natural de-reference
+     * @param tokName         the token containing the name to resolve
+     * @param listTypes       the optional {@code <types>} following the name that could add
+     *                        information to the resolution
+     * @param errs            the error listener to log any errors to
+     *
+     * @return the argument represented by the name as relative to the previous arg
+     */
+    protected Argument resolveNextName(
+            Argument             arg,
+            boolean              fSuppressDeref,
+            Token                tokName,
+            List<TypeExpression> listTypes,
+            ErrorListener        errs)
+        {
+        // the "arg" _is_ the context in this case
+        // REVIEW arg could represent a Ref/Var for a property, for example, so how to get the TypeInfo for _that_ property?
+        TypeConstant typeArg = arg.getRefType();
+        TypeInfo     infoArg = typeArg.ensureTypeInfo(errs);
+        String       sName   = tokName.getValueText();
+
+        if (arg instanceof Register)
+            {
+            // this includes the unknown (TBD) register and actual register indexes (for parameters
+            // and local variables), and the reserved registers (for "this", etc.); the name has to
+            // be a property name (including type parameter names, and including constant value
+            // names) or a multi-method name (which includes both functions and methods) declared
+            // by the compile-time-type of the register
+            // REVIEW could it also possibly be a typedef name?
+            PropertyInfo prop = infoArg.findProperty(sName);
+            if (prop == null)
+                {
+                if (infoArg.containsMultiMethod(sName))
+                    {
+                    arg = new MultiMethodConstant(pool(), typeArg, sName);
+                    }
+                }
+            else
+                {
+                arg = prop.getIdentity();
+                }
+
+            }
+        else
+            {
+            // need to determine if the constant is part of the current virtual scope, which
+            // requires the current context to be virtual, and the constant to be a virtualizable
+            // member (property, method, typedef) of
+            Constant constant = (Constant) arg;
+            switch (constant.getFormat())
+                {
+                // TODO could be a type
+                case Typedef:
+                    // TODO should not have <> (???)
+                    break;
+
+                case Module:
+                case Package:
+                case Class:
+                    // TODO
+                    break;
+
+                case Property:
+                    // TODO
+                    break;
+
+                case MultiMethod:
+                    throw new IllegalStateException("multi-method can only be the last name");
+
+                default:
+                    throw new IllegalStateException("unsupported constant: " + constant);
+                }
+            }
+
+        return applyArgRules(arg, fSuppressDeref, tokName, listTypes, errs);
+        }
+
+    /**
+     * TODO
+     *
+     * <p/>TODO remember ".this"
+     * <p/>TODO "construct" (placed at end of list by parser)
+     *
+     * @param arg             the "left hand side" argument providing context to resolve the next
+     *                        name
+     * @param fSuppressDeref  true specifies that the expression should resolve the name without
+     *                        de-referencing it, explicitly suppressing the natural de-reference
+     * @param tokName         the token containing the name to resolve
+     * @param listTypes       the optional {@code <types>} following the name that could add
+     *                        information to the resolution
+     * @param errs            the error listener to log any errors to
+     *
+     * @return the argument represented by the name as relative to the previous arg
+     */
+    private Argument applyArgRules(
+            Argument             arg,
+            boolean              fSuppressDeref,
+            Token                tokName,
+            List<TypeExpression> listTypes,
+            ErrorListener        errs)
+        {
+        return fSuppressDeref
+                ? arg
+                : dereferenceName(arg, tokName, errs);
+        //
+        if (!isInvokee() && getTrailingTypeParams() != null)
+            {
+            // REVIEW - what if the arg refers to a type or has evaluated to a typedef? could it have a trailing "<T1,T2>"?
+            throw new IllegalStateException("TODO log error: name<type> not allowed without () invocation");
+            }
+
+
+        // check for errors
+        else if (!fSuppressDeref)
+            {
+
+            }
+
         else if (arg instanceof Register)
             {
             // this includes the unknown (TBD) register and actual register indexes (for parameters
@@ -1155,42 +1291,45 @@ public abstract class Expression
                     throw new IllegalStateException("unsupported constant: " + constant);
                 }
 
+// TODO
+            // while the name resolved to something, we need to apply the rules of what that
+            // something means from this context
+            if (arg instanceof Constant)
+                {
+                Constant constant = (Constant) arg;
+                switch (constant.getFormat())
+                    {
+                    case Class:
+                        if (!((ClassStructure) ((IdentityConstant) constant).getComponent()).isSingleton())
+                            {
+                            arg = pool().ensureClassTypeConstant(constant, Access.PUBLIC);
+                            break;
+                            }
+                        // fall through
+                    case Module:
+                    case Package:
+                        // these are always singletons
+                        arg = pool().ensureSingletonConstConstant((IdentityConstant) constant);
+                        break;
+
+
+                    case ThisClass:
+                    case ParentClass:
+                    case ChildClass:
+                        // TODO not sure how to handle these yet, but should be easy ...
+                        throw new UnsupportedOperationException("constant=" + constant);
+                    }
+                }
+
+
             // check for any errors
-                boolean fStatic = ctx.isStatic();
+            boolean fStatic = ctx.isStatic();
             }
         else
             {
             throw new IllegalStateException("unsupported argument: " + arg);
             }
 
-        return arg;
-        }
-
-    /**
-     * TODO
-     *
-     * <p/>TODO remember ".this"
-     * <p/>TODO "construct" (placed at end of list by parser)
-     *
-     * @param arg             the "left hand side" argument providing context to resolve the next
-     *                        name
-     * @param fSuppressDeref  true specifies that the expression should resolve the name without
-     *                        de-referencing it, explicitly suppressing the natural de-reference
-     * @param tokName         the token containing the name to resolve
-     * @param listTypes       the optional {@code <types>} following the name that could add
-     *                        information to the resolution
-     * @param errs            the error listener to log any errors to
-     *
-     * @return the argument represented by the name as relative to the previous arg
-     */
-    protected Argument resolveNextName(Argument             arg,
-                                       boolean              fSuppressDeref,
-                                       Token                tokName,
-                                       List<TypeExpression> listTypes,
-                                       ErrorListener        errs)
-        {
-        // TODO
-        return null;
         }
 
     /**

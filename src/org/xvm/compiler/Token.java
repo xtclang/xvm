@@ -123,6 +123,17 @@ public class Token
         }
 
     /**
+     * Helper to get the value as text, if there is a value, otherwise to get the token id's text.
+     * Use only for debugging or when the token is known to be a String.
+     *
+     * @return the String form of the token
+     */
+    public String getValueText()
+        {
+        return m_oValue == null ? m_id.TEXT : m_oValue.toString();
+        }
+
+    /**
      * @return true iff this is an identifier is a "special name"
      */
     public boolean isSpecial()

@@ -162,10 +162,33 @@ public class NameExpression
         return names;
         }
 
-    public List<TypeExpression> getParams()
+    // ----- Invocable begin -----
+    // TODO put these methods onto an "Invocable" interface? (i.e. also implemented by "dot name" expr)
+
+    public List<TypeExpression> getTrailingTypeParams()
         {
         return params;
         }
+
+    /**
+     * For the "left hand side" expression of an invocation, let the expression know that it is
+     * being used for an invocation.
+     */
+    protected void markAsInvokee()
+        {
+        m_fInvokee = true;
+        }
+
+    /**
+     * @return true iff this expression has been marked as an "invokee" <b><i>and</i></b> needs to
+     *         keep track of that information because its compilation behavior is altered as a
+     *         result
+     */
+    public boolean isInvokee()
+        {
+        return m_fInvokee;
+        }
+    // ----- Invocable end -----
 
     /**
      * @return the number of dot-delimited names in the expression
@@ -224,20 +247,23 @@ public class NameExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    protected Argument resolveNames(Context ctx, ErrorListener errs)
+    protected Argument resolveNames(Context ctx)
         {
-        // already did the first (0) name, so start with the second (1) and go to the last,
-        // resolving the name incrementally
-        Argument arg = null;
-        for (int i = 0, iLast = names.size() - 1; i <= iLast; ++i)
+        // resolve the first (i.e. simple) name using the context; if this is the LHS of an invoke,
+        // then the invoke is responsible for the dereference handling and type param info, so don't
+        // pass that down to the resolve method
+        int      cNames   = getNameCount();
+        boolean  fInvokee = isInvokee();
+        int      iParams  = fInvokee ? -1 : cNames - 1;
+        Argument arg      = resolveFirstName(ctx, isSuppressDeref() && !fInvokee,
+                names.get(0), iParams == 0 ? params : null, ErrorListener.BLACKHOLE);
+
+        // resolve from the second (1) to the last (getNameCount()-1) name, resolving each name
+        // based on the result from the one before it
+        for (int i = 1; arg != null && i < cNames; ++i)
             {
-            arg = i == 0
-                    ? resolveFirstName(ctx, isSuppressDeref(), names.get(i), i == iLast ? params : null, errs)
-                    : resolveNextName(arg, false, names.get(i), i == iLast ? params : null, errs);
-            if (arg == null)
-                {
-                return null;
-                }
+            arg = resolveNextName(arg, false,
+                    names.get(i), i == iParams ? params : null, ErrorListener.BLACKHOLE);
             }
 
         return arg;
@@ -246,7 +272,7 @@ public class NameExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        Argument arg = resolveNames(ctx, ErrorListener.BLACKHOLE);
+        Argument arg = resolveNames(ctx, );
         return arg == null
                 ? null
                 : arg.getRefType();
@@ -303,7 +329,7 @@ public class NameExpression
 
         // resolve the initial name
         Token        name  = names.get(0);
-        String       sName = name.getValue().toString();
+        String       sName = name.getValueText();
         Argument     arg   = ctx.resolveName(name, errs);
         if (arg == null)
             {
@@ -485,6 +511,7 @@ public class NameExpression
 
     private Argument     m_arg;
     private Assignable   m_LVal;
+    private boolean      m_fInvokee;
     private boolean      m_fAssignable;
     private TypeConstant m_type;
 

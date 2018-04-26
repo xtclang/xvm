@@ -145,7 +145,7 @@ module Ecstasy.xtclang.org
     const UnsupportedOperationException(String? text, Exception? cause)
             extends Exception(text, cause)
         {
-        construct UnsupportedOperationException(String? text, Exception? cause) {} // TODO bug that this is necessary
+        construct (String? text, Exception? cause) {} // TODO bug that this is necessary
         }
 
     package annotations

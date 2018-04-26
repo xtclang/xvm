@@ -119,7 +119,7 @@ public class MethodDeclarationStatement
         {
         if (name != null)
             {
-            return name.getValue().toString();
+            return name.getValueText();
             }
 
         MethodStructure struct = (MethodStructure) getComponent();
