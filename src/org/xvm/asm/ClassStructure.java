@@ -791,14 +791,14 @@ public class ClassStructure
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
-                MethodStructure methodGet = Adapter.getGetter(property);
+                MethodStructure methodGet = property.getGetter();
                 if ((methodGet == null || methodGet.isAccessible(access))
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = Adapter.getSetter(property);
+                MethodStructure methodSet = property.getSetter();
                 if ((methodSet == null || methodSet.isAccessible(access))
                         && constType.producesFormalType(sName, Access.PUBLIC))
                     {
@@ -931,14 +931,14 @@ public class ClassStructure
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
-                MethodStructure methodGet = Adapter.getGetter(property);
+                MethodStructure methodGet = property.getGetter();
                 if ((methodGet == null || methodGet.isAccessible(access)
                         && constType.producesFormalType(sName, Access.PUBLIC)))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = Adapter.getSetter(property);
+                MethodStructure methodSet = property.getSetter();
                 if ((methodSet == null || methodSet.isAccessible(access))
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {

@@ -79,8 +79,6 @@ public abstract class ClassTemplate
 
     /**
      * Initialize properties, methods and functions declared at the "top" layer.
-     *
-     * @return false if the initialization could not be completed due to a non-initialized dependency
      */
     public void initDeclared()
         {
@@ -818,7 +816,7 @@ public abstract class ClassTemplate
             return invokeNativeSet(frame, hTarget, property, hValue);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : Adapter.getSetter(property);
+        MethodStructure method = hTarget.isStruct() ? null : property.getSetter();
         if (method == null)
             {
             return setFieldValue(frame, hTarget, sPropName, hValue);
@@ -1399,14 +1397,14 @@ public abstract class ClassTemplate
         {
         PropertyStructure prop = getProperty(sPropName);
 
-        return Adapter.getGetter(prop);
+        return prop.getGetter();
         }
 
     public MethodStructure ensureSetter(String sPropName)
         {
         PropertyStructure prop = getProperty(sPropName);
 
-        return Adapter.getSetter(prop);
+        return prop.getSetter();
         }
 
 
