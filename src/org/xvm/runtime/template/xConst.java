@@ -48,6 +48,17 @@ public class xConst
     @Override
     public void initDeclared()
         {
+        if (this == INSTANCE)
+            {
+            getCanonicalType().ensureTypeInfo().findEqualsFunction().setNative(true);
+            getCanonicalType().ensureTypeInfo().findCompareFunction().setNative(true);
+            }
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return true;
         }
 
     @Override
@@ -67,9 +78,10 @@ public class xConst
     public int callEquals(Frame frame, TypeComposition clazz,
                           ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        // if there is an "equals" function, we need to call it
-        MethodStructure functionEquals = findCompareFunction("equals", xBoolean.PARAMETERS);
-        if (functionEquals != null)
+        // if there is an "equals" function that is not native (on the Const itself),
+        // we need to call it
+        MethodStructure functionEquals = clazz.getType().ensureTypeInfo().findEqualsFunction();
+        if (functionEquals != null && !functionEquals.isNative())
             {
             return frame.call1(functionEquals, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);
@@ -86,8 +98,8 @@ public class xConst
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // if there is an "compare" function, we need to call it
-        MethodStructure functionCompare = findCompareFunction("compare", xOrdered.TYPES);
-        if (functionCompare != null)
+        MethodStructure functionCompare = clazz.getType().ensureTypeInfo().findCompareFunction();
+        if (functionCompare != null && !functionCompare.isNative())
             {
             return frame.call1(functionCompare, null,
                     new ObjectHandle[]{hValue1, hValue2}, iReturn);

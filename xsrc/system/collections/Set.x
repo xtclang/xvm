@@ -11,7 +11,7 @@ interface Set<ElementType>
      * A Set is always composed of distinct values.
      */
     @Override
-    Boolean distinct.get()
+    @RO Boolean distinct.get()
         {
         return true;
         }

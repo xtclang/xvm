@@ -283,12 +283,12 @@ const Type<DataType>
         TODO hash
         }
 
-    static Boolean equals(Type value1, Type value2)
+    static <CompileType extends Type> Boolean equals(CompileType value1, CompileType value2)
         {
         TODO ==
         }
 
-    static Ordered compare(Type value1, Type value2)
+    static <CompileType extends Type> Ordered compare(CompileType value1, CompileType value2)
         {
         TODO <=>
         }

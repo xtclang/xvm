@@ -30,6 +30,12 @@ public class xBit
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),

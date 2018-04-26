@@ -625,13 +625,13 @@ public class xTestApp extends xModule
                 1))
             .add(new X_Print(1))
 
-            .add(new IsEq(0, 1, 2)) // next register #2
-            .add(new X_Print(adapter.ensureValueConstantId("p1 == p2")))
-            .add(new X_Print(2))
+            .add(new IsNotEq(0, 1, 2)) // next register #2
+            .add(new AssertM(2, adapter.ensureValueConstantId("p1 == p2")))
+            .add(new X_Print(adapter.ensureValueConstantId("p1 != p2")))
 
             .add(new IsGt(1, 0, 2))
+            .add(new AssertM(2, adapter.ensureValueConstantId("p2 <= p1")))
             .add(new X_Print(adapter.ensureValueConstantId("p2 > p1")))
-            .add(new X_Print(2))
 
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.Rectangle"),
                 adapter.ensureValueConstantId("r"))) // #3 (r)
@@ -704,7 +704,7 @@ public class xTestApp extends xModule
         ftTestMixin.createCode()
             .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.testMixin() #")))
             .add(new Var_N(adapter.getClassTypeConstId("TestApp.PrettyPoint"),
-                    adapter.ensureValueConstantId("prp"))) // #0 (prp)
+                adapter.ensureValueConstantId("prp"))) // #0 (prp)
             .add(new New_N(adapter.getMethodConstId("TestApp.PrettyPoint", "construct"),
                 new int[]{
                     adapter.ensureValueConstantId(1),

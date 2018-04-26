@@ -55,11 +55,6 @@ const Int64
         return to<Int128>().abs().to<UInt64>();
         }
 
-    static Boolean equals(Int64 value1, Int64 value2)
-        {
-        return value1.to<Byte[]> == value2.to<Byte[]>;
-        }
-
 // TODO
     @Op Int64 add(Int64 n);
 

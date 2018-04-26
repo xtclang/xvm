@@ -3,12 +3,11 @@ interface Const
         extends Orderable
     {
     /**
-     * TODO
+     * The default implementation of comparison for Const implementations is to compare each of
+     * the fields.
      */
-    static Ordered compare(Const value1, Const value2)
+    static <CompileType extends Const> Ordered compare(CompileType value1, CompileType value2)
         {
-        // TODO check if the same const class; if not, make up a predictable answer
-        // TODO same class, so either use the struct, or much better yet delegate somehow to const compare() impl
         TODO -- native
         }
 
@@ -16,10 +15,8 @@ interface Const
      * The default implementation of comparison-for-equality for Const implementations is to
      * compare each of the fields for equality.
      */
-    static Boolean equals(Const value1, Const value2)
+    static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2)
         {
-        // TODO check if the same const class; if not, return false
-        // TODO same class, so either use the struct or somehow delegate to the const equals() impl
         TODO -- native
         }
 

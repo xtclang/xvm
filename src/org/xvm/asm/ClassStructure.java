@@ -18,7 +18,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -282,6 +281,8 @@ public class ClassStructure
         TypeConstant typeCanonical = m_typeCanonical;
         if (typeCanonical == null)
             {
+            ConstantPool pool = getConstantPool();
+
             IdentityConstant constClz = getIdentityConstant();
 
             ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
@@ -289,10 +290,30 @@ public class ClassStructure
                 {
                 typeCanonical = constClz.asTypeConstant();
                 }
+            else if (constClz.equals(pool.clzTuple()))
+                {
+                // canonical Tuple is the same as Void
+                typeCanonical = pool.typeVoid();
+                }
             else
                 {
-                typeCanonical = getConstantPool().ensureClassTypeConstant(
-                    constClz, null, mapParams.values().toArray(new TypeConstant[mapParams.size()]));
+                TypeConstant[] atypeParam = new TypeConstant[mapParams.size()];
+                int ix = 0;
+                GenericTypeResolver resolver = null;
+                for (TypeConstant typeParam : mapParams.values())
+                    {
+                    if (typeParam.isParamsSpecified())
+                        {
+                        // TODO: not quite right if typeParam is a Tuple
+                        if (resolver == null)
+                            {
+                            resolver = new SimpleTypeResolver(new ArrayList<>());
+                            }
+                        typeParam = typeParam.resolveGenerics(resolver);
+                        }
+                    atypeParam[ix++] = typeParam;
+                    }
+                typeCanonical = pool.ensureClassTypeConstant(constClz, null, atypeParam);
                 }
             m_typeCanonical = typeCanonical;
             }
@@ -770,14 +791,14 @@ public class ClassStructure
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
-                MethodStructure methodGet = Adapter.getGetter(property);
+                MethodStructure methodGet = property.getGetter();
                 if ((methodGet == null || methodGet.isAccessible(access))
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = Adapter.getSetter(property);
+                MethodStructure methodSet = property.getSetter();
                 if ((methodSet == null || methodSet.isAccessible(access))
                         && constType.producesFormalType(sName, Access.PUBLIC))
                     {
@@ -910,14 +931,14 @@ public class ClassStructure
                 // TODO: add correct access check when added to the structure
                 // TODO: add @RO support
 
-                MethodStructure methodGet = Adapter.getGetter(property);
+                MethodStructure methodGet = property.getGetter();
                 if ((methodGet == null || methodGet.isAccessible(access)
                         && constType.producesFormalType(sName, Access.PUBLIC)))
                     {
                     return true;
                     }
 
-                MethodStructure methodSet = Adapter.getSetter(property);
+                MethodStructure methodSet = property.getSetter();
                 if ((methodSet == null || methodSet.isAccessible(access))
                         && constType.consumesFormalType(sName, Access.PUBLIC))
                     {
@@ -1459,9 +1480,11 @@ public class ClassStructure
          */
         public SimpleTypeResolver(List<TypeConstant> listActual)
             {
+            ConstantPool pool = getConstantPool();
+
             m_listActual = listActual;
 
-            if (getIdentityConstant().equals(getConstantPool().clzTuple()))
+            if (getIdentityConstant().equals(pool.clzTuple()))
                 {
                 m_fTuple = true;
                 }
@@ -1481,12 +1504,20 @@ public class ClassStructure
                     List<Map.Entry<StringConstant, TypeConstant>> entries = m_mapParams.asList();
 
                     // fill the missing actual parameters with the canonical types
+                    // Note: since there is a possibility of Tuple self-reference
+                    // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)
+                    // we'll prime the args as "Void" (TODO: that needs to be re-worked)
+                    for (int i = cActual; i < cFormal; i++)
+                        {
+                        listActual.add(pool.typeVoid());
+                        }
+
                     for (int i = cActual; i < cFormal; i++)
                         {
                         TypeConstant typeCanonical = entries.get(i).getValue();
 
                         // the canonical type itself could be formal, depending on another parameter
-                        listActual.add(typeCanonical.resolveGenerics(this));
+                        listActual.set(i, typeCanonical.resolveGenerics(this));
                         }
                     }
                 }

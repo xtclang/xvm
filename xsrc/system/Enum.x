@@ -55,19 +55,10 @@ interface Enum
         }
 
     /**
-     * Compare two enumerated values for order. If they are both members of the same enumeration,
-     * then compare then using their ordinal values; otherwise, use the result of comparing their
-     * Enumerations to each other.
+     * Compare two enumerated values that belong to the same enumeration.
      */
-    static Ordered compare(Enum value1, Enum value2)
+    static <CompileType extends Enum> Ordered compare(CompileType value1, CompileType value2)
         {
-        if (value1.enumeration == value2.enumeration)
-            {
-            return value1.ordinal <=> value2.ordinal;
-            }
-        else
-            {
-            return value1.enumeration <=> value2.enumeration;
-            }
+        return value1.ordinal <=> value2.ordinal;
         }
     }

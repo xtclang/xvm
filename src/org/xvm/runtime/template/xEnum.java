@@ -40,6 +40,12 @@ public class xEnum
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public void initDeclared()
         {
         if (this == INSTANCE)

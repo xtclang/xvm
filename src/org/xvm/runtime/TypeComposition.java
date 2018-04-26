@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,7 +51,7 @@ public class TypeComposition
      *
      * Note: the access of the inception type is always Access.PRIVATE.
      */
-    private final TypeConstant f_typeInception;
+    public final TypeConstant f_typeInception;
 
     /**
      * The type that is revealed by the ObjectHandle that refer to this composition.
@@ -72,7 +73,7 @@ public class TypeComposition
     private final Map<String, CallChain> f_mapSetters;
 
     // cached map of fields (values are always nulls)
-    private Map<String, ObjectHandle> m_mapFields;
+    private final Map<String, ObjectHandle> f_mapFields;
 
     /**
      * Construct the TypeComposition for a given "inception" type and a "revealed" type.
@@ -81,7 +82,7 @@ public class TypeComposition
      *  - it has to be a class (TypeConstant.isClass())
      *  - it cannot be abstract
      *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
-     *    a ParameterizedTypeConstant
+     *    ParameterizedTypeConstant(s)
      *
      * @param support        the OpSupport implementation for the inception type
      * @param typeInception  the "origin type"
@@ -90,6 +91,7 @@ public class TypeComposition
     protected TypeComposition(OpSupport support, TypeConstant typeInception, TypeConstant typeRevealed)
         {
         assert typeInception.isSingleDefiningConstant();
+        assert typeInception.getAccess() == Access.PUBLIC;
 
         // TODO: it should be a "super-private", allowing private access per inheritance level
         typeInception = typeInception.getConstantPool().
@@ -104,6 +106,7 @@ public class TypeComposition
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
+        f_mapFields  = f_template.isGenericHandle() ? ensureFields() : null;
         }
 
     /**
@@ -120,6 +123,7 @@ public class TypeComposition
         f_mapMethods = f_clzInception.f_mapMethods;
         f_mapGetters = f_clzInception.f_mapGetters;
         f_mapSetters = f_clzInception.f_mapSetters;
+        f_mapFields = f_clzInception.f_mapFields;
         }
 
     /**
@@ -367,14 +371,15 @@ public class TypeComposition
     // return the set of field names
     public Set<String> getFieldNames()
         {
-        return ensureFields().keySet();
+        Map mapCached = f_mapFields;
+        return mapCached == null ? Collections.EMPTY_SET : mapCached.keySet();
         }
 
     // create unassigned (with a null value) entries for all fields
     protected Map<String, ObjectHandle> createFields()
         {
-        Map mapCached = ensureFields();
-        if (mapCached.isEmpty())
+        Map mapCached = f_mapFields;
+        if (mapCached == null)
             {
             return null;
             }
@@ -386,34 +391,34 @@ public class TypeComposition
 
     private Map<String, ObjectHandle> ensureFields()
         {
-        Map mapCached = m_mapFields;
-        if (mapCached == null)
+        ConstantPool pool = f_typeInception.getConstantPool();
+
+        TypeConstant typeStruct = pool.ensureAccessTypeConstant(
+            f_typeInception.getUnderlyingType(), Access.STRUCT);
+        TypeInfo infoStruct = typeStruct.ensureTypeInfo();
+
+        Map mapFields = new ListMap<>();
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry :
+                infoStruct.getProperties().entrySet())
             {
-            m_mapFields = mapCached = new ListMap<>();
+            String sPropName = entry.getKey().getName();
+            PropertyInfo infoProp = entry.getValue();
 
-            TypeInfo infoType = f_typeInception.ensureTypeInfo();
-            for (Map.Entry<PropertyConstant, PropertyInfo> entry :
-                    infoType.getProperties().entrySet())
+            RefHandle hRef = null;
+            if (infoProp.hasField())
                 {
-                String sPropName = entry.getKey().getName();
-                PropertyInfo infoProp = entry.getValue();
-
-                RefHandle hRef = null;
-                if (infoProp.hasField())
+                if (infoProp.isRefAnnotated())
                     {
-                    if (infoProp.isRefAnnotated())
-                        {
-                        TypeComposition clzRef =
-                            f_template.f_templates.resolveClass(infoProp.getRefType());
+                    TypeComposition clzRef =
+                        f_template.f_templates.resolveClass(infoProp.getRefType());
 
-                        hRef = ((VarSupport) clzRef.getSupport()).
-                            createRefHandle(clzRef, sPropName);
-                        }
-                    mapCached.put(sPropName, hRef);
+                    hRef = ((VarSupport) clzRef.getSupport()).
+                        createRefHandle(clzRef, sPropName);
                     }
+                mapFields.put(sPropName, hRef);
                 }
             }
-        return mapCached;
+        return mapFields.isEmpty() ? null : mapFields;
         }
 
     @Override

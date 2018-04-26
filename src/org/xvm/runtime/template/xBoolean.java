@@ -5,8 +5,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
@@ -21,18 +19,9 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    public static TypeConstant TYPE;
-    public static TypeConstant[] PARAMETERS;
-
     public xBoolean(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
-
-        if (fInstance)
-            {
-            TYPE = getCanonicalType();
-            PARAMETERS = new TypeConstant[] {structure.getIdentityConstant().asTypeConstant()};
-            }
         }
 
     @Override

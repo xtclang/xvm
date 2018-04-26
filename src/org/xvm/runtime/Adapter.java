@@ -362,25 +362,4 @@ public class Adapter
                 null, getTypeParameters(asRetType, true), getTypeParameters(asArgType, false),
                 true);
         }
-
-    public static boolean isNative(MethodStructure method)
-        {
-        return method.isNative();
-        }
-
-    public static MethodStructure getGetter(PropertyStructure property)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) property.getChild("get");
-
-        // TODO: use the type
-        return mms == null ? null : mms.methods().get(0);
-        }
-
-    public static MethodStructure getSetter(PropertyStructure property)
-        {
-        MultiMethodStructure mms = (MultiMethodStructure) property.getChild("set");
-
-        // TODO: use the type
-        return mms == null ? null : mms.methods().get(0);
-        }
     }

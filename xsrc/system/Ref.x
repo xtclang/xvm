@@ -109,7 +109,7 @@ interface Ref<RefType>
      * implementation of this function is also impossible to represent in Ecstasy, hence the
      * implementation may appear to be infinitely recursive.
      */
-    static Boolean equals(Ref value1, Ref value2)
+    static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
         {
         return value1 == value2;
         }

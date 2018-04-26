@@ -78,9 +78,10 @@ public class TemplateRegistry
                 continue;
                 }
 
-            if (f_mapTemplatesByType.containsKey(structClass.getCanonicalType()))
+            if (f_mapTemplatesByType.containsKey(
+                    structClass.getIdentityConstant().asTypeConstant()))
                 {
-                // already loaded - one of the "base" ones
+                // already loaded - one of the "base" classes
                 continue;
                 }
 
@@ -157,14 +158,10 @@ public class TemplateRegistry
 
     protected void storeNativeTemplate(ClassTemplate template)
         {
-        TypeConstant typeCanonical = template.getCanonicalType();
+        // register just a naked underlying type
+        TypeConstant typeBase = template.getClassConstant().asTypeConstant();
 
-        if (typeCanonical.isParamsSpecified())
-            {
-            // register just a naked underlying type
-            typeCanonical = typeCanonical.getUnderlyingType();
-            }
-        registerNativeTemplate(typeCanonical, template);
+        registerNativeTemplate(typeBase, template);
         }
 
     public void registerNativeTemplate(TypeConstant type, ClassTemplate template)

@@ -283,12 +283,72 @@ public class PropertyStructure
 
     /**
      * @param constVal  the value for the property, or null if an initializer function is going to
-     *                  be used to provide the intial value for the property
+     *                  be used to provide the initial value for the property
      */
     public void setInitialValue(Constant constVal)
         {
         m_fHasValue = false;
         m_constVal  = constVal;
+        }
+
+    /**
+     * @return the MethodStructure for the "get" method; null if there is no getter
+     */
+    public MethodStructure getGetter()
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) getChild("get");
+
+        if (mms != null)
+            {
+            for (MethodStructure method : mms.methods())
+                {
+                if (method.getParamArray().length > 0)
+                    {
+                    continue;
+                    }
+                Parameter[] aParamReturn = method.getReturnArray();
+                if (aParamReturn.length != 1)
+                    {
+                    continue;
+                    }
+
+                if (aParamReturn[0].getType().equals(getType()))
+                    {
+                    return method;
+                    }
+                }
+            }
+        return null;
+        }
+
+    /**
+     * @return the MethodStructure for the "get" method; null if there is no getter
+     */
+    public MethodStructure getSetter()
+        {
+        MultiMethodStructure mms = (MultiMethodStructure) getChild("set");
+
+        if (mms != null)
+            {
+            for (MethodStructure method : mms.methods())
+                {
+                if (method.getReturnArray().length > 0)
+                    {
+                    continue;
+                    }
+                Parameter[] aParam = method.getParamArray();
+                if (aParam.length != 1)
+                    {
+                    continue;
+                    }
+
+                if (aParam[0].getType().equals(getType()))
+                    {
+                    return method;
+                    }
+                }
+            }
+        return null;
         }
 
     /**
