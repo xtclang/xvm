@@ -5,22 +5,22 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.Return_0;
-
 import org.xvm.asm.op.X_Print;
+
 import org.xvm.runtime.Adapter;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.template.xConst;
 
 /**
  * TODO:
  */
-public class xOrigin extends ClassTemplate
+public class xOrigin extends xConst
     {
     private final Adapter adapter;
 
     public xOrigin(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         adapter = templates.f_container.f_adapter;
         }

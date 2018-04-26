@@ -358,7 +358,16 @@ public abstract class ClassTemplate
         return f_struct.toString();
         }
 
+
     // ----- constructions  ------------------------------------------------------------------------
+
+    /**
+     * Specifies whether or not this template uses a GenericHandle for its objects.
+     */
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
 
     /**
      * Create an object handle for the specified constant.

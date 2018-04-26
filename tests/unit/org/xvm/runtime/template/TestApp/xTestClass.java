@@ -8,20 +8,20 @@ import org.xvm.asm.Op;
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.template.xObject;
 
 
 /**
  * A test class.
  */
-public class xTestClass extends ClassTemplate
+public class xTestClass extends xObject
     {
     private final Adapter adapter;
 
     public xTestClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(templates, structure, false);
 
         adapter = templates.f_container.f_adapter;
         }

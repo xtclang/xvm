@@ -967,33 +967,47 @@ public class TerminalTypeConstant
                 return Usage.NO;
 
             case Class:
-                {
-                ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) constIdThis).getComponent();
-
-                Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
-
-                listParams = clzThis.normalizeParameters(listParams);
-
-                Iterator<TypeConstant> iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext())
+                if (isTuple())
                     {
-                    TypeConstant constParam = iterParams.next();
-                    String sFormal = iterNames.next().getValue();
-
-                    if (constParam.consumesFormalType(sTypeName, access)
-                            && clzThis.producesFormalType(sFormal, access, listParams)
-                        ||
-                        constParam.producesFormalType(sTypeName, access)
-                            && clzThis.consumesFormalType(sFormal, access, listParams))
+                    // Tuple consumes and produces every element type
+                    for (TypeConstant constParam : listParams)
                         {
-                        return Usage.YES;
+                        if (constParam.consumesFormalType(sTypeName, access)
+                            ||
+                            constParam.producesFormalType(sTypeName, access))
+                            {
+                            return Usage.YES;
+                            }
+                        }
+                    }
+                else if (!listParams.isEmpty())
+                    {
+                    ClassStructure clzThis = (ClassStructure)
+                        ((IdentityConstant) constIdThis).getComponent();
+
+                    Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+
+                    listParams = clzThis.normalizeParameters(listParams);
+
+                    Iterator<TypeConstant> iterParams = listParams.iterator();
+                    Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                    while (iterParams.hasNext())
+                        {
+                        TypeConstant constParam = iterParams.next();
+                        String sFormal = iterNames.next().getValue();
+
+                        if (constParam.consumesFormalType(sTypeName, access)
+                                && clzThis.producesFormalType(sFormal, access, listParams)
+                            ||
+                            constParam.producesFormalType(sTypeName, access)
+                                && clzThis.consumesFormalType(sFormal, access, listParams))
+                            {
+                            return Usage.YES;
+                            }
                         }
                     }
                 return Usage.NO;
-                }
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).
@@ -1025,34 +1039,47 @@ public class TerminalTypeConstant
                 return Usage.valueOf(((PropertyConstant) constIdThis).getName().equals(sTypeName));
 
             case Class:
-                {
-                ClassStructure clzThis = (ClassStructure)
-                    ((IdentityConstant) constIdThis).getComponent();
-
-                Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
-
-                listParams = clzThis.normalizeParameters(listParams);
-
-                Iterator<TypeConstant> iterParams = listParams.iterator();
-                Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
-
-                while (iterParams.hasNext())
+                if (isTuple())
                     {
-                    TypeConstant constParam = iterParams.next();
-                    String sFormal = iterNames.next().getValue();
-
-                    if (constParam.producesFormalType(sTypeName, access)
-                            && clzThis.producesFormalType(sFormal, access, listParams)
-                        ||
-                        constParam.consumesFormalType(sTypeName, access)
-                            && clzThis.consumesFormalType(sFormal, access, listParams))
+                    // Tuple consumes and produces every element type
+                    for (TypeConstant constParam : listParams)
                         {
-                        return Usage.YES;
+                        if (constParam.producesFormalType(sTypeName, access)
+                            ||
+                            constParam.consumesFormalType(sTypeName, access))
+                            {
+                            return Usage.YES;
+                            }
                         }
                     }
+                else if (!listParams.isEmpty())
+                    {
+                    ClassStructure clzThis = (ClassStructure)
+                        ((IdentityConstant) constIdThis).getComponent();
 
+                    Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
+
+                    listParams = clzThis.normalizeParameters(listParams);
+
+                    Iterator<TypeConstant> iterParams = listParams.iterator();
+                    Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
+
+                    while (iterParams.hasNext())
+                        {
+                        TypeConstant constParam = iterParams.next();
+                        String sFormal = iterNames.next().getValue();
+
+                        if (constParam.producesFormalType(sTypeName, access)
+                                && clzThis.producesFormalType(sFormal, access, listParams)
+                            ||
+                            constParam.consumesFormalType(sTypeName, access)
+                                && clzThis.consumesFormalType(sFormal, access, listParams))
+                            {
+                            return Usage.YES;
+                            }
+                        }
+                    }
                 return Usage.NO;
-                }
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).

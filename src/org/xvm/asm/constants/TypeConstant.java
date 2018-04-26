@@ -2384,7 +2384,7 @@ public abstract class TypeConstant
         //    it still exists and can be found by the un-narrowed signature, since it is
         //    necessary for the system to be able to find the method chain that corresponds to
         //    that un-narrowed signature, because that is the signature that will appear in any
-        //    code that was compiled against the base type). further, the cap indicates what
+        //    code that was compiled against the base type). Further, the cap indicates what
         //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
         //    narrowed signature, which in turn will be able to walk up its super chain to the
         //    bottom-most narrowing method, which then supers to the method chain that is under

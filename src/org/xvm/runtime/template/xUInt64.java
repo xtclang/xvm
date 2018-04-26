@@ -21,4 +21,10 @@ public class xUInt64
     public void initDeclared()
         {
         }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
     }

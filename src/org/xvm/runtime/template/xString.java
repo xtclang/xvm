@@ -37,7 +37,13 @@ public class xString
         {
         markNativeGetter("size");
         markNativeMethod("indexOf", new String[]{"this", "Range<Int64>?"},
-                new String[]{"Boolean", "Int64"});
+            new String[]{"Boolean", "Int64"});
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
         }
 
     @Override

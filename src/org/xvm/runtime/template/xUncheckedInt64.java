@@ -52,6 +52,12 @@ public class xUncheckedInt64
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         // TODO: assert IntConstant.getFormat() == UncheckedInt
