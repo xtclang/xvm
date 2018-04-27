@@ -27,8 +27,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
 
-import org.xvm.runtime.Adapter;
-
 import org.xvm.util.ListMap;
 
 

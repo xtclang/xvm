@@ -557,7 +557,7 @@ class TestApp
 
         i = j;
 
-        Class<Point> clzP = Point;
+//        Class<Point> clzP = Point;
 
 //        Class<Array<Point>> clzAP = Array<Point>;
         }

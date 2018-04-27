@@ -1540,6 +1540,8 @@ public class Frame
             m_nTypeId = nTypeId;
             m_nNameId = nNameId;
             m_nStyle = nStyle;
+
+            assert getType() != null; // side effect or realizing the type
             }
 
         /**
@@ -1551,6 +1553,8 @@ public class Frame
             m_nTypeId = nAuxId;
             m_nStyle = VAR_STANDARD;
             m_resolver = resolver;
+
+            assert getType() != null; // side effect or realizing the type
             }
 
         public String getName()
@@ -1697,7 +1701,7 @@ public class Frame
                 MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
                 TypeConstant typeRet = constMethod.getRawReturns()[iRet];
 
-                return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_THIS
+                return nTargetReg == Op.A_THIS
                     // a static method (function) resolution or "this" target
                     ? typeRet.resolveGenerics(frame.getGenericsResolver())
                     // a target type-based resolution
@@ -1729,9 +1733,7 @@ public class Frame
             else
                 {
                 // "local property" or a literal constant
-                typeArray = nTargetReg == Op.A_THIS
-                    ? frame.getThis().getType() // "this" is an array
-                    : frame.getLocalType(nTargetReg);
+                typeArray = frame.getLocalType(nTargetReg);
                 }
 
             if (typeArray.isParamsSpecified())
@@ -1768,7 +1770,7 @@ public class Frame
             TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
                 pool.typeTuple(), constMethod.getRawReturns());
 
-            return nTargetReg == Op.A_FRAME || nTargetReg == Op.A_THIS
+            return nTargetReg == Op.A_THIS
                 // a static method (function) resolution or "this" target
                 ? typeTuple.resolveGenerics(frame.getGenericsResolver())
                 // a target type-based resolution

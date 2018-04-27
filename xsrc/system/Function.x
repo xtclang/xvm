@@ -1,8 +1,8 @@
 /**
- * TODO
+ * A Function represents a unit of invocation. A function has a name, a number of
+ * parameter types, and a number of return types.
  */
 interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
-// interface Function<(ParamTypes), (ReturnTypes)>
     {
     @RO Parameter[] params;
     @RO Map<String, Parameter> paramsByName;
