@@ -56,19 +56,6 @@ public class MultiMethodConstant
             }
         }
 
-    /**
-     * Construct a compile-time (temporary) constant whose value is a multi-method identifier of a
-     * type (not of a class).
-     *
-     * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the type containing the multi-method name
-     * @param sName        the method name
-     */
-    public MultiMethodConstant(ConstantPool pool, TypeConstant constParent, String sName)
-        {
-        super(pool, constParent, sName);
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

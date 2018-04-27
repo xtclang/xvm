@@ -2590,7 +2590,7 @@ public class Parser
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new DotNameExpression(expr, noDeRef, name, params, lEndPos);
+                            expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
                             break;
                             }
 
@@ -2711,84 +2711,96 @@ public class Parser
             case CONSTRUCT:
             case IDENTIFIER:
                 {
-                Token       noDeRef   = match(Id.BIT_AND);
-                Token       construct = match(Id.CONSTRUCT);
-                boolean     fNormal   = noDeRef == null && construct == null;
-                List<Token> names     = new ArrayList<>(3);
-                names.add(expect(Id.IDENTIFIER));
+                // the preamble can contain a leading "&" and a leading "construct". the "construct"
+                // ends up getting relocated from the left most position where it is parsed, to the
+                // right-most position in the name itself, e.g. "construct A.B.C" becomes a name
+                // expression of "A.B.C.construct". even more complex, it is possible to obtain a
+                // reference to the constructor itself using the notation "&construct A.B.C", which
+                // means that the no-de-reference indicator also gets moved to the right with the
+                // "construct"
+                Token   amp       = match(Id.BIT_AND);
+                Token   construct = match(Id.CONSTRUCT);
+                Token   name      = expect(Id.IDENTIFIER);
+                boolean fNormal   = amp == null && construct == null;
 
                 // test for single-param implicit lambda
                 if (fNormal && peek().getId() == Id.LAMBDA)
                     {
-                    return new LambdaExpression(Collections.singletonList(new NameExpression(
-                            noDeRef, names, null, names.get(names.size()-1).getEndPosition())),
+                    return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
                             expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
 
-                // parse qualified name
-                Token dot;
-                long  lEndPos = getLastMatch().getEndPosition();
-                while ((dot = match(Id.DOT)) != null)
+                // the no-de-ref goes with the construct if there is a construct, not with the name
+                Token nameNDR      = construct == null ? amp : null;
+                Token constructNDR = construct != null ? amp : null;
+
+                // parse qualified name (which is necessary because we may have to tack on a
+                // "construct" to the end)
+                long           lEndPos = getLastMatch().getEndPosition();
+                NameExpression left    = null;
+                boolean        fQuit   = false;
+                Token          dot;
+                while (nameNDR == null && (dot = match(Id.DOT)) != null)
                     {
-                    Token name = match(Id.IDENTIFIER);
-                    if (name == null)
+                    Token nameNext = match(Id.IDENTIFIER);
+                    if (nameNext == null)
                         {
+                        // it's not a ".name" construct, so the name expression ended BEFORE the dot
                         putBack(dot);
-                        long lEndName = names.get(names.size()-1).getEndPosition();
-
-                        // construct is added to the end of the list if it was specified
-                        if (construct != null)
-                            {
-                            names.add(construct);
-                            }
-
-                        return new NameExpression(noDeRef, names, null, lEndName);
+                        fQuit = true;
+                        break;
                         }
-                    else
-                        {
-                        names.add(name);
-                        lEndPos = name.getEndPosition();
-                        }
+
+                    left    = new NameExpression(left, nameNDR, name, null, lEndPos);
+                    nameNDR = null;                     // only gets applied once
+                    name    = nameNext;
+                    lEndPos = name.getEndPosition();
                     }
 
-                // construct is added to the end of the list if it was specified
-                if (construct != null)
+                if (fQuit || !fNormal)
                     {
-                    names.add(construct);
+                    // have to build the expression for the trailing name
+                    NameExpression expr = new NameExpression(left, nameNDR, name,
+                            parseTypeParameterTypeList(false), lEndPos);
+
+                    // construct is added to the end of the list if it was specified
+                    if (construct != null)
+                        {
+                        expr = new NameExpression(expr, constructNDR, construct, null, lEndPos);
+                        }
+
+                    return expr;
                     }
 
                 // test for an access-specified TypeExpression, i.e. ending with :public,
                 // :protected, :private, or :struct
                 Token access = null;
-                if (fNormal)
+                if (peek().getId() == Id.COLON)
                     {
-                    Token colon = match(Id.COLON);
-                    if (colon != null)
+                    Token colon = expect(Id.COLON);
+                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                         {
-                        if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                        switch (peek().getId())
                             {
-                            switch (peek().getId())
-                                {
-                                case PUBLIC:
-                                case PROTECTED:
-                                case PRIVATE:
-                                case STRUCT:
-                                    // at this point, this MUST be a type expression
-                                    access = current();
-                                    lEndPos = access.getEndPosition();
-                                    break;
-                                }
+                            case PUBLIC:
+                            case PROTECTED:
+                            case PRIVATE:
+                            case STRUCT:
+                                // at this point, this MUST be a type expression
+                                access = current();
+                                lEndPos = access.getEndPosition();
+                                break;
                             }
+                        }
 
-                        if (access == null)
-                            {
-                            putBack(colon);
-                            }
+                    if (access == null)
+                        {
+                        putBack(colon);
                         }
                     }
 
                 // test for a non-auto-narrowing modifier ("!")
-                Token tokNoNarrow = fNormal && !peek().hasLeadingWhitespace()
+                Token tokNoNarrow = !peek().hasLeadingWhitespace()
                         ? match(Id.NOT)
                         : null;
 
@@ -2815,49 +2827,44 @@ public class Parser
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:{"
-                if (fNormal)
+                if (peek().getId() == Id.COLON)
                     {
-                    Token colon = match(Id.COLON);
-                    if (colon != null)
+                    Token colon = expect(Id.COLON);
+                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                         {
-                        if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
+                        switch (peek().getId())
                             {
-                            switch (peek().getId())
-                                {
-                                case L_PAREN:
-                                    if (!(names.size() == 1 && names.get(0).getValue().equals("Tuple")))
-                                        {
-                                        break;
-                                        }
-                                    // fall through
-                                case L_CURLY:
-                                    return parseCustomLiteral(new NamedTypeExpression(
-                                            null, names, access, tokNoNarrow, params, lEndPos));
-
-                                case LIT_STRING:
-                                    if (names.size() == 1)
-                                        {
-                                        String sName = (String) names.get(0).getValue();
-                                        if (sName.equals("v") || sName.equals("Version"))
-                                            {
-                                            return parseCustomLiteral(new NamedTypeExpression(
-                                                    null, names, access, tokNoNarrow, params, lEndPos));
-                                            }
-                                        }
+                            case L_PAREN:
+                                if (left != null || !name.getValueText().equals("Tuple"))
+                                    {
                                     break;
-                                }
-                            }
+                                    }
+                                // fall through
+                            case L_CURLY:
+                                return parseCustomLiteral(new NamedTypeExpression(null,
+                                        toList(left, name), access, tokNoNarrow, params, lEndPos));
 
-                        putBack(colon);
+                            case LIT_STRING:
+                                if (left == null && (name.getValueText().equals("v")
+                                        || name.getValueText().equals("Version")))
+                                    {
+                                    return parseCustomLiteral(new NamedTypeExpression(
+                                            null, Collections.singletonList(name), access,
+                                            tokNoNarrow, params, lEndPos));
+                                    }
+                                break;
+                            }
                         }
+
+                    putBack(colon);
                     }
 
                 // note to future self: the reason that we have NameExpression with <params>
                 // (which seems almost self-evident to ALWAYS be a type and not a name) is because
                 // we have the ability to do this: "String s = o.to<String>();" (redundant return)
                 return access == null && tokNoNarrow == null
-                        ? new NameExpression(noDeRef, names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, tokNoNarrow, params, lEndPos);
+                        ? new NameExpression(left, null, name, params, lEndPos)
+                        : new NamedTypeExpression(null, toList(left, name), access, tokNoNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -2957,6 +2964,18 @@ public class Parser
             case AT:
                 return parseTypeExpression();
             }
+        }
+
+    private static List<Token> toList(NameExpression left, Token name)
+        {
+        if (left == null)
+            {
+            return Collections.singletonList(name);
+            }
+
+        List<Token> names = left.getNameTokens();
+        names.add(name);
+        return names;
         }
 
     /**

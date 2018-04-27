@@ -12,6 +12,7 @@ import org.xvm.asm.Version;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Statement.Context;
 
 
@@ -38,8 +39,12 @@ public class InvocationExpression
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        return expr instanceof NameExpression && ((NameExpression) expr).isDotNameWithNoParams("versionMatches")
-                && args.size() == 1 && args.get(0) instanceof VersionExpression
+        return expr instanceof NameExpression
+                && ((NameExpression) expr).getName().equals("versionMatches")
+                && args.size() == 1
+                && args.get(0) instanceof VersionExpression
+                && ((NameExpression) expr).getLeftExpression() != null
+                && ((NameExpression) expr).isOnlyNames()
                 || super.validateCondition(errs);
         }
 
@@ -49,20 +54,20 @@ public class InvocationExpression
         if (validateCondition(null))
             {
             // build the qualified module name
-            NameExpression exprNames = (NameExpression) expr;
-            StringBuilder  sb        = new StringBuilder();
-            for (int i = 0, c = exprNames.getNameCount() - 1; i < c; ++i)
+            StringBuilder sb    = new StringBuilder();
+            List<Token>   names = ((NameExpression) expr).getNameTokens();
+            for (int i = 0, c = names.size() - 1; i < c; ++i)
                 {
                 if (i > 0)
                     {
                     sb.append('.');
                     }
-                sb.append(exprNames.getName(i));
+                sb.append(names.get(i).getValueText());
                 }
 
+            ConstantPool pool    = pool();
             String       sModule = sb.toString();
             Version      version = ((VersionExpression) args.get(0)).getVersion();
-            ConstantPool pool    = pool();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
             }

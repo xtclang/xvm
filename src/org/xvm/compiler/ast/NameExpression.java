@@ -3,22 +3,26 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.ErrorListener.SilentErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
@@ -31,40 +35,115 @@ import org.xvm.util.Severity;
 
 
 /**
- * A name expression specifies a name. This handles both a simple name, a qualified name, and a name
- * with type parameters.
+ * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
+ * epxression, and names with type parameters and/or supress-de-reference symbols.
+ *
  * <p/>
  * A simple name can refer to:
  * <ul>
- * <li>A method parameter from the current method;</li>
- * <li>A local variable (register) available from the Context;</li>
- * <li>In the case of a lambda, a capturable variable from outside of the current MethodStructure
- *     (but within the compiler context)  that must be captured (added as an implicit parameter to
- *     the lambda);</li>
- * <li>A constant value available from the Context;</li>
- * <li>A capturable name available to the current method, if the method is a lambda;</li>
- * <li>A property name;</li>
- * <li>A class identity;</li>
- * <li>A typedef identity;</li>
- * <li>A multi-method identity;</li>
- * <li>The "construct" keyword (indicating a call to a constructor function on this type);</li>
- * <li>A parameter name preceding the lambda operator ("->").</li>
+ * <li>An import, which in turn refers to a module/package/class, property/constant,
+ *     multi-method, or typedef;</li>
+ * <li>A reserved identifier, such as "this";</li>
+ * <li>A variable;</li>
+ * <li>A parameter (other than being read-only, i.e. a Ref instead of a Var, this follows the
+ *     same rules as for variables);</li>
+ * <li>A property (i) defined within the current method body, (ii) defined by the current class
+ *     (or within one of the sequence of components between the current method and that class),
+ *     or (iii) defined by a containing class/package/module;</li>
+ * <li>A constant (i) defined by the current class (or within one of the sequence of components
+ *     between the current method and that class), or (ii) defined by a containing
+ *     class/package/module;</li>
+ * <li>A method (i) defined within the current method body, (ii) defined by the current class
+ *     (or within one of the sequence of components between the current method and that class),
+ *     or (iii) defined by a containing class/package/module;</li>
+ * <li>A function (i) defined within the current method body, (ii) defined by the current class
+ *     (or within one of the sequence of components between the current method and that class),
+ *     or (iii) defined by a containing class/package/module;</li>
+ * <li>A class (i) defined within the current method body, (ii) defined by the current class
+ *     (or within one of the sequence of components between the current method and that class),
+ *     or (iii) defined by a containing class/package/module, or (iv) the containing module
+ *     itself;</li>
+ * <li>A typedef (i) defined within the current method body, (ii) defined by the current class
+ *     (or within one of the sequence of components between the current method and that class),
+ *     or (iii) defined by a containing class/package/module;</li>
  * </ul>
  *
  * <p/>
- * A name with params can only be one of the following:
+ * The context either has a "this" (i.e. context from inside of an instance method), or it
+ * doesn't (i.e. context from inside of a function). Even a lambda within a method has a "this",
+ * since it can conceptually capture the "this" of the method. The presence of a "this" has to
+ * be tracked, because the interpretation of a name will differ in some cases based on whether
+ * there is a "this" or not.
+ * <p/>
+ * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
+ * suppression of the dereference using the "&" symbol). The result of the name being resolved
+ * will differ based on whether the name is implicitly deferenced, or explicitly not
+ * dereferenced.
+ *
+ * <p/>
+ * The starting point for dereferencing is within a "method body", which is one of:
  * <ul>
- * <li>A method name with "redundant return" disambiguation; or</li>
- * <li>A type.</li>
+ * <li>A method;</li>
+ * <li>A function;</li>
+ * <li>An initializer (e.g. for a property), which is implicitly a constructor (for a property),
+ *     or a function (for a constant);</li>
  * </ul>
  *
  * <p/>
- * Subsequent simple names can refer to:
+ * Furthermore, the starting point (i.e. the point at which the name to resolve is being used)
+ * may be nested within a lambda expression. The lambda boundary represents a point at which
+ * capture information must be accumulated, because each capture adds an implicit parameter to
+ * the lambda (and thus an implicit argument to be included by the initializer of the lambda).
+ * Assuming that the name resolves to a variable or parameter of type T:
  * <ul>
- * <li>A nested class name ... ending with "construct"</li>
- * <li></li>
- * <li></li>
- * <li></li>
+ * <li>A lambda that uses a captured variable name as an LVal adds an implicit type
+ *     {@code Var<T>} parameter of that name.</li>
+ * <li>A lambda that uses (i) a captured parameter name, or (ii) a captured effectively-constant
+ *     variable name, as an RVal, adds an implicit type {@code T} parameter of that name.
+ * <li>A lambda that uses a captured NOT-effectively-constant variable name as an RVal adds
+ *     an implicit type {@code Ref<T>} parameter of that name.</li>
+ * <li>If the lambda is nested within a lambda, and the name refers to a variable or parameter
+ *     outside of the outer lambda, then -- in addition to the above! -- the outer lambda must
+ *     capture the name on behalf of the inner lambda, allowing the inner lambda to capture it
+ *     from the outer lambda (and recursively so, if nested more than one level deep).</li>
+ * </ul>
+ *
+ * <p/>
+ * Lastly, there is the determination of the name itself. If the name refers to the name of an
+ * import, then that name is resolved first (recursively), such that the result is that the name
+ * no longer refers to the name of an import, but rather to the component (Module, Package,
+ * Class, Property, Multi-Method) being imported by that name.
+ * <p/>
+ * <code><pre>
+ *   Name        method             specifies            "static"            specifies
+ *   refers to   context            no-de-ref            context             no-de-ref
+ *   ---------   -----------------  -------------------  ------------------  -------------------
+ *   Reserved    T                  Error                T                   Error
+ *   - Virtual   T                  Error                Error               Error
+ *
+ *   Parameter   T                  <- Ref               T                   <- Ref
+ *   Local var   T                  <- Var               T                   <- Var
+ *
+ *   Property    T                  <- Ref/Var           Property            Error
+ *   Constant    T                  Error                T                   Error
+ *
+ *   Class       ClassConstant      Error                ClassConstant       Error
+ *   - related   PseudoConstant     Error                ClassConstant       Error
+ *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
+ *
+ *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
+ *
+ *   MMethod     MMethod            MMethod -1           MMethod (static)    MMethod -1 (static)
+ * </pre></code>
+ * <p/>
+ * Method and function evaluation is the most complex of these scenarios, because the no-de-ref
+ * flag is on the name expression, but can also be implied by an argument of the
+ * NonBindingExpression type. As a result, the InvocationExpression is responsible for checking
+ * for a non-binding effect, which requires <i>at least</i> one of:
+ * <ul>
+ * <li>The "left" expression being a name or dot-name expression with {@link #isSuppressDeref()}
+ *     evaluating to true; or</li>
+ * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
  * </ul>
  */
 public class NameExpression
@@ -72,15 +151,44 @@ public class NameExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * This constructor is used to implement a "simple name" expression.
+     *
+     * @param name  the (required) name
+     */
     public NameExpression(Token name)
         {
-        this(null, Collections.singletonList(name), null, name.getEndPosition());
+        this(null, name, null, name.getEndPosition());
         }
 
-    public NameExpression(Token amp, List<Token> names, List<TypeExpression> params, long lEndPos)
+    /**
+     * This constructor is used to implement an "initial name" expression.
+     *
+     * @param amp      the (optional) no-de-reference token "&"
+     * @param name     the (required) name
+     * @param params   the (optional)
+     * @param lEndPos  the end of the expression
+     */
+    public NameExpression(Token amp, Token name, List<TypeExpression> params, long lEndPos)
         {
+        this(null, amp, name, params, lEndPos);
+        }
+
+    /**
+     * This constructor is used to implement "dot name" expressions. The expression to the left of
+     * the dot is passed as "left".
+     *
+     * @param left     the (optional) expression to the left of the dot
+     * @param amp      the (optional) no-de-reference token "&"
+     * @param name     the (required) name
+     * @param params   the (optional)
+     * @param lEndPos  the end of the expression
+     */
+    public NameExpression(Expression left, Token amp, Token name, List<TypeExpression> params, long lEndPos)
+        {
+        this.left    = left;
         this.amp     = amp;
-        this.names   = names;
+        this.name    = name;
         this.params  = params;
         this.lEndPos = lEndPos;
         }
@@ -91,20 +199,34 @@ public class NameExpression
     @Override
     protected boolean usesSuper()
         {
-        for (Token token : names)
-            {
-            if (token.getId() == Id.SUPER)
-                {
-                return true;
-                }
-            }
-        return false;
+        return name.getId() == Id.SUPER || left != null && left.usesSuper();
         }
 
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        return isDotNameWithNoParams("present") || super.validateCondition(errs);
+        // can only be "Name.Name.present" form
+        if (left instanceof NameExpression && amp == null && params == null && getName().equals("present"))
+            {
+            // left has to be all names
+            NameExpression expr = (NameExpression) left;
+            while (expr.left != null)
+                {
+                if (!expr.getName().equals("present") && expr.left instanceof NameExpression)
+                    {
+                    expr = (NameExpression) expr.left;
+                    }
+                else
+                    {
+                    return super.validateCondition(errs);
+                    }
+                }
+            return true;
+            }
+        else
+            {
+            return super.validateCondition(errs);
+            }
         }
 
     @Override
@@ -113,105 +235,143 @@ public class NameExpression
         if (validateCondition(null))
             {
             ConstantPool pool = pool();
-            return pool.ensurePresentCondition(new UnresolvedNameConstant(pool, getUpToDotName(), false));
+            return pool.ensurePresentCondition(new UnresolvedNameConstant(pool,
+                    ((NameExpression) left).collectNames(1), false));
             }
 
         return super.toConditionalConstant();
         }
 
     /**
-     * Determine if the expression is a multi-part, dot-delimited name that has no type params.
-     *
-     * @param sName  the last name of the expression must match this name
-     *
-     * @return true iff the expression is a multi-part, dot-delimited name that has no type params,
-     *         with the last part of the name matching the specified name
+     * @return true iff the expression is as "pure" name expression, i.e. containing only names
      */
-    protected boolean isDotNameWithNoParams(String sName)
+    public boolean isOnlyNames()
         {
-        List<Token> names  = this.names;
-        int         cNames = names.size();
-        return cNames > 1 && names.get(cNames-1).getValue().equals(sName) && (params == null || params.isEmpty());
+        return left == null || left instanceof NameExpression && ((NameExpression) left).isOnlyNames();
         }
 
     /**
-     * Get all of the names in the expression except the last one.
+     * Build a list of type names.
+     *
+     * @return a list of name tokens
+     */
+    public List<Token> getNameTokens()
+        {
+        return collectNameTokens(1);
+        }
+
+    /**
+     * Build an array of names for the name expression.
+     *
+     * @param cNames  how many names so far (recursing right to left)
      *
      * @return an array of names
      */
-    protected String[] getUpToDotName()
+    protected String[] collectNames(int cNames)
         {
-        List<Token> listNames = this.names;
-        int         cNames    = listNames.size() - 1;
-        String[]    aNames    = new String[cNames];
-        for (int i = 0; i < cNames; ++i)
+        String[] asName;
+        if (left instanceof NameExpression)
             {
-            aNames[i] = (String) listNames.get(i).getValue();
+            asName = ((NameExpression) left).collectNames(cNames + 1);
             }
-        return aNames;
+        else
+            {
+            asName = new String[cNames];
+            }
+        asName[asName.length-cNames] = getName();
+        return asName;
         }
 
-    @Override
+    /**
+     * Build an list of name tokens for the name expression.
+     *
+     * @param cNames  how many names so far (recursing right to left)
+     *
+     * @return a list of name tokens
+     */
+    protected List<Token> collectNameTokens(int cNames)
+        {
+        List<Token> list;
+        if (left instanceof NameExpression)
+            {
+            list = ((NameExpression) left).collectNameTokens(cNames + 1);
+            }
+        else
+            {
+            list = new ArrayList<>(cNames);
+            }
+        list.add(getNameToken());
+        return list;
+        }
+
+    /**
+     * @return the expression that precedes this name, if this is a "dot name" expression, or null
+     */
+    public Expression getLeftExpression()
+        {
+        return left;
+        }
+
+    /**
+     * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
+     *         a class, property, or method name
+     */
     public boolean isSuppressDeref()
         {
         return amp != null;
         }
 
-    public List<Token> getNames()
+    /**
+     * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
+     *         a class, property, or method name, or if the left expression is a name expression and
+     *         it has any suppressed deref
+     */
+    public boolean hasAnySuppressDeref()
         {
-        return names;
+        return isSuppressDeref() || left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
         }
 
-    // ----- Invocable begin -----
-    // TODO put these methods onto an "Invocable" interface? (i.e. also implemented by "dot name" expr)
+    /**
+     * @return the name token
+     */
+    public Token getNameToken()
+        {
+        return name;
+        }
 
+    /**
+     * @return the name
+     */
+    public String getName()
+        {
+        return name.getValueText();
+        }
+
+    /**
+     * @return the trailing {@code "<T1, T2>"} type expressions, or null
+     */
     public List<TypeExpression> getTrailingTypeParams()
         {
         return params;
         }
 
-    /**
-     * For the "left hand side" expression of an invocation, let the expression know that it is
-     * being used for an invocation.
-     */
-    protected void markAsInvokee()
-        {
-        m_fInvokee = true;
-        }
-
-    /**
-     * @return true iff this expression has been marked as an "invokee" <b><i>and</i></b> needs to
-     *         keep track of that information because its compilation behavior is altered as a
-     *         result
-     */
-    public boolean isInvokee()
-        {
-        return m_fInvokee;
-        }
-    // ----- Invocable end -----
-
-    /**
-     * @return the number of dot-delimited names in the expression
-     */
-    public int getNameCount()
-        {
-        return names.size();
-        }
-
-    /**
-     * @param i  the index of the name to obtain from the dot-delimited names in the expression
-     *
-     * @return the i-th name in the expression
-     */
-    String getName(int i)
-        {
-        return (String) names.get(i).getValue();
-        }
-
     @Override
     public long getStartPosition()
         {
-        return names.get(0).getStartPosition();
+        // construct gets moved from its left-most position in the source code to a right-most
+        // position in the AST, so if this is the "construct" node, then the word "construct" was
+        // actually the starting position of the expression
+        if (left != null && name.getId() != Id.CONSTRUCT)
+            {
+            return left.getStartPosition();
+            }
+
+        if (amp != null)
+            {
+            return amp.getStartPosition();
+            }
+
+        return name.getStartPosition();
         }
 
     @Override
@@ -222,20 +382,13 @@ public class NameExpression
 
     public boolean isSpecial()
         {
-        for (Token name : names)
-            {
-            if (name.isSpecial())
-                {
-                return true;
-                }
-            }
-        return false;
+        return name.isSpecial() || left instanceof NameExpression && ((NameExpression) left).isSpecial();
         }
 
     @Override
     public TypeExpression toTypeExpression()
         {
-        return new NamedTypeExpression(null, names, null, null, params, lEndPos);
+        return new NamedTypeExpression(null, collectNameTokens(1), null, null, params, lEndPos);
         }
 
     @Override
@@ -247,54 +400,175 @@ public class NameExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    protected Argument resolveNames(Context ctx)
-        {
-        // resolve the first (i.e. simple) name using the context; if this is the LHS of an invoke,
-        // then the invoke is responsible for the dereference handling and type param info, so don't
-        // pass that down to the resolve method
-        int      cNames   = getNameCount();
-        boolean  fInvokee = isInvokee();
-        int      iParams  = fInvokee ? -1 : cNames - 1;
-        Argument arg      = resolveFirstName(ctx, isSuppressDeref() && !fInvokee,
-                names.get(0), iParams == 0 ? params : null, ErrorListener.BLACKHOLE);
-
-        // resolve from the second (1) to the last (getNameCount()-1) name, resolving each name
-        // based on the result from the one before it
-        for (int i = 1; arg != null && i < cNames; ++i)
-            {
-            arg = resolveNextName(arg, false,
-                    names.get(i), i == iParams ? params : null, ErrorListener.BLACKHOLE);
-            }
-
-        return arg;
-        }
+    // TODO
+    // Name
+    // refers to   Result
+    // ---------   -------------------------------------------------------------------------
+    // Reserved    Argument index in the range [-0x01, -0x10]
+    // Parameter   Argument index in the range [0, p), where p is the number of parameters
+    // Local var   Argument index in the range >= p
+    // Typedef     Argument index < -0x10 referring to TypedefConstant
+    // Class       Argument index < -0x10 referring to ClassConstant
+    // Property    Argument index < -0x10 referring to PropertyConstant
+    // MMethod     Argument index < -0x10 referring to MultiMethodConstant
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        Argument arg = resolveNames(ctx, );
-        return arg == null
-                ? null
-                : arg.getRefType();
+        TypeConstant type;
+        if (left == null)
+            {
+            Argument arg = ctx.resolveName(name, ErrorListener.BLACKHOLE);
+            if (arg == null)
+                {
+                return null;
+                }
+
+            type = arg.getRefType();
+
+            // apply the "trailing type parameters"
+            List<TypeExpression> params = getTrailingTypeParams();
+            if (params != null)
+                {
+                // the arg must be a class or a typedef
+                if (!(arg instanceof Constant))
+                    {
+                    return null;
+                    }
+
+                int            cParams = params.size();
+                TypeConstant[] aParams = new TypeConstant[cParams];
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    TypeConstant typeParam = params.get(i).getImplicitType(ctx);
+                    if (typeParam == null)
+                        {
+                        return null;
+                        }
+                    aParams[i] = typeParam;
+                    }
+
+                switch (((Constant) arg).getFormat())
+                    {
+                    case Module:
+                    case Package:
+                    case Class:
+                        // the trailing <params> results in a type constant
+                        type = pool().ensureParameterizedTypeConstant(
+                                ((IdentityConstant) arg).asTypeConstant(), aParams);
+                        break;
+
+                    case Typedef:
+                        if (isSuppressDeref())
+                            {
+                            // can't both provide <params> and suppress de-reference (since the
+                            // params are implicitly applied to the type as part of de-referencing
+                            return null;
+                            }
+                        else
+                            {
+                            // the typedef is just a redirect to another type
+                            type = ((TypedefConstant) arg).getReferredToType();
+
+                            // remove/replace the parameters
+                            return type.adoptParameters(aParams);
+                            }
+
+                    default:
+                        // trailing type params are not appropriate for whatever type this is
+                        return null;
+                    }
+                }
+
+            return translateType(ctx, type, !isSuppressDeref(), ErrorListener.BLACKHOLE);
+            }
+        else
+            {
+            TypeConstant typeLeft = left.getImplicitType(ctx);
+            if (typeLeft == null)
+                {
+                return null;
+                }
+
+            // the left hand side could be:
+            // - a reserved name (e.g. this)
+            // - a variable (including a parameter)
+            // - a property
+            // - a class
+            // - a typedef
+
+            // results in
+            // - a Ref/Var
+            // - a ClassConstant (etc.) or a PseudoConstant
+            // - a SingletonConstant
+            // - a TypedefConstant
+            // - a Property
+            // - a type
+            // - a normal reference
+            // - an error
+
+            // if
+            // TODO - we have the left side type, so figure out what the name refers to
+
+            // TODO - then apply the rules
+
+                /*
+     * <p/>TODO remember ".this"
+     * <p/>TODO "construct" (placed at end of list by parser)
+    */
+            // the "arg" _is_ the context in this case
+            // REVIEW arg could represent a Ref/Var for a property, for example, so how to get the TypeInfo for _that_ property?
+            TypeConstant typeArg = arg.getRefType();
+            TypeInfo infoArg = typeArg.ensureTypeInfo(errs);
+            String       sName   = tokName.getValueText();
+
+            if (arg instanceof Register)
+                {
+                // this includes the unknown (TBD) register and actual register indexes (for parameters
+                // and local variables), and the reserved registers (for "this", etc.); the name has to
+                // be a property name (including type parameter names, and including constant value
+                // names) or a multi-method name (which includes both functions and methods) declared
+                // by the compile-time-type of the register
+                // REVIEW could it also possibly be a typedef name?
+                PropertyInfo prop = infoArg.findProperty(sName);
+                if (prop == null)
+                    {
+                    if (infoArg.containsMultiMethod(sName))
+                        {
+                        arg = new MultiMethodConstant(pool(), typeArg, sName);
+                        }
+                    }
+                else
+                    {
+                    arg = prop.getIdentity();
+                    }
+
+                }
+
+
+            }
+
+        // TODO - we have arg.getRefType() at this point, now apply the rules
+        return null;
         }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        Argument arg = resolveNames(ctx, ErrorListener.BLACKHOLE);
-        if (arg == null)
+        TypeConstant typeThis = getImplicitType(ctx);
+        if (typeThis == null)
             {
             return TypeFit.NoFit;
             }
 
-        if (typeRequired == null || arg.getRefType().isA(typeRequired))
+        if (typeRequired == null || typeThis.isA(typeRequired))
             {
             return pref == TuplePref.Required
                     ? TypeFit.Pack
                     : TypeFit.Fit;
             }
 
-        if (arg.getRefType().getConverterTo(typeRequired) != null)
+        if (typeThis.getConverterTo(typeRequired) != null)
             {
             return pref == TuplePref.Required
                     ? TypeFit.ConvPack
@@ -328,7 +602,7 @@ public class NameExpression
             }
 
         // resolve the initial name
-        Token        name  = names.get(0);
+        Token        name  = this.name.get(0);
         String       sName = name.getValueText();
         Argument     arg   = ctx.resolveName(name, errs);
         if (arg == null)
@@ -346,7 +620,7 @@ public class NameExpression
             }
 
         // resolve the name to an argument, and determine assignability
-        if (names.size() == 1)
+        if (this.name.size() == 1)
             {
             // TODO incorporate params, if any
             m_arg         = arg;
@@ -448,6 +722,63 @@ public class NameExpression
         return LVal;
         }
 
+
+    // ----- name resolution helpers ---------------------------------------------------------------
+
+    /**
+     * TODO
+     * <p/>
+     * <code><pre>
+     *   Name        method             specifies            "static"            specifies
+     *   refers to   context            no-de-ref            context             no-de-ref
+     *   ---------   -----------------  -------------------  ------------------  -------------------
+     *   Reserved    T                  Error                T                   Error
+     *   - Virtual   T                  Error                Error               Error
+     *
+     *   Parameter   T                  <- Ref               T                   <- Ref
+     *   Local var   T                  <- Var               T                   <- Var
+     *
+     *   Property    T                  <- Ref/Var           Property            Error
+     *   Constant    T                  Error                T                   Error
+     *
+     *   Class       ClassConstant      Error                ClassConstant       Error
+     *   - related   PseudoConstant     Error                ClassConstant       Error
+     *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
+     *
+     *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
+     *
+     *   MMethod     MMethod            MMethod -1           MMethod (static)    MMethod -1 (static)
+     * </pre></code>
+     *
+     * @param ctx     TODO
+     * @param type    TODO
+     * @param fDeref  TODO
+     * @param errs    TODO
+     *
+     * @return TODO
+     */
+    TypeConstant translateType(Context ctx, TypeConstant type, boolean fDeref, ErrorListener errs)
+        {
+        // if (type.isClass())
+
+        // ClassConstant
+        // - if refers to singleton, then SingletonConstant
+        // - if virtual and refers to a "virtually related class", then PseudoConstant
+
+        // PropertyConstant
+        // - if virtual OR the property is a constant, then resolve to type of property
+        // - if not virtual and not constant, then stays the PropertyConstant
+
+        // Variable
+        // - type of variable
+
+        // Reserved
+        //
+        // - type of reserved name
+        return null;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -455,28 +786,23 @@ public class NameExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        boolean first = true;
-        for (Token token : names)
+        if (left != null)
             {
-            if (first)
-                {
-                first = false;
-                if (amp != null)
-                    {
-                    sb.append('&');
-                    }
-                }
-            else
-                {
-                sb.append('.');
-                }
-            sb.append(token.getValue());
+            sb.append(left)
+              .append('.');
             }
+
+        if (amp != null)
+            {
+            sb.append('&');
+            }
+
+        sb.append(name.getValueText());
 
         if (params != null)
             {
             sb.append('<');
-            first = true;
+            boolean first = true;
             for (Expression param : params)
                 {
                 if (first)
@@ -504,8 +830,9 @@ public class NameExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected Expression           left;
     protected Token                amp;
-    protected List<Token>          names;
+    protected Token                name;
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
@@ -515,5 +842,5 @@ public class NameExpression
     private boolean      m_fAssignable;
     private TypeConstant m_type;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "params");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
     }

@@ -48,7 +48,7 @@ public abstract class NamedConstant
      * @param constParent  the module, package, class, or method that contains this property
      * @param sName        the property name
      */
-    public NamedConstant(ConstantPool pool, Constant constParent, String sName)
+    public NamedConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {
         super(pool);
 
@@ -66,35 +66,13 @@ public abstract class NamedConstant
         m_constName   = pool.ensureStringConstant(sName);
         }
 
-    /**
-     * Internal constructor, used for temporary (unresolved) constants.
-     *
-     * @param pool  the ConstantPool
-     */
-    protected NamedConstant(ConstantPool pool)
-        {
-        super(pool);
-        }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant getParentConstant()
         {
-        return (IdentityConstant) m_constParent;
-        }
-
-    /**
-     * Helper that also conveniently allows the parent to be a TypeConstant.
-     *
-     * @return the type of the parent
-     */
-    public TypeConstant getParentType()
-        {
-        return m_constParent instanceof TypeConstant
-                ? (TypeConstant) m_constParent
-                : getParentConstant().asTypeConstant();
+        return m_constParent;
         }
 
     public StringConstant getNameConstant()
@@ -117,8 +95,8 @@ public abstract class NamedConstant
     @Override
     public Constant simplify()
         {
-        m_constParent = m_constParent.simplify();
-        m_constName   = (StringConstant) m_constName.simplify();
+        m_constParent = (IdentityConstant) m_constParent.simplify();
+        m_constName   = (StringConstant)   m_constName.simplify();
         return this;
         }
 
@@ -170,16 +148,7 @@ public abstract class NamedConstant
                 break;
 
             default:
-                if (constParent instanceof TypeConstant)
-                    {
-                    sParent = ((TypeConstant) constParent).getValueString();
-                    chSep   = '#';
-                    }
-                else
-                    {
-                    throw new IllegalStateException();
-                    }
-                break;
+                throw new IllegalStateException("parent=" + constParent);
             }
 
         return sParent + chSep + m_constName.getValue();
@@ -193,27 +162,21 @@ public abstract class NamedConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constParent = pool.getConstant(m_iParent);
-        m_constName   = (StringConstant) pool.getConstant(m_iName);
-
-        assert m_constParent instanceof IdentityConstant;
+        m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
+        m_constName   = (StringConstant)   pool.getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        assert m_constParent instanceof IdentityConstant;
-
-        m_constParent = pool.register(m_constParent);
-        m_constName   = (StringConstant) pool.register(m_constName);
+        m_constParent = (IdentityConstant) pool.register(m_constParent);
+        m_constName   = (StringConstant)   pool.register(m_constName);
         }
 
     @Override
     protected void assemble(DataOutput out)
             throws IOException
         {
-        assert m_constParent instanceof IdentityConstant;
-
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
         writePackedLong(out, m_constName.getPosition());
@@ -251,7 +214,7 @@ public abstract class NamedConstant
      * The constant that identifies the structure which is the parent of the structure identified by
      * this constant.
      */
-    private Constant m_constParent;
+    private IdentityConstant m_constParent;
 
     /**
      * The constant that holds the name of the structure identified by this constant.
