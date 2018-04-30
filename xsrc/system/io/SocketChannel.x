@@ -9,8 +9,8 @@ interface SocketChannel
      *
      * This operation will complete once any of the following occurs:
      *   - the buffer has been filled;
-     *   - the `minBytes` number of bytes has been read;
-     *   - the end-of-stream has been reached REVIEW: why would not simply return zero
+     *   - at least the `minBytes` number of bytes has been read;
+     *   - the end-of-stream has been reached
      *
      * The buffer position is updated according to the number of bytes read.
      *
@@ -27,6 +27,11 @@ interface SocketChannel
      *         &bytesRead.whenComplete(onComplete);
      *         }
      *
+     * @param minBytes  the minimum number of bytes the caller requires to be read before
+     *                  the operation completes; passing zero when there are no incomplete
+     *                  asynchronous read requests guarantees a non-blocking operation
+     *                  (meaning that only already "available" bytes are going to be read)
+     *
      * @return the number of bytes read or false if the end-of-stream has been reached
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
@@ -38,7 +43,7 @@ interface SocketChannel
      *
      * This operation will complete once any of the following occurs:
      *   - all the buffers have been filled;
-     *   - the `minBytes` number of bytes has been read;
+     *   - at least the `minBytes` number of bytes has been read;
      *   - the end-of-stream has been reached
      *
      * @return the number of bytes read and the index of the buffer the next byte would be
@@ -65,6 +70,8 @@ interface SocketChannel
      *         }
      *
      * @return the number of bytes written
+     *
+     * @throws IOException if an I/O error occurs
      */
     Int write(Buffer<Byte> buffer);
 
@@ -75,13 +82,10 @@ interface SocketChannel
      * @return the number of bytes written and the index of the buffer the next byte would be read
      *         from (e.g. if all the buffers are exhausted, the second return value would be equal
      *         to the buffer array length)
+     *
+     * @throws IOException if an I/O error occurs
      */
     (Int, Int) write(Buffer<Byte>[] buffers);
-
-    /**
-     * Ensure all the changes are written to the underlying storage medium.
-     */
-    Void flush();
 
     // TODO: modes and attributes...
     }
