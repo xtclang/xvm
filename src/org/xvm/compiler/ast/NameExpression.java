@@ -480,7 +480,7 @@ public class NameExpression
                     }
                 }
 
-            return translateType(ctx, type, !isSuppressDeref(), ErrorListener.BLACKHOLE);
+            return translateType(type, ctx.isStatic(), !isSuppressDeref(), ErrorListener.BLACKHOLE);
             }
         else
             {
@@ -583,7 +583,121 @@ public class NameExpression
         {
         boolean fValid = true;
 
-        // a name expression has params from the construct:
+        // the first step is to resolve the name to a "raw" argument, i.e. what does the name refer
+        // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
+        // vs. virtual, and so on
+        String sName = name.getValueText();
+        if (left == null)
+            {
+            // resolve the initial name
+            Argument arg = ctx.resolveName(name, errs);
+            if (arg == null)
+                {
+                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
+                        sName, ctx.getMethod().getIdentityConstant().getSignature());
+                fValid = false;
+                }
+            else if (arg instanceof Register)
+                {
+                Register reg = (Register) arg;
+                if (reg.isUnknown() || reg.getIndex() >= 0)
+                    {
+                    m_meaning = Meaning.Variable;
+                    }
+                else
+                    {
+                    m_meaning = Meaning.Reserved;
+                    }
+                m_arg = reg;
+                }
+            else
+                {
+                Constant constant = (Constant) arg;
+                switch (constant.getFormat())
+                    {
+                    case Class:
+                    case Package:
+                    case Module:
+                        m_meaning = Meaning.Class;
+                        break;
+
+                    case Property:
+                        m_meaning = Meaning.Property;
+                        break;
+
+                    case Typedef:
+                        m_meaning = Meaning.Typedef;
+                        break;
+
+                    default:
+                        throw new IllegalStateException("format=" + constant.getFormat()
+                                + ", constant=" + constant);
+                    }
+                m_arg = constant;
+                }
+            }
+        else
+            {
+            // a name expression may have a "left hand side", which means that the name is being used
+            // as a "dot name" expression
+            Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
+            if (leftNew == null)
+                {
+                // there was an error on the left hand side, so it will be impossible to determine
+                // the meaning of this name
+                fValid = false;
+                }
+            else
+                {
+                left = leftNew;
+
+                // when there is a "left hand side", it is possible that this name is a continuation
+                // of the name on the left hand side, which is called the "identity mode".
+
+                if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode())
+                    {
+                    NameExpression leftName = (NameExpression) leftNew;
+                    switch (leftName.m_meaning)
+                        {
+                        case Reserved:
+                        case Variable:
+                        case Class:
+                        case Property:
+                        case Typedef:
+                            // TODO
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                // obtain a component from the left-hand-side, if that is possible
+
+
+                // consider that the left-hand-side could be part of a qualified name that this
+                // expression is a further part of, or the left-hand-side could be a constant value
+
+
+                // use the left-hand-side to resolve the name
+                if (left.hasConstantValue())
+                    {
+                    // TODO module, package, class, pseudo, property
+                    }
+
+                // the left hand side could be:
+                // - a reserved name (e.g. this)
+                // - a variable (including a parameter)
+                // - a property
+                // - a class
+                // - a typedef
+
+                // identi
+                // TODO
+                }
+            }
+
+        // a name expression may have type params from the construct:
         //      QualifiedNameName TypeParameterTypeList-opt
         ConstantPool pool = pool();
         if (params != null)
@@ -601,36 +715,28 @@ public class NameExpression
                 }
             }
 
-        // resolve the initial name
-        Token        name  = this.name.get(0);
-        String       sName = name.getValueText();
-        Argument     arg   = ctx.resolveName(name, errs);
-        if (arg == null)
-            {
-            log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
-                    sName, ctx.getMethod().getIdentityConstant().getSignature());
-            fValid = false;
-            }
+        switch ()
+        // TODO if it's a reserved name, then neither no-de-ref nor params can be specified
 
-        // if anything has failed already, we won't be able to complete the validation
         if (!fValid)
             {
-            finishValidation(TypeFit.NoFit, typeRequired, arg instanceof Constant ? (Constant) arg : null);
+            // something failed previously, so we can't complete the validation
+            finishValidation(TypeFit.NoFit, typeRequired, null);
             return null;
             }
 
+        // translate the argument that we found by that name into the appropriate contextual meaning
+        arg = translateArg(arg, ctx.isStatic(), !isSuppressDeref(), errs);
+
+        // check required type
+        // TODO
+
+
+        // TODO here down
+
         // resolve the name to an argument, and determine assignability
-        if (this.name.size() == 1)
-            {
-            // TODO incorporate params, if any
-            m_arg         = arg;
-            m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
-            }
-        else
-            {
-            // TODO resolve subsequent names (will return another expression type at any point that a name is not resolving to an arg)
-            notImplemented();
-            }
+        m_RVal = arg;
+        m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
 
         // validate that the expression can be of the required type
         TypeConstant type = arg.getRefType();
@@ -672,8 +778,8 @@ public class NameExpression
             fit = fit.addPack();
             }
 
-        boolean fConstant = m_arg != null && m_arg instanceof Constant && !m_fAssignable;
-        finishValidation(fit, type, fConstant ? (Constant) m_arg : null);
+        boolean fConstant = m_RVal != null && m_RVal instanceof Constant && !m_fAssignable;
+        finishValidation(fit, type, fConstant ? (Constant) m_RVal : null);
 
         return fValid
                 ? this
@@ -689,9 +795,9 @@ public class NameExpression
     @Override
     public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
         {
-        return m_arg == null
+        return m_RVal == null
                 ? generateBlackHole(getType())
-                : m_arg;
+                : m_RVal;
         }
 
 
@@ -701,16 +807,16 @@ public class NameExpression
         Assignable LVal = m_LVal;
         if (LVal == null && isAssignable())
             {
-            if (m_arg instanceof Register)
+            if (m_RVal instanceof Register)
                 {
-                LVal = new Assignable((Register) m_arg);
+                LVal = new Assignable((Register) m_RVal);
                 }
-            else if (m_arg instanceof PropertyConstant)
+            else if (m_RVal instanceof PropertyConstant)
                 {
                 // TODO: use getThisClass().toTypeConstant() for a type
                 LVal = new Assignable(
                     new Register(pool().typeObject(), Op.A_TARGET),
-                    (PropertyConstant) m_arg);
+                    (PropertyConstant) m_RVal);
                 }
             else
                 {
@@ -725,8 +831,23 @@ public class NameExpression
 
     // ----- name resolution helpers ---------------------------------------------------------------
 
+    boolean isIdentityMode()
+        {
+        // TODO this is wrong; see table below
+        return (m_meaning == Meaning.Class || m_meaning == Meaning.Property)
+                && (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode());
+        }
+
     /**
-     * TODO
+     * Translate TODO
+     *
+     * There is a natural inconsistency here, because an identity can theoretically be used on the
+     * left-hand-side to mean either the class or the singleton. For example, with the "Person"
+     * class having a property "name", "Person.name" is ambiguous in that it could refer to the
+     * "name" property on the "Class" class, or to the "name" property on the "Person" class, but
+     * by convention, the ambiguity is decided by always looking first at Person, and only on a miss
+     * looking at Class.
+     *
      * <p/>
      * <code><pre>
      *   Name        method             specifies            "static"            specifies
@@ -738,27 +859,36 @@ public class NameExpression
      *   Parameter   T                  <- Ref               T                   <- Ref
      *   Local var   T                  <- Var               T                   <- Var
      *
-     *   Property    T                  <- Ref/Var           Property            Error
-     *   Constant    T                  Error                T                   Error
+     *   Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
+     *   Constant    T                  <- Ref/Var           T                   PropertyConstant*
      *
-     *   Class       ClassConstant      Error                ClassConstant       Error
-     *   - related   PseudoConstant     Error                ClassConstant       Error
-     *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
+     *   Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
+     *   - related   PseudoConstant     ClassConstant*       ClassConstant*      ClassConstant*
+     *   Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
      *
      *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
      *
-     *   MMethod     MMethod            MMethod -1           MMethod (static)    MMethod -1 (static)
+     *   MMethod     Error              Error                Error               Error
      * </pre></code>
+     * Note: '*' signifies "identity mode"
      *
-     * @param ctx     TODO
-     * @param type    TODO
-     * @param fDeref  TODO
-     * @param errs    TODO
+     * @param type     the raw type being translated, or null
+     * @param fStatic  true if the context within which the type is being translated is necessarily
+     *                 static (i.e. "this" is not available)
+     * @param fDeref   true if the type is being de-referenced; false if the de-reference is being
+     *                 explicitly suppressed
+     * @param errs     the error list to log errors to
      *
-     * @return TODO
+     * @return the translated type, or null
      */
-    TypeConstant translateType(Context ctx, TypeConstant type, boolean fDeref, ErrorListener errs)
+    TypeConstant translateType(TypeConstant type, boolean fStatic, boolean fDeref, ErrorListener errs)
         {
+        if (type == null)
+            {
+            return null;
+            }
+
+        // TODO
         // if (type.isClass())
 
         // ClassConstant
@@ -775,6 +905,12 @@ public class NameExpression
         // Reserved
         //
         // - type of reserved name
+        return null;
+        }
+
+    Argument translateArg(Argument arg, boolean fStatic, boolean fDeref, ErrorListener errs)
+        {
+        // TODO
         return null;
         }
 
@@ -836,11 +972,13 @@ public class NameExpression
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
-    private Argument     m_arg;
-    private Assignable   m_LVal;
-    private boolean      m_fInvokee;
-    private boolean      m_fAssignable;
-    private TypeConstant m_type;
+    // cached validation info
+    enum Meaning {Reserved, Variable, Property, Class, Typedef}
+    private Meaning    m_meaning;
+    private Argument   m_arg;
+    private Argument   m_RVal;
+    private boolean    m_fAssignable;
+    private Assignable m_LVal;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
     }

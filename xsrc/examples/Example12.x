@@ -858,3 +858,38 @@ class D<T3>
         // ...
         }
     }
+
+//
+
+// consider the case of "Point p;"
+
+Point                   // Class
+Point.x                 // Property
+Point.x.assigned        // Property
+Point.x.&get()          // Method
+
+Origin                  // Singleton instance
+&Origin                 // Class
+&Origin.x               // Property
+Origin.x                // Int value
+Origin.&x               // Ref/Var
+Origin.x.assigned       // Boolean value
+Point.x.&get()          // Method
+
+p.x                     // Int
+p.&x                    // bound property, i.e. Ref/Var: Var<Int>
+p.&x.&get()             // Function
+
+
+Class c = Point;
+Boolean f = c.isAbstract;
+// could have also said:
+Boolean f = Point.isAbstract;
+
+// what if class Person has a property "name" (note that Class class also has a property "name")
+Person.name             // *must* look first on Person, not on Class, so this refers to the Property "name" on Person
+Person.name.assigned    // the "assigned" Property of the "name" Property of Person
+
+String  s = Point.name              // String value of the "name" property of the "Class" class for the Point class
+Boolean b = Point.name.assigned     // Boolean value of the "assigned" property of the above
+

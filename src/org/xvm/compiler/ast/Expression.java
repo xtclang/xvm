@@ -623,11 +623,25 @@ public abstract class Expression
      * compiler. Some expressions may be constant, but may not be able to provide their value at
      * compile time, because code needs to be generated on behalf of the expression.
      *
-     * @return true iff the expression
+     * @return true iff the expression results in a compile-time (ConstantPool) constant value
      */
     public boolean hasConstantValue()
         {
         return m_aConst != null;
+        }
+
+    /**
+     * (Post-validation) Determine if the expression needs to generate code, even if if it yields
+     * a compile-time constant value.
+     *
+     * @return true iff the expression needs to produce code, regardless of wheterh it yields a
+     *         compile-time constant value
+     */
+    public boolean hasSideEffects()
+        {
+        // generally, an expression that yields a compile-time constant value does not have
+        // side-effects; this must be overridden by any expression that violates this assumption
+        return !hasConstantValue();
         }
 
     /**
@@ -1118,32 +1132,6 @@ public abstract class Expression
             {
             throw notImplemented();
             }
-        }
-
-
-    // ----- inner class: PendingArgument ----------------------------------------------------------
-
-    /**
-     * TODO - what is this for?
-     */
-    public class PendingArgument
-            implements Argument
-        {
-        public PendingArgument(Argument arg)
-            {
-            m_arg = arg;
-            }
-
-        @Override
-        public TypeConstant getRefType()
-            {
-            // TODO
-            return null;
-            }
-
-        // TODO
-
-        private Argument m_arg;
         }
 
 
