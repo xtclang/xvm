@@ -140,6 +140,11 @@ public class xTuple
         ObjectHandle[] ah1 = hTuple1.m_ahValue;
         ObjectHandle[] ah2 = hTuple2.m_ahValue;
 
+        if (ah1 == ah2)
+            {
+            return true;
+            }
+
         if (ah1.length != ah2.length)
             {
             return false;

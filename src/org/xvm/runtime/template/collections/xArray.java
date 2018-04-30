@@ -182,6 +182,11 @@ public class xArray
         ObjectHandle[] ah1 = hArray1.m_ahValue;
         ObjectHandle[] ah2 = hArray2.m_ahValue;
 
+        if (ah1 == ah2)
+            {
+            return true;
+            }
+
         for (int i = 0, c = hArray1.m_cSize; i < c; i++)
             {
             ObjectHandle hV1 = ah1[i];

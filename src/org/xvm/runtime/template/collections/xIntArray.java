@@ -160,17 +160,7 @@ public class xIntArray
             return false;
             }
 
-        long[] al1 = hArray1.m_alValue;
-        long[] al2 = hArray2.m_alValue;
-
-        for (int i = 0, c = hArray1.m_cSize; i < c; i++)
-            {
-            if (al1[i] != al2[i])
-                {
-                return false;
-                }
-            }
-        return true;
+        return Arrays.equals(hArray1.m_alValue, hArray2.m_alValue);
         }
 
     public static IntArrayHandle makeIntArrayInstance(long[] alValue)
