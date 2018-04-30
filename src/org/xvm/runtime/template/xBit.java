@@ -61,4 +61,10 @@ public class xBit
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
         }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
+        }
     }

@@ -340,6 +340,7 @@ class TestApp
             Var<Int> ri2 = &i;
             ri = &i;
 
+            assert(ri == ri2);
             print(ri.get());
 
             ri.set(2);

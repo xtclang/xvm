@@ -41,6 +41,12 @@ public class xClass
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ClassConstant)
@@ -92,6 +98,9 @@ public class xClass
 
         return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getType().compareTo(hThat.getType())));
         }
+
+
+    // ----- ObjectHandle -----
 
     public static class ClassHandle
             extends ObjectHandle

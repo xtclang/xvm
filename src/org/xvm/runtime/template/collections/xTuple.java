@@ -62,6 +62,12 @@ public class xTuple
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     protected ClassConstant getInceptionClassConstant()
         {
         return INCEPTION_CLASS;
@@ -119,6 +125,40 @@ public class xTuple
 
         return frame.assignValue(iReturn, hTuple);
         }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        TupleHandle hTuple1 = (TupleHandle) hValue1;
+        TupleHandle hTuple2 = (TupleHandle) hValue2;
+
+        if (hTuple1.isMutable() || hTuple2.isMutable())
+            {
+            return false;
+            }
+
+        ObjectHandle[] ah1 = hTuple1.m_ahValue;
+        ObjectHandle[] ah2 = hTuple2.m_ahValue;
+
+        if (ah1.length != ah2.length)
+            {
+            return false;
+            }
+
+        for (int i = 0, c = ah1.length; i < c; i++)
+            {
+            ObjectHandle hV1 = ah1[i];
+            ObjectHandle hV2 = ah2[i];
+
+            ClassTemplate template = hV1.getTemplate();
+            if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
 
     // ----- IndexSupport methods -----
 

@@ -47,6 +47,12 @@ public class xFunction
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant)

@@ -31,6 +31,12 @@ public class xByte
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),
@@ -55,5 +61,11 @@ public class xByte
         JavaLong h2 = (JavaLong) hValue2;
 
         return frame.assignValue(iReturn, xOrdered.makeHandle(h1.getValue() - h2.getValue()));
+        }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
         }
     }

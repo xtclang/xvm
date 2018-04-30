@@ -364,6 +364,9 @@ public class xTestApp extends xModule
             .add(new MoveVar(4, 5))
             .add(new MoveVar(4, 3))
 
+            .add(new IsEq(3, 5, Frame.RET_LOCAL))
+            .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("ri != ri2")))
+
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 6)) // next register #6
             .add(new X_Print(6))
 

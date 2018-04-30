@@ -62,6 +62,12 @@ public class xArray
         markNativeMethod("reify", VOID, new String[]{"collections.Array<ElementType>"});
         }
 
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constArray = (ArrayConstant) constant;
@@ -161,6 +167,35 @@ public class xArray
         int[] holder = new int[] {0}; // the index holder
         return new Equals(ah1, ah2, typeEl, cElements, holder, iReturn).doNext(frame);
         }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;
+        GenericArrayHandle hArray2 = (GenericArrayHandle) hValue2;
+
+        if (hArray1.isMutable() || hArray2.isMutable() || hArray1.m_cSize != hArray2.m_cSize)
+            {
+            return false;
+            }
+
+        ObjectHandle[] ah1 = hArray1.m_ahValue;
+        ObjectHandle[] ah2 = hArray2.m_ahValue;
+
+        for (int i = 0, c = hArray1.m_cSize; i < c; i++)
+            {
+            ObjectHandle hV1 = ah1[i];
+            ObjectHandle hV2 = ah2[i];
+
+            ClassTemplate template = hV1.getTemplate();
+            if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
 
     // ----- IndexSupport methods -----
 

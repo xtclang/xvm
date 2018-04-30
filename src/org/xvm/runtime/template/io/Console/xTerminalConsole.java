@@ -25,8 +25,8 @@ import org.xvm.runtime.template.xString.StringHandle;
 public class xTerminalConsole
         extends ClassTemplate
     {
-    public static BufferedReader CONSOLE_IN = new BufferedReader(new InputStreamReader(System.in));
-    public static PrintWriter CONSOLE_OUT = new PrintWriter(System.out, true);
+    private static BufferedReader CONSOLE_IN = new BufferedReader(new InputStreamReader(System.in));
+    private static PrintWriter CONSOLE_OUT = new PrintWriter(System.out, true);
 
     public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {

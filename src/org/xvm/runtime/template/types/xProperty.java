@@ -19,21 +19,20 @@ import org.xvm.runtime.TemplateRegistry;
 public class xProperty
         extends ClassTemplate
     {
-    public static xProperty INSTANCE;
-
     public xProperty(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
         }
 
     @Override

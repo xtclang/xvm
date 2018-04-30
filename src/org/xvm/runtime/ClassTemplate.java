@@ -346,7 +346,7 @@ public abstract class ClassTemplate
     @Override
     public boolean equals(Object obj)
         {
-        // type compositions are singletons
+        // class templates are singletons
         return this == obj;
         }
 
@@ -364,7 +364,7 @@ public abstract class ClassTemplate
      */
     public boolean isGenericHandle()
         {
-        return false;
+        return true;
         }
 
     /**
@@ -1257,6 +1257,26 @@ public abstract class ClassTemplate
                 throw new IllegalStateException(
                         "No implementation for \"compare()\" function at " + f_sName);
             }
+        }
+
+    /**
+     * Compare for identity equality two object handles that both associated with this template.
+     *
+     * More specifically, the ObjectHandles must either be the same runtime object, or the objects
+     * that they represent are both immutable and structurally identical (see Ref.equals).
+     *
+     * Note: this method is inherently native; it must be answered without calling any natural code
+     *
+     * @param hValue1  the first value
+     * @param hValue2  the second value
+     *
+     * @return true iff the identities are equal
+     */
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return hValue1 == hValue2 ||
+               isGenericHandle() && GenericHandle.compareIdentity(
+                        (GenericHandle) hValue1, (GenericHandle) hValue2);
         }
 
 
