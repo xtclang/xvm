@@ -207,6 +207,24 @@ public abstract class Component
         }
 
     /**
+     * @return the first component walking up the parentage chain of this component that is a
+     *         ClassStructure, or null if none can be found
+     */
+    public ClassStructure getContainingClass()
+        {
+        Component parent = getParent();
+        while (parent != null)
+            {
+            if (parent instanceof ClassStructure)
+                {
+                return (ClassStructure) parent;
+                }
+            parent = parent.getParent();
+            }
+        return null;
+        }
+
+    /**
      * Each Component is identified by a constant. The one exception is the file structure, which
      * contains components, but is not technically itself a component in the XVM sense.
      *

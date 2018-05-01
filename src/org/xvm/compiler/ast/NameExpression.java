@@ -20,13 +20,11 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
@@ -128,7 +126,7 @@ import org.xvm.util.Severity;
  *   Parameter     T                  <- Ref               T                   <- Ref
  *   Local var     T                  <- Var               T                   <- Var
  *
- *   Property      T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
+ *   Property      T                  <- Ref/Var           Error               PropertyConstant*
  *   - type param  T                  <- Ref               T                   <- Ref
  *   Constant      T                  <- Ref               T                   <- Ref
  *
@@ -426,140 +424,140 @@ public class NameExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type;
-        if (left == null)
-            {
-            Argument arg = ctx.resolveName(name, ErrorListener.BLACKHOLE);
-            if (arg == null)
-                {
-                return null;
-                }
-
-            type = arg.getRefType();
-
-            // apply the "trailing type parameters"
-            List<TypeExpression> params = getTrailingTypeParams();
-            if (params != null)
-                {
-                // the arg must be a class or a typedef
-                if (!(arg instanceof Constant))
-                    {
-                    return null;
-                    }
-
-                int            cParams = params.size();
-                TypeConstant[] aParams = new TypeConstant[cParams];
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    TypeConstant typeParam = params.get(i).getImplicitType(ctx);
-                    if (typeParam == null)
-                        {
-                        return null;
-                        }
-                    aParams[i] = typeParam;
-                    }
-
-                switch (((Constant) arg).getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                        // the trailing <params> results in a type constant
-                        type = pool().ensureParameterizedTypeConstant(
-                                ((IdentityConstant) arg).asTypeConstant(), aParams);
-                        break;
-
-                    case Typedef:
-                        if (isSuppressDeref())
-                            {
-                            // can't both provide <params> and suppress de-reference (since the
-                            // params are implicitly applied to the type as part of de-referencing
-                            return null;
-                            }
-                        else
-                            {
-                            // the typedef is just a redirect to another type
-                            type = ((TypedefConstant) arg).getReferredToType();
-
-                            // remove/replace the parameters
-                            return type.adoptParameters(aParams);
-                            }
-
-                    default:
-                        // trailing type params are not appropriate for whatever type this is
-                        return null;
-                    }
-                }
-
-            return translateType(type, ctx.isStatic(), !isSuppressDeref(), ErrorListener.BLACKHOLE);
-            }
-        else
-            {
-            TypeConstant typeLeft = left.getImplicitType(ctx);
-            if (typeLeft == null)
-                {
-                return null;
-                }
-
-            // the left hand side could be:
-            // - a reserved name (e.g. this)
-            // - a variable (including a parameter)
-            // - a property
-            // - a class
-            // - a typedef
-
-            // results in
-            // - a Ref/Var
-            // - a ClassConstant (etc.) or a PseudoConstant
-            // - a SingletonConstant
-            // - a TypedefConstant
-            // - a Property
-            // - a type
-            // - a normal reference
-            // - an error
-
-            // if
-            // TODO - we have the left side type, so figure out what the name refers to
-
-            // TODO - then apply the rules
-
-                /*
-     * <p/>TODO remember ".this"
-     * <p/>TODO "construct" (placed at end of list by parser)
-    */
-            // the "arg" _is_ the context in this case
-            // REVIEW arg could represent a Ref/Var for a property, for example, so how to get the TypeInfo for _that_ property?
-            TypeConstant typeArg = arg.getRefType();
-            TypeInfo infoArg = typeArg.ensureTypeInfo(errs);
-            String       sName   = tokName.getValueText();
-
-            if (arg instanceof Register)
-                {
-                // this includes the unknown (TBD) register and actual register indexes (for parameters
-                // and local variables), and the reserved registers (for "this", etc.); the name has to
-                // be a property name (including type parameter names, and including constant value
-                // names) or a multi-method name (which includes both functions and methods) declared
-                // by the compile-time-type of the register
-                // REVIEW could it also possibly be a typedef name?
-                PropertyInfo prop = infoArg.findProperty(sName);
-                if (prop == null)
-                    {
-                    if (infoArg.containsMultiMethod(sName))
-                        {
-                        arg = new MultiMethodConstant(pool(), typeArg, sName);
-                        }
-                    }
-                else
-                    {
-                    arg = prop.getIdentity();
-                    }
-
-                }
-
-
-            }
-
-        // TODO - we have arg.getRefType() at this point, now apply the rules
+//        TypeConstant type;
+//        if (left == null)
+//            {
+//            Argument arg = ctx.resolveName(name, ErrorListener.BLACKHOLE);
+//            if (arg == null)
+//                {
+//                return null;
+//                }
+//
+//            type = arg.getRefType();
+//
+//            // apply the "trailing type parameters"
+//            List<TypeExpression> params = getTrailingTypeParams();
+//            if (params != null)
+//                {
+//                // the arg must be a class or a typedef
+//                if (!(arg instanceof Constant))
+//                    {
+//                    return null;
+//                    }
+//
+//                int            cParams = params.size();
+//                TypeConstant[] aParams = new TypeConstant[cParams];
+//                for (int i = 0; i < cParams; ++i)
+//                    {
+//                    TypeConstant typeParam = params.get(i).getImplicitType(ctx);
+//                    if (typeParam == null)
+//                        {
+//                        return null;
+//                        }
+//                    aParams[i] = typeParam;
+//                    }
+//
+//                switch (((Constant) arg).getFormat())
+//                    {
+//                    case Module:
+//                    case Package:
+//                    case Class:
+//                        // the trailing <params> results in a type constant
+//                        type = pool().ensureParameterizedTypeConstant(
+//                                ((IdentityConstant) arg).asTypeConstant(), aParams);
+//                        break;
+//
+//                    case Typedef:
+//                        if (isSuppressDeref())
+//                            {
+//                            // can't both provide <params> and suppress de-reference (since the
+//                            // params are implicitly applied to the type as part of de-referencing
+//                            return null;
+//                            }
+//                        else
+//                            {
+//                            // the typedef is just a redirect to another type
+//                            type = ((TypedefConstant) arg).getReferredToType();
+//
+//                            // remove/replace the parameters
+//                            return type.adoptParameters(aParams);
+//                            }
+//
+//                    default:
+//                        // trailing type params are not appropriate for whatever type this is
+//                        return null;
+//                    }
+//                }
+//
+//            return translateType(type, ctx.isStatic(), !isSuppressDeref(), ErrorListener.BLACKHOLE);
+//            }
+//        else
+//            {
+//            TypeConstant typeLeft = left.getImplicitType(ctx);
+//            if (typeLeft == null)
+//                {
+//                return null;
+//                }
+//
+//            // the left hand side could be:
+//            // - a reserved name (e.g. this)
+//            // - a variable (including a parameter)
+//            // - a property
+//            // - a class
+//            // - a typedef
+//
+//            // results in
+//            // - a Ref/Var
+//            // - a ClassConstant (etc.) or a PseudoConstant
+//            // - a SingletonConstant
+//            // - a TypedefConstant
+//            // - a Property
+//            // - a type
+//            // - a normal reference
+//            // - an error
+//
+//            // if
+//            // TODO - we have the left side type, so figure out what the name refers to
+//
+//            // TODO - then apply the rules
+//
+//                /*
+//     * <p/>TODO remember ".this"
+//     * <p/>TODO "construct" (placed at end of list by parser)
+//    */
+//            // the "arg" _is_ the context in this case
+//            // REVIEW arg could represent a Ref/Var for a property, for example, so how to get the TypeInfo for _that_ property?
+//            TypeConstant typeArg = arg.getRefType();
+//            TypeInfo infoArg = typeArg.ensureTypeInfo(errs);
+//            String       sName   = tokName.getValueText();
+//
+//            if (arg instanceof Register)
+//                {
+//                // this includes the unknown (TBD) register and actual register indexes (for parameters
+//                // and local variables), and the reserved registers (for "this", etc.); the name has to
+//                // be a property name (including type parameter names, and including constant value
+//                // names) or a multi-method name (which includes both functions and methods) declared
+//                // by the compile-time-type of the register
+//                // REVIEW could it also possibly be a typedef name?
+//                PropertyInfo prop = infoArg.findProperty(sName);
+//                if (prop == null)
+//                    {
+//                    if (infoArg.containsMultiMethod(sName))
+//                        {
+//                        arg = new MultiMethodConstant(pool(), typeArg, sName);
+//                        }
+//                    }
+//                else
+//                    {
+//                    arg = prop.getIdentity();
+//                    }
+//
+//                }
+//
+//
+//            }
+//
+//        // TODO - we have arg.getRefType() at this point, now apply the rules
         return null;
         }
 
@@ -626,9 +624,9 @@ public class NameExpression
                 Constant constant = (Constant) arg;
                 switch (constant.getFormat())
                     {
-                    case Class:
-                    case Package:
                     case Module:
+                    case Package:
+                    case Class:
                         m_meaning = Meaning.Class;
                         break;
 
@@ -640,6 +638,10 @@ public class NameExpression
                         m_meaning = Meaning.Typedef;
                         break;
 
+                    case MultiMethod:
+                        // TODO log error
+                        throw new IllegalStateException("MMethod!");
+
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
@@ -647,9 +649,8 @@ public class NameExpression
                 m_arg = constant;
                 }
             }
-        else
+        else // there is a "left hand side", that means that this is a "dot name" expression
             {
-            // if there is a "left hand side", that means that this is a "dot name" expression
             Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
             if (leftNew == null)
                 {
@@ -659,28 +660,58 @@ public class NameExpression
                 }
             else
                 {
-                left = leftNew;
-
                 // when there is a "left hand side", it is possible that this name is a continuation
                 // of the name on the left hand side, which is called the "identity mode".
+                left = leftNew;
                 if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode(ctx))
                     {
-                    // it should either be ".this" or a child of the component
+                    // it must either be ".this" or a child of the component
+                    NameExpression   exprLeft = (NameExpression) leftNew;
+                    IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
                     switch (name.getId())
                         {
                         case THIS:
-                            // TODO
-                            break;
+                            if (ctx.isStatic())
+                                {
+                                // TODO log error
+                                throw new IllegalStateException("no this!");
+                                }
 
-                        case THIS_PUB:
-                        case THIS_PRO:
-                        case THIS_PRI:
-                        case THIS_STRUCT:
-                            // REVIEW - how to
+                            switch (idLeft.getFormat())
+                                {
+                                case Module:
+                                case Package:
+                                case Class:
+                                    // if the left is a class, then the result is a sequence of at
+                                    // least one (recursive) ParentClassConstant around a
+                                    // ThisClassConstant; from this (context) point, walk up looking
+                                    // for the specified class, counting the number of "parent
+                                    // class" steps to get there
+                                    PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
+                                    if (idRelative == null)
+                                        {
+                                        // TODO log error
+                                        throw new IllegalStateException("no " + idLeft.getName() + ".this!");
+                                        }
+                                    m_arg     = idRelative;
+                                    m_meaning = Meaning.Class;
+                                    break;
+
+                                case Property:
+                                    // if the left is a property, then the result is the same as if
+                                    // we had said "&propname", i.e. the result is a Ref/Var for the
+                                    // property in question (i.e. the property's "this")
+                                    // TODO - the property needs to be a parent of the current method, and not a constant value, and its class parent needs to be a "relative" like getRelativeIdentity()
+                                    // TODO - need to copy (or delegate to) the code for getting a Ref/Var for a property
+                                    throw new UnsupportedOperationException();
+
+                                default:
+                                    throw new IllegalStateException("left=" + idLeft);
+                                }
                             break;
 
                         case IDENTIFIER:
-                            Component child = ((NameExpression) leftNew).getIdentity().getComponent().getChild(sName);
+                            Component child = idLeft.getComponent().getChild(sName);
                             if (child == null || child instanceof MultiMethodStructure)
                                 {
                                 name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
@@ -691,63 +722,60 @@ public class NameExpression
                                 IdentityConstant id = child.getIdentityConstant();
                                 switch (id.getFormat())
                                     {
-                                    m_meaning = M
+                                    case Package:
+                                    case Class:
+                                        m_meaning = Meaning.Class;
+                                        break;
+
+                                    case Property:
+                                        m_meaning = Meaning.Property;
+                                        break;
+
+                                    case Typedef:
+                                        m_meaning = Meaning.Typedef;
+                                        break;
+
+                                    case MultiMethod:
+                                        // TODO log error
+                                        throw new IllegalStateException("MMethod!");
+
+                                    case Module:        // why an error? because it can't be nested
+                                    default:
+                                        throw new IllegalStateException("id=" + id);
+
                                     }
                                 m_arg = id;
                                 }
                             break;
 
                         default:
-                            name.log(errs, getSource(), Severity.ERROR, C)
-                        }
-                    }
-                else
-                    {
-                    NameExpression leftName = (NameExpression) leftNew;
-                    switch (leftName.m_meaning)
-                        {
-                        case Reserved:
-                        case Variable:
-                        case Class:
-                        case Property:
-                        case Typedef:
-                            // TODO
+                            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                            fValid = false;
                             break;
-
-                        default:
-                            throw new IllegalStateException();
                         }
                     }
-
-                // obtain a component from the left-hand-side, if that is possible
-
-
-                // consider that the left-hand-side could be part of a qualified name that this
-                // expression is a further part of, or the left-hand-side could be a constant value
-
-
-                // use the left-hand-side to resolve the name
-                if (left.hasConstantValue())
+                else // not in identity mode
                     {
-                    // TODO module, package, class, pseudo, property
+                    // the name can refer to either a property or a typedef
+                    TypeInfo     leftInfo = leftNew.getType().ensureTypeInfo(errs);
+                    PropertyInfo propInfo = leftInfo.findProperty(sName);
+                    if (propInfo != null) // TODO properties nested under something other than a class (need nested type infos?)
+                        {
+                        m_meaning = Meaning.Property;
+                        m_arg     = propInfo.getIdentity();
+                        }
+                    else
+                        {
+                        // TODO typedefs
+                        fValid = false;
+                        }
                     }
-
-                // the left hand side could be:
-                // - a reserved name (e.g. this)
-                // - a variable (including a parameter)
-                // - a property
-                // - a class
-                // - a typedef
-
-                // identi
-                // TODO
                 }
             }
 
-        // a name expression may have type params from the construct:
-        //      QualifiedNameName TypeParameterTypeList-opt
+        // validate the type parameters
         ConstantPool pool = pool();
-        if (params != null)
+        if (params != null && !params.isEmpty())
             {
             for (int i = 0, c = params.size(); i < c; ++i)
                 {
@@ -760,10 +788,27 @@ public class NameExpression
                     params.set(i, typeNew);
                     }
                 }
+
+            // a reserved name can not have type params
+            if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
+                {
+                // TODO log error
+                throw new IllegalStateException();
+                }
             }
 
-        switch ()
-        // TODO if it's a reserved name, then neither no-de-ref nor params can be specified
+        // validate the no-de-reference option
+        if (m_arg != null && isSuppressDeref())
+            {
+            // TODO
+
+            // a reserved name can not have no-de-ref
+            if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
+                {
+                // TODO log error
+                throw new IllegalStateException();
+                }
+            }
 
         if (!fValid)
             {
@@ -773,60 +818,60 @@ public class NameExpression
             }
 
         // translate the argument that we found by that name into the appropriate contextual meaning
-        arg = translateArg(arg, ctx.isStatic(), !isSuppressDeref(), errs);
+        // TODO arg = translateArg(arg, ctx.isStatic(), !isSuppressDeref(), errs);
 
-        // check required type
-        // TODO
-
-
-        // TODO here down
-
-        // resolve the name to an argument, and determine assignability
-        m_RVal = arg;
-        m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
-
-        // validate that the expression can be of the required type
-        TypeConstant type = arg.getRefType();
-        TypeFit      fit  = TypeFit.Fit;
-        if (fValid && typeRequired != null && !type.isA(typeRequired))
+        // check required type (might have to do a conversion)
+        if (typeRequired != null)
             {
-            // check if conversion in required
-            MethodConstant idMethod = type.ensureTypeInfo().findConversion(typeRequired);
-            if (idMethod == null)
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
-                fValid = false;
-                }
-            else
-                {
-                // use the return value from the conversion function to figure out what type the
-                // literal should be converted to, and then do the conversion here in the
-                // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
-                // able to rely on the runtime itself to do conversions, and using containers,
-                // can even do so for user code)
-                type = idMethod.getSignature().getRawReturns()[0];
-                fit  = fit.addConversion();
-                }
+            // TODO
             }
 
-        if (!fValid)
-            {
-            // if there's any problem computing the type, and the expression is already invalid,
-            // then just agree to whatever was asked
-            if (typeRequired != null)
-                {
-                type = typeRequired;
-                }
-
-            fit = TypeFit.NoFit;
-            }
-        else if (pref == TuplePref.Required)
-            {
-            fit = fit.addPack();
-            }
-
-        boolean fConstant = m_RVal != null && m_RVal instanceof Constant && !m_fAssignable;
-        finishValidation(fit, type, fConstant ? (Constant) m_RVal : null);
+//        // resolve the name to an argument, and determine assignability
+//        m_RVal = arg;
+//        m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
+//
+//        // validate that the expression can be of the required type
+//        TypeConstant type = arg.getRefType();
+//        TypeFit      fit  = TypeFit.Fit;
+//        if (fValid && typeRequired != null && !type.isA(typeRequired))
+//            {
+//            // check if conversion in required
+//            MethodConstant idMethod = type.ensureTypeInfo().findConversion(typeRequired);
+//            if (idMethod == null)
+//                {
+//                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
+//                fValid = false;
+//                }
+//            else
+//                {
+//                // use the return value from the conversion function to figure out what type the
+//                // literal should be converted to, and then do the conversion here in the
+//                // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
+//                // able to rely on the runtime itself to do conversions, and using containers,
+//                // can even do so for user code)
+//                type = idMethod.getSignature().getRawReturns()[0];
+//                fit  = fit.addConversion();
+//                }
+//            }
+//
+//        if (!fValid)
+//            {
+//            // if there's any problem computing the type, and the expression is already invalid,
+//            // then just agree to whatever was asked
+//            if (typeRequired != null)
+//                {
+//                type = typeRequired;
+//                }
+//
+//            fit = TypeFit.NoFit;
+//            }
+//        else if (pref == TuplePref.Required)
+//            {
+//            fit = fit.addPack();
+//            }
+//
+//        boolean fConstant = m_RVal != null && m_RVal instanceof Constant && !m_fAssignable;
+//        finishValidation(fit, type, fConstant ? (Constant) m_RVal : null);
 
         return fValid
                 ? this
@@ -885,34 +930,37 @@ public class NameExpression
      */
     protected boolean isIdentityMode(Context ctx)
         {
+        // TODO type parameters cancel identity mode
+
+        checkValidated();
         if (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx))
             {
-            if (m_meaning == Meaning.Class)
+            switch (m_meaning)
                 {
-                // a class name can continue identity mode if no-de-ref is specified:
-                // Name        method             specifies            "static"            specifies
-                // refers to   context            no-de-ref            context             no-de-ref
-                // ---------   -----------------  -------------------  ------------------  -------------------
-                // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
-                // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
-                // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
-                return (isSuppressDeref() || !((ClassStructure) getIdentity().getComponent()).isSingleton());
-                }
-            else if (m_meaning == Meaning.Property)
-                {
-                // a non-constant-property name can be "identity mode" if at least one of the
-                // following is true:
-                //   1) there is no left and the context is static; or
-                //   2) there is a left, and it is in identity mode;
-                //
-                // Name        method             specifies            "static"            specifies
-                // refers to   context            no-de-ref            context             no-de-ref
-                // ---------   -----------------  -------------------  ------------------  -------------------
-                // Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
-                // type param  T                  <- Ref               T                   <- Ref
-                // Constant    T                  <- Ref               T                   <- Ref
-                PropertyStructure prop = (PropertyStructure) getIdentity().getComponent();
-                return !prop.isStatic() && !prop.isTypeParameter() && (left != null || ctx.isStatic());
+                case Class:
+                    // a class name can continue identity mode if no-de-ref is specified:
+                    // Name        method             specifies            "static"            specifies
+                    // refers to   context            no-de-ref            context             no-de-ref
+                    // ---------   -----------------  -------------------  ------------------  -------------------
+                    // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
+                    // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
+                    // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
+                    return isSuppressDeref() || !((ClassStructure) getIdentity(ctx).getComponent()).isSingleton();
+
+                case Property:
+                    // a non-constant-property name can be "identity mode" if at least one of the
+                    // following is true:
+                    //   1) there is no left and the context is static; or
+                    //   2) there is a left, and it is in identity mode;
+                    //
+                    // Name        method             specifies            "static"            specifies
+                    // refers to   context            no-de-ref            context             no-de-ref
+                    // ---------   -----------------  -------------------  ------------------  -------------------
+                    // Property    T                  <- Ref/Var           Error               PropertyConstant*
+                    // type param  T                  <- Ref               T                   <- Ref
+                    // Constant    T                  <- Ref               T                   <- Ref
+                    PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
+                    return isSuppressDeref() && !prop.isConstant() && !prop.isTypeParameter() && left != null;
                 }
             }
 
@@ -923,85 +971,48 @@ public class NameExpression
      * @return the class or property identity that the name expression indicates, iff the name
      *         expression is "identity mode"
      */
-    protected IdentityConstant getIdentity()
+    protected IdentityConstant getIdentity(Context ctx)
         {
         return (IdentityConstant) m_arg;
         }
 
     /**
-     * Translate TODO
-     *
-     * There is a natural inconsistency here, because an identity can theoretically be used on the
-     * left-hand-side to mean either the class or the singleton. For example, with the "Person"
-     * class having a property "name", "Person.name" is ambiguous in that it could refer to the
-     * "name" property on the "Class" class, or to the "name" property on the "Person" class, but
-     * by convention, the ambiguity is decided by always looking first at Person, and only on a miss
-     * looking at Class.
-     *
-     * <p/>
-     * <code><pre>
-     *   Name        method             specifies            "static"            specifies
-     *   refers to   context            no-de-ref            context             no-de-ref
-     *   ---------   -----------------  -------------------  ------------------  -------------------
-     *   Reserved    T                  Error                T                   Error
-     *   - Virtual   T                  Error                Error               Error
-     *
-     *   Parameter   T                  <- Ref               T                   <- Ref
-     *   Local var   T                  <- Var               T                   <- Var
-     *
-     *   Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
-     *   type param  T                  <- Ref               T                   <- Ref
-     *   Constant    T                  <- Ref               T                   <- Ref
-     *
-     *   Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
-     *   - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
-     *   Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
-     *
-     *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
-     *
-     *   MMethod     Error              Error                Error               Error
-     * </pre></code>
-     * Note: '*' signifies potential "identity mode"
-     *
-     * @param type     the raw type being translated, or null
-     * @param fStatic  true if the context within which the type is being translated is necessarily
-     *                 static (i.e. "this" is not available)
-     * @param fDeref   true if the type is being de-referenced; false if the de-reference is being
-     *                 explicitly suppressed
-     * @param errs     the error list to log errors to
-     *
-     * @return the translated type, or null
+     * @return  the PseudoConstant representing the relationship of the parent class that this name
+     *          expression refers to vis-a-vis the class containing the method for which the passed
+     *          context exists
      */
-    TypeConstant translateType(TypeConstant type, boolean fStatic, boolean fDeref, ErrorListener errs)
+    protected PseudoConstant getRelativeIdentity(Context ctx)
         {
-        if (type == null)
+        assert (!ctx.isStatic());
+        assert isIdentityMode(ctx);
+
+        ConstantPool     pool      = pool();
+        IdentityConstant idTarget  = getIdentity(ctx);
+        ClassStructure   clzParent = ctx.getMethod().getContainingClass();
+        IdentityConstant idParent  = null;
+        PseudoConstant   idDotThis = null;
+        while (clzParent != null)
             {
-            return null;
+            idParent  = clzParent.getIdentityConstant();
+            idDotThis = idDotThis == null
+                    ? pool.ensureThisClassConstant(idParent)
+                    : pool.ensureParentClassConstant(idDotThis);
+
+            if (idParent.equals(idTarget))
+                {
+                // found it!
+                return idDotThis;
+                }
+
+            if (clzParent.isTopLevel() || clzParent.isStatic())
+                {
+                // can't ".this" beyond the outermost class, and can't ".this" from a static child
+                return null;
+                }
+
+            clzParent = clzParent.getContainingClass();
             }
 
-        // TODO
-        // if (type.isClass())
-
-        // ClassConstant
-        // - if refers to singleton, then SingletonConstant
-        // - if virtual and refers to a "virtually related class", then PseudoConstant
-
-        // PropertyConstant
-        // - if virtual OR the property is a constant, then resolve to type of property
-        // - if not virtual and not constant, then stays the PropertyConstant
-
-        // Variable
-        // - type of variable
-
-        // Reserved
-        //
-        // - type of reserved name
-        return null;
-        }
-
-    Argument translateArg(Argument arg, boolean fStatic, boolean fDeref, ErrorListener errs)
-        {
-        // TODO
         return null;
         }
 

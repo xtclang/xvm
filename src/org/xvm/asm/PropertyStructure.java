@@ -82,6 +82,14 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff the property is a named constant value
+     */
+    public boolean isConstant()
+        {
+        return isStatic();
+        }
+
+    /**
      * The "Var" access of the property, which may be more restricted than the access of the
      * property (as a Ref). Null implies that the property does not have a "Var" access specified,
      * which means either that the "Var" access is the same as the "Ref" access, or that there is

@@ -149,6 +149,14 @@ public class Register
         }
 
     /**
+     * @return true iff the register is a pre-defined argument
+     */
+    public boolean isPredefined()
+        {
+        return m_iArg < 0 && m_iArg != UNKNOWN;
+        }
+
+    /**
      * Determine if this register has an "unknown" index. This is used to indicate a "next"
      * index.
      *
