@@ -36,6 +36,12 @@ public class xInt64
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public void initDeclared()
         {
         super.initDeclared();
@@ -169,6 +175,13 @@ public class xInt64
 
         return frame.assignValue(iReturn, makeHandle(l+1));
         }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
+        }
+
 
     // ----- helpers -----
 

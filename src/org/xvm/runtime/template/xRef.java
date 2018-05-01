@@ -46,13 +46,20 @@ public class xRef
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     protected ClassConstant getInceptionClassConstant()
         {
         return INCEPTION_CLASS;
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+    public int invokeNativeGet(Frame frame, String sPropName,
+                               ObjectHandle hTarget, int iReturn)
         {
         RefHandle hRef = (RefHandle) hTarget;
 
@@ -188,7 +195,8 @@ public class xRef
         }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+    public int invokeNativeNN(Frame frame, MethodStructure method,
+                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
         RefHandle hRef = (RefHandle) hTarget;
 
@@ -227,6 +235,17 @@ public class xRef
         {
         return new RefHandle(clazz, sName);
         }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        RefHandle hRef1 = (RefHandle) hValue1;
+        RefHandle hRef2 = (RefHandle) hValue2;
+
+        return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
+        }
+
 
     // ----- VarSupport implementation -------------------------------------------------------------
 
@@ -499,7 +518,9 @@ public class xRef
             }
         }
 
-    // RefHandle for an indexed element of an Array or Tuple
+    /***
+     * RefHandle for an indexed element of an Array or a Tuple.
+     */
     public static class IndexedRefHandle
             extends RefHandle
         {
@@ -521,10 +542,78 @@ public class xRef
             }
         }
 
-    // ----- fields -----
-
     /**
-     * Cached inception type.
+     * Helper class for calculating the referent equality.
      */
-    protected TypeConstant m_typeInception;
+    static protected class CompareReferents
+            implements Frame.Continuation
+        {
+        public CompareReferents(RefHandle hRef1, RefHandle hRef2, xRef template, int iReturn)
+            {
+            this.hRef1 = hRef1;
+            this.hRef2 = hRef2;
+            this.template = template;
+            this.iReturn = iReturn;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            updateResult(frameCaller);
+
+            return doNext(frameCaller);
+            }
+
+        protected void updateResult(Frame frameCaller)
+            {
+            if (index == 0)
+                {
+                hReferent1 = frameCaller.getFrameLocal();
+                }
+            else
+                {
+                hReferent2 = frameCaller.getFrameLocal();
+                }
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            while (++index < 2)
+                {
+                RefHandle hRef = index == 0 ? hRef1 : hRef2;
+
+                switch (template.get(frameCaller, hRef, Frame.RET_LOCAL))
+                    {
+                    case Op.R_NEXT:
+                        updateResult(frameCaller);
+                        break;
+
+                    case Op.R_CALL:
+                        frameCaller.m_frameNext.setContinuation(this);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            ClassTemplate template = hReferent1.getTemplate();
+            boolean fEquals = template == hReferent2.getTemplate()
+                && template.compareIdentity(hReferent1, hReferent2);
+
+            return frameCaller.assignValue(iReturn, xBoolean.makeHandle(fEquals));
+            }
+
+        private final RefHandle hRef1;
+        private final RefHandle hRef2;
+        private final xRef template;
+        private final int iReturn;
+
+        private ObjectHandle hReferent1;
+        private ObjectHandle hReferent2;
+        private int index = -1;
+        }
     }

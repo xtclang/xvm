@@ -55,12 +55,6 @@ public class xService
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return true;
-        }
-
-    @Override
     protected ClassConstant getInceptionClassConstant()
         {
         return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();

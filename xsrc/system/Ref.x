@@ -101,6 +101,8 @@ interface Ref<RefType>
     @RO Type ActualType;
 
     /**
+     * REVIEW: should we move this function to the Referent interface?
+     *
      * Reference equality is used to determine if two references are referring to the same referent
      * _identity_. Specifically, two references are equal iff they reference the same runtime
      * object, or the two objects that they reference are both immutable and structurally identical.

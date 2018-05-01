@@ -77,7 +77,6 @@ interface Map<KeyType, ValueType>
         static <CompileType extends Entry> Boolean equals(CompileType entry1, CompileType entry2)
             {
             return entry1.key == entry2.key
-                && entry1.exists && entry2.exists
                 && entry1.value == entry2.value;
             }
         }

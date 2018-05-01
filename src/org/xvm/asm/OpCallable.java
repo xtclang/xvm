@@ -136,7 +136,7 @@ public abstract class OpCallable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnVar(Op.A_FRAME, method.getIdentityConstant(), 0);
+            frame.introduceReturnVar(A_THIS, method.getIdentityConstant(), 0);
             }
         }
 
@@ -147,7 +147,7 @@ public abstract class OpCallable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnTuple(A_FRAME, method.getIdentityConstant());
+            frame.introduceReturnTuple(A_THIS, method.getIdentityConstant());
             }
         }
 
@@ -163,7 +163,7 @@ public abstract class OpCallable extends Op
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                frame.introduceReturnVar(Op.A_FRAME, constMethod, i);
+                frame.introduceReturnVar(A_THIS, constMethod, i);
                 }
             }
         }

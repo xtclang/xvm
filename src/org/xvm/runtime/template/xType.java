@@ -36,6 +36,12 @@ public class xType
         }
 
     @Override
+    public boolean isGenericHandle()
+        {
+        return false;
+        }
+
+    @Override
     public void initDeclared()
         {
         markNativeGetter("allMethods");

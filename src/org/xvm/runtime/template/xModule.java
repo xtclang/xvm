@@ -1,7 +1,6 @@
 package org.xvm.runtime.template;
 
 
-import java.util.HashMap;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +37,12 @@ public class xModule
     @Override
     public void initDeclared()
         {
+        }
+
+    @Override
+    public boolean isGenericHandle()
+        {
+        return false;
         }
 
     @Override

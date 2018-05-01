@@ -1357,7 +1357,7 @@ public abstract class Op
     public static final int A_STRUCT = -6;
 
     /**
-     * Pre-defined argument: {@code this:frame}
+     * Pre-defined argument: {@code this:frame} // currently unused
      */
     public static final int A_FRAME = -7;
 

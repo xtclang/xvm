@@ -3,13 +3,10 @@ package org.xvm.runtime.template.annotations;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -19,7 +16,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xInt64;
-import org.xvm.runtime.template.xVar;
 
 
 /**

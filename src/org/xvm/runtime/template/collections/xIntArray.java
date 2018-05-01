@@ -149,6 +149,30 @@ public class xIntArray
                 xBoolean.makeHandle(Arrays.equals(h1.m_alValue, h2.m_alValue)));
         }
 
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        IntArrayHandle hArray1 = (IntArrayHandle) hValue1;
+        IntArrayHandle hArray2 = (IntArrayHandle) hValue2;
+
+        if (hArray1.isMutable() || hArray2.isMutable() || hArray1.m_cSize != hArray2.m_cSize)
+            {
+            return false;
+            }
+
+        long[] al1 = hArray1.m_alValue;
+        long[] al2 = hArray2.m_alValue;
+
+        for (int i = 0, c = hArray1.m_cSize; i < c; i++)
+            {
+            if (al1[i] != al2[i])
+                {
+                return false;
+                }
+            }
+        return true;
+        }
+
     public static IntArrayHandle makeIntArrayInstance(long[] alValue)
         {
         return new IntArrayHandle(INSTANCE.getCanonicalClass(), alValue);

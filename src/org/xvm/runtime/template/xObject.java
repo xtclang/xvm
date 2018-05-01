@@ -41,12 +41,6 @@ public class xObject
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return true;
-        }
-
-    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         switch (sPropName)

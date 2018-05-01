@@ -174,6 +174,46 @@ public abstract class ObjectHandle
             m_mapFields.put(sName, hValue);
             }
 
+        public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
+            {
+            if (h1 == h2)
+                {
+                return true;
+                }
+
+            if (h1.isMutable() || h2.isMutable())
+                {
+                return false;
+                }
+
+            Map<String, ObjectHandle> map1 = h1.m_mapFields;
+            Map<String, ObjectHandle> map2 = h2.m_mapFields;
+
+            if (map1 == map2)
+                {
+                return true;
+                }
+
+            if (map1.size() != map2.size())
+                {
+                return false;
+                }
+
+            for (String sProp : map1.keySet())
+                {
+                ObjectHandle hV1 = map1.get(sProp);
+                ObjectHandle hV2 = map2.get(sProp);
+
+                ClassTemplate template = hV1.getTemplate();
+                if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
+                    {
+                    return false;
+                    }
+                }
+
+            return true;
+            }
+
         @Override
         public int hashCode()
             {

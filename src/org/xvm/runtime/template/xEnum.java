@@ -110,6 +110,12 @@ public class xEnum
         }
 
     @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
+        }
+
+    @Override
     public int buildHashCode(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         EnumHandle hEnum = (EnumHandle) hTarget;
@@ -125,6 +131,7 @@ public class xEnum
         return frame.assignValue(iReturn,
                 xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
         }
+
 
     // ----- helper method -----
 
