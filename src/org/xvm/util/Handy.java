@@ -1832,10 +1832,12 @@ public class Handy
      *
      * @param ao  an array of objects
      *
+     * @return true iff all elements are non-null
+     *
      * @throws IllegalArgumentException  if the array is null, or any elements
      *         of the array are null
      */
-    public static void checkElementsNonNull(Object[] ao)
+    public static boolean checkElementsNonNull(Object[] ao)
         {
         if (ao == null)
             {
@@ -1849,6 +1851,8 @@ public class Handy
                 throw new IllegalArgumentException("array element is null");
                 }
             }
+
+        return true;
         }
 
 

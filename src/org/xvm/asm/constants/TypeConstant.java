@@ -2592,6 +2592,7 @@ public abstract class TypeConstant
             return nidBest;
             }
 
+        // REVIEW could this be updated to use selectBest() ?
         // if multiple candidates exist, then one must be obviously better than the rest
         SignatureConstant sigBest = null;
         nextCandidate: for (int iCur = 0, cCandidates = listMatch.size();
@@ -2636,6 +2637,51 @@ public abstract class TypeConstant
             }
 
         return nidBest;
+        }
+
+    /**
+     * Helper to select the "best" signature from an array of signatures.
+     *
+     * @param aSig  an array of signatures
+     *
+     * @return the "best" signature to use
+     */
+    public SignatureConstant selectBest(SignatureConstant[] aSig)
+        {
+        SignatureConstant sigBest     = null;
+        int               cCandidates = aSig.length;
+        nextCandidate: for (int iCandidate = 0; iCandidate < cCandidates; ++iCandidate)
+            {
+            SignatureConstant sigCandidate = aSig[iCandidate];
+            if (sigBest == null) // that means that "best" is ambiguous thus far
+                {
+                // have to back-test all the ones in front of us to make sure that
+                for (int iPrev = 0; iPrev < iCandidate; ++iPrev)
+                    {
+                    SignatureConstant sigPrev = aSig[iPrev];
+                    if (!sigPrev.isSubstitutableFor(sigCandidate, this))
+                        {
+                        // still ambiguous
+                        continue nextCandidate;
+                        }
+                    }
+
+                // so far, this candidate is the best
+                sigBest = sigCandidate;
+                }
+            else if (sigBest.isSubstitutableFor(sigCandidate, this))
+                {
+                // this assumes that "best" is a transitive concept, i.e. we're not going to back-
+                // test all of the other candidates
+                sigBest = sigCandidate;
+                }
+            else if (!sigCandidate.isSubstitutableFor(sigBest, this))
+                {
+                sigBest = null;
+                }
+            }
+
+        return sigBest;
         }
 
     /**
@@ -3891,6 +3937,11 @@ public abstract class TypeConstant
 
 
     // -----fields ---------------------------------------------------------------------------------
+
+    /**
+     * An immutable, empty, zero-length array of types.
+     */
+    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * Relationship options.

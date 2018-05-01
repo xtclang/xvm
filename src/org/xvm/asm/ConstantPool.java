@@ -2672,7 +2672,7 @@ public class ConstantPool
     /**
      * An immutable, empty, zero-length array of types.
      */
-    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
+    public static final TypeConstant[] NO_TYPES = TypeConstant.NO_TYPES;
 
     /**
      * Storage of Constant objects by index.

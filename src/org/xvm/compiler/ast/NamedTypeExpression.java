@@ -89,7 +89,7 @@ public class NamedTypeExpression
         String[]    as   = new String[c];
         for (int i = 0; i < c; ++i)
             {
-            as[i] = list.get(i).getValue().toString();
+            as[i] = list.get(i).getValueText();
             }
         return as;
         }
@@ -412,7 +412,7 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -420,13 +420,26 @@ public class NamedTypeExpression
 
         if (paramTypes != null)
             {
-            for (TypeExpression type : paramTypes)
+            for (int i = 0, c = paramTypes.size(); i < c; ++i)
                 {
-                fValid &= type.validate(ctx, null, errs);
+                TypeExpression typeOrig = paramTypes.get(i);
+                TypeExpression type     = (TypeExpression) typeOrig.validate(ctx, null, TuplePref.Rejected, errs);
+                if (type == null)
+                    {
+                    fValid = false;
+                    }
+                else if (type != typeOrig)
+                    {
+                    paramTypes.set(i, type);
+                    }
                 }
             }
 
-        return fValid;
+        // TODO finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, , );
+
+        return fValid
+                ? this
+                : null;
         }
 
 // ----- debugging assistance ------------------------------------------------------------------

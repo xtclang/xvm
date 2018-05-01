@@ -338,7 +338,7 @@ const IntLiteral(String text)
     /**
      * Convert the number to a 32-bit radix-2 (binary) floating point number.
      */
-    @Auto Float32 to<Float32>()
+    @Auto Float32 to<FloFPat32>()
         {
         return to<VarFloat>().to<Float32>();
         }

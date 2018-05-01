@@ -278,7 +278,7 @@ public class Parser
                 else
                     {
                     tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                    parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprIf), compositions);
+                    parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprIf), compositions);
                     }
                 expect(Id.R_CURLY);
 
@@ -299,7 +299,7 @@ public class Parser
                         }
                     else
                         {
-                        parseConditionalComposition(new BiExpression(exprCondition, tokAnd, exprElse), compositions);
+                        parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprElse), compositions);
                         }
                     if (!fElseIf)
                         {
@@ -386,7 +386,7 @@ public class Parser
                             }
                         type = new NamedTypeExpression(null, names, null, null, paramnames, getLastMatch().getEndPosition());
                         }
-                    List<Expression> args = parseArgumentList(false);
+                    List<Expression> args = parseArgumentList(false, false);
                     compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
@@ -405,7 +405,7 @@ public class Parser
                         {
                                          keyword = expect(Id.EXTENDS);
                         TypeExpression   type    = parseTypeExpression();
-                        List<Expression> args    = parseArgumentList(false);
+                        List<Expression> args    = parseArgumentList(false, false);
                         compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
                         fAny = true;
                         }
@@ -487,7 +487,7 @@ public class Parser
                 List<TypeExpression> typeParams = parseTypeParameterTypeList(false);
 
                 // argument list
-                List<Expression> args = parseArgumentList(false);
+                List<Expression> args = parseArgumentList(false, false);
 
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
@@ -566,7 +566,7 @@ public class Parser
                     else
                         {
                         tokAnd = new Token(tokIf.getStartPosition(), tokIf.getEndPosition(), Id.COND_AND);
-                        parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
+                        parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprIf), stmts, fFileLevel);
                         }
                     // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
@@ -587,7 +587,7 @@ public class Parser
                             }
                         else
                             {
-                            parseTypeCompositionComponents(new BiExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
+                            parseTypeCompositionComponents(new CmpExpression(exprCondition, tokAnd, exprElse), stmts, fFileLevel);
                             }
                         // the '}' is eaten by the recursive call to parseTypeCompositionComponents
 
@@ -943,7 +943,7 @@ public class Parser
                     if (returns != null)
                         {
                         return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                                modifiers, annotations, null, null, returns, null, expect(Id.IDENTIFIER));
+                                modifiers, annotations, null, null, returns, expect(Id.IDENTIFIER));
                         }
                     }
 
@@ -970,7 +970,7 @@ public class Parser
                 List<TypeExpression> returns     = parseReturnList();
                 Token                name        = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, typeVars, conditional, returns, null, name);
+                        modifiers, annotations, typeVars, conditional, returns, name);
                 }
 
             case CONSTRUCT:
@@ -984,9 +984,8 @@ public class Parser
                     }
 
                 Token keyword = expect(Id.CONSTRUCT);
-                Token name    = expect(Id.IDENTIFIER);
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                        modifiers, annotations, null, null, null, keyword, name);
+                        modifiers, annotations, null, null, null, keyword);
                 }
 
             case CONDITIONAL:
@@ -1020,7 +1019,7 @@ public class Parser
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
                     return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                            annotations, null, conditional, Collections.singletonList(type), null, name);
+                            annotations, null, conditional, Collections.singletonList(type), name);
                     }
                 else
                     {
@@ -1120,7 +1119,7 @@ public class Parser
      */
     MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos,
             Expression exprCondition, Token doc, List<Token> modifiers, List<Annotation> annotations,
-            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token keyword, Token name)
+            List<Parameter> typeVars, Token conditional, List<TypeExpression> returns, Token name)
         {
         List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false);
         List<Parameter>      params           = parseParameterList(true);
@@ -1131,7 +1130,7 @@ public class Parser
         if (body != null)
             {
             // check for "constructor finally" block
-            if (keyword != null && match(Id.FINALLY) != null)
+            if (name.getId() == Id.CONSTRUCT && match(Id.FINALLY) != null)
                 {
                 stmtFinally = parseStatementBlock();
                 lEndPos = stmtFinally.getEndPosition();
@@ -1143,7 +1142,7 @@ public class Parser
             }
 
         return new MethodDeclarationStatement(lStartPos, lEndPos, exprCondition, modifiers, annotations,
-                typeVars, conditional, returns, keyword, name, redundantReturns, params, body, stmtFinally, doc);
+                typeVars, conditional, returns, name, redundantReturns, params, body, stmtFinally, doc);
         }
 
     /**
@@ -1179,8 +1178,8 @@ public class Parser
             List<Parameter>            params     = parseParameterList(true);
             StatementBlock             block      = parseStatementBlock();
             MethodDeclarationStatement method     = new MethodDeclarationStatement(
-                    methodName.getStartPosition(), block.getEndPosition(),
-                    null, null, null, null, null, null, null, methodName, null, params, block, null, null);
+                    methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
+                    null, null, methodName, null, params, block, null, null);
             body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
@@ -1244,7 +1243,6 @@ public class Parser
      *     ImportStatement
      *     ReturnStatement
      *     SwitchStatement
-     *     "throw" Expression ";"
      *     TryStatement
      *     TypeDefStatement
      *     "using" ResourceDeclaration StatementBlock
@@ -1361,13 +1359,6 @@ public class Parser
 
             case SWITCH:
                 return parseSwitchStatement();
-
-            case THROW:
-                {
-                ThrowStatement stmt = new ThrowStatement(expect(Id.THROW), parseExpression());
-                expect(Id.SEMICOLON);
-                return stmt;
-                }
 
             case TRY:
                 return parseTryStatement();
@@ -1696,7 +1687,7 @@ public class Parser
      *
      * <p/><code><pre>
      * SwitchStatement
-     *     switch "(" SwitchCondition ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
+     *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks-opt SwitchLabels-opt "}"
      *
      * SwitchCondition
      *     VariableInitializer
@@ -1725,15 +1716,22 @@ public class Parser
         {
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
-        // while the switch does not allow a conditional declaration, it does allow all of the
-        // other capabilities expressed in a conditional declaration
-        Statement cond = parseConditionalDeclaration(true);
-        if (cond instanceof VariableDeclarationStatement && ((VariableDeclarationStatement) cond).isConditional())
+
+        Statement cond = null;
+        if (match(Id.R_PAREN) == null)
             {
-            log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(), peek().getEndPosition());
-            throw new CompilerException("conditional is not allowed");
+            // while the switch does not allow a conditional declaration, it does allow all of the
+            // other capabilities expressed in a conditional declaration
+            cond = parseConditionalDeclaration(true);
+            if (cond instanceof VariableDeclarationStatement &&
+                    ((VariableDeclarationStatement) cond).isConditional())
+                {
+                log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(),
+                        peek().getEndPosition());
+                throw new CompilerException("conditional is not allowed");
+                }
+            expect(Id.R_PAREN);
             }
-        expect(Id.R_PAREN);
 
         Token tokLCurly = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
@@ -1742,7 +1740,7 @@ public class Parser
             switch (peek().getId())
                 {
                 case CASE:
-                    stmts.add(new CaseStatement(current(), parseTernaryExpression(), expect(Id.COLON)));
+                    stmts.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
                     break;
 
                 case DEFAULT:
@@ -2045,7 +2043,9 @@ public class Parser
      * Parse a list of expressions.
      *
      * <p/><code><pre>
-     *     TODO
+     * ExpressionList
+     *     Expression
+     *     ExpressionList "," Expression
      * </pre></code>
      *
      * @return an expression
@@ -2077,14 +2077,43 @@ public class Parser
         Expression expr = parseTernaryExpression();
         if (peek().getId() == Id.COLON)
             {
-            expr = new BiExpression(expr, current(), parseExpression());
+            expr = new ElseExpression(expr, current(), parseExpression());
             }
         return expr;
         }
 
     /**
+     * Parse an expression list, but one that does not look for a trailing ':'.
+     *
+     * <p/><code><pre>
+     * TernaryExpressionList:
+     *     TernaryExpression
+     *     TernaryExpressionList "," TernaryExpression
+     * </pre></code>
+     *
+     * @return
+     */
+    List<Expression> parseTernaryExpressionList()
+        {
+        Expression expr = parseTypeExpression();
+        if (peek().getId() != Id.COMMA)
+            {
+            return Collections.singletonList(expr);
+            }
+
+        ArrayList<Expression> list = new ArrayList<>();
+        list.add(expr);
+        while (match(Id.COMMA) != null)
+            {
+            list.add(parseTypeExpression());
+            }
+
+        return list;
+        }
+
+    /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
-s     *
+     *
      * <p/><code><pre>
      * TernaryExpression
      *     ElvisExpression
@@ -2123,7 +2152,7 @@ s     *
         Expression expr = parseOrExpression();
         if (peek().getId() == Id.COND_ELSE)
             {
-            expr = new BiExpression(expr, current(), parseElvisExpression());
+            expr = new ElseExpression(expr, current(), parseElvisExpression());
             }
         return expr;
         }
@@ -2144,7 +2173,7 @@ s     *
         Expression expr = parseAndExpression();
         while (peek().getId() == Id.COND_OR)
             {
-            expr = new BiExpression(expr, current(), parseAndExpression());
+            expr = new RelOpExpression(expr, current(), parseAndExpression());
             }
         return expr;
         }
@@ -2165,7 +2194,7 @@ s     *
         Expression expr = parseBitOrExpression();
         while (peek().getId() == Id.COND_AND)
             {
-            expr = new BiExpression(expr, current(), parseBitOrExpression());
+            expr = new RelOpExpression(expr, current(), parseBitOrExpression());
             }
         return expr;
         }
@@ -2186,7 +2215,7 @@ s     *
         Expression expr = parseBitXorExpression();
         while (peek().getId() == Id.BIT_OR)
             {
-            expr = new BiExpression(expr, current(), parseBitXorExpression());
+            expr = new RelOpExpression(expr, current(), parseBitXorExpression());
             }
         return expr;
         }
@@ -2207,7 +2236,7 @@ s     *
         Expression expr = parseBitAndExpression();
         while (peek().getId() == Id.BIT_XOR)
             {
-            expr = new BiExpression(expr, current(), parseBitAndExpression());
+            expr = new RelOpExpression(expr, current(), parseBitAndExpression());
             }
         return expr;
         }
@@ -2228,7 +2257,7 @@ s     *
         Expression expr = parseEqualityExpression();
         while (peek().getId() == Id.BIT_AND)
             {
-            expr = new BiExpression(expr, current(), parseEqualityExpression());
+            expr = new RelOpExpression(expr, current(), parseEqualityExpression());
             }
         return expr;
         }
@@ -2250,7 +2279,7 @@ s     *
         Expression expr = parseRelationalExpression();
         while (peek().getId() == Id.COMP_EQ || peek().getId() == Id.COMP_NEQ)
             {
-            expr = new BiExpression(expr, current(), parseRelationalExpression());
+            expr = new CmpExpression(expr, current(), parseRelationalExpression());
             }
         return expr;
         }
@@ -2284,13 +2313,16 @@ s     *
                 case COMP_LTEQ:
                 case COMP_GTEQ:
                 case COMP_ORD:
-                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    expr = new CmpExpression(expr, current(), parseRangeExpression());
                     break;
 
                 case AS:
                 case IS:
+                    expr = new AsExpression(expr, current(), parseTypeExpression());
+                    break;
+
                 case INSTANCEOF:
-                    expr = new BiExpression(expr, current(), parseTypeExpression());
+                    expr = new IsExpression(expr, current(), parseTypeExpression());
                     break;
 
                 default:
@@ -2315,7 +2347,7 @@ s     *
         Expression expr = parseShiftExpression();
         while (peek().getId() == Id.DOTDOT)
             {
-            expr = new BiExpression(expr, current(), parseShiftExpression());
+            expr = new RelOpExpression(expr, current(), parseShiftExpression());
             }
         return expr;
         }
@@ -2343,7 +2375,7 @@ s     *
                 case SHL:
                 case SHR:
                 case USHR:
-                    expr = new BiExpression(expr, current(), parseRangeExpression());
+                    expr = new RelOpExpression(expr, current(), parseRangeExpression());
                     break;
 
                 default:
@@ -2369,7 +2401,7 @@ s     *
         Expression expr = parseMultiplicativeExpression();
         while (peek().getId() == Id.ADD || peek().getId() == Id.SUB)
             {
-            expr = new BiExpression(expr, current(), parseMultiplicativeExpression());
+            expr = new RelOpExpression(expr, current(), parseMultiplicativeExpression());
             }
         return expr;
         }
@@ -2399,7 +2431,7 @@ s     *
                 case DIV:
                 case MOD:
                 case DIVMOD:
-                    expr = new BiExpression(expr, current(), parsePrefixExpression());
+                    expr = new RelOpExpression(expr, current(), parsePrefixExpression());
                     break;
 
                 default:
@@ -2414,6 +2446,7 @@ s     *
      * <p/><code><pre>
      * PrefixExpression
      *     PostfixExpression
+     *     "throw" PrefixExpression
      *     "++" PrefixExpression
      *     "--" PrefixExpression
      *     "+" PrefixExpression
@@ -2435,7 +2468,6 @@ s     *
             case SUB:
             case NOT:
             case BIT_NOT:
-            case BIT_AND:
                 return new PrefixExpression(current(), parsePrefixExpression());
 
             default:
@@ -2513,7 +2545,7 @@ s     *
                             {
                             Token            keyword = expect(Id.NEW);
                             TypeExpression   type    = parseTypeExpression();
-                            List<Expression> params  = parseArgumentList(false);
+                            List<Expression> params  = parseArgumentList(false, false);
                             long             lEndPos = params == null
                                     ? type.getEndPosition()
                                     : getLastMatch().getEndPosition();
@@ -2527,13 +2559,17 @@ s     *
                             {
                             Token keyword = current();
                             expect(Id.L_PAREN);
-                            expr = new BiExpression(expr, keyword, parseTypeExpression());
+                            expr = keyword.getId() == Id.AS
+                                    ? new AsExpression(expr, keyword, parseTypeExpression())
+                                    : new IsExpression(expr, keyword, parseTypeExpression());
                             expect(Id.R_PAREN);
                             break;
                             }
 
+                        case BIT_AND:
                         case IDENTIFIER:
                             {
+                            Token                noDeRef = match(Id.BIT_AND);
                             Token                name    = expect(Id.IDENTIFIER);
                             long                 lEndPos = name.getEndPosition();
                             List<TypeExpression> params  = null;
@@ -2554,7 +2590,7 @@ s     *
                                     }
                                 catch (CompilerException e) {}
                                 }
-                            expr = new DotNameExpression(expr, name, params, lEndPos);
+                            expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
                             break;
                             }
 
@@ -2569,7 +2605,7 @@ s     *
 
                 case L_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true),
+                    expr = new InvocationExpression(expr, parseArgumentList(true, true),
                             getLastMatch().getEndPosition());
                     break;
 
@@ -2630,15 +2666,16 @@ s     *
      * </li></ul>
      * <p/><code><pre>
      * PrimaryExpression
-     *     "new" TypeExpression ArgumentList-opt
-     *     "construct" QualifiedName
-     *     QualifiedNameName TypeParameterTypeList-opt
-     *     Literal
-     *     LambdaExpression
-     *     construct
-     *     "_"
      *     "(" Expression ")"
-     *     "T0D0" TodoMessage-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
+     *     "new" TypeExpression NewFinish
+     *     "construct" QualifiedName
+     *     "&"-opt QualifiedName TypeParameterTypeList-opt
+     *     StatementExpression
+     *     SwitchExpression
+     *     LambdaExpression
+     *     "_"
+     *     "T0D0" TodoFinish-opt
+     *     Literal
      * </pre></code>
      *
      * @return an expression
@@ -2654,7 +2691,7 @@ s     *
                 {
                 Token            keyword = expect(Id.NEW);
                 TypeExpression   type    = parseTypeExpression();
-                List<Expression> args    = parseArgumentList(false);
+                List<Expression> args    = parseArgumentList(false, false);
                 StatementBlock   body    = null;
                 if (peek().getId() == Id.L_CURLY)
                     {
@@ -2663,57 +2700,84 @@ s     *
                 return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
-            case CONSTRUCT:
-                {
-                Token keyword = expect(Id.CONSTRUCT);
-                if (peek().getId() == Id.L_PAREN)
-                    {
-                    return new NameExpression(keyword);
-                    }
+            case THROW:
+                return new ThrowExpression(expect(Id.THROW), parseTernaryExpression());
 
-                List<Token> qname = parseQualifiedName();
-                qname.add(keyword);
-                return new NameExpression(qname, null, keyword.getEndPosition());
-                }
+            case TODO:
+                return parseTodoExpression();
 
             default:
+            case BIT_AND:
+            case CONSTRUCT:
             case IDENTIFIER:
                 {
-                List<Token> names = new ArrayList<>(3);
-                names.add(expect(Id.IDENTIFIER));
+                // the preamble can contain a leading "&" and a leading "construct". the "construct"
+                // ends up getting relocated from the left most position where it is parsed, to the
+                // right-most position in the name itself, e.g. "construct A.B.C" becomes a name
+                // expression of "A.B.C.construct". even more complex, it is possible to obtain a
+                // reference to the constructor itself using the notation "&construct A.B.C", which
+                // means that the no-de-reference indicator also gets moved to the right with the
+                // "construct"
+                Token   amp       = match(Id.BIT_AND);
+                Token   construct = match(Id.CONSTRUCT);
+                Token   name      = expect(Id.IDENTIFIER);
+                boolean fNormal   = amp == null && construct == null;
 
                 // test for single-param implicit lambda
-                if (peek().getId() == Id.LAMBDA)
+                if (fNormal && peek().getId() == Id.LAMBDA)
                     {
-                    return new LambdaExpression(Collections.singletonList(new NameExpression(
-                            names, null, names.get(names.size()-1).getEndPosition())),
+                    return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
                             expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition());
                     }
 
-                // parse qualified name
-                Token dot;
-                long  lEndPos = getLastMatch().getEndPosition();
-                while ((dot = match(Id.DOT)) != null)
+                // the no-de-ref goes with the construct if there is a construct, not with the name
+                Token nameNDR      = construct == null ? amp : null;
+                Token constructNDR = construct != null ? amp : null;
+
+                // parse qualified name (which is necessary because we may have to tack on a
+                // "construct" to the end)
+                long           lEndPos = getLastMatch().getEndPosition();
+                NameExpression left    = null;
+                boolean        fQuit   = false;
+                Token          dot;
+                while (nameNDR == null && (dot = match(Id.DOT)) != null)
                     {
-                    Token name = match(Id.IDENTIFIER);
-                    if (name == null)
+                    Token nameNext = match(Id.IDENTIFIER);
+                    if (nameNext == null)
                         {
+                        // it's not a ".name" construct, so the name expression ended BEFORE the dot
                         putBack(dot);
-                        return new NameExpression(names, null, names.get(names.size()-1).getEndPosition());
+                        fQuit = true;
+                        break;
                         }
-                    else
+
+                    left    = new NameExpression(left, nameNDR, name, null, lEndPos);
+                    nameNDR = null;                     // only gets applied once
+                    name    = nameNext;
+                    lEndPos = name.getEndPosition();
+                    }
+
+                if (fQuit || !fNormal)
+                    {
+                    // have to build the expression for the trailing name
+                    NameExpression expr = new NameExpression(left, nameNDR, name,
+                            parseTypeParameterTypeList(false), lEndPos);
+
+                    // construct is added to the end of the list if it was specified
+                    if (construct != null)
                         {
-                        names.add(name);
-                        lEndPos = name.getEndPosition();
+                        expr = new NameExpression(expr, constructNDR, construct, null, lEndPos);
                         }
+
+                    return expr;
                     }
 
                 // test for an access-specified TypeExpression, i.e. ending with :public,
                 // :protected, :private, or :struct
                 Token access = null;
-                Token colon  = match(Id.COLON);
-                if (colon != null)
+                if (peek().getId() == Id.COLON)
                     {
+                    Token colon = expect(Id.COLON);
                     if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                         {
                         switch (peek().getId())
@@ -2723,7 +2787,7 @@ s     *
                             case PRIVATE:
                             case STRUCT:
                                 // at this point, this MUST be a type expression
-                                access  = current();
+                                access = current();
                                 lEndPos = access.getEndPosition();
                                 break;
                             }
@@ -2736,11 +2800,12 @@ s     *
                     }
 
                 // test for a non-auto-narrowing modifier ("!")
-                Token tokNarrow = !peek().hasLeadingWhitespace()
+                Token tokNoNarrow = !peek().hasLeadingWhitespace()
                         ? match(Id.NOT)
                         : null;
 
-                // test to see if there is a type parameter list (implying the expression is a type)
+                // test to see if there is a type parameter list (implying the expression is a type,
+                // or a name of a method specifying "redundant return types"
                 List<TypeExpression> params = null;
                 if (peek().getId() == Id.COMP_LT)
                     {
@@ -2762,32 +2827,30 @@ s     *
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:{"
-                colon = match(Id.COLON);
-                if (colon != null)
+                if (peek().getId() == Id.COLON)
                     {
+                    Token colon = expect(Id.COLON);
                     if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
                         {
                         switch (peek().getId())
                             {
                             case L_PAREN:
-                                if (!(names.size() == 1 && names.get(0).getValue().equals("Tuple")))
+                                if (left != null || !name.getValueText().equals("Tuple"))
                                     {
                                     break;
                                     }
                                 // fall through
                             case L_CURLY:
-                                return parseCustomLiteral(new NamedTypeExpression(
-                                        null, names, access, tokNarrow, params, lEndPos));
+                                return parseCustomLiteral(new NamedTypeExpression(null,
+                                        toList(left, name), access, tokNoNarrow, params, lEndPos));
 
                             case LIT_STRING:
-                                if (names.size() == 1)
+                                if (left == null && (name.getValueText().equals("v")
+                                        || name.getValueText().equals("Version")))
                                     {
-                                    String sName = (String) names.get(0).getValue();
-                                    if (sName.equals("v") || sName.equals("Version"))
-                                        {
-                                        return parseCustomLiteral(new NamedTypeExpression(
-                                                null, names, access, tokNarrow, params, lEndPos));
-                                        }
+                                    return parseCustomLiteral(new NamedTypeExpression(
+                                            null, Collections.singletonList(name), access,
+                                            tokNoNarrow, params, lEndPos));
                                     }
                                 break;
                             }
@@ -2796,9 +2859,12 @@ s     *
                     putBack(colon);
                     }
 
-                return access == null
-                        ? new NameExpression(names, params, lEndPos)
-                        : new NamedTypeExpression(null, names, access, tokNarrow, params, lEndPos);
+                // note to future self: the reason that we have NameExpression with <params>
+                // (which seems almost self-evident to ALWAYS be a type and not a name) is because
+                // we have the ability to do this: "String s = o.to<String>();" (redundant return)
+                return access == null && tokNoNarrow == null
+                        ? new NameExpression(left, null, name, params, lEndPos)
+                        : new NamedTypeExpression(null, toList(left, name), access, tokNoNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -2878,6 +2944,12 @@ s     *
                 }
 
             case L_CURLY:
+                throw new IllegalStateException("TODO statement expression"); // TODO
+
+            case SWITCH:
+                throw new IllegalStateException("TODO switch expression"); // TODO
+
+            case L_SQUARE:
                 return parseCustomLiteral(null);
 
             case LIT_CHAR:
@@ -2887,14 +2959,23 @@ s     *
             case LIT_BIN:
                 return new LiteralExpression(current());
 
-            case TODO:
-                return parseTodoExpression();
-
             case FUNCTION:
             case IMMUTABLE:
             case AT:
                 return parseTypeExpression();
             }
+        }
+
+    private static List<Token> toList(NameExpression left, Token name)
+        {
+        if (left == null)
+            {
+            return Collections.singletonList(name);
+            }
+
+        List<Token> names = left.getNameTokens();
+        names.add(name);
+        return names;
         }
 
     /**
@@ -3633,7 +3714,7 @@ s     *
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {
-            args = parseArgumentList(true);
+            args = parseArgumentList(true, false);
             }
 
         long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
@@ -3843,6 +3924,7 @@ s     *
      * # note: the "?" argument allows functions to specify arguments that they are NOT binding
      * ArgumentExpression
      *     "?"
+     *     "<" TypeExpression ">" "?"
      *     Expression
      *
      * NamedArgument
@@ -3850,11 +3932,12 @@ s     *
      * </pre></code>
      *
      *
-     * @param required  true iff the parenthesis are required
+     * @param required       true iff the parenthesis are required
+     * @param allowCurrying  true iff the "?" argument and its variations are allowed
      *
      * @return a list of arguments, or null if no parenthesis were encountered
      */
-    List<Expression> parseArgumentList(boolean required)
+    List<Expression> parseArgumentList(boolean required, boolean allowCurrying)
         {
         List<Expression> args = null;
         if (match(Id.L_PAREN, required) != null)
@@ -3873,6 +3956,7 @@ s     *
                     }
 
                 // special case where the parameter names are being specified with the arguments
+                Token label = null;
                 if (peek().getId() == Id.IDENTIFIER)
                     {
                     Token name = expect(Id.IDENTIFIER);
@@ -3883,12 +3967,45 @@ s     *
                         }
                     else
                         {
-                        args.add(new LabeledExpression(name, parseExpression()));
-                        continue;
+                        label = name;
                         }
                     }
 
-                args.add(parseExpression());
+                Expression expr;
+                if (allowCurrying)
+                    {
+                    switch (peek().getId())
+                        {
+                        case COND:
+                            {
+                            Token tokUnbound = match(Id.COND);
+                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                                    tokUnbound.getEndPosition(), null);
+                            }
+                            break;
+
+                        case COMP_LT:
+                            {
+                            Token          tokOpen    = match(Id.COMP_LT);
+                            TypeExpression type       = parseTypeExpression();
+                            Token          tokClose   = match(Id.COMP_GT);
+                            Token          tokUnbound = match(Id.COND);
+                            expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                                    tokUnbound.getEndPosition(), type);
+                            }
+                            break;
+
+                        default:
+                            expr = parseExpression();
+                            break;
+                        }
+                    }
+                else
+                    {
+                    expr = parseExpression();
+                    }
+
+                args.add(label == null ? expr : new LabeledExpression(label, expr));
                 }
             }
         return args;

@@ -66,23 +66,13 @@ public abstract class NamedConstant
         m_constName   = pool.ensureStringConstant(sName);
         }
 
-    /**
-     * Internal constructor, used for temporary (unresolved) constants.
-     *
-     * @param pool  the ConstantPool
-     */
-    protected NamedConstant(ConstantPool pool)
-        {
-        super(pool);
-        }
-
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
     public IdentityConstant getParentConstant()
         {
-        return (IdentityConstant) m_constParent;
+        return m_constParent;
         }
 
     public StringConstant getNameConstant()
@@ -105,8 +95,8 @@ public abstract class NamedConstant
     @Override
     public Constant simplify()
         {
-        m_constParent = m_constParent.simplify();
-        m_constName   = (StringConstant) m_constName.simplify();
+        m_constParent = (IdentityConstant) m_constParent.simplify();
+        m_constName   = (StringConstant)   m_constName.simplify();
         return this;
         }
 
@@ -120,7 +110,7 @@ public abstract class NamedConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        int n = this.getParentConstant().compareTo(((NamedConstant) that).getParentConstant());
+        int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
         if (n == 0)
             {
             n = this.getName().compareTo(((NamedConstant) that).getName());
@@ -132,29 +122,36 @@ public abstract class NamedConstant
     public String getValueString()
         {
         String sParent;
+        char   chSep;
         final Constant constParent = m_constParent;
         switch (constParent.getFormat())
             {
             case Module:
                 sParent = ((ModuleConstant) constParent).getUnqualifiedName();
-                return sParent + ':' + m_constName.getValue();
+                chSep   = ':';
+                break;
 
             case Package:
             case Class:
                 sParent = constParent.getValueString();
-                return sParent + '.' + m_constName.getValue();
+                chSep   = '.';
+                break;
 
             case Property:
                 sParent = ((NamedConstant) constParent).getName();
-                return sParent + '#' + m_constName.getValue();
+                chSep   = '#';
+                break;
 
             case Method:
                 sParent = ((MethodConstant) constParent).getName() + "(?)";
-                return sParent + '#' + m_constName.getValue();
+                chSep   = '#';
+                break;
 
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("parent=" + constParent);
             }
+
+        return sParent + chSep + m_constName.getValue();
         }
 
 
@@ -165,15 +162,15 @@ public abstract class NamedConstant
             throws IOException
         {
         final ConstantPool pool = getConstantPool();
-        m_constParent = pool.getConstant(m_iParent);
-        m_constName   = (StringConstant) pool.getConstant(m_iName);
+        m_constParent = (IdentityConstant) pool.getConstant(m_iParent);
+        m_constName   = (StringConstant)   pool.getConstant(m_iName);
         }
 
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constParent = pool.register(m_constParent);
-        m_constName   = (StringConstant) pool.register(m_constName);
+        m_constParent = (IdentityConstant) pool.register(m_constParent);
+        m_constName   = (StringConstant)   pool.register(m_constName);
         }
 
     @Override
@@ -217,7 +214,7 @@ public abstract class NamedConstant
      * The constant that identifies the structure which is the parent of the structure identified by
      * this constant.
      */
-    private Constant m_constParent;
+    private IdentityConstant m_constParent;
 
     /**
      * The constant that holds the name of the structure identified by this constant.

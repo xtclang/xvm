@@ -34,11 +34,12 @@ public class MultiMethodConstant
         }
 
     /**
-     * Construct a constant whose value is a property identifier.
+     * Construct a constant whose value is a multi-method identifier.
      *
      * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the module, package, class, or method that contains this property
-     * @param sName        the property name
+     * @param constParent  the module, package, class, proprety, or method that contains this
+     *                     multi-method
+     * @param sName        the method name
      */
     public MultiMethodConstant(ConstantPool pool, IdentityConstant constParent, String sName)
         {

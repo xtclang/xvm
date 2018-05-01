@@ -6,12 +6,15 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 
 import org.xvm.asm.ErrorListener;
-
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
+import org.xvm.compiler.ast.Expression.TuplePref;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -80,15 +83,48 @@ public class AssignmentStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = lvalue.validate(ctx, null, errs);
+        boolean fValid = true;
+
+        // REVIEW does this have to support multiple assignment? (I think that it does...)
+
+        Expression lvalueNew = lvalue.validate(ctx, null, TuplePref.Rejected, errs);
+        if (lvalueNew != lvalue)
+            {
+            fValid &= lvalueNew != null;
+            if (lvalueNew != null)
+                {
+                lvalue = lvalueNew;
+                }
+            }
 
         // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
         // and can validate that assignment can occur
-        fValid &= rvalue.validate(ctx, lvalue.getImplicitType(), errs);
+        Expression rvalueNew = rvalue.validate(ctx, lvalue.getType(), TuplePref.Rejected, errs);
+        if (rvalueNew != rvalue)
+            {
+            fValid &= rvalueNew != null;
+            if (rvalueNew != null)
+                {
+                rvalue = rvalueNew;
+                }
+            }
 
-        return fValid;
+        if (lvalue.isVoid())
+            {
+            lvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                    Math.max(1, rvalue.getValueCount()),
+                    0);
+            }
+        else if (lvalue.getValueCount() != rvalue.getValueCount())
+            {
+            rvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                    lvalue.getValueCount(),
+                    rvalue.getValueCount());
+            }
+
+        return fValid ? this : null;
         }
 
     @Override
@@ -109,20 +145,18 @@ public class AssignmentStatement
 
         if (lvalue.isSingle() && op.getId() == Token.Id.ASN)
             {
-            boolean fCompletes = fReachable;
-
-            Assignable asnL = lvalue.generateAssignable(code, errs);
-
-            if (fCompletes &= lvalue.isCompletable())
+            boolean    fCompletes = fReachable;
+            Assignable asnL       = lvalue.generateAssignable(code, errs);
+            if (fCompletes &= !lvalue.isAborting())
                 {
                 rvalue.generateAssignment(code, asnL, errs);
-
-                fCompletes &= rvalue.isCompletable();
+                fCompletes &= !rvalue.isAborting();
                 }
 
             return fCompletes;
             }
 
+        // REVIEW what is not implemented? multi-assignment?
         throw notImplemented();
         }
 

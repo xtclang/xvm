@@ -313,19 +313,19 @@
 pre-defined variables/constants:
 index  r/w  name            type        description
 -----  ---  --------------  ----------  ------------------------------------------------
-+ 0:     w                              black hole (basically the /dev/null of registers)
-+ 1:   r    this:public
-+ 2:   r    this:protected
-+ 3:   r    this:private
-+ 4:   r    this:target                 the "this" that was used to invoke the method
-+ 5:   r    this:struct                 type is TODO
-  6:   r    this:frame      Frame
-+ 7:   r    this:service	Service
-+ 8:   r    this:module     Module      type is the actual compile-time module
-  9:   r    this:type       Type
-+ A:   r    super           Function    type is the appropriate compile-time generic form
-  B: *reserved
-  C: *reserved
-  D: *reserved
-  E: *reserved
-  F: *reserved
+-0x01  r/w  (n/a)           auto        frame-local stack; auto type: each pop/read *MUST* correspond 1:1 with a previous push/write
+-0x02   w   (n/a)           any         black hole (basically the /dev/null of registers)
+-0x03   r   this:target                 the "this" that was used to invoke the method                             (only in virtual context)
+-0x04   r   this:public                 type is meta.PublicType                                                   (only in virtual context)
+-0x05   r   this:protected              type is meta.ProtectedType                                                (only in virtual context)
+-0x06   r   this:private                type is meta.PrivateType                                                  (only in virtual context)
+-0x07   r   this:struct     Struct      type is meta.StructType                                                   (only in virtual or construct context)
+-0x08   r   this:service	Service     the run-time service within which the currently executing code is running (any context permitted)
+-0x09   r   super           Function    type is the appropriate compile-time generic form                         (only in virtual context)
+-0x0A       (n/a)                       *reserved
+-0x0B       (n/a)                       *reserved
+-0x0C       (n/a)                       *reserved
+-0x0D       (n/a)                       *reserved
+-0x0E       (n/a)                       *reserved
+-0x0F       (n/a)                       *reserved
+-0x10       (n/a)                       *reserved

@@ -403,6 +403,17 @@ public class SignatureConstant
         return true;
         }
 
+    /**
+     * @return the type of the function that corresponds to this SignatureConstant
+     */
+    public TypeConstant asFunctionType()
+        {
+        ConstantPool pool = getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.typeFunction(),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstParams),
+                pool.ensureParameterizedTypeConstant(pool.typeTuple(), m_aconstReturns));
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

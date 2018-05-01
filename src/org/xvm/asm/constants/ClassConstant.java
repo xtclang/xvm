@@ -51,10 +51,6 @@ public class ClassConstant
             }
         }
 
-    protected ClassConstant(ConstantPool pool)
-        {
-        super(pool);
-        }
 
     // ----- ClassConstant methods -----------------------------------------------------------------
 

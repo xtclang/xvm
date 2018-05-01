@@ -51,7 +51,6 @@ public class MethodDeclarationStatement
                                       List<Parameter>      typeParams,
                                       Token                conditional,
                                       List<TypeExpression> returns,
-                                      Token                keyword,
                                       Token                name,
                                       List<TypeExpression> redundant,
                                       List<Parameter>      params,
@@ -69,7 +68,6 @@ public class MethodDeclarationStatement
         this.conditional  = conditional;
         this.typeParams   = typeParams;
         this.returns      = returns;
-        this.keyword      = keyword;
         this.name         = name;
         this.redundant    = redundant;
         this.params       = params;
@@ -112,16 +110,16 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    public boolean isConstructor()
+        {
+        return name != null && name.getId() == Id.CONSTRUCT;
+        }
+
     public String getName()
         {
-        if (keyword != null)
-            {
-            return keyword.getId().TEXT;
-            }
-
         if (name != null)
             {
-            return name.getValue().toString();
+            return name.getValueText();
             }
 
         MethodStructure struct = (MethodStructure) getComponent();
@@ -178,7 +176,7 @@ public class MethodDeclarationStatement
             String    sName     = getName();
             if (container.isMethodContainer())
                 {
-                boolean      fConstructor = keyword != null && keyword.getId() == Id.CONSTRUCT;
+                boolean      fConstructor = isConstructor();
                 boolean      fFunction    = isStatic(modifiers) || fConstructor;
                 Access       access       = getDefaultAccess();
                 ConstantPool pool         = container.getConstantPool();
@@ -656,11 +654,6 @@ public class MethodDeclarationStatement
             }
 
         sb.append(getName());
-        if (keyword != null)
-            {
-            sb.append(' ')
-              .append(name.getValue());
-            }
 
         if (redundant != null)
             {
@@ -778,7 +771,6 @@ public class MethodDeclarationStatement
     protected List<Parameter>      typeParams;
     protected Token                conditional;
     protected List<TypeExpression> returns;
-    protected Token                keyword;
     protected Token                name;
     protected List<TypeExpression> redundant;
     protected List<Parameter>      params;

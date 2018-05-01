@@ -112,6 +112,15 @@ interface Number
      */
     Number pow(Number n);
 
+    /**
+     * Obtain an interval beginning with this number and proceeding to the specified number.
+     */
+    @Op Interval<Number> to(Number n)
+        {
+        return new Interval<Number>(this, n);
+        }
+
+
     // ----- conversions
 
     /**

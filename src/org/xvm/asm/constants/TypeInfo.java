@@ -1085,6 +1085,25 @@ public class TypeInfo
     // ----- compiler support ----------------------------------------------------------------------
 
     /**
+     * See if any method has the specified name.
+     *
+     * @param sName  a method name
+     *
+     * @return true if the type contains at least one method (or function) by the specified name
+     */
+    public boolean containsMultiMethod(String sName)
+        {
+        for (MethodConstant method : m_mapMethods.keySet())
+            {
+            if (method.getName().equals(sName))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Obtain all of the methods that are annotated with "@Op".
      *
      * @return a set of zero or more method constants

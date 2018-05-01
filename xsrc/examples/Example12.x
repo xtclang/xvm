@@ -528,3 +528,368 @@ static service FAService
     }
 
 
+// --- inference
+
+// legal of course
+List<Person> list = new ArrayList<Person>()
+
+// we did NOT want to do this (Java hack), because "<>" has a meaning in Ecstasy
+List<Person> list = new ArrayList<>() // error (because the <> _specifies_ "no type specified")
+
+// could do this, because "<Person>" is inferable
+List<Person> list = new ArrayList()
+
+Map<String, Int> map = new HashMap<String>(); // error
+
+// ---- expression type analysis / validation
+
+(Int, String) foo();
+Tuple<Int, String> bar();
+Tuple<Int, String> t;
+
+t = foo();          // allowed (packing)
+t = bar();          // allowed (direct assignment)
+
+Int i = foo();      // allowed (String is discarded)
+Int i = bar();      // error (Tuple cannot be assigned to Int)
+
+// ---- expression type analysis / validation (2)
+
+(IntLiteral, String) foo();
+Tuple<IntLiteral, String> bar();
+Tuple<Int, String> zoo();
+
+Tuple<Int, String> t;
+
+t = (4, "hello");                   // allowed (conv pack)
+(Int i, String s) = (4, "hello");   // allowed (conv pack unpack)
+t = foo();                          // allowed (conv pack)
+t = bar();                          // error
+(Int i, String s) = foo();          // allowed
+(Int i, String s) = zoo();          // allowed
+Int i = zoo();                      // error
+(Int i, String s) = bar();          // error
+
+Int i = foo();      // sure, this is OK (String is discarded)
+Int i = bar();      // error
+
+
+
+// precision and conversions
+
+Int x = 4/3;        // 1
+Dec d = 4/3;        // 1.3333... (conversion of 4->Dec and 3->Dec and THEN the division)
+Byte b = 300-50;    // compiler error (300 is out of byte range)
+
+Dec sqkm = PI * (r * r) / (1000 * 1000);
+Int sqkm = PI * (r * r) / (1000 * 1000);                // compiler error (PI can't convert to Int)
+Int sqkm = (PI * (r * r) / (1000 * 1000)).to<Int>();    // ok iff r is of FP type (calc done with that type)
+
+// how to handle this one?
+Int zero = (1/3) * 10;
+
+
+// --- switch expression
+
+// for constant value match:
+Int x = switch (y)
+    {
+    case 0:     0;
+    case 1:
+    case 2:     -1;
+    case 3:     {
+                Int j = 99;
+                for (Int i : 5..10)
+                    {
+                    j += i;
+                    }
+                return j;
+                }
+    case 4:     12;
+    default:    17;
+    }
+
+// (as ternary instead)
+Int x = y == 0 ? 0
+      : y == 1 ||
+        y == 2 ? -1
+      : y == 3 ? () -> {
+                    Int j = 99;
+                    for (Int i : 5..10)
+                        {
+                        j += i;
+                        }
+                    return j;
+                    }               // how to ".run()" it?
+      : y == 4 ? 12;
+               : 17;
+    }
+
+// (as switch statement instead)
+Int x;
+switch (y)
+    {
+    case 0:     x=0;
+    case 1:
+    case 2:     x=-1;
+    case 3:     {
+                    x = 99;
+                    for (Int i : 5..10)
+                        {
+                        x += i;
+                        }
+                    }
+    case 4:     x=12;
+    default:    x=17;
+    }
+
+// for first boolean expression match:
+Int x = switch ()
+    {
+    case (a > 3):   0;
+    case (b < 0):   75;
+    default:        17;
+    }
+
+Int x = (a > 3) ? 0
+      : (b < 0) ? 75
+                : 17
+
+// To consider: "right side of lambda expression", i.e. "()->{...}();" (define AND invoke)
+// name it "statement expression"?
+Int x = {
+        Int j = 99;
+        for (Int i : 5..10)
+            {
+            j += i;
+            }
+        return j;
+        }
+
+// (semantically equivalent to this)
+Int x = () -> {
+        Int j = 99;
+        for (Int i : 5..10)
+            {
+            j += i;
+            }
+        return j;
+        }();
+
+// try, using, etc.
+Int x =
+    {
+    try (Socket socket = createSocket())
+        {
+        return socket.readInt();
+        }
+    catch (Exception e)
+        {
+        return -1;
+        }
+    }
+
+// or even ..
+Int x = try (Socket socket = createSocket())
+        {
+        return socket.readInt();
+        }
+    catch (Exception e)
+        {
+        return -1;
+        }
+
+// or even ..
+Int x = using (Socket socket = createSocket())
+    {
+    return socket.readInt();
+    }
+
+// in C ...
+
+int x = 1, 2, 3;    // x = 3 ... stupid!
+
+// tuple
+switch (x, y)
+    {
+    case (0, 1):
+    case (1, 0):
+    case (2,4), (5,7):
+    }
+
+case 'a': case 'b': case 'c': ...   // bad
+case 'a', 'b', 'c':                 // good
+
+// no-deref
+
+class C
+    {
+    Void foo();
+    Void foo(String s);
+
+    Void bar(String s, Int i);
+    Void bar(Int h, Int i);
+
+    Int zoo();
+    String zoo();
+
+    Int x;
+    }
+
+C c = ...
+
+c.foo;          // error
+c.&foo;         // error
+
+c.&foo();       // Function<<>, <>>
+C.&foo();       // method
+c.&foo("x");    // Function<<>, <>>
+c.foo(?);       // Function<<String>, <>>
+c.&foo(?);      // error
+c.&foo(String); //
+
+c.bar(?, 5)             // error (ambiguous)
+
+c.&bar(Int,Int)(?, 5);  // ... how to know that Int is a parameter type and not an argument?
+c.&bar(?.as(Int), 5);   // ... ugh ugh ugly
+c.&bar(<Int>?, 5);      // ... reads well
+c.&bar(?<Int>, 5);      // ... and not so well
+
+c.bar("Hello", ?);      // not ambiguous
+
+c.zoo<Int>;     // bad (unreadable)
+c.&zoo<Int>();  // good
+
+c.x;            // Int
+c.&x;           // Var<Int>
+C.x;            // Property<Int>
+
+// ---
+case throw a?.b?.c?.d?.e :
+
+class Q<T>
+    {
+    construct(Int x)
+        {
+        // ...
+        }
+    }
+
+class B
+    {
+    construct(Int x)
+        {
+        // ...
+        }
+    }
+
+class C extends B
+    {
+    construct(Int x)
+        {
+        construct C("hello");
+
+        // ...
+
+        construct B(x);
+        }
+    finally
+        {
+        foo();
+        }
+
+    construct(String s)
+        {
+        // ...
+        }
+
+    static Int bar(String s)
+        {
+        // ...
+        }
+
+    Void foo()
+        {
+        // ...
+        }
+
+    Void bar()
+        {
+        Function fFoo  = &foo();
+        Function fBar  = &bar();
+        Method   mFoo  = C.&foo();                  // can NOT omit the "C." because then it is a function
+        Function fCon  = C.&construct C(<Int>?);    // ugly
+        Function fCon2 =   &construct C(<Int>?);    // can omit the "C." because it is implicit (from this) and because we specify "C"
+        Function fCon3 = B.&construct B(<Int>?);    // ugly
+        Function fCon4 =   &construct B(<Int>?);    // can omit the "B." both because it is implicit (from this) and because we specify "B"
+        Function fCon5 =   &construct Q(<Int>?);    // OK
+        Function fCon6 =   &construct Q<Int>(<Int>?);    // OK
+        Function fCon7 =  Q<Int>.&construct Q(5);    // not wrong but ugly
+        Method   mToStr=  Q.&to<String>();
+
+        ... = &bar(?).conditionalResult);           // type of "&bar(?)" is Function, which has a "conditionalResult" property
+        ... = bar().maxvalue;                       // bar returns an Int64, and Int64 has a static constant "maxvalue"
+        ... = bar().&maxvalue;                      // this yields a Ref<IntLiteral>
+        ... = bar().sign;                           // bar returns an Int64, which has a "sign" property
+        ... = bar().&sign;                          // this yields a Ref<Signum>
+        }
+    }
+
+// list literal
+
+List l1 = {1,2,3};      // old (no longer supported; collides with StatementExpression)
+List l2 = [1,2,3];      // new
+Int i = [1,2,3][1];     // ugh! but ok
+
+// --- isA() discussion
+
+class C<T1, T2 extends List<T1>> // any use of T2 (param or return) results in T1 being consumed and produced
+    {
+    // ...
+    T2 bar();
+    }
+
+C<Person> c = new C();
+
+class D<T3>
+    {
+    C<T3> foo()     // the result of this is that D both consumes and produces T3
+        {
+        // ...
+        }
+    }
+
+//
+
+// consider the case of "Point p;"
+
+Point                   // Class
+Point.x                 // Property
+Point.x.assigned        // Property
+Point.x.&get()          // Method
+
+Origin                  // Singleton instance
+&Origin                 // Class
+&Origin.x               // Property
+Origin.x                // Int value
+Origin.&x               // Ref/Var
+Origin.x.assigned       // Boolean value
+Point.x.&get()          // Method
+
+p.x                     // Int
+p.&x                    // bound property, i.e. Ref/Var: Var<Int>
+p.&x.&get()             // Function
+
+
+Class c = Point;
+Boolean f = c.isAbstract;
+// could have also said:
+Boolean f = Point.isAbstract;
+
+// what if class Person has a property "name" (note that Class class also has a property "name")
+Person.name             // *must* look first on Person, not on Class, so this refers to the Property "name" on Person
+Person.name.assigned    // the "assigned" Property of the "name" Property of Person
+
+String  s = Point.name              // String value of the "name" property of the "Class" class for the Point class
+Boolean b = Point.name.assigned     // Boolean value of the "assigned" property of the above
+

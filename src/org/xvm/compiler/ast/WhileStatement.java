@@ -101,8 +101,10 @@ public class WhileStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
+        boolean fValid = true;
+
         // let the conditional statement know that it is indeed being used as a condition
         cond.markConditional(Usage.While, new Label());
 
@@ -114,11 +116,26 @@ public class WhileStatement
             ctx = ctx.enterScope();
             }
 
-        boolean fValid = cond.validate(ctx, errs);
+        ConditionalStatement condNew = (ConditionalStatement) cond.validate(ctx, errs);
+        if (condNew != cond)
+            {
+            fValid &= condNew != null;
+            if (condNew != null)
+                {
+                cond = condNew;
+                }
+            }
 
-        // TODO consider what to do when the condition is always true (is a fork still required?)
-        Context ctxBlock = ctx.fork();
-        fValid &= block.validate(ctxBlock, errs);
+        Context        ctxBlock = ctx.fork();
+        StatementBlock blockNew = (StatementBlock) block.validate(ctxBlock, errs);
+        if (blockNew != block)
+            {
+            fValid &= blockNew != null;
+            if (blockNew != null)
+                {
+                block = blockNew;
+                }
+            }
         ctx.join(ctxBlock);
 
         if (fScope)
@@ -126,7 +143,9 @@ public class WhileStatement
             ctx = ctx.exitScope();
             }
 
-        return fValid;
+        return fValid
+                ? this
+                : null;
         }
 
     @Override

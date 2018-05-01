@@ -44,6 +44,13 @@ public class LabeledExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    public boolean isNonBinding()
+        {
+        return expr.isNonBinding();
+        }
+
     @Override
     public boolean isConstant()
         {

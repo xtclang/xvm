@@ -54,6 +54,18 @@ public class TypedefConstant
         }
 
 
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the underlying type that the typedef represents (note that this is a "static" type
+     *         and does not reflect the type parameters of the containing runtime type)
+     */
+    public TypeConstant getReferredToType()
+        {
+        return ((TypedefStructure) getComponent()).getType();
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

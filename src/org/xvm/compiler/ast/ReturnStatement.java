@@ -23,6 +23,7 @@ import org.xvm.asm.op.Return_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.Expression.TuplePref;
 import org.xvm.util.Severity;
 
 
@@ -84,36 +85,46 @@ public class ReturnStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
 
         MethodStructure  structMethod = ctx.getMethod();
         boolean          fConditional = structMethod.isConditionalReturn();
-        Parameter[]      aReturn      = structMethod.getReturnArray();
-        int              cReturns     = aReturn.length;
+        TypeConstant[]   aRetTypes    = structMethod.getReturnTypes();
+        int              cRets        = aRetTypes.length;
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
         // Void methods are the simplest
-        if (cExprs == 0 || cReturns == 0)
+        if (cExprs == 0 || cRets == 0)
             {
             if (cExprs > 0)
                 {
                 // check the expressions anyhow (even though they can't be used)
                 for (int i = 0; i < cExprs; ++i)
                     {
-                    listExprs.get(i).validate(ctx, null, errs);
+                    Expression exprOld = listExprs.get(i);
+                    Expression exprNew = exprOld.validate(ctx, null, TuplePref.Accepted, errs);
+                    if (exprNew != exprOld)
+                        {
+                        fValid &= exprNew != null;
+                        if (exprNew != null)
+                            {
+                            listExprs.set(i, exprNew);
+                            }
+                        }
                     }
 
-                if (cExprs != 1 || (listExprs.get(0).isCompletable() && listExprs.get(0).getValueCount() > 0))
+                // allow the (strange) use of T0D0 or the (strange) return of a Void expression
+                if (cExprs != 1 || !listExprs.get(0).isAborting() || !listExprs.get(0).isVoid())
                     {
                     // it was supposed to be a void return
                     log(errs, Severity.ERROR, Compiler.RETURN_VOID);
                     fValid = false;
                     }
                 }
-            else if (cReturns > 0)
+            else if (cRets > 0)
                 {
                 // the expressions are missing; it was NOT supposed to be a void return
                 log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
@@ -125,56 +136,80 @@ public class ReturnStatement
             // validate each expression, telling it what return type is expected
             for (int i = 0; i < cExprs; ++i)
                 {
-                TypeConstant typeRet = i < cReturns
-                        ? aReturn[i].getType()
+                TypeConstant typeRet = i < cRets
+                        ? aRetTypes[i]
                         : null;
-                fValid &= listExprs.get(i).validate(ctx, typeRet, errs);
+                Expression exprOld = listExprs.get(i);
+                Expression exprNew = exprOld.validate(ctx, typeRet, TuplePref.Rejected, errs);
+                if (exprNew != exprOld)
+                    {
+                    fValid &= exprNew != null;
+                    if (exprNew != null)
+                        {
+                        listExprs.set(i, exprNew);
+                        }
+                    }
                 }
 
             // make sure the arity is correct (the number of exprs has to match the number of rets)
-            if (cExprs != cReturns)
+            if (cExprs != cRets)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
+                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
                 }
             }
         else // cExprs == 1
             {
-            Expression expr       = listExprs.get(0);
-            int        cValues    = expr.getValueCount();
-            boolean    fCondFalse = false;
-            if (cValues > 1 && cReturns > 1)
+            Expression exprOld = listExprs.get(0);
+            Expression exprNew = null;
+            // several possibilities:
+            // 1) most likely the expression provides a single value, which matches the single
+            //    return type for the method
+            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0], TuplePref.Rejected).isFit())
                 {
-                // there is exactly 1 expression, and it results in multiple values, so allow a
-                // tuple return that will generate a RETURN_T op
-                fValid &= expr.validateMulti(ctx, structMethod.getReturnTypes(), errs);
-                m_fTupleReturn = true;
-                }
-            else if (fConditional)
-                {
-                // it's allowed to have a single conditional return value, as long as it's False
-                assert aReturn[0].getType().equals(pool().typeBoolean());
-
-                fValid &= expr.validate(ctx, pool().typeBoolean(), errs);
-
-                fCondFalse = fValid && expr.isConstant() && expr.toConstant().equals(pool().valFalse());
+                exprNew = exprOld.validate(ctx, aRetTypes[0], TuplePref.Rejected, errs);
                 }
             else
                 {
-                // assume a simple 1:1 expression to return value mapping
-                fValid &= expr.validate(ctx, aReturn[0].getType(), errs);
+                // 2) it could be a tuple return
+                ConstantPool pool      = pool();
+                TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
+                if (exprOld.testFit(ctx, typeTuple, TuplePref.Rejected).isFit())
+                    {
+                    exprNew = exprOld.validate(ctx, typeTuple, TuplePref.Rejected, errs);
+                    m_fTupleReturn = true;
+                    }
+                // 3) it could be a conditional false
+                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), TuplePref.Rejected).isFit())
+                    {
+                    exprNew = exprOld.validate(ctx, pool.typeFalse(), TuplePref.Rejected, errs);
+                    if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))
+                        {
+                        // it's not clear how this could happen; it's more like an assertion
+                        log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        fValid = false;
+                        }
+                    }
+                // 4) otherwise it's an error (so force validation based on the return types, which
+                // will log the error)
+                else
+                    {
+                    exprNew = exprOld.validateMulti(ctx, aRetTypes, TuplePref.Required, errs);
+                    }
                 }
 
-            // verify that we had enough arguments from the expression to satisfy the # of returns
-            // (we could treat extras as an error, but consider the example of the expression being
-            // a method invocation returning 4 items, and we just want 3 of them, so we'll
-            // black-hole them)
-            if (expr.isCompletable() && cValues < cReturns && !fCondFalse)
+            if (exprNew != exprOld)
                 {
-                log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cExprs);
+                fValid &= exprNew != null;
+                if (exprNew != null)
+                    {
+                    listExprs.set(0, exprNew);
+                    }
                 }
             }
 
-        return fValid;
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
@@ -183,8 +218,8 @@ public class ReturnStatement
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = ctx.getMethod();
-        int              cReturns     = structMethod.getReturnCount();
-        List<Parameter>  listRets     = structMethod.getReturns();
+        TypeConstant[]   aRetTypes    = structMethod.getReturnTypes();
+        int              cRets        = aRetTypes.length;
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
@@ -192,15 +227,8 @@ public class ReturnStatement
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
-            TypeConstant[] atypeR = new TypeConstant[cReturns];
-            for (int i = 0; i < cReturns; ++i)
-                {
-                atypeR[i] = listRets.get(i).getType();
-                }
-
-            ConstantPool pool   = pool();
-            TypeConstant typeT  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeR);
-            Argument     arg    = listExprs.get(0).generateArgument(code, typeT, false, errs);
+            ConstantPool pool = pool();
+            Argument     arg  = listExprs.get(0).generateArgument(code, false, errs);
             code.add(new Return_T(arg));
             }
         else
@@ -212,8 +240,7 @@ public class ReturnStatement
                     break;
 
                 case 1:
-                    Argument arg = listExprs.get(0).generateArgument(
-                            code, listRets.get(0).getType(), false, errs);
+                    Argument arg = listExprs.get(0).generateArgument(code, false, errs);
                     code.add(new Return_1(arg));
                     break;
 
@@ -221,8 +248,7 @@ public class ReturnStatement
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
-                        args[i] = listExprs.get(i).generateArgument(
-                                code, listRets.get(i).getType(), false, errs);
+                        args[i] = listExprs.get(i).generateArgument(code, false, errs);
                         }
                     code.add(new Return_N(args));
                     break;
@@ -283,9 +309,10 @@ public class ReturnStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token            keyword;
-    protected List<Expression> exprs;
-    protected boolean          m_fTupleReturn;
+    protected Token             keyword;
+    protected List<Expression>  exprs;
+
+    protected transient boolean m_fTupleReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
     }

@@ -7,11 +7,20 @@ import java.util.List;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Token;
+
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -37,8 +46,12 @@ public class InvocationExpression
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        return expr instanceof NameExpression && ((NameExpression) expr).isDotNameWithNoParams("versionMatches")
-                && args.size() == 1 && args.get(0) instanceof VersionExpression
+        return expr instanceof NameExpression
+                && ((NameExpression) expr).getName().equals("versionMatches")
+                && args.size() == 1
+                && args.get(0) instanceof VersionExpression
+                && ((NameExpression) expr).getLeftExpression() != null
+                && ((NameExpression) expr).isOnlyNames()
                 || super.validateCondition(errs);
         }
 
@@ -48,20 +61,20 @@ public class InvocationExpression
         if (validateCondition(null))
             {
             // build the qualified module name
-            NameExpression exprNames = (NameExpression) expr;
-            StringBuilder  sb        = new StringBuilder();
-            for (int i = 0, c = exprNames.getNameCount() - 1; i < c; ++i)
+            StringBuilder sb    = new StringBuilder();
+            List<Token>   names = ((NameExpression) expr).getNameTokens();
+            for (int i = 0, c = names.size() - 1; i < c; ++i)
                 {
                 if (i > 0)
                     {
                     sb.append('.');
                     }
-                sb.append(exprNames.getName(i));
+                sb.append(names.get(i).getValueText());
                 }
 
+            ConstantPool pool    = pool();
             String       sModule = sb.toString();
             Version      version = ((VersionExpression) args.get(0)).getVersion();
-            ConstantPool pool    = pool();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
             }
@@ -90,6 +103,13 @@ public class InvocationExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return TypeConstant.NO_TYPES;
+        }
+
+
     // TODO getValueCount() - could be any #?
 
     @Override
@@ -100,14 +120,122 @@ public class InvocationExpression
         }
 
     @Override
-    protected boolean validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
+        boolean fNoDeRef = false;
+
+        // TODO validate parameters - might set fNoDeRef to true if any of the params is "?"
+
+        if (expr instanceof NameExpression)
+            {
+            // when we have a name expression on the left, we do NOT (!!!) validate it, because the
+            // name resolution is the responsibility of this InvocationExpression, and the
+            // NameExpression will error on resolving a method/function name
+            MultiMethodConstant  idMMethod = null;
+            NameExpression       exprName  = (NameExpression) expr;
+            Expression           left      =  exprName.left;
+            Token                name      = exprName.name;
+            String               sName     = name.getValueText();
+            List<TypeExpression> params    = exprName.params;                // redundant returns
+
+            // it's possible that the name indicates that the invocation is a partial binding and
+            // not actually an invocation
+            fNoDeRef |= exprName.isSuppressDeref();
+
+            // a name expression may have type params from the construct:
+            //      QualifiedNameName TypeParameterTypeList-opt
+            // these names form the optional "redundant returns" portion of the method/function
+            // invocation
+            ConstantPool pool   = pool();
+            boolean      fValid = true;
+            if (params != null)
+                {
+                for (int i = 0, c = params.size(); i < c; ++i)
+                    {
+                    TypeExpression typeOld = params.get(i);
+                    TypeExpression typeNew = (TypeExpression) typeOld.validate(
+                            ctx, pool.typeType(), TuplePref.Rejected, errs);
+                    fValid &= typeNew != null;
+                    if (typeNew != typeOld && typeNew != null)
+                        {
+                        params.set(i, typeNew);
+                        }
+                    }
+                }
+
+            if (left == null)
+                {
+                Argument arg = ctx.resolveName(name, errs);
+                if (arg instanceof MultiMethodConstant)
+                    {
+                    idMMethod = (MultiMethodConstant) arg;
+                    }
+                else if (arg == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.NAME_MISSING,
+                            sName, ctx.getMethod().getIdentityConstant().getSignature());
+                    fValid = false;
+                    }
+                else
+                    {
+                    // TODO log error - the name has to resolve to a method/function
+                    fValid = false;
+                    }
+                }
+            else
+                {
+                Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
+                if (leftNew == null)
+                    {
+                    // TODO null is an error, so the idea is to get out of here (but maybe do some work first, in case we can catch other errors)
+                    return null;
+                    }
+                else if (leftNew != left)
+                    {
+                    exprName.left = left = leftNew;
+                    }
+
+                if (left.isVoid())
+                    {
+                    // TODO log error
+                    return null;
+                    }
+
+                TypeInfo infoType = left.getType().ensureTypeInfo(errs);
+                // TODO that info is where we will ultimately find the sName
+                }
+
+            if (!fValid)
+                {
+                return null;
+                }
+
+            // find the correct Method within the MultiMethod, using the (optional) redundant return
+            // types, and the parameters
+            // TODO
+            }
+        else // the expr is NOT a NameExpression
+            {
+            Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
+            // TODO could be null
+            // TODO could be changed
+            }
+
         // TODO we have an "expr" that represents the thing being invoked, and we have "args" that represents the things being passed
         // TODO we may need one to validate the other, i.e. we may need to know the arg types to find the method, the the method to validate the args by required type
 
-        // if (expr.validate(ctx, pool().typeFunction(), errs))
+        // if (expr.validate(ctx,))
         // TODO
-        return true;
+
+        // TODO goal is to figure out which one of these that we are responsible for producing code to do:
+        // 1) call a method
+        // 2) call a function
+        // 3) bind a method (and possibly (partially) bind the resulting function)
+        // 4) (partially) bind a function
+
+        // TODO finishValidation() or finishValidations()
+
+        return this;
         }
 
 

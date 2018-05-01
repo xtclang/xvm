@@ -9,7 +9,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
+import org.xvm.compiler.ast.Expression.TuplePref;
 
 
 /**
@@ -96,34 +98,48 @@ public class ExpressionStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = expr.validate(ctx, null, errs);
-
-        if (getUsage() != Usage.Standalone)
+        boolean    fValid = true;
+        Expression exprNew;
+        if (getUsage() == Usage.Standalone)
+            {
+            exprNew = expr.validateMulti(ctx, TypeConstant.NO_TYPES, TuplePref.Rejected, errs);
+            }
+        else
             {
             m_rte = RuntimeEval.RequiresEval;
+            exprNew = expr.validate(ctx, pool().typeBoolean(), TuplePref.Rejected, errs);
 
             // handle situations in which the expression is always true or always false
-            if (expr.isConstant())
+            if (exprNew != null && exprNew.hasConstantValue())
                 {
                 // there are only two values that we're interested in; assume anything else
                 // indicates a compiler error, and that's someone else's problem to deal with
-                Constant constVal = expr.validateAndConvertConstant(expr.toConstant(),
-                        pool().typeBoolean(), errs);
+                Constant constVal = exprNew.toConstant();
                 m_rte = constVal.equals(pool().valTrue())
                             ? RuntimeEval.AlwaysTrue
                             : RuntimeEval.AlwaysFalse;
                 }
             }
+        if (exprNew != expr)
+            {
+            fValid &= exprNew != null;
+            if (exprNew != null)
+                {
+                expr = exprNew;
+                }
+            }
 
-        return fValid;
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable & expr.isCompletable();
+        boolean fCompletes = fReachable & !expr.isAborting();
 
         if (getUsage() == Usage.Standalone)
             {

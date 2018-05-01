@@ -61,24 +61,26 @@ public class ListExpression
     // ----- compilation ---------------------------------------------------------------------------
 
 
+    // TODO must implement the genArgumentMulti version even if validated with single
+
     @Override
-    public TypeConstant getImplicitType()
+    public TypeConstant getType()
         {
         // TODO lots of error checking required
 
         if (type != null)
             {
-            return type.getImplicitType();
+            return type.getType();
             }
 
         TypeConstant typeArray = pool().typeArray();
 
         ElementsAllSameType: if (!exprs.isEmpty())
             {
-            TypeConstant typeElement = exprs.get(0).getImplicitType();
+            TypeConstant typeElement = exprs.get(0).getType();
             for (Expression expr : exprs)
                 {
-                if (!typeElement.equals(expr.getImplicitType()))
+                if (!typeElement.equals(expr.getType()))
                     {
                     break ElementsAllSameType;
                     }
@@ -112,7 +114,7 @@ public class ListExpression
             {
             aConsts[i] = exprs.get(i).toConstant();
             }
-        return pool().ensureArrayConstant(getImplicitType(), aConsts);
+        return pool().ensureArrayConstant(getType(), aConsts);
         }
 
     // ----- debugging assistance ------------------------------------------------------------------

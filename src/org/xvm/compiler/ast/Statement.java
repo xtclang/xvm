@@ -12,15 +12,18 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
@@ -110,7 +113,7 @@ public abstract class Statement
      *
      * @return true iff the compilation can proceed
      */
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs) // TODO make abstract
         {
         throw notImplemented();
         }
@@ -167,9 +170,8 @@ public abstract class Statement
      *
      * @return true iff the statement completes
      */
-    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
+    protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) // TODO make abstract
         {
-        // TODO temporary -- this will be abstract
         throw notImplemented();
         }
 
@@ -178,6 +180,8 @@ public abstract class Statement
 
     /**
      * Compiler context for compiling a method body.
+     *
+     * <p/>TODO need a "lambda context" that captures "this" (makes itself a method), params and vars (adds auto-bound params)
      */
     public abstract static class Context
         {
@@ -192,11 +196,22 @@ public abstract class Statement
             }
 
         /**
-         * @return the MethodStructure that the context represents
+         * @return the MethodStructure that the context represents (and specifically, not a
+         *         MethodStructure representing an implicit or explicit lambda, since those are
+         *         treated "transparently" because of captures)
          */
         public MethodStructure getMethod()
             {
             return m_ctxOuter.getMethod();
+            }
+
+        /**
+         * @return true iff the containing MethodStructure is a function (not a method), which means
+         *         that "this", "super", and other reserved registers are not available
+         */
+        public boolean isStatic()
+            {
+            return m_ctxOuter.isStatic();
             }
 
         /**
@@ -281,18 +296,13 @@ public abstract class Statement
             {
             checkInnermost();
 
-            String sName = tokName.getValue().toString();
+            String sName = tokName.getValueText();
             if (isVarDeclaredInThisScope(sName))
                 {
                 tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
                 }
 
-            Map<String, Argument> mapByName = m_mapByName;
-            if (mapByName == null)
-                {
-                m_mapByName = mapByName = new HashMap<>();
-                }
-            mapByName.put(sName, reg);
+            ensureNameMap().put(sName, reg);
             }
 
         /**
@@ -306,7 +316,8 @@ public abstract class Statement
          */
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            return m_mapByName != null && m_mapByName.containsKey(sName);
+            Map<String, Argument> mapByName = getNameMap();
+            return mapByName != null && mapByName.containsKey(sName);
             }
 
         /**
@@ -341,6 +352,41 @@ public abstract class Statement
             }
 
         /**
+         * @return the map that provides a name-to-argument lookup, or null if it has not yet been
+         *         created
+         */
+        protected Map<String, Argument> getNameMap()
+            {
+            return m_mapByName;
+            }
+
+        /**
+         * @return the map that provides a name-to-argument lookup
+         */
+        protected Map<String, Argument> ensureNameMap()
+            {
+            Map<String, Argument> mapByName = m_mapByName;
+
+            if (mapByName == null)
+                {
+                mapByName = new HashMap<>();
+                initNameMap(mapByName);
+                m_mapByName = mapByName;
+                }
+
+            return mapByName;
+            }
+
+        /**
+         * Initialize the map that holds named arguments.
+         *
+         * @param mapByName  the map from simple name to argument
+         */
+        protected void initNameMap(Map<String, Argument> mapByName)
+            {
+            }
+
+        /**
          * Resolve a name (other than a reserved name) to an argument.
          *
          * @param name  the potentially reserved name token
@@ -350,8 +396,8 @@ public abstract class Statement
          */
         public Argument resolveRegularName(Token name, ErrorListener errs)
             {
-            String                sName     = name.getValue().toString();
-            Map<String, Argument> mapByName = m_mapByName;
+            String                sName     = name.getValueText();
+            Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
                 Argument arg = mapByName.get(sName);
@@ -427,12 +473,14 @@ public abstract class Statement
             if (m_ctxInner != this)
                 {
                 throw new IllegalStateException();
+
                 }
             }
 
-        Context               m_ctxOuter;
-        Context               m_ctxInner;
-        Map<String, Argument> m_mapByName;
+        Context m_ctxOuter;
+        Context m_ctxInner;
+
+        private Map<String, Argument> m_mapByName;
         }
 
     /**
@@ -500,7 +548,7 @@ public abstract class Statement
         @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            Argument arg = ensureMethodParameters().get(sName);
+            Argument arg = ensureNameMap().get(sName);
             return arg instanceof Register &&
                     (((Register) arg).getIndex() >= 0 || ((Register) arg).isUnknown());
             }
@@ -508,7 +556,7 @@ public abstract class Statement
         @Override
         public boolean isVarWritable(String sName)
             {
-            Argument arg = ensureMethodParameters().get(sName);
+            Argument arg = ensureNameMap().get(sName);
             if (arg instanceof Register)
                 {
                 return ((Register) arg).isWritable();
@@ -535,8 +583,8 @@ public abstract class Statement
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
-            String                sName     = name.getValue().toString();
-            Map<String, Argument> mapByName = ensureMethodParameters();
+            String                sName     = name.getValueText();
+            Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
@@ -544,35 +592,6 @@ public abstract class Statement
                 arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
                 if (arg != null)
                     {
-                    // while the name resolved to something, we need to apply the rules of what that
-                    // something means from this context
-                    if (arg instanceof Constant)
-                        {
-                        Constant constant = (Constant) arg;
-                        switch (constant.getFormat())
-                            {
-                            case Class:
-                                if (!((ClassStructure) ((IdentityConstant) constant).getComponent()).isSingleton())
-                                    {
-                                    arg = pool().ensureClassTypeConstant(constant, Access.PUBLIC);
-                                    break;
-                                    }
-                                // fall through
-                            case Module:
-                            case Package:
-                                // these are always singletons
-                                arg = pool().ensureSingletonConstConstant((IdentityConstant) constant);
-                                break;
-
-
-                            case ThisClass:
-                            case ParentClass:
-                            case ChildClass:
-                                // TODO not sure how to handle these yet, but should be easy ...
-                                throw new UnsupportedOperationException("constant=" + constant);
-                            }
-                        }
-
                     mapByName.put(sName, arg);
                     }
                 }
@@ -585,7 +604,7 @@ public abstract class Statement
             {
             checkValidating();
 
-            String       sName = name.getValue().toString();
+            String       sName = name.getValueText();
             boolean      fThis = false;
             ConstantPool pool  = pool();
             TypeConstant type;
@@ -599,9 +618,9 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:private":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
-                    nReg  = Op.A_PRIVATE;
+                case "this:public":
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    nReg  = Op.A_PUBLIC;
                     fThis = true;
                     break;
 
@@ -611,9 +630,9 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:public":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
-                    nReg  = Op.A_PUBLIC;
+                case "this:private":
+                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    nReg  = Op.A_PRIVATE;
                     fThis = true;
                     break;
 
@@ -623,32 +642,28 @@ public abstract class Statement
                     fThis = true;
                     break;
 
-                case "this:type":
-                    type  = pool.ensureParameterizedTypeConstant(pool.typeType(), getThisType());
-                    nReg  = Op.A_TYPE;
-                    fThis = true;
-                    break;
-
-                case "this:frame":
-                    type = pool.typeFrame();
-                    nReg = Op.A_FRAME;
-                    break;
-
-                case "this:module":
-                    type = getModuleType();
-                    nReg = Op.A_MODULE;
-                    break;
-
                 case "this:service":
                     type = pool.typeService();
                     nReg = Op.A_SERVICE;
                     break;
 
                 case "super":
-                    // TODO need to verify that there is a super
-                    type = pool().typeFunction(); // TODO need the actual sig of the super function
-                    nReg = Op.A_SUPER;
+                    TypeInfo infoThis = getThisType().ensureTypeInfo(errs);
+                    MethodStructure method = getMethod();
+                    MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
+                    if (abody == null || abody.length <= 1)
+                        {
+                        name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
+                        }
+
+                    type  = method.getIdentityConstant().getSignature().asFunctionType();
+                    nReg  = Op.A_SUPER;
+                    fThis = true;
                     break;
+
+                case "this:module":
+                    // the module can be resolved to the actual module component at compile time
+                    return getModule().getIdentityConstant();
 
                 default:
                     return null;
@@ -656,11 +671,11 @@ public abstract class Statement
 
             if (fThis && isStatic() && !m_fLoggedNoThis)
                 {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS, sName);
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 m_fLoggedNoThis = true;
                 }
 
-            Map<String, Argument> mapByName = ensureMethodParameters();
+            Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
@@ -670,28 +685,18 @@ public abstract class Statement
             return arg;
             }
 
-        protected Map<String, Argument> ensureMethodParameters()
+        @Override
+        protected void initNameMap(Map<String, Argument> mapByName)
             {
-            Map<String, Argument> mapByName = m_mapByName;
-
-            if (mapByName == null)
+            MethodStructure method = m_method;
+            for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
-                mapByName = new HashMap<>();
-
-                MethodStructure method = m_method;
-                for (int i = 0, c = method.getParamCount(); i < c; ++i)
-                    {
-                    Parameter param = method.getParam(i);
-                    mapByName.put(param.getName(), new Register(param.getType(), i));
-                    }
-
-                m_mapByName = mapByName;
+                Parameter param = method.getParam(i);
+                mapByName.put(param.getName(), new Register(param.getType(), i));
                 }
-
-            return mapByName;
             }
 
-        boolean isStatic()
+        public boolean isStatic()
             {
             Component parent = m_method;
             while (true)
@@ -728,66 +733,34 @@ public abstract class Statement
                 }
             }
 
-        TypeConstant getThisType()
+        ClassStructure getThisClass()
             {
             Component parent = m_method;
-            while (true)
+            while (!(parent instanceof ClassStructure))
                 {
-                switch (parent.getFormat())
-                    {
-                    case INTERFACE:
-                    case CLASS:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                    case SERVICE:
-                    case PACKAGE:
-                    case MODULE:
-                        return ((ClassStructure) parent).getFormalType();
-
-                    case METHOD:
-                    case PROPERTY:
-                    case MULTIMETHOD:
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
                 parent = parent.getParent();
                 }
+            return (ClassStructure) parent;
+            }
+
+        TypeConstant getThisType()
+            {
+            return getThisClass().getFormalType();
+            }
+
+        ModuleStructure getModule()
+            {
+            Component parent = m_method;
+            while (!(parent instanceof ModuleStructure))
+                {
+                parent = parent.getParent();
+                }
+            return (ModuleStructure) parent;
             }
 
         TypeConstant getModuleType()
             {
-            Component parent = m_method;
-            while (true)
-                {
-                switch (parent.getFormat())
-                    {
-                    case MODULE:
-                        return ((ClassStructure) parent).getFormalType();
-
-                    case INTERFACE:
-                    case CLASS:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                    case SERVICE:
-                    case PACKAGE:
-                    case METHOD:
-                    case PROPERTY:
-                    case MULTIMETHOD:
-                        break;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-
-                parent = parent.getParent();
-                }
+            return getModule().getFormalType();
             }
 
         @Override
@@ -838,6 +811,7 @@ public abstract class Statement
         private boolean         m_fEmitting;
         private boolean         m_fLoggedNoThis;
         }
+
 
     /**
      * A nested context, representing a separate scope and/or code path.

@@ -667,6 +667,10 @@ public class Compiler
      * There is no "this".
      */
     public static final String NO_THIS                            = "COMPILER-52";
+    /**
+     * There is no "super".
+     */
+    public static final String NO_SUPER                           = "COMPILER-53";
 
 
     // ----- data members --------------------------------------------------------------------------
@@ -682,6 +686,7 @@ public class Compiler
         Loading,
         Loaded,
         Resolving,
+        Resolvable,
         Resolved,
         Validating,
         Validated,

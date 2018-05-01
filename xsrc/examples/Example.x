@@ -272,7 +272,7 @@ module M3 {
 
 // for some <T>
 
-boolean f(T& value)
+boolean f(T& value)           // note (Apr '18): we are NOT doing this; use "Ref<T>" or "Var<T>" instead
 
 T value;
 while (f(&value))

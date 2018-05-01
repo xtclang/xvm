@@ -255,15 +255,21 @@ const Type<DataType>
 
     /**
      * TODO should it be possible to create a new type from the union of two existing types?
+     * REVIEW name? this creates a "union type"
      */
+    @Op("+")
     Type add(Type that)
         {
         TODO +
         }
 
+    // TODO intersection type "&" op?
+
     /**
      * TODO should it be possible to explicitly remove things from a type?
+     * REVIEW name? this creates a "difference type"
      */
+    @Op("-")
     Type sub(Type that)
         {
         TODO -

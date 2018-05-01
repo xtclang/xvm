@@ -64,7 +64,7 @@ public class IfStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean validate(Context ctx, ErrorListener errs)
+    protected Statement validate(Context ctx, ErrorListener errs)
         {
         // let the conditional statement know that it is indeed being used as a condition
         cond.markConditional(Usage.If, new Label());
@@ -75,10 +75,11 @@ public class IfStatement
             ctx = ctx.enterScope();
             }
 
-        // TODO consider what to do when the condition is always true or false (is a fork still required?)
-        Context ctxThen = ctx.fork();
-        boolean fValid  = cond.validate(ctxThen, errs)
-                        & stmtThen.validate(ctxThen, errs);
+        Context              ctxThen     = ctx.fork();
+        ConditionalStatement condNew     = (ConditionalStatement) cond.validate(ctxThen, errs);
+        Statement            stmtThenNew = stmtThen.validate(ctxThen, errs);
+        Statement            stmtElseNew = null;
+        boolean              fValid      = condNew != null && stmtThenNew != null;
 
         if (stmtElse == null)
             {
@@ -87,7 +88,8 @@ public class IfStatement
         else
             {
             Context ctxElse = ctx.fork();
-            fValid &= stmtElse.validate(ctxElse, errs);
+            stmtElseNew = stmtElse.validate(ctxElse, errs);
+            fValid &= stmtElseNew != null;
             ctx.join(ctxThen, ctxElse);
             }
 
@@ -96,7 +98,22 @@ public class IfStatement
             ctx = ctx.exitScope();
             }
 
-        return fValid;
+        if (condNew != null & condNew != cond)
+            {
+            cond = condNew;
+            }
+        if (stmtThenNew != null & stmtThenNew != stmtThen)
+            {
+            stmtThen = stmtThenNew;
+            }
+        if (stmtElseNew != null & stmtElseNew != stmtElse)
+            {
+            stmtElse = stmtElseNew;
+            }
+
+        return fValid
+                ? this
+                : null;
         }
 
     @Override
