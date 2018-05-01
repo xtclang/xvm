@@ -6,12 +6,16 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -115,26 +119,29 @@ import org.xvm.util.Severity;
  * Class, Property, Multi-Method) being imported by that name.
  * <p/>
  * <code><pre>
- *   Name        method             specifies            "static"            specifies
- *   refers to   context            no-de-ref            context             no-de-ref
- *   ---------   -----------------  -------------------  ------------------  -------------------
- *   Reserved    T                  Error                T                   Error
- *   - Virtual   T                  Error                Error               Error
+ *   Name          method             specifies            "static"            specifies
+ *   refers to     context            no-de-ref            context             no-de-ref
+ *   ------------  -----------------  -------------------  ------------------  -------------------
+ *   Reserved      T                  Error                T                   Error
+ *   - Virtual     T                  Error                Error               Error
  *
- *   Parameter   T                  <- Ref               T                   <- Ref
- *   Local var   T                  <- Var               T                   <- Var
+ *   Parameter     T                  <- Ref               T                   <- Ref
+ *   Local var     T                  <- Var               T                   <- Var
  *
- *   Property    T                  <- Ref/Var           Property            Error
- *   Constant    T                  Error                T                   Error
+ *   Property      T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
+ *   - type param  T                  <- Ref               T                   <- Ref
+ *   Constant      T                  <- Ref               T                   <- Ref
  *
- *   Class       ClassConstant      Error                ClassConstant       Error
- *   - related   PseudoConstant     Error                ClassConstant       Error
- *   Singleton   SingletonConstant  ClassConstant        SingletonConstant   ClassConstant
+ *   Class         ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
+ *   - related     PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
+ *   Singleton     SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
  *
- *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
+ *   Typedef       Type<..>           TypedefConstant      Type                TypedefConstant
  *
- *   MMethod     MMethod            MMethod -1           MMethod (static)    MMethod -1 (static)
+ *   MultiMethod   Error              Error                Error               Error
  * </pre></code>
+ * <p/>
+ * Note: '*' signifies potential "identity mode"
  * <p/>
  * Method and function evaluation is the most complex of these scenarios, because the no-de-ref
  * flag is on the name expression, but can also be implied by an argument of the
@@ -145,6 +152,10 @@ import org.xvm.util.Severity;
  *     evaluating to true; or</li>
  * <li>Any invocation argument with {@link #isNonBinding()} evaluating to true.</li>
  * </ul>
+ * <p/>
+ * The invocation expression does not delegate validation to the name expression; instead, it takes
+ * on the responsibility of recognizing that there is a name expression, and validating the contents
+ * on the name expression's behalf.
  */
 public class NameExpression
         extends Expression
@@ -593,7 +604,7 @@ public class NameExpression
             Argument arg = ctx.resolveName(name, errs);
             if (arg == null)
                 {
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.NAME_MISSING,
+                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
                         sName, ctx.getMethod().getIdentityConstant().getSignature());
                 fValid = false;
                 }
@@ -652,8 +663,45 @@ public class NameExpression
 
                 // when there is a "left hand side", it is possible that this name is a continuation
                 // of the name on the left hand side, which is called the "identity mode".
+                if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode(ctx))
+                    {
+                    // it should either be ".this" or a child of the component
+                    switch (name.getId())
+                        {
+                        case THIS:
+                            // TODO
+                            break;
 
-                if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode())
+                        case THIS_PUB:
+                        case THIS_PRO:
+                        case THIS_PRI:
+                        case THIS_STRUCT:
+                            // REVIEW - how to
+                            break;
+
+                        case IDENTIFIER:
+                            Component child = ((NameExpression) leftNew).getIdentity().getComponent().getChild(sName);
+                            if (child == null || child instanceof MultiMethodStructure)
+                                {
+                                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
+                                fValid = false;
+                                }
+                            else
+                                {
+                                IdentityConstant id = child.getIdentityConstant();
+                                switch (id.getFormat())
+                                    {
+                                    m_meaning = M
+                                    }
+                                m_arg = id;
+                                }
+                            break;
+
+                        default:
+                            name.log(errs, getSource(), Severity.ERROR, C)
+                        }
+                    }
+                else
                     {
                     NameExpression leftName = (NameExpression) leftNew;
                     switch (leftName.m_meaning)
@@ -830,13 +878,25 @@ public class NameExpression
 
     // ----- name resolution helpers ---------------------------------------------------------------
 
-    boolean isIdentityMode()
+    /**
+     * @return true iff the name expression could represent a class or property identity, because
+     *         either it is a simple name of a class or property, or because it augments an identity
+     *         mode name expression by adding the name of a class or property
+     */
+    protected boolean isIdentityMode(Context ctx)
         {
-        if (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode())
+        if (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx))
             {
             if (m_meaning == Meaning.Class)
                 {
-                // a class name can continue identity mode if no-de-ref is specified
+                // a class name can continue identity mode if no-de-ref is specified:
+                // Name        method             specifies            "static"            specifies
+                // refers to   context            no-de-ref            context             no-de-ref
+                // ---------   -----------------  -------------------  ------------------  -------------------
+                // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
+                // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
+                // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
+                return (isSuppressDeref() || !((ClassStructure) getIdentity().getComponent()).isSingleton());
                 }
             else if (m_meaning == Meaning.Property)
                 {
@@ -844,12 +904,28 @@ public class NameExpression
                 // following is true:
                 //   1) there is no left and the context is static; or
                 //   2) there is a left, and it is in identity mode;
-                return !((PropertyConstant) m_arg).getComponent().isStatic() &&
-                        (left == null && ctx)
+                //
+                // Name        method             specifies            "static"            specifies
+                // refers to   context            no-de-ref            context             no-de-ref
+                // ---------   -----------------  -------------------  ------------------  -------------------
+                // Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
+                // type param  T                  <- Ref               T                   <- Ref
+                // Constant    T                  <- Ref               T                   <- Ref
+                PropertyStructure prop = (PropertyStructure) getIdentity().getComponent();
+                return !prop.isStatic() && !prop.isTypeParameter() && (left != null || ctx.isStatic());
                 }
             }
 
         return false;
+        }
+
+    /**
+     * @return the class or property identity that the name expression indicates, iff the name
+     *         expression is "identity mode"
+     */
+    protected IdentityConstant getIdentity()
+        {
+        return (IdentityConstant) m_arg;
         }
 
     /**
@@ -874,6 +950,7 @@ public class NameExpression
      *   Local var   T                  <- Var               T                   <- Var
      *
      *   Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
+     *   type param  T                  <- Ref               T                   <- Ref
      *   Constant    T                  <- Ref               T                   <- Ref
      *
      *   Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
