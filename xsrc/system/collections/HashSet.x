@@ -1,7 +1,10 @@
 class HashSet<ElementType>
         implements Set<ElementType>
     {
-    construct HashSet(Hasher<ElementType> hasher = new NaturalHasher<>());
+    construct()
+        {
+        Hasher<ElementType> hasher = new NaturalHasher();
+        }
 
     public/private Hasher<ElementType> hasher;
 

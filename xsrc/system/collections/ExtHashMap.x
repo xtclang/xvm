@@ -16,7 +16,7 @@ class ExtHashMap<KeyType, ValueType>
      * @param hasher
      * @param initCapacity  the number of expected entries
      */
-    construct ExtHashMap(Hasher<KeyType> hasher, Int initCapacity = 0)
+    construct(Hasher<KeyType> hasher, Int initCapacity = 0)
         {
         this.hasher = hasher;
 
@@ -346,7 +346,7 @@ class ExtHashMap<KeyType, ValueType>
     protected static class HashEntry
             implements Entry<KeyType, ValueType>
         {
-        construct HashEntry(KeyType key, Int keyhash, ValueType value, HashEntry next = null)
+        construct(KeyType key, Int keyhash, ValueType value, HashEntry next = null)
             {
             this.key     = key;
             this.keyhash = keyhash;
@@ -513,11 +513,11 @@ class ExtHashMap<KeyType, ValueType>
      * Primes used for bucket array sizes (to ensure a prime modulo).
      */
     protected static Int[] PRIMES =
-        {
+        [
         7, 13, 23, 37, 47, 61, 79, 107, 137, 181, 229, 283, 349, 419, 499, 599, 727, 863, 1013,
         1187, 1399, 1697, 2039, 2503, 3253, 4027, 5113, 6679, 8999, 11987, 16381, 21023, 28351,
         39719, 65521, 99991, 149993, 262139, 524269, 1048571, 2097143, 4194301, 8388593, 16777213,
         33554393, 67108859, 134217689, 268435399, 536870909, 1073741789, 2147483647, 4294967291,
         8589934583, 17179869143, 34359738337, 68719476731, 137438953447, 274877906899, 549755813881
-        };
+        ];
     }

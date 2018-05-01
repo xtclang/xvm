@@ -4,7 +4,7 @@
 const Int64
         implements IntNumber
     {
-    construct Int64(Bit[] bits)
+    construct(Bit[] bits)
         {
         assert bits.size == 64;
         this.bits = bits;

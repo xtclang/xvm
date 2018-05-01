@@ -21,8 +21,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.compiler.*;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Source;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -406,7 +406,7 @@ public abstract class AstNode
      * and structures within methods. To accomplish this, this pass must be able to resolve type
      * names, which is why the second pass was necessarily a separate pass.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
      *
@@ -527,7 +527,7 @@ public abstract class AstNode
     /**
      * Fourth logical compiler pass. Emits the resulting, finished structures.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisted during this compiler
+     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
      *                     pass
      * @param errs         the error list to log any errors to
      *
@@ -711,8 +711,8 @@ public abstract class AstNode
             out.print(sIndentCat + sCat);
 
             // find the kids
-            int      cKids = 0;
-            Iterator iterK = null;
+            int      cKids;
+            Iterator iterK;
             if (value instanceof Map)
                 {
                 Map kids = (Map) value;
@@ -946,7 +946,7 @@ public abstract class AstNode
             throw new IllegalStateException();
             }
 
-        public static final ChildIterator EMPTY = new ChildIterator()
+        ChildIterator EMPTY = new ChildIterator()
             {
             @Override
             public boolean hasNext()

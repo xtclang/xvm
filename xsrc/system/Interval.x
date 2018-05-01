@@ -4,7 +4,7 @@
 const Interval<ElementType extends Orderable>
         incorporates conditional Range<ElementType extends Sequential>
     {
-    construct Interval(ElementType first, ElementType last)
+    construct(ElementType first, ElementType last)
         {
         if (first > last)
             {

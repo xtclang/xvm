@@ -166,7 +166,7 @@ public class MethodDeclarationStatement
     protected AstNode registerStructures(ErrorListener errs)
         {
         // create the structure for this method
-        if (getComponent() == null)
+        CreateStructure: if (getComponent() == null)
             {
             // TODO validate that the "redundant" types match the return types
             // TODO validate that the names (params, type params) are unique
@@ -197,7 +197,7 @@ public class MethodDeclarationStatement
                             }
                         // it's a "short hand" property method; stop right here
                         // will continue resolution in resolveNames() below
-                        return this;
+                        break CreateStructure;
                         }
 
                     if (fConstructor)

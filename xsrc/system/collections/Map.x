@@ -578,7 +578,7 @@ interface Map<KeyType, ValueType>
         Collection<KeyType> remove(KeyType key)
             {
             Map newMap = Map.this.remove(key);
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             return this;
             }
 
@@ -592,7 +592,7 @@ interface Map<KeyType, ValueType>
         Collection<KeyType> clear()
             {
             Map newMap = Map.this.clear();
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             return this;
             }
         }
@@ -647,7 +647,7 @@ interface Map<KeyType, ValueType>
             if (ValueType value : Map.this.get(entry.key) && value == entry.value)
                 {
                 Map newMap = Map.this.remove(entry.key);
-                assert &(Map.this) == &newMap;
+                assert Ref.equals(Map.this, newMap);
                 }
             return this;
             }
@@ -670,7 +670,7 @@ interface Map<KeyType, ValueType>
         Set<Entry<KeyType, ValueType>> clear()
             {
             Map newMap = Map.this.clear();
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             return this;
             }
         }
@@ -727,7 +727,7 @@ interface Map<KeyType, ValueType>
         Void remove()
             {
             Map newMap = Map.this.remove(key);
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             }
         }
 
@@ -807,7 +807,7 @@ interface Map<KeyType, ValueType>
                 if (entry.value == value)
                     {
                     Map newmap = Map.this.remove(entry.key);
-                    assert &(Map.this) == &newmap;
+                    assert Ref.equals(Map.this, newMap);
                     return true;
                     }
                 return false;
@@ -826,7 +826,7 @@ interface Map<KeyType, ValueType>
         Collection<ValueType> clear()
             {
             Map newMap = Map.this.clear();
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             return this;
             }
         }
@@ -877,7 +877,7 @@ interface Map<KeyType, ValueType>
                 if (ValueType keyvalue : Map.this.get(key) && keyvalue == value)
                     {
                     Map newMap = Map.this.remove(key);
-                    assert &(Map.this) == &newMap;
+                    assert Ref.equals(Map.this, newMap);
                     return true;
                     }
                 return false;
@@ -900,7 +900,7 @@ interface Map<KeyType, ValueType>
         Collection<ValueType> clear()
             {
             Map newMap = Map.this.clear();
-            assert &(Map.this) == &newMap;
+            assert Ref.equals(Map.this, newMap);
             return this;
             }
         }

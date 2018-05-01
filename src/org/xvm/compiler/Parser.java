@@ -2095,7 +2095,7 @@ public class Parser
      */
     List<Expression> parseTernaryExpressionList()
         {
-        Expression expr = parseTypeExpression();
+        Expression expr = parseTernaryExpression();
         if (peek().getId() != Id.COMMA)
             {
             return Collections.singletonList(expr);
@@ -2105,7 +2105,7 @@ public class Parser
         list.add(expr);
         while (match(Id.COMMA) != null)
             {
-            list.add(parseTypeExpression());
+            list.add(parseTernaryExpression());
             }
 
         return list;
@@ -2173,7 +2173,7 @@ public class Parser
         Expression expr = parseAndExpression();
         while (peek().getId() == Id.COND_OR)
             {
-            expr = new RelOpExpression(expr, current(), parseAndExpression());
+            expr = new CondOpExpression(expr, current(), parseAndExpression());
             }
         return expr;
         }
@@ -2194,7 +2194,7 @@ public class Parser
         Expression expr = parseBitOrExpression();
         while (peek().getId() == Id.COND_AND)
             {
-            expr = new RelOpExpression(expr, current(), parseBitOrExpression());
+            expr = new CondOpExpression(expr, current(), parseBitOrExpression());
             }
         return expr;
         }
@@ -3148,12 +3148,22 @@ public class Parser
 
             case "List":
                 {
-                expect(Id.L_CURLY);
-                long lStartPos = type == null
-                        ? getLastMatch().getStartPosition()
-                        : type.getStartPosition();
+                long     lStartPos;
+                Token.Id idEnd;
+                if (type == null)
+                    {
+                    lStartPos = expect(Id.L_SQUARE).getStartPosition();
+                    idEnd     = Id.R_SQUARE;
+                    }
+                else
+                    {
+                    expect(Id.L_CURLY);
+                    lStartPos = type.getStartPosition();
+                    idEnd     = Id.R_CURLY;
+                    }
+
                 List<Expression> exprs = null;
-                while (match(Id.R_CURLY) == null)
+                while (match(idEnd) == null)
                     {
                     if (exprs == null)
                         {

@@ -7,7 +7,7 @@ class ListMap<KeyType extends immutable Hashable, ValueType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct ListMap(Int initCapacity = 0)
+    construct(Int initCapacity = 0)
         {
         TODO
         }

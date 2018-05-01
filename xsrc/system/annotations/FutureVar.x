@@ -510,7 +510,7 @@ mixin FutureVar<RefType>
     static class MultiCompleter<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct MultiCompleter(NotifyDependent first, NotifyDependent second)
+        construct(NotifyDependent first, NotifyDependent second)
             {
             // while "notify" is a private property of the super-class, all properties with storage
             // (i.e. fields in the "this" struct) are visible at construction
@@ -691,7 +691,7 @@ mixin FutureVar<RefType>
     static class OrStep<RefType>
             extends DependentFuture<RefType, RefType>
         {
-        construct OrStep(FutureVar<RefType> other)
+        construct(FutureVar<RefType> other)
             {
             }
         finally
@@ -709,7 +709,7 @@ mixin FutureVar<RefType>
     static class AndStep<RefType, InputType, Input2Type>
             extends DependentFuture<RefType, InputType>
         {
-        construct AndStep(FutureVar<Input2Type> other, function RefType (InputType, Input2Type) combine)
+        construct(FutureVar<Input2Type> other, function RefType (InputType, Input2Type) combine)
             {
             }
         finally

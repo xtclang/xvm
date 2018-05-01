@@ -1,18 +1,18 @@
 const Char
         implements Sequential
     {
-    construct Char(UInt32 codepoint)
+    construct(UInt32 codepoint)
         {
         assert:always codepoint <= 0x10FFFF;
         this.codepoint = codepoint;
         }
 
-    construct Char(Byte b)
+    construct(Byte b)
         {
         construct Char(b.to<UInt32>());
         }
 
-    construct Char(Int n)
+    construct(Int n)
         {
         construct Char(n.to<UInt32>());
         }

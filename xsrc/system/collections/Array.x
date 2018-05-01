@@ -15,7 +15,7 @@ class Array<ElementType>
     /**
      * Construct a dynamically growing array with the specified initial capacity.
      */
-    construct Array(Int capacity = 0) // dynamic growth with an initial ca
+    construct(Int capacity = 0) // dynamic growth with an initial ca
         {
         if (capacity < 0)
             {
@@ -27,7 +27,7 @@ class Array<ElementType>
     /**
      * Construct a fixed size array with the specified size and initial value.
      */
-    construct Array(Int size, function ElementType(Int) supply) // fixed size
+    construct(Int size, function ElementType(Int) supply) // fixed size
         {
         construct Array(size);
 

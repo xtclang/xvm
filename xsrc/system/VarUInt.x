@@ -10,7 +10,7 @@ const VarUInt
      * Note that the bits are arranged such that bits[0] is the least significant bit and
      * bits[bits.length-1] is the most significant bit.
      */
-    construct VarUInt(Bit[] bits)
+    construct(Bit[] bits)
         {
         // ignore leading zeros to find the actual number of bits necessary for the value
         Int    bitsUsed = bits.length;

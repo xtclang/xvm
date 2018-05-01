@@ -1,7 +1,7 @@
 const String
         implements Sequence<Char>
     {
-    private construct String() {}
+    private construct() {}
 
     private Char[] chars;
 
@@ -73,12 +73,7 @@ const String
     //
     const StringAscii(Byte[] bytes)
         {
-        Char get(Int index)
-            {
-            return bytes[index].to<Char>();
-            }
-
-        construct StringAscii(Byte[] bytes)
+        construct(Byte[] bytes)
             {
             for (Byte b : bytes)
                 {
@@ -88,7 +83,7 @@ const String
             this.bytes = bytes.reify();
             }
 
-        construct StringAscii(Sequence<Char> seq)
+        construct(Sequence<Char> seq)
             {
             Byte[] bytes  = new Byte[seq.length];
             Int    offset = 0;
@@ -100,6 +95,11 @@ const String
                 }
 
             this.bytes = bytes;
+            }
+
+        Char get(Int index)
+            {
+            return bytes[index].to<Char>();
             }
         }
 
@@ -124,7 +124,7 @@ const String
         private Int offset;
         private Int length;
 
-        private construct StringSub(String source, Int offset, Int length)
+        private construct(String source, Int offset, Int length)
             {
             assert:always offset >= 0;
             assert:always length >= 0;

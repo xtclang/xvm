@@ -43,7 +43,7 @@
 const CriticalSection
         implements Closeable
     {
-    construct CriticalSection(Service.Reentrancy reentrancy = Forbidden)
+    construct(Service.Reentrancy reentrancy = Forbidden)
         {
         assert reentrancy == Exclusive || reentrancy == Forbidden;
 

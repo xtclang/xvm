@@ -2,7 +2,7 @@ package TestPackage
     {
     static const Origin extends TestApp.Point
         {
-        construct Origin()
+        construct()
             {
             construct Point(0, 0);
             }

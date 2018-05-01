@@ -4,7 +4,7 @@
 const ContextToken<TokenType extends immutable Object>
         implements Closeable
     {
-    construct ContextToken(String name, TokenType value)
+    construct(String name, TokenType value)
         {
         // store off the previous contextToken; it will be replaced by this contextToken, and restored when
         // this contextToken is closed

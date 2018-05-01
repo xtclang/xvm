@@ -11,7 +11,7 @@ service Container
     /**
      * Construct a container based on the specified repository.
      */
-    construct Container(ModuleRepository repository)
+    construct(ModuleRepository repository)
         {
         this.repository = repository;
         }
@@ -19,11 +19,11 @@ service Container
     /**
      * Construct a single module container.
      */
-    construct Container(String moduleName, immutable Byte[] moduleBytes)
+    construct(String moduleName, immutable Byte[] moduleBytes)
         {
         ModuleRepository simpleRepo = new ModuleRepository()
             {
-            @RO immutable collections.Set<String> moduleNames = {moduleName}; // Set: {moduleName}
+            @RO immutable collections.Set<String> moduleNames = [moduleName];
 
             immutable Byte[] getModule(String name)
                 {

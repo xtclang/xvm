@@ -39,7 +39,7 @@ class Object
      */
     Object[] to<Object[]>()
         {
-        return {this};
+        return [this];
         }
 
     /**

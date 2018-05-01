@@ -7,7 +7,7 @@ class HashMap<KeyType extends immutable Hashable, ValueType>
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct HashMap(Int initCapacity = 0)
+    construct(Int initCapacity = 0)
         {
         construct ExtHashMap(new NaturalHasher<KeyType>(), initCapacity);
         }

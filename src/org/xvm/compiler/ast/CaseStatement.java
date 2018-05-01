@@ -85,5 +85,5 @@ public class CaseStatement
     protected List<Expression> exprs;
     protected long             lEndPos;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
     }

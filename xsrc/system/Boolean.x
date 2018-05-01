@@ -20,7 +20,7 @@ enum Boolean
             }
         @Op Boolean and(Boolean that)
             {
-            return False;
+            return this;
             }
         @Op Boolean or(Boolean that)
             {
@@ -60,7 +60,7 @@ enum Boolean
             }
         @Op Boolean or(Boolean that)
             {
-            return True;
+            return this;
             }
         @Op Boolean xor(Boolean that)
             {
@@ -76,7 +76,7 @@ enum Boolean
     Byte to<Byte>();
     Int  to<Int>();
     UInt to<UInt>();
-    
+
     @Op Boolean and(Boolean that);
     @Op Boolean or(Boolean that);
     @Op Boolean xor(Boolean that);

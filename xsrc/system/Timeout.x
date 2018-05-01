@@ -67,7 +67,7 @@
 const Timeout
         implements Closeable
     {
-    construct Timeout(Duration remainingTime, Boolean independent = false)
+    construct(Duration remainingTime, Boolean independent = false)
         {
         assert remainingTime > Duration:"0s";
 

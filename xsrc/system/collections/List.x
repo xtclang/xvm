@@ -252,7 +252,7 @@ interface List<ElementType>
          *        cursor on a specific element (as if the caller had just obtained that element from
          *        a call to {@link Cursor.next next()} or {@link Cursor.prev prev()})
          */
-        construct SimpleCursor(Int index)
+        construct(Int index)
             {
             if (index < 0 || index > List.this.size)
                 {

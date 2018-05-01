@@ -1,6 +1,6 @@
 const Bit
     {
-    construct Bit(IntLiteral literal)
+    construct(IntLiteral literal)
         {
         assert:always literal == 0 || literal == 1;
         this.literal = literal;

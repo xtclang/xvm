@@ -33,7 +33,7 @@
 const AsyncSection
         implements Closeable
     {
-    construct AsyncSection(function Void (Exception) notify)
+    construct(function Void (Exception) notify)
         {
         // store off the previous AsyncSection; it will be restored when
         // this AsyncSection is closed

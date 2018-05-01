@@ -5,7 +5,7 @@
 const BiType<DataType extends BiType>(Type type1, Type type2)
         extends Type
     {
-    construct BiType(Type type1, Type type2)
+    construct(Type type1, Type type2)
         {
         // explicitlyImmutable = type1.explicitlyImmutable && type2.explicitlyImmutable;
         // resolved            = type1.resolved && type2.resolved;

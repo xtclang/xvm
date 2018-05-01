@@ -81,7 +81,7 @@ class TestApp
         {
         String prop1;
 
-        construct TestClass(String s)
+        construct(String s)
             {
             prop1 = s;
             }
@@ -115,7 +115,7 @@ class TestApp
         Int prop2;
         Int temp;
 
-        construct TestClass2(Int i, String s)
+        construct(Int i, String s)
             {
             prop2 = i;
 
@@ -391,7 +391,7 @@ class TestApp
         rs.set("zero");
         print(as1[0]);
 
-        Int[] ai = {1, 2, 3}; // constant
+        Int[] ai = [1, 2, 3]; // constant
         print(ai[2]);
         }
 
@@ -463,7 +463,7 @@ class TestApp
         {
         Red(0), Green(256), Blue(256*256);
 
-        construct Color(Int i)
+        construct(Int i)
             {
             pix = i;
             }
@@ -516,7 +516,7 @@ class TestApp
             extends Point
             incorporates Formatter
         {
-        construct PrettyPoint(Int x, Int y, String prefix)
+        construct(Int x, Int y, String prefix)
             {
             construct Point(x, y);
             construct Formatter(prefix);
@@ -527,7 +527,7 @@ class TestApp
             extends Rectangle
             incorporates Formatter
         {
-        construct PrettyRectangle(Point tl, Point br, String prefix)
+        construct(Point tl, Point br, String prefix)
             {
             construct Rectangle(tl, br);
             construct Formatter(prefix);

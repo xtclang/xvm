@@ -24,7 +24,7 @@ const Path
     /**
      * Construct a {code}Path{code} based on the specified name.
      */
-    construct Path(String pathName)
+    construct(String pathName)
         {
         this.pathName = normalize(pathName);
         }
@@ -33,7 +33,7 @@ const Path
      * Construct a {code}Path{code} based on the specified directory {code}Path{code} and
      * the child name.
      */
-    construct Path(Path dir, String pathName)
+    construct(Path dir, String pathName)
         {
         this.pathName = dir + normalize(pathName);
         }

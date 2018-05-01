@@ -3,7 +3,7 @@
  */
 const VarInt
     {
-    construct VarInt(Bit[] bits)
+    construct(Bit[] bits)
         {
         assert:always bits.length >= 8 && bits.length.bitCount == 1;
         this.bits = bits;
