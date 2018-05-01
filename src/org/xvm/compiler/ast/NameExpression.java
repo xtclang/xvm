@@ -638,8 +638,7 @@ public class NameExpression
             }
         else
             {
-            // a name expression may have a "left hand side", which means that the name is being used
-            // as a "dot name" expression
+            // if there is a "left hand side", that means that this is a "dot name" expression
             Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
             if (leftNew == null)
                 {
@@ -833,9 +832,24 @@ public class NameExpression
 
     boolean isIdentityMode()
         {
-        // TODO this is wrong; see table below
-        return (m_meaning == Meaning.Class || m_meaning == Meaning.Property)
-                && (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode());
+        if (left == null || left instanceof NameExpression && ((NameExpression) left).isIdentityMode())
+            {
+            if (m_meaning == Meaning.Class)
+                {
+                // a class name can continue identity mode if no-de-ref is specified
+                }
+            else if (m_meaning == Meaning.Property)
+                {
+                // a non-constant-property name can be "identity mode" if at least one of the
+                // following is true:
+                //   1) there is no left and the context is static; or
+                //   2) there is a left, and it is in identity mode;
+                return !((PropertyConstant) m_arg).getComponent().isStatic() &&
+                        (left == null && ctx)
+                }
+            }
+
+        return false;
         }
 
     /**
@@ -860,17 +874,17 @@ public class NameExpression
      *   Local var   T                  <- Var               T                   <- Var
      *
      *   Property    T                  <- Ref/Var           PropertyConstant*   PropertyConstant*
-     *   Constant    T                  <- Ref/Var           T                   PropertyConstant*
+     *   Constant    T                  <- Ref               T                   <- Ref
      *
      *   Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
-     *   - related   PseudoConstant     ClassConstant*       ClassConstant*      ClassConstant*
+     *   - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
      *   Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
      *
      *   Typedef     Type<..>           TypedefConstant      Type                TypedefConstant
      *
      *   MMethod     Error              Error                Error               Error
      * </pre></code>
-     * Note: '*' signifies "identity mode"
+     * Note: '*' signifies potential "identity mode"
      *
      * @param type     the raw type being translated, or null
      * @param fStatic  true if the context within which the type is being translated is necessarily
