@@ -600,6 +600,8 @@ public class NameExpression
         {
         boolean fValid = true;
 
+        // evaluate the left side first (we'll need it to be done before re-resolving our own raw
+        // argument)
         if (left != null)
             {
             Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
@@ -613,179 +615,10 @@ public class NameExpression
                 }
             }
 
-        // the first step is to resolve the name to a "raw" argument, i.e. what does the name refer
-        // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
-        // vs. virtual, and so on
-        String sName = name.getValueText();
-        if (left == null)
-            {
-            // resolve the initial name
-            Argument arg = ctx.resolveName(name, errs);
-            if (arg == null)
-                {
-                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                        sName, ctx.getMethod().getIdentityConstant().getSignature());
-                fValid = false;
-                }
-            else if (arg instanceof Register)
-                {
-                Register reg = (Register) arg;
-                m_arg     = reg;
-                m_meaning = reg.isPredefined() ? Meaning.Reserved : Meaning.Variable;
-                }
-            else
-                {
-                Constant constant = (Constant) arg;
-                switch (constant.getFormat())
-                    {
-                    case Module:
-                    case Package:
-                    case Class:
-                        m_meaning = Meaning.Class;
-                        break;
-
-                    case Property:
-                        m_meaning = Meaning.Property;
-                        break;
-
-                    case Typedef:
-                        m_meaning = Meaning.Typedef;
-                        break;
-
-                    case MultiMethod:
-                        // TODO log error
-                        throw new IllegalStateException("MMethod!");
-
-                    default:
-                        throw new IllegalStateException("format=" + constant.getFormat()
-                                + ", constant=" + constant);
-                    }
-                m_arg = constant;
-                }
-            }
-        else // there is a "left hand side", that means that this is a "dot name" expression
-            {
-            Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
-            if (leftNew == null)
-                {
-                // there was an error on the left hand side, so it will be impossible to determine
-                // the meaning of this name
-                fValid = false;
-                }
-            else
-                {
-                // when there is a "left hand side", it is possible that this name is a continuation
-                // of the name on the left hand side, which is called the "identity mode".
-                left = leftNew;
-                if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode(ctx))
-                    {
-                    // it must either be ".this" or a child of the component
-                    NameExpression   exprLeft = (NameExpression) leftNew;
-                    IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                    switch (name.getId())
-                        {
-                        case THIS:
-                            if (ctx.isStatic())
-                                {
-                                // TODO log error
-                                throw new IllegalStateException("no this!");
-                                }
-
-                            switch (idLeft.getFormat())
-                                {
-                                case Module:
-                                case Package:
-                                case Class:
-                                    // if the left is a class, then the result is a sequence of at
-                                    // least one (recursive) ParentClassConstant around a
-                                    // ThisClassConstant; from this (context) point, walk up looking
-                                    // for the specified class, counting the number of "parent
-                                    // class" steps to get there
-                                    PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
-                                    if (idRelative == null)
-                                        {
-                                        // TODO log error
-                                        throw new IllegalStateException("no " + idLeft.getName() + ".this!");
-                                        }
-                                    m_arg     = idRelative;
-                                    m_meaning = Meaning.Class;
-                                    break;
-
-                                case Property:
-                                    // if the left is a property, then the result is the same as if
-                                    // we had said "&propname", i.e. the result is a Ref/Var for the
-                                    // property in question (i.e. the property's "this")
-                                    // TODO - the property needs to be a parent of the current method, and not a constant value, and its class parent needs to be a "relative" like getRelativeIdentity()
-                                    // TODO - need to copy (or delegate to) the code for getting a Ref/Var for a property
-                                    throw new UnsupportedOperationException();
-
-                                default:
-                                    throw new IllegalStateException("left=" + idLeft);
-                                }
-                            break;
-
-                        case IDENTIFIER:
-                            Component child = idLeft.getComponent().getChild(sName);
-                            if (child == null || child instanceof MultiMethodStructure)
-                                {
-                                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
-                                fValid = false;
-                                }
-                            else
-                                {
-                                IdentityConstant id = child.getIdentityConstant();
-                                switch (id.getFormat())
-                                    {
-                                    case Package:
-                                    case Class:
-                                        m_meaning = Meaning.Class;
-                                        break;
-
-                                    case Property:
-                                        m_meaning = Meaning.Property;
-                                        break;
-
-                                    case Typedef:
-                                        m_meaning = Meaning.Typedef;
-                                        break;
-
-                                    case MultiMethod:
-                                        // TODO log error
-                                        throw new IllegalStateException("MMethod!");
-
-                                    case Module:        // why an error? because it can't be nested
-                                    default:
-                                        throw new IllegalStateException("id=" + id);
-
-                                    }
-                                m_arg = id;
-                                }
-                            break;
-
-                        default:
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                            fValid = false;
-                            break;
-                        }
-                    }
-                else // not in identity mode
-                    {
-                    // the name can refer to either a property or a typedef
-                    TypeInfo     leftInfo = leftNew.getType().ensureTypeInfo(errs);
-                    PropertyInfo propInfo = leftInfo.findProperty(sName);
-                    if (propInfo != null) // TODO properties nested under something other than a class (need nested type infos?)
-                        {
-                        m_meaning = Meaning.Property;
-                        m_arg     = propInfo.getIdentity();
-                        }
-                    else
-                        {
-                        // TODO typedefs
-                        fValid = false;
-                        }
-                    }
-                }
-            }
+        // resolve the name to a "raw" argument, i.e. what does the name refer to, without
+        // consideration to read-only vs. read-write, reference vs. de-reference, static vs.
+        // virtual, and so on
+        fValid &= resolveRawArgument(ctx, true, errs);
 
         // validate the type parameters
         ConstantPool pool = pool();
@@ -807,7 +640,7 @@ public class NameExpression
             if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
                 {
                 // TODO log error
-                throw new IllegalStateException();
+                fValid = false;
                 }
             }
 
@@ -820,7 +653,7 @@ public class NameExpression
             if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
                 {
                 // TODO log error
-                throw new IllegalStateException();
+                fValid = false;
                 }
             }
 
@@ -937,15 +770,24 @@ public class NameExpression
 
     // ----- name resolution helpers ---------------------------------------------------------------
 
-    protected boolean resolveArgument(Context ctx, boolean fForce, ErrorListener errs)
+    /**
+     * Resolve the expression to obtain a "raw" argument.
+     *
+     * @param ctx     the compiler context
+     * @param fForce  true to force the resolution, even if it has been done previously
+     * @param errs    the error list to log errors to
+     *
+     * @return true iff the raw argument was determinable
+     */
+    protected boolean resolveRawArgument(Context ctx, boolean fForce, ErrorListener errs)
         {
         if (!fForce && m_arg != null)
             {
             return true;
             }
 
-        boolean  fValid = true;
         Argument arg    = null;
+        boolean  fValid = true;
 
         // the first step is to resolve the name to a "raw" argument, i.e. what does the name refer
         // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
@@ -954,178 +796,158 @@ public class NameExpression
         if (left == null)
             {
             // resolve the initial name
-            Argument arg = ctx.resolveName(name, errs);
+            arg = ctx.resolveName(name, errs);
             if (arg == null)
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_MISSING,
                         sName, ctx.getMethod().getIdentityConstant().getSignature());
                 fValid = false;
                 }
-            else if (arg instanceof Register)
+            else if (arg instanceof Constant)
                 {
-                m_arg = arg;
-                }
-            else
-                {
-                Constant constant = (Constant) arg;
+                Constant constant = ((Constant) arg);
                 switch (constant.getFormat())
                     {
                     case Module:
                     case Package:
                     case Class:
-                        // it's a Class;
-                        break;
-
                     case Property:
-                        // it's a Property;
-                        break;
-
                     case Typedef:
-                        // it's a Typedef;
                         break;
 
                     case MultiMethod:
                         // TODO log error
-                        throw new IllegalStateException("MMethod!");
+                        fValid = false;
+                        break;
 
                     default:
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
                     }
-                m_arg = constant;
                 }
             }
-        else // there is a "left hand side", that means that this is a "dot name" expression
+        else if (left instanceof NameExpression
+                && ((NameExpression) left).resolveRawArgument(ctx, false, errs)
+                && ((NameExpression) left).isIdentityMode(ctx))
             {
-            Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
-            if (leftNew == null)
+            // it must either be ".this" or a child of the component
+            NameExpression   exprLeft = (NameExpression) left;
+            IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
+            switch (name.getId())
                 {
-                // there was an error on the left hand side, so it will be impossible to determine
-                // the meaning of this name
-                fValid = false;
-                }
-            else
-                {
-                // when there is a "left hand side", it is possible that this name is a continuation
-                // of the name on the left hand side, which is called the "identity mode".
-                left = leftNew;
-                if (leftNew instanceof NameExpression && ((NameExpression) leftNew).isIdentityMode(ctx))
-                    {
-                    // it must either be ".this" or a child of the component
-                    NameExpression   exprLeft = (NameExpression) leftNew;
-                    IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                    switch (name.getId())
+                case THIS:
+                    if (ctx.isStatic())
                         {
-                        case THIS:
-                            if (ctx.isStatic())
+                        // TODO log error
+                        fValid = false;
+                        break;
+                        }
+
+                    switch (idLeft.getFormat())
+                        {
+                        case Module:
+                        case Package:
+                        case Class:
+                            // if the left is a class, then the result is a sequence of at
+                            // least one (recursive) ParentClassConstant around a
+                            // ThisClassConstant; from this (context) point, walk up looking
+                            // for the specified class, counting the number of "parent
+                            // class" steps to get there
+                            PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
+                            if (idRelative == null)
                                 {
                                 // TODO log error
-                                throw new IllegalStateException("no this!");
-                                }
-
-                            switch (idLeft.getFormat())
-                                {
-                                case Module:
-                                case Package:
-                                case Class:
-                                    // if the left is a class, then the result is a sequence of at
-                                    // least one (recursive) ParentClassConstant around a
-                                    // ThisClassConstant; from this (context) point, walk up looking
-                                    // for the specified class, counting the number of "parent
-                                    // class" steps to get there
-                                    PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
-                                    if (idRelative == null)
-                                        {
-                                        // TODO log error
-                                        throw new IllegalStateException("no " + idLeft.getName() + ".this!");
-                                        }
-                                    m_arg = idRelative;
-                                    break;
-
-                                case Property:
-                                    // if the left is a property, then the result is the same as if
-                                    // we had said "&propname", i.e. the result is a Ref/Var for the
-                                    // property in question (i.e. the property's "this")
-                                    // TODO - the property needs to be a parent of the current method, and not a constant value, and its class parent needs to be a "relative" like getRelativeIdentity()
-                                    // TODO - need to copy (or delegate to) the code for getting a Ref/Var for a property
-                                    throw new UnsupportedOperationException();
-
-                                default:
-                                    throw new IllegalStateException("left=" + idLeft);
-                                }
-                            break;
-
-                        case IDENTIFIER:
-                            Component child = idLeft.getComponent().getChild(sName);
-                            if (child == null || child instanceof MultiMethodStructure)
-                                {
-                                name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
                                 fValid = false;
                                 }
                             else
                                 {
-                                IdentityConstant id = child.getIdentityConstant();
-                                switch (id.getFormat())
-                                    {
-                                    case Package:
-                                    case Class:
-                                        // it's a Class;
-                                        break;
-
-                                    case Property:
-                                        // it's a Property;
-                                        break;
-
-                                    case Typedef:
-                                        // it's a Typedef;
-                                        break;
-
-                                    case MultiMethod:
-                                        // TODO log error
-                                        throw new IllegalStateException("MMethod!");
-
-                                    case Module:        // why an error? because it can't be nested
-                                    default:
-                                        throw new IllegalStateException("id=" + id);
-
-                                    }
-                                m_arg = id;
+                                arg = idRelative;
                                 }
                             break;
 
-                        default:
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                            fValid = false;
+                        case Property:
+                            // if the left is a property, then the result is the same as if
+                            // we had said "&propname", i.e. the result is a Ref/Var for the
+                            // property in question (i.e. the property's "this")
+                            // TODO - the property needs to be a parent of the current method, and not a constant value, and its class parent needs to be a "relative" like getRelativeIdentity()
+                            // TODO - need to copy (or delegate to) the code for getting a Ref/Var for a property
+                            fValid = false; // TODO remove; this will be valid when it gets implemented
                             break;
+
+                        default:
+                            throw new IllegalStateException("left=" + idLeft);
                         }
-                    }
-                else // not in identity mode
-                    {
-                    // the name can refer to either a property or a typedef
-                    TypeInfo     leftInfo = leftNew.getType().ensureTypeInfo(errs);
-                    PropertyInfo propInfo = leftInfo.findProperty(sName);
-                    if (propInfo != null) // TODO properties nested under something other than a class (need nested type infos?)
+                    break;
+
+                case IDENTIFIER:
+                    Component child = idLeft.getComponent().getChild(sName);
+                    if (child == null || child instanceof MultiMethodStructure)
                         {
-                        m_meaning = Meaning.Property;
-                        m_arg     = propInfo.getIdentity();
+                        name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
+                        fValid = false;
                         }
                     else
                         {
-                        // TODO typedefs
-                        fValid = false;
+                        IdentityConstant id = child.getIdentityConstant();
+                        switch (id.getFormat())
+                            {
+                            case Package:
+                            case Class:
+                            case Property:
+                            case Typedef:
+                                arg = id;
+                                break;
+
+                            case MultiMethod:
+                                // TODO log error
+                                fValid = false;
+                                break;
+
+                            case Module:        // why an error? because it can't be nested
+                            default:
+                                throw new IllegalStateException("id=" + id);
+
+                            }
                         }
+                    break;
+
+                default:
+                    name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                    fValid = false;
+                    break;
+                }
+            }
+        else // there is a left expression, but it is not in identity mode
+            {
+            // the name can refer to either a property or a typedef
+            TypeConstant typeLeft = left.getImplicitType(ctx);
+            if (typeLeft == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                // TODO support or properties nested under something other than a class (need nested type infos?)
+                TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
+                PropertyInfo infoProp = infoType.findProperty(sName);
+                if (infoProp == null)
+                    {
+                    // TODO typedefs
+                    fValid = false;
+                    }
+                else
+                    {
+                    arg = infoProp.getIdentity();
                     }
                 }
             }
 
-        assert arg == null ^ fValid;
-        m_arg = arg;
-
+        m_arg = fValid ? arg : null;
         return fValid;
         }
 
     /**
-     * @return the meaning of the name (after resolveArgument has finished), or null if it cannot be
+     * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
      *         determined
      */
     protected Meaning getMeaning()
@@ -1321,10 +1143,21 @@ public class NameExpression
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
-    // cached validation info
+    /**
+     * Cached validation info: The raw argument that the name refers to.
+     */
     private Argument   m_arg;
+    /**
+     * Cached validation info: The "R Value" translation of the raw argument, aka the value.
+     */
     private Argument   m_RVal;
+    /**
+     * Cached validation info: True if the expression represents an assignable "L Value".
+     */
     private boolean    m_fAssignable;
+    /**
+     * Cached validation info: The "L Value" translation of the raw argument, aka the variable.
+     */
     private Assignable m_LVal;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
