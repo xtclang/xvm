@@ -398,13 +398,19 @@ public abstract class Expression
      * @param fit       the fit of that type that was determined by the validation
      * @param type      the single type that results from the Expression
      * @param constVal  a constant value, iff this expression is constant
+     *
+     * @return this or null
      */
-    protected void finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
+    protected Expression finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
         {
         finishValidations(
                 fit,
                 type == null ? null : new TypeConstant[] {type},
                 constVal == null ? null : new Constant[] {constVal});
+
+        return fit.isFit()
+                ? this
+                : null;
         }
 
     /**
@@ -414,8 +420,10 @@ public abstract class Expression
      * @param aType      the types that result from the Expression
      * @param aconstVal  an array of constant values, equal in length to the array of types, iff
      *                   this expression is constant
+     *
+     * @return this or null
      */
-    protected void finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
+    protected Expression finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
         {
         if (aType == null)
             {
@@ -434,6 +442,10 @@ public abstract class Expression
         m_fit    = fit == null ? TypeFit.Fit : fit;
         m_aType  = aType;
         m_aConst = aconstVal;
+
+        return fit.isFit()
+                ? this
+                : null;
         }
 
     /**
