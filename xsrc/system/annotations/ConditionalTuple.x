@@ -29,7 +29,7 @@ mixin ConditionalTuple
     @Override
     Tuple<ElementTypes> replace(Int index, Object value)
         {
-        assert this[0];
+        assert this[0] && index > 0;
         return super(index, value);
         }
 
