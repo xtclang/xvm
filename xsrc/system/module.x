@@ -100,6 +100,8 @@ module Ecstasy.xtclang.org
     const UnsupportedOperationException(String? text, Exception? cause)
             extends Exception(text, cause)
         {
+        // TODO: remove
+        construct UnsupportedOperationException(String? text, Exception? cause) {}
         }
 
     /**
