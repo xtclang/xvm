@@ -122,6 +122,7 @@ public class InvocationExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
+        boolean fValid   = true;
         boolean fNoDeRef = false;
 
         // TODO validate parameters - might set fNoDeRef to true if any of the params is "?"
@@ -217,10 +218,23 @@ public class InvocationExpression
         else // the expr is NOT a NameExpression
             {
             Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
-            // TODO could be null
-            // TODO could be changed
+            if (exprNew != expr)
+                {
+                if (exprNew != null)
+                    {
+                    expr = exprNew;
+                    }
+                }
+
+            // verify that the arguments match the parameters
+            // TODO
+
             }
 
+        if (fValid)
+            {
+
+            }
         // TODO we have an "expr" that represents the thing being invoked, and we have "args" that represents the things being passed
         // TODO we may need one to validate the other, i.e. we may need to know the arg types to find the method, the the method to validate the args by required type
 
@@ -234,7 +248,7 @@ public class InvocationExpression
         // 4) (partially) bind a function
 
         // TODO finishValidation() or finishValidations()
-        return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
+        return finishValidation(fit, typeRequired == null ? pool().typeObject() : typeRequired, null);
         }
 
 

@@ -2255,7 +2255,7 @@ public class ConstantPool
         {
         if (System.getProperties().containsKey("CP"))
             {
-            for (int i = 0, c = m_listConst.size(); i < c; ++i)
+            NextConst: for (int i = 0, c = m_listConst.size(); i < c; ++i)
                 {
                 Constant constant = m_listConst.get(i);
                 TypeConstant type = null;
@@ -2281,6 +2281,28 @@ public class ConstantPool
                     case IntersectionType:
                     case DifferenceType:
                         type = (TypeConstant) constant;
+                        if (type.isParamsSpecified())
+                            {
+                            if (!type.isSingleDefiningConstant())
+                                {
+                                continue NextConst;
+                                }
+                            Constant idParent = type.getDefiningConstant();
+                            for (TypeConstant typeParam : type.getParamTypesArray())
+                                {
+                                if (typeParam.isSingleDefiningConstant() && typeParam.getDefiningConstant() instanceof PropertyConstant)
+                                    {
+                                    IdentityConstant idPropParent = ((PropertyConstant) typeParam.getDefiningConstant()).getParentConstant();
+                                    ConstantPool     pool         = getConstantPool();
+                                    if (!idPropParent.equals(idParent)
+                                            && !pool.ensureTerminalTypeConstant(idPropParent)
+                                                    .isA(pool.ensureTerminalTypeConstant(idParent)))
+                                        {
+                                        continue NextConst;
+                                        }
+                                    }
+                                }
+                            }
                         break;
                     }
                 if (type != null)
