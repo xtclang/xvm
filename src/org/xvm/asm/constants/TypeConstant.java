@@ -3309,6 +3309,16 @@ public abstract class TypeConstant
             return Relation.IS_A;
             }
 
+        // TODO temporary hack; please remove before shipping
+        if (this.equals(getConstantPool().typeFalse())
+                && typeLeft.isTuple()
+                && typeLeft.isParamsSpecified()
+                && typeLeft.getParamsCount() > 0
+                && typeLeft.getParamTypesArray()[0].equals(getConstantPool().typeBoolean())) // conditional tuple
+            {
+            return Relation.IS_A;
+            }
+
         // WARNING: thread-unsafe
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
         Relation relation = mapRelations.get(typeLeft);
