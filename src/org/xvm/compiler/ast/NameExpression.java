@@ -29,11 +29,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.asm.op.P_Get;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.NameExpression.Plan;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -460,7 +460,7 @@ public class NameExpression
             }
 
         // figure out how we would translate the raw argument to a finished (RVal) argument
-        return planCodeGeneration(ctx, arg, aParams, null, ErrorListener.BLACKHOLE);
+        return planCodeGen(ctx, arg, aParams, null, ErrorListener.BLACKHOLE);
         }
 
     @Override
@@ -517,9 +517,9 @@ public class NameExpression
 
         // validate the type parameters
         TypeConstant[] atypeParams = null;
+        ConstantPool pool = pool();
         if (hasTrailingTypeParams())
             {
-            ConstantPool pool = pool();
             int cParams = params.size();
             atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
@@ -547,8 +547,8 @@ public class NameExpression
             }
 
         // translate the raw argument into the appropriate contextual meaning
-        TypeFit      fit      = TypeFit.NoFit
-        TypeConstant type     = planCodeGeneration(ctx, argRaw, atypeParams, typeRequired, errs);
+        TypeFit      fit      = TypeFit.NoFit;
+        TypeConstant type     = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
         Constant     constant = null;
         if (type != null)
             {
@@ -563,15 +563,39 @@ public class NameExpression
                     case Class:
                         // class is ALWAYS a constant; it results in a ClassConstant, a
                         // PseudoConstant, a SingletonConstant, or a TypeConstant
-// TODO Plan {None, PropertyDeref, PropertyRef, TypeOfClass, Singleton}
+                        switch (m_plan)
+                            {
+                            case None:
+                                constant = (Constant) argRaw;
+                                break;
+
+                            case TypeOfClass:
+                                // the class could either be identified (in the raw) by an identity
+                                // constant, or a relative (pseudo) constant
+                                assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
+                                constant = pool.ensureTerminalTypeConstant((Constant) argRaw);
+                                break;
+
+                            case Singleton:
+                                // theoretically, the singleton could be a parent of the current
+                                // class, so we could have a PseudoConstant for it
+                                assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
+                                IdentityConstant idClass = argRaw instanceof PseudoConstant
+                                        ? ((PseudoConstant) argRaw).getDeclarationLevelClass()
+                                        : (IdentityConstant) argRaw;
+                                constant = pool.ensureSingletonConstConstant(idClass);
+                                break;
+
+                            default:
+                                throw new IllegalStateException("plan=" + m_plan);
+                            }
                         break;
 
                     case Property:
-                        {
                         // a non-constant property is ONLY a constant in identity mode; a constant
                         // property is only a constant iff the property itself has a compile-time
                         // constant
-                        PropertyConstant  id   = (PropertyConstant) argRVal;
+                        PropertyConstant  id   = (PropertyConstant) argRaw;
                         PropertyStructure prop = (PropertyStructure) id.getComponent();
                         if (prop.isConstant() && m_plan == Plan.PropertyDeref)
                             {
@@ -581,7 +605,6 @@ public class NameExpression
                             {
                             constant = id;
                             }
-                        }
                         break;
                     }
                 }
@@ -611,43 +634,93 @@ public class NameExpression
     @Override
     public boolean isAssignable()
         {
-        return m_fAssignable;
+        if (m_fAssignable)
+            {
+            // determine assign-ability: only local variables and read/write properties are
+            // assignable:
+            //
+            // Name          method             specifies            "static" context /    specifies
+            // refers to     context            no-de-ref            identity mode         no-de-ref
+            // ------------  -----------------  -------------------  ------------------    -------------------
+            // Local var     T                  <- Var               T                     <- Var
+            // Property      T                  <- Ref/Var           PropertyConstant*[1]  PropertyConstant*
+            switch (getMeaning())
+                {
+                case Variable:
+                    return m_plan == Plan.None;
+
+                case Property:
+                    return m_plan == Plan.PropertyDeref;
+                }
+            }
+
+        return false;
         }
 
+// REVIEW API - how to enable local-property mode
+// REVIEW API - how to enable "next register" mode
+// REVIEW API - how to take advantage of the "frame-local stack"
     @Override
     public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
         {
-        return m_RVal == null
-                ? generateBlackHole(getType())
-                : m_RVal;
+        Argument argRaw = m_arg;
+        switch (m_plan)
+            {
+            case None:
+                return argRaw;
+
+            case PropertyDeref:
+                if (false)  // TODO local property mode: how to know that we can return a property constant to represent the "get" of that property against "this"
+                    {
+                    // local property mode
+                    return argRaw;
+                    }
+                else
+                    {
+                    // TODO allocate a register, do a PGET or LGET (for "this"), and return that register
+                    Register reg = new Register();
+                    // determine "this" (vs. some other ref
+                    // code.add(new P_Get((PropertyConstant) argRaw, ));
+                    return reg;
+                    }
+
+            case PropertyRef:
+                return null; // TODO
+
+            case TypeOfTypedef:
+            case TypeOfClass:
+            case Singleton:
+                assert hasConstantValue();
+                return super.generateArgument(code, fPack, errs);
+
+            default:
+                throw new IllegalStateException("arg=" + argRaw);
+            }
         }
 
 
     @Override
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
-        Assignable LVal = m_LVal;
-        if (LVal == null && isAssignable())
+        if (isAssignable())
             {
-            if (m_RVal instanceof Register)
+            Argument arg = m_arg;
+            if (arg instanceof Register)
                 {
-                LVal = new Assignable((Register) m_RVal);
+                return new Assignable((Register) arg);
                 }
-            else if (m_RVal instanceof PropertyConstant)
+            else if (arg instanceof PropertyConstant)
                 {
                 // TODO: use getThisClass().toTypeConstant() for a type
-                LVal = new Assignable(
-                    new Register(pool().typeObject(), Op.A_TARGET),
-                    (PropertyConstant) m_RVal);
+                return new Assignable(new Register(pool().typeObject(), Op.A_TARGET), (PropertyConstant) arg);
                 }
             else
                 {
-                LVal = super.generateAssignable(code, errs);
+                return super.generateAssignable(code, errs);
                 }
-            m_LVal = LVal;
             }
 
-        return LVal;
+        return null;
         }
 
 
@@ -673,6 +746,7 @@ public class NameExpression
         // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
         // vs. virtual, and so on
         String sName = name.getValueText();
+        m_fAssignable = false;
         if (left == null)
             {
             // resolve the initial name
@@ -703,6 +777,10 @@ public class NameExpression
                         throw new IllegalStateException("format=" + constant.getFormat()
                                 + ", constant=" + constant);
                     }
+                }
+            else if (arg instanceof Register)
+                {
+                m_fAssignable = ((Register) arg).isWritable();
                 }
             }
         else
@@ -814,7 +892,8 @@ public class NameExpression
                         }
                     else
                         {
-                        m_arg = infoProp.getIdentity();
+                        m_arg         = infoProp.getIdentity();
+                        m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
                         }
                     }
                 }
@@ -835,7 +914,7 @@ public class NameExpression
      *
      * @return
      */
-    protected TypeConstant planCodeGeneration(
+    protected TypeConstant planCodeGen(
             Context ctx,
             Argument argRaw,
             TypeConstant[] aTypeParams,
@@ -1318,7 +1397,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, PropertyDeref, PropertyRef, TypeOfClass, Singleton}
+    enum Plan {None, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.
@@ -1330,6 +1409,11 @@ public class NameExpression
      * to implement the behavior implied by the name.
      */
     private transient Plan m_plan;
+
+    /**
+     * Cached validation info: Can the name be used as an "L value"?
+     */
+    private transient boolean m_fAssignable;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
     }
