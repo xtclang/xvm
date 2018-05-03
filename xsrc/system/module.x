@@ -101,7 +101,7 @@ module Ecstasy.xtclang.org
             extends Exception(text, cause)
         {
         // TODO: remove
-        construct UnsupportedOperationException(String? text, Exception? cause) {}
+        construct(String? text, Exception? cause) {}
         }
 
     /**
