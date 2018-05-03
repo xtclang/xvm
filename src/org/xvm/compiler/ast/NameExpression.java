@@ -1300,7 +1300,7 @@ public class NameExpression
      * Cached validation info: What has to be done with either the "R Value" or "L Value" in order
      * to implement the behavior implied by the name.
      */
-    private transient Plan m_plan;
+    private transient Plan m_plan = Plan.None;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?

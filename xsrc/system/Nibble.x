@@ -2,7 +2,7 @@ const Nibble
     {
     construct(Bit[] bits)
         {
-        assert:always bits.length == 4;
+        assert:always bits.size == 4;
         this.bits = bits;
         }
 
