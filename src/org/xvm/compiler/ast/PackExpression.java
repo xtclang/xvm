@@ -9,7 +9,6 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
-import org.xvm.asm.op.Var_T;
 
 
 /**
@@ -37,7 +36,8 @@ public  class PackExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
         if (fPack)
             {
@@ -46,7 +46,7 @@ public  class PackExpression
 
         if (isConstant())
             {
-            return super.generateArgument(code, fPack, errs);
+            return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
             }
 
         // generate the tuple fields

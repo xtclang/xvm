@@ -234,8 +234,7 @@ public class InvocationExpression
         // 4) (partially) bind a function
 
         // TODO finishValidation() or finishValidations()
-
-        return this;
+        return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
         }
 
 

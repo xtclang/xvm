@@ -27,9 +27,12 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.P_Get;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -657,11 +660,8 @@ public class NameExpression
         return false;
         }
 
-// REVIEW API - how to enable local-property mode
-// REVIEW API - how to enable "next register" mode
-// REVIEW API - how to take advantage of the "frame-local stack"
     @Override
-    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         Argument argRaw = m_arg;
         switch (m_plan)
@@ -670,17 +670,25 @@ public class NameExpression
                 return argRaw;
 
             case PropertyDeref:
-                if (false)  // TODO local property mode: how to know that we can return a property constant to represent the "get" of that property against "this"
+                boolean fThisProp = left == null; // TODO or left == this
+                if (fThisProp && fLocalPropOk)
                     {
                     // local property mode
                     return argRaw;
                     }
                 else
                     {
-                    // TODO allocate a register, do a PGET or LGET (for "this"), and return that register
-                    Register reg = new Register();
-                    // determine "this" (vs. some other ref
-                    // code.add(new P_Get((PropertyConstant) argRaw, ));
+                    Register reg = new Register(getType());
+                    if (fThisProp)
+                        {
+                        code.add(new L_Get((PropertyConstant) argRaw, reg));
+                        }
+                    else
+                        {
+                        Argument argLeft = left.generateArgument(code, false, false, false, errs);
+                        code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
+                        }
+
                     return reg;
                     }
 
@@ -691,13 +699,12 @@ public class NameExpression
             case TypeOfClass:
             case Singleton:
                 assert hasConstantValue();
-                return super.generateArgument(code, fPack, errs);
+                return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
             }
         }
-
 
     @Override
     public Assignable generateAssignable(Code code, ErrorListener errs)
@@ -912,245 +919,130 @@ public class NameExpression
      * @param typeDesired  the (optional) type to attempt to fulfill during translation
      * @param errs         the error list to log errors to
      *
-     * @return
+     * @return the type of the expression
      */
     protected TypeConstant planCodeGen(
-            Context ctx,
-            Argument argRaw,
-            TypeConstant[] aTypeParams,
-            TypeConstant typeDesired,
-            ErrorListener errs)
+            Context         ctx,
+            Argument        argRaw,
+            TypeConstant[]  aTypeParams,
+            TypeConstant    typeDesired,
+            ErrorListener   errs)
         {
         assert ctx != null && argRaw != null;
+        ConstantPool pool = pool();
 
         if (argRaw instanceof Register)
             {
+            // meaning    type (de-ref)  type (no-de-ref)
+            // ---------  -------------  ----------------
+            // Reserved     T            n/a (already reported an Error)
+            // - Virtual    T            n/a (already reported an Error)
+            // Parameter    T            <- Ref
+            // Local var    T            <- Var
+
+            // validate that there are no trailing type parameters (not allowed for registers)
+            if (aTypeParams != null)
+                {
+                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                }
+
             Register reg = (Register) argRaw;
-            if (reg.isPredefined())
+            if (isSuppressDeref())
                 {
-                // it turns out that the only thing that you can do with a predefined register is to
-                // use it as a predefined register; all potential errors would have already been
-                // detected and reported
-                m_plan = Plan.None;
-                return argRaw.getRefType();
+                assert !reg.isPredefined();
+                m_plan = Plan.RegisterRef;
+                return pool.ensureParameterizedTypeConstant(
+                        m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getRefType());
                 }
 
-
-            *   Parameter     T                  <- Ref               T                     <- Ref
-                    *   Local var     T                  <- Var               T                     <- Var
-                    ? Meaning.Reserved
-                    : Meaning.Variable;
+            // use the register itself (the "T" column in the table above)
+            m_plan = Plan.None;
+            return argRaw.getRefType();
             }
 
-        if (argRaw instanceof Constant)
+        assert argRaw instanceof Constant;
+        Constant constant = (Constant) argRaw;
+        switch (constant.getFormat())
             {
-            Constant constant = (Constant) argRaw;
-            switch (constant.getFormat())
+            // class ID
+            case Module:
+            case Package:
+            case Class:
+            // relative ID
+            case ThisClass:
+            case ParentClass:
+                // handle the SingletonConstant use cases
+                if (!isIdentityMode(ctx))
+                    {
+                    if (aTypeParams != null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                        }
+
+                    m_plan = Plan.Singleton;
+                    return pool.ensureTerminalTypeConstant(constant);
+                    }
+
+                // determine the type of the class
+                TypeConstant type = pool.ensureTerminalTypeConstant(constant);
+                if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
+                    {
+                    if (aTypeParams != null)
+                        {
+                        type = pool.ensureParameterizedTypeConstant(type, aTypeParams);
+                        }
+
+                    m_plan = Plan.TypeOfClass;
+                    return pool().ensureParameterizedTypeConstant(pool.typeType(), type);
+                    }
+                else
+                    {
+                    m_plan = Plan.None;
+                    return type;
+                    }
+
+            case Property:
                 {
-                // class ID
-                case Module:
-                case Package:
-                case Class:
-                    // relative ID
-                case ThisClass:
-                case ParentClass:
-                    return Meaning.Class;
+                if (aTypeParams != null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    }
 
-                case Property:
-                    return Meaning.Property;
+                PropertyConstant  id   = (PropertyConstant) argRaw;
+                PropertyStructure prop = (PropertyStructure) id.getComponent();
+                if (!prop.isConstant() && isIdentityMode(ctx))
+                    {
+                    m_plan = Plan.None;
+                    // TODO parameterized type of Property<TargetType, PropertyType>
+                    return pool.typeProperty();
+                    }
 
-                case Typedef:
-                    return Meaning.Typedef;
+                if (isSuppressDeref())
+                    {
+                    m_plan = Plan.PropertyRef;
+                    return pool.ensureParameterizedTypeConstant(
+                            m_fAssignable ? pool.typeVar() : pool.typeRef(), prop.getType());
+                    }
+                else
+                    {
+                    m_plan = Plan.PropertyDeref;
+                    return prop.getType();
+                    }
                 }
+            case Typedef:
+                if (aTypeParams != null)
+                    {
+                    // TODO have to incorporate type params
+                    throw new UnsupportedOperationException("TODO: " + this);
+                    }
+
+                m_plan = Plan.TypeOfTypedef;
+                return pool.ensureParameterizedTypeConstant(
+                        pool.typeType(), ((TypedefConstant) constant).getReferredToType());
+
+            default:
+                throw new IllegalStateException("constant=" + constant);
             }
-
-        throw new IllegalStateException("arg=" + argRaw);
-
-        boolean fNoDeref = isSuppressDeref();
-        // TODO
-
-
-        // a reserved name can not have type params
-        if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
-            {
-            // TODO log error
-            fValid = false;
-            }
-
-        // validate the no-de-reference option
-        if (m_arg != null && isSuppressDeref())
-            {
-            // TODO
-
-            // a reserved name can not have no-de-ref
-            if (m_arg instanceof Register && ((Register) m_arg).isPredefined())
-                {
-                // TODO log error
-                fValid = false;
-                }
-            }
-
-
-//        // resolve the name to an argument, and determine assignability
-//        m_RVal = arg;
-//        m_fAssignable = ctx.isVarWritable(sName); // TODO: handle properties
-//
-//        // validate that the expression can be of the required type
-//        TypeConstant type = arg.getRefType();
-//        TypeFit      fit  = TypeFit.Fit;
-//        if (fValid && typeRequired != null && !type.isA(typeRequired))
-//            {
-//            // check if conversion in required
-//            MethodConstant idMethod = type.ensureTypeInfo().findConversion(typeRequired);
-//            if (idMethod == null)
-//                {
-//                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeRequired, arg.getRefType());
-//                fValid = false;
-//                }
-//            else
-//                {
-//                // use the return value from the conversion function to figure out what type the
-//                // literal should be converted to, and then do the conversion here in the
-//                // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
-//                // able to rely on the runtime itself to do conversions, and using containers,
-//                // can even do so for user code)
-//                type = idMethod.getSignature().getRawReturns()[0];
-//                fit  = fit.addConversion();
-//                }
-//            }
-//
-//        if (!fValid)
-//            {
-//            // if there's any problem computing the type, and the expression is already invalid,
-//            // then just agree to whatever was asked
-//            if (typeRequired != null)
-//                {
-//                type = typeRequired;
-//                }
-//
-//            fit = TypeFit.NoFit;
-//            }
-//        else if (pref == TuplePref.Required)
-//            {
-//            fit = fit.addPack();
-//            }
-//
-//        boolean fConstant = m_RVal != null && m_RVal instanceof Constant && !m_fAssignable;
-//        finishValidation(fit, type, fConstant ? (Constant) m_RVal : null);
-
-
-        // Name
-        // refers to   Result
-        // ---------   -------------------------------------------------------------------------
-        // Reserved    Argument index in the range [-0x01, -0x10]
-        // Parameter   Argument index in the range [0, p), where p is the number of parameters
-        // Local var   Argument index in the range >= p
-        // Typedef     Argument index < -0x10 referring to TypedefConstant
-        // Class       Argument index < -0x10 referring to ClassConstant
-        // Property    Argument index < -0x10 referring to PropertyConstant
-        // MMethod     Argument index < -0x10 referring to MultiMethodConstant
-
-//
-//                switch (((Constant) arg).getFormat())
-//                    {
-//                    case Module:
-//                    case Package:
-//                    case Class:
-//                        // the trailing <params> results in a type constant
-//                        type = pool().ensureParameterizedTypeConstant(
-//                                ((IdentityConstant) arg).asTypeConstant(), aParams);
-//                        break;
-//
-//                    case Typedef:
-//                        if (isSuppressDeref())
-//                            {
-//                            // can't both provide <params> and suppress de-reference (since the
-//                            // params are implicitly applied to the type as part of de-referencing
-//                            return null;
-//                            }
-//                        else
-//                            {
-//                            // the typedef is just a redirect to another type
-//                            type = ((TypedefConstant) arg).getReferredToType();
-//
-//                            // remove/replace the parameters
-//                            return type.adoptParameters(aParams);
-//                            }
-//
-//                    default:
-//                        // trailing type params are not appropriate for whatever type this is
-//                        return null;
-//                    }
-//                }
-//
-//            return translateType(type, ctx.isStatic(), !isSuppressDeref(), ErrorListener.BLACKHOLE);
-//            }
-//        else
-//            {
-//            TypeConstant typeLeft = left.getImplicitType(ctx);
-//            if (typeLeft == null)
-//                {
-//                return null;
-//                }
-//
-//            // the left hand side could be:
-//            // - a reserved name (e.g. this)
-//            // - a variable (including a parameter)
-//            // - a property
-//            // - a class
-//            // - a typedef
-//
-//            // results in
-//            // - a Ref/Var
-//            // - a ClassConstant (etc.) or a PseudoConstant
-//            // - a SingletonConstant
-//            // - a TypedefConstant
-//            // - a Property
-//            // - a type
-//            // - a normal reference
-//            // - an error
-//
-//            // if
-//            // TODO - we have the left side type, so figure out what the name refers to
-//
-//            // TODO - then apply the rules
-//
-//     * <p/>TODO remember ".this"
-//     * <p/>TODO "construct" (placed at end of list by parser)
-//            // the "arg" _is_ the context in this case
-//            // REVIEW arg could represent a Ref/Var for a property, for example, so how to get the TypeInfo for _that_ property?
-//            TypeConstant typeArg = arg.getRefType();
-//            TypeInfo infoArg = typeArg.ensureTypeInfo(errs);
-//            String       sName   = tokName.getValueText();
-//
-//            if (arg instanceof Register)
-//                {
-//                // this includes the unknown (TBD) register and actual register indexes (for parameters
-//                // and local variables), and the reserved registers (for "this", etc.); the name has to
-//                // be a property name (including type parameter names, and including constant value
-//                // names) or a multi-method name (which includes both functions and methods) declared
-//                // by the compile-time-type of the register
-//                // REVIEW could it also possibly be a typedef name?
-//                PropertyInfo prop = infoArg.findProperty(sName);
-//                if (prop == null)
-//                    {
-//                    if (infoArg.containsMultiMethod(sName))
-//                        {
-//                        arg = new MultiMethodConstant(pool(), typeArg, sName);
-//                        }
-//                    }
-//                else
-//                    {
-//                    arg = prop.getIdentity();
-//                    }
-//
-//                }
-//
-//
-//            }
-//
-//        // TODO - we have arg.getRefType() at this point, now apply the rules
-        return null;
         }
 
     /**
@@ -1205,7 +1097,6 @@ public class NameExpression
      */
     protected boolean isIdentityMode(Context ctx)
         {
-        checkValidated();
         if (params == null && (left == null
                 || left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx)))
             {
@@ -1397,7 +1288,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.
