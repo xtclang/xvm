@@ -280,7 +280,7 @@ public class TupleExpression
         Argument[]       aArgs     = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            aArgs[i] = exprs.get(i).generateArgument(code, false, errs);
+            aArgs[i] = exprs.get(i).generateArgument(code, false, false, false, errs);
             }
 
         if (!fPack)

@@ -398,13 +398,19 @@ public abstract class Expression
      * @param fit       the fit of that type that was determined by the validation
      * @param type      the single type that results from the Expression
      * @param constVal  a constant value, iff this expression is constant
+     *
+     * @return this or null
      */
-    protected void finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
+    protected Expression finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
         {
         finishValidations(
                 fit,
                 type == null ? null : new TypeConstant[] {type},
                 constVal == null ? null : new Constant[] {constVal});
+
+        return fit.isFit()
+                ? this
+                : null;
         }
 
     /**
@@ -414,8 +420,10 @@ public abstract class Expression
      * @param aType      the types that result from the Expression
      * @param aconstVal  an array of constant values, equal in length to the array of types, iff
      *                   this expression is constant
+     *
+     * @return this or null
      */
-    protected void finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
+    protected Expression finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
         {
         if (aType == null)
             {
@@ -434,6 +442,10 @@ public abstract class Expression
         m_fit    = fit == null ? TypeFit.Fit : fit;
         m_aType  = aType;
         m_aConst = aconstVal;
+
+        return fit.isFit()
+                ? this
+                : null;
         }
 
     /**
@@ -550,7 +562,7 @@ public abstract class Expression
         {
         checkValidated();
 
-        return getTypes();
+        return m_aType;
         }
 
     /**
@@ -695,14 +707,16 @@ public abstract class Expression
      * This method (or the plural version) must be overridden by any expression that is not always
      * constant.
      *
-     * @param code   the code block
-     * @param fPack  true if the result must be delivered wrapped in a tuple
-     * @param errs   the error list to log any errors to
+     * @param code          the code block
+     * @param fPack         true if the result must be delivered wrapped in a tuple
+     * @param fLocalPropOk  enables use of local-property mode
+     * @param fUsedOnce     enables use of the "frame-local stack"
+     * @param errs          the error list to log any errors to
      *
      * @return a resulting argument of the specified type, or of a tuple of the specified type if
      *         that is both allowed and "free" to produce
      */
-    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         checkDepth();
         assert !isVoid();
@@ -755,7 +769,7 @@ public abstract class Expression
                 return NO_RVALUES;
 
             case 1:
-                return new Argument[] {generateArgument(code, fPack, errs)};
+                return new Argument[] {generateArgument(code, fPack, false, false, errs)};
 
             default:
                 // this must be overridden
@@ -870,7 +884,7 @@ public abstract class Expression
         if (isSingle())
             {
             // this will be overridden by classes that can push down the work
-            Argument arg = generateArgument(code, false, errs);
+            Argument arg = generateArgument(code, false, false, false, errs);
             LVal.assign(arg, code, errs);
             }
         else
@@ -957,7 +971,7 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, false, errs);
+        Argument arg = generateArgument(code, false, false, false, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));

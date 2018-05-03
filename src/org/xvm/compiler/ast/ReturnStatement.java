@@ -11,7 +11,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op.Argument;
-import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -228,7 +227,7 @@ public class ReturnStatement
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
             ConstantPool pool = pool();
-            Argument     arg  = listExprs.get(0).generateArgument(code, false, errs);
+            Argument     arg  = listExprs.get(0).generateArgument(code, false, false, false, errs);
             code.add(new Return_T(arg));
             }
         else
@@ -240,7 +239,7 @@ public class ReturnStatement
                     break;
 
                 case 1:
-                    Argument arg = listExprs.get(0).generateArgument(code, false, errs);
+                    Argument arg = listExprs.get(0).generateArgument(code, false, false, false, errs);
                     code.add(new Return_1(arg));
                     break;
 
@@ -248,7 +247,7 @@ public class ReturnStatement
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
-                        args[i] = listExprs.get(i).generateArgument(code, false, errs);
+                        args[i] = listExprs.get(i).generateArgument(code, false, false, false, errs);
                         }
                     code.add(new Return_N(args));
                     break;

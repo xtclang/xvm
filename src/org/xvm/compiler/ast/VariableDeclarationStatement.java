@@ -281,7 +281,7 @@ public class VariableDeclarationStatement
             Argument[]       aArgs    = new Argument[cVals];
             for (int i = 0; i < cVals; ++i)
                 {
-                aArgs[i] = listVals.get(i).generateArgument(code, false, errs);
+                aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
                 }
             code.add(new Var_SN(m_reg, constName, aArgs));
             }

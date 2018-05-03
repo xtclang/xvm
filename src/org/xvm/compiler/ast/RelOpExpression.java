@@ -545,7 +545,8 @@ public class RelOpExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
         if (!isConstant())
             {
@@ -576,7 +577,7 @@ public class RelOpExpression
                 }
             }
 
-        return super.generateArgument(code, fPack, errs);
+        return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
@@ -598,8 +599,8 @@ public class RelOpExpression
         if (LVal.isLocalArgument())
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, errs);
+            Argument arg1 = expr1.generateArgument(code, false, false, false, errs);
+            Argument arg2 = expr2.generateArgument(code, false, false, false, errs);
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())

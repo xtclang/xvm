@@ -168,7 +168,7 @@ public class StatementBlock
         RootContext ctx = new RootContext(code.getMethodStructure(), this);
 
         Statement that = validate(ctx.validatingContext(), errs);
-        if (!errs.isAbortDesired())
+        if (that != null && !errs.isAbortDesired())
             {
             boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
 
@@ -199,7 +199,7 @@ public class StatementBlock
                 {
                 Statement stmtOld = stmts.get(i);
                 Statement stmtNew = stmtOld.validate(ctx, errs);
-                if (stmtNew != stmtOld)
+                if (stmtNew != stmtOld && stmtNew != null)
                     {
                     this.stmts = ensureArrayList(stmts);
                     stmts.set(i, stmtNew);
