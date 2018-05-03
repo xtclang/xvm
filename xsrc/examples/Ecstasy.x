@@ -1,7 +1,7 @@
 module Ecstasy.xtclang.org
     {
-    const Module {}
-    const Package {}
+    interface Module {}
+    interface Package {}
     const Class {}
     interface Const {}
 

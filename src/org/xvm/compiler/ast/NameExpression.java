@@ -787,6 +787,7 @@ public class NameExpression
                 }
             else if (arg instanceof Register)
                 {
+                m_arg         = arg;
                 m_fAssignable = ((Register) arg).isWritable();
                 }
             }
@@ -1033,7 +1034,7 @@ public class NameExpression
                 if (aTypeParams != null)
                     {
                     // TODO have to incorporate type params
-                    throw new UnsupportedOperationException("TODO: " + this);
+                    throw new IllegalStateException("TODO: " + this);
                     }
 
                 m_plan = Plan.TypeOfTypedef;
