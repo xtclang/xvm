@@ -10,6 +10,8 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -89,6 +91,15 @@ public class UnionTypeConstant
             }
 
         return false;
+        }
+
+    @Override
+    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+        {
+        ResolutionResult result1 = m_constType1.resolveFormalType(sName, collector);
+        return result1 == ResolutionResult.UNKNOWN
+            ? m_constType2.resolveFormalType(sName, collector)
+            : result1;
         }
 
     @Override

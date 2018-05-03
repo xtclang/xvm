@@ -1390,10 +1390,10 @@ public abstract class Component
     /**
      * Request that the component determine what the specified name is referring to.
      *
-     * @param sName        the name to resolve
-     * @param collector    the collector to which the potential name matches will be reported
+     * @param sName      the name to resolve
+     * @param collector  the collector to which the potential name matches will be reported
      *
-     * @return true iff any matches for the name were collected
+     * @return the resolution result
      */
     public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
@@ -3060,7 +3060,7 @@ public abstract class Component
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
-    public enum ResolutionResult {UNKNOWN, RESOLVED, DEFERRED, ERROR}
+    public enum ResolutionResult {UNKNOWN, RESOLVED, DEFERRED, POSSIBLE_FORMAL, ERROR}
 
     /**
      * A callback interface used by the name resolution functionality of the Component.

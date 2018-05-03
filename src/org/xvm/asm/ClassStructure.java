@@ -215,10 +215,10 @@ public class ClassStructure
     /**
      * Add a type parameter.
      *
-     * @param sName  the type parameter name
-     * @param clz    the type parameter type
+     * @param sName            the type parameter name
+     * @param typeConstraint   the type parameter constraint type
      */
-    public void addTypeParam(String sName, TypeConstant clz)
+    public void addTypeParam(String sName, TypeConstant typeConstraint)
         {
         ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null)
@@ -226,7 +226,18 @@ public class ClassStructure
             m_mapParams = map = new ListMap<>();
             }
 
-        map.put(getConstantPool().ensureStringConstant(sName), clz);
+        ConstantPool pool = getConstantPool();
+
+        map.put(pool.ensureStringConstant(sName), typeConstraint);
+
+        // each type parameter also has a synthetic property of the same name,
+        // whose type is of type"Type<constraint-type>"
+        TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
+            pool.clzType(), null, typeConstraint);
+
+        // create the property and mark it as synthetic
+        createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName)
+            .setSynthetic(true);
         markModified();
         }
 
@@ -393,6 +404,94 @@ public class ClassStructure
         return !isSingleton();
         }
 
+    @Override
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+        {
+        ResolutionResult result = super.resolveName(sName, collector);
+
+        return result == ResolutionResult.UNKNOWN
+            ? resolveFormalType(sName, collector, true)
+            : result;
+        }
+
+    /**
+     * Determine if the specified name is referring to a formal type on any of the contributions
+     * for this class.
+     *
+     * @param sName       the name to resolve
+     * @param collector   the collector to which the potential name matches will be reported
+     * @param fAllowInto  if false, the "into" contributions should not be looked at
+     *
+     * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE_FORMAL
+     */
+    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector,
+                                                 boolean fAllowInto)
+        {
+        Component child = getChild(sName);
+        if (child instanceof PropertyStructure && child.isSynthetic())
+            {
+            assert ((PropertyStructure) child).isTypeParameter();
+
+            collector.resolvedComponent(child);
+            return ResolutionResult.RESOLVED;
+            }
+
+        // no child by that name; it could only be a formal type introduced by a contribution
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        continue;
+                        }
+                case Annotation:
+                case Delegates:
+                case Implements:
+                case Extends:
+                    break;
+
+                case Incorporates:
+                    fAllowInto = false;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.containsUnresolved())
+                {
+                return ResolutionResult.POSSIBLE_FORMAL;
+                }
+
+            if (typeContrib.equals(getConstantPool().typeObject()))
+                {
+                // trivial optimization; no need to look into the Object
+                break;
+                }
+
+            if (typeContrib.isSingleDefiningConstant())
+                {
+                ClassStructure clzContrib = (ClassStructure)
+                    typeContrib.getSingleUnderlyingClass(true).getComponent();
+
+                ResolutionResult result = clzContrib.resolveFormalType(sName, collector, fAllowInto);
+                if (result != ResolutionResult.UNKNOWN)
+                    {
+                    return result;
+                    }
+                }
+            else
+                {
+                return typeContrib.resolveFormalType(sName, collector);
+                }
+            }
+
+        return ResolutionResult.UNKNOWN;
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -550,6 +649,8 @@ public class ClassStructure
     /**
      * Find an index of a generic parameter with the specified name.
      *
+     * Note: this method only looks for parameters declared by this class.
+     *
      * @param sParamName  the parameter name
      *
      * @return the parameter index or -1 if not found
@@ -617,7 +718,7 @@ public class ClassStructure
                     if (typeContrib.isParamsSpecified())
                         {
                         ClassStructure clzContrib = (ClassStructure)
-                            contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
+                            typeContrib.getSingleUnderlyingClass(true).getComponent();
                         TypeConstant type = clzContrib.getGenericParamTypeImpl(sName,
                             typeContrib.getParamTypes(), false);
                         if (type != null)
@@ -1504,7 +1605,8 @@ public class ClassStructure
                     // fill the missing actual parameters with the canonical types
                     // Note: since there is a possibility of Tuple self-reference
                     // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)
-                    // we'll prime the args as "Void" (TODO: that needs to be re-worked)
+                    // we'll prime the args as "Void"
+                    // (TODO: that needs to be re-worked when we get rid of Void)
                     for (int i = cActual; i < cFormal; i++)
                         {
                         listActual.add(pool.typeVoid());

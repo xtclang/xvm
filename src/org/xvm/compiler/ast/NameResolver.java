@@ -143,7 +143,8 @@ public class NameResolver
                     {
                     // start with the current node, and one by one walk up to the root, asking at
                     // each level for the node to resolve the name
-                    AstNode node = m_node;
+                    boolean fPossibleFormal = false;
+                    AstNode node            = m_node;
                     WalkUpToTheRoot: while (node != null)
                         {
                         // if the first name refers to an import, then ask that import to figure out
@@ -186,6 +187,10 @@ public class NameResolver
                             // ask the component to resolve the name
                             switch (componentResolver.resolveName(m_sName, this))
                                 {
+                                case POSSIBLE_FORMAL:
+                                    // formal types could not be resolved; keep walking up
+                                    fPossibleFormal = true;
+                                    // break-through
                                 case UNKNOWN:
                                     // the component didn't know the name; keep walking up
                                     break;
@@ -216,6 +221,10 @@ public class NameResolver
                         Component component = getPool().getImplicitlyImportedComponent(m_sName);
                         if (component == null)
                             {
+                            if (fPossibleFormal)
+                                {
+                                return Result.DEFERRED;
+                                }
                             m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                             m_status = Status.ERROR;
                             return Result.ERROR;

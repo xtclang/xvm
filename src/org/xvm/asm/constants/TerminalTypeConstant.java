@@ -18,6 +18,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -226,6 +228,47 @@ public class TerminalTypeConstant
     public boolean isAutoNarrowing()
         {
         return ensureResolvedConstant().isAutoNarrowing();
+        }
+
+    @Override
+    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+        {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case Register:
+                return ResolutionResult.UNKNOWN;
+
+            case NativeClass:
+                constant = ((NativeRebaseConstant) constant).getClassConstant();
+                // break through
+            case Class:
+                {
+                ClassConstant constClz = (ClassConstant) constant;
+
+                return ((ClassStructure) constClz.getComponent()).
+                    resolveFormalType(sName, collector, true);
+                }
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                        .resolveFormalType(sName, collector);
+
+            case Typedef:
+                return getTypedefTypeConstant((TypedefConstant) constant).
+                    resolveFormalType(sName, collector);
+
+            case UnresolvedName:
+                return ResolutionResult.POSSIBLE_FORMAL;
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
         }
 
     @Override

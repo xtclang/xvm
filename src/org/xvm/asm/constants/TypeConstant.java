@@ -25,6 +25,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -457,6 +459,20 @@ public abstract class TypeConstant
     protected TypeConstant cloneSingle(TypeConstant type)
         {
         throw new UnsupportedOperationException();
+        }
+
+    /**
+     * Determine if the specified name is referring to a formal type on any of the contributions
+     * for this class.
+     *
+     * @param sName      the name to resolve
+     * @param collector  the collector to which the potential name matches will be reported
+     *
+     * @return the resolution result
+     */
+    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+        {
+        return getUnderlyingType().resolveFormalType(sName, collector);
         }
 
     /**

@@ -659,15 +659,6 @@ public class TypeCompositionStatement
                                     ? OBJECT_CLASS.asTypeConstant()
                                     : exprType.ensureTypeConstant();
                             component.addTypeParam(sParam, constType);
-
-                            // each type parameter also has a synthetic property of the same name,
-                            // whose type is of type"Type<exprType>"
-                            TypeConstant constPropType = pool.ensureClassTypeConstant(
-                                    pool.clzType(), null, constType);
-
-                            // create the property and mark it as synthetic
-                            component.createProperty(false, Access.PUBLIC, Access.PUBLIC, constPropType, sParam)
-                                    .setSynthetic(true);
                             }
                         }
                     }

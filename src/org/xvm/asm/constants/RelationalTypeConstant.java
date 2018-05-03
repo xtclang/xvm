@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -196,6 +198,15 @@ public abstract class RelationalTypeConstant
             return (T) this;
             }
         throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+        {
+        // we should not get here for the Intersection type, but instead of throwing,
+        // let's simply treat it in the same way as the DifferenceType -
+        // only looking into the first type
+        return m_constType1.resolveFormalType(sName, collector);
         }
 
     @Override
