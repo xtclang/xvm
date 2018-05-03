@@ -13,7 +13,7 @@ const VarUInt
     construct(Bit[] bits)
         {
         // ignore leading zeros to find the actual number of bits necessary for the value
-        Int    bitsUsed = bits.length;
+        Int    bitsUsed = bits.size;
         while (bitsUsed > 0 && bits[bitsUsed-1] == 0)
             {
             --bitsUsed;
@@ -26,7 +26,7 @@ const VarUInt
         bitsUsed = bitsUsed < 8 ? 8 : (bitsUsed * 2 - 1).leftmostBit;
 
         // if the passed-in bits array isn't the right length, then replace it with a correct one
-        if (bitsUsed == bits.length)
+        if (bitsUsed == bits.size)
             {
             this.bits = bits;
             }
@@ -35,7 +35,7 @@ const VarUInt
             // need to allocate a new array of bits of the calculated size, and copy over
             // the least significant bitsUsed number of bits that were passed in
             Bit[] newBits = new Bit[bitsUsed];
-            for (Int i = 0, c = bitsUsed.min(bits.length); i < c; ++i)
+            for (Int i = 0, c = bitsUsed.min(bits.size); i < c; ++i)
                 {
                 newBits[i] = bits[i];
                 }
@@ -57,7 +57,7 @@ const VarUInt
 
     Int bitLength.get()
         {
-        return bits.length;
+        return bits.size;
         }
 
     Bit[] to<Bit[]>()

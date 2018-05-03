@@ -5,7 +5,7 @@ const VarInt
     {
     construct(Bit[] bits)
         {
-        assert:always bits.length >= 8 && bits.length.bitCount == 1;
+        assert:always bits.size >= 8 && bits.size.bitCount == 1;
         this.bits = bits;
         }
 
@@ -14,7 +14,7 @@ const VarInt
     @Lazy Signum sign.get()
         {
         // twos-complement number will have the MSB set if negative
-        if (bits[bits.length-1] == 1)
+        if (bits[bits.size-1] == 1)
             {
             return Negative;
             }
@@ -31,7 +31,7 @@ const VarInt
 
     Int bitLength.get()
         {
-        return bits.length;
+        return bits.size;
         }
 
     Int byteLength.get()
