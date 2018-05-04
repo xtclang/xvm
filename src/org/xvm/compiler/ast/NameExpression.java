@@ -994,7 +994,7 @@ public class NameExpression
                         }
 
                     m_plan = Plan.TypeOfClass;
-                    return pool().ensureParameterizedTypeConstant(pool.typeType(), type);
+                    return pool.ensureParameterizedTypeConstant(pool.typeType(), type);
                     }
                 else
                     {
