@@ -23,6 +23,22 @@ public class LabeledExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the token that provides the label (the name) for the expression
+     */
+    public Token getNameToken()
+        {
+        return name;
+        }
+
+    /**
+     * @return the label name
+     */
+    public String getName()
+        {
+        return name.getValueText();
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -43,7 +59,6 @@ public class LabeledExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
 
     @Override
     public boolean isNonBinding()

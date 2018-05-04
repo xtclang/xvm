@@ -893,3 +893,9 @@ Person.name.assigned    // the "assigned" Property of the "name" Property of Per
 String  s = Point.name              // String value of the "name" property of the "Class" class for the Point class
 Boolean b = Point.name.assigned     // Boolean value of the "assigned" property of the above
 
+
+// -- reflection ...
+
+Shape                s = ...;
+Method<Shape, <>,<>> m = Shape.draw();
+Function<<>, <>>     f = ...            // requires a reflection API to combine s+m
