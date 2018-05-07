@@ -277,6 +277,7 @@ MethodIdentity
     "conditional"-opt ReturnList Name RedundantReturnSpecifier-opt
 
 ReturnList
+    "void"
     SingleReturnList
     MultiReturnList
 
@@ -330,6 +331,7 @@ Statement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
     "while" "(" WhileCondition ")" StatementBlock
+    WithStatement
 
 PropertyDeclarationStatement
     "static" TypeExpression Name PropertyDeclarationFinish-opt
@@ -342,7 +344,7 @@ Statements
     Statements Statement
 
 VariableDeclaration
-    TypeExpression Name VariableInitializerFinish-opt
+    VariableTypeExpression Name VariableInitializerFinish-opt
     "(" MultipleOptionalDeclaration "," SingleOptionalDeclaration ")" VariableInitializerFinish
 
 MultipleOptionalDeclaration
@@ -352,8 +354,10 @@ MultipleOptionalDeclaration
 SingleOptionalDeclaration
     TypeExpression-opt Assignable
 
-VariableInitializerFinish
-    "=" Expression
+VariableTypeExpression
+    "var"
+    "val"
+    TypeExpression
 
 Assignment
     Assignee AssignmentOperator Expression
@@ -425,6 +429,9 @@ VariableInitializationList
 
 VariableInitializer
     TypeExpression-opt Name VariableInitializerFinish
+
+VariableInitializerFinish
+    "=" Expression
 
 VariableModificationList
     VariableModification
@@ -506,6 +513,16 @@ Catch
 
 TypeDefStatement
     "typedef" TypeExpression "as"-opt Name ";"
+
+WithStatement
+    "with" "(" TypeExpression "as"-opt Name ";"
+
+WithDeclarationList
+    WithDeclaration
+    WithDeclarationList "," WithDeclaration
+
+WithDeclaration
+    Expression "as" Name
 
 #
 # expressions

@@ -11,7 +11,9 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -69,14 +71,14 @@ import org.xvm.util.Severity;
  *                                            bind    bind
  *   description                              target  args    call
  *   ---------------------------------------  ------  ------  ------
- *   obtain reference to method or function   N       N       N
- *   function invocation                      N       N       Y
- *   binding function parameters / currying   N       Y       N
- *   function invocation                      N       Y       Y
- *   method binding                           Y       N       N
- *   method invocation                        Y       N       Y
- *   method and parameter binding             Y       Y       N
- *   method invocation                        Y       Y       Y
+ *   obtain reference to method or function
+ *   function invocation                                      X
+ *   binding function parameters / currying           X
+ *   function invocation                              X       X
+ *   method binding                           X
+ *   method invocation                        X               X
+ *   method and parameter binding             X       X
+ *   method invocation                        X       X       X
  * </code></pre>
  * <p/>
  * The implementation is specialized when the method or function <b>name</b> is provided. The
@@ -101,29 +103,76 @@ import org.xvm.util.Severity;
  *     not to perform the "call" portion itself, but rather to yield the method or function
  *     reference as a result. This information may overlap with information that the
  *     InvocationExpression has from its own method arguments, if any is a NonBindingExpression,
- *     since that also indicates that the InvocationExpression must not to perform the "call", but
+ *     since that also indicates that the InvocationExpression must not perform the "call", but
  *     rather yields a method or function reference as its result.</li>
- * <li>The rules for determining th</li>
+ * <li>...</li>
  * </ul>
  * <p/>
  * The rules for determining the method or function to call when the name is provided:
+ * <ol>
+ * <li>Validate the (optional) left expression, and all of the (optional) redundant return type
+ *     {@link NameExpression#params params} expressions of the NameExpression.</li>
+ * <li>Determine whether the search will include methods, functions, or both. Functions are included
+ *     if (i) there is no left, or (ii) the left is identity-mode. Methods are included if (i) there
+ *     is a left, or (ii) there is no left and the context is not static.</li>
+ * <li>If the name has a {@code left} expression, that expression provides the scope to search for
+ *     a matching method/function. If the left expression is itself a NameExpression, then the scope
+ *     may actually refer to two separate types, because the NameExpression may indicate both (i)
+ *     identity mode and (ii) reference mode. In this case, the identity mode is treated as a
+ *     first scope, and the reference mode is treated as a second scope.</li>
+ * <li>If the name does not have a {@code left} expression, then walk up the AST parent node chain
+ *     looking for a registered name, i.e. a local variable of that name, stopping once the
+ *     containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
+ *     enable local variable capture) is reached. If a match is found, then that is the
+ *     method/function to use, and it is an error if the type of that variable is not a method, a
+ *     function, or a reference that has an @Auto conversion to a method or function. (Done.)</li>
+ * <li>Otherwise, for a name without a {@code left} expression (which provides its scope),
+ *     determine the sequence of scopes that will be searched for matching methods/functions. For
+ *     example, the point from which the call is occurring could be inside a (i) lambda, inside a
+ *     (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static child
+ *     class, inside a (vi) top level class, inside a (vii) package, inside a (viii) module; in this
+ *     example, scope (i) is searched first for any matching methods and functions, then scope (ii),
+ *     then scope (ii), (iii), (iv), and (v). Because scope (v) is a static child, when scope (vi)
+ *     is searched, it is only searched for functions, <i>unless</i> the InvocationExpression is
+ *     <b>not</b> performing a "call" (i.e. no "this" is required), in which case methods are
+ *     included. The package and module are omitted from the search; we do not venture past the
+ *     top level class barrier in the search.</li>
+ * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
+ *     the rules from step 4 above: If a match is found, then that is the method/function to use,
+ *     and it is an error if the type of that property/constant is not a method, a function, or a
+ *     reference that has an @Auto conversion to a method or function. (Done.)</li>
+ * <li>Otherwise, find the methods/functions that match the above criteria, as follows:
+ *     (i) including only method and/or functions as appropriate; (ii) matching the name; (iii) for
+ *     each named argument, having a matching parameter name on the method/function; (iv) after
+ *     accounting for named arguments, having at least as many parameters as the number of provided
+ *     arguments, and no more <i>required</i> parameters than the number of provided arguments; (v)
+ *     having each argument from steps (iii) and (iv) be isA() or @Auto convertible to the type of
+ *     each corresponding parameter; and (vi) matching (i.e. isA()) any specified redundant return
+ *     types.</li>
+ * <li>If no methods or functions match from steps 6 &amp; 7, then repeat at the next outer scope.
+ *     If there are no more outer scopes, then it is an error. (Done.)</li>
+ * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
+ * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
+ *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+ *     used. If that algorithm results in a single selection, then that single selection is used.
+ *     Otherwise, the redundant return types are used as a tie breaker; if that results in a single
+ *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
+ *     (Done.)</li>
+ * </ol>
+ * <p/>
+ * The "construct" name (which is actually a keyword) indicates a simplified set of rules;
+ * specifically:
  * <ul>
- * <li>First, validate the (optional) left expression, and all of the (optional) params expressions
- *     of the NameExpression.</li>
- * <li>Second, determine whether the search will involve methods, functions, or both. Functions are
- *     included if (i) there is no left, or (ii) the left is identity-mode. Methods are included if
- *     (i) there is a left, or (ii) there is no left and the context is not static.</li>
- * <li>If there is no left, look for functions and methods that exist as children of the current
- *     component (which may be the method TODO), walking up the component tree until the method is reached.
- *     walking up the
- * on the TypeInfo for the type possible methods and/or functions that </li>
- * <li></li>
- * <li></li>
- * <li></li>
- * <li></li>
- *
+ * <li>It requires the name to either (i) have no <i>left</i>, or (ii) have a <i>left</i> that is
+ *     itself a NameExpression in identity-mode;</li>
+ * <li>Only the constructors are searched; the name cannot specify a variable or a property;</li>
+ * <li>There cannot / must not be any redundant returns, so any associated rules are ignored.</li>
  * </ul>
  * <p/>
+ * Deferred implementation items:
+ * <ul><li>TODO default parameter values
+ * </li><li>TODO named parameters
+ * </li></ul>
  */
 public class InvocationExpression
         extends Expression
@@ -203,6 +252,28 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
+        ConstantPool pool       = pool();
+        TypeConstant typeMethod = expr.getImplicitType(ctx);
+        if (typeMethod != null)
+            {
+            TypeConstant[] a = null;
+            if (typeMethod.isA(pool.typeMethod()) || typeMethod.isA(pool.typeFunction()))
+                {
+                a = typeMethod.getParamTypesArray();
+                // TODO
+                }
+            else
+                {
+                // check for an @Auto that converts to
+                }
+            }
+
+        MethodConstant idMethod = resolveName(ctx, false, typeLeft, aRedundant, aArgs, ErrorListener.BLACKHOLE);
+        if (idMethod != null)
+            {
+            return idMethod.getRawReturns();
+            }
+
         return TypeConstant.NO_TYPES;
         }
 
@@ -340,6 +411,82 @@ public class InvocationExpression
         }
 
 
+    // ----- method resolution helpers -------------------------------------------------------------
+
+    /**
+     * @return true iff this expression does not actually result in an invocation, but instead
+     *         resolves to a reference to a method or a function as its result
+     */
+    protected boolean isSuppressCall()
+        {
+        if (expr instanceof NameExpression && ((NameExpression) expr).isSuppressDeref())
+            {
+            return true;
+            }
+
+        for (Expression exprArg : args)
+            {
+            if (exprArg.isNonBinding())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * @return true iff the parameter is named
+     */
+    protected boolean isParamNamed(Expression expr)
+        {
+        return expr instanceof LabeledExpression;
+        }
+
+    /**
+     * @return the name of the parameter, or null if the parameter is not named
+     */
+    protected String getParamName(Expression expr)
+        {
+        return isParamNamed(expr)
+                ? ((LabeledExpression) expr).getName()
+                : null;
+        }
+
+    /**
+     * Resolve the expression to determine the referred to method or function. Responsible for
+     * setting {@link #m_idMethod}.
+     *
+     * @param ctx         the compiler context
+     * @param fForce      true to force the resolution, even if it has been done previously
+     * @param typeLeft    the type of the "left" expression of the name, or null if there is no left
+     * @param aRedundant  the types of any "redundant return" indicators
+     * @param aArgs       array of argument types, with null meaning "any" (i.e. "?")
+     * @param errs        the error list to log errors to
+     *
+     * @return the method constant, or null if it was not determinable
+     */
+    protected MethodConstant resolveName(
+            Context        ctx,
+            boolean        fForce,
+            TypeConstant   typeLeft,
+            TypeConstant[] aRedundant,
+            TypeConstant[] aArgs,
+            ErrorListener  errs)
+        {
+        if (!fForce && m_idMethod != null)
+            {
+            return m_idMethod;
+            }
+
+        NameExpression exprName   = (NameExpression) expr;
+        int            cRedundant = aRedundant == null ? 0 : aRedundant.length;
+        // TODO
+
+        return m_idMethod;
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
@@ -380,18 +527,11 @@ public class InvocationExpression
     protected List<Expression> args;
     protected long             lEndPos;
 
-    // bind target: F/T
-    // bind parameters: F/T
-    // call: F/T
-    //
-
     private transient boolean fBindTarget;
     private transient boolean fBindParams;
     private transient boolean fCall;
 
-    enum BindParams {None, Partial, All}
-    enum CallPlan {None, Invoke, Call}
-
+    private transient MethodConstant m_idMethod;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }
