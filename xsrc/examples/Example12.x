@@ -921,3 +921,40 @@ Int f8(String s) {...}
 f3() ? f7(4) : f8("hello");     // compiler error: types of the two expressions don't match
 f3() ? {f7(4);} : {f8("hello");};
 
+// methods and functions and binding oh my!
+
+class C
+    {
+    void foo(Int n, Int n2, String s) {...}
+    }
+
+Method<C, <Int, Int, String>, <>> m  = C.foo(?, ?, ?);
+Method<C, <Int, Int, String>, <>> m2 = C.foo(<Int>?, <Int>?, <String>?);
+
+Method m3 = C.foo(3, ?, ?);     // error (foo is not bound to a target; no partial or full binding of methods)
+
+Function f = new C().&foo(?, ?, ?);
+f(1, 2, "hello");                   // error - type is Function, not!!! Function<<Int, Int, String>, <>>
+
+// not name expression example
+
+class C
+    {
+    function void () foo()
+        {
+        return &bar();
+        }
+
+    void bar()
+        {
+        ...
+        }
+    }
+
+new C().foo()();
+
+// turtles
+
+typedef Function<<>, <Turtle>> Turtle;
+Turtle f = ...;
+f()()()()()()()()()()()();

@@ -1133,25 +1133,6 @@ public class TypeInfo
         }
 
     /**
-     * Given the specified method signature, find the most appropriate method that matches that
-     * signature, and return that method. If there is no matching method, then return null. If
-     * there are multiple methods that match, but it is ambiguous which method is "the best"
-     * match, then log an error to the error list, and return null.
-     *
-     * @param constSig  the method signature to search for
-     * @param errs      the error list to log errors to
-     *
-     * @return the MethodInfo for the method that is the "best match" for the signature, or null
-     *         if no method is a best match (including the case in which more than one method
-     *         matches, but no one of those methods is a provable unambiguous "best match")
-     */
-    public MethodInfo findMethod(SignatureConstant constSig, ErrorListener errs)
-        {
-        // TODO - the idea is that this method would be useful for the compiler resolving method calls
-        return null;
-        }
-
-    /**
      * Obtain all of the matching op methods for the specified name and/or the operator string, that
      * take the specified number of params.
      *

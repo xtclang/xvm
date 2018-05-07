@@ -114,12 +114,6 @@ public class ClassConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfo(ErrorListener errs)
-        {
-        return super.ensureTypeInfo(errs);
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.Class;

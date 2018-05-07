@@ -4,7 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -17,8 +19,10 @@ import org.xvm.asm.Version;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -285,6 +289,8 @@ public class InvocationExpression
                     return TypeConstant.NO_TYPES;
                     }
 
+                // collect as many redundant return types as possible to help narrow down the
+                // possible method/function matches
                 List<TypeExpression> aParams = exprName.params;
                 if (aParams != null)
                     {
@@ -305,27 +311,32 @@ public class InvocationExpression
                 }
 
             Argument argMethod = resolveName(ctx, false, typeLeft, aRedundant, aArgTypes, ErrorListener.BLACKHOLE);
+            // TODO must also validateFunction()
             if (argMethod == null)
                 {
                 return TypeConstant.NO_TYPES;
                 }
 
+            // handle conversion to function
             if (m_idConvert != null)
                 {
                 // the first return type of the idConvert method must be a function, which in turn
                 // has two sub-types, the first of which is its "params" and the second of which is
                 // its "returns", and the returns is a tuple type parameterized by the types of the
                 // return values from the function
+                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
                 return m_fCall
-                        ? (m_idConvert.getRawReturns()[0]).getParamTypesArray()[1].getParamTypesArray()
-                        : m_idConvert.getRawReturns(); // TODO m_idConvert.getRawReturns()[0] is the function type; calculate the resulting (arg bound?) result type
+                        ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
+                        : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
                 }
 
+            // handle method or function
             if (argMethod instanceof MethodConstant)
                 {
                 return m_fCall
                         ? ((MethodConstant) argMethod).getRawReturns()
-                        : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                        : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
+                                                                                       // TODO                      if (m_fBindParams) { ...
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
@@ -335,8 +346,8 @@ public class InvocationExpression
             TypeConstant typeArg = argMethod.getRefType();
             assert typeArg.isA(pool().typeFunction());
             return m_fCall
-                    ? typeArg.getParamTypesArray()[1].getParamTypesArray()
-                    : new TypeConstant[] {typeArg}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                    ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
+                    : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
             }
         else // not a NameExpression
             {
@@ -348,7 +359,7 @@ public class InvocationExpression
                 if (typeFn != null)
                     {
                     return m_fCall
-                            ? typeFn.getParamTypesArray()[1].getParamTypesArray()
+                            ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
                     }
                 }
@@ -386,11 +397,30 @@ public class InvocationExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        boolean      fValid   = true;
-        boolean      fNoDeRef = false;
-        ConstantPool pool     = pool();
+        boolean fValid = true;
 
-        // TODO validate parameters - might set fNoDeRef to true if any of the params is "?"
+        // validate the invocation arguments, some of which may be left unbound (e.g. "?")
+        ConstantPool     pool     = pool();
+        List<Expression> listArgs = args;
+        int              cArgs    = listArgs.size();
+        TypeConstant[]   aArgs    = new TypeConstant[cArgs];
+        for (int i = 0, c = listArgs.size(); i < c; ++i)
+            {
+            Expression exprOld = listArgs.get(i);
+            Expression exprNew = exprOld.validate(ctx, null, TuplePref.Rejected, errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                if (exprNew != exprOld)
+                    {
+                    listArgs.set(i, exprNew);
+                    }
+                aArgs[i] = exprNew.getType();   // WARNING: null type if unbound w/o "<Type>" prefix
+                }
+            }
 
         if (expr instanceof NameExpression)
             {
@@ -402,33 +432,32 @@ public class InvocationExpression
             Expression           left      =  exprName.left;
             Token                name      = exprName.name;
             String               sName     = name.getValueText();
-            List<TypeExpression> params    = exprName.params;                // redundant returns
-
-            // it's possible that the name indicates that the invocation is a partial binding and
-            // not actually an invocation
-            fNoDeRef |= exprName.isSuppressDeref();
+            List<TypeExpression> listRets  = exprName.params;                // redundant returns
 
             // a name expression may have type params from the construct:
             //      QualifiedNameName TypeParameterTypeList-opt
             // these names form the optional "redundant returns" portion of the method/function
             // invocation
-            if (params != null)
+            if (listRets != null)
                 {
-                for (int i = 0, c = params.size(); i < c; ++i)
+                for (int i = 0, c = listRets.size(); i < c; ++i)
                     {
-                    TypeExpression typeOld = params.get(i);
+                    TypeExpression typeOld = listRets.get(i);
                     TypeExpression typeNew = (TypeExpression) typeOld.validate(
                             ctx, pool.typeType(), TuplePref.Rejected, errs);
                     fValid &= typeNew != null;
                     if (typeNew != typeOld && typeNew != null)
                         {
-                        params.set(i, typeNew);
+                        // WARNING: mutating contents of the NameExpression, which has been
+                        //          _subsumed_ by this InvocationExpression
+                        listRets.set(i, typeNew);
                         }
                     }
                 }
 
             if (left == null)
                 {
+                // TODO copy logic from getImplicitTypes() e.g. this.resolveName()
                 Argument arg = ctx.resolveName(name, errs);
                 if (arg instanceof MultiMethodConstant)
                     {
@@ -456,6 +485,8 @@ public class InvocationExpression
                     }
                 else if (leftNew != left)
                     {
+                    // WARNING: mutating contents of the NameExpression, which has been
+                    //          _subsumed_ by this InvocationExpression
                     exprName.left = left = leftNew;
                     }
 
@@ -481,12 +512,15 @@ public class InvocationExpression
         else // the expr is NOT a NameExpression
             {
             Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
-            if (exprNew != expr)
+            if (exprNew == null)
                 {
-                if (exprNew != null)
-                    {
-                    expr = exprNew;
-                    }
+                // TODO error
+                fValid = false;
+                }
+            else
+                {
+                expr = exprNew;
+                TypeConstant typeFn = validateFunction(ctx, exprNew.getType(), aArgs, errs);
                 }
 
             // verify that the arguments match the parameters
@@ -494,25 +528,10 @@ public class InvocationExpression
 
             }
 
-        if (fValid)
-            {
-
-            }
-        // TODO we have an "expr" that represents the thing being invoked, and we have "args" that represents the things being passed
-        // TODO we may need one to validate the other, i.e. we may need to know the arg types to find the method, the the method to validate the args by required type
-
-        // if (expr.validate(ctx,))
-        // TODO
-
-        // TODO goal is to figure out which one of these that we are responsible for producing code to do:
-        // 1) call a method
-        // 2) call a function
-        // 3) bind a method (and possibly (partially) bind the resulting function)
-        // 4) (partially) bind a function
-
-        // TODO finishValidation() or finishValidations()
         return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
         }
+
+    // TODO --- generateArguments()  !!!!!!!!!!!!!!!!!!!!!
 
 
     // ----- method resolution helpers -------------------------------------------------------------
@@ -585,7 +604,8 @@ public class InvocationExpression
      * @param fForce      true to force the resolution, even if it has been done previously
      * @param typeLeft    the type of the "left" expression of the name, or null if there is no left
      * @param aRedundant  the types of any "redundant return" indicators
-     * @param aArgs       array of argument types, with null meaning "any" (i.e. "?")
+     * @param aArgs       array of argument types, with null meaning "any" (i.e. "?") or unknown (if
+     *                    this is called before validation)
      * @param errs        the error list to log errors to
      *
      * @return the method constant, or null if it was not determinable
@@ -608,6 +628,7 @@ public class InvocationExpression
         boolean fNoCall  = isSuppressCall();
 
         m_argMethod   = null;
+        m_idConvert   = null;
         m_fBindTarget = false;
         m_fBindParams = !fNoFBind;
         m_fCall       = !fNoCall;
@@ -664,7 +685,6 @@ public class InvocationExpression
                     case Module:
                     case Package:
                     case Class:
-                    case NativeClass:
                         ClassStructure clz  = (ClassStructure) parent;
                         TypeInfo       info = idParent.ensureTypeInfo(errs);
                         Argument       arg  = findCallable(info, sName,
@@ -681,15 +701,27 @@ public class InvocationExpression
                             break NextParent;
                             }
 
-                        // if the class is a static child, then we lose the "this"
+                        // if the class is a static child, then we lose the "this" when we go up to
+                        // the parent class
                         if (clz.isStatic())
                             {
                             fHasThis = false;
                             }
                         break;
 
+                    case Method:
+                        // TODO
+                        throw new UnsupportedOperationException("TODO: method impl "
+                                + parent.getIdentityConstant().getValueString());
+
                     case Property:
                         // TODO
+/*
+ * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
+ *     the rules from step 4 above: If a match is found, then that is the method/function to use,
+ *     and it is an error if the type of that property/constant is not a method, a function, or a
+ *     reference that has an @Auto conversion to a method or function. (Done.)</li>
+ */
                         throw new UnsupportedOperationException("TODO: need a TypeInfo for property "
                                 + parent.getIdentityConstant().getValueString());
                     }
@@ -700,7 +732,7 @@ public class InvocationExpression
         else // there is a "left" expression for the name
             {
             // the left expression provides the scope to search for a matching method/function;
-            // if the left expression is itself a NameExpression, and it in identity mode (i.e. a
+            // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
             // possible identity), then check the identity first
             Argument arg = null;
             if (exprLeft instanceof NameExpression && ((NameExpression) exprLeft).isIdentityMode(ctx))
@@ -737,7 +769,22 @@ public class InvocationExpression
         return m_argMethod;
         }
 
-    protected Argument findCallable(
+    /**
+     * Find a named method or function that best matches the specified requirements.
+     *
+     * @param infoParent  the TypeInfo to search for the method or function on
+     * @param sName       the name of the method or function
+     * @param fMethods    true to include methods in the search
+     * @param fFunctions  true to include functions in the search
+     * @param aRedundant  the redundant return type information (helps to clarify which method or
+     *                    function to select)
+     * @param aArgs       the types of the arguments being provided (some of which may be null to
+     *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     * @param errs        the error list to log errors to
+     *
+     * @return the matching method, function, or (rarely) property
+     */
+    protected IdentityConstant findCallable(
             TypeInfo       infoParent,
             String         sName,
             boolean        fMethods,
@@ -748,18 +795,141 @@ public class InvocationExpression
         {
         int cRedundant = aRedundant == null ? 0 : aRedundant.length;
         int cArgs      = aArgs      == null ? 0 : aArgs     .length;
-        // TODO
+
+        // check for a property of that name; if one exists, it must be of type function, or a type
+        // with an @Auto conversion to function - which will be verified by validateFunction()
+        PropertyInfo prop = infoParent.findProperty(sName);
+        if (prop != null)
+            {
+            return prop.getIdentity();
+            }
+
+        Map<MethodConstant, MethodInfo>       mapAll    = infoParent.getMethods();
+        Map.Entry<MethodConstant, MethodInfo> entryBest = null;
+        Map<MethodConstant, MethodInfo>       mapMatch  = null;
+        NextMethod: for (Map.Entry<MethodConstant, MethodInfo> entry : mapAll.entrySet())
+            {
+            // 1) including only method and/or functions as appropriate;
+            // 2) matching the name;
+            // 3) for each named argument, having a matching parameter name on the method/function; // TODO
+            // 4) after accounting for named arguments, having at least as many parameters as the
+            //    number of provided arguments, and no more required parameters than the number of
+            //    provided arguments;
+            // 5) having each argument from steps (3) and (4) be isA() or @Auto convertible to the
+            //    type of each corresponding parameter; and
+            // 6) matching (i.e. isA()) any specified redundant return types
+            MethodConstant id   = entry.getKey();
+            MethodInfo     info = entry.getValue();
+            if (id.getName().equals(sName)
+                    && id.getRawParams().length >= cArgs
+                    && id.getRawReturns().length >= cRedundant
+                    && info.isFunction() ? fFunctions : fMethods)
+                {
+                SignatureConstant sig      = info.getSignature();
+                TypeConstant[]    aParams  = sig.getRawParams();
+                TypeConstant[]    aReturns = sig.getRawReturns();
+                for (int i = 0; i < cRedundant; ++i)
+                    {
+                    TypeConstant typeReturn    = aReturns  [i];
+                    TypeConstant typeRedundant = aRedundant[i];
+                    if (!typeReturn.isA(typeRedundant))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+                for (int i = 0; i < cArgs; ++i)
+                    {
+                    TypeConstant typeParam = aParams[i];
+                    TypeConstant typeArg   = aArgs  [i];
+                    if (typeArg != null &&                // null means unbound
+                            !(typeArg.isA(typeParam) || typeArg.getConverterTo(typeParam) != null))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+
+                int cParams = aParams.length;
+                if (cParams > cArgs)
+                    {
+                    // make sure that all required parameters have been satisfied;
+                    // the challenge that we have here is that there are potentially a large number
+                    // of MethodStructures that contribute to the resulting MethodInfo, and each can
+                    // have different defaults for the parameters
+                    // MethodStructure struct = ...
+                    // for (int i = cArgs; i < cParams; ++i)
+                    //     {
+                    //     // make sure that the parameter is optional
+                    //     TODO
+                    //     }
+                    continue NextMethod;
+                    }
+
+                if (entryBest == null && mapMatch == null)
+                    {
+                    // only one match so far
+                    entryBest = entry;
+                    }
+                else
+                    {
+                    if (mapMatch == null)
+                        {
+                        // switch to "multi choice" mode
+                        mapMatch = new HashMap<>();
+                        mapMatch.put(entryBest.getKey(), entryBest.getValue());
+                        entryBest = null;
+                        }
+
+                    mapMatch.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+
+        if (entryBest != null)
+            {
+            // if one method matches, then that method is selected
+            return entryBest.getKey();
+            }
+
+        if (mapMatch == null)
+            {
+            // no matches
+            return null;
+            }
+
+        // with multiple methods and/or functions matching, the _best_ one must be selected.
+        // - First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+        //   used.
+        // - If that algorithm results in a single selection, then that single selection is used.
+        // - Otherwise, the redundant return types are used as a tie breaker; if that results in a
+        //   single selection, then that single selection is used.
+        // - Otherwise, the ambiguity is an error.
+        // TODO - how to factor in conversions?
+        log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
         return null;
         }
 
+    /**
+     * Check the type of the thing that is either a function or needs to be converted into a
+     * function.
+     * <p/>
+     * Responsible for setting the {@link #m_idConvert} field if a conversion is necessary.
+     *
+     * @param ctx         the compiler context
+     * @param typeFn      the type of the function (or the type of the object that should know how
+     *                    to convert itself into a function)
+     * @param aArgs       array of argument types, with null meaning "any" (i.e. "?") or unknown (if
+     *                    this is called before validation)
+     * @param errs        the error list to log errors to
+     *
+     * @return the type of the function, or null if a type-safe type for the function could not be
+     *         determined
+     */
     protected TypeConstant validateFunction(
             Context        ctx,
             TypeConstant   typeFn,
             TypeConstant[] aArgs,
             ErrorListener  errs)
         {
-        m_idConvert = null;
-
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
         // conversion to a function. (Done.)
@@ -776,7 +946,7 @@ public class InvocationExpression
                 }
             else
                 {
-                typeFn = idConvert.getRawReturns()[0];
+                typeFn = idConvert.getRawReturns()[F_ARGS];
                 }
             }
 
@@ -785,53 +955,40 @@ public class InvocationExpression
         // REVIEW move this to a helper on TypeConstant?
         TypeConstant[] aSubTypes = typeFn.getParamTypesArray();
         if (!typeFn.isParamsSpecified() || aSubTypes.length < 2
-                || !aSubTypes[0].isA(pool.typeTuple()) || !aSubTypes[0].isParamsSpecified()
-                || !aSubTypes[1].isA(pool.typeTuple()) || !aSubTypes[1].isParamsSpecified())
+                || !aSubTypes[F_ARGS].isA(pool.typeTuple()) || !aSubTypes[F_ARGS].isParamsSpecified()
+                || !aSubTypes[F_RETS].isA(pool.typeTuple()) || !aSubTypes[F_RETS].isParamsSpecified())
             {
             log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
             return null;
             }
 
+        if (aArgs != null)
+            {
+            TypeConstant[] aParams = aSubTypes[F_ARGS].getParamTypesArray();
+            int            cParams = aParams.length;
+            int            cArgs   = aArgs.length;
+            if (cParams != cArgs)
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cParams, cArgs);
+                // it's an error, but keep going
+                }
+
+            for (int i = 0, c = Math.min(cParams, cArgs); i < c; ++i)
+                {
+                TypeConstant typeParam = aParams[i];
+                TypeConstant typeArg   = aArgs[i];
+                if (typeArg != null && typeParam != null && !typeArg.isA(typeParam))
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            typeParam.getValueString(), typeArg.getValueString());
+                    // it's an error, but keep going
+                    }
+                }
+            }
+
         m_idConvert = idConvert;
         return typeFn;
         }
-
-/*
- * <li>Otherwise, for a name without a {@code left} expression (which provides its scope),
- *     determine the sequence of scopes that will be searched for matching methods/functions. For
- *     example, the point from which the call is occurring could be inside a (i) lambda, inside a
- *     (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static child
- *     class, inside a (vi) top level class, inside a (vii) package, inside a (viii) module; in this
- *     example, scope (i) is searched first for any matching methods and functions, then scope (ii),
- *     then scope (ii), (iii), (iv), and (v). Because scope (v) is a static child, when scope (vi)
- *     is searched, it is only searched for functions, <i>unless</i> the InvocationExpression is
- *     <b>not</b> performing a "call" (i.e. no "this" is required), in which case methods are
- *     included. The package and module are omitted from the search; we do not venture past the
- *     top level class barrier in the search.</li>
- *
- * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
- *     the rules from step 4 above: If a match is found, then that is the method/function to use,
- *     and it is an error if the type of that property/constant is not a method, a function, or a
- *     reference that has an @Auto conversion to a method or function. (Done.)</li>
- * <li>Otherwise, find the methods/functions that match the above criteria, as follows:
- *     (i) including only method and/or functions as appropriate; (ii) matching the name; (iii) for
- *     each named argument, having a matching parameter name on the method/function; (iv) after
- *     accounting for named arguments, having at least as many parameters as the number of provided
- *     arguments, and no more <i>required</i> parameters than the number of provided arguments; (v)
- *     having each argument from steps (iii) and (iv) be isA() or @Auto convertible to the type of
- *     each corresponding parameter; and (vi) matching (i.e. isA()) any specified redundant return
- *     types.</li>
- *
- * <li>If no methods or functions match from steps 6 &amp; 7, then repeat at the next outer scope.
- *     If there are no more outer scopes, then it is an error. (Done.)</li>
- * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
- * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
- *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
- *     used. If that algorithm results in a single selection, then that single selection is used.
- *     Otherwise, the redundant return types are used as a tie breaker; if that results in a single
- *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
- *     (Done.)</li>
- */
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -869,6 +1026,37 @@ public class InvocationExpression
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * Method type first parameter is the target type that the method binds to:
+     * <p/>
+     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
+     */
+    public static final int M_TARG = 0;
+    /**
+     * Method type second parameter is method param types tuple:
+     * <p/>
+     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
+     */
+    public static final int M_ARGS = 1;
+    /**
+     * Method type third parameter is return types tuple:
+     * <p/>
+     * {@code const Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>}
+     */
+    public static final int M_RETS = 2;
+    /**
+     * Function type first parameter is function param types tuple:
+     * <p/>
+     * {@code Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>}
+     */
+    public static final int F_ARGS = 0;
+    /**
+     * Function type second parameter is return types tuple:
+     * <p/>
+     * {@code Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>}
+     */
+    public static final int F_RETS = 1;
 
     protected Expression       expr;
     protected List<Expression> args;

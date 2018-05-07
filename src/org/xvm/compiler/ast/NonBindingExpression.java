@@ -3,6 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op.Argument;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -66,9 +71,46 @@ public class NonBindingExpression
         }
 
     @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+        {
+        TypeFit      fit      = TypeFit.Fit;
+        TypeConstant type     = null;
+        Constant     constant = null;
+
+        if (this.type != null)
+            {
+            TypeExpression exprNew = (TypeExpression) this.type.validate(ctx, typeRequired, pref, errs);
+            if (exprNew == null)
+                {
+                fit  = TypeFit.NoFit;
+                type = typeRequired;
+                }
+            else
+                {
+                fit  = TypeFit.Fit;
+                type = exprNew.getType();
+                if (exprNew.isConstant())
+                    {
+                    constant = exprNew.toConstant();
+                    }
+                }
+            }
+        return finishValidation(fit, type, constant);
+        }
+
+    @Override
     public boolean isNonBinding()
         {
         return true;
+        }
+
+    @Override
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+            boolean fUsedOnce,
+            ErrorListener errs)
+        {
+        throw new IllegalStateException("NonBindingExpression cannot generate an argument;"
+                + ": that's why they're called non-binding! (" + this + ')');
         }
 
 
