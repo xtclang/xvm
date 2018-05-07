@@ -595,8 +595,7 @@ Int zero = (1/3) * 10;
 Int x = switch (y)
     {
     case 0:     0;
-    case 1:
-    case 2:     -1;
+    case 1, 2:  -1;
     case 3:     {
                 Int j = 99;
                 for (Int i : 5..10)
@@ -629,9 +628,9 @@ Int x = y == 0 ? 0
 Int x;
 switch (y)
     {
-    case 0:     x=0;
+    case 0:     x=0; break;
     case 1:
-    case 2:     x=-1;
+    case 2:     x=-1; break;
     case 3:     {
                     x = 99;
                     for (Int i : 5..10)
@@ -639,14 +638,16 @@ switch (y)
                         x += i;
                         }
                     }
-    case 4:     x=12;
-    default:    x=17;
+                 break;
+    case 4:     x=12;  break;
+    default:    x=17;  break;
     }
 
 // for first boolean expression match:
 Int x = switch ()
     {
     case (a > 3):   0;
+    case (b == c):
     case (b < 0):   75;
     default:        17;
     }
@@ -892,4 +893,31 @@ Person.name.assigned    // the "assigned" Property of the "name" Property of Per
 
 String  s = Point.name              // String value of the "name" property of the "Class" class for the Point class
 Boolean b = Point.name.assigned     // Boolean value of the "assigned" property of the above
+
+// ----- functions as types (for mark)
+
+void f1() {...}
+void f2() {...}
+Boolean f3() {...}
+
+(f3() ? f1 : f2)();
+
+// or ...
+function void() f = f3() ? f1 : f2;
+f();
+
+
+void f5(Int n) {...}
+void f6(String s) {...}
+Boolean f3() {...}
+
+f3() ? f5(4) : f6("hello");
+
+// diff types
+
+Boolean f3() {...}
+String f7(Int n) {...}
+Int f8(String s) {...}
+f3() ? f7(4) : f8("hello");     // compiler error: types of the two expressions don't match
+f3() ? {f7(4);} : {f8("hello");};
 

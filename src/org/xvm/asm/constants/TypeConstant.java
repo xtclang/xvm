@@ -3269,8 +3269,7 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
                         this.getValueString(), sParam);
                 }
-            else if (!prop.isTypeParam() || !prop.getType().isA(
-                    pool.ensureParameterizedTypeConstant(pool.typeType(), param.getConstraintType())))
+            else if (!prop.isTypeParam() || !prop.getType().getParamTypesArray()[0].isA(param.getConstraintType()))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
                         this.getValueString(), sParam);

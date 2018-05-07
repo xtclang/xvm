@@ -2,7 +2,9 @@ module Ecstasy.xtclang.org
     {
     interface Module {}
     interface Package {}
-    const Class {}
+    const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType>
+            incorporates conditional Enumeration<PublicType extends Enum>
+        {}
     interface Const {}
 
     package types
@@ -25,7 +27,7 @@ module Ecstasy.xtclang.org
         @Auto function Object() to<function Object()>() { TODO(""); }
         }
 
-    interface Enum
+    interface Enum extends Const
         {
         @RO Enumeration<Enum> enumeration;
         @RO Int ordinal;
@@ -68,7 +70,11 @@ module Ecstasy.xtclang.org
         {
         }
 
-    const Type<DataType> {}
+    const Type<DataType>
+        {
+        // TODO remove (temporary to force both produce and consume of DataType)
+        DataType foo(DataType dt) {return dt;}
+        }
 
     enum Nullable{Null}
     enum Boolean{False, True}
@@ -124,10 +130,10 @@ module Ecstasy.xtclang.org
             }
         RefType get();
         @Override @RO Type ActualType;
-        static Boolean equals(Ref value1, Ref value2)
-            {
-            return value1 == value2;
-            }
+//        static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
+//            {
+//            return value1 == value2;
+//            }
         @RO String? name;
         @RO Int byteLength;
         @RO Boolean selfContained;
@@ -154,7 +160,7 @@ module Ecstasy.xtclang.org
         mixin ReadOnly into Property {}
         mixin Operator(String? token = null) into Method {}
         mixin Override into Property | Method {}
-        mixin InjectedRef<RefType> into Property | Ref<RefType> {}
+        mixin InjectedRef<RefType> into Property /* TODO | Ref<RefType> */ {}
         mixin UncheckedInt into Int64 {}
         mixin AnnotateRef<RefType> into Var<RefType> {}
         mixin AnnotateVar<RefType> into Var<RefType> {}
@@ -164,6 +170,7 @@ module Ecstasy.xtclang.org
             private function RefType ()? calculate;
             private Boolean assignable = false;
 
+            @Override
             RefType get()
                 {
                 TODO
@@ -186,6 +193,7 @@ module Ecstasy.xtclang.org
 //                return super();
                 }
 
+            @Override
             Void set(RefType value)
                 {
                 TODO

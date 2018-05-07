@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 
 
 /**
@@ -111,6 +112,12 @@ public class ClassConstant
 
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    public TypeInfo ensureTypeInfo(ErrorListener errs)
+        {
+        return super.ensureTypeInfo(errs);
+        }
 
     @Override
     public Format getFormat()

@@ -4,8 +4,8 @@
  * a type containing the method) in order to obtain an invocable function.
  */
 const Method<TargetType,
-             ReturnTypes extends Tuple<ReturnTypes...>,
-             ParamTypes extends Tuple<ParamTypes...>>
+             ParamTypes extends Tuple<ParamTypes...>,
+             ReturnTypes extends Tuple<ReturnTypes...>>
     {
     /**
      * The method's name.

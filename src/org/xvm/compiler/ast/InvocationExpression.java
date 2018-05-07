@@ -3,15 +3,23 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -24,9 +32,154 @@ import org.xvm.util.Severity;
 
 
 /**
- * Invocation expression represents calling a method or function.
+ * Invocation expression represents calling a method or function. An oversimplification of the
+ * model is as follows:
+ * <ul>
+ * <li><i>"Binding a method"</i>: Reference + Method = Function</li>
+ * <li><i>"Binding parameters" (aka currying)</i>: Function + Argument(s) = Function'</li>
+ * <li><i>"Calling a function"</i>: Function + () = Return Value(s)</li>
+ * </ul>
+ * <p/>
+ * Most of the time, this is all accomplished in a single syntactic step, but not always:
+ * <p/>
+ * <pre><code>
+ *   // bind target "list" to method "add", bind argument, call function
+ *   list.add(item);
  *
- * If you already have an expression "expr", this is for "expr(args)".
+ *   // on "List" type, find "add" method with one parameter (four alternatives shown)
+ *   Method m = List.&add(?);
+ *   Method m = List.&add(&lt;List.ElementType&gt;?);
+ *   Method m = List.add(?);
+ *   Method m = List.add(&lt;List.ElementType&gt;?);
+ *
+ *    // bind target "list" to method "add", bind argument
+ *   function void () fn = list.&add(item);
+ *
+ *   // call the function held in "fn"
+ *   fn();
+ * </code></pre>
+ * <p/>
+ * There are op codes for:
+ * <ul>
+ * <li>Binding a method to its target reference to create a function;</li>
+ * <li>Binding any subset (including all) parameters of a function to create a new function;</li>
+ * <li>Calling a function (16 different ops, including short forms for calling functions whose
+ *     parameters have been bound vs. functions that still have unbound parameters);</li>
+ * <li>Invoking a method using a target reference (16 different ops);</li>
+ * <li>Instantiating a new object and invoking its constructor (16 different ops); and</li>
+ * <li>Invoking another constructor from within a constructor (4 different ops);</li>
+ * </ul>
+ * <p/>
+ * Each of these operations is type safe, requiring a provably correct target reference, arguments,
+ * and destinations for each of the return values.
+ * <p/>
+ * <pre><code>
+ *                                            bind    bind
+ *   description                              target  args    call    result
+ *   ---------------------------------------  ------  ------  ------  ------------------------------
+ *   obtain reference to method or function                           method or function
+ *   function invocation                                      X       result of call
+ *   binding function parameters / currying           X               function from a function
+ *   function invocation                              X       X       result of call
+ *   method binding                           X                       function from a method name
+ *   method invocation                        X               X       result of call
+ *   method and parameter binding             X       X               function from a method name
+ *   method invocation                        X       X       X       result of call
+ * </code></pre>
+ * <p/>
+ * The implementation is specialized when the method or function <b>name</b> is provided. The
+ * invocation expression knows this situation exists because its {@link #expr} refers to a {@link
+ * NameExpression}. The responsibilities of the InvocationExpression are expanded as follows:
+ * <ul>
+ * <li>The {@link #expr} itself is <b>NOT</b> asked to validate! All of the information that it
+ *     contains is instead validated by and used by the InvocationExpression directly.</li>
+ * <li>The NameExpression's own {@link NameExpression#left left} expression (if any) represents
+ *     the class/type within which -- or reference on which -- the method or function will be
+ *     found; a lack of a left expression implies a possible "this." for non-static code contexts,
+ *     and the current name-resolution {@link Context} for both non-static and static code
+ *     contexts.</li>
+ * <li>The NameExpression's purpose in this case is to provide information to the
+ *     InvocationExpression so that it can locate the correct method or function. In addition to
+ *     the context and the name, there are optional "redundant returns" on the NameExpression in
+ *     {@link NameExpression#params params}. The InvocationExpression must validate these, and for
+ *     each redundant return type provided, it must ensure that any method/function that it selects
+ *     matches that redundant return.</li>
+ * <li>Lastly, the NameExpression includes a no-de-reference indicator, {@link
+ *     NameExpression#isSuppressDeref() isSuppressDeref()}, which tells the InvocationExpression
+ *     not to perform the "call" portion itself, but rather to yield the method or function
+ *     reference as a result. This information may overlap with information that the
+ *     InvocationExpression has from its own method arguments, if any is a NonBindingExpression,
+ *     since that also indicates that the InvocationExpression must not perform the "call", but
+ *     rather yields a method or function reference as its result.</li>
+ * <li>...</li>
+ * </ul>
+ * <p/>
+ * The rules for determining the method or function to call when the name is provided:
+ * <ol>
+ * <li>Validate the (optional) left expression, and all of the (optional) redundant return type
+ *     {@link NameExpression#params params} expressions of the NameExpression.</li>
+ * <li>Determine whether the search will include methods, functions, or both. Functions are included
+ *     if (i) there is no left, or (ii) the left is identity-mode. Methods are included if (i) there
+ *     is a left, (ii) there is no left and the context is not static, or (iii) the call itself is
+ *     suppressed and no arguments are bound (i.e. no "this" is required to bind the method).</li>
+ * <li>If the name has a {@code left} expression, that expression provides the scope to search for
+ *     a matching method/function. If the left expression is itself a NameExpression, then the scope
+ *     may actually refer to two separate types, because the NameExpression may indicate both (i)
+ *     identity mode and (ii) reference mode. In this case, the identity mode is treated as a
+ *     first scope, and the reference mode is treated as a second scope.</li>
+ * <li>If the name does not have a {@code left} expression, then walk up the AST parent node chain
+ *     looking for a registered name, i.e. a local variable of that name, stopping once the
+ *     containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
+ *     enable local variable capture) is reached. If a match is found, then that is the function to
+ *     use, and it is an error if the type of that variable is not a function, or a reference that
+ *     has an @Auto conversion to a function. (Done.)</li>
+ * <li>Otherwise, for a name without a {@code left} expression (which provides its scope),
+ *     determine the sequence of scopes that will be searched for matching methods/functions. For
+ *     example, the point from which the call is occurring could be inside a (i) lambda, inside a
+ *     (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static child
+ *     class, inside a (vi) top level class, inside a (vii) package, inside a (viii) module; in this
+ *     example, scope (i) is searched first for any matching methods and functions, then scope (ii),
+ *     then scope (ii), (iii), (iv), and (v). Because scope (v) is a static child, when scope (vi)
+ *     is searched, it is only searched for functions, <i>unless</i> the InvocationExpression is
+ *     <b>not</b> performing a "call" (i.e. no "this" is required), in which case methods are
+ *     included. The package and module are omitted from the search; we do not venture past the
+ *     top level class barrier in the search.</li>
+ * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
+ *     the rules from step 4 above: If a match is found, then that is the method/function to use,
+ *     and it is an error if the type of that property/constant is not a method, a function, or a
+ *     reference that has an @Auto conversion to a method or function. (Done.)</li>
+ * <li>Otherwise, find the methods/functions that match the above criteria, as follows:
+ *     (i) including only method and/or functions as appropriate; (ii) matching the name; (iii) for
+ *     each named argument, having a matching parameter name on the method/function; (iv) after
+ *     accounting for named arguments, having at least as many parameters as the number of provided
+ *     arguments, and no more <i>required</i> parameters than the number of provided arguments; (v)
+ *     having each argument from steps (iii) and (iv) be isA() or @Auto convertible to the type of
+ *     each corresponding parameter; and (vi) matching (i.e. isA()) any specified redundant return
+ *     types.</li>
+ * <li>If no methods or functions match from steps 6 &amp; 7, then repeat at the next outer scope.
+ *     If there are no more outer scopes, then it is an error. (Done.)</li>
+ * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
+ * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
+ *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+ *     used. If that algorithm results in a single selection, then that single selection is used.
+ *     Otherwise, the redundant return types are used as a tie breaker; if that results in a single
+ *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
+ *     (Done.)</li>
+ * </ol>
+ * <p/>
+ * The "construct" name (which is actually a keyword) indicates a simplified set of rules;
+ * specifically:
+ * <ul>
+ * <li>It requires the name to either (i) have no <i>left</i>, or (ii) have a <i>left</i> that is
+ *     itself a NameExpression in identity-mode;</li>
+ * <li>Only the constructors are searched; the name cannot specify a variable or a property;</li>
+ * <li>There cannot / must not be any redundant returns, so any associated rules are ignored.</li>
+ * </ul>
+ * <p/>
+ * Deferred implementation items:
+ * <ul><li>TODO default parameter values
+ * </li><li>TODO named parameters
+ * </li></ul>
  */
 public class InvocationExpression
         extends Expression
@@ -106,23 +259,136 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        return TypeConstant.NO_TYPES;
+        // ConstantPool pool = pool();
+
+        List<Expression> aArgExprs = args;
+        int              cArgs     = aArgExprs == null ? 0 : aArgExprs.size();
+        TypeConstant[]   aArgTypes = new TypeConstant[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            // note: could be null (will have to be tolerant of this elsewhere); as long as it does
+            // not introduce ambiguity, we can still figure out the result type(s) of the invoke
+            aArgTypes[i] = aArgExprs.get(i).getImplicitType(ctx);
+            }
+
+        if (expr instanceof NameExpression)
+            {
+            NameExpression exprName   = (NameExpression) expr;
+            Expression     exprLeft   = exprName.left;
+            TypeConstant   typeLeft   = null;
+            TypeConstant[] aRedundant = null;
+            if (exprLeft != null)
+                {
+                typeLeft = exprLeft.getImplicitType(ctx);
+                if (typeLeft == null)
+                    {
+                    return TypeConstant.NO_TYPES;
+                    }
+
+                List<TypeExpression> aParams = exprName.params;
+                if (aParams != null)
+                    {
+                    int                     cParams   = aParams.size();
+                    ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        TypeConstant typeParam = aParams.get(i).getImplicitType(ctx);
+                        if (typeParam == null)
+                            {
+                            break;
+                            }
+                        listTypes.add(typeParam);
+                        }
+
+                    aRedundant = listTypes.toArray(new TypeConstant[cParams]);
+                    }
+                }
+
+            Argument argMethod = resolveName(ctx, false, typeLeft, aRedundant, aArgTypes, ErrorListener.BLACKHOLE);
+            if (argMethod == null)
+                {
+                return TypeConstant.NO_TYPES;
+                }
+
+            if (m_idConvert != null)
+                {
+                // the first return type of the idConvert method must be a function, which in turn
+                // has two sub-types, the first of which is its "params" and the second of which is
+                // its "returns", and the returns is a tuple type parameterized by the types of the
+                // return values from the function
+                return m_fCall
+                        ? (m_idConvert.getRawReturns()[0]).getParamTypesArray()[1].getParamTypesArray()
+                        : m_idConvert.getRawReturns(); // TODO m_idConvert.getRawReturns()[0] is the function type; calculate the resulting (arg bound?) result type
+                }
+
+            if (argMethod instanceof MethodConstant)
+                {
+                return m_fCall
+                        ? ((MethodConstant) argMethod).getRawReturns()
+                        : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                }
+
+            // must be a property or a variable of type function (@Auto conversion possibility
+            // already handled above); the function has two tuple sub-types, the second of which is
+            // the "return types" of the function
+            assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
+            TypeConstant typeArg = argMethod.getRefType();
+            assert typeArg.isA(pool().typeFunction());
+            return m_fCall
+                    ? typeArg.getParamTypesArray()[1].getParamTypesArray()
+                    : new TypeConstant[] {typeArg}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+            }
+        else // not a NameExpression
+            {
+            // it has to either be a function or convertible to a function
+            TypeConstant typeFn = expr.getImplicitType(ctx);
+            if (typeFn != null)
+                {
+                typeFn = validateFunction(ctx, typeFn, aArgTypes, ErrorListener.BLACKHOLE);
+                if (typeFn != null)
+                    {
+                    return m_fCall
+                            ? typeFn.getParamTypesArray()[1].getParamTypesArray()
+                            : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                    }
+                }
+
+            return TypeConstant.NO_TYPES;
+            }
         }
 
-
-    // TODO getValueCount() - could be any #?
-
     @Override
-    public boolean isConstant()
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)   // TODO need testFitMulti() impl instead
         {
-        // assume all invocations can have side effects
-        return false;
+        TypeConstant typeThis = getImplicitType(ctx);
+        if (typeThis == null)
+            {
+            return TypeFit.NoFit;
+            }
+
+        if (typeRequired == null || typeThis.isA(typeRequired))
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.Pack
+                    : TypeFit.Fit;
+            }
+
+        if (typeThis.getConverterTo(typeRequired) != null)
+            {
+            return pref == TuplePref.Required
+                    ? TypeFit.ConvPack
+                    : TypeFit.Conv;
+            }
+
+        return TypeFit.NoFit;
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        boolean fNoDeRef = false;
+        boolean      fValid   = true;
+        boolean      fNoDeRef = false;
+        ConstantPool pool     = pool();
 
         // TODO validate parameters - might set fNoDeRef to true if any of the params is "?"
 
@@ -146,8 +412,6 @@ public class InvocationExpression
             //      QualifiedNameName TypeParameterTypeList-opt
             // these names form the optional "redundant returns" portion of the method/function
             // invocation
-            ConstantPool pool   = pool();
-            boolean      fValid = true;
             if (params != null)
                 {
                 for (int i = 0, c = params.size(); i < c; ++i)
@@ -217,10 +481,23 @@ public class InvocationExpression
         else // the expr is NOT a NameExpression
             {
             Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
-            // TODO could be null
-            // TODO could be changed
+            if (exprNew != expr)
+                {
+                if (exprNew != null)
+                    {
+                    expr = exprNew;
+                    }
+                }
+
+            // verify that the arguments match the parameters
+            // TODO
+
             }
 
+        if (fValid)
+            {
+
+            }
         // TODO we have an "expr" that represents the thing being invoked, and we have "args" that represents the things being passed
         // TODO we may need one to validate the other, i.e. we may need to know the arg types to find the method, the the method to validate the args by required type
 
@@ -236,6 +513,325 @@ public class InvocationExpression
         // TODO finishValidation() or finishValidations()
         return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
         }
+
+
+    // ----- method resolution helpers -------------------------------------------------------------
+
+    /**
+     * @return true iff this expression does not actually result in an invocation, but instead
+     *         resolves to a reference to a method or a function as its result
+     */
+    protected boolean isSuppressCall()
+        {
+        return (expr instanceof NameExpression && ((NameExpression) expr).isSuppressDeref())
+                || isAnyArgUnbound();
+        }
+
+    /**
+     * @return true iff any argument will be bound
+     */
+    protected boolean isAnyArgBound()
+        {
+        for (Expression expr : args)
+            {
+            if (!expr.isNonBinding())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * @return true iff any argument will be left unbound
+     */
+    protected boolean isAnyArgUnbound()
+        {
+        for (Expression expr : args)
+            {
+            if (expr.isNonBinding())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    /**
+     * @return true iff the parameter is named
+     */
+    protected boolean isParamNamed(Expression expr)
+        {
+        return expr instanceof LabeledExpression;
+        }
+
+    /**
+     * @return the name of the parameter, or null if the parameter is not named
+     */
+    protected String getParamName(Expression expr)
+        {
+        return isParamNamed(expr)
+                ? ((LabeledExpression) expr).getName()
+                : null;
+        }
+
+    /**
+     * Resolve the expression to determine the referred to method or function. Responsible for
+     * setting {@link #m_argMethod}.
+     *
+     * @param ctx         the compiler context
+     * @param fForce      true to force the resolution, even if it has been done previously
+     * @param typeLeft    the type of the "left" expression of the name, or null if there is no left
+     * @param aRedundant  the types of any "redundant return" indicators
+     * @param aArgs       array of argument types, with null meaning "any" (i.e. "?")
+     * @param errs        the error list to log errors to
+     *
+     * @return the method constant, or null if it was not determinable
+     */
+    protected Argument resolveName(
+            Context        ctx,
+            boolean        fForce,
+            TypeConstant   typeLeft,
+            TypeConstant[] aRedundant,
+            TypeConstant[] aArgs,
+            ErrorListener  errs)
+        {
+        if (!fForce && m_argMethod != null)
+            {
+            return m_argMethod;
+            }
+
+        boolean fNoMBind = false;
+        boolean fNoFBind = !isAnyArgBound();
+        boolean fNoCall  = isSuppressCall();
+
+        m_argMethod   = null;
+        m_fBindTarget = false;
+        m_fBindParams = !fNoFBind;
+        m_fCall       = !fNoCall;
+
+        // if the name does not have a left expression, then walk up the AST parent node chain
+        // looking for a registered name, i.e. a local variable of that name, stopping once the
+        // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
+        // enable local variable capture) is reached
+        ConstantPool   pool      = pool();
+        NameExpression exprName  = (NameExpression) expr;
+        String         sName     = exprName.getName();
+        Expression     exprLeft  = exprName.left;
+        if (exprLeft == null)
+            {
+            Register reg = ctx.getVar(sName);
+            if (reg != null)
+                {
+                // should not be any redundant returns
+                if (aRedundant != null && aRedundant.length > 0)
+                    {
+                    log(errs, Severity.ERROR, Compiler.UNEXPECTED_REDUNDANT_RETURNS);
+                    // ignore them and continue
+                    }
+
+                if (validateFunction(ctx, reg.getRefType(), aArgs, errs) == null)
+                    {
+                    return null;
+                    }
+                else
+                    {
+                    m_argMethod = reg;
+                    return reg;
+                    }
+                }
+
+            // for a name without a left expression (which provides its scope), determine the
+            // sequence of scopes that will be searched for matching methods/functions. For example,
+            // the point from which the call is occurring could be inside a (i) lambda, inside a
+            // (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static
+            // child class, inside a (vi) top level class, inside a (vii) package, inside a (viii)
+            // module; in this example, scope (i) is searched first for any matching methods and
+            // functions, then scope (ii), then scope (ii), (iii), (iv), and (v). Because scope (v)
+            // is a static child, when scope (vi) is searched, it is only searched for functions,
+            // unless the InvocationExpression is not performing a "call" (i.e. no "this" is
+            // required), in which case methods are included. The package and module are omitted
+            // from the search; we do not venture past the top level class barrier in the search
+            Component parent   = getComponent();
+            boolean   fHasThis = !ctx.isStatic();
+            NextParent: while (parent != null)
+                {
+                IdentityConstant idParent = parent.getIdentityConstant();
+                switch (idParent.getFormat())
+                    {
+                    case Module:
+                    case Package:
+                    case Class:
+                    case NativeClass:
+                        ClassStructure clz  = (ClassStructure) parent;
+                        TypeInfo       info = idParent.ensureTypeInfo(errs);
+                        Argument       arg  = findCallable(info, sName,
+                                (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, errs);
+                        if (arg != null)
+                            {
+                            m_argMethod = arg;
+                            break NextParent;
+                            }
+
+                        // we're done once we have searched the top-level class
+                        if (parent instanceof ClassStructure && ((ClassStructure) parent).isTopLevel())
+                            {
+                            break NextParent;
+                            }
+
+                        // if the class is a static child, then we lose the "this"
+                        if (clz.isStatic())
+                            {
+                            fHasThis = false;
+                            }
+                        break;
+
+                    case Property:
+                        // TODO
+                        throw new UnsupportedOperationException("TODO: need a TypeInfo for property "
+                                + parent.getIdentityConstant().getValueString());
+                    }
+
+                parent = parent.getParent();
+                }
+            }
+        else // there is a "left" expression for the name
+            {
+            // the left expression provides the scope to search for a matching method/function;
+            // if the left expression is itself a NameExpression, and it in identity mode (i.e. a
+            // possible identity), then check the identity first
+            Argument arg = null;
+            if (exprLeft instanceof NameExpression && ((NameExpression) exprLeft).isIdentityMode(ctx))
+                {
+                // the left identity
+                // - methods are included because there is a left, but since it is to obtain a
+                //   method reference, there must not be any arg binding or actual invocation
+                // - functions are included because the left is identity-mode
+                TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
+                arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs, errs);
+                }
+
+            if (arg == null)
+                {
+                // use the type of the left expression to get the TypeInfo that must contain the
+                // method/function to call
+                // - methods are included because there is a left and it is NOT identity-mode
+                // - functions are NOT included because the left is NOT identity-mode
+                TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+                arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs, errs);
+                }
+
+            if (arg == null)
+                {
+                // error: could not find method
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
+                }
+            else
+                {
+                m_argMethod = arg;
+                }
+            }
+
+        return m_argMethod;
+        }
+
+    protected Argument findCallable(
+            TypeInfo       infoParent,
+            String         sName,
+            boolean        fMethods,
+            boolean        fFunctions,
+            TypeConstant[] aRedundant,
+            TypeConstant[] aArgs,
+            ErrorListener  errs)
+        {
+        int cRedundant = aRedundant == null ? 0 : aRedundant.length;
+        int cArgs      = aArgs      == null ? 0 : aArgs     .length;
+        // TODO
+        return null;
+        }
+
+    protected TypeConstant validateFunction(
+            Context        ctx,
+            TypeConstant   typeFn,
+            TypeConstant[] aArgs,
+            ErrorListener  errs)
+        {
+        m_idConvert = null;
+
+        // if a match is found, then that is the function to use, and it is an error if the
+        // type of that variable is not a function or a reference that has an @Auto
+        // conversion to a function. (Done.)
+        ConstantPool   pool      = pool();
+        boolean        fFunction = typeFn.isA(pool.typeFunction());
+        MethodConstant idConvert = null;
+        if (!fFunction)
+            {
+            idConvert = typeFn.getConverterTo(pool.typeFunction());
+            if (idConvert == null)
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
+                return null;
+                }
+            else
+                {
+                typeFn = idConvert.getRawReturns()[0];
+                }
+            }
+
+        // function must be parameterized by 2 fields: param types and return types
+        // each is a parameterized "tuple" type constant with an array of types
+        // REVIEW move this to a helper on TypeConstant?
+        TypeConstant[] aSubTypes = typeFn.getParamTypesArray();
+        if (!typeFn.isParamsSpecified() || aSubTypes.length < 2
+                || !aSubTypes[0].isA(pool.typeTuple()) || !aSubTypes[0].isParamsSpecified()
+                || !aSubTypes[1].isA(pool.typeTuple()) || !aSubTypes[1].isParamsSpecified())
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
+            return null;
+            }
+
+        m_idConvert = idConvert;
+        return typeFn;
+        }
+
+/*
+ * <li>Otherwise, for a name without a {@code left} expression (which provides its scope),
+ *     determine the sequence of scopes that will be searched for matching methods/functions. For
+ *     example, the point from which the call is occurring could be inside a (i) lambda, inside a
+ *     (ii) method, inside a (iii) property, inside a (iv) child class, inside a (v) static child
+ *     class, inside a (vi) top level class, inside a (vii) package, inside a (viii) module; in this
+ *     example, scope (i) is searched first for any matching methods and functions, then scope (ii),
+ *     then scope (ii), (iii), (iv), and (v). Because scope (v) is a static child, when scope (vi)
+ *     is searched, it is only searched for functions, <i>unless</i> the InvocationExpression is
+ *     <b>not</b> performing a "call" (i.e. no "this" is required), in which case methods are
+ *     included. The package and module are omitted from the search; we do not venture past the
+ *     top level class barrier in the search.</li>
+ *
+ * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
+ *     the rules from step 4 above: If a match is found, then that is the method/function to use,
+ *     and it is an error if the type of that property/constant is not a method, a function, or a
+ *     reference that has an @Auto conversion to a method or function. (Done.)</li>
+ * <li>Otherwise, find the methods/functions that match the above criteria, as follows:
+ *     (i) including only method and/or functions as appropriate; (ii) matching the name; (iii) for
+ *     each named argument, having a matching parameter name on the method/function; (iv) after
+ *     accounting for named arguments, having at least as many parameters as the number of provided
+ *     arguments, and no more <i>required</i> parameters than the number of provided arguments; (v)
+ *     having each argument from steps (iii) and (iv) be isA() or @Auto convertible to the type of
+ *     each corresponding parameter; and (vi) matching (i.e. isA()) any specified redundant return
+ *     types.</li>
+ *
+ * <li>If no methods or functions match from steps 6 &amp; 7, then repeat at the next outer scope.
+ *     If there are no more outer scopes, then it is an error. (Done.)</li>
+ * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
+ * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
+ *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+ *     used. If that algorithm results in a single selection, then that single selection is used.
+ *     Otherwise, the redundant return types are used as a tie breaker; if that results in a single
+ *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
+ *     (Done.)</li>
+ */
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -277,6 +873,12 @@ public class InvocationExpression
     protected Expression       expr;
     protected List<Expression> args;
     protected long             lEndPos;
+
+    private transient boolean        m_fBindTarget;
+    private transient boolean        m_fBindParams;
+    private transient boolean        m_fCall;
+    private transient Argument       m_argMethod;
+    private transient MethodConstant m_idConvert;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
     }
