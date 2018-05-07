@@ -2645,6 +2645,7 @@ public abstract class Component
             if (!typeContrib.isParamsSpecified())
                 {
                 // non-parameterized contribution
+                // TODO: shouldn't we normalize and proceed below?
                 return Collections.emptyList();
                 }
 

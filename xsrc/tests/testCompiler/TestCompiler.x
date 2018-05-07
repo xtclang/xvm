@@ -326,12 +326,36 @@ class TestCompiler<TestType1 extends Number,
         Tuple<Int> ti = t;
         }
 
+    static class PCOfInt
+            extends PC<Int>
+        {
+        }
+
     static Void testClassConst()
         {
+        // PC must refer to a class whose public type is of type PC
         Class<PC> clzPC = PC;
-        // Type<PC> typePC = PC;
+        Class<PC<Int>> clcAPC = PCOfInt; // PC<Int> by itself can only be a type
 
-        // Class<Array<PC>> clcAPC = Array<PC>;
+        Type<PC> typePC = PC;
+        Type<PC<Int>> typePCI = PC<Int>;
+        }
+
+    static Void testEnumeration(Enumeration<False> enf, Enumeration en)
+        {
+        Class<False> cf = enf;
+        Class c = enf;
+        Class c2 = en;
+        }
+
+    static Void testEnumerationExpectedFailure1(Enumeration<False> en)
+        {
+        Class<True> c = en;
+        }
+
+    static Void testEnumerationExpectedFailure2(Enumeration en)
+        {
+        Class<True> c = en;
         }
 
     // auto-narrowing tests

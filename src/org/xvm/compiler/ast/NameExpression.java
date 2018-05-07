@@ -44,7 +44,7 @@ import org.xvm.util.Severity;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
- * epxression, and names with type parameters and/or supress-de-reference symbols.
+ * expression, and names with type parameters and/or suppress-de-reference symbols.
  *
  * <p/>
  * A simple name can refer to:
@@ -85,7 +85,7 @@ import org.xvm.util.Severity;
  * <p/>
  * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
  * suppression of the dereference using the "&" symbol). The result of the name being resolved
- * will differ based on whether the name is implicitly deferenced, or explicitly not
+ * will differ based on whether the name is implicitly dereferenced, or explicitly not
  * dereferenced.
  *
  * <p/>
@@ -985,9 +985,9 @@ public class NameExpression
                     }
 
                 // determine the type of the class
-                TypeConstant type = pool.ensureTerminalTypeConstant(constant);
                 if (aTypeParams != null || (typeDesired != null && typeDesired.isA(pool.typeType())))
                     {
+                    TypeConstant type = pool.ensureTerminalTypeConstant(constant);
                     if (aTypeParams != null)
                         {
                         type = pool.ensureParameterizedTypeConstant(type, aTypeParams);
@@ -999,7 +999,9 @@ public class NameExpression
                 else
                     {
                     m_plan = Plan.None;
-                    return type;
+                    return constant instanceof PseudoConstant
+                            ? ((PseudoConstant) constant).getDeclarationLevelClass().getType()
+                            : ((IdentityConstant) constant).getType();
                     }
 
             case Property:
@@ -1098,8 +1100,8 @@ public class NameExpression
      */
     protected boolean isIdentityMode(Context ctx)
         {
-        if (params == null && (left == null
-                || left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx)))
+        if (left == null ||
+            left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx))
             {
             switch (getMeaning())
                 {

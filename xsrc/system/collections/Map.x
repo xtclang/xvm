@@ -708,6 +708,7 @@ interface Map<KeyType, ValueType>
         @Override
         ValueType value
             {
+            @Override
             ValueType get()
                 {
                 if (ValueType value : Map.this.get(key))
@@ -717,6 +718,7 @@ interface Map<KeyType, ValueType>
                 throw new BoundsException();
                 }
 
+            @Override
             Void set(ValueType value)
                 {
                 Map.this.put(key, value);

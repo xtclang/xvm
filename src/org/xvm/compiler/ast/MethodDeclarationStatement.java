@@ -408,7 +408,8 @@ public class MethodDeclarationStatement
                             }
                         }
                     }
-                catch (UnsupportedOperationException e) // TODO temporary
+                catch (Throwable e) // TODO temporary
+                // catch (UnsupportedOperationException e) // TODO temporary
                     {
                     // copy over errors
                     for (ErrorInfo info : errsTemp.getErrors())
@@ -422,7 +423,14 @@ public class MethodDeclarationStatement
                     method.setNative(true);
                     if (sPath.startsWith("TestCompiler"))
                         {
-                        System.err.println("Compilation error: " + sPath + " " + sMsg);
+                        if (e instanceof AssertionError || e instanceof NullPointerException)
+                            {
+                            e.printStackTrace(System.err);
+                            }
+                        else
+                            {
+                            System.err.println("Compilation error: " + sPath + " " + sMsg);
+                            }
                         }
                     }
                 }

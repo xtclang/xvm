@@ -430,7 +430,6 @@ public class MethodStructure
         resetRuntimeInfo();
         m_fAbstract   = false;
         m_fNative     = false;
-        m_FUsesSuper  = null;
         m_aconstLocal = null;
         m_abOps       = null;
         m_code = code = new Code(this);
@@ -474,7 +473,6 @@ public class MethodStructure
         m_abOps       = null;
         m_code        = new Code(this, aop);
         m_fAbstract   = false;
-        m_fNative     = false;
         m_FUsesSuper  = null;
         markModified();
 

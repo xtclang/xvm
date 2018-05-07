@@ -70,6 +70,11 @@ const String
         TODO
         }
 
+    @Op("+") String append(Object o)
+        {
+        TODO
+        }
+
     //
     const StringAscii(Byte[] bytes)
         {

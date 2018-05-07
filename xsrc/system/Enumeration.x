@@ -46,7 +46,7 @@
  *   no class can extend the class of any Enum.
  */
 mixin Enumeration<EnumType extends Enum>
-        into Class
+        into Class<EnumType>
     {
     /**
      * The name of the Enumeration.

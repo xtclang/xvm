@@ -285,6 +285,7 @@ public class ReturnStatement
                         if (first)
                             {
                             first = false;
+                            sb.append(" ");
                             }
                         else
                             {

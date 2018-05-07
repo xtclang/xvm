@@ -22,10 +22,13 @@ import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
@@ -414,35 +417,61 @@ public class NamedTypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
+        ConstantPool pool = pool();
+
         boolean fValid = true;
 
-        // TODO - @see NameResolver to resolve names: List<Token> names
-
+        TypeConstant[] atypeParams = null;
         if (paramTypes != null)
             {
+            atypeParams = new TypeConstant[paramTypes.size()];
             for (int i = 0, c = paramTypes.size(); i < c; ++i)
                 {
-                TypeExpression typeOrig = paramTypes.get(i);
-                TypeExpression type     = (TypeExpression) typeOrig.validate(ctx, null, TuplePref.Rejected, errs);
-                if (type == null)
+                TypeExpression exprOrig = paramTypes.get(i);
+                TypeExpression expr     = (TypeExpression) exprOrig.validate(ctx, null, TuplePref.Rejected, errs);
+                if (expr == null)
                     {
-                    fValid = false;
+                    fValid         = false;
+                    atypeParams[i] = pool.typeObject();
                     }
-                else if (type != typeOrig)
+                else
                     {
-                    paramTypes.set(i, type);
+                    if (expr != exprOrig)
+                        {
+                        paramTypes.set(i, expr);
+                        }
+
+                    TypeConstant   typeParam = expr.getType();
+                    TypeConstant[] atypeSub  = typeParam.getParamTypesArray();
+                    if (atypeSub.length >= 1 && typeParam.isA(pool.typeType()))
+                        {
+                        atypeParams[i] = atypeSub[0];
+                        }
+                    else
+                        {
+                        expr.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            pool.ensureParameterizedTypeConstant(pool.typeType(),
+                                pool.typeObject()).getValueString(), typeParam.getValueString());
+
+                        fValid         = false;
+                        atypeParams[i] = pool.typeObject();
+                        }
                     }
                 }
             }
 
-        // TODO finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, , );
+        TypeConstant type = pool.ensureTerminalTypeConstant(m_constId);
+        if (atypeParams != null)
+            {
+            type = pool.ensureParameterizedTypeConstant(type, atypeParams);
+            }
+        TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), type);
 
-        return fValid
-                ? this
-                : null;
+        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeType, type);
         }
 
-// ----- debugging assistance ------------------------------------------------------------------
+
+    // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
     public String toString()

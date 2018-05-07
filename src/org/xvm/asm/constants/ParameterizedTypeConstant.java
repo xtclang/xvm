@@ -381,7 +381,7 @@ public class ParameterizedTypeConstant
     protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
                                                ContributionChain chain)
         {
-        // we know that from "that" perspective "that" is assignable to "this"
+        // we know that from the "right" perspective it is assignable to "left" (this)
         if (typeRight.isParamsSpecified() || typeRight.isRelationalType())
             {
             // the type correspondence have already been checked

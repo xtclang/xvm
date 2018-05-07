@@ -938,7 +938,7 @@ public abstract class TypeConstant
         // is not equal to the normalized type, the TypeInfo for the two will be identical
         if (struct.getTypeParams().size() > getParamsCount() && !isTuple())
             {
-            return normalizeParameters().ensureTypeInfo(errs);
+            return normalizeParameters().ensureTypeInfoInternal(errs);
             }
 
         // we're going to build a map from name to param info, including whatever parameters are

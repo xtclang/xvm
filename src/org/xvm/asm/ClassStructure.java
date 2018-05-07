@@ -308,19 +308,10 @@ public class ClassStructure
                 {
                 TypeConstant[] atypeParam = new TypeConstant[mapParams.size()];
                 int ix = 0;
-                GenericTypeResolver resolver = null;
+                GenericTypeResolver resolver = new SimpleTypeResolver(new ArrayList<>());
                 for (TypeConstant typeParam : mapParams.values())
                     {
-                    if (typeParam.isParamsSpecified())
-                        {
-                        // TODO: not quite right if typeParam is a Tuple
-                        if (resolver == null)
-                            {
-                            resolver = new SimpleTypeResolver(new ArrayList<>());
-                            }
-                        typeParam = typeParam.resolveGenerics(resolver);
-                        }
-                    atypeParam[ix++] = typeParam;
+                    atypeParam[ix++] = typeParam.resolveGenerics(resolver);
                     }
                 typeCanonical = pool.ensureClassTypeConstant(constClz, null, atypeParam);
                 }
