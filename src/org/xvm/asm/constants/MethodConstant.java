@@ -232,6 +232,21 @@ public class MethodConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        ConstantPool    pool    = getConstantPool();
+        MethodStructure method  = (MethodStructure) getComponent();
+        TypeConstant    params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawParams());
+        TypeConstant    returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawReturns());
+        return method.isStatic()
+                // Function<Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
+                ? pool.ensureParameterizedTypeConstant(pool.typeFunction(), params, returns)
+                // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
+                : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
+                        getParentConstant().getType(), params, returns);
+        }
+
+    @Override
     public Constant simplify()
         {
         m_constParent = (MultiMethodConstant) m_constParent.simplify();

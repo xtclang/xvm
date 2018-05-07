@@ -671,6 +671,18 @@ public class Compiler
      * There is no "super".
      */
     public static final String NO_SUPER                           = "COMPILER-53";
+    /**
+     * Unexpected redundant return type information.
+     */
+    public static final String UNEXPECTED_REDUNDANT_RETURNS       = "COMPILER-54";
+    /**
+     * Method or function type requires complete parameter and return type information.
+     */
+    public static final String MISSING_PARAM_INFORMATION          = "COMPILER-55";
+    /**
+     * Could not find a matching method or function "{0}".
+     */
+    public static final String MISSING_METHOD                     = "COMPILER-56";
 
 
     // ----- data members --------------------------------------------------------------------------

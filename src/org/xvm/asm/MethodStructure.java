@@ -121,6 +121,26 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff this is a constructor, which is a specialized form of a function
+     */
+    public boolean isConstructor()
+        {
+        boolean fConstructor = getName().equals("construct");
+        assert !fConstructor || isFunction();
+        return fConstructor;
+        }
+
+    /**
+     * @return true iff this is a constructor finalizer, which is a specialized form of a method
+     */
+    public boolean isConstructorFinalizer()
+        {
+        boolean fFinalizer = getName().equals("finally");
+        assert !fFinalizer || !isFunction();
+        return fFinalizer;
+        }
+
+    /**
      * @return the number of annotations
      */
     public int getAnnotationCount()

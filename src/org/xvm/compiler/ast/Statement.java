@@ -389,10 +389,10 @@ public abstract class Statement
         /**
          * Resolve a name (other than a reserved name) to an argument.
          *
-         * @param name  the potentially reserved name token
+         * @param name  the name token
          * @param errs  the error list to log errors to
          *
-         * @return an Argument iff the name resolves to a reserved name; otherwise null
+         * @return an Argument iff the name is registered to an argument; otherwise null
          */
         public Argument resolveRegularName(Token name, ErrorListener errs)
             {
@@ -408,6 +408,30 @@ public abstract class Statement
                 }
 
             return m_ctxOuter.resolveRegularName(name, errs);
+            }
+
+        /**
+         * See if the specified name declares an argument within this context.
+         *
+         * @param sName  the name
+         *
+         * @return a Register iff the name is registered to a register; otherwise null
+         */
+        public Register getVar(String sName)
+            {
+            Map<String, Argument> mapByName = getNameMap();
+            if (mapByName != null)
+                {
+                Argument arg = mapByName.get(sName);
+                if (arg instanceof Register)
+                    {
+                    return (Register) arg;
+                    }
+                }
+
+            return m_ctxOuter == null
+                    ? null
+                    : m_ctxOuter.getVar(sName);
             }
 
         /**

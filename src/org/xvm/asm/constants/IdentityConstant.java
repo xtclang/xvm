@@ -10,6 +10,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.util.Handy;
@@ -476,6 +477,30 @@ public abstract class IdentityConstant
             case Property:
             case NativeClass:
                 return getConstantPool().ensureTerminalTypeConstant(this);
+
+            default:
+                throw new IllegalStateException("not a class type: " + this);
+            }
+        }
+
+    /**
+     * @return the TypeInfo for the type implied by this identity, which must be a class identity
+     *         (including module and package), or a property identity (to obtain a nested TypeInfo
+     *         for the property, as if the property were a class itself)
+     */
+    public TypeInfo ensureTypeInfo(ErrorListener errs)
+        {
+        switch (getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+            case Typedef:
+            case NativeClass:
+                return asTypeConstant().ensureTypeInfo(errs);
+
+            case Property:
+                throw new UnsupportedOperationException("TODO: TypeInfo for property");
 
             default:
                 throw new IllegalStateException("not a class type: " + this);
