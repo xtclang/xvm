@@ -496,7 +496,6 @@ public abstract class IdentityConstant
             case Package:
             case Class:
             case Typedef:
-            case NativeClass:
                 return asTypeConstant().ensureTypeInfo(errs);
 
             case Property:
