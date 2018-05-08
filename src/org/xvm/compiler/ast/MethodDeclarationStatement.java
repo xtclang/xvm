@@ -378,6 +378,8 @@ public class MethodDeclarationStatement
                                 System.out.println("Successfully compiled: " + sPath);
                                 }
                             }
+
+                        return super.generateCode(listRevisit, errs);
                         }
                     else
                         {
@@ -436,7 +438,7 @@ public class MethodDeclarationStatement
                 }
             }
 
-        return super.generateCode(listRevisit, errs);
+        return this;
         }
 
 

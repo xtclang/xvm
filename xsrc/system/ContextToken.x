@@ -8,7 +8,7 @@ const ContextToken<TokenType extends immutable Object>
         {
         // store off the previous contextToken; it will be replaced by this contextToken, and restored when
         // this contextToken is closed
-        previousContextToken = this:service.contextToken;
+        previousContextToken = this:service.findContextToken(name);
 
         startTime = runtimeClock.time;
         deadline  = startTime + duration;
@@ -38,7 +38,7 @@ const ContextToken<TokenType extends immutable Object>
      */
     Boolean active.get()
         {
-        return this:service.contextToken == this;
+        return this:service.findContextToken(name) == this;
         }
 
     /**
@@ -47,7 +47,7 @@ const ContextToken<TokenType extends immutable Object>
      */
     Boolean registered.get()
         {
-        ContextToken? registered = this:service.contextToken;
+        ContextToken? registered = this:service.findContextToken(name);
         while (registered?)
             {
             if (this == registered)

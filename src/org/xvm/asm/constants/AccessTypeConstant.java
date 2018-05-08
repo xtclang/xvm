@@ -133,6 +133,42 @@ public class AccessTypeConstant
 
     // ----- type comparison support ---------------------------------------------------------------
 
+
+    @Override
+    public List<ContributionChain> collectContributions(TypeConstant typeLeft, List<TypeConstant> listRight,
+                                                        List<ContributionChain> chains)
+        {
+        switch (m_access)
+            {
+            case STRUCT:
+                if (typeLeft.equals(getConstantPool().typeStruct()))
+                    {
+                    // any struct is a Struct
+                    chains.add(new ContributionChain(
+                        new Component.Contribution(Component.Composition.Equal, null)));
+                    return chains;
+                    }
+                if (typeLeft.getAccess() != Access.STRUCT)
+                    {
+                    // struct is not assignable to anything but a struct
+                    return chains;
+                    }
+                break;
+
+            case PUBLIC:
+            case PROTECTED:
+            case PRIVATE:
+                if (typeLeft.getAccess().compareTo(m_access) > 0)
+                    {
+                    // for now, disallow any access widening
+                    // TODO: allow for MaybeDuckType
+                    return chains;
+                    }
+                break;
+            }
+        return super.collectContributions(typeLeft, listRight, chains);
+        }
+
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)

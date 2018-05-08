@@ -943,6 +943,7 @@ public class ConstantPool
             case "Ref":
             case "Service":
             case "String":
+            case "Struct":
             case "Type":
             case "Orderable":
             case "Sequential":

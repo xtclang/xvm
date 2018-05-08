@@ -191,7 +191,8 @@ public class StatementBlock
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
-        List<Statement> stmts = this.stmts;
+        List<Statement> stmts  = this.stmts;
+        boolean         fValid = true;
         if (stmts != null && !stmts.isEmpty())
             {
             ctx = ctx.enterScope();
@@ -199,10 +200,17 @@ public class StatementBlock
                 {
                 Statement stmtOld = stmts.get(i);
                 Statement stmtNew = stmtOld.validate(ctx, errs);
-                if (stmtNew != stmtOld && stmtNew != null)
+                if (stmtNew != stmtOld)
                     {
-                    this.stmts = ensureArrayList(stmts);
-                    stmts.set(i, stmtNew);
+                    if (stmtNew == null)
+                        {
+                        fValid = false;
+                        }
+                    else
+                        {
+                        this.stmts = ensureArrayList(stmts);
+                        stmts.set(i, stmtNew);
+                        }
                     }
 
                 if (errs.isAbortDesired())
@@ -213,7 +221,7 @@ public class StatementBlock
             ctx = ctx.exitScope();
             }
 
-        return this;
+        return fValid ? this : null;
         }
 
     @Override

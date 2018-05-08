@@ -90,6 +90,7 @@ const AsyncSection
      * Close the AsyncSection. This method is invoked automatically by the {@code using} or
      * {@code try} with-resources keywords.
      */
+    @Override
     Void close()
         {
         if (registered)
