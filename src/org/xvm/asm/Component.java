@@ -2932,10 +2932,6 @@ public abstract class Component
      */
     public static class ContributionChain
         {
-        public ContributionChain()
-            {
-            }
-
         public ContributionChain(Contribution contrib)
             {
             add(contrib);

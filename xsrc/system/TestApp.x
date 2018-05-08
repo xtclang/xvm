@@ -2,6 +2,12 @@ import annotations.AtomicVar;
 
 class TestApp
     {
+    static Void print(Object o)
+        {
+        @Inject io.Console console;
+        console.println(o);
+        }
+
     // entry point
     Void run()
         {
@@ -217,19 +223,14 @@ class TestApp
 
     static Int testBlockingReturn(Service svc)
         {
-        TODO // TODO remove
+        return svc.increment();
         }
 
     static Void testService2()
         {
         TestService svc = new TestService();
 
-        static Int testBlockingReturn()
-            {
-            return svc.increment();
-            }
-
-        Int c = testBlockingReturn();
+        Int c = testBlockingReturn(svc);
         print(c);
 
         @Future Int fc = svc.increment();
@@ -563,7 +564,7 @@ class TestApp
 //        Class<Array<Point>> clzAP = Array<Point>;
         }
 
-    static mixin BlackHole
+    mixin BlackHole
             into Var<Int>
         {
         @Override Int get() {return 0;}

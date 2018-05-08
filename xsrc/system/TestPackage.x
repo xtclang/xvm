@@ -4,7 +4,7 @@ package TestPackage
         {
         construct()
             {
-            construct Point(0, 0);
+            construct TestApp.Point(0, 0);
             }
         }
     }

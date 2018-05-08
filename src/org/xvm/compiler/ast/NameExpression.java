@@ -22,6 +22,8 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
@@ -341,7 +343,7 @@ public class NameExpression
     /**
      * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
      *         a class, property, or method name, or if the left expression is a name expression and
-     *         it has any suppressed deref
+     *         it has any suppressed dereference
      */
     public boolean hasAnySuppressDeref()
         {
@@ -768,16 +770,23 @@ public class NameExpression
                 Constant constant = ((Constant) arg);
                 switch (constant.getFormat())
                     {
+                    case Property:
+                        {
+                        PropertyConstant idProp   = (PropertyConstant) arg;
+                        TypeConstant     typeClz  = idProp.getClassIdentity().asTypeConstant();
+                        TypeInfo         infoClz  = typeClz.ensureTypeInfo(errs);
+                        PropertyInfo     infoProp = infoClz.findProperty(idProp);
+
+                        m_arg         = infoProp.getIdentity();
+                        m_fAssignable = infoProp.isVar() && !infoProp.isInjected();
+                        break;
+                        }
+
                     case Module:
                     case Package:
                     case Class:
-                    case Property:
                     case Typedef:
                         m_arg = arg;
-                        break;
-
-                    case MultiMethod:
-                        // TODO log error
                         break;
 
                     default:
@@ -797,7 +806,7 @@ public class NameExpression
             boolean fValid = true;
             if (left instanceof NameExpression
                     && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null
-                    && ((NameExpression) left).isIdentityMode(ctx))
+                    && ((NameExpression) left).isIdentityMode(ctx, true))
                 {
                 // it must either be ".this" or a child of the component
                 NameExpression   exprLeft = (NameExpression) left;
@@ -973,7 +982,7 @@ public class NameExpression
             case ThisClass:
             case ParentClass:
                 // handle the SingletonConstant use cases
-                if (!isIdentityMode(ctx))
+                if (!isIdentityMode(ctx, false))
                     {
                     if (aTypeParams != null)
                         {
@@ -1013,7 +1022,7 @@ public class NameExpression
 
                 PropertyConstant  id   = (PropertyConstant) argRaw;
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
-                if (!prop.isConstant() && isIdentityMode(ctx))
+                if (!prop.isConstant() && isIdentityMode(ctx, false))
                     {
                     m_plan = Plan.None;
                     // TODO parameterized type of Property<TargetType, PropertyType>
@@ -1094,14 +1103,18 @@ public class NameExpression
         }
 
     /**
+     * REVIEW: the "soft" concept is ugly; Cam to review
+     * @param fSoft  if true, allow this expression to return true if the name expression could
+     *               potentially represent a class identity (e.g. package or module)
+     *
      * @return true iff the name expression could represent a class or property identity, because
      *         either it is a simple name of a class or property, or because it augments an identity
      *         mode name expression by adding the name of a class or property
      */
-    protected boolean isIdentityMode(Context ctx)
+    protected boolean isIdentityMode(Context ctx, boolean fSoft)
         {
         if (left == null ||
-            left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx))
+            left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx, true))
             {
             switch (getMeaning())
                 {
@@ -1113,7 +1126,16 @@ public class NameExpression
                     // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
                     // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
                     // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
-                    // TODO this won't work for "pkg1.pkg2.ClassName" (packages are singletons)
+
+                    if (fSoft)
+                        {
+                        IdentityConstant id = getIdentity(ctx);
+                        if (id instanceof ModuleConstant || id instanceof PackageConstant)
+                            {
+                            return true;
+                            }
+                        }
+
                     return isSuppressDeref() || !((ClassStructure) getIdentity(ctx).getComponent()).isSingleton();
 
                 case Property:
@@ -1153,16 +1175,15 @@ public class NameExpression
     protected PseudoConstant getRelativeIdentity(Context ctx)
         {
         assert (!ctx.isStatic());
-        assert isIdentityMode(ctx);
+        assert isIdentityMode(ctx, false);
 
         ConstantPool     pool      = pool();
         IdentityConstant idTarget  = getIdentity(ctx);
         ClassStructure   clzParent = ctx.getMethod().getContainingClass();
-        IdentityConstant idParent  = null;
         PseudoConstant   idDotThis = null;
         while (clzParent != null)
             {
-            idParent  = clzParent.getIdentityConstant();
+            IdentityConstant idParent = clzParent.getIdentityConstant();
             idDotThis = idDotThis == null
                     ? pool.ensureThisClassConstant(idParent)
                     : pool.ensureParentClassConstant(idDotThis);

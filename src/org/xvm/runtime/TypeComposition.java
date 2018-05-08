@@ -93,7 +93,7 @@ public class TypeComposition
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
-        // TODO: it should be a "super-private", allowing private access per inheritance level
+        // TODO: should it be a "super-private", allowing private access per inheritance level?
         typeInception = typeInception.getConstantPool().
             ensureAccessTypeConstant(typeInception, Access.PRIVATE);
 

@@ -219,8 +219,8 @@ public abstract class ClassTemplate
         {
         assert !typeInception.isAccessSpecified();
         assert !typeMask.isAccessSpecified();
-        assert typeInception.normalizeParameters() == typeInception;
-        assert typeMask.normalizeParameters() == typeMask;
+        assert typeInception.normalizeParameters().equals(typeInception);
+        assert typeMask.normalizeParameters().equals(typeMask);
 
         return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {

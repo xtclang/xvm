@@ -338,7 +338,7 @@ class TestCompiler<TestType1 extends Number,
         Class<PC<Int>> clcAPC = PCOfInt; // PC<Int> by itself can only be a type
 
         Type<PC> typePC = PC;
-        Type<PC<Int>> typePCI = PC<Int>;
+        // Type<PC<Int>> typePCI = PC<Int>;
         }
 
     static Void testEnumeration(Enumeration<False> enf, Enumeration en)
