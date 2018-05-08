@@ -1329,67 +1329,69 @@ public abstract class Op
     /**
      * Pre-defined argument: a write-only "black hole" register, akin to {@code /dev/null}
      */
-    public static final int A_IGNORE = -1;
+    public static final int A_STACK     = -1;
 
     /**
-     * Pre-defined argument: {@code this:public}
+     * Pre-defined argument: a write-only "black hole" register, akin to {@code /dev/null}
      */
-    public static final int A_PUBLIC = -2;
-
-    /**
-     * Pre-defined argument: {@code this:protected}
-     */
-    public static final int A_PROTECTED = -3;
-
-    /**
-     * Pre-defined argument: {@code this:private}
-     */
-    public static final int A_PRIVATE = -4;
+    public static final int A_IGNORE    = -2;
 
     /**
      * Pre-defined argument: {@code this:target}
      */
-    public static final int A_TARGET = -5;
+    public static final int A_TARGET    = -3;
+
+    /**
+     * Pre-defined argument: {@code this:public}
+     */
+    public static final int A_PUBLIC    = -4;
+
+    /**
+     * Pre-defined argument: {@code this:protected}
+     */
+    public static final int A_PROTECTED = -5;
+
+    /**
+     * Pre-defined argument: {@code this:private}
+     */
+    public static final int A_PRIVATE   = -6;
 
     /**
      * Pre-defined argument: {@code this:struct}
      */
-    public static final int A_STRUCT = -6;
-
-    /**
-     * Pre-defined argument: {@code this:frame} // currently unused
-     */
-    public static final int A_FRAME = -7;
+    public static final int A_STRUCT    = -7;
 
     /**
      * Pre-defined argument: {@code this:service}
      */
-    public static final int A_SERVICE = -8;
-
-    /**
-     * Pre-defined argument: {@code this:module}
-     */
-    public static final int A_MODULE = -9;
-
-    /**
-     * Pre-defined argument: {@code this:type}
-     */
-    public static final int A_TYPE = -10;
+    public static final int A_SERVICE   = -8;
 
     /**
      * Pre-defined argument: {@code super} (function).
      */
-    public static final int A_SUPER = -11;
+    public static final int A_SUPER     = -9;
 
+    // TODO GG try to remove (or make "internal") all of the below
+    /**
+     * Pre-defined argument: {@code this:frame} // currently unused
+     */
+    public static final int A_FRAME = -10;
+    /**
+     * Pre-defined argument: {@code this:module}
+     */
+    public static final int A_MODULE = -11;
+    /**
+     * Pre-defined argument: {@code this:type}
+     */
+    public static final int A_TYPE = -12;
     /**
      * Pre-defined argument: a target for local invocation
      */
-    public static final int A_THIS = -12;
-
+    public static final int A_THIS = -13;
     /**
      * Pre-defined argument: the frame local (used only for testing)
      */
-    public static final int A_LOCAL = -13;
+    public static final int A_LOCAL = -14;
 
 
     // ----- return values from the Op.process() method --------------------------------------------
