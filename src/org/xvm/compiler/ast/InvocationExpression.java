@@ -13,8 +13,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
@@ -40,6 +40,7 @@ import org.xvm.asm.op.Call_NN;
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.Invoke_01;
 
+import org.xvm.asm.op.P_Get;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -575,36 +576,101 @@ public class InvocationExpression
             {
             NameExpression exprName = (NameExpression) expr;
             Expression     exprLeft = exprName.left;
-            if (m_fBindTarget)
+            if (m_fBindTarget && m_fCall)
                 {
-                // it's a method
-                Argument   argLeft  = exprLeft == null
-                        ? new Register()
-                        :
+                // it's a method, and we need to generate the necessary code that calls it
+//                Argument   argLeft  = exprLeft == null
+//                        ? new Register()
+//                        :
+                // TODO
+                throw new UnsupportedOperationException("TODO method invocation");
+                }
 
-                if (m_fCall)
+            Argument argMethod = m_argMethod;
+            if (argMethod instanceof Register)
+                {
+                assert exprLeft == null;
+                argFn = argMethod;
+                }
+            else if (argMethod instanceof PropertyConstant)
+                {
+                PropertyConstant  idProp = (PropertyConstant) argMethod;
+                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                if (prop.isConstant())
                     {
-                    // this means calling a method
-                    // TODO
+                    if (prop.hasInitialValue())
+                        {
+                        argFn = prop.getInitialValue();
+                        }
+                    else
+                        {
+                        // generate code to get the value of the constant property
+                        Register regResult = new Register(prop.getType());
+                        code.add(new P_Get(idProp, Register.IGNORE, regResult));
+                        argFn = regResult;
+                        }
                     }
                 else
                     {
-                    // bind the method and drop down to where we handle functions
+                    Argument argTarget;
+                    if (exprLeft == null)
+                        {
+                        // use "this"
+                        assert !code.getMethodStructure().isFunction();
+                        argTarget = new Register()
+                        }
+                    else
+                        {
 
-                    // TODO
+                        }
                     }
-                }
-            else
-                {
-                // the name specifies a function; the name could be the name of the function, or it
-                // could be a variable or property holding a function (or something that converts to
-                // a function); obtain the function, and drop down to where we handle functions
-                if ()
-                // TODO
+
                 }
 
-            // TODO
-            throw new UnsupportedOperationException();
+            // Expression       expr;
+            // List<Expression> args;
+            // boolean        m_fBindTarget;
+            // boolean        m_fBindParams;
+            // boolean        m_fCall;
+            // Argument       m_argMethod;
+            // MethodConstant m_idConvert;
+
+//            m_
+//            // handle conversion to function
+//            if (m_idConvert != null)
+//                {
+//                // the first return type of the idConvert method must be a function, which in turn
+//                // has two sub-types, the first of which is its "params" and the second of which is
+//                // its "returns", and the returns is a tuple type parameterized by the types of the
+//                // return values from the function
+//                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
+//                TypeConstant[] atypeResult   = m_fCall
+//                        ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
+//                        : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+//                return finishValidations(TypeFit.Fit, atypeResult, null);
+//                }
+//
+//                // handle method or function
+//                if (argMethod instanceof MethodConstant)
+//                    {
+//                    TypeConstant[] atypeResult = m_fCall
+//                            ? ((MethodConstant) argMethod).getRawReturns()
+//                            : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
+//                    return finishValidations(TypeFit.Fit, atypeResult, null);
+//                    }
+//
+//                // must be a property or a variable of type function (@Auto conversion possibility
+//                // already handled above); the function has two tuple sub-types, the second of which is
+//                // the "return types" of the function
+//                assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
+//                TypeConstant typeArg = argMethod.getRefType();
+//                assert typeArg.isA(pool().typeFunction());
+//                TypeConstant[] atypeResult = m_fCall
+//                        ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
+//                        : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+//                return finishValidations(TypeFit.Fit, atypeResult, null);
+//                }
+//
 
             // Expression       expr;
             // List<Expression> args;
@@ -909,11 +975,12 @@ public class InvocationExpression
         // enable local variable capture) is reached
         ConstantPool   pool      = pool();
         NameExpression exprName  = (NameExpression) expr;
+        Token          tokName   = exprName.getNameToken();
         String         sName     = exprName.getName();
         Expression     exprLeft  = exprName.left;
         if (exprLeft == null)
             {
-            Register reg = ctx.getVar(sName);
+            Argument reg = ctx.getVar(tokName, errs);
             if (reg != null)
                 {
                 // should not be any redundant returns
@@ -946,7 +1013,7 @@ public class InvocationExpression
             // required), in which case methods are included. The package and module are omitted
             // from the search; we do not venture past the top level class barrier in the search
             Component parent   = getComponent();
-            boolean   fHasThis = !ctx.isStatic();
+            boolean   fHasThis = ctx.isMethod();
             NextParent: while (parent != null)
                 {
                 IdentityConstant idParent = parent.getIdentityConstant();
@@ -997,6 +1064,12 @@ public class InvocationExpression
             }
         else // there is a "left" expression for the name
             {
+            if (tokName.isSpecial())
+                {
+                // TODO handle special names (e.g. ".this")
+                throw new UnsupportedOperationException("no handling yet for ." + sName);
+                }
+
             // the left expression provides the scope to search for a matching method/function;
             // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
             // possible identity), then check the identity first
@@ -1086,10 +1159,11 @@ public class InvocationExpression
             // 6) matching (i.e. isA()) any specified redundant return types
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
-            if (id.getName().equals(sName)
-                    && id.getRawParams().length >= cArgs
+            if (id.getNestedDepth() == 1
+                    && id.getName().equals(sName)
+                    && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant
-                    && info.isFunction() ? fFunctions : fMethods)
+                    && (info.isFunction() ? fFunctions : fMethods))
                 {
                 SignatureConstant sig      = info.getSignature();
                 TypeConstant[]    aParams  = sig.getRawParams();

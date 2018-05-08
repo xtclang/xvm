@@ -2,10 +2,11 @@ module Ecstasy.xtclang.org
     {
     interface Module {}
     interface Package {}
-    const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType>
+    const Class<PublicType, ProtectedType extends PublicType, PrivateType extends ProtectedType, StructType extends Struct>
             incorporates conditional Enumeration<PublicType extends Enum>
         {}
     interface Const {}
+    interface Struct {}
 
     package types
         {
@@ -37,14 +38,14 @@ module Ecstasy.xtclang.org
         }
 
     mixin Enumeration<EnumType extends Enum>
-            into Class
+            into Class<EnumType>
         {
         String name;
 
-        @Lazy Int count;
-        @Lazy String[] names;
-        @Lazy EnumType[] values;
-        @Lazy Map<String, EnumType> byName;
+        Int count;
+        String[] names;
+        EnumType[] values;
+        Map<String, EnumType> byName;
         }
 
     interface Function<ParamTypes, ReturnTypes> // TODO <ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>

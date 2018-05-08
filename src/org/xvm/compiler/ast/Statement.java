@@ -6,7 +6,6 @@ import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -18,7 +17,6 @@ import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -206,12 +204,32 @@ public abstract class Statement
             }
 
         /**
-         * @return true iff the containing MethodStructure is a function (not a method), which means
-         *         that "this", "super", and other reserved registers are not available
+         * @return true iff the containing MethodStructure is a method (not a function), which means
+         *         that "this", "super", and other reserved registers are available
          */
-        public boolean isStatic()
+        public boolean isMethod()
             {
-            return m_ctxOuter.isStatic();
+            return m_ctxOuter.isMethod();
+            }
+
+        /**
+         * @return true iff the containing MethodStructure is a function (neither a method nor a
+         *         constructor), which means that "this", "super", and other reserved registers are
+         *         not available
+         */
+        public boolean isFunction()
+            {
+            return m_ctxOuter.isFunction();
+            }
+
+        /**
+         * @return true iff the containing MethodStructure is a constructor, which means that
+         *         "this" and "this:struct" are available, but other reserved registers that require
+         *         an instance of the class are not available
+         */
+        public boolean isConstructor()
+            {
+            return m_ctxOuter.isConstructor();
             }
 
         /**
@@ -413,25 +431,27 @@ public abstract class Statement
         /**
          * See if the specified name declares an argument within this context.
          *
-         * @param sName  the name
+         * @param name  the name token
+         * @param errs  the error list to log errors to
          *
          * @return a Register iff the name is registered to a register; otherwise null
          */
-        public Register getVar(String sName)
+        public Argument getVar(Token name, ErrorListener errs)
             {
+            String sName = name.getValueText();
             Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
                 Argument arg = mapByName.get(sName);
                 if (arg instanceof Register)
                     {
-                    return (Register) arg;
+                    return arg;
                     }
                 }
 
             return m_ctxOuter == null
                     ? null
-                    : m_ctxOuter.getVar(sName);
+                    : m_ctxOuter.getVar(name, errs);
             }
 
         /**
@@ -624,51 +644,72 @@ public abstract class Statement
             }
 
         @Override
+        public Argument getVar(Token name, ErrorListener errs)
+            {
+            return resolveReservedName(name, errs);
+            }
+
+        @Override
         public Argument resolveReservedName(Token name, ErrorListener errs)
             {
             checkValidating();
 
-            String       sName = name.getValueText();
-            boolean      fThis = false;
-            ConstantPool pool  = pool();
+            Map<String, Argument> mapByName = ensureNameMap();
+            String                sName     = name.getValueText();
+            Argument              arg       = mapByName.get(sName);
+            if (arg instanceof Register && ((Register) arg).isPredefined())
+                {
+                return arg;
+                }
+
+            boolean      fNoFunction  = true;
+            boolean      fNoConstruct = true;
+            ConstantPool pool         = pool();
             TypeConstant type;
             int          nReg;
             switch (sName)
                 {
                 case "this":
+                    if (isConstructor())
+                        {
+                        type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                        nReg = Op.A_STRUCT;
+                        fNoConstruct = false;
+                        break;
+                        }
+                    // fall through
+
                 case "this:target":
-                    type  = getThisType();
-                    nReg  = Op.A_TARGET;
-                    fThis = true;
+                    type = getThisType();
+                    nReg = Op.A_TARGET;
                     break;
 
                 case "this:public":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
-                    nReg  = Op.A_PUBLIC;
-                    fThis = true;
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    nReg = Op.A_PUBLIC;
                     break;
 
                 case "this:protected":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
-                    nReg  = Op.A_PROTECTED;
-                    fThis = true;
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    nReg = Op.A_PROTECTED;
                     break;
 
                 case "this:private":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
-                    nReg  = Op.A_PRIVATE;
-                    fThis = true;
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    nReg = Op.A_PRIVATE;
                     break;
 
                 case "this:struct":
-                    type  = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
-                    nReg  = Op.A_STRUCT;
-                    fThis = true;
+                    type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                    nReg = Op.A_STRUCT;
+                    fNoConstruct = false;
                     break;
 
                 case "this:service":
                     type = pool.typeService();
                     nReg = Op.A_SERVICE;
+                    fNoFunction  = false;
+                    fNoConstruct = false;
                     break;
 
                 case "super":
@@ -682,7 +723,6 @@ public abstract class Statement
 
                     type  = method.getIdentityConstant().getSignature().asFunctionType();
                     nReg  = Op.A_SUPER;
-                    fThis = true;
                     break;
 
                 case "this:module":
@@ -693,19 +733,14 @@ public abstract class Statement
                     return null;
                 }
 
-            if (fThis && isStatic() && !m_fLoggedNoThis)
+            if ((fNoFunction && isFunction() || fNoConstruct && isConstructor()) && !m_fLoggedNoThis)
                 {
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 m_fLoggedNoThis = true;
                 }
 
-            Map<String, Argument> mapByName = ensureNameMap();
-            Argument              arg       = mapByName.get(sName);
-            if (arg == null)
-                {
-                arg = new Register(type, nReg);
-                }
-
+            arg = new Register(type, nReg);
+            mapByName.put(sName, arg);
             return arg;
             }
 
@@ -720,7 +755,14 @@ public abstract class Statement
                 }
             }
 
-        public boolean isStatic()
+        @Override
+        public boolean isMethod()
+            {
+            return !isFunction() && !isConstructor();
+            }
+
+        @Override
+        public boolean isFunction()
             {
             Component parent = m_method;
             while (true)
@@ -755,6 +797,12 @@ public abstract class Statement
 
                 parent = parent.getParent();
                 }
+            }
+
+        @Override
+        public boolean isConstructor()
+            {
+            return m_method.isConstructor();
             }
 
         ClassStructure getThisClass()

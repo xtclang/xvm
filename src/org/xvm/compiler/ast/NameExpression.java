@@ -814,7 +814,7 @@ public class NameExpression
                 switch (name.getId())
                     {
                     case THIS:
-                        if (ctx.isStatic())
+                        if (ctx.isFunction())
                             {
                             // TODO log error
                             fValid = false;
@@ -1174,7 +1174,7 @@ public class NameExpression
      */
     protected PseudoConstant getRelativeIdentity(Context ctx)
         {
-        assert (!ctx.isStatic());
+        assert (!ctx.isFunction());
         assert isIdentityMode(ctx, false);
 
         ConstantPool     pool      = pool();

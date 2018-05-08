@@ -121,12 +121,13 @@
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate
+// - for P_GET and P_REF, an rvalue-target of "black hole" indicates a constant property
 +L_GET       PROPERTY, lvalue                        ; get local property (move local property value to register)
 +L_SET       PROPERTY, rvalue                        ; set local property (move register value to local property)
-+P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
+-P_GET       PROPERTY, rvalue-target, lvalue         ; get property (move target property value to register)
 +P_SET       PROPERTY, rvalue-target, rvalue         ; set property (move register value to target property)
 +P_VAR       PROPERTY, rvalue-target, lvalue-dest    ; move Var-to-property to destination
-+P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move Ref-to-property to destination
+-P_REF       PROPERTY, rvalue-target, lvalue-dest    ; move Ref-to-property to destination
 
 // register/local-property inc/dec ("A"=after, aka "post" / "B"=before, aka "pre"):
 // - the lvalue-target indicates the register or the local-property indicator (PROPERTY)
@@ -235,8 +236,7 @@
  MIP_XOR     rvalue-target, #:(rvalue-ix), rvalue2
 
 // function calls
-// rvalue-fn does NOT support "local property" mode - REVIEW why not? agreed that rvalue-params must not support lprops
-// rvalue-param and lvalue-return support "local property" mode
+// rvalue-fn, rvalue-param and lvalue-return support "local property" mode
 // return values can specify the "next register" to allocate
 // - first digit is # params: 0, 1, n, or "t"=tuple
 // - second digit is # returns: 0, 1, n, or "t"=tuple

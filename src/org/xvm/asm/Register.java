@@ -44,7 +44,7 @@ public class Register
      */
     public Register(TypeConstant type, int iArg, boolean fReadOnly)
         {
-        if (type == null)
+        if (type == null && iArg != Op.A_IGNORE)
             {
             throw new IllegalArgumentException("type required");
             }
@@ -196,9 +196,13 @@ public class Register
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(m_type.getValueString())
-          .append(' ')
-          .append(getIdString());
+        if (m_type != null)
+            {
+            sb.append(m_type.getValueString())
+              .append(' ');
+            }
+
+        sb.append(getIdString());
 
         if (m_fRO)
             {
@@ -266,6 +270,11 @@ public class Register
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * A singleton "black hole" register.
+     */
+    public static final Register IGNORE = new Register(null, Op.A_IGNORE);
 
     /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.
