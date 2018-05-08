@@ -334,6 +334,10 @@ public class Frame
         {
         switch (nArgId)
             {
+            case Op.A_STACK:
+                // TODO GG implement this
+                throw new UnsupportedOperationException();
+
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hThis;
                 if (hThis == null)
@@ -348,13 +352,6 @@ public class Frame
                     throw new IllegalStateException();
                     }
                 return f_hTarget;
-
-            case Op.A_THIS:
-                if (f_hThis == null)
-                    {
-                    throw new IllegalStateException();
-                    }
-                return f_hThis;
 
             case Op.A_PUBLIC:
                 if (f_hThis == null)
@@ -384,6 +381,21 @@ public class Frame
                     }
                 return f_hThis.ensureAccess(Access.STRUCT);
 
+            case Op.A_SERVICE:
+                return ServiceContext.getCurrentContext().m_hService;
+
+            // TODO remove this and replace usages with A_STACK instead?
+            case Op.A_LOCAL:
+                return m_hFrameLocal;
+
+            // TODO remove the rest of these?
+            case Op.A_THIS:
+                if (f_hThis == null)
+                    {
+                    throw new IllegalStateException();
+                    }
+                return f_hThis;
+
             case Op.A_TYPE:
                 if (f_hThis == null)
                     {
@@ -396,12 +408,6 @@ public class Frame
 
             case Op.A_MODULE:
                 return f_context.f_container.getModule();
-
-            case Op.A_SERVICE:
-                return ServiceContext.getCurrentContext().m_hService;
-
-            case Op.A_LOCAL:
-                return m_hFrameLocal;
 
             default:
                 throw new IllegalStateException("Invalid argument " + nArgId);

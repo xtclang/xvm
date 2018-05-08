@@ -12,6 +12,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
@@ -20,12 +22,22 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.asm.op.Call_00;
+import org.xvm.asm.op.Call_01;
+import org.xvm.asm.op.Call_0N;
+import org.xvm.asm.op.Call_10;
+import org.xvm.asm.op.Call_11;
+import org.xvm.asm.op.Call_1N;
+import org.xvm.asm.op.Call_N0;
+import org.xvm.asm.op.Call_N1;
+import org.xvm.asm.op.Call_NN;
+import org.xvm.asm.op.Invoke_01;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -280,7 +292,6 @@ public class InvocationExpression
             NameExpression exprName   = (NameExpression) expr;
             Expression     exprLeft   = exprName.left;
             TypeConstant   typeLeft   = null;
-            TypeConstant[] aRedundant = null;
             if (exprLeft != null)
                 {
                 typeLeft = exprLeft.getImplicitType(ctx);
@@ -288,30 +299,30 @@ public class InvocationExpression
                     {
                     return TypeConstant.NO_TYPES;
                     }
+                }
 
-                // collect as many redundant return types as possible to help narrow down the
-                // possible method/function matches
-                List<TypeExpression> aParams = exprName.params;
-                if (aParams != null)
+            // collect as many redundant return types as possible to help narrow down the
+            // possible method/function matches
+            TypeConstant[]       aRedundant    = null;
+            List<TypeExpression> listRedundant = exprName.params;
+            if (listRedundant != null)
+                {
+                int                     cParams   = listRedundant.size();
+                ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
+                for (int i = 0; i < cParams; ++i)
                     {
-                    int                     cParams   = aParams.size();
-                    ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
-                    for (int i = 0; i < cParams; ++i)
+                    TypeConstant typeParam = listRedundant.get(i).getImplicitType(ctx);
+                    if (typeParam == null)
                         {
-                        TypeConstant typeParam = aParams.get(i).getImplicitType(ctx);
-                        if (typeParam == null)
-                            {
-                            break;
-                            }
-                        listTypes.add(typeParam);
+                        break;
                         }
-
-                    aRedundant = listTypes.toArray(new TypeConstant[cParams]);
+                    listTypes.add(typeParam);
                     }
+
+                aRedundant = listTypes.toArray(new TypeConstant[cParams]);
                 }
 
             Argument argMethod = resolveName(ctx, false, typeLeft, aRedundant, aArgTypes, ErrorListener.BLACKHOLE);
-            // TODO must also validateFunction()
             if (argMethod == null)
                 {
                 return TypeConstant.NO_TYPES;
@@ -397,9 +408,8 @@ public class InvocationExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        boolean fValid = true;
-
         // validate the invocation arguments, some of which may be left unbound (e.g. "?")
+        boolean          fValid   = true;
         ConstantPool     pool     = pool();
         List<Expression> listArgs = args;
         int              cArgs    = listArgs.size();
@@ -422,116 +432,323 @@ public class InvocationExpression
                 }
             }
 
+        // when we have a name expression on our immediate left, we do NOT (!!!) validate it,
+        // because the name resolution is the responsibility of this InvocationExpression, and
+        // the NameExpression itself will error on resolving a method/function name
         if (expr instanceof NameExpression)
             {
-            // when we have a name expression on the left, we do NOT (!!!) validate it, because the
-            // name resolution is the responsibility of this InvocationExpression, and the
-            // NameExpression will error on resolving a method/function name
-            MultiMethodConstant  idMMethod = null;
-            NameExpression       exprName  = (NameExpression) expr;
-            Expression           left      =  exprName.left;
-            Token                name      = exprName.name;
-            String               sName     = name.getValueText();
-            List<TypeExpression> listRets  = exprName.params;                // redundant returns
-
-            // a name expression may have type params from the construct:
-            //      QualifiedNameName TypeParameterTypeList-opt
-            // these names form the optional "redundant returns" portion of the method/function
-            // invocation
-            if (listRets != null)
+            // if the name expression has an expression on _its_ left, then we are now responsible
+            // for validating that "left left" expression
+            NameExpression exprName = (NameExpression) expr;
+            Expression     exprLeft = exprName.left;
+            TypeConstant   typeLeft = null;
+            if (exprLeft != null)
                 {
-                for (int i = 0, c = listRets.size(); i < c; ++i)
+                Expression exprNew = exprLeft.validate(ctx, null, TuplePref.Rejected, errs);
+                if (exprNew == null)
                     {
-                    TypeExpression typeOld = listRets.get(i);
-                    TypeExpression typeNew = (TypeExpression) typeOld.validate(
-                            ctx, pool.typeType(), TuplePref.Rejected, errs);
-                    fValid &= typeNew != null;
-                    if (typeNew != typeOld && typeNew != null)
-                        {
-                        // WARNING: mutating contents of the NameExpression, which has been
-                        //          _subsumed_ by this InvocationExpression
-                        listRets.set(i, typeNew);
-                        }
-                    }
-                }
-
-            if (left == null)
-                {
-                // TODO copy logic from getImplicitTypes() e.g. this.resolveName()
-                Argument arg = ctx.resolveName(name, errs);
-                if (arg instanceof MultiMethodConstant)
-                    {
-                    idMMethod = (MultiMethodConstant) arg;
-                    }
-                else if (arg == null)
-                    {
-                    log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                            sName, ctx.getMethod().getIdentityConstant().getSignature());
                     fValid = false;
                     }
                 else
                     {
-                    // TODO log error - the name has to resolve to a method/function
-                    fValid = false;
+                    if (exprNew != exprLeft)
+                        {
+                        // WARNING: mutating contents of the NameExpression, which has been
+                        //          _subsumed_ by this InvocationExpression
+                        exprName.left = exprLeft = exprNew;
+                        }
+
+                    typeLeft = exprLeft.getType();
+                    if (typeLeft == null)
+                        {
+                        fValid = false;
+                        }
                     }
                 }
-            else
+
+            // validate the "redundant returns" expressions
+            TypeConstant[]       aRedundant    = null;
+            List<TypeExpression> listRedundant = exprName.params;
+            if (listRedundant != null)
                 {
-                Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
-                if (leftNew == null)
+                int cRedundant = listRedundant.size();
+                aRedundant = new TypeConstant[cRedundant];
+                for (int i = 0; i < cRedundant; ++i)
                     {
-                    // TODO null is an error, so the idea is to get out of here (but maybe do some work first, in case we can catch other errors)
-                    return null;
+                    TypeExpression typeOld = listRedundant.get(i);
+                    TypeExpression typeNew = (TypeExpression) typeOld.validate(
+                            ctx, pool.typeType(), TuplePref.Rejected, errs);
+                    if (typeNew == null)
+                        {
+                        fValid = false;
+                        }
+                    else
+                        {
+                        if (typeNew != typeOld)
+                            {
+                            // WARNING: mutating contents of the NameExpression, which has been
+                            //          _subsumed_ by this InvocationExpression
+                            listRedundant.set(i, typeNew);
+                            }
+                        aRedundant[i] = typeNew.getType();
+                        }
                     }
-                else if (leftNew != left)
-                    {
-                    // WARNING: mutating contents of the NameExpression, which has been
-                    //          _subsumed_ by this InvocationExpression
-                    exprName.left = left = leftNew;
-                    }
-
-                if (left.isVoid())
-                    {
-                    // TODO log error
-                    return null;
-                    }
-
-                TypeInfo infoType = left.getType().ensureTypeInfo(errs);
-                // TODO that info is where we will ultimately find the sName
                 }
 
-            if (!fValid)
+            // the reason for tracking success (fValid) is that we want to get as many things
+            // validated as possible, but if some of the expressions didn't validate, we can't
+            // predictably find the desired method or function (e.g. without a left expression
+            // providing validated type information)
+            if (fValid)
                 {
-                return null;
-                }
+                // resolving the name will yield a method, a function, or something else that needs
+                // to yield a function, such as a property or variable that holds a function or
+                // something that can be converted to a function
+                Argument argMethod = resolveName(ctx, true, typeLeft, aRedundant, aArgs, errs);
+                if (argMethod != null)
+                    {
+                    // handle conversion to function
+                    if (m_idConvert != null)
+                        {
+                        // the first return type of the idConvert method must be a function, which in turn
+                        // has two sub-types, the first of which is its "params" and the second of which is
+                        // its "returns", and the returns is a tuple type parameterized by the types of the
+                        // return values from the function
+                        TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
+                        TypeConstant[] atypeResult   = m_fCall
+                                ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
+                                : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        }
 
-            // find the correct Method within the MultiMethod, using the (optional) redundant return
-            // types, and the parameters
-            // TODO
+                    // handle method or function
+                    if (argMethod instanceof MethodConstant)
+                        {
+                        TypeConstant[] atypeResult = m_fCall
+                                ? ((MethodConstant) argMethod).getRawReturns()
+                                : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
+                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        }
+
+                    // must be a property or a variable of type function (@Auto conversion possibility
+                    // already handled above); the function has two tuple sub-types, the second of which is
+                    // the "return types" of the function
+                    assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
+                    TypeConstant typeArg = argMethod.getRefType();
+                    assert typeArg.isA(pool().typeFunction());
+                    TypeConstant[] atypeResult = m_fCall
+                            ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
+                            : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    }
+                }
             }
         else // the expr is NOT a NameExpression
             {
             Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
-            if (exprNew == null)
-                {
-                // TODO error
-                fValid = false;
-                }
-            else
+            if (exprNew != null)
                 {
                 expr = exprNew;
+
+                // it has to either be a function or convertible to a function
                 TypeConstant typeFn = validateFunction(ctx, exprNew.getType(), aArgs, errs);
+                if (typeFn != null)
+                    {
+                    TypeConstant[] atypeResult = m_fCall
+                            ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
+                            : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+
+                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    }
                 }
-
-            // verify that the arguments match the parameters
-            // TODO
-
             }
 
         return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
         }
 
-    // TODO --- generateArguments()  !!!!!!!!!!!!!!!!!!!!!
+    @Override
+    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+        {
+        Argument argFn = null;
+        if (expr instanceof NameExpression)
+            {
+            // TODO
+            throw new UnsupportedOperationException();
+
+            // Expression       expr;
+            // List<Expression> args;
+            // boolean        m_fBindTarget;
+            // boolean        m_fBindParams;
+            // boolean        m_fCall;
+            // Argument       m_argMethod;
+            // MethodConstant m_idConvert;
+
+//            // determine left hand side of a method invocation
+//            Argument argTarget = null;
+//            if (m_fBindTarget)
+//                {
+//                assert m_argMethod instanceof MethodConstant;
+//                assert m_idConvert == null;
+//
+//                Expression left = ((NameExpression) expr).left;
+//                if (left == null)
+//                    {
+//                    // TODO not necessarily "this"; may be a parent of "this"
+//                    // m_argMethod
+//                    // argTarget = new Register()
+//                    }
+//                else
+//                    {
+//                    argTarget = left.generateArgument(code, false, true, true, errs);
+//                    }
+//
+//                }
+//            // TODO else if (expr != null && expr.hasSideEffects()) {...}
+            }
+        else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
+            {
+            assert !m_fBindTarget;
+
+            // obtain the function that will be bound and/or called
+            argFn = expr.generateArgument(code, false, true, true, errs);
+            }
+
+        // bind arguments and/or generate a call to the function specified by argFn; first, convert
+        // it to the desired function if necessary
+        TypeConstant typeFn = argFn.getRefType();
+        if (m_idConvert != null)
+            {
+            // argFn isn't a function; convert whatever-it-is into the desired function
+            typeFn = m_idConvert.getRawReturns()[0];
+            Register regFn  = new Register(typeFn);       // TODO need fStackOk for Op.A_STACK
+            code.add(new Invoke_01(argFn, m_idConvert, regFn));
+            argFn = regFn;
+            }
+
+        if (!m_fCall && !m_fBindParams)
+            {
+            // not binding anything; not calling anything; just returning the function itself
+            return new Argument[] {argFn};
+            }
+
+        TypeConstant[] atypeSub     = typeFn.getParamTypesArray();
+        TypeConstant[] atypeParams  = atypeSub[F_ARGS].getParamTypesArray();
+        TypeConstant[] atypeReturns = atypeSub[F_RETS].getParamTypesArray();
+        int            cParams      = atypeParams.length;
+        int            cReturns     = atypeReturns.length;
+        if (m_fCall)
+            {
+            if (m_fBindParams)
+                {
+                // TODO the following code doesn't do argument conversions to the required parameter types
+                assert cParams == args.size();
+                switch (cParams)
+                    {
+                    case 0:
+                        throw new IllegalStateException();
+
+                    case 1:
+                        {
+                        Argument arg = args.get(0).generateArgument(code, false, false, false, errs);
+
+                        switch (cReturns)
+                            {
+                            case 0:
+                                code.add(new Call_10(argFn, arg));
+                                return NO_RVALUES;
+
+                            case 1:
+                                {
+                                Register regResult = new Register(atypeReturns[0]);
+                                code.add(new Call_11(argFn, arg, regResult));
+                                return new Argument[] {regResult};
+                                }
+
+                            default:
+                                {
+                                Register[] aRets = new Register[cReturns];
+                                for (int i = 0; i < cReturns; ++i)
+                                    {
+                                    aRets[i] = new Register(atypeReturns[i]);
+                                    }
+                                code.add(new Call_1N(argFn, arg, aRets));
+                                return aRets;
+                                }
+                            }
+                        }
+
+                    default:
+                        {
+                        Argument[] aArgs = new Argument[cParams];
+                        for (int i = 0; i < cParams; ++i)
+                            {
+                            aArgs[i] = args.get(i).generateArgument(code, false, false, false, errs);
+                            }
+
+                        switch (cReturns)
+                            {
+                            case 0:
+                                code.add(new Call_N0(argFn, aArgs));
+                                return NO_RVALUES;
+
+                            case 1:
+                                {
+                                Register regResult = new Register(atypeReturns[0]);
+                                code.add(new Call_N1(argFn, aArgs, regResult));
+                                return new Argument[] {regResult};
+                                }
+
+                            default:
+                                {
+                                Register[] aRets = new Register[cReturns];
+                                for (int i = 0; i < cReturns; ++i)
+                                    {
+                                    aRets[i] = new Register(atypeReturns[i]);
+                                    }
+                                code.add(new Call_NN(argFn, aArgs, aRets));
+                                return aRets;
+                                }
+                            }
+                        }
+                    }
+                }
+            else // no parameters, just call the function
+                {
+                assert cParams == 0;
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Call_00(argFn));
+                        return NO_RVALUES;
+
+                    case 1:
+                        {
+                        Register regResult = new Register(atypeReturns[0]);
+                        code.add(new Call_01(argFn, regResult));
+                        return new Argument[] {regResult};
+                        }
+
+                    default:
+                        {
+                        Register[] aRets = new Register[cReturns];
+                        for (int i = 0; i < cReturns; ++i)
+                            {
+                            aRets[i] = new Register(atypeReturns[i]);
+                            }
+                        code.add(new Call_0N(argFn, aRets));
+                        return aRets;
+                        }
+                    }
+                }
+            }
+        else
+            {
+            assert m_fBindParams;
+
+            // TODO partially bind the function and return the resulting function
+            throw new UnsupportedOperationException();
+            }
+        }
 
 
     // ----- method resolution helpers -------------------------------------------------------------
@@ -598,7 +815,8 @@ public class InvocationExpression
 
     /**
      * Resolve the expression to determine the referred to method or function. Responsible for
-     * setting {@link #m_argMethod}.
+     * setting {@link #m_argMethod}, {@link #m_idConvert}, {@link #m_fBindTarget},
+     * {@link #m_fBindParams}, and {@link #m_fCall}.
      *
      * @param ctx         the compiler context
      * @param fForce      true to force the resolution, even if it has been done previously
@@ -711,19 +929,15 @@ public class InvocationExpression
 
                     case Method:
                         // TODO
-                        throw new UnsupportedOperationException("TODO: method impl "
-                                + parent.getIdentityConstant().getValueString());
+                        break;
 
                     case Property:
+                        // Starting at the first scope, check for a property of that name; if one exists, treat it using
+                        // the rules from step 4 above: If a match is found, then that is the method/function to use,
+                        // and it is an error if the type of that property/constant is not a method, a function, or a
+                        // reference that has an @Auto conversion to a method or function. (Done.)</li>
                         // TODO
-/*
- * <li>Starting at the first scope, check for a property of that name; if one exists, treat it using
- *     the rules from step 4 above: If a match is found, then that is the method/function to use,
- *     and it is an error if the type of that property/constant is not a method, a function, or a
- *     reference that has an @Auto conversion to a method or function. (Done.)</li>
- */
-                        throw new UnsupportedOperationException("TODO: need a TypeInfo for property "
-                                + parent.getIdentityConstant().getValueString());
+                        break;
                     }
 
                 parent = parent.getParent();

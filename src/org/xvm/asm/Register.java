@@ -229,11 +229,14 @@ public class Register
         {
         switch (nReg)
             {
-            case UNKNOWN:
-                return "#???";
+            case Op.A_STACK:
+                return "this:stack";
 
             case Op.A_IGNORE:
                 return "_";
+
+            case Op.A_TARGET:
+                return "this:target";
 
             case Op.A_PUBLIC:
                 return "this:public";
@@ -244,29 +247,17 @@ public class Register
             case Op.A_PRIVATE:
                 return "this:private";
 
-            case Op.A_TARGET:
-                return "this:target";
-
             case Op.A_STRUCT:
                 return "this:struct";
-
-            case Op.A_FRAME:
-                return "this:frame";
 
             case Op.A_SERVICE:
                 return "this:service";
 
-            case Op.A_MODULE:
-                return "this:module";
-
-            case Op.A_TYPE:
-                return "this:type";
-
             case Op.A_SUPER:
                 return "super";
 
-            case Op.A_THIS:
-                return "this";
+            case UNKNOWN:
+                return "#???";
 
             default:
                 return "#" + nReg;
