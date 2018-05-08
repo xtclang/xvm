@@ -949,7 +949,7 @@ public class InvocationExpression
             // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
             // possible identity), then check the identity first
             Argument arg = null;
-            if (exprLeft instanceof NameExpression && ((NameExpression) exprLeft).isIdentityMode(ctx))
+            if (exprLeft instanceof NameExpression && ((NameExpression) exprLeft).isIdentityMode(ctx, false))
                 {
                 // the left identity
                 // - methods are included because there is a left, but since it is to obtain a
