@@ -37,6 +37,7 @@ import org.xvm.asm.op.Call_1N;
 import org.xvm.asm.op.Call_N0;
 import org.xvm.asm.op.Call_N1;
 import org.xvm.asm.op.Call_NN;
+import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.Invoke_01;
 
 import org.xvm.compiler.Compiler;
@@ -572,6 +573,36 @@ public class InvocationExpression
         Argument argFn = null;
         if (expr instanceof NameExpression)
             {
+            NameExpression exprName = (NameExpression) expr;
+            Expression     exprLeft = exprName.left;
+            if (m_fBindTarget)
+                {
+                // it's a method
+                Argument   argLeft  = exprLeft == null
+                        ? new Register()
+                        :
+
+                if (m_fCall)
+                    {
+                    // this means calling a method
+                    // TODO
+                    }
+                else
+                    {
+                    // bind the method and drop down to where we handle functions
+
+                    // TODO
+                    }
+                }
+            else
+                {
+                // the name specifies a function; the name could be the name of the function, or it
+                // could be a variable or property holding a function (or something that converts to
+                // a function); obtain the function, and drop down to where we handle functions
+                if ()
+                // TODO
+                }
+
             // TODO
             throw new UnsupportedOperationException();
 
@@ -741,13 +772,34 @@ public class InvocationExpression
                     }
                 }
             }
-        else
-            {
-            assert m_fBindParams;
 
-            // TODO partially bind the function and return the resulting function
-            throw new UnsupportedOperationException();
+        // bind (or partially bind) the function
+        assert m_fBindParams;
+
+        // count the number of parameters to bind
+        int cBind = 0;
+        for (int i = 0; i < cParams; ++i)
+            {
+            if (!args.get(i).isNonBinding())
+                {
+                ++cBind;
+                }
             }
+
+        int[]      aiArg = new int[cBind];
+        Argument[] aArg  = new Argument[cBind];
+        for (int i = 0, iNext = 0; i < cParams; ++i)
+            {
+            if (!args.get(i).isNonBinding())
+                {
+                aiArg[iNext] = i;
+                aArg [iNext] = args.get(i).generateArgument(code, false, false, true, errs);
+                }
+            }
+
+        Register regFn = new Register(getType());
+        code.add(new FBind(argFn, aiArg, aArg, regFn));
+        return new Argument[] {regFn};
         }
 
 
