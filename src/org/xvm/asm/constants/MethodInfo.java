@@ -536,9 +536,19 @@ public class MethodInfo
             // grab the "raw" (unoptimized) chain
             chain = getChain();
 
+            MethodBody bodyHead = chain[0];
+
+            // first, see if this chain was capped, which means that it (virtually) redirects to
+            // a different method chain, which (somewhere at the bottom of that chain) will contain
+            // the method bodies that are "hidden" under this chain's cap
+            if (bodyHead.getImplementation() == Implementation.Capped)
+                {
+                // note: turtles
+                return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
+                }
+
             // when the method is a property accessor, we need to use the PropertyInfo
             // to get the optimized chain (to include a potential field access body)
-            MethodBody      bodyHead  = chain[0];
             MethodStructure method    = bodyHead.getMethodStructure();
             Component       container = method.getParent().getParent();
             if (container instanceof PropertyStructure)
@@ -552,15 +562,6 @@ public class MethodInfo
                     return m_aBodyResolved =
                         infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
                     }
-                }
-
-            // first, see if this chain was capped, which means that it (virtually) redirects to
-            // a different method chain, which (somewhere at the bottom of that chain) will contain
-            // the method bodies that are "hidden" under this chain's cap
-            if (bodyHead.getImplementation() == Implementation.Capped)
-                {
-                // note: turtles
-                return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
                 }
 
             // see if the chain will work as-is
