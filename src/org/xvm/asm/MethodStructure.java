@@ -107,7 +107,6 @@ public class MethodStructure
             }
         m_cTypeParams = cTypeParams;
         m_FUsesSuper  = fUsesSuper;
-        m_FUsesSuper  = fUsesSuper;
         }
 
 

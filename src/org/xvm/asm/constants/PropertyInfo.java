@@ -1006,13 +1006,8 @@ public class PropertyInfo
         if (chain == null)
             {
             MethodConstant idGet = getGetterId();
-
-            chain = infoType.getOptimizedMethodChain(idGet);
-            if (chain == null)
-                {
-                chain = augmentPropertyChain(null, infoType, idGet);
-                }
-            m_chainGet = chain;
+            m_chainGet = chain =
+                augmentPropertyChain(infoType.getOptimizedMethodChain(idGet), infoType, idGet);
             }
 
         return chain;
@@ -1043,13 +1038,8 @@ public class PropertyInfo
         if (chain == null)
             {
             MethodConstant idSet = getSetterId();
-
-            chain = infoType.getOptimizedMethodChain(idSet);
-            if (chain == null)
-                {
-                chain = augmentPropertyChain(null, infoType, idSet);
-                }
-            m_chainGet = chain;
+            m_chainSet = chain =
+                augmentPropertyChain(infoType.getOptimizedMethodChain(idSet), infoType, idSet);
             }
 
         return chain;
@@ -1148,9 +1138,9 @@ public class PropertyInfo
                     chain = chainNew;
                     ixTail++;
                     }
+                chain[ixTail] = new MethodBody(constId, constId.getSignature(),
+                        Implementation.Field, getFieldIdentity());
                 }
-            chain[ixTail] = new MethodBody(constId, constId.getSignature(),
-                    Implementation.Field, getFieldIdentity());
             }
         return chain;
         }
