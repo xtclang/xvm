@@ -665,6 +665,52 @@ public class NameExpression
     @Override
     public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
+//        // TODO this code came from InvocationExpression; evaluate NameExpression code for necessary fixes
+//            Argument argMethod = m_argMethod;
+//            if (argMethod instanceof Register)
+//                {
+//                assert !exprName.hasSideEffects();
+//                assert exprLeft == null;
+//                argFn = argMethod;
+//                }
+//            else if (argMethod instanceof PropertyConstant)
+//                {
+//                assert !exprName.hasSideEffects();
+//                PropertyConstant  idProp = (PropertyConstant) argMethod;
+//                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+//                if (prop.isConstant())
+//                    {
+//                    if (prop.hasInitialValue())
+//                        {
+//                        argFn = prop.getInitialValue();
+//                        }
+//                    else
+//                        {
+//                        // generate code to get the value of the constant property
+//                        Register regResult = new Register(prop.getType());
+//                        code.add(new P_Get(idProp, Register.IGNORE, regResult));
+//                        argFn = regResult;
+//                        }
+//                    }
+//                else
+//                    {
+//                    Argument argTarget;
+//                    if (exprLeft == null)
+//                        {
+//                        // use "this"
+//                        MethodStructure method = code.getMethodStructure();
+//                        assert !method.isFunction();
+//                        argTarget = generateReserved(method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
+//                        }
+//                    else
+//                        {
+//                        argTarget = exprLeft.generateArgument(code, false, true, true, errs);
+//                        }
+//
+//                    // TODO
+//                    }
+//                }
+
         Argument argRaw = m_arg;
         switch (m_plan)
             {
