@@ -1,5 +1,20 @@
 module Test
     {
+    class C
+        {
+        Int x
+            {
+            Int get()
+                {
+                return super();
+                }
+
+            Void set(Int n)
+                {
+                super(n);
+                }
+            }
+        }
 //    class Fubar
 //        {
 //        // problem #1 - is the solution a SubstitutableTypeConstant that takes the place of each instance of "T"?
@@ -227,17 +242,17 @@ module Test
 //            return this;
 //            }
 //        }
-
-    // problem #21 - calling a method
-    Void foo()
-        {
-        }
-
-    Void bar()
-        {
-        foo();
-        }
-
+//
+//    // problem #21 - calling a method
+//    Void foo()
+//        {
+//        }
+//
+//    Void bar()
+//        {
+//        foo();
+//        }
+//
 //    // problem #22 - calling a function
 //    static Void foo()
 //        {
