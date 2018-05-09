@@ -718,6 +718,7 @@ public class NameExpression
                 return argRaw;
 
             case PropertyDeref:
+                // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                 boolean fThisProp = left == null; // TODO or left == this
                 if (fThisProp && fLocalPropOk)
                     {
@@ -741,7 +742,7 @@ public class NameExpression
                     }
 
             case PropertyRef:
-                return null; // TODO
+                throw new UnsupportedOperationException("&" + getName());
 
             case TypeOfTypedef:
             case TypeOfClass:
