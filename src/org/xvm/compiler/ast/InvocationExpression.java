@@ -16,7 +16,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
@@ -40,9 +39,17 @@ import org.xvm.asm.op.Call_N0;
 import org.xvm.asm.op.Call_N1;
 import org.xvm.asm.op.Call_NN;
 import org.xvm.asm.op.FBind;
+import org.xvm.asm.op.Invoke_00;
 import org.xvm.asm.op.Invoke_01;
+import org.xvm.asm.op.Invoke_0N;
+import org.xvm.asm.op.Invoke_10;
+import org.xvm.asm.op.Invoke_11;
+import org.xvm.asm.op.Invoke_1N;
+import org.xvm.asm.op.Invoke_N0;
+import org.xvm.asm.op.Invoke_N1;
+import org.xvm.asm.op.Invoke_NN;
+import org.xvm.asm.op.MBind;
 
-import org.xvm.asm.op.P_Get;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -573,49 +580,21 @@ public class InvocationExpression
     @Override
     public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
         {
+        // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
+        // assertion or error if it tries; that is the responsibility of InvocationExpression
         Argument argFn = null;
-        if (expr instanceof NameExpression)
+        if (expr instanceof NameExpression && m_argMethod instanceof MethodConstant)
             {
             NameExpression exprName = (NameExpression) expr;
             Expression     exprLeft = exprName.left;
-            if (m_fBindTarget && m_fCall)
+            MethodConstant idMethod = (MethodConstant) m_argMethod;
+            boolean        fMethod  = !((MethodStructure) idMethod.getComponent()).isFunction();
+            if (fMethod)
                 {
-                // it's a method, and we need to generate the necessary code that calls it
-//                Argument   argLeft  = exprLeft == null
-//                        ? new Register()
-//                        :
-                // TODO
-                throw new UnsupportedOperationException("TODO method invocation");
-                }
-
-            Argument argMethod = m_argMethod;
-            if (argMethod instanceof Register)
-                {
-                assert !exprName.hasSideEffects();
-                assert exprLeft == null;
-                argFn = argMethod;
-                }
-            else if (argMethod instanceof PropertyConstant)
-                {
-                assert !exprName.hasSideEffects();
-                PropertyConstant  idProp = (PropertyConstant) argMethod;
-                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                if (prop.isConstant())
+                // idMethod is a MethodConstant for a method (including "finally")
+                if (m_fBindTarget)
                     {
-                    if (prop.hasInitialValue())
-                        {
-                        argFn = prop.getInitialValue();
-                        }
-                    else
-                        {
-                        // generate code to get the value of the constant property
-                        Register regResult = new Register(prop.getType());
-                        code.add(new P_Get(idProp, Register.IGNORE, regResult));
-                        argFn = regResult;
-                        }
-                    }
-                else
-                    {
+                    // the method needs a target (its "this")
                     Argument argTarget;
                     if (exprLeft == null)
                         {
@@ -629,95 +608,124 @@ public class InvocationExpression
                         argTarget = exprLeft.generateArgument(code, false, true, true, errs);
                         }
 
-                    // TODO use argTarget to get argFn
+                    if (m_fCall)
+                        {
+                        // it's a method, and we need to generate the necessary code that calls it;
+                        // generate the arguments
+                        TypeConstant[] atypeParams = idMethod.getRawParams();
+                        int            cArgs       = atypeParams.length;
+                        char           chArgs      = '0';
+                        Argument       arg         = null;
+                        Argument[]     aArgs       = null;
+                        assert cArgs == args.size(); // TODO eventually support default arg values
+                        // TODO the following code doesn't do argument conversions to the required parameter types
+                        if (cArgs == 1)
+                            {
+                            chArgs = '1';
+                            arg    = args.get(0).generateArgument(code, false, false, true, errs);
+                            }
+                        else if (cArgs > 1)
+                            {
+                            chArgs = 'N';
+                            aArgs  = new Argument[cArgs];
+                            for (int i = 0; i < cArgs; ++i)
+                                {
+                                aArgs[i] = args.get(i).generateArgument(code, false, false, true, errs);
+                                }
+                            }
+
+                        // generate registers for the return values
+                        TypeConstant[] atypeRets = idMethod.getRawReturns();
+                        int            cRets     = atypeRets.length;
+                        char           chRets    = '0';
+                        Register       ret       = null;
+                        Register[]     aRets     = Register.NO_REGS;
+                        if (cRets == 1)
+                            {
+                            chRets = '1';
+                            ret    = new Register(atypeRets[0]);
+                            aRets  = new Register[] {ret};
+                            }
+                        else if (cRets > 1)
+                            {
+                            chRets = 'N';
+                            aRets  = new Register[cRets];
+                            for (int i = 0; i < cRets; ++i)
+                                {
+                                aRets[i] = new Register(atypeRets[i]);
+                                }
+                            }
+
+                        switch (String.valueOf(chArgs) + chRets)
+                            {
+                            case "00":
+                                code.add(new Invoke_00(argTarget, idMethod));
+                                break;
+
+                            case "10":
+                                code.add(new Invoke_10(argTarget, idMethod, arg));
+                                break;
+
+                            case "N0":
+                                code.add(new Invoke_N0(argTarget, idMethod, aArgs));
+                                break;
+
+                            case "01":
+                                code.add(new Invoke_01(argTarget, idMethod, ret));
+                                break;
+
+                            case "11":
+                                code.add(new Invoke_11(argTarget, idMethod, arg, ret));
+                                break;
+
+                            case "N1":
+                                code.add(new Invoke_N1(argTarget, idMethod, aArgs, ret));
+                                break;
+
+                            case "0N":
+                                code.add(new Invoke_0N(argTarget, idMethod, aRets));
+                                break;
+
+                            case "1N":
+                                code.add(new Invoke_1N(argTarget, idMethod, arg, aRets));
+                                break;
+
+                            case "NN":
+                                code.add(new Invoke_NN(argTarget, idMethod, aArgs, aRets));
+                                break;
+
+                            default:
+                                throw new UnsupportedOperationException("TODO method invocation");
+                            }
+
+                        return aRets;
+                        }
+                    else
+                        {
+                        // the method gets bound to become a function; do this and drop through to
+                        // the function handling
+                        argFn = new Register(idMethod.getSignature().asFunctionType());
+                        code.add(new MBind(argTarget, idMethod, argFn));
+                        }
+                    }
+                else
+                    {
+                    // the method instance itself is the result, e.g. "Method m = Frog.&jump();"
+                    assert m_idConvert == null && !m_fBindParams && !m_fCall;
+                    return new Argument[] {m_argMethod};
                     }
                 }
-            else
+            else // _NOT_ a method (so it must be a function)
                 {
-                // if (argMethod instanceof ) TODO TODO TODO this mess is where i'm currently working
-                throw new UnsupportedOperationException();
+                // use the function identity as the argument & drop through to the function handling
+                assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects());
+                argFn = m_argMethod;
                 }
-
-            // Expression       expr;
-            // List<Expression> args;
-            // boolean        m_fBindTarget;
-            // boolean        m_fBindParams;
-            // boolean        m_fCall;
-            // Argument       m_argMethod;
-            // MethodConstant m_idConvert;
-
-//            m_
-//            // handle conversion to function
-//            if (m_idConvert != null)
-//                {
-//                // the first return type of the idConvert method must be a function, which in turn
-//                // has two sub-types, the first of which is its "params" and the second of which is
-//                // its "returns", and the returns is a tuple type parameterized by the types of the
-//                // return values from the function
-//                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-//                TypeConstant[] atypeResult   = m_fCall
-//                        ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
-//                        : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-//                return finishValidations(TypeFit.Fit, atypeResult, null);
-//                }
-//
-//                // handle method or function
-//                if (argMethod instanceof MethodConstant)
-//                    {
-//                    TypeConstant[] atypeResult = m_fCall
-//                            ? ((MethodConstant) argMethod).getRawReturns()
-//                            : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
-//                    return finishValidations(TypeFit.Fit, atypeResult, null);
-//                    }
-//
-//                // must be a property or a variable of type function (@Auto conversion possibility
-//                // already handled above); the function has two tuple sub-types, the second of which is
-//                // the "return types" of the function
-//                assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-//                TypeConstant typeArg = argMethod.getRefType();
-//                assert typeArg.isA(pool().typeFunction());
-//                TypeConstant[] atypeResult = m_fCall
-//                        ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
-//                        : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-//                return finishValidations(TypeFit.Fit, atypeResult, null);
-//                }
-//
-
-            // Expression       expr;
-            // List<Expression> args;
-            // boolean        m_fBindTarget;
-            // boolean        m_fBindParams;
-            // boolean        m_fCall;
-            // Argument       m_argMethod;
-            // MethodConstant m_idConvert;
-
-//            // determine left hand side of a method invocation
-//            Argument argTarget = null;
-//            if (m_fBindTarget)
-//                {
-//                assert m_argMethod instanceof MethodConstant;
-//                assert m_idConvert == null;
-//
-//                Expression left = ((NameExpression) expr).left;
-//                if (left == null)
-//                    {
-//                    // TODO not necessarily "this"; may be a parent of "this"
-//                    // m_argMethod
-//                    // argTarget = new Register()
-//                    }
-//                else
-//                    {
-//                    argTarget = left.generateArgument(code, false, true, true, errs);
-//                    }
-//
-//                }
-//            // TODO else if (expr != null && expr.hasSideEffects()) {...}
             }
         else // _NOT_ an InvocationExpression of a NameExpression (i.e. it's just a function)
             {
-            assert !m_fBindTarget;
-
             // obtain the function that will be bound and/or called
+            assert !m_fBindTarget;
             argFn = expr.generateArgument(code, false, true, true, errs);
             }
 
@@ -739,115 +747,98 @@ public class InvocationExpression
             return new Argument[] {argFn};
             }
 
-        TypeConstant[] atypeSub     = typeFn.getParamTypesArray();
-        TypeConstant[] atypeParams  = atypeSub[F_ARGS].getParamTypesArray();
-        TypeConstant[] atypeReturns = atypeSub[F_RETS].getParamTypesArray();
-        int            cParams      = atypeParams.length;
-        int            cReturns     = atypeReturns.length;
+        TypeConstant[] atypeSub    = typeFn.getParamTypesArray();
+        TypeConstant[] atypeParams = atypeSub[F_ARGS].getParamTypesArray();
+        int            cParams     = atypeParams.length;
+        TypeConstant[] atypeRets   = atypeSub[F_RETS].getParamTypesArray();
+        int            cRets       = atypeRets.length;
         if (m_fCall)
             {
-            if (m_fBindParams)
+            int            cArgs = args.size();
+            char           chArgs      = '0';
+            Argument       arg         = null;
+            Argument[]     aArgs       = null;
+            assert cArgs == cParams; // TODO eventually support default arg values
+            assert m_fBindParams == cParams > 0;
+            // TODO the following code doesn't do argument conversions to the required parameter types
+            if (cArgs == 1)
                 {
-                // TODO the following code doesn't do argument conversions to the required parameter types
-                assert cParams == args.size();
-                switch (cParams)
+                chArgs = '1';
+                arg    = args.get(0).generateArgument(code, false, false, true, errs);
+                }
+            else if (cArgs > 1)
+                {
+                chArgs = 'N';
+                aArgs  = new Argument[cArgs];
+                for (int i = 0; i < cArgs; ++i)
                     {
-                    case 0:
-                        throw new IllegalStateException();
-
-                    case 1:
-                        {
-                        Argument arg = args.get(0).generateArgument(code, false, false, false, errs);
-
-                        switch (cReturns)
-                            {
-                            case 0:
-                                code.add(new Call_10(argFn, arg));
-                                return NO_RVALUES;
-
-                            case 1:
-                                {
-                                Register regResult = new Register(atypeReturns[0]);
-                                code.add(new Call_11(argFn, arg, regResult));
-                                return new Argument[] {regResult};
-                                }
-
-                            default:
-                                {
-                                Register[] aRets = new Register[cReturns];
-                                for (int i = 0; i < cReturns; ++i)
-                                    {
-                                    aRets[i] = new Register(atypeReturns[i]);
-                                    }
-                                code.add(new Call_1N(argFn, arg, aRets));
-                                return aRets;
-                                }
-                            }
-                        }
-
-                    default:
-                        {
-                        Argument[] aArgs = new Argument[cParams];
-                        for (int i = 0; i < cParams; ++i)
-                            {
-                            aArgs[i] = args.get(i).generateArgument(code, false, false, false, errs);
-                            }
-
-                        switch (cReturns)
-                            {
-                            case 0:
-                                code.add(new Call_N0(argFn, aArgs));
-                                return NO_RVALUES;
-
-                            case 1:
-                                {
-                                Register regResult = new Register(atypeReturns[0]);
-                                code.add(new Call_N1(argFn, aArgs, regResult));
-                                return new Argument[] {regResult};
-                                }
-
-                            default:
-                                {
-                                Register[] aRets = new Register[cReturns];
-                                for (int i = 0; i < cReturns; ++i)
-                                    {
-                                    aRets[i] = new Register(atypeReturns[i]);
-                                    }
-                                code.add(new Call_NN(argFn, aArgs, aRets));
-                                return aRets;
-                                }
-                            }
-                        }
+                    aArgs[i] = args.get(i).generateArgument(code, false, false, true, errs);
                     }
                 }
-            else // no parameters, just call the function
+
+            // generate registers for the return values
+            char       chRets = '0';
+            Register   ret    = null;
+            Register[] aRets  = Register.NO_REGS;
+            if (cRets == 1)
                 {
-                assert cParams == 0;
-                switch (cReturns)
+                chRets = '1';
+                ret    = new Register(atypeRets[0]);
+                aRets  = new Register[] {ret};
+                }
+            else if (cRets > 1)
+                {
+                chRets = 'N';
+                aRets  = new Register[cRets];
+                for (int i = 0; i < cRets; ++i)
                     {
-                    case 0:
-                        code.add(new Call_00(argFn));
-                        return NO_RVALUES;
-
-                    case 1:
-                        {
-                        Register regResult = new Register(atypeReturns[0]);
-                        code.add(new Call_01(argFn, regResult));
-                        return new Argument[] {regResult};
-                        }
-
-                    default:
-                        {
-                        Register[] aRets = new Register[cReturns];
-                        for (int i = 0; i < cReturns; ++i)
-                            {
-                            aRets[i] = new Register(atypeReturns[i]);
-                            }
-                        code.add(new Call_0N(argFn, aRets));
-                        return aRets;
-                        }
+                    aRets[i] = new Register(atypeRets[i]);
                     }
                 }
+
+            switch (String.valueOf(chArgs) + chRets)
+                {
+                case "00":
+                    code.add(new Call_00(argFn));
+                    break;
+
+                case "10":
+                    code.add(new Call_10(argFn, arg));
+                    break;
+
+                case "N0":
+                    code.add(new Call_N0(argFn, aArgs));
+                    break;
+
+                case "01":
+                    code.add(new Call_01(argFn, ret));
+                    break;
+
+                case "11":
+                    code.add(new Call_11(argFn, arg, ret));
+                    break;
+
+                case "N1":
+                    code.add(new Call_N1(argFn, aArgs, ret));
+                    break;
+
+                case "0N":
+                    code.add(new Call_0N(argFn, aRets));
+                    break;
+
+                case "1N":
+                    code.add(new Call_1N(argFn, arg, aRets));
+                    break;
+
+                case "NN":
+                    code.add(new Call_NN(argFn, aArgs, aRets));
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException("TODO method invocation");
+                }
+
+            return aRets;
             }
 
         // bind (or partially bind) the function
@@ -1170,7 +1161,7 @@ public class InvocationExpression
             // 6) matching (i.e. isA()) any specified redundant return types
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
-            if (id.getNestedDepth() == 1
+            if (id.getNestedDepth() == 2
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant

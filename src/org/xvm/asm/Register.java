@@ -277,6 +277,11 @@ public class Register
     public static final Register IGNORE = new Register(null, Op.A_IGNORE);
 
     /**
+     * Empty array of registers.
+     */
+    public static final Register[] NO_REGS = new Register[0];
+
+    /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.
      */
     static final int UNKNOWN = Integer.MIN_VALUE;

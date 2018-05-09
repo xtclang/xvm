@@ -34,6 +34,8 @@ public class MBind
      * @param nTarget    the target object containing the method
      * @param nMethodId  the method id
      * @param nRet       the location to store the resulting function
+     *
+     * @deprecated
      */
     public MBind(int nTarget, int nMethodId, int nRet)
         {
