@@ -1161,7 +1161,7 @@ public class InvocationExpression
             // 6) matching (i.e. isA()) any specified redundant return types
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
-            if (id.getNestedDepth() == 1
+            if (id.getNestedDepth() == 2
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant

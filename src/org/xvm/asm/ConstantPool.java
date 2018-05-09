@@ -2295,9 +2295,7 @@ public class ConstantPool
                                     {
                                     IdentityConstant idPropParent = ((PropertyConstant) typeParam.getDefiningConstant()).getParentConstant();
                                     ConstantPool     pool         = getConstantPool();
-                                    if (!idPropParent.equals(idParent)
-                                            && !pool.ensureTerminalTypeConstant(idPropParent)
-                                                    .isA(pool.ensureTerminalTypeConstant(idParent)))
+                                    if (!idPropParent.equals(idParent))
                                         {
                                         continue NextConst;
                                         }

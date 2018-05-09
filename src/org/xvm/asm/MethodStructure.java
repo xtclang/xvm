@@ -1222,7 +1222,14 @@ public class MethodStructure
 
         if (m_abOps == null && m_code != null)
             {
-            m_code.ensureAssembled();
+            try
+                {
+                m_code.ensureAssembled();
+                }
+            catch (UnsupportedOperationException e)
+                {
+                System.err.println("Error in MethodStructure.assemble(): " + e);
+                }
             }
 
         // write out the bytes (if there are any)
@@ -1602,7 +1609,15 @@ public class MethodStructure
                 assert f_method.m_registry == null;
                 Op.ConstantRegistry registry = f_method.m_registry =
                     new Op.ConstantRegistry(f_method.getConstantPool());
-                Op[] aop = ensureOps();
+                Op[] aop = Op.NO_OPS;
+                try
+                    {
+                    aop = ensureOps();
+                    }
+                catch (UnsupportedOperationException e)
+                    {
+                    System.err.println("Error in MethodStructure.registerConstants(): " + e);
+                    }
                 for (Op op : aop)
                     {
                     op.registerConstants(registry);

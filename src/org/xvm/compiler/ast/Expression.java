@@ -856,7 +856,7 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (!hasConstantValue() && !isVoid())
+        if (hasSideEffects())
             {
             if (isSingle())
                 {
