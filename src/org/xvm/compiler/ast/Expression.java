@@ -4,16 +4,21 @@ package org.xvm.compiler.ast;
 import java.util.Arrays;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Invoke_01;
@@ -1104,6 +1109,73 @@ public abstract class Expression
             }
 
         return argOut;
+        }
+
+    /**
+     * Generate a "this" or some other reserved register.
+     *
+     * @param nReg  the register identifier
+     * @param errs  the error list to log to
+     *
+     * @return the reserved register
+     */
+    protected Argument generateReserved(int nReg, ErrorListener errs)
+        {
+        boolean         fNoFunction  = true;
+        boolean         fNoConstruct = true;
+        ConstantPool    pool         = pool();
+        MethodStructure method       = (MethodStructure) getComponent();
+        TypeConstant    type         = method.getContainingClass().getIdentityConstant().asTypeConstant();
+        switch (nReg)
+            {
+            case Op.A_TARGET:
+                break;
+
+            case Op.A_PUBLIC:
+                type = pool.ensureAccessTypeConstant(type, Access.PUBLIC);
+                break;
+
+            case Op.A_PROTECTED:
+                type = pool.ensureAccessTypeConstant(type, Access.PROTECTED);
+                break;
+
+            case Op.A_PRIVATE:
+                type = pool.ensureAccessTypeConstant(type, Access.PRIVATE);
+                break;
+
+            case Op.A_STRUCT:
+                type = pool.ensureAccessTypeConstant(type, Access.STRUCT);
+                fNoConstruct = false;
+                break;
+
+            case Op.A_SERVICE:
+                type = pool.typeService();
+                fNoFunction  = false;
+                fNoConstruct = false;
+                break;
+
+            case Op.A_SUPER:
+                TypeInfo infoThis = type.ensureTypeInfo(errs);
+                MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
+                if (abody == null || abody.length <= 1)
+                    {
+                    log(errs, Severity.ERROR, Compiler.NO_SUPER);
+                    }
+
+                type  = method.getIdentityConstant().getSignature().asFunctionType();
+                break;
+
+            default:
+                throw new IllegalArgumentException("nReg=" + nReg);
+            }
+
+        if (fNoFunction && method.isFunction() && !method.isConstructor()
+                || fNoConstruct && method.isConstructor())
+            {
+            log(errs, Severity.ERROR, Compiler.NO_THIS);
+            }
+
+        return new Register(type, nReg);
         }
 
     /**

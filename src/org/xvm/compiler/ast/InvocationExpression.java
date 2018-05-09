@@ -12,7 +12,9 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 import org.xvm.asm.Op.Argument;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -589,11 +591,13 @@ public class InvocationExpression
             Argument argMethod = m_argMethod;
             if (argMethod instanceof Register)
                 {
+                assert !exprName.hasSideEffects();
                 assert exprLeft == null;
                 argFn = argMethod;
                 }
             else if (argMethod instanceof PropertyConstant)
                 {
+                assert !exprName.hasSideEffects();
                 PropertyConstant  idProp = (PropertyConstant) argMethod;
                 PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
                 if (prop.isConstant())
@@ -616,15 +620,22 @@ public class InvocationExpression
                     if (exprLeft == null)
                         {
                         // use "this"
-                        assert !code.getMethodStructure().isFunction();
-                        argTarget = new Register()
+                        MethodStructure method = code.getMethodStructure();
+                        assert !method.isFunction();
+                        argTarget = generateReserved(method.isConstructor() ? Op.A_STRUCT : Op.A_PRIVATE, errs);
                         }
                     else
                         {
-
+                        argTarget = exprLeft.generateArgument(code, false, true, true, errs);
                         }
-                    }
 
+                    // TODO use argTarget to get argFn
+                    }
+                }
+            else
+                {
+                // if (argMethod instanceof ) TODO TODO TODO this mess is where i'm currently working
+                throw new UnsupportedOperationException();
                 }
 
             // Expression       expr;
