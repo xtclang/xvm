@@ -218,7 +218,7 @@ public class NameExpression
     @Override
     protected boolean usesSuper()
         {
-        return name.getId() == Id.SUPER || left != null && left.usesSuper();
+        return name.getValueText().equals("super") || left != null && left.usesSuper();
         }
 
     @Override

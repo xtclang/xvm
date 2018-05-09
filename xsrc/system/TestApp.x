@@ -99,8 +99,8 @@ class TestApp
         Int method1()
             {
             String s = prop1;
-            Int of = s.indexOf("World");
-            return of + s.length();
+            Int of = s.indexOf("World", null);
+            return of + s.size;
             }
 
         Int exceptional(String? s)
@@ -165,7 +165,7 @@ class TestApp
         c = svc.counter;
         assert(c == 17);
 
-        function Int() fnInc = svc.increment; // counter = 18
+        function Int() fnInc = &svc.increment(); // counter = 18
         c = fnInc();
         print(c);
 
@@ -175,8 +175,10 @@ class TestApp
         print(fc);
         print(rfc);
 
-        FutureVar<Int> rfc2 = &svc.increment(); // counter = 20
-        @Future Int rfc3 = rfc2;
+        FutureVar<Int> rfc2;
+        @Future Int fc2 = svc.increment(); // counter = 20;
+        rfc2 = &rfc;
+
         rfc2.whenComplete((r, x) ->
             {
             print(c);
@@ -221,7 +223,7 @@ class TestApp
         svc.exceptional(0);
         }
 
-    static Int testBlockingReturn(Service svc)
+    static Int testBlockingReturn(TestService svc)
         {
         return svc.increment();
         }

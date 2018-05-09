@@ -197,7 +197,7 @@ public class xTestApp extends xModule
             .add(new Var_N(adapter.getClassTypeConstId("annotations.FutureVar<Int64>"),
                 adapter.ensureValueConstantId("rfc2"))) // #5 (rfc2)
             .add(new Var_DN(adapter.getClassTypeConstId("@annotations.FutureVar Var<Int64>"),
-                adapter.ensureValueConstantId("rfc3"))) // #6 (rfc3)
+                adapter.ensureValueConstantId("fc2"))) // #6 (fc2)
             .add(new Invoke_01(0,
                 adapter.getMethodConstId("TestApp.TestService", "increment"), 6))
             .add(new MoveRef(6, 5))

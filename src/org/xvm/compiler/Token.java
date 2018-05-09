@@ -651,12 +651,12 @@ public class Token
     private Object m_oValue;
 
     /**
-     * Each token konws if it follows whitespace.
+     * Each token knows if it follows whitespace.
      */
     private boolean m_fLeadingWhitespace;
 
     /**
-     * Each token konws if it has whitespace following.
+     * Each token knows if it has whitespace following.
      */
     private boolean m_fTrailingWhitespace;
     }

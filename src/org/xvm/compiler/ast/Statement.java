@@ -18,6 +18,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -713,17 +714,21 @@ public abstract class Statement
                     break;
 
                 case "super":
-                    TypeInfo infoThis = getThisType().ensureTypeInfo(errs);
-                    MethodStructure method = getMethod();
-                    MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
-                    if (abody == null || abody.length <= 1)
+                    {
+                    TypeInfo        info     = getThisType().ensureTypeInfo(errs);
+                    MethodStructure method   = getMethod();
+                    MethodConstant  idMethod = method.getIdentityConstant();
+                    MethodBody[]    chain    = info.getOptimizedMethodChain(idMethod);
+
+                    if (chain == null || chain.length <= 1)
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }
 
-                    type  = method.getIdentityConstant().getSignature().asFunctionType();
-                    nReg  = Op.A_SUPER;
+                    type = idMethod.getSignature().asFunctionType();
+                    nReg = Op.A_SUPER;
                     break;
+                    }
 
                 case "this:module":
                     // the module can be resolved to the actual module component at compile time

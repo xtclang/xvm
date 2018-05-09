@@ -21,9 +21,6 @@ import org.xvm.asm.constants.PropertyBody.Effect;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.append;
-import static org.xvm.util.Handy.dedupAdds;
-
 
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
@@ -1008,7 +1005,7 @@ public class PropertyInfo
         MethodBody[] chain = m_chainGet;
         if (chain == null)
             {
-            m_chainGet = chain = ensurePropertyChain(type, getGetterId());
+            m_chainGet = chain = type.getOptimizedMethodChain(getGetterId());
             }
 
         return chain;
@@ -1038,7 +1035,7 @@ public class PropertyInfo
         MethodBody[] chain = m_chainSet;
         if (chain == null)
             {
-            m_chainSet = chain = ensurePropertyChain(type, getSetterId());
+            m_chainSet = chain = type.getOptimizedMethodChain(getSetterId());
             }
 
         return chain;
@@ -1081,19 +1078,18 @@ public class PropertyInfo
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Validate the property accessor chain represented by this property info.
+     * Augment the method chain for a property accessor represented by this property info.
      *
      * REVIEW some of this could be done by the TypeInfo "build" process
      *
+     * @param chain    the raw method chain
      * @param type     the enclosing TypeInfo
      * @param constId  the accessor method constant
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    private MethodBody[] ensurePropertyChain(TypeInfo type, MethodConstant constId)
+    public MethodBody[] augmentPropertyChain(MethodBody[] chain, TypeInfo type, MethodConstant constId)
         {
-        MethodBody[] chain = type.getOptimizedMethodChain(constId);
-
         if (chain == null || chain.length == 0)
             {
             if (hasField())

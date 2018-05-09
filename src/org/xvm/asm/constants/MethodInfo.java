@@ -7,11 +7,13 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
 import org.xvm.util.Severity;
@@ -522,33 +524,51 @@ public class MethodInfo
      * default method. An optimized chain contains only method bodies with the implementation types
      * of: Explicit, Native, Delegating, Field, and Default.
      *
-     * @param type  the TypeInfo that contains this method
+     * @param infoType  the TypeInfo that contains this method
      *
      * @return a chain of bodies, each representing functionality to invoke, in their "super" order
      */
-    public MethodBody[] ensureOptimizedMethodChain(TypeInfo type)
+    public MethodBody[] ensureOptimizedMethodChain(TypeInfo infoType)
         {
-        MethodBody[] aBody = m_aBodyResolved;
-        if (aBody == null)
+        MethodBody[] chain = m_aBodyResolved;
+        if (chain == null)
             {
             // grab the "raw" (unoptimized) chain
-            aBody = getChain();
+            chain = getChain();
+
+            // when the method is a property accessor, we need to use the PropertyInfo
+            // to get the optimized chain (to include a potential field access body)
+            MethodBody      bodyHead  = chain[0];
+            MethodStructure method    = bodyHead.getMethodStructure();
+            Component       container = method.getParent().getParent();
+            if (container instanceof PropertyStructure)
+                {
+                PropertyStructure property     = (PropertyStructure) container;
+                MethodStructure   methodGetter = property.getGetter();
+                MethodStructure   methodSetter = property.getSetter();
+                if (method == methodGetter || method == methodSetter)
+                    {
+                    PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
+                    return m_aBodyResolved =
+                        infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
+                    }
+                }
 
             // first, see if this chain was capped, which means that it (virtually) redirects to
             // a different method chain, which (somewhere at the bottom of that chain) will contain
             // the method bodies that are "hidden" under this chain's cap
-            if (aBody[0].getImplementation() == Implementation.Capped)
+            if (bodyHead.getImplementation() == Implementation.Capped)
                 {
                 // note: turtles
-                return type.getOptimizedMethodChain(aBody[0].getNarrowingNestedIdentity());
+                return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
                 }
 
             // see if the chain will work as-is
             ArrayList  listNew     = null;
             MethodBody bodyDefault = null;
-            for (int i = 0, c = aBody.length; i < c; ++i)
+            for (int i = 0, c = chain.length; i < c; ++i)
                 {
-                MethodBody body = aBody[i];
+                MethodBody body = chain[i];
                 switch (body.getImplementation())
                     {
                     case Implicit:
@@ -559,7 +579,7 @@ public class MethodInfo
                         // so start building the optimized chain (if it has not already started)
                         if (listNew == null)
                             {
-                            listNew = startList(aBody, i);
+                            listNew = startList(chain, i);
                             }
                         break;
 
@@ -571,7 +591,7 @@ public class MethodInfo
                             }
                         if (listNew == null && i != c-1)
                             {
-                            listNew = startList(aBody, i);
+                            listNew = startList(chain, i);
                             }
                         break;
 
@@ -599,17 +619,17 @@ public class MethodInfo
                     listNew.add(bodyDefault);
                     }
                 int c = listNew.size();
-                aBody = c == 0
+                chain = c == 0
                         ? MethodBody.NO_BODIES
                         : (MethodBody[]) listNew.toArray(new MethodBody[c]);
                 }
 
             // cache the optimized chain (no worries about race conditions, as the result is
             // idempotent)
-            m_aBodyResolved = aBody;
+            m_aBodyResolved = chain;
             }
 
-        return aBody;
+        return chain;
         }
 
     /**
