@@ -914,7 +914,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedGetChain(PropertyConstant id)
         {
-        PropertyInfo prop  = findProperty(id);
+        PropertyInfo prop = findProperty(id);
         return prop == null
                 ? null
                 : prop.ensureOptimizedGetChain(this);
@@ -929,7 +929,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedSetChain(PropertyConstant id)
         {
-        PropertyInfo prop  = findProperty(id);
+        PropertyInfo prop = findProperty(id);
         return prop == null
                 ? null
                 : prop.ensureOptimizedSetChain(this);

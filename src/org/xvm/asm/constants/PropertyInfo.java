@@ -996,16 +996,23 @@ public class PropertyInfo
     /**
      * Obtain the method chain for the property getter represented by this property info.
      *
-     * @param type  the enclosing TypeInfo
+     * @param infoType  the enclosing TypeInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedGetChain(TypeInfo type)
+    public MethodBody[] ensureOptimizedGetChain(TypeInfo infoType)
         {
         MethodBody[] chain = m_chainGet;
         if (chain == null)
             {
-            m_chainGet = chain = type.getOptimizedMethodChain(getGetterId());
+            MethodConstant idGet = getGetterId();
+
+            chain = infoType.getOptimizedMethodChain(idGet);
+            if (chain == null)
+                {
+                chain = augmentPropertyChain(null, infoType, idGet);
+                }
+            m_chainGet = chain;
             }
 
         return chain;
@@ -1026,16 +1033,23 @@ public class PropertyInfo
     /**
      * Obtain the method chain for the property getter represented by this property info.
      *
-     * @param type  the enclosing TypeInfo
+     * @param infoType  the enclosing TypeInfo
      *
      * @return the method chain iff the property exists; otherwise null
      */
-    public MethodBody[] ensureOptimizedSetChain(TypeInfo type)
+    public MethodBody[] ensureOptimizedSetChain(TypeInfo infoType)
         {
         MethodBody[] chain = m_chainSet;
         if (chain == null)
             {
-            m_chainSet = chain = type.getOptimizedMethodChain(getSetterId());
+            MethodConstant idSet = getSetterId();
+
+            chain = infoType.getOptimizedMethodChain(idSet);
+            if (chain == null)
+                {
+                chain = augmentPropertyChain(null, infoType, idSet);
+                }
+            m_chainGet = chain;
             }
 
         return chain;

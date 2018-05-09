@@ -258,7 +258,7 @@ public class xTestApp extends xModule
         // --- testService2 ---
 
         MethodStructure ftTestReturn = getMethodStructure("testBlockingReturn",
-            new String[]{"Service"}, INT);
+            new String[]{"TestApp.TestService"}, INT);
         ftTestReturn.createCode()
             // #0 = svc
             .add(new Invoke_01(0,

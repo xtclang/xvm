@@ -547,23 +547,6 @@ public class MethodInfo
                 return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
                 }
 
-            // when the method is a property accessor, we need to use the PropertyInfo
-            // to get the optimized chain (to include a potential field access body)
-            MethodStructure method    = bodyHead.getMethodStructure();
-            Component       container = method.getParent().getParent();
-            if (container instanceof PropertyStructure)
-                {
-                PropertyStructure property     = (PropertyStructure) container;
-                MethodStructure   methodGetter = property.getGetter();
-                MethodStructure   methodSetter = property.getSetter();
-                if (method == methodGetter || method == methodSetter)
-                    {
-                    PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
-                    return m_aBodyResolved =
-                        infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
-                    }
-                }
-
             // see if the chain will work as-is
             ArrayList  listNew     = null;
             MethodBody bodyDefault = null;
@@ -623,6 +606,23 @@ public class MethodInfo
                 chain = c == 0
                         ? MethodBody.NO_BODIES
                         : (MethodBody[]) listNew.toArray(new MethodBody[c]);
+                }
+
+            // when the method is a property accessor, we need to use the PropertyInfo
+            // to get the optimized chain (to include a potential field access body)
+            MethodStructure method    = bodyHead.getMethodStructure();
+            Component       container = method.getParent().getParent();
+            if (container instanceof PropertyStructure)
+                {
+                PropertyStructure property     = (PropertyStructure) container;
+                MethodStructure   methodGetter = property.getGetter();
+                MethodStructure   methodSetter = property.getSetter();
+                if (method == methodGetter || method == methodSetter)
+                    {
+                    PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
+                    return m_aBodyResolved =
+                        infoProp.augmentPropertyChain(chain, infoType, method.getIdentityConstant());
+                    }
                 }
 
             // cache the optimized chain (no worries about race conditions, as the result is
