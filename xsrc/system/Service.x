@@ -210,16 +210,19 @@ interface Service()
     Void yield();
 
     /**
-     * Add a function-to-invoke to the service's backlog.
+     * Add a function-to-call to the service's backlog.
      *
      * This method is intended primarily to be used from within the service, so that the running
      * code can defer some separate unit of work until the existing backlog is processed. With
      * respect to calls from outside of the service, all such calls are treated similarly _as if_
      * they were queued in the backlog via this method.
      *
+     * Note, that the {@code doLater} function has access to the service instance via
+     * (@code this:service} reserved variable.
+     *
      * Exceptions raised by the {@code doLater} function are ignored and lost by the runtime.
      */
-    Void invokeLater(function Void doLater());
+    Void callLater(function Void doLater());
 
     /**
      * This is the memory footprint of the service, including memory that might not be being fully

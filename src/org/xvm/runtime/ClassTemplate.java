@@ -317,26 +317,6 @@ public abstract class ClassTemplate
         return tTest.equals(tParam);
         }
 
-    // find one of the "equals" or "compare" functions definition
-    // @param atRet is one of xBoolean.TYPES or xOrdered.TYPES
-    public MethodStructure findCompareFunction(String sName, TypeConstant[] atRet)
-        {
-        ClassTemplate template = this;
-        TypeConstant typeThis = getClassConstant().asTypeConstant();
-        TypeConstant[] atArg = new TypeConstant[] {typeThis, typeThis};
-        do
-            {
-            MethodStructure method = getDeclaredMethod(sName, atArg, atRet);
-            if  (method != null && method.isStatic())
-                {
-                return method;
-                }
-            template = template.m_templateSuper;
-            }
-        while (template != null);
-        return null;
-        }
-
     @Override
     public int hashCode()
         {

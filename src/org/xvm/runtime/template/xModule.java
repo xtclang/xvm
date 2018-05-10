@@ -2,16 +2,18 @@ package org.xvm.runtime.template;
 
 
 import java.util.Map;
-
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -39,6 +41,7 @@ public class xModule
         {
         }
 
+
     @Override
     public boolean isGenericHandle()
         {
@@ -51,20 +54,23 @@ public class xModule
         if (constant instanceof ModuleConstant)
             {
             ModuleConstant constModule = (ModuleConstant) constant;
+            TypeConstant typeModule = constModule.asTypeConstant();
+            TypeComposition clazz = ensureClass(typeModule, typeModule);
 
             return f_mapModules.computeIfAbsent(constModule.getName(),
-                    sName -> new ModuleHandle(getCanonicalClass(), sName));
+                    sName -> new ModuleHandle(clazz, sName));
             }
         return null;
         }
 
-    public static class ModuleHandle extends ObjectHandle
+    public static class ModuleHandle extends GenericHandle
         {
         String m_sName;
 
         protected ModuleHandle(TypeComposition clazz, String sName)
             {
             super(clazz);
+
             m_sName = sName;
             }
         }
