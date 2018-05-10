@@ -21,7 +21,7 @@ public class MoveVar
         extends OpMove
     {
     /**
-     * Construct a REF op.
+     * Construct a MOV_VAR op.
      *
      * @param nSource  the source location
      * @param nDest    the destination location
@@ -33,11 +33,11 @@ public class MoveVar
         super((Argument) null, null);
 
         m_nFromValue = nSource;
-        m_nToValue = nDest;
+        m_nToValue   = nDest;
         }
 
     /**
-     * Construct a REF op for the passed arguments.
+     * Construct a MOV_VAR op for the passed arguments.
      *
      * @param regSrc   the source Register
      * @param regDest  the destination Register

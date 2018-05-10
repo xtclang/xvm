@@ -219,6 +219,7 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
+                // REVIEW GG this is wrong to use "this.getConstantPool()" ... the constant pool must come from the resolver!
                 ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
         }

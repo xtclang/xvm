@@ -37,7 +37,7 @@ public abstract class OpMove
             throws IOException
         {
         m_nFromValue = readPackedInt(in);
-        m_nToValue = readPackedInt(in);
+        m_nToValue   = readPackedInt(in);
         }
 
     @Override

@@ -471,6 +471,12 @@ public class PropertyStructure
     // ----- component methods ---------------------------------------------------------------------
 
     @Override
+    public boolean isClassContainer()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isMethodContainer()
         {
         return true;

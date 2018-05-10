@@ -847,7 +847,7 @@ public class NameExpression
                 m_fAssignable = ((Register) arg).isWritable();
                 }
             }
-        else
+        else // left is NOT null
             {
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
             boolean fValid = true;
@@ -858,16 +858,16 @@ public class NameExpression
                 // it must either be ".this" or a child of the component
                 NameExpression   exprLeft = (NameExpression) left;
                 IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                switch (name.getId())
+                if (name.getValueText().equals("this"))
                     {
-                    case THIS:
-                        if (ctx.isFunction())
-                            {
-                            // TODO log error
-                            fValid = false;
-                            break;
-                            }
-
+                    if (ctx.isFunction())
+                        {
+                        name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
+                        fValid = false;
+                        }
+                    else
+                        {
+// TODO rethink this .. maybe walk up the parentage tree?
                         switch (idLeft.getFormat())
                             {
                             case Module:
@@ -881,7 +881,7 @@ public class NameExpression
                                 PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
                                 if (idRelative == null)
                                     {
-                                    // TODO log error
+                                    log(errs, Severity.ERROR, Compiler.MISSING_RELATIVE, sName);
                                     fValid = false;
                                     }
                                 else
@@ -901,39 +901,35 @@ public class NameExpression
                             default:
                                 throw new IllegalStateException("left=" + idLeft);
                             }
-                        break;
-
-                    case IDENTIFIER:
-                        SimpleResolutionCollector collector = new SimpleResolutionCollector();
-                        if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
+                        }
+                    }
+                else
+                    {
+                    SimpleResolutionCollector collector = new SimpleResolutionCollector();
+                    if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
+                        {
+                        Constant constant = collector.getConstant();
+                        switch (constant.getFormat())
                             {
-                            Constant constant = collector.getConstant();
-                            switch (constant.getFormat())
-                                {
-                                case Package:
-                                case Class:
-                                case Property:
-                                case Typedef:
-                                    m_arg = constant;
-                                    break;
+                            case Package:
+                            case Class:
+                            case Property:
+                            case Typedef:
+                                m_arg = constant;
+                                break;
 
-                                case MultiMethod:
-                                    // TODO log error
-                                    fValid = false;
-                                    break;
+                            case MultiMethod:
+                                log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
+                                fValid = false;
+                                break;
 
-                                case Module:        // why an error? because it can't be nested
-                                default:
-                                    throw new IllegalStateException("format=" + constant.getFormat()
-                                            + ", constant=" + constant);
+                            case Module:        // why an error? because it can't be nested
+                            default:
+                                throw new IllegalStateException("format=" + constant.getFormat()
+                                        + ", constant=" + constant);
 
-                                }
                             }
-                        break;
-
-                    default:
-                        name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
-                        break;
+                        }
                     }
                 }
 
@@ -1160,8 +1156,8 @@ public class NameExpression
      */
     protected boolean isIdentityMode(Context ctx, boolean fSoft)
         {
-        if (left == null ||
-            left instanceof NameExpression && ((NameExpression) left).isIdentityMode(ctx, true))
+        if (left == null || left instanceof NameExpression && !name.getValueText().equals("this")
+                && ((NameExpression) left).isIdentityMode(ctx, true))
             {
             switch (getMeaning())
                 {
