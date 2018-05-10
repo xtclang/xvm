@@ -113,6 +113,12 @@ public class ParentClassConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureParentTypeConstant(m_constChild.getType());
+        }
+
+    @Override
     public boolean isClass()
         {
         return true;

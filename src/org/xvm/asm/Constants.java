@@ -175,7 +175,7 @@ public interface Constants
     // ----- error codes ---------------------------------------------------------------------------
 
     /**
-     * Unknown error.
+     * Unknown error. {0}
      */
     public static final String VE_UNKNOWN                             = "VERIFY-01";
     /**

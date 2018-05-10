@@ -90,8 +90,13 @@ public class PropertyConstant
     @Override
     public TypeConstant getType()
         {
-        // TODO return Property<> or Ref<>
-        throw new IllegalStateException("TODO: property type?!");
+        // TODO this is not correct, but it is close; what we really need is a type that points at the prop itself as if it were a class
+        // REVIEW GG
+        TypeInfo     infoClz  = getClassIdentity().asTypeConstant().ensureTypeInfo();
+        PropertyInfo infoThis = infoClz.findProperty(this);
+        ConstantPool pool     = getConstantPool();
+        return pool.ensureParameterizedTypeConstant(
+                infoThis.isVar() ? pool.typeVar() : pool.typeRef(), getRefType());
         }
 
     @Override

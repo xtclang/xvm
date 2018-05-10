@@ -13,7 +13,10 @@ module Test
                 @Override
                 Int get()
                     {
-                    return Outer.this; //.x; // TODO  + y.this.z;
+                    Outer outer = Outer.this;
+                    C c = C.this;
+                    Var<Int> v = y.this;
+                    return Outer.this.x; // TODO  + y.this.z;
                     }
 
 //                Void set(Int n)

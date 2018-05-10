@@ -28,6 +28,7 @@ import org.xvm.type.Decimal;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
+import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -1482,11 +1483,27 @@ public class ConstantPool
      *
      * @return an auto-narrowing class type constant that represents the type of "this"
      */
-    public TypeConstant ensureThisTypeConstant(IdentityConstant constClass, Access access)
+    public TypeConstant ensureThisTypeConstant(Constant constClass, Access access)
         {
+        ThisClassConstant constId;
+        switch (constClass.getFormat())
+            {
+            case ThisClass:
+                constId = (ThisClassConstant) constClass;
+                break;
+
+            case Module:
+            case Package:
+            case Class:
+                constId = ensureThisClassConstant((IdentityConstant) constClass);
+                break;
+
+            default:
+                throw new IllegalStateException("constant=" + constClass);
+            }
+
         // get the raw type
-        ThisClassConstant constId   = ensureThisClassConstant(constClass);
-        TypeConstant      constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
+        TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
         if (constType == null)
             {
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constId));
@@ -2306,10 +2323,17 @@ public class ConstantPool
                     }
                 if (type != null)
                     {
-                    TypeInfo info = type.ensureTypeInfo(errlist);
-                    if (errlist.isAbortDesired())
+                    try
                         {
-                        return true;
+                        TypeInfo info = type.ensureTypeInfo(errlist);
+                        if (errlist.isAbortDesired())
+                            {
+                            return true;
+                            }
+                        }
+                    catch (IllegalStateException e)
+                        {
+                        errlist.log(Severity.ERROR, VE_UNKNOWN, new Object[] {e.toString()}, type);
                         }
                     }
                 }

@@ -77,6 +77,12 @@ public class ThisClassConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        return getConstantPool().ensureThisTypeConstant(this, null);
+        }
+
+    @Override
     public boolean isClass()
         {
         return true;

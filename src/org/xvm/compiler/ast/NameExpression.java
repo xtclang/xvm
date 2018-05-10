@@ -24,17 +24,22 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.ParentClassConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.PseudoConstant;
+import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.asm.op.L_Get;
+import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.P_Get;
 
+import org.xvm.asm.op.P_Ref;
+import org.xvm.asm.op.P_Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -566,12 +571,16 @@ public class NameExpression
                 switch (getMeaning())
                     {
                     case Class:
-                        // class is ALWAYS a constant; it results in a ClassConstant, a
-                        // PseudoConstant, a SingletonConstant, or a TypeConstant
+                        // other than "Outer.this", class is ALWAYS a constant; it results in a
+                        // ClassConstant, aPseudoConstant, a SingletonConstant, or a TypeConstant
                         switch (m_plan)
                             {
                             case None:
                                 constant = (Constant) argRaw;
+                                break;
+
+                            case OuterThis:
+                                // not a constant
                                 break;
 
                             case TypeOfClass:
@@ -621,8 +630,8 @@ public class NameExpression
                     {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             typeRequired.getValueString(), type.getValueString());
-                    fit    = TypeFit.NoFit;
-                    type   = typeRequired;
+                    fit  = TypeFit.NoFit;
+                    type = typeRequired;
                     }
                 else
                     {
@@ -717,6 +726,71 @@ public class NameExpression
             case None:
                 return argRaw;
 
+            case OuterThis:
+                switch (getMeaning())
+                    {
+                    case Class:
+                        {
+                        int cSteps = 0;
+                        PseudoConstant idClz = (PseudoConstant) argRaw;
+                        while (idClz instanceof ParentClassConstant)
+                            {
+                            idClz = ((ParentClassConstant) idClz).getChildClass();
+                            ++cSteps;
+                            }
+                        assert idClz instanceof ThisClassConstant;
+
+                        if (cSteps == 0)
+                            {
+                            // it's just "this" (but note that it results in the public type)
+                            return generateReserved(Op.A_PUBLIC, errs);
+                            }
+
+                        Register regOuter = new Register(((PseudoConstant) argRaw).getType());
+                        code.add(new MoveThis(cSteps, regOuter));
+                        return regOuter;
+                        }
+
+                    case Property:
+                        {
+                        PropertyConstant idProp = (PropertyConstant) argRaw;
+                        IdentityConstant idClz  = idProp.getClassIdentity();
+                        int cSteps = 0;
+
+                        // count the steps up to the class containing the property
+                        IdentityConstant idParent = code.getMethodStructure().getIdentityConstant();
+                        while (idParent.equals(idProp))
+                            {
+                            if (idParent.isClass())
+                                {
+                                ++cSteps;
+                                }
+                            idParent = idParent.getParentConstant();
+                            }
+
+                        Register regThis;
+                        if (cSteps == 0)
+                            {
+                            regThis = (Register) generateReserved(Op.A_PRIVATE, errs);
+                            }
+                        else
+                            {
+                            regThis = new Register(idClz.asTypeConstant());
+                            code.add(new MoveThis(cSteps, regThis));
+                            }
+
+                        TypeConstant type     = idProp.getType();
+                        Register     regOuter = new Register(type);
+                        code.add(type.isA(pool().typeVar())
+                                ? new P_Var(idProp, regThis, regOuter)
+                                : new P_Ref(idProp, regThis, regOuter));
+                        return regOuter;
+                        }
+
+                    default:
+                        throw new IllegalStateException("arg=" + argRaw);
+                    }
+
             case PropertyDeref:
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
                 boolean fThisProp = left == null; // TODO or left == this
@@ -798,11 +872,13 @@ public class NameExpression
             return m_arg;
             }
 
+        m_arg         = null;
+        m_fAssignable = false;
+
         // the first step is to resolve the name to a "raw" argument, i.e. what does the name refer
         // to, without consideration to read-only vs. read-write, reference vs. de-reference, static
         // vs. virtual, and so on
         String sName = name.getValueText();
-        m_fAssignable = false;
         if (left == null)
             {
             // resolve the initial name
@@ -847,7 +923,110 @@ public class NameExpression
                 m_fAssignable = ((Register) arg).isWritable();
                 }
             }
-        else // left is NOT null
+        else if (sName.equals("this"))
+            {
+            if (ctx.isFunction())
+                {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
+                }
+            else if (left instanceof NameExpression)
+                {
+                NameExpression   exprLeft = (NameExpression) left;
+                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
+                switch (idLeft.getFormat())
+                    {
+                    case Module:
+                    case Package:
+                    case Class:
+                        // the left has to be an identity mode
+                        if (exprLeft.isIdentityMode(ctx, true))
+                            {
+                            // if the left is a class, then the result is a sequence of at
+                            // least one (recursive) ParentClassConstant around a
+                            // ThisClassConstant; from this (context) point, walk up looking
+                            // for the specified class, counting the number of "parent
+                            // class" steps to get there
+                            PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
+                            if (idRelative == null)
+                                {
+                                log(errs, Severity.ERROR, Compiler.MISSING_RELATIVE, sName);
+                                }
+                            else
+                                {
+                                m_arg = idRelative;
+                                }
+                            }
+                        else
+                            {
+                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                            }
+                        break;
+
+                    case Property:
+                        // the left has to be in identity mode OR the property name does not have a
+                        // left
+                        if (exprLeft.isIdentityMode(ctx, true) || exprLeft.left == null)
+                            {
+                            // the property needs to be a parent (or grandparent, etc.) of the
+                            // current method, and not a constant value, and its class parent needs
+                            // to be a "relative" like getRelativeIdentity()
+                            Component parent = ctx.getMethod();
+                            NextParent: while (true)
+                                {
+                                IdentityConstant idParent = parent.getIdentityConstant();
+                                switch (idParent.getFormat())
+                                    {
+                                    case Property:
+                                        PropertyStructure prop = (PropertyStructure) parent;
+                                        if (prop.isConstant() || prop.isTypeParameter())
+                                            {
+                                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                                            break NextParent;
+                                            }
+
+                                        if (idParent.equals(idLeft))
+                                            {
+                                            // if the left is a property, then the result is the
+                                            // same as if we had said "&propname", i.e. the result
+                                            // is a Ref/Var for the property in question (i.e. the
+                                            // property's "this")
+                                            m_arg = idLeft;
+                                            }
+                                        break;
+
+                                    case Class:
+                                        if (!((ClassStructure) parent).isTopLevel() && !parent.isStatic())
+                                            {
+                                            break;
+                                            }
+                                        // fall through
+                                    case Module:
+                                    case Package:
+                                        // these are top level; it's an error that we haven't
+                                        // already found the property
+                                        name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                                        break NextParent;
+                                    }
+
+                                parent = parent.getParent();
+                                }
+                            }
+                        else
+                            {
+                            name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                            }
+                        break;
+
+                    default:
+                        throw new IllegalStateException("left=" + idLeft);
+                    }
+                }
+            else
+                {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                }
+            }
+        else // left is NOT null, and it is not a ".this"
             {
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
             boolean fValid = true;
@@ -855,80 +1034,31 @@ public class NameExpression
                     && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null
                     && ((NameExpression) left).isIdentityMode(ctx, true))
                 {
-                // it must either be ".this" or a child of the component
-                NameExpression   exprLeft = (NameExpression) left;
-                IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
-                if (name.getValueText().equals("this"))
+                // it must be a child of the component
+                NameExpression            exprLeft  = (NameExpression) left;
+                IdentityConstant          idLeft    = exprLeft.getIdentity(ctx);
+                SimpleResolutionCollector collector = new SimpleResolutionCollector();
+                if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
                     {
-                    if (ctx.isFunction())
+                    Constant constant = collector.getConstant();
+                    switch (constant.getFormat())
                         {
-                        name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
-                        fValid = false;
-                        }
-                    else
-                        {
-// TODO rethink this .. maybe walk up the parentage tree?
-                        switch (idLeft.getFormat())
-                            {
-                            case Module:
-                            case Package:
-                            case Class:
-                                // if the left is a class, then the result is a sequence of at
-                                // least one (recursive) ParentClassConstant around a
-                                // ThisClassConstant; from this (context) point, walk up looking
-                                // for the specified class, counting the number of "parent
-                                // class" steps to get there
-                                PseudoConstant idRelative = exprLeft.getRelativeIdentity(ctx);
-                                if (idRelative == null)
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.MISSING_RELATIVE, sName);
-                                    fValid = false;
-                                    }
-                                else
-                                    {
-                                    m_arg = idRelative;
-                                    }
-                                break;
+                        case Package:
+                        case Class:
+                        case Property:
+                        case Typedef:
+                            m_arg = constant;
+                            break;
 
-                            case Property:
-                                // if the left is a property, then the result is the same as if
-                                // we had said "&propname", i.e. the result is a Ref/Var for the
-                                // property in question (i.e. the property's "this")
-                                // TODO - the property needs to be a parent of the current method, and not a constant value, and its class parent needs to be a "relative" like getRelativeIdentity()
-                                // TODO - need to copy (or delegate to) the code for getting a Ref/Var for a property
-                                break;
+                        case MultiMethod:
+                            log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
+                            fValid = false;
+                            break;
 
-                            default:
-                                throw new IllegalStateException("left=" + idLeft);
-                            }
-                        }
-                    }
-                else
-                    {
-                    SimpleResolutionCollector collector = new SimpleResolutionCollector();
-                    if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
-                        {
-                        Constant constant = collector.getConstant();
-                        switch (constant.getFormat())
-                            {
-                            case Package:
-                            case Class:
-                            case Property:
-                            case Typedef:
-                                m_arg = constant;
-                                break;
-
-                            case MultiMethod:
-                                log(errs, Severity.ERROR, Compiler.UNEXPECTED_METHOD_NAME, sName);
-                                fValid = false;
-                                break;
-
-                            case Module:        // why an error? because it can't be nested
-                            default:
-                                throw new IllegalStateException("format=" + constant.getFormat()
-                                        + ", constant=" + constant);
-
-                            }
+                        case Module:        // why an error? because it can't be nested
+                        default:
+                            throw new IllegalStateException("format=" + constant.getFormat()
+                                    + ", constant=" + constant);
                         }
                     }
                 }
@@ -948,7 +1078,8 @@ public class NameExpression
                         {
                         // TODO typedefs
 
-                        name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING, sName);
+                        name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
+                                sName, ((NameExpression) left).getName());
                         }
                     else
                         {
@@ -1017,13 +1148,20 @@ public class NameExpression
         Constant constant = (Constant) argRaw;
         switch (constant.getFormat())
             {
+            // relative ID
+            case ThisClass:
+            case ParentClass:
+                if (name.getValueText().equals("this"))
+                    {
+                    assert left instanceof NameExpression;
+                    m_plan = Plan.OuterThis;
+                    return constant.getType();
+                    }
+                // fall through
             // class ID
             case Module:
             case Package:
             case Class:
-            // relative ID
-            case ThisClass:
-            case ParentClass:
                 // handle the SingletonConstant use cases
                 if (!isIdentityMode(ctx, false))
                     {
@@ -1061,6 +1199,13 @@ public class NameExpression
                 if (aTypeParams != null)
                     {
                     log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+                    }
+
+                if (name.getValueText().equals("this"))
+                    {
+                    assert left instanceof NameExpression;
+                    m_plan = Plan.OuterThis;
+                    return ((PropertyConstant) constant).getType();
                     }
 
                 PropertyConstant  id   = (PropertyConstant) argRaw;
@@ -1156,45 +1301,71 @@ public class NameExpression
      */
     protected boolean isIdentityMode(Context ctx, boolean fSoft)
         {
-        if (left == null || left instanceof NameExpression && !name.getValueText().equals("this")
-                && ((NameExpression) left).isIdentityMode(ctx, true))
+        // identity mode requires the left side to be absent or to be a name expression
+        if (left != null && !(left instanceof NameExpression))
             {
-            switch (getMeaning())
+            return false;
+            }
+
+        switch (getMeaning())
+            {
+            case Class:
                 {
-                case Class:
-                    // a class name can continue identity mode if no-de-ref is specified:
-                    // Name        method             specifies            "static"            specifies
-                    // refers to   context            no-de-ref            context             no-de-ref
-                    // ---------   -----------------  -------------------  ------------------  -------------------
-                    // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
-                    // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
-                    // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
+                // a class name can continue identity mode if no-de-ref is specified:
+                // Name        method             specifies            "static"            specifies
+                // refers to   context            no-de-ref            context             no-de-ref
+                // ---------   -----------------  -------------------  ------------------  -------------------
+                // Class       ClassConstant*     ClassConstant*       ClassConstant*      ClassConstant*
+                // - related   PseudoConstant*    ClassConstant*       ClassConstant*      ClassConstant*
+                // Singleton   SingletonConstant  ClassConstant*       SingletonConstant   ClassConstant*
 
-                    if (fSoft)
+                if (left != null)
+                    {
+                    // 1) the "left" NameExpression must be identity mode, and
+                    // 2) this NameExpression must NOT be ".this"
+                    if (!((NameExpression) left).isIdentityMode(ctx, true) || name.getValueText().equals("this"))
                         {
-                        IdentityConstant id = getIdentity(ctx);
-                        if (id instanceof ModuleConstant || id instanceof PackageConstant)
-                            {
-                            return true;
-                            }
+                        return false;
                         }
+                    }
 
-                    return isSuppressDeref() || !((ClassStructure) getIdentity(ctx).getComponent()).isSingleton();
+                if (fSoft)
+                    {
+                    IdentityConstant id = getIdentity(ctx);
+                    if (id instanceof ModuleConstant || id instanceof PackageConstant)
+                        {
+                        return true;
+                        }
+                    }
 
-                case Property:
-                    // a non-constant-property name can be "identity mode" if at least one of the
-                    // following is true:
-                    //   1) there is no left and the context is static; or
-                    //   2) there is a left, and it is in identity mode;
-                    //
-                    // Name        method             specifies            "static"            specifies
-                    // refers to   context            no-de-ref            context             no-de-ref
-                    // ---------   -----------------  -------------------  ------------------  -------------------
-                    // Property    T                  <- Ref/Var           Error               PropertyConstant*
-                    // type param  T                  <- Ref               T                   <- Ref
-                    // Constant    T                  <- Ref               T                   <- Ref
-                    PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
-                    return isSuppressDeref() && !prop.isConstant() && !prop.isTypeParameter() && left != null;
+                return isSuppressDeref() || !((ClassStructure) getIdentity(ctx).getComponent()).isSingleton();
+                }
+
+            case Property:
+                {
+                // a non-constant-property name can be "identity mode" if at least one of the
+                // following is true:
+                //   1) there is no left and the context is static; or
+                //   2) there is a left, and it is in identity mode;
+                //
+                // Name        method             specifies            "static"            specifies
+                // refers to   context            no-de-ref            context             no-de-ref
+                // ---------   -----------------  -------------------  ------------------  -------------------
+                // Property    T                  <- Ref/Var           Error               PropertyConstant*
+                // type param  T                  <- Ref               T                   <- Ref
+                // Constant    T                  <- Ref               T                   <- Ref
+
+                PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
+
+                if (name.getValueText().equals("this"))
+                    {
+                    // "propname.this" is legal, as long as we're on code somewhere nested inside of
+                    // "propname", and we can get a "this" for the class that contains it
+                    return left instanceof NameExpression && ((NameExpression) left).left == null;   // TODO grab checks from below?
+                    }
+
+                return isSuppressDeref() && !prop.isConstant() && !prop.isTypeParameter()
+                    && left != null && ((NameExpression) left).isIdentityMode(ctx, true);
                 }
             }
 
@@ -1355,7 +1526,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, OuterThis, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.

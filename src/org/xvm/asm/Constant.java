@@ -110,6 +110,8 @@ public abstract class Constant
 
     /**
      * Obtain the TypeConstant that represents the runtime type of the value of this constant.
+     * <p/>
+     * TODO swap getType() and getRefType() ... it appears that they are backwards (discussed with GG)
      *
      * @return a TypeConstant
      */

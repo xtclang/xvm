@@ -696,6 +696,10 @@ public class Compiler
      * Unexpected method name "{0}" encountered.
      */
     public static final String UNEXPECTED_METHOD_NAME             = "COMPILER-58";
+    /**
+     * The ".this" suffix must follow a parent class or parent property identity.
+     */
+    public static final String INVALID_OUTER_THIS                 = "COMPILER-59";
 
 
     // ----- data members --------------------------------------------------------------------------
