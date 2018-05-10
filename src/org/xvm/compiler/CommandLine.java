@@ -717,7 +717,8 @@ public class CommandLine
             }
         }
 
-    /*** After names/dependencies are resolved, generate the actual code.
+    /**
+     * After names/dependencies are resolved, generate the actual code.
      */
     protected void generateCode()
         {

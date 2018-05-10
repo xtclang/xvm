@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
@@ -360,8 +362,11 @@ public class Compiler
         {
         for (AstNode node : getDeferred())
             {
-            node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP,
-                    node.getComponent().getIdentityConstant().toString());
+            Component        component = node.getComponent();
+            IdentityConstant id        = component == null ? null : component.getIdentityConstant();
+            node.log(m_errs, Severity.FATAL, Compiler.INFINITE_RESOLVE_LOOP, id == null
+                    ? node.getSource().toString(node.getStartPosition(), node.getEndPosition())
+                    : id.toString());
             }
         }
 
@@ -683,6 +688,14 @@ public class Compiler
      * Could not find a matching method or function "{0}".
      */
     public static final String MISSING_METHOD                     = "COMPILER-56";
+    /**
+     * Could not find an "outer this" named "{0}".
+     */
+    public static final String MISSING_RELATIVE                   = "COMPILER-57";
+    /**
+     * Unexpected method name "{0}" encountered.
+     */
+    public static final String UNEXPECTED_METHOD_NAME             = "COMPILER-58";
 
 
     // ----- data members --------------------------------------------------------------------------
