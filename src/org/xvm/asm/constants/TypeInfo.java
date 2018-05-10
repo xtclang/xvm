@@ -936,6 +936,129 @@ public class TypeInfo
         }
 
     /**
+     * Find a named method or function that best matches the specified requirements.
+     *
+     * @param sName       the name of the method or function
+     * @param fMethods    true to include methods in the search
+     * @param fFunctions  true to include functions in the search
+     * @param aRedundant  the redundant return type information (helps to clarify which method or
+     *                    function to select)
+     * @param aArgs       the types of the arguments being provided (some of which may be null to
+     *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     *
+     * @return the matching method or function (null if none found)
+     */
+    public MethodConstant findCallable(String sName, boolean fMethods, boolean fFunctions,
+                                       TypeConstant[] aRedundant, TypeConstant[] aArgs)
+        {
+        int cRedundant = aRedundant == null ? 0 : aRedundant.length;
+        int cArgs      = aArgs      == null ? 0 : aArgs     .length;
+
+        Map<MethodConstant, MethodInfo>       mapAll    = getMethods();
+        Map.Entry<MethodConstant, MethodInfo> entryBest = null;
+        Map<MethodConstant, MethodInfo>       mapMatch  = null;
+        NextMethod: for (Map.Entry<MethodConstant, MethodInfo> entry : mapAll.entrySet())
+            {
+            // 1) including only method and/or functions as appropriate;
+            // 2) matching the name;
+            // 3) for each named argument, having a matching parameter name on the method/function; // TODO
+            // 4) after accounting for named arguments, having at least as many parameters as the
+            //    number of provided arguments, and no more required parameters than the number of
+            //    provided arguments;
+            // 5) having each argument from steps (3) and (4) be isA() or @Auto convertible to the
+            //    type of each corresponding parameter; and
+            // 6) matching (i.e. isA()) any specified redundant return types
+            MethodConstant id   = entry.getKey();
+            MethodInfo     info = entry.getValue();
+            if (id.getNestedDepth() == 2
+                    && id.getName().equals(sName)
+                    && id.getRawParams() .length >= cArgs
+                    && id.getRawReturns().length >= cRedundant
+                    && (info.isFunction() ? fFunctions : fMethods))
+                {
+                SignatureConstant sig      = info.getSignature();
+                TypeConstant[]    aParams  = sig.getRawParams();
+                TypeConstant[]    aReturns = sig.getRawReturns();
+                for (int i = 0; i < cRedundant; ++i)
+                    {
+                    TypeConstant typeReturn    = aReturns  [i];
+                    TypeConstant typeRedundant = aRedundant[i];
+                    if (!typeReturn.isA(typeRedundant))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+                for (int i = 0; i < cArgs; ++i)
+                    {
+                    TypeConstant typeParam = aParams[i];
+                    TypeConstant typeArg   = aArgs  [i];
+                    if (typeArg != null &&                // null means unbound
+                            !(typeArg.isA(typeParam) || typeArg.getConverterTo(typeParam) != null))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+
+                int cParams = aParams.length;
+                if (cParams > cArgs)
+                    {
+                    // make sure that all required parameters have been satisfied;
+                    // the challenge that we have here is that there are potentially a large number
+                    // of MethodStructures that contribute to the resulting MethodInfo, and each can
+                    // have different defaults for the parameters
+                    // MethodStructure struct = ...
+                    // for (int i = cArgs; i < cParams; ++i)
+                    //     {
+                    //     // make sure that the parameter is optional
+                    //     TODO
+                    //     }
+                    continue NextMethod;
+                    }
+
+                if (entryBest == null && mapMatch == null)
+                    {
+                    // only one match so far
+                    entryBest = entry;
+                    }
+                else
+                    {
+                    if (mapMatch == null)
+                        {
+                        // switch to "multi choice" mode
+                        mapMatch = new HashMap<>();
+                        mapMatch.put(entryBest.getKey(), entryBest.getValue());
+                        entryBest = null;
+                        }
+
+                    mapMatch.put(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
+
+        if (entryBest != null)
+            {
+            // if one method matches, then that method is selected
+            return entryBest.getKey();
+            }
+
+        if (mapMatch == null)
+            {
+            // no matches
+            return null;
+            }
+
+        // with multiple methods and/or functions matching, the _best_ one must be selected.
+        // - First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+        //   used.
+        // - If that algorithm results in a single selection, then that single selection is used.
+        // - Otherwise, the redundant return types are used as a tie breaker; if that results in a
+        //   single selection, then that single selection is used.
+        // - Otherwise, the ambiguity is an error.
+        // TODO - how to factor in conversions?
+        return null;
+        }
+
+    /**
      * @return a MethodStructure for this type's "equals" function
      */
     public MethodStructure findEqualsFunction()

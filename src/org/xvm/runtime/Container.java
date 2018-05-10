@@ -15,11 +15,14 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
+import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xModule.ModuleHandle;
 
 
@@ -85,17 +88,20 @@ public class Container
 
         f_templates.loadNativeTemplates(f_moduleRoot);
 
+        ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
         if (f_sAppName.equals("TestApp"))
             {
             // TODO: remove -- but for now TestApp is a part of the "system"
             m_app = f_templates.getTemplate(f_sAppName);
+            assert structModule == f_moduleRoot;
             }
         else
             {
             m_app = f_templates.getTemplate(f_constModule);
+            m_hModule = (ModuleHandle) m_app.createConstHandle(null, f_constModule);
             }
 
-        m_contextMain = createServiceContext(f_sAppName, f_moduleRoot);
+        m_contextMain = createServiceContext(f_sAppName, structModule);
         xService.makeHandle(m_contextMain,
             xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
@@ -107,15 +113,47 @@ public class Container
         {
         try
             {
-            // TODO: find a matching method
-            MethodStructure mtRun = m_app.getDeclaredMethod(sMethodName, TemplateRegistry.VOID, TemplateRegistry.VOID);
-            if (mtRun == null)
+            TypeInfo infoApp = m_app.getCanonicalType().ensureTypeInfo();
+            int cArgs = ahArg == null ? 0 : ahArg.length;
+
+            TypeConstant[] atypeArg;
+            if (cArgs == 0)
+                {
+                atypeArg = TypeConstant.NO_TYPES;
+                }
+            else
+                {
+                atypeArg = new TypeConstant[cArgs];
+                for (int i = 0; i < cArgs; i++)
+                    {
+                    atypeArg[i] = ahArg[i].getType();
+                    }
+                }
+
+            MethodConstant idMethod = infoApp.findCallable(sMethodName, true, false,
+                TypeConstant.NO_TYPES, atypeArg);
+
+            if (idMethod == null)
                 {
                 System.err.println("Missing: " +  sMethodName + " method for " + m_app);
                 return;
                 }
 
-            m_contextMain.callLater(xFunction.makeHandle(mtRun), ahArg);
+            FunctionHandle hFunction;
+
+            if (m_hModule == null)
+                {
+                // TODO: remove along with the TestApp
+                hFunction = xFunction.makeHandle((MethodStructure) idMethod.getComponent());
+                }
+            else
+                {
+                CallChain chain = m_hModule.getComposition().
+                    getMethodCallChain(idMethod.getSignature());
+                hFunction = xFunction.makeHandle(chain, 0);
+                hFunction = hFunction.bindTarget(m_hModule);
+                }
+            m_contextMain.callLater(hFunction, ahArg);
             }
         catch (Exception e)
             {

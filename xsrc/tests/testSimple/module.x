@@ -1,7 +1,9 @@
 module TestSimple.xqiz.it
     {
-    public Void run()
+    @Inject X.io.Console console;
+
+    Void run()
         {
-        return;
+        console.println("\nHello world!!!");
         }
     }

@@ -105,7 +105,7 @@ public class xService
 
         switch (method.getName())
             {
-            case "invokeLater":
+            case "callLater":
                 {
                 return hService.m_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE);
                 }

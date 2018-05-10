@@ -422,6 +422,24 @@ public class ServiceContext
         return !f_queueMsg.isEmpty() || !f_queueSuspended.isEmpty() || m_frameCurrent != null;
         }
 
+    // send and asynchronous "call later" message to this context
+    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
+        {
+        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+
+        addRequest(new CallLaterRequest(hFunction, ahArg, future));
+
+        future.whenComplete((r, x) ->
+            {
+            if (x != null)
+                {
+                callUnhandledExceptionHandler(
+                    ((ExceptionHandle.WrapperException) x).getExceptionHandle());
+                }
+            });
+        return Op.R_NEXT;
+        }
+
     // send and asynchronous "construct service" message to this context
     public CompletableFuture<ServiceHandle> sendConstructRequest(Frame frameCaller,
                 MethodStructure constructor, TypeComposition clazz, ObjectHandle[] ahArg)
@@ -450,12 +468,8 @@ public class ServiceContext
 
         if (cReturns == 0)
             {
-            // "callLater" invocations are not guarded
-            if (frameCaller != null)
-                {
-                frameCaller.f_fiber.registerUncapturedRequest(future);
-                return null;
-                }
+            frameCaller.f_fiber.registerUncapturedRequest(future);
+            return null;
             }
         return future;
         }
@@ -507,21 +521,6 @@ public class ServiceContext
         addRequest(new ConstantInitializationRequest(frameCaller, method, future));
 
         return future;
-        }
-
-    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
-        {
-        CompletableFuture<ObjectHandle> future = sendInvoke1Request(null, hFunction, ahArg, 0);
-
-        future.whenComplete((r, x) ->
-            {
-            if (x != null)
-                {
-                callUnhandledExceptionHandler(
-                    ((ExceptionHandle.WrapperException) x).getExceptionHandle());
-                }
-            });
-        return Op.R_NEXT;
         }
 
     protected void callUnhandledExceptionHandler(ExceptionHandle hException)
@@ -680,6 +679,64 @@ public class ServiceContext
         }
 
     /**
+     * Represents a "fire and forget" call request onto a service.
+     */
+    public static class CallLaterRequest
+            extends Message
+        {
+        private final FunctionHandle f_hFunction;
+        private final ObjectHandle[] f_ahArg;
+        private final CompletableFuture<ObjectHandle> f_future;
+
+        public CallLaterRequest(FunctionHandle hFunction, ObjectHandle[] ahArg,
+                                CompletableFuture<ObjectHandle> future)
+            {
+            super(null);
+
+            f_hFunction = hFunction;
+            f_ahArg = ahArg;
+            f_future = future;
+            }
+
+        @Override
+        public Frame createFrame(ServiceContext context)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    return f_hFunction.call1(frame, null, f_ahArg, Frame.RET_UNUSED);
+                    }
+
+                public String toString()
+                    {
+                    return "CallLaterRequest";
+                    }
+                };
+
+            Frame frame0 = context.createServiceEntryFrame(this, 0,
+                    new Op[] {opCall, Return_0.INSTANCE});
+
+            frame0.setContinuation(_null ->
+                {
+                // "callLater" has returned
+                ExceptionHandle hException = frame0.m_hException;
+                if (hException == null)
+                    {
+                    f_future.complete(xTuple.H_VOID);
+                    }
+                else
+                    {
+                    f_future.completeExceptionally(hException.getException());
+                    }
+                return Op.R_NEXT;
+                });
+
+            return frame0;
+            }
+        }
+
+    /**
      * Represents an invoke request from one service onto another with zero or one return value.
      */
     public static class Invoke1Request
@@ -726,23 +783,7 @@ public class ServiceContext
                 {
                 if (f_cReturns == 0)
                     {
-                    if (f_fiberCaller == null)
-                        {
-                        // "callLater" has returned
-                        ExceptionHandle hException = frame0.m_hException;
-                        if (hException == null)
-                            {
-                            f_future.complete(xTuple.H_VOID);
-                            }
-                        else
-                            {
-                            f_future.completeExceptionally(hException.getException());
-                            }
-                        }
-                    else
-                        {
-                        sendResponse0(f_fiberCaller, frame0, f_future);
-                        }
+                    sendResponse0(f_fiberCaller, frame0, f_future);
                     }
                 else
                     {

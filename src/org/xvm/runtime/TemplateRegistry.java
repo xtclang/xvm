@@ -41,8 +41,6 @@ public class TemplateRegistry
     // cache - ClassTemplates by type
     private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
 
-    public final static TypeConstant[] VOID = ConstantPool.NO_TYPES;
-
     TemplateRegistry(Container container)
         {
         f_container = container;
