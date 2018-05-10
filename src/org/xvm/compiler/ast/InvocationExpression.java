@@ -1030,7 +1030,8 @@ public class InvocationExpression
                                 (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, errs);
                         if (arg != null)
                             {
-                            m_argMethod = arg;
+                            m_fBindTarget = true;
+                            m_argMethod   = arg;
                             break NextParent;
                             }
 
@@ -1094,6 +1095,7 @@ public class InvocationExpression
                 // - functions are NOT included because the left is NOT identity-mode
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
                 arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs, errs);
+                m_fBindTarget = arg != null;
                 }
 
             if (arg == null)

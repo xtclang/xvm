@@ -934,8 +934,8 @@ public abstract class Expression
                     m_fInAssignment = true;
                     generateVoid(code, errs);
                     m_fInAssignment = false;
+                    return;
                     }
-                break;
 
             case 1:
                 if (!m_fInAssignment)
@@ -943,17 +943,14 @@ public abstract class Expression
                     m_fInAssignment = true;
                     generateAssignment(code, aLVal[0], errs);
                     m_fInAssignment = false;
-                    break;
+                    return;
                     }
-                // fall through
+            }
 
-            default:
-                Argument[] aArg = generateArguments(code, false, errs);
-                for (int i = 0; i < cLVals; ++i)
-                    {
-                    aLVal[i].assign(aArg[i], code, errs);
-                    }
-                break;
+        Argument[] aArg = generateArguments(code, false, errs);
+        for (int i = 0; i < cLVals; ++i)
+            {
+            aLVal[i].assign(aArg[i], code, errs);
             }
         }
 
