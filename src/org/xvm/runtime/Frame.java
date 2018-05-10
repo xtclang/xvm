@@ -798,7 +798,7 @@ public class Frame
 
     public Constant getConstant(int iArg)
         {
-        assert iArg < Op.CONSTANT_OFFSET;
+        assert iArg <= Op.CONSTANT_OFFSET;
         return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
