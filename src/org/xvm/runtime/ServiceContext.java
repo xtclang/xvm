@@ -555,37 +555,41 @@ public class ServiceContext
             }
 
         // ignore any exception coming out of the handler
-        sendInvoke1Request(null, hFunction, new ObjectHandle[]{hException}, 0);
+        callLater(hFunction, new ObjectHandle[]{hException});
         }
 
 
     // ----- helpers ------
 
-    // send zero results back to the caller
-    protected static void sendResponse0(Fiber fiberCaller, Frame frame, CompletableFuture future)
+    // send the specified number of return values back to the caller
+    protected static int sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
         {
-        fiberCaller.f_context.respond(
-                new Response(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
-        }
+        switch (cReturns)
+            {
+            case 0:
+                fiberCaller.f_context.respond(
+                        new Response(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+                break;
 
-    // send one results back to the caller
-    protected static void sendResponse1(Fiber fiberCaller, Frame frame, CompletableFuture future)
-        {
-        ObjectHandle hReturn = frame.f_ahVar[0];
+            case 1:
+                {
+                ObjectHandle hReturn = frame.f_ahVar[0];
+                // TODO: validate that the argument is immutable or ImmutableAble;
+                //       replace functions with proxies
+                fiberCaller.f_context.respond(
+                        new Response(fiberCaller, hReturn, frame.m_hException, future));
+                break;
+                }
 
-        // TODO: validate that all the arguments are immutable or ImmutableAble;
-        //       replace functions with proxies
-        fiberCaller.f_context.respond(
-                new Response(fiberCaller, hReturn, frame.m_hException, future));
-        }
-
-    // send all results back to the caller
-    protected static void sendResponseN(Fiber fiberCaller, Frame frame, CompletableFuture future)
-        {
-        // TODO: validate that all the arguments are immutable or ImmutableAble;
-        //       replace functions with proxies
-        fiberCaller.f_context.respond(
-                new Response(fiberCaller, frame.f_ahVar, frame.m_hException, future));
+            default:
+                assert cReturns > 1;
+                // TODO: validate that all the arguments are immutable or ImmutableAble;
+                //       replace functions with proxies
+                fiberCaller.f_context.respond(
+                        new Response(fiberCaller, frame.f_ahVar, frame.m_hException, future));
+                break;
+            }
+        return Op.R_NEXT;
         }
 
     @Override
@@ -670,10 +674,13 @@ public class ServiceContext
 
             frame0.setContinuation(_null ->
                 {
-                sendResponse1(f_fiberCaller, frame0, f_future);
-                return Op.R_NEXT;
+                // an exception will dealt with by the caller (see sendConstructRequest)
+                if (frame0.m_hException == null)
+                    {
+                    context.setService((ServiceHandle) frame0.f_ahVar[0]);
+                    }
+                return sendResponse(f_fiberCaller, frame0, f_future, 1);
                 });
-
             return frame0;
             }
         }
@@ -780,17 +787,7 @@ public class ServiceContext
                     new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.setContinuation(_null ->
-                {
-                if (f_cReturns == 0)
-                    {
-                    sendResponse0(f_fiberCaller, frame0, f_future);
-                    }
-                else
-                    {
-                    sendResponse1(f_fiberCaller, frame0, f_future);
-                    }
-                return Op.R_NEXT;
-                });
+                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
             }
@@ -846,10 +843,7 @@ public class ServiceContext
                 new Op[] {opCall, Return_0.INSTANCE});
 
             frame0.setContinuation(_null ->
-                {
-                sendResponseN(f_fiberCaller, frame0, f_future);
-                return Op.R_NEXT;
-                });
+                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
             }
@@ -907,17 +901,7 @@ public class ServiceContext
                     new Op[]{opCall, Return_0.INSTANCE});
 
             frame0.setContinuation(_null ->
-                {
-                if (cReturns == 0)
-                    {
-                    sendResponse0(f_fiberCaller, frame0, f_future);
-                    }
-                else
-                    {
-                    sendResponse1(f_fiberCaller, frame0, f_future);
-                    }
-                return Op.R_NEXT;
-                });
+                sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
 
             return frame0;
             }
@@ -961,10 +945,7 @@ public class ServiceContext
                     new Op[]{opCall, Return_0.INSTANCE});
 
             frame0.setContinuation(_null ->
-                {
-                sendResponse0(f_fiberCaller, frame0, f_future);
-                return Op.R_NEXT;
-                });
+                sendResponse(f_fiberCaller, frame0, f_future, 1));
 
             return frame0;
             }

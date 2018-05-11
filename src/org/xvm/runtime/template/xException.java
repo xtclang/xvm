@@ -65,10 +65,9 @@ public class xException
         ExceptionHandle hException = makeMutableStruct(INSTANCE.getCanonicalClass(), null, null);
 
         hException.setField("text", xString.makeHandle(sMessage));
-
-        hException.ensureAccess(Access.PUBLIC);
         hException.makeImmutable();
-        return hException;
+
+        return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
         }
 
     private static ExceptionHandle makeMutableStruct(TypeComposition clazz,

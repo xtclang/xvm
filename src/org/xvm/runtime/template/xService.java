@@ -60,6 +60,12 @@ public class xService
         return this == INSTANCE ? INCEPTION_CLASS : super.getInceptionClassConstant();
         }
 
+    public int constructSync(Frame frame, MethodStructure constructor,
+                             TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
+        {
+        return super.construct(frame, constructor, clazz, ahArg, iReturn);
+        }
+
     @Override
     public int construct(Frame frame, MethodStructure constructor,
                          TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
@@ -75,10 +81,7 @@ public class xService
     protected ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         // called via constructSync()
-        ServiceContext context = frame.f_context;
-        ServiceHandle hService = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
-        context.setService(hService);
-        return hService;
+        return new ServiceHandle(clazz.ensureAccess(Access.STRUCT), frame.f_context);
         }
 
     @Override
@@ -340,14 +343,6 @@ public class xService
         return frame.assignValue(iReturn, xString.makeHandle(hService.m_context.toString()));
         }
 
-
-    // ----- Service API -----
-
-    public int constructSync(Frame frame, MethodStructure constructor,
-                             TypeComposition clazz, ObjectHandle[] ahArg, int iReturn)
-        {
-        return super.construct(frame, constructor, clazz, ahArg, iReturn);
-        }
 
     // ----- ObjectHandle -----
 

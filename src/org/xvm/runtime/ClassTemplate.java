@@ -687,18 +687,23 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
+        if (hTarget.isStruct())
+            {
+            return getFieldValue(frame, hTarget, sPropName, iReturn);
+            }
+
         CallChain chain = hTarget.getComposition().getPropertyGetterChain(sPropName);
         if (chain.isNative())
             {
             return invokeNativeGet(frame, sPropName, hTarget, iReturn);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : chain.getTop();
-        if (method == null)
+        if (chain.isField())
             {
             return getFieldValue(frame, hTarget, sPropName, iReturn);
             }
 
+        MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
 
         return frame.invoke1(chain, 0, hTarget, ahVar, iReturn);
@@ -776,14 +781,18 @@ public abstract class ClassTemplate
             throw new IllegalStateException(f_sName);
             }
 
-        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
-        PropertyStructure property = chain.getProperty();
+        if (hTarget.isStruct())
+            {
+            return setFieldValue(frame, hTarget, sPropName, hValue);
+            }
 
         if (!hTarget.isMutable())
             {
             return frame.raiseException(
                 xException.makeHandle("Immutable object: " + hTarget));
             }
+
+        CallChain chain = hTarget.getComposition().getPropertySetterChain(sPropName);
 
 //        if (chain.getDepth() == 0)
 //            {
@@ -793,15 +802,15 @@ public abstract class ClassTemplate
 
         if (chain.isNative())
             {
-            return invokeNativeSet(frame, hTarget, property, hValue);
+            return invokeNativeSet(frame, hTarget, chain.getProperty(), hValue);
             }
 
-        MethodStructure method = hTarget.isStruct() ? null : property.getSetter();
-        if (method == null)
+        if (chain.isField())
             {
             return setFieldValue(frame, hTarget, sPropName, hValue);
             }
 
+        MethodStructure method = chain.getTop();
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 

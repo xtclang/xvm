@@ -79,6 +79,9 @@ public class MethodDeclarationStatement
     /**
      * Create a MethodDeclarationStatement that turns an expression into a MethodStructure. This is
      * used, for example, by initializers.
+     * <p/>
+     * Note: the underlying expression can be retrieved using the {@link #getInitializerExpression()}
+     * method.
      *
      * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
      *                compile into
@@ -159,6 +162,29 @@ public class MethodDeclarationStatement
         return body != null && body.usesSuper();
         }
 
+    /**
+     * This helper method is only used for MethodDeclarationStatements that are created with the
+     * {@link #MethodDeclarationStatement(MethodStructure, Expression) method-based constructor}
+     *
+     * @return the one expression that defines the return value of this statement, if such a thing
+     *         is even possible; otherwise null
+     */
+    public Expression getInitializerExpression()
+        {
+        List<Statement> list = body.stmts;
+        if (list.isEmpty())
+            {
+            return null;
+            }
+
+        Statement stmtFirst = list.get(0);
+        if (stmtFirst instanceof ReturnStatement && ((ReturnStatement) stmtFirst).exprs.size() == 1)
+            {
+            return ((ReturnStatement) stmtFirst).exprs.get(0);
+            }
+
+        return null;
+        }
 
     // ----- compile phases ------------------------------------------------------------------------
 

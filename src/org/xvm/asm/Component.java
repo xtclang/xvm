@@ -874,6 +874,68 @@ public abstract class Component
         }
 
     /**
+     * Remove the specified child.
+     *
+     * @param child  the child of this component to remove
+     */
+    public void removeChild(Component child)
+        {
+        assert child.getParent() == this;
+
+        // if the child is a method, it is stored by its signature; otherwise, it is stored by
+        // its name
+        Map<Object, Component> kids;
+        Object id;
+        if (child instanceof MethodStructure)
+            {
+            kids = (Map) ensureMethodByConstantMap();
+            id   = child.getIdentityConstant();
+            }
+        else
+            {
+            kids = (Map) ensureChildByNameMap();
+            id   = child.getName();
+            }
+
+        Component sibling = kids.remove(id);
+        if (sibling == child && child.m_sibling == null)
+            {
+            // most common case: the specified child is the only sibling with that id
+            markModified();
+            return;
+            }
+
+        if (sibling == null)
+            {
+            // the child was not there
+            return;
+            }
+
+        if (sibling == child)
+            {
+            // the child to remove is in the head of the linked list
+            kids.put(id, child.m_sibling);
+            markModified();
+            return;
+            }
+
+        // the child to remove is in the middle of the linked list;
+        // put the linked list back first, then find and remove the child
+        kids.put(id, sibling);
+        do
+            {
+            if (sibling.m_sibling == child)
+                {
+                sibling.m_sibling = child.m_sibling;
+                markModified();
+                return;
+                }
+            sibling = sibling.m_sibling;
+            }
+        while (sibling != null);
+        }
+
+    /**
      * @return true if this component can contain packages
      */
     public boolean isPackageContainer()

@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.*;
@@ -245,28 +246,59 @@ public class PropertyDeclarationStatement
                 TypeConstant type = prop.getType();
                 assert !type.containsUnresolved();
 
-                // the initial value has to be resolved; we have to decide either to use the expression
-                // to create a constant value or an initializer function
-                if (!value.isAborting() && value.isConstant())
+                // create an initializer function
+                MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
+                        org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                        new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
+                        "=", Parameter.NO_PARAMS, false);
+
+                // wrap it with a pretend function in the AST tree
+                MethodDeclarationStatement stmtInit = new MethodDeclarationStatement(methodInit, value);
+                stmtInit.setParent(this);
+
+                // we're going to compile the initializer now, so that we can determine if it could
+                // be discarded and replaced with a constant
+                List<AstNode> listTemp = new ArrayList<>();
+                stmtInit = (MethodDeclarationStatement) stmtInit.registerStructures(errs);
+                stmtInit = (MethodDeclarationStatement) stmtInit.resolveNames(listTemp, errs);
+                if (listTemp.isEmpty())
                     {
+                    stmtInit = (MethodDeclarationStatement) stmtInit.validateExpressions(listTemp, errs);
+                    if (listTemp.isEmpty())
+                        {
+                        stmtInit.generateCode(listTemp, errs);
+                        }
+                    }
+                if (!listTemp.isEmpty())
+                    {
+                    listRevisit.add(this);
+                    return this;
+                    }
+
+                // if in the process of compiling the initializer, it became obvious that the result
+                // was a constant value, then just take that constant value and discard the
+                // initializer
+                Expression valueNew = stmtInit.getInitializerExpression();
+                if (valueNew != null && !value.isAborting() && value.isConstant())
+                    {
+                    value = valueNew;
+
                     Constant constValue = value.toConstant();
                     assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
                     prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
+
+                    // discard the initializer by removing the entire MultiMethodStructure
+                    MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();
+                    mms.getParent().removeChild(mms);
                     }
                 else
                     {
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
 
-                    // create an initializer function
-                    MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
-                            org.xvm.asm.Annotation.NO_ANNOTATIONS,
-                            new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                            "=", Parameter.NO_PARAMS, false);
-
-                    // wrap it with a pretend function in the AST tree
-                    initializer = new MethodDeclarationStatement(methodInit, value);
-                    initializer.setParent(this);
+                    // REVIEW should value be nulled out since it's now "owned by" initializer?
+                    // REVIEW and if so, what other methods make decisions based on "value != null"?
+                    initializer = stmtInit;
                     }
                 }
             }

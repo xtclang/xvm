@@ -1247,7 +1247,9 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
-                .append("id=\"")
+                .append("host=\"")
+                .append(getParent().getParent().getName())
+                .append("\", id=\"")
                 .append(getIdentityConstant().getValueString())
                 .append("\", sig=")
                 .append(getIdentityConstant().getSignature())

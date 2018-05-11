@@ -19,6 +19,8 @@ public class CallChain
     // Construct the CallChain
     public CallChain(MethodBody[] aMethods)
         {
+        assert aMethods != null;
+
         f_aMethods = aMethods;
         }
 
@@ -46,6 +48,12 @@ public class CallChain
         {
         return f_aMethods.length == 0 ||
                f_aMethods[0].getImplementation() == Implementation.Native;
+        }
+
+    public boolean isField()
+        {
+        return f_aMethods.length > 0 ||
+               f_aMethods[0].getImplementation() == Implementation.Field;
         }
 
     public boolean isExplicit()

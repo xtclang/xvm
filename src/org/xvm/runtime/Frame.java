@@ -102,7 +102,11 @@ public class Frame
         f_aOp      = function.getOps();
 
         f_hTarget = hTarget;
-        f_hThis   = hTarget == null ? null : hTarget.revealOrigin();
+        f_hThis   = hTarget == null
+                    ? null
+                    : hTarget.isStruct()
+                        ? hTarget
+                        : hTarget.revealOrigin();
 
         f_ahVar = ahVar;
         f_aInfo = new VarInfo[ahVar.length];
@@ -372,7 +376,7 @@ public class Frame
                     {
                     throw new IllegalStateException();
                     }
-                return f_hThis.ensureAccess(Access.PRIVATE);
+                return f_hThis;
 
             case Op.A_STRUCT:
                 if (f_hThis == null)
