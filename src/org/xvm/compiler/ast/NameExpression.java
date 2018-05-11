@@ -929,7 +929,8 @@ public class NameExpression
                 {
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 }
-            else if (left instanceof NameExpression)
+            else if (left instanceof NameExpression
+                    && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null)
                 {
                 NameExpression   exprLeft = (NameExpression) left;
                 IdentityConstant idLeft   = exprLeft.getIdentity(ctx);
@@ -991,6 +992,7 @@ public class NameExpression
                                             // is a Ref/Var for the property in question (i.e. the
                                             // property's "this")
                                             m_arg = idLeft;
+                                            break NextParent;
                                             }
                                         break;
 
