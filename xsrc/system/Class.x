@@ -83,7 +83,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      *   "extends" another interface.
      * * Incorporates - a class _incorporates_ a mixin.
      */
-    enum Action {Extends, Implements, Incorporates}
+    enum Action {Extends, Implements, Incorporates, Annotates}
 
     /**
      * A Composition represents a single step in a compositional recipe. A class is composed as a
