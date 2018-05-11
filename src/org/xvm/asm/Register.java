@@ -8,7 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
  * A Register represents a specific, typed, machine register of the XVM.
  */
 public class Register
-        implements Op.Argument
+        implements Argument
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ public class Register
      * @return the Register's type
      */
     @Override
-    public TypeConstant getRefType()
+    public TypeConstant getType()
         {
         return m_type;
         }

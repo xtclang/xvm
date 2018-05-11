@@ -73,6 +73,15 @@ public class PropertyConstant
         return sig;
         }
 
+    /**
+     * @return a TypeConstant representing a formal type represented by this property
+     */
+    public TypeConstant getFormalType()
+        {
+        return getConstantPool().ensureTerminalTypeConstant(this);
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -88,19 +97,19 @@ public class PropertyConstant
         }
 
     @Override
-    public TypeConstant getType()
+    public TypeConstant getRefType()
         {
         // TODO this is not correct, but it is close; what we really need is a type that points at the prop itself as if it were a class
         // REVIEW GG
-        TypeInfo     infoClz  = getClassIdentity().asTypeConstant().ensureTypeInfo();
+        TypeInfo     infoClz  = getClassIdentity().getType().ensureTypeInfo();
         PropertyInfo infoThis = infoClz.findProperty(this);
         ConstantPool pool     = getConstantPool();
         return pool.ensureParameterizedTypeConstant(
-                infoThis.isVar() ? pool.typeVar() : pool.typeRef(), getRefType());
+                infoThis.isVar() ? pool.typeVar() : pool.typeRef(), getType());
         }
 
     @Override
-    public TypeConstant getRefType()
+    public TypeConstant getType()
         {
         TypeConstant type = m_type;
         if (type == null)

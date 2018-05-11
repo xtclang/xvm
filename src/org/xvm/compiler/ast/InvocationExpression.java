@@ -4,9 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -15,14 +13,13 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -357,7 +354,7 @@ public class InvocationExpression
                 {
                 return m_fCall
                         ? ((MethodConstant) argMethod).getRawReturns()
-                        : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
+                        : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
                                                                                        // TODO                      if (m_fBindParams) { ...
                 }
 
@@ -365,7 +362,7 @@ public class InvocationExpression
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
             assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-            TypeConstant typeArg = argMethod.getRefType();
+            TypeConstant typeArg = argMethod.getType();
             assert typeArg.isA(pool().typeFunction());
             return m_fCall
                     ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
@@ -537,7 +534,7 @@ public class InvocationExpression
                         {
                         TypeConstant[] atypeResult = m_fCall
                                 ? ((MethodConstant) argMethod).getRawReturns()
-                                : new TypeConstant[] {((MethodConstant) argMethod).getType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
+                                : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
                         return finishValidations(TypeFit.Fit, atypeResult, null);
                         }
 
@@ -545,7 +542,7 @@ public class InvocationExpression
                     // already handled above); the function has two tuple sub-types, the second of which is
                     // the "return types" of the function
                     assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-                    TypeConstant typeArg = argMethod.getRefType();
+                    TypeConstant typeArg = argMethod.getType();
                     assert typeArg.isA(pool().typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
@@ -741,7 +738,7 @@ public class InvocationExpression
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
         // it to the desired function if necessary
-        TypeConstant typeFn = argFn.getRefType();
+        TypeConstant typeFn = argFn.getType();
         if (m_idConvert != null)
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
@@ -1002,7 +999,7 @@ public class InvocationExpression
                     // ignore them and continue
                     }
 
-                if (validateFunction(ctx, reg.getRefType(), aArgs, errs) == null)
+                if (validateFunction(ctx, reg.getType(), aArgs, errs) == null)
                     {
                     return null;
                     }

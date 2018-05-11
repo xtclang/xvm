@@ -1,6 +1,7 @@
 package org.xvm.runtime.template;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -493,7 +494,7 @@ public class xTestApp extends xModule
 
             Label labelFalse = new Label();
             code.add(new JumpFalse(var_i.getRegister(), labelFalse));
-            code.add(new Return_N(new Op.Argument[] {
+            code.add(new Return_N(new Argument[] {
                     adapter.ensureValueConstant(true),
                     adapter.ensureValueConstant("positive")}));
             code.add(labelFalse);

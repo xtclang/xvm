@@ -140,7 +140,7 @@ public class ParamInfo
             ParamInfo info = parameters.get(constProperty.getName());
             return info != null && info.isActualTypeSpecified()
                     ? info.getActualType()
-                    : constProperty.asTypeConstant();
+                    : constProperty.getFormalType();
             }
 
         @Override

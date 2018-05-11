@@ -12,8 +12,6 @@ import java.util.Map;
 
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Frame;
@@ -114,39 +112,6 @@ public abstract class Op
     public boolean usesSuper()
         {
         return false;
-        }
-
-    /**
-     * Represents any argument for an op, including constants, registers, and pre-defined
-     * references like "this".
-     */
-    public interface Argument
-        {
-        /**
-         * @return the RefType from the implicit Ref that this argument represents
-         */
-        TypeConstant getRefType();
-
-        /**
-         * For debugging purposes, format the optional "arg" and position
-         * @param arg
-         * @param nArg
-         * @return
-         */
-        static String toIdString(Argument arg, int nArg)
-            {
-            if (arg instanceof Constant)
-                {
-                return ((Constant) arg).getValueString();
-                }
-
-            if (arg instanceof Register)
-                {
-                return ((Register) arg).getIdString();
-                }
-
-            return Register.getIdString(nArg);
-            }
         }
 
     /**
@@ -1458,9 +1423,4 @@ public abstract class Op
      * index is {@code i}, it is encoded as: {@code CONSTANT_OFFSET - i}
      */
     public static final int CONSTANT_OFFSET = -17;
-
-    /**
-     * A stub for an op-code.
-     */
-    public static final Op[] STUB = new Op[] {Return_0.INSTANCE};
     }

@@ -748,7 +748,7 @@ public class PropertyInfo
 
             if (body.getImplementation() == Implementation.Delegating)
                 {
-                TypeInfo     typeThat = body.getDelegate().getRefType().ensureTypeInfo();
+                TypeInfo     typeThat = body.getDelegate().getType().ensureTypeInfo();
                 PropertyInfo propThat = typeThat.findProperty(getName());
                 return propThat != null && propThat.isVar();
                 }
@@ -936,6 +936,7 @@ public class PropertyInfo
      */
     public TypeConstant getRefType()
         {
+        // TODO cp - may need a TypeConstant for the specific type of the property
         TypeConstant typeProp = getType();
         ConstantPool pool     = typeProp.getConstantPool();
 

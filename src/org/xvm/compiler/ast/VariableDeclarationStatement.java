@@ -10,7 +10,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
@@ -266,7 +266,7 @@ public class VariableDeclarationStatement
             }
 
         // declare and initialize named var
-        TypeConstant typeVar = m_reg.getRefType();
+        TypeConstant typeVar = m_reg.getType();
         if (m_fPackingInit)
             {
             Argument[] aArgs = value.generateArguments(code, false, errs);

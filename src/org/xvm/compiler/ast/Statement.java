@@ -13,7 +13,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 

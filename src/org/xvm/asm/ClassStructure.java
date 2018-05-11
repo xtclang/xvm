@@ -262,7 +262,7 @@ public class ClassStructure
             ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
             if (mapParams == null)
                 {
-                typeFormal = constantClz.asTypeConstant();
+                typeFormal = constantClz.getType();
                 }
             else
                 {
@@ -297,7 +297,7 @@ public class ClassStructure
             ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
             if (mapParams == null)
                 {
-                typeCanonical = constClz.asTypeConstant();
+                typeCanonical = constClz.getType();
                 }
             else if (constClz.equals(pool.clzTuple()))
                 {
@@ -818,7 +818,7 @@ public class ClassStructure
                 // and since they cannot be conditional at any level, the actual types won't matter
                 // for further recursion
                 chainsContrib = typeContrib.collectContributions(
-                    idClzLeft.asTypeConstant(), new ArrayList<>(), new ArrayList<>());
+                    idClzLeft.getType(), new ArrayList<>(), new ArrayList<>());
                 }
 
             if (chainsContrib != null && !chainsContrib.isEmpty())

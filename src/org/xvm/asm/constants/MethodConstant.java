@@ -232,7 +232,7 @@ public class MethodConstant
         }
 
     @Override
-    public TypeConstant getType()
+    public TypeConstant getRefType()
         {
         ConstantPool    pool    = getConstantPool();
         MethodStructure method  = (MethodStructure) getComponent();
@@ -243,7 +243,7 @@ public class MethodConstant
                 ? pool.ensureParameterizedTypeConstant(pool.typeFunction(), params, returns)
                 // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
                 : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
-                        getParentConstant().getType(), params, returns);
+                        getNamespace().getType(), params, returns);
         }
 
     @Override

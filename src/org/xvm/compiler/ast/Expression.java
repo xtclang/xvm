@@ -10,7 +10,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -1090,7 +1090,7 @@ public abstract class Expression
         // assume that the result is the same as what was passed in
         Argument argOut = argIn;
 
-        TypeConstant typeIn = argIn.getRefType();
+        TypeConstant typeIn = argIn.getType();
         if (!typeIn.equals(typeOut) && !typeIn.isA(typeOut))
             {
             MethodConstant constConv = typeIn.ensureTypeInfo().findConversion(typeOut);
@@ -1122,7 +1122,7 @@ public abstract class Expression
         boolean         fNoConstruct = true;
         ConstantPool    pool         = pool();
         MethodStructure method       = (MethodStructure) getComponent();
-        TypeConstant    type         = method.getContainingClass().getIdentityConstant().asTypeConstant();
+        TypeConstant    type         = method.getContainingClass().getIdentityConstant().getType();
         switch (nReg)
             {
             case Op.A_TARGET:
@@ -1330,17 +1330,17 @@ public abstract class Expression
                     return pool().typeObject();
 
                 case LocalVar:
-                    return getRegister().getRefType();
+                    return getRegister().getType();
 
                 case LocalProp:
                 case TargetProp:
                 case IndexedProp:
                 case IndexedNProp:
-                    return getProperty().getRefType();
+                    return getProperty().getType();
 
                 case Indexed:
                 case IndexedN:
-                    return getArray().getRefType();
+                    return getArray().getType();
 
                 default:
                     throw new IllegalStateException();

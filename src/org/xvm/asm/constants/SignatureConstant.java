@@ -125,7 +125,7 @@ public class SignatureConstant
 
         m_constName     = pool.ensureStringConstant(constProperty.getName());
         m_aconstParams  = ConstantPool.NO_TYPES;
-        m_aconstReturns = new TypeConstant[] {constProperty.getRefType()};
+        m_aconstReturns = new TypeConstant[] {constProperty.getType()};
         m_fProperty     = true;
         }
 

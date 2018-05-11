@@ -66,7 +66,7 @@ import org.xvm.util.PackedInteger;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>, Cloneable, Op.Argument
+        implements Comparable<Constant>, Cloneable, Argument
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -110,22 +110,13 @@ public abstract class Constant
 
     /**
      * Obtain the TypeConstant that represents the runtime type of the value of this constant.
-     * <p/>
-     * TODO swap getType() and getRefType() ... it appears that they are backwards (discussed with GG)
      *
      * @return a TypeConstant
      */
+    @Override
     public TypeConstant getType()
         {
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
-        }
-
-    @Override
-    public TypeConstant getRefType()
-        {
-        // it's possible that we want to push this decision down to e.g. ValueConstant, but
-        // it seems like a reasonable default for now
-        return getType();
         }
 
     /**

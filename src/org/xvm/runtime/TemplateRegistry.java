@@ -77,7 +77,7 @@ public class TemplateRegistry
                 }
 
             if (f_mapTemplatesByType.containsKey(
-                    structClass.getIdentityConstant().asTypeConstant()))
+                    structClass.getIdentityConstant().getType()))
                 {
                 // already loaded - one of the "base" classes
                 continue;
@@ -157,7 +157,7 @@ public class TemplateRegistry
     protected void storeNativeTemplate(ClassTemplate template)
         {
         // register just a naked underlying type
-        TypeConstant typeBase = template.getClassConstant().asTypeConstant();
+        TypeConstant typeBase = template.getClassConstant().getType();
 
         registerNativeTemplate(typeBase, template);
         }
@@ -187,7 +187,7 @@ public class TemplateRegistry
         try
             {
             return f_mapTypesByName.computeIfAbsent(sName, s ->
-                getClassStructure(s).getIdentityConstant().asTypeConstant());
+                getClassStructure(s).getIdentityConstant().getType());
             }
         catch (NullPointerException e)
             {
@@ -236,7 +236,7 @@ public class TemplateRegistry
 
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
-        return f_mapTemplatesByType.computeIfAbsent(constClass.asTypeConstant(), type ->
+        return f_mapTemplatesByType.computeIfAbsent(constClass.getType(), type ->
             {
             Component struct = constClass.getComponent();
             ClassStructure structClass = (ClassStructure) struct;

@@ -72,7 +72,7 @@ public class SingletonConstant
     @Override
     public TypeConstant getType()
         {
-        return m_constClass.asTypeConstant();
+        return m_constClass.getType();
         }
 
     /**

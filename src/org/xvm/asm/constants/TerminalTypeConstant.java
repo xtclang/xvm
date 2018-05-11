@@ -256,7 +256,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
                         .resolveFormalType(sName, collector);
 
             case Typedef:
@@ -349,7 +349,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant();
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getType();
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -432,7 +432,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().asTypeConstant()
+                return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
                         .buildTypeInfo(errs);
 
             default:
@@ -915,7 +915,7 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clzLeft = (ClassStructure)
                     ((PseudoConstant) constIdLeft).getDeclarationLevelClass().getComponent();
-                return clzLeft.getIdentityConstant().asTypeConstant().
+                return clzLeft.getIdentityConstant().getType().
                     collectClassContributions(clzRight, listRight, chains);
                 }
 
@@ -958,7 +958,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdLeft).getDeclarationLevelClass().asTypeConstant().
+                return ((PseudoConstant) constIdLeft).getDeclarationLevelClass().getType().
                     isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
             default:
@@ -990,7 +990,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
                     containsSubstitutableMethod(signature, access, listParams);
 
             default:
@@ -1059,7 +1059,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
                     checkConsumption(sTypeName, access, listParams);
 
             default:
@@ -1131,7 +1131,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().asTypeConstant().
+                return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
                     checkProduction(sTypeName, access, listParams);
 
             default:

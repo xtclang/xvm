@@ -1897,7 +1897,7 @@ public class ConstantPool
 
     private TypeConstant makeNativeRebase(ClassConstant constClass)
         {
-        return new NativeRebaseConstant(constClass).asTypeConstant();
+        return new NativeRebaseConstant(constClass).getType();
         }
 
 
@@ -2287,7 +2287,7 @@ public class ConstantPool
                     case Module:
                     case Class:
                     case Typedef:
-                        type = ((IdentityConstant) constant).asTypeConstant();
+                        type = ((IdentityConstant) constant).getType();
                         break;
 
                     case TerminalType:

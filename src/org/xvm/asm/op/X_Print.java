@@ -1,6 +1,7 @@
 package org.xvm.asm.op;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpInvocable;

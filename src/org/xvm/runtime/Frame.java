@@ -872,7 +872,7 @@ public class Frame
             : iArg == Op.A_THIS
                 ? f_hThis.getType() // "this" is always resolved
                 // "local property" type needs to be resolved
-                : getConstant(iArg).getRefType().resolveGenerics(getGenericsResolver());
+                : getConstant(iArg).getType().resolveGenerics(getGenericsResolver());
         }
 
     protected TypeConstant getRegisterType(int iArg)
@@ -897,7 +897,7 @@ public class Frame
             }
 
         // "local property"
-        TypeConstant typeProp = getConstant(iArg).getRefType();
+        TypeConstant typeProp = getConstant(iArg).getType();
         return ensureClass(typeProp.resolveGenerics(getGenericsResolver()));
         }
 
@@ -1129,7 +1129,7 @@ public class Frame
         else
             {
             // "local property" or a literal constant
-            TypeConstant type = getConstant(nVarFrom).getRefType();
+            TypeConstant type = getConstant(nVarFrom).getType();
 
             f_aInfo[nVar] = new VarInfo(type.getPosition(), 0, VAR_STANDARD);
             }
@@ -1802,8 +1802,8 @@ public class Frame
 
             return typeTarget.isGenericType(constProperty.getName())
                 ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                constProperty.asTypeConstant().resolveGenerics(typeTarget))
-                : constProperty.getRefType().resolveGenerics(typeTarget);
+                    constProperty.getFormalType().resolveGenerics(typeTarget))
+                : constProperty.getType().resolveGenerics(typeTarget);
             }
         };
 

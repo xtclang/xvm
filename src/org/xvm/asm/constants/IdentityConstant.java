@@ -464,26 +464,6 @@ public abstract class IdentityConstant
         }
 
     /**
-     * @return a TypeConstant for this class
-     */
-    public TypeConstant asTypeConstant()
-        {
-        switch (getFormat())
-            {
-            case Module:
-            case Package:
-            case Class:
-            case Typedef:
-            case Property:
-            case NativeClass:
-                return getConstantPool().ensureTerminalTypeConstant(this);
-
-            default:
-                throw new IllegalStateException("not a class type: " + this);
-            }
-        }
-
-    /**
      * @return the TypeInfo for the type implied by this identity, which must be a class identity
      *         (including module and package), or a property identity (to obtain a nested TypeInfo
      *         for the property, as if the property were a class itself)
@@ -496,7 +476,7 @@ public abstract class IdentityConstant
             case Package:
             case Class:
             case Typedef:
-                return asTypeConstant().ensureTypeInfo(errs);
+                return getType().ensureTypeInfo(errs);
 
             case Property:
                 throw new UnsupportedOperationException("TODO: TypeInfo for property");
@@ -506,11 +486,12 @@ public abstract class IdentityConstant
             }
         }
 
-
-    // ----- constant methods ----------------------------------------------------------------------
-
-    @Override
-    public TypeConstant getType()
+    /**
+     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this constant.
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant getRefType()
         {
         if (isClass())
             {
@@ -525,7 +506,28 @@ public abstract class IdentityConstant
                     pool.ensureClassTypeConstant(this, Access.STRUCT));
             }
 
-        return super.getType();
+        throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
+        }
+
+
+    // ----- constant methods ----------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getType()
+        {
+        switch (getFormat())
+            {
+            case Module:
+            case Package:
+            case Class:
+            case Typedef:
+            case Property:
+            case NativeClass:
+                return getConstantPool().ensureTerminalTypeConstant(this);
+
+            default:
+                throw new IllegalStateException("not a class type: " + this);
+            }
         }
 
     @Override

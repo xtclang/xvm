@@ -170,7 +170,7 @@ public abstract class ClassTemplate
         ConstantPool pool = f_struct.getConstantPool();
 
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionClassConstant().asTypeConstant(), typeParams).normalizeParameters();
+            getInceptionClassConstant().getType(), typeParams).normalizeParameters();
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(typeParams);
 
@@ -199,7 +199,7 @@ public abstract class ClassTemplate
             public TypeConstant apply(TypeConstant type)
                 {
                 return type instanceof TerminalTypeConstant
-                    ? constInception.asTypeConstant()
+                    ? constInception.getType()
                     : type.replaceUnderlying(this);
                 }
             };
@@ -1139,7 +1139,7 @@ public abstract class ClassTemplate
             return ((RefHandle) hThis.getField(sPropName));
             }
 
-        TypeConstant typeReferent = constProp.getRefType().resolveGenerics(hTarget.getType());
+        TypeConstant typeReferent = constProp.getType().resolveGenerics(hTarget.getType());
 
         TypeComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)

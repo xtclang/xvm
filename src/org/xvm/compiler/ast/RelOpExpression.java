@@ -9,7 +9,7 @@ import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;

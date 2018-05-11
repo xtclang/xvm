@@ -130,7 +130,7 @@ public class ObjectHeap
 
                 assert ((ClassStructure) constId.getComponent()).isSingleton();
 
-                return constId.asTypeConstant();
+                return constId.getType();
                 }
 
             case Tuple:

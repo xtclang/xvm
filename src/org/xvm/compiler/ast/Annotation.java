@@ -5,12 +5,12 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.compiler.Source;
@@ -240,15 +240,15 @@ public class Annotation
             }
 
         @Override
-        public Op.Argument resolveRegularName(Token name, ErrorListener errs)
+        public Argument resolveRegularName(Token name, ErrorListener errs)
             {
             return new NameResolver(Annotation.this, name.getValueText()).forceResolve(errs);
             }
 
         @Override
-        public Op.Argument resolveReservedName(Token name, ErrorListener errs)
+        public Argument resolveReservedName(Token name, ErrorListener errs)
             {
-            return name.getValueText() == "this:module"
+            return name.getValueText().equals("this:module")
                     ? Annotation.this.getComponent().getIdentityConstant().getModuleConstant()
                     : null;
             }

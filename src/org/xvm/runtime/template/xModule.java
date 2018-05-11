@@ -54,7 +54,7 @@ public class xModule
         if (constant instanceof ModuleConstant)
             {
             ModuleConstant constModule = (ModuleConstant) constant;
-            TypeConstant typeModule = constModule.asTypeConstant();
+            TypeConstant typeModule = constModule.getType();
             TypeComposition clazz = ensureClass(typeModule, typeModule);
 
             return f_mapModules.computeIfAbsent(constModule.getName(),

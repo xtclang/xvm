@@ -6,7 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -179,7 +179,7 @@ public class TodoExpression
         ConstantPool   pool     = pool();
         ClassConstant  constEx  = pool.ensureEcstasyClassConstant("UnsupportedOperationException");
         MethodConstant constNew = pool.ensureEcstasyConstructor(constEx, pool.typeString१(), pool.typeException१());
-        Argument       argEx    = new Register(constEx.asTypeConstant());
+        Argument       argEx    = new Register(constEx.getType());
         Argument       argMsg   = message == null
                 ? pool.valNull()
                 : message.generateArgument(code, false, false, false, errs);

@@ -15,7 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
-import org.xvm.asm.Op.Argument;
+import org.xvm.asm.Argument;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
@@ -775,11 +775,11 @@ public class NameExpression
                             }
                         else
                             {
-                            regThis = new Register(idClz.asTypeConstant());
+                            regThis = new Register(idClz.getType());
                             code.add(new MoveThis(cSteps, regThis));
                             }
 
-                        TypeConstant type     = idProp.getType();
+                        TypeConstant type     = idProp.getRefType();
                         Register     regOuter = new Register(type);
                         code.add(type.isA(pool().typeVar())
                                 ? new P_Var(idProp, regThis, regOuter)
@@ -896,7 +896,7 @@ public class NameExpression
                     case Property:
                         {
                         PropertyConstant idProp   = (PropertyConstant) arg;
-                        TypeConstant     typeClz  = idProp.getClassIdentity().asTypeConstant();
+                        TypeConstant     typeClz  = idProp.getClassIdentity().getType();
                         TypeInfo         infoClz  = typeClz.ensureTypeInfo(errs);
                         PropertyInfo     infoProp = infoClz.findProperty(idProp);
 
@@ -1138,12 +1138,12 @@ public class NameExpression
                 assert !reg.isPredefined();
                 m_plan = Plan.RegisterRef;
                 return pool.ensureParameterizedTypeConstant(
-                        m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getRefType());
+                        m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getType());
                 }
 
             // use the register itself (the "T" column in the table above)
             m_plan = Plan.None;
-            return argRaw.getRefType();
+            return argRaw.getType();
             }
 
         assert argRaw instanceof Constant;
@@ -1192,8 +1192,8 @@ public class NameExpression
                     {
                     m_plan = Plan.None;
                     return constant instanceof PseudoConstant
-                            ? ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                            : ((IdentityConstant) constant).getType();
+                            ? ((PseudoConstant) constant).getDeclarationLevelClass().getRefType()
+                            : ((IdentityConstant) constant).getRefType();
                     }
 
             case Property:
@@ -1207,7 +1207,7 @@ public class NameExpression
                     {
                     assert left instanceof NameExpression;
                     m_plan = Plan.OuterThis;
-                    return ((PropertyConstant) constant).getType();
+                    return ((PropertyConstant) constant).getRefType();
                     }
 
                 PropertyConstant  id   = (PropertyConstant) argRaw;

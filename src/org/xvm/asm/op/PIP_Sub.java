@@ -4,6 +4,7 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpPropInPlaceAssign;
 

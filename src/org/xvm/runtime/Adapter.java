@@ -157,7 +157,7 @@ public class Adapter
                     case Module:
                     case Package:
                     case Class:
-                        constType = constId.asTypeConstant();
+                        constType = constId.getType();
                         break;
 
                     case Typedef:

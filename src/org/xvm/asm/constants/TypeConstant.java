@@ -1554,7 +1554,7 @@ public abstract class TypeConstant
                     {
                     // for a native rebase, the interface becomes a class, and that class implements
                     // the original interface
-                    TypeConstant typeNatural = ((NativeRebaseConstant) constId).getClassConstant().asTypeConstant();
+                    TypeConstant typeNatural = ((NativeRebaseConstant) constId).getClassConstant().getType();
                     if (isParamsSpecified())
                         {
                         typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
@@ -3826,10 +3826,7 @@ public abstract class TypeConstant
     @Override
     public TypeConstant getType()
         {
-        ConstantPool pool = getConstantPool();
-        return isExplicitClassIdentity(true)
-            ? pool.ensureParameterizedTypeConstant(pool.typeClass(), this)
-            : pool.ensureParameterizedTypeConstant(pool.typeType(), this);
+        return this;
         }
 
     @Override
