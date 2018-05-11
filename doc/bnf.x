@@ -515,14 +515,15 @@ TypeDefStatement
     "typedef" TypeExpression "as"-opt Name ";"
 
 WithStatement
-    "with" "(" TypeExpression "as"-opt Name ";"
+    "with" "(" WithDeclarationList ")" Statement
 
 WithDeclarationList
     WithDeclaration
     WithDeclarationList "," WithDeclaration
 
 WithDeclaration
-    Expression "as" Name
+    VariableTypeExpression Name VariableInitializerFinish
+
 
 #
 # expressions
