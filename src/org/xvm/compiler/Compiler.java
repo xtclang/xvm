@@ -231,7 +231,7 @@ public class Compiler
             {
             // force the reregistration of constants after the names are resolved to eliminate
             // cruft from earlier passes, such as Void return types
-            m_structFile.reregisterConstants();
+            m_structFile.reregisterConstants(false);
 
             setStage(Stage.Resolved);
             }
