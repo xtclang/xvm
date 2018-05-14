@@ -344,8 +344,11 @@ public class Compiler
         if (fDone)
             {
             // do a final validation on the entire module structure
-
-            m_structFile.validate(m_errs);
+            if (System.getProperty("GG") == null)
+                {
+                // TODO temp
+                m_structFile.validate(m_errs);
+                }
             m_structFile.setErrorListener(null);
 
             setStage(Stage.Emitted);
