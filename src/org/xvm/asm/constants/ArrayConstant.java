@@ -167,20 +167,6 @@ public class ArrayConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constType = (TypeConstant) m_constType.simplify();
-
-        Constant[] aconst = m_aconstVal;
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
-            aconst[i] = aconst[i].simplify();
-            }
-
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

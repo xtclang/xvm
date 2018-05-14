@@ -98,7 +98,7 @@ module Ecstasy.xtclang.org
             {
             conditional ValueType get(KeyType key);
 
-            Void put(KeyType key, ValueType value);
+            void put(KeyType key, ValueType value);
             }
         }
 
@@ -143,7 +143,7 @@ module Ecstasy.xtclang.org
     interface Var<RefType>
             extends Ref<RefType>
         {
-        Void set(RefType value);
+        void set(RefType value);
         }
 
     const Exception(String? text, Exception? cause = null)
@@ -195,7 +195,7 @@ module Ecstasy.xtclang.org
                 }
 
             @Override
-            Void set(RefType value)
+            void set(RefType value)
                 {
                 TODO
 //                assert !assigned && assignable;
@@ -206,6 +206,15 @@ module Ecstasy.xtclang.org
                 {
                 TODO construct LazyVar with a calculate function, or override the calc() method
                 }
+            }
+        }
+
+    package io
+        {
+        interface Console
+            {
+            void print(Object o);
+            void println(Object o = "");
             }
         }
     }

@@ -172,7 +172,7 @@ const Timeout
     /**
      * Check to see if the timeout has expired, and if it has, invoke its expiration.
      */
-    Void checkExpiry()
+    void checkExpiry()
         {
         if (expired)
             {
@@ -184,7 +184,7 @@ const Timeout
      * This method is invoked when the timeout determines that it has expired. The default behavior
      * of this method is to throw a TimeoutException.
      */
-    protected Void onExpiry()
+    protected void onExpiry()
         {
         throw new TimeoutException(this);
         }
@@ -193,7 +193,7 @@ const Timeout
      * Close the timeout. This method is invoked automatically by the {@code using} or {@code try}
      * with-resources keywords.
      */
-    Void close()
+    void close()
         {
         if (registered)
             {

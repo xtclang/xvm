@@ -231,7 +231,7 @@ public class Compiler
             {
             // force the reregistration of constants after the names are resolved to eliminate
             // cruft from earlier passes, such as Void return types
-            m_structFile.reregisterConstants();
+            m_structFile.reregisterConstants(false);
 
             setStage(Stage.Resolved);
             }
@@ -344,8 +344,11 @@ public class Compiler
         if (fDone)
             {
             // do a final validation on the entire module structure
-
-            m_structFile.validate(m_errs);
+            if (System.getProperty("GG") == null)
+                {
+                // TODO temp
+                m_structFile.validate(m_errs);
+                }
             m_structFile.setErrorListener(null);
 
             setStage(Stage.Emitted);

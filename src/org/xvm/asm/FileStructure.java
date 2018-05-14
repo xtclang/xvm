@@ -196,7 +196,7 @@ public class FileStructure
     public void writeTo(DataOutput out)
             throws IOException
         {
-        reregisterConstants();
+        reregisterConstants(true);
         assemble(out);
         resetModified();
         }
@@ -719,12 +719,12 @@ public class FileStructure
     /**
      * Re-registers all referenced constants with the pool.
      */
-    public void reregisterConstants()
+    public void reregisterConstants(boolean fOptimize)
         {
         ConstantPool pool = this.pool;
         pool.preRegisterAll();
         registerConstants(pool);
-        pool.postRegisterAll(true);
+        pool.postRegisterAll(fOptimize);
         }
 
     @Override

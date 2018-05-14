@@ -6,13 +6,13 @@ interface Console
     /**
      * Print the string produced by the {@link Object#toString) method for the specified object.
      */
-    Void print(Object o);
+    void print(Object o);
 
     /**
      * Print the string produced by the {@link Object#toString) method for the specified object
      * followed by the line separator string.
      */
-    Void println(Object o = "");
+    void println(Object o = "");
 
     /**
     * Read a single text line from the console.
@@ -31,10 +31,10 @@ interface Console
             implements Console
         {
         @Override
-        Void print(Object o) {TODO("native");}
+        void print(Object o) {TODO("native");}
 
         @Override
-        Void println(Object o = "") {TODO("native");}
+        void println(Object o = "") {TODO("native");}
 
         @Override
         String readLine()  {TODO("native");}

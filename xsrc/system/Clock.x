@@ -9,8 +9,8 @@
  */
 interface Clock
     {
-    typedef function Void () Alarm;
-    typedef function Void () Cancellable;
+    typedef function void () Alarm;
+    typedef function void () Cancellable;
 
     @RO DateTime epoch;
 //    @RO TimeZone timezone;

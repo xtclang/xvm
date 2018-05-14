@@ -539,6 +539,7 @@ WithDeclaration
 #   .               access object member
 #   .new            postfix object creation
 #   .as             postfix type assertion
+#   .is             postfix type comparison
 #   .instanceof     postfix type comparison
 #
 #   ++              pre-increment             2     right to left
@@ -565,8 +566,9 @@ WithDeclaration
 #   <  <=           relational                7     left to right
 #   >  >=
 #   <=>             order
+#   as              type assertion 
+#   is              type comparison
 #   instanceof      type comparison
-#   as              type assertion
 #
 #   ==              equality                  8     left to right
 #   !=
@@ -625,6 +627,7 @@ RelationalExpression
     RelationalExpression ">=" RangeExpression
     RelationalExpression "<=>" RangeExpression
     RelationalExpression "as" TypeExpression
+    RelationalExpression "is" TypeExpression
     RelationalExpression "instanceof" TypeExpression
 
 RangeExpression
@@ -678,6 +681,7 @@ PostfixExpression
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
     PostfixExpression ".new" TypeExpression ArgumentList-opt
     PostfixExpression ".as" "(" TypeExpression ")"
+    PostfixExpression ".is" "(" TypeExpression ")"
     PostfixExpression ".instanceof" "(" TypeExpression ")"
 
 ArrayDims

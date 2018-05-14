@@ -107,13 +107,6 @@ public class ThisClassConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constClass = (IdentityConstant) m_constClass.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constClass);

@@ -1,5 +1,5 @@
-typedef function Void () Alarm;
-typedef function Void () Cancellable;
+typedef function void () Alarm;
+typedef function void () Cancellable;
 
 interface Timer
     {

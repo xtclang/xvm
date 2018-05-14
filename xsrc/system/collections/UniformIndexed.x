@@ -12,7 +12,7 @@ interface UniformIndexed<IndexType, ElementType>
     /**
      * Modify the value in the specified element.
      */
-    @Op Void setElement(IndexType index, ElementType value)
+    @Op void setElement(IndexType index, ElementType value)
         {
         throw new ReadOnlyException();
         }
@@ -41,7 +41,7 @@ interface UniformIndexed<IndexType, ElementType>
                 return UniformIndexed.this.get(index);
                 }
 
-            Void set(ElementType value)
+            void set(ElementType value)
                 {
                 UniformIndexed.this.set(index, value);
                 }

@@ -75,6 +75,14 @@ public class VariableDeclarationStatement
         return op != null && op.getId() == Token.Id.COLON;
         }
 
+    /**
+     * @return the name being assigned to
+     */
+    public String getName()
+        {
+        return name == null ? "null" : name.getValueText();
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -178,7 +186,7 @@ public class VariableDeclarationStatement
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         pool.typeBoolean().getValueString(),
-                        (value.isVoid() ? pool.typeVoid() : value.getTypes()[0]).getValueString());
+                        value.isVoid() ? "void" : value.getTypes()[0].getValueString());
                 fValid = false;
                 }
 

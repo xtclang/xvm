@@ -246,17 +246,6 @@ public abstract class MultiCondition
         }
 
     @Override
-    public Constant simplify()
-        {
-        final ConditionalConstant[] aconstCond = m_aconstCond;
-        for (int i = 0, c = aconstCond.length; i < c; ++i)
-            {
-            aconstCond[i] = (ConditionalConstant) aconstCond[i].simplify();
-            }
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         for (Constant constant : m_aconstCond)

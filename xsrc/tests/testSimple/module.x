@@ -2,12 +2,13 @@ module TestSimple.xqiz.it
     {
     @Inject X.io.Console console;
 
-    Void run()
+    void run()
         {
         console.println("\nHello world!!!");
         }
     }
 
+/* REVIEW GG
 
 @CmdLine module TestComplex.xqiz.it
     {
@@ -77,3 +78,4 @@ mixin CmdLine
         }
     void shutdown() {...}
     }
+*/

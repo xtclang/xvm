@@ -18,11 +18,6 @@
 module Ecstasy.xtclang.org
     {
     /**
-     * The Void type is a return type of no values.
-     */
-    typedef Tuple<> Void;
-
-    /**
      * The Nullable type is the only type that can contain the value Null.
      *
      * Nullable is an Enumeration whose only value is the singleton enum value {@code Null}.
@@ -115,7 +110,7 @@ module Ecstasy.xtclang.org
          * its resources at this point, and may subsequently be cantankerous and/or unusable as a
          * result.
          */
-        Void close();
+        void close();
         }
 
     /**

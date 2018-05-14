@@ -121,7 +121,7 @@ interface Map<KeyType, ValueType>
          *
          * @throws ReadOnlyException if the map is _fixed size_, _persistent_, or {@code const}
          */
-        Void remove();
+        void remove();
 
         /**
          * If the entry is a temporary object, for example an entry that can be re-used to represent
@@ -496,7 +496,7 @@ interface Map<KeyType, ValueType>
      * @throws ReadOnlyException if the map is of the _persistent_ or {@code const} variety
      */
     @Override
-    @Op Void setElement(KeyType index, ValueType value)
+    @Op void setElement(KeyType index, ValueType value)
         {
         // this must be overridden by map implementations that are not of the "mutable" variety
         Map<KeyType, ValueType> newMap = put(index, value);
@@ -719,14 +719,14 @@ interface Map<KeyType, ValueType>
                 }
 
             @Override
-            Void set(ValueType value)
+            void set(ValueType value)
                 {
                 Map.this.put(key, value);
                 }
             }
 
         @Override
-        Void remove()
+        void remove()
             {
             Map newMap = Map.this.remove(key);
             assert Ref.equals(Map.this, newMap);

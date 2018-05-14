@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -646,27 +645,6 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        checkDepth(true);
-
-        m_constType = (TypeConstant) m_constType.simplify();
-
-        TypeConstant[] atypeParams = m_atypeParams;
-        for (int i = 0, c = atypeParams.length; i < c; ++i)
-            {
-            TypeConstant constOld = atypeParams[i];
-            TypeConstant constNew = (TypeConstant) constOld.simplify();
-            if (constNew != constOld)
-                {
-                atypeParams[i] = constNew;
-                }
-            }
-        checkDepth(false);
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
@@ -823,7 +801,7 @@ public class ParameterizedTypeConstant
 
             // a parameterized type constant has to be followed by a terminal type constant
             // specifying a class/interface identity
-            if (!((TypeConstant) m_constType.simplify()).isExplicitClassIdentity(false))
+            if (!(m_constType.resolveTypedefs()).isExplicitClassIdentity(false))
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_PARAM_TYPE_ILLEGAL, m_constType.getValueString());
                 }

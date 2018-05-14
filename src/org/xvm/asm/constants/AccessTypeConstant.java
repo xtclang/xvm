@@ -230,13 +230,6 @@ public class AccessTypeConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constType = (TypeConstant) m_constType.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
@@ -308,7 +301,7 @@ public class AccessTypeConstant
 
             // an access type constant can modify an annotated, a parameterized, or a terminal type
             // constant that refers to a class/interface
-            TypeConstant type = (TypeConstant) m_constType.simplify();
+            TypeConstant type = m_constType.resolveTypedefs();
             if (!(type instanceof AnnotatedTypeConstant || type.isExplicitClassIdentity(true)))
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_ACCESS_TYPE_ILLEGAL, type.getValueString());

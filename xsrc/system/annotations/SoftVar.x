@@ -16,7 +16,7 @@
  * the garbage collector; see {@link Service.pendingRuntimeEvents} and
  * {@link Service.dispatchRuntimeEvents}.
  */
-mixin SoftVar<RefType>(function Void ()? notify)
+mixin SoftVar<RefType>(function void ()? notify)
         into Var<RefType>
     {
     /**

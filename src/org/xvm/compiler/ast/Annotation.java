@@ -8,15 +8,16 @@ import java.util.List;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Statement.Context;
 
+import org.xvm.util.Severity;
 
 
 /**
@@ -91,7 +92,15 @@ public class Annotation
         return m_anno;
         }
 
+
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        return super.resolveNames(listRevisit, errs);
+
+        }
 
     @Override
     public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
@@ -100,31 +109,37 @@ public class Annotation
         Constant[] aconstArgs = m_anno == null ? null : m_anno.getParams();
         if (aconstArgs != null && aconstArgs.length > 0)
             {
-            List<Expression> args  = getArguments();
-            int              cArgs = args.size();
+            ValidatingContext ctx   = new ValidatingContext();
+            List<Expression>  args  = getArguments();
+            int               cArgs = args.size();
+            assert cArgs == aconstArgs.length;
+
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
                 Expression exprOld = args.get(iArg);
                 Expression exprNew = (Expression) exprOld.validateExpressions(listRevisit, errs);
-                if (exprNew != exprOld)
+                if (exprNew != null)
+                    {
+                    exprNew = exprNew.validate(ctx, null, Expression.TuplePref.Rejected, errs);
+                    }
+
+                if (exprNew != null && exprNew != exprOld)
                     {
                     args.set(iArg, exprNew);
                     }
 
-                ValidatingContext ctx = new ValidatingContext();
-                exprOld = exprNew;
-                exprNew = exprOld.validate(ctx, null, Expression.TuplePref.Rejected, errs);
-                if (exprNew == null)
+                if (exprNew == null || !exprNew.isConstant())
                     {
-                    // TODO compiler error
-                    throw new IllegalStateException();
+                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                     }
                 else
                     {
-                    if (exprNew != exprOld)
-                        {
-                        args.set(iArg, exprNew);
-                        }
+                    // update the Annotation directly
+                    // Note: this is quite unusual, in that normally things like an annotation are
+                    //       treated as a constant once instantiated, but in this case, it was
+                    //       impossible to validate the arguments of the annotation when it was
+                    //       constructed, because we were too early in the compile cycle to resolve
+                    //       any constant expressions that refer to anything _by name_
                     aconstArgs[iArg] = exprNew.toConstant();
                     }
                 }
@@ -259,6 +274,7 @@ public class Annotation
             throw new IllegalStateException();
             }
         }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

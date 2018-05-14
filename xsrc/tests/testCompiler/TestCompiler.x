@@ -7,7 +7,7 @@ class TestCompiler<TestType1 extends Number,
     interface MyMap<KM, VM>
         {
         VM get(KM key);
-        Void put(KM key, VM value);
+        void put(KM key, VM value);
         Boolean containsValue(VM value);
         }
 
@@ -67,7 +67,7 @@ class TestCompiler<TestType1 extends Number,
     class MyClass10<V10>
         extends MyClass9<String, V10> {}
 
-    static Void test1(MyClass1<String, Number> c1,
+    static void test1(MyClass1<String, Number> c1,
                       MyClass2<String, Number> c2,
                       MyClass3<String, Number> c3,
                       MyClass4<String> c4,
@@ -102,27 +102,27 @@ class TestCompiler<TestType1 extends Number,
         MyClass6<String> mc6s = c6;
         }
 
-    static Void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)
+    static void test1ExpectedFailure1(MyClass7 c7ExpectedFailure)
         {
         Consumer<Int> finder7a = c7ExpectedFailure;
         }
 
-    static Void test1ExpectedFailure2(MyClass9<String, String> c9)
+    static void test1ExpectedFailure2(MyClass9<String, String> c9)
         {
         MyConsumer<Int> finder9 = c9; // fail; "Incorporates"
         }
 
-    static Void test1ExpectedFailure3(MyClass9<String, String> c9)
+    static void test1ExpectedFailure3(MyClass9<String, String> c9)
         {
         Consumer<Int> finder9a = c9; // fail; "Incorporates-Extends"
         }
 
-    static Void test1ExpectedFailure4(MyClass10<String> c10a)
+    static void test1ExpectedFailure4(MyClass10<String> c10a)
         {
         MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
         }
 
-//    static Void test1ExpectedFailure5(MyClass10<Int> c10)
+//    static void test1ExpectedFailure5(MyClass10<Int> c10)
 //        {
 //        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
 //        }
@@ -151,7 +151,7 @@ class TestCompiler<TestType1 extends Number,
 
     interface C<T>
         {
-        Void consume(T value);
+        void consume(T value);
 
         // self-referencing methods don't contribute to consumption/production
         C<T> self();
@@ -170,16 +170,16 @@ class TestCompiler<TestType1 extends Number,
     static class FakePCofObject
         {
         Object produce() {return "";}
-        Void consume(Object value) {}
+        void consume(Object value) {}
         }
 
     static class FakePCofString
         {
         String produce() {return "";}
-        Void consume(String value) {}
+        void consume(String value) {}
         }
 
-    static Void testPC(C          c,
+    static void testPC(C          c,
                        C<Object>  co,
                        C2<Object> c2o,
                        PC<Object> pco,
@@ -208,32 +208,32 @@ class TestCompiler<TestType1 extends Number,
         PC<Object> pco = pcs; // ok, but the RT needs to "safe-wrap" the consuming methods
         }
 
-    static Void testPCExpectedFailure1(C<String> cs)
+    static void testPCExpectedFailure1(C<String> cs)
         {
         C<Object> co = cs;
         }
 
-    static Void testPCExpectedFailure2(PC<String> pcs)
+    static void testPCExpectedFailure2(PC<String> pcs)
         {
         C<Object> x4 = y4;
         }
 
-    static Void testPCExpectedFailure3(P<Object> po)
+    static void testPCExpectedFailure3(P<Object> po)
         {
         P<String> ps = po;
         }
 
-    static Void testPCExpectedFailure4(PC<String> pcs)
+    static void testPCExpectedFailure4(PC<String> pcs)
         {
         FakePCofObject fpco = pcs;
         }
 
-    static Void testPCExpectedFailure5(PC<Object> pco)
+    static void testPCExpectedFailure5(PC<Object> pco)
         {
         PC<String> pcs = pco;
         }
 
-    static Void testPCExpectedFailure6(C c)
+    static void testPCExpectedFailure6(C c)
         {
         C<Object> co = c;
         }
@@ -247,7 +247,7 @@ class TestCompiler<TestType1 extends Number,
 //    TestType1 extends Number,
 //    TestType2 extends TestType1,
 //    TestType3 extends TestType2
-    Void test3(TestType1 t1,
+    void test3(TestType1 t1,
                TestType2 t2,
                TestType3 t3,
                C<TestType1> ct1,
@@ -269,13 +269,13 @@ class TestCompiler<TestType1 extends Number,
         PC<TestType1> pct1 = pct3;
         }
 
-    Void test3ExpectedFailure1(TestType3 t3)
+    void test3ExpectedFailure1(TestType3 t3)
         {
         Int n = t3;
         }
 
     static <Type1 extends Number, Type2 extends Type1>
-        Void test4(Type1 t1,
+        void test4(Type1 t1,
                    Type2 t2,
                    C<Type1> ct1,
                    PC<Type2> pct2)
@@ -291,7 +291,7 @@ class TestCompiler<TestType1 extends Number,
         }
 
     static <Type1 extends Number, Type2 extends Type1>
-        Void test5(Type1 | Type2 t12,
+        void test5(Type1 | Type2 t12,
                    C<Type1> | C<Type2> c12,
                    C<Number> cn,
                    PC<Type1> + PC<Type2> pct12)
@@ -302,12 +302,12 @@ class TestCompiler<TestType1 extends Number,
         }
 
     static <Type1 extends Number, Type2 extends Type1>
-            Void test5ExpectedFailure1(C<Type1> | C<Type2> ct12)
+            void test5ExpectedFailure1(C<Type1> | C<Type2> ct12)
         {
         C<Number> cn = ct12;
         }
 
-    static Void testTuple(Tuple t,
+    static void testTuple(Tuple t,
                           Tuple<Int, String> tns)
         {
         Tuple t1 = t;
@@ -316,12 +316,12 @@ class TestCompiler<TestType1 extends Number,
         Tuple<Number> tn = tns;
         }
 
-    static Void testTupleExpectedFailure1(Tuple<Number, String> tns)
+    static void testTupleExpectedFailure1(Tuple<Number, String> tns)
         {
         Tuple<Int, String> tn = tns;
         }
 
-    static Void testTupleExpectedFailure2(Tuple t)
+    static void testTupleExpectedFailure2(Tuple t)
         {
         Tuple<Int> ti = t;
         }
@@ -331,7 +331,7 @@ class TestCompiler<TestType1 extends Number,
         {
         }
 
-    static Void testClassConst()
+    static void testClassConst()
         {
         // PC must refer to a class whose public type is of type PC
         Class<PC> clzPC = PC;
@@ -341,19 +341,19 @@ class TestCompiler<TestType1 extends Number,
         // Type<PC<Int>> typePCI = PC<Int>;
         }
 
-    static Void testEnumeration(Enumeration<False> enf, Enumeration en)
+    static void testEnumeration(Enumeration<False> enf, Enumeration en)
         {
         Class<False> cf = enf;
         Class c = enf;
         Class c2 = en;
         }
 
-    static Void testEnumerationExpectedFailure1(Enumeration<False> en)
+    static void testEnumerationExpectedFailure1(Enumeration<False> en)
         {
         Class<True> c = en;
         }
 
-    static Void testEnumerationExpectedFailure2(Enumeration en)
+    static void testEnumerationExpectedFailure2(Enumeration en)
         {
         Class<True> c = en;
         }
@@ -372,7 +372,7 @@ class TestCompiler<TestType1 extends Number,
 
     interface ANIface1D extends ANIface1
         {
-        Void f2();
+        void f2();
         }
 
     class ANClass1
@@ -385,7 +385,7 @@ class TestCompiler<TestType1 extends Number,
         ANClass2! f1();
         }
 
-    static Void testAutoNarrow(ANClass1 clz1, ANClass2 clz2)
+    static void testAutoNarrow(ANClass1 clz1, ANClass2 clz2)
         {
         ANIface1 iface11 = clz1;
         ANIface2 iface21 = clz1;
@@ -398,10 +398,10 @@ class TestCompiler<TestType1 extends Number,
         Person parent;
         List<Person> dependents;
 
-        Void add(Person! p) {dependents.add(p);}
-        Void addParent(Person! p) {parent = p;}
+        void add(Person! p) {dependents.add(p);}
+        void addParent(Person! p) {parent = p;}
 
-        Void testExpectedFailure()
+        void testExpectedFailure()
             {
             List<Employee> emps1 = dependents;
             }
@@ -410,7 +410,7 @@ class TestCompiler<TestType1 extends Number,
     class Employee
             extends Person
         {
-        Void testAutoNarrow()
+        void testAutoNarrow()
             {
             List<Employee> emps2 = dependents;
             }

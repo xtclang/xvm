@@ -65,7 +65,7 @@ mixin Range<ElementType extends Sequential>
         }
 
     @Override
-    Void forEach(function Void(ElementType) process)
+    void forEach(function void(ElementType) process)
         {
         if (reversed)
             {
@@ -96,7 +96,7 @@ mixin Range<ElementType extends Sequential>
      *
      * @param process  the function to call with each value from the range
      */
-    Void forEachExclusive(function Void(ElementType) process)
+    void forEachExclusive(function void(ElementType) process)
         {
         if (reversed)
             {

@@ -396,7 +396,7 @@ class ExtHashMap<KeyType, ValueType>
     /**
      * Check to see if the ExtHashMap needs to grow or shrink based on the current capacity need.
      */
-    private Void checkCapacity()
+    private void checkCapacity()
         {
         Int size = this.size;
         if (size < shrinkAt)
@@ -416,7 +416,7 @@ class ExtHashMap<KeyType, ValueType>
      *
      * @param plannedSize  the capacity to assume that the map will need
      */
-    private Void checkCapacity(Int plannedSize)
+    private void checkCapacity(Int plannedSize)
         {
         // check if a resize is necessary
         if (plannedSize < shrinkAt || plannedSize > growAt)
@@ -431,7 +431,7 @@ class ExtHashMap<KeyType, ValueType>
      *
      * @param plannedSize  the capacity to assume that the map will need
      */
-    private Void resize(Int plannedSize)
+    private void resize(Int plannedSize)
         {
         (Int bucketCount, Int growAt, Int shrinkAt) = calcBucketCount(plannedSize);
         HashEntry?[] oldBuckets = buckets;

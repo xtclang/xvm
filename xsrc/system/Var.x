@@ -13,5 +13,5 @@ interface Var<RefType>
      * Specify the referent for this variable reference. The Var may reject the mutation by throwing
      * an exception.
      */
-    Void set(RefType value);
+    void set(RefType value);
     }

@@ -58,7 +58,7 @@ mixin LazyVar<RefType>(function RefType ()? calculate = null)
         }
 
     @Override
-    Void set(RefType value)
+    void set(RefType value)
         {
         assert !assigned && assignable;
         super(value);

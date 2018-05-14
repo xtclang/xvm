@@ -448,26 +448,6 @@ public class SignatureConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constName = (StringConstant) m_constName.simplify();
-        simplifyTypes(m_aconstParams);
-        simplifyTypes(m_aconstReturns);
-
-        // replace a void return with no return
-        if (m_aconstReturns.length == 1)
-            {
-            TypeConstant type = m_aconstReturns[0];
-            if (!type.containsUnresolved() && type.isVoid())
-                {
-                m_aconstReturns = ConstantPool.NO_TYPES;
-                }
-            }
-
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);
@@ -659,19 +639,6 @@ public class SignatureConstant
             aconst[i] = (TypeConstant) pool.getConstant(an[i]);
             }
         return aconst;
-        }
-
-    /**
-     * Simplify each of the type constants in the passed array.
-     *
-     * @param aconst  an array of constants
-     */
-    protected static void simplifyTypes(TypeConstant[] aconst)
-        {
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
-            aconst[i] = (TypeConstant) aconst[i].simplify();
-            }
         }
 
     /**

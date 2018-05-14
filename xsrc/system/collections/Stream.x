@@ -101,7 +101,7 @@ interface Stream<ElementType>
      *
      * @return a new stream with the specified functionality attached to it
      */
-    Stream<ElementType> peek(function Void accept(ElementType));
+    Stream<ElementType> peek(function void accept(ElementType));
 
     /**
      * Returns a stream representing only the first {@code count} elements of this stream.
@@ -169,7 +169,7 @@ interface Stream<ElementType>
      *
      * @param process  an action to perform on each element
      */
-    Void forEach(function Void (ElementType) process)
+    void forEach(function void (ElementType) process)
         {
         // the default behavior delegates to the Iterator, but an implementation that parallelizes
         // the stream will likely override this behavior

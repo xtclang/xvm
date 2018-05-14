@@ -2,14 +2,14 @@ import annotations.AtomicVar;
 
 class TestApp
     {
-    static Void print(Object o)
+    static void print(Object o)
         {
         @Inject io.Console console;
         console.println(o);
         }
 
     // entry point
-    Void run()
+    void run()
         {
         test1();
         test2();
@@ -38,7 +38,7 @@ class TestApp
         return "Hello " + "world!";
         }
 
-    static Void test1()
+    static void test1()
         {
         @Inject io.Console console;
 
@@ -57,7 +57,7 @@ class TestApp
             }
         }
 
-    static Void test2()
+    static void test2()
         {
         TestClass t = new TestClass("Hello World!");
 
@@ -146,9 +146,9 @@ class TestApp
             }
         }
 
-    static Void lambda_1(Int c, Int r, Exception x) {} // TODO: remove
+    static void lambda_1(Int c, Int r, Exception x) {} // TODO: remove
 
-    static Void testService()
+    static void testService()
         {
         TestService svc = new TestService();
         print(svc);
@@ -228,7 +228,7 @@ class TestApp
         return svc.increment();
         }
 
-    static Void testService2()
+    static void testService2()
         {
         TestService svc = new TestService();
 
@@ -277,7 +277,7 @@ class TestApp
                 return super();
                 }
             @Override
-            Void set(Int c)
+            void set(Int c)
                 {
                 print("In counter.set");
                 print(to<String>());
@@ -295,13 +295,13 @@ class TestApp
             return ++counter;
             }
 
-        Void testConstant()
+        void testConstant()
             {
             TestApp.Point origin = TestPackage.Origin;
             print(origin);
             }
 
-        static Void lambda_1(Var<Int> iRet, Int cDelay)
+        static void lambda_1(Var<Int> iRet, Int cDelay)
             {
             TODO // TODO remove
             }
@@ -328,7 +328,7 @@ class TestApp
             }
         }
 
-    static Void testRef(String arg)
+    static void testRef(String arg)
         {
         Var<String> ra = &arg;
         print(ra.get());
@@ -375,7 +375,7 @@ class TestApp
         TODO // TODO remove
         }
 
-    static Void testArray()
+    static void testArray()
         {
         Int[] ai = new Int[]; // mutable Array<Int>
         ai[0] = 1;
@@ -403,7 +403,7 @@ class TestApp
         TODO // TODO remove
         }
 
-     static Void testTuple()
+     static void testTuple()
         {
         Tuple t = ("zero", 0); // literal, therefore constant
         print(t[0]);
@@ -480,7 +480,7 @@ class TestApp
         Int pix;
         }
 
-    static Void testConst()
+    static void testConst()
         {
         Point p1 = new Point(0, 1);
         Point p2 = new Point(1, 0);
@@ -537,7 +537,7 @@ class TestApp
             }
         }
 
-    static Void testMixin()
+    static void testMixin()
         {
         PrettyPoint prp = new PrettyPoint(1, 2, "*** ");
         print(prp);
@@ -552,7 +552,7 @@ class TestApp
         @Atomic Int ai = 0;
         }
 
-    static Void testReal1()
+    static void testReal1()
         {
 //        @Inject io.Console console;
 
@@ -570,6 +570,6 @@ class TestApp
             into Var<Int>
         {
         @Override Int get() {return 0;}
-        @Override Void set(Int i) {}
+        @Override void set(Int i) {}
         }
     }

@@ -167,15 +167,6 @@ public class UnresolvedNameConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        Constant constUnwrapped = unwrap();
-        return constUnwrapped == this
-                ? this
-                : constUnwrapped.simplify();
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         if (m_constId != null)

@@ -230,14 +230,6 @@ public class IntervalConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_const1 = m_const1.simplify();
-        m_const1 = m_const2.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_const1);

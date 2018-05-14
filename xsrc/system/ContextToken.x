@@ -65,7 +65,7 @@ const ContextToken<TokenType extends immutable Object>
      * Close the contextToken. This method is invoked automatically by the {@code using} or
      * {@code try} with-resources keywords.
      */
-    Void close()
+    void close()
         {
         if (registered)
             {

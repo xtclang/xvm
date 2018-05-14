@@ -12,7 +12,7 @@
  * the garbage collector; see {@link Service.pendingRuntimeEvents} and
  * {@link Service.dispatchRuntimeEvents}.
  */
-mixin WeakVar<RefType>(function Void ()? notify)
+mixin WeakVar<RefType>(function void ()? notify)
         into Var<RefType>
     {
     }
