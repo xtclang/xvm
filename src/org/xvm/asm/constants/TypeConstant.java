@@ -3614,7 +3614,10 @@ public abstract class TypeConstant
      */
     public MethodConstant getConverterTo(TypeConstant that)
         {
-        return this.ensureTypeInfo().findConversion(that);
+        // formal type is not convertible to anything
+        return isFormalType()
+            ? null
+            : ensureTypeInfo().findConversion(that);
         }
 
     /**
@@ -3637,6 +3640,14 @@ public abstract class TypeConstant
         {
         // generally, a type is a class type if any of the underlying types is a class type
         return getUnderlyingType().isClassType();
+        }
+
+    /**
+     * @return true iff the TypeConstant represents a "formal type"
+     */
+    public boolean isFormalType()
+        {
+        return false;
         }
 
     /**

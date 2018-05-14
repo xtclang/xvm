@@ -13,7 +13,7 @@ import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -42,7 +42,7 @@ public class xEnum
     @Override
     public boolean isGenericHandle()
         {
-        return false;
+        return true;
         }
 
     @Override
@@ -112,7 +112,7 @@ public class xEnum
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
+        return ((EnumHandle) hValue1).getValue() == ((EnumHandle) hValue2).getValue();
         }
 
     @Override
@@ -149,11 +149,20 @@ public class xEnum
     // ----- ObjectHandle -----
 
     public static class EnumHandle
-                extends JavaLong
+                extends GenericHandle
         {
-        EnumHandle(TypeComposition clz, long lIndex)
+        protected int m_index;
+
+        EnumHandle(TypeComposition clz, int index)
             {
-            super(clz, lIndex);
+            super(clz);
+
+            m_index = index;
+            }
+
+        public int getValue()
+            {
+            return m_index;
             }
         }
     }

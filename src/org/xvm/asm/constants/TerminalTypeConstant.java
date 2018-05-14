@@ -531,6 +531,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isFormalType()
+        {
+        return getDefiningConstant().getFormat() == Format.Property;
+        }
+
+    @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         Constant constant = getDefiningConstant();

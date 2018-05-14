@@ -356,7 +356,7 @@ public class NamedTypeExpression
             }
 
         ConstantPool pool = pool();
-        TypeConstant constType = pool().ensureTerminalTypeConstant(inferAutoNarrowing(constId));
+        TypeConstant constType = pool.ensureTerminalTypeConstant(inferAutoNarrowing(constId));
 
         if (paramTypes != null)
             {
