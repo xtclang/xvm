@@ -73,13 +73,13 @@ public class xBoolean
 
         public boolean get()
             {
-            return m_lValue != 0;
+            return m_index != 0;
             }
 
         @Override
         public String toString()
             {
-            return m_lValue == 0 ? "false" : "true";
+            return m_index == 0 ? "false" : "true";
             }
         }
     }
