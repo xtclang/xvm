@@ -522,13 +522,6 @@ public class LiteralConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constStr = (StringConstant) m_constStr.simplify();
-        return this;
-        }
-
-    @Override
     public TypeConstant resultType(Id op, Constant that)
         {
         // order of automatic type promotion is from IntLiteral to FPLiteral to any "actual" types

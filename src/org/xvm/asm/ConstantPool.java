@@ -101,7 +101,10 @@ public class ConstantPool
         // before registering the constant, see if there is a simpler alternative to use; for
         // example, this allows a type constant that refers to a typedef constant to be replaced
         // with the type constant that the typedef refers to, removing a level of indirection
-        constant = constant.simplify();
+        if (constant instanceof TypeConstant)
+            {
+            constant = ((TypeConstant) constant).resolveTypedefs();
+            }
 
         // constants that contain unresolved information need to be resolved before they are
         // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already

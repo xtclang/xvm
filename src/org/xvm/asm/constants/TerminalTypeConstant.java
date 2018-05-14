@@ -20,7 +20,6 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
-import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -274,8 +273,8 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant resolveTypedefs()
         {
-        Constant constId = getDefiningConstant();
-        return constId instanceof TypedefConstant
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.Typedef
                 ? getTypedefTypeConstant((TypedefConstant) constId).resolveTypedefs()
                 : this;
         }
@@ -1214,47 +1213,6 @@ public class TerminalTypeConstant
             return getTypedefTypeConstant((TypedefConstant) constId).containsUnresolved();
             }
         return false;
-        }
-
-    @Override
-    public Constant simplify()
-        {
-        // simplify the underlying constant
-        Constant constId = ensureResolvedConstant().simplify();
-
-        // store off the result
-        m_constId = constId;
-
-        // compile down all of the types that refer to typedefs so that they refer to the underlying
-        // types instead
-        if (constId instanceof TypedefConstant)
-            {
-            Component    typedef   = ((TypedefConstant) constId).getComponent();
-            TypeConstant constType;
-            if (typedef instanceof CompositeComponent)
-                {
-                List<Component> typedefs = ((CompositeComponent) typedef).components();
-                constType = (TypeConstant) ((TypedefStructure) typedefs.get(0)).getType().simplify();
-                for (int i = 1, c = typedefs.size(); i < c; ++i)
-                    {
-                    TypeConstant constTypeN = (TypeConstant) ((TypedefStructure) typedefs.get(i)).getType().simplify();
-                    if (!constType.equals(constTypeN))
-                        {
-                        // typedef points to more than one type, conditionally, so just leave the
-                        // typedef in place
-                        return this;
-                        }
-                    }
-                }
-            else
-                {
-                constType = (TypeConstant) ((TypedefStructure) typedef).getType().simplify();
-                }
-            assert constType != null;
-            return constType;
-            }
-
-        return this;
         }
 
     @Override

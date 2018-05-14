@@ -164,19 +164,6 @@ public abstract class Constant
         }
 
     /**
-     * Determine if a different constant exists that could be used in lieu of this constant, such
-     * that the substitute constant would have some perceived advantage in terms of simplicity.
-     * <p/>
-     * This is primarily intended for use by the assembly process itself.
-     *
-     * @return a simplified form of the same constant, if such a form exists
-     */
-    public Constant simplify()
-        {
-        return this;
-        }
-
-    /**
      * Determine the type of a binary operator on two constant values.
      *
      * @param op    the token id representing the operation

@@ -247,14 +247,6 @@ public class MethodConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constParent = (MultiMethodConstant) m_constParent.simplify();
-        m_constSig    = (SignatureConstant  ) m_constSig.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);

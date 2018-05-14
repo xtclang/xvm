@@ -310,14 +310,6 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_annotation.simplify();
-        m_constType = (TypeConstant) m_constType.simplify();
-        return this;
-        }
-
-    @Override
     public boolean containsUnresolved()
         {
         return m_annotation.containsUnresolved() || m_constType.containsUnresolved();
@@ -395,7 +387,7 @@ public class AnnotatedTypeConstant
 
             // an annotated type constant can modify a parameterized or a terminal type constant
             // that refers to a class/interface
-            TypeConstant typeNext = (TypeConstant) m_constType.simplify();
+            TypeConstant typeNext = m_constType.resolveTypedefs();
             if (!(typeNext instanceof AnnotatedTypeConstant || typeNext.isExplicitClassIdentity(true)))
                 {
                 fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_ILLEGAL, typeNext.getValueString());

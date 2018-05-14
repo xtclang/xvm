@@ -150,13 +150,6 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constType = (TypeConstant) m_constType.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
@@ -209,7 +202,7 @@ public class ImmutableTypeConstant
 
             // the immutable type constant can modify any type constant other than an immutable
             // type constant
-            TypeConstant type = (TypeConstant) m_constType.simplify();
+            TypeConstant type = m_constType;
             if (type instanceof ImmutableTypeConstant)
                 {
                 fHalt |= log(errs, Severity.WARNING, VE_IMMUTABLE_REDUNDANT);
@@ -218,7 +211,7 @@ public class ImmutableTypeConstant
             // a service type cannot be immutable
             if (type.ensureTypeInfo(errs).getFormat() == Component.Format.SERVICE)
                 {
-                fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, m_constType.getValueString());
+                fHalt |= log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
                 }
             }
 

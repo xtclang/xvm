@@ -623,7 +623,7 @@ public abstract class TypeConstant
      */
     public boolean isArray()
         {
-        TypeConstant constThis = (TypeConstant) this.simplify();
+        TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
         return constThis.isA(getConstantPool().typeArray());
         }
@@ -633,7 +633,7 @@ public abstract class TypeConstant
      */
     public boolean isSequence()
         {
-        TypeConstant constThis = (TypeConstant) this.simplify();
+        TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
 
         constThis = constThis.resolveAutoNarrowing();

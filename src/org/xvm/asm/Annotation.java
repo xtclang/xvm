@@ -131,23 +131,6 @@ public class Annotation
     /**
      * Helper for Constant.
      */
-    public void simplify()
-        {
-        Constant[] aParams = m_aParams;
-        for (int i = 0, c = aParams.length; i < c; ++i)
-            {
-            Constant constOld = aParams[i];
-            Constant constNew = constOld.simplify();
-            if (constNew != constOld)
-                {
-                aParams[i] = constNew;
-                }
-            }
-        }
-
-    /**
-     * Helper for Constant.
-     */
     public boolean containsUnresolved()
         {
         if (getAnnotationClass().containsUnresolved())

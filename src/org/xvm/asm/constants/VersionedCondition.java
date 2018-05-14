@@ -163,13 +163,6 @@ public class VersionedCondition
         }
 
     @Override
-    public Constant simplify()
-        {
-        m_constVer = (VersionConstant) m_constVer.simplify();
-        return this;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constVer);
