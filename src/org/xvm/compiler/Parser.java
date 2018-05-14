@@ -989,10 +989,17 @@ public class Parser
                 }
 
             case CONDITIONAL:
+            case VOID:
             default:
                 {
                 // method may have a "conditional" return value
                 Token conditional = match(Id.CONDITIONAL);
+
+                if (match(Id.VOID) != null)
+                    {
+                    return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
+                            annotations, null, conditional, Collections.emptyList(), expect(Id.IDENTIFIER));
+                    }
 
                 TypeExpression type;
                 if (fInMethod && modifiers == null && annotations == null && conditional == null)
@@ -4026,6 +4033,7 @@ public class Parser
      *
      * <p/><code><pre>
      * ReturnList
+     *     "void"
      *     SingleReturnList
      *     MultiReturnList
      *
@@ -4039,7 +4047,11 @@ public class Parser
     List<TypeExpression> parseReturnList()
         {
         List<TypeExpression> listReturn;
-        if (match(Id.L_PAREN) == null)
+        if (match(Id.VOID) != null)
+            {
+            listReturn = Collections.EMPTY_LIST;
+            }
+        else if (match(Id.L_PAREN) == null)
             {
             listReturn = Collections.singletonList(parseTypeExpression());
             }
