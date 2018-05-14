@@ -75,6 +75,14 @@ public class VariableDeclarationStatement
         return op != null && op.getId() == Token.Id.COLON;
         }
 
+    /**
+     * @return the name being assigned to
+     */
+    public String getName()
+        {
+        return name == null ? "null" : name.getValueText();
+        }
+
     @Override
     public long getStartPosition()
         {

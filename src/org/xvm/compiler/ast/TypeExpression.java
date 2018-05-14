@@ -1,9 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -90,17 +93,30 @@ public abstract class TypeExpression
     // ----- Expression methods --------------------------------------------------------------------
 
     @Override
-    public boolean isConstant()
+    public TypeConstant getImplicitType(Context ctx)
         {
-        return ensureTypeConstant().isConstant();
+        TypeConstant type = getTypeConstant();
+        if (type == null)
+            {
+            throw new IllegalStateException("type has not yet been determined for this: " + this);
+            }
+
+        ConstantPool pool = pool();
+        return pool.ensureParameterizedTypeConstant(pool.typeType(), type);
         }
 
     @Override
-    public Constant toConstant()
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        TypeConstant type = ensureTypeConstant();
-        assert type.isConstant();
-        return type;
+        ConstantPool pool = pool();
+        TypeConstant typeReferent  = getTypeConstant();
+        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
+
+        // TODO pref etc. - this kind of nonsense should not have to show up on every single Expression implementation!
+        TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
+                ? TypeFit.Fit
+                : TypeFit.NoFit;
+        return finishValidation(fit, typeReference, typeReferent);
         }
 
 

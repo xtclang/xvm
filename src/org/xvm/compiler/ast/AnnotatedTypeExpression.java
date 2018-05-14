@@ -6,12 +6,18 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+
+import org.xvm.compiler.Constants;
+import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.util.Severity;
 
 
 /**
@@ -114,17 +120,48 @@ public class AnnotatedTypeExpression
             setStage(Stage.Resolving);
 
             // resolve the annotation and sub-type
-            annotation.resolveNames(listRevisit, errs);
-            type.resolveNames(listRevisit, errs);
+            AstNode annotationNew = annotation.resolveNames(listRevisit, errs);
+            AstNode typeNew       = type.resolveNames(listRevisit, errs);
 
-            // TODO verify that the annotation type is a class type
-            // TODO verify that each of the params is a constant
+            assert annotationNew != null && typeNew != null;
+            annotation = (Annotation) annotationNew;
+            type       = (TypeExpression) typeNew;
+
+            if (!annotationNew.alreadyReached(Stage.Resolved) || !typeNew.alreadyReached(Stage.Resolved))
+                {
+                listRevisit.add(this);
+                return this;
+                }
+
+            // note: each of the parameters of the Annotation will be verified to be a compile-
+            // time constant, but that cannot be attempted until after the call to validate() /
+            // validateMulti(); @see Annotation#validateExpressions
 
             // store off a type constant for this type expression
             ensureTypeConstant();
             }
 
         return super.resolveNames(listRevisit, errs);
+        }
+
+
+    // ----- Expression methods --------------------------------------------------------------------
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+        {
+        // we need to verify that the type specified in the annotation will "apply to" our
+        // right-hand-side type
+// TODO        org.xvm.asm.Annotation annoNew = annotation.validate(ctx, typeRequired, pref, errs);
+//        ConstantPool pool = pool();
+//        TypeConstant typeReferent  = getTypeConstant();
+//        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
+//
+//        // TODO pref etc. - this kind of nonsense should not have to show up on every single qExpression implementation!
+//        TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
+//                ? TypeFit.Fit
+//                : TypeFit.NoFit;
+        return super.validate(ctx, typeRequired, pref, errs);
         }
 
 

@@ -208,4 +208,13 @@ module Ecstasy.xtclang.org
                 }
             }
         }
+
+    package io
+        {
+        interface Console
+            {
+            void print(Object o);
+            void println(Object o = "");
+            }
+        }
     }

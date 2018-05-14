@@ -1,41 +1,51 @@
 module Test
     {
-    class Outer
+    class C
         {
-        Int x = 4;
-
-        class C
-            {
-            @RO Int y
-                {
-                Int z = 5;
-
-                @Override
-                Int get()
-                    {
-                    Outer outer = Outer.this;
-                    C c = C.this;
-                    Ref<Int> v = y.this;
-                    return Outer.this.x; // TODO  + y.this.z;
-                    }
-
-//                void set(Int n)
-//                    {
-//                    Ref<Int> r1 = y.this;
-//                    Var<Int> r2 = y.this;
-//                    Ref<Int> r3 = &y;
-//                    Var<Int> r4 = &y;
-//                    Ref<Int> r5 = &z;
-//                    Var<Int> r6 = &z;
-//                    Ref<Int> r7 = y.this.&z;
-//                    Var<Int> r8 = y.this.&z;
-//
-//                    Outer.this.x = n;
-//                    y.this.z     = n;
-//                    }
-                }
-            }
         }
+
+    void run()
+        {
+        @Inject X.io.Console console;
+        // C c = new C();
+        }
+
+//    class Outer
+//        {
+//        Int x = 4;
+//
+//        class C
+//            {
+//            @RO Int y
+//                {
+//                Int z = 5;
+//
+//                @Override
+//                Int get()
+//                    {
+//                    Outer outer = Outer.this;
+//                    C c = C.this;
+//                    Ref<Int> v = y.this;
+//                    return Outer.this.x; // TODO  + y.this.z;
+//                    }
+//
+////                void set(Int n)
+////                    {
+////                    Ref<Int> r1 = y.this;
+////                    Var<Int> r2 = y.this;
+////                    Ref<Int> r3 = &y;
+////                    Var<Int> r4 = &y;
+////                    Ref<Int> r5 = &z;
+////                    Var<Int> r6 = &z;
+////                    Ref<Int> r7 = y.this.&z;
+////                    Var<Int> r8 = y.this.&z;
+////
+////                    Outer.this.x = n;
+////                    y.this.z     = n;
+////                    }
+//                }
+//            }
+//        }
 
 //    class Fubar
 //        {
