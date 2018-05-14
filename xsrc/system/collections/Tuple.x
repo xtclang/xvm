@@ -49,7 +49,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
      *
      * This operation will throw an exception if the tuple is either persistent or {@code const}.
      */
-    @Op Void setElement(Int index, Object newValue);
+    @Op void setElement(Int index, Object newValue);
 
     /**
      * Obtain the Ref for the specified element.

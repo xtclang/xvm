@@ -19,7 +19,7 @@ module Test
                     return Outer.this.x; // TODO  + y.this.z;
                     }
 
-//                Void set(Int n)
+//                void set(Int n)
 //                    {
 //                    Ref<Int> r1 = y.this;
 //                    Var<Int> r2 = y.this;
@@ -71,7 +71,7 @@ module Test
 //        {
 //        ElementType first;
 //
-//        Void add(ElementType value);
+//        void add(ElementType value);
 //
 //        Iterator<ElementType> iterator();
 //        }
@@ -79,7 +79,7 @@ module Test
 //    class MyList<ElementType extends Int>
 //            implements List<ElementType>
 //        {
-//        Void add(ElementType value)
+//        void add(ElementType value)
 //            {
 //            TODO
 //            }
@@ -88,12 +88,12 @@ module Test
 //    // problem #6
 //    class MyClass<MapType1 extends Map, MapType2 extends Map>
 //        {
-//        Void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
+//        void process(MapType1.KeyType k1, MapType2.KeyType k2)  // TODO resolve both "KeyType" correctly
 //            {
 //            // ...
 //            }
 //
-//        <MT3 extends MapType1, KT3 extends MapType1.KeyType> Void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
+//        <MT3 extends MapType1, KT3 extends MapType1.KeyType> void process(MT3.KeyType k, KT3 k3)  // TODO resolve both "KeyType" correctly
 //            {
 //            // ...
 //            }
@@ -112,7 +112,7 @@ module Test
 //        }
 //
 //    // problem #8 - typedefs
-//    typedef function Void Alarm();
+//    typedef function void Alarm();
 //
 //    class MyTest3
 //        {
@@ -121,8 +121,8 @@ module Test
 //        Alarm foo(Alarm alarm);
 //        }
 //
-//    // problem #9 - Void compiling to Tuple instead of being eliminated
-//    Void fnVoid();
+//    // problem #9 - void compiling to Tuple instead of being eliminated
+//    void fnVoid();
 //    Tuple fnTupleNone();
 //    Tuple<> fnTupleEmpty();
 //    Tuple<Int> fnTupleInt();
@@ -145,7 +145,7 @@ module Test
 //        }
 //
 //    // problem #13 - various return type tests, @Op tests, and conversion tests
-//    Void foo1()
+//    void foo1()
 //        {
 //        }
 //
@@ -163,7 +163,7 @@ module Test
 //        return 'x' * 5;
 //        }
 //
-//    Void foo2()
+//    void foo2()
 //        {
 //        return;
 //        }
@@ -266,21 +266,21 @@ module Test
 //        }
 //
 //    // problem #21 - calling a method
-//    Void foo()
+//    void foo()
 //        {
 //        }
 //
-//    Void bar()
+//    void bar()
 //        {
 //        foo();
 //        }
 //
 //    // problem #22 - calling a function
-//    static Void foo()
+//    static void foo()
 //        {
 //        }
 //
-//    static Void bar()
+//    static void bar()
 //        {
 //        foo();
 //        }
@@ -397,7 +397,7 @@ module Test
 //
 //        Int y
 //            {
-//            Void set(Int value)
+//            void set(Int value)
 //                {
 //                super(value);
 //                }
@@ -416,7 +416,7 @@ module Test
 //
 //        Int y
 //            {
-//            Void set(Int value)
+//            void set(Int value)
 //                {
 //                super(value);
 //                }
@@ -427,8 +427,8 @@ module Test
 //    class C
 //        {
 //        Int x = 0;
-//        Void foo(Int i) {}
-//        Void testVariations()
+//        void foo(Int i) {}
+//        void testVariations()
 //            {
 //            Int i = x;
 //            x = i;
@@ -552,7 +552,7 @@ module Test
 
 //    class MyMap<KeyType, ValueType> implements Map<KeyType, ValueType>
 //        {
-//        Void foo();
+//        void foo();
 //        @Auto Int size();
 //        }
 //
@@ -563,10 +563,10 @@ module Test
 //        public/private @Unchecked Int x
 //            {
 //            @Unchecked Int get() {return 0;}
-//            Void set(@Unchecked Int n) {}
+//            void set(@Unchecked Int n) {}
 //            }
 //
-//        Void bar();
+//        void bar();
 //        @Auto Int size();
 //
 //        static Int y = 0;

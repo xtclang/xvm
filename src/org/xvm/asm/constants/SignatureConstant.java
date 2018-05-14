@@ -454,14 +454,12 @@ public class SignatureConstant
         simplifyTypes(m_aconstParams);
         simplifyTypes(m_aconstReturns);
 
+        // TODO remove this block after testing
         // replace a void return with no return
         if (m_aconstReturns.length == 1)
             {
             TypeConstant type = m_aconstReturns[0];
-            if (!type.containsUnresolved() && type.isVoid())
-                {
-                m_aconstReturns = ConstantPool.NO_TYPES;
-                }
+            assert type.containsUnresolved() || !type.isVoid();
             }
 
         return this;

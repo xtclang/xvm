@@ -62,7 +62,7 @@ class Array<ElementType>
         }
 
     @Override
-    @Op Void setElement(Int index, ElementType value)
+    @Op void setElement(Int index, ElementType value)
         {
         elementAt(index).set();
         }

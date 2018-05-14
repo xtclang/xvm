@@ -178,7 +178,7 @@ public class VariableDeclarationStatement
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         pool.typeBoolean().getValueString(),
-                        (value.isVoid() ? pool.typeVoid() : value.getTypes()[0]).getValueString());
+                        value.isVoid() ? "void" : value.getTypes()[0].getValueString());
                 fValid = false;
                 }
 

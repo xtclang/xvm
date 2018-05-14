@@ -67,7 +67,7 @@ interface List<ElementType>
          *
          * @throws ReadOnlyException  if the List is not _mutable_
          */
-        Void insert(ElementType value);
+        void insert(ElementType value);
 
         /**
          * Delete the element at the current index. If the index is beyond the end of the list, this
@@ -75,7 +75,7 @@ interface List<ElementType>
          *
          * @throws ReadOnlyException  if the List is not _mutable_
          */
-        Void delete();
+        void delete();
         }
 
     /**
@@ -276,7 +276,7 @@ interface List<ElementType>
                 }
 
             @Override
-            Void set(Int i)
+            void set(Int i)
                 {
                 if (i < 0 || i > List.this.size)
                     {
@@ -318,7 +318,7 @@ interface List<ElementType>
                 }
 
             @Override
-            Void set(ElementType value)
+            void set(ElementType value)
                 {
                 Int i    = internalIndex;
                 Int size = List.this.size;
@@ -337,7 +337,7 @@ interface List<ElementType>
             }
 
         @Override
-        Void insert(ElementType value)
+        void insert(ElementType value)
             {
             Int i    = internalIndex;
             Int size = List.this.size;
@@ -355,7 +355,7 @@ interface List<ElementType>
             }
 
         @Override
-        Void delete()
+        void delete()
             {
             Int i = index;
             if (i < List.this.size)

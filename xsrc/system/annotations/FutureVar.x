@@ -13,7 +13,7 @@
  *           }
  *       }
  *
- *   Void test()
+ *   void test()
  *       {
  *       @Inject Console console
  *       Pi pi = new Pi();
@@ -75,7 +75,7 @@ mixin FutureVar<RefType>
     /**
      * The function type used to notify dependent futures.
      */
-    typedef function Void (Completion, RefType?, Exception?) NotifyDependent;
+    typedef function void (Completion, RefType?, Exception?) NotifyDependent;
 
     /**
      * The future that is chained to this future, that this future sends its completion result to.
@@ -115,7 +115,7 @@ mixin FutureVar<RefType>
         }
 
     @Override
-    Void set(RefType value)
+    void set(RefType value)
         {
         assert !assigned;
         if (assignable)
@@ -143,7 +143,7 @@ mixin FutureVar<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureVar!<RefType> thenDo(function Void () run)
+    FutureVar!<RefType> thenDo(function void () run)
         {
         return chain(new ThenDoStep<RefType>(run));
         }
@@ -163,7 +163,7 @@ mixin FutureVar<RefType>
      * * If the new future completes successfully, then its value will be the same as this
      *   future's value.
      */
-    FutureVar!<RefType> passTo(function Void (RefType) consume)
+    FutureVar!<RefType> passTo(function void (RefType) consume)
         {
         return chain(new PassToStep<RefType>(consume));
         }
@@ -309,7 +309,7 @@ mixin FutureVar<RefType>
      *   (successfully or exceptionally) and with the same result (value or exception) as this
      *   future.
      */
-    FutureVar!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+    FutureVar!<RefType> whenComplete(function void (RefType?, Exception?) notify)
         {
         return chain(new WhenCompleteStep<RefType>(notify));
         }
@@ -356,7 +356,7 @@ mixin FutureVar<RefType>
      * Cause the future to complete successfully with a result, if the future has not already
      * completed.
      */
-    Void complete(RefType result)
+    void complete(RefType result)
         {
         if (completion == Pending)
             {
@@ -378,7 +378,7 @@ mixin FutureVar<RefType>
      * Cause the future to complete exceptionally with an exception, if the future has not already
      * completed.
      */
-    Void completeExceptionally(Exception e)
+    void completeExceptionally(Exception e)
         {
         if (completion == Pending)
             {
@@ -412,7 +412,7 @@ mixin FutureVar<RefType>
      * Internal method that has the once-and-only-once behavior associated with the future's
      * completion.
      */
-    protected Void thisCompleted(RefType? result, Exception? e)
+    protected void thisCompleted(RefType? result, Exception? e)
         {
         // by default, the only completion logic is to chain the completion
         notify?(completion, result, e);
@@ -436,7 +436,7 @@ mixin FutureVar<RefType>
      * Add a NotifyDependent function to the list of things that this future must notify when it
      * completes. The FutureVar can chain to any number of NotifyDependent functions.
      */
-    Void chain(NotifyDependent notify)
+    void chain(NotifyDependent notify)
         {
         switch (completion)
             {
@@ -476,7 +476,7 @@ mixin FutureVar<RefType>
             incorporates FutureVar<RefType>
             delegates Ref<RefType>(resultRef)
         {
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
             if (!assigned)
                 {
@@ -527,7 +527,7 @@ mixin FutureVar<RefType>
         private NotifyDependent? notify2;
 
         @Override
-        Void chain(NotifyDependent chain)
+        void chain(NotifyDependent chain)
             {
             // the MultiCompleter is used by other future instances to implement chaining, but
             // the MultiCompleter is not intended to be visible outside of those futures, and it
@@ -536,7 +536,7 @@ mixin FutureVar<RefType>
             }
 
         @Override
-        protected Void thisCompleted(RefType? result, Exception? e)
+        protected void thisCompleted(RefType? result, Exception? e)
             {
             super(result, e);
 
@@ -553,11 +553,11 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link run} function throws an exception, then this future completes exceptionally.
      */
-    static class ThenDoStep<RefType>(function Void () run)
+    static class ThenDoStep<RefType>(function void () run)
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, RefType? input, Exception? e)
+        void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Result)
                 {
@@ -584,11 +584,11 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link consume} function throws an exception, then this future completes exceptionally.
      */
-    static class PassToStep<RefType>(function Void (RefType) consume)
+    static class PassToStep<RefType>(function void (RefType) consume)
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, RefType? input, Exception? e)
+        void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Result)
                 {
@@ -623,7 +623,7 @@ mixin FutureVar<RefType>
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, RefType? input, Exception? e)
+        void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion == Error)
                 {
@@ -654,11 +654,11 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link notify} function throws an exception, then this future completes exceptionally.
      */
-    static class WhenCompleteStep<RefType>(function Void (RefType?, Exception?) notify)
+    static class WhenCompleteStep<RefType>(function void (RefType?, Exception?) notify)
             extends DependentFuture<RefType, RefType>
         {
         @Override
-        Void parentCompleted(Completion completion, RefType? input, Exception? e)
+        void parentCompleted(Completion completion, RefType? input, Exception? e)
             {
             if (!assigned && completion != Pending)
                 {
@@ -727,7 +727,7 @@ mixin FutureVar<RefType>
          * Handle the completion of the first parent.
          */
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
             if (!assigned && !input1)
                 {
@@ -751,7 +751,7 @@ mixin FutureVar<RefType>
         /**
          * Handle the completion of the second parent.
          */
-        Void parent2Completed(Completion completion, Input2Type? input, Exception? e)
+        void parent2Completed(Completion completion, Input2Type? input, Exception? e)
             {
             if (!assigned && !input2)
                 {
@@ -775,7 +775,7 @@ mixin FutureVar<RefType>
         /**
          * Handle the successful completion of both parents.
          */
-        private Void bothParentsCompleted()
+        private void bothParentsCompleted()
             {
             assert input1 && input2;
             try
@@ -801,7 +801,7 @@ mixin FutureVar<RefType>
             extends DependentFuture<RefType, InputType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
             assert completion != Pending;
 
@@ -835,7 +835,7 @@ mixin FutureVar<RefType>
             extends DependentFuture<RefType, InputType>
         {
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
             if (!assigned)
                 {
@@ -865,7 +865,7 @@ mixin FutureVar<RefType>
         protected FutureVar<RefType>? asyncResult;
 
         @Override
-        Void parentCompleted(Completion completion, InputType? input, Exception? e)
+        void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
             if (!assigned)
                 {
@@ -892,7 +892,7 @@ mixin FutureVar<RefType>
          * When the invoked function completes, its future invokes this method, allowing this future
          * to complete.
          */
-        protected Void asyncCompleted(Completion completion, RefType? result, Exception? e)
+        protected void asyncCompleted(Completion completion, RefType? result, Exception? e)
             {
             assert completion != Pending;
             if (completion == Result)

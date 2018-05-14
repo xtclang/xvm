@@ -207,7 +207,7 @@ interface Service()
      * * {@code yield} has no effect on the backlog if reentrancy is set to Forbidden;
      * * {@code yield} has no effect if it is invoked from outside of the service.
      */
-    Void yield();
+    void yield();
 
     /**
      * Add a function-to-call to the service's backlog.
@@ -222,7 +222,7 @@ interface Service()
      *
      * Exceptions raised by the {@code doLater} function are ignored and lost by the runtime.
      */
-    Void callLater(function Void doLater());
+    void callLater(function void doLater());
 
     /**
      * This is the memory footprint of the service, including memory that might not be being fully
@@ -238,7 +238,7 @@ interface Service()
     /**
      * Request the service to look for objects that are no longer used and reclaim their memory.
      */
-    Void gc();
+    void gc();
 
     /**
      * Attempt to terminate the Service gracefully by asking it to shut down itself.
@@ -248,14 +248,14 @@ interface Service()
      *
      * This method can be invoked from either inside or outside of the service.
      */
-    Void shutdown();
+    void shutdown();
 
     /**
      * Forcibly terminate the Service without giving it a chance to shut down gracefully.
      *
      * This method can be invoked from either inside or outside of the service.
      */
-    Void kill();
+    void kill();
 
     /**
      * Register a ContextToken, replacing any previously registered ContextToken with the same name.
@@ -264,7 +264,7 @@ interface Service()
      * any calls from this service to another service will have the effect of automatically
      * registering the same ContextToken with that service for the duration of the call.
      */
-    Void registerContextToken(ContextToken? token);
+    void registerContextToken(ContextToken? token);
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
@@ -273,7 +273,7 @@ interface Service()
      * of the current execution thread (a.k.a. fiber). Otherwise, the timeout of the service
      * itself will be changed.
      */
-    Void registerTimeout(Timeout? timeout);
+    void registerTimeout(Timeout? timeout);
 
     /**
      * Register a CriticalSection for the service, replacing any previously registered
@@ -281,7 +281,7 @@ interface Service()
      *
      * Calling this method from the outside of the service is not allowed.
      */
-    Void registerCriticalSection(CriticalSection? criticalSection);
+    void registerCriticalSection(CriticalSection? criticalSection);
 
     /**
      * Register a function to invoke when the service is shutting down. This notification is not
@@ -289,7 +289,7 @@ interface Service()
      *
      * Exceptions raised by the {@code notify} function are ignored and lost by the runtime.
      */
-    Void registerShuttingDownNotification(function Void notify());
+    void registerShuttingDownNotification(function void notify());
 
     /**
      * Register an AsyncSection to process unhandled exceptions. An unhandled exception can occur
@@ -304,7 +304,7 @@ interface Service()
      *
      * Calling this method from the outside of the service is not allowed.
      */
-    Void registerAsyncSection(AsyncSection? newAsyncSection);
+    void registerAsyncSection(AsyncSection? newAsyncSection);
 
     /**
      * Register a function to invoke when an unhandled exception occurs. An unhandled exception can
@@ -318,5 +318,5 @@ interface Service()
      *
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
-    Void registerUnhandledExceptionNotification(function Void notify(Exception));
+    void registerUnhandledExceptionNotification(function void notify(Exception));
     }

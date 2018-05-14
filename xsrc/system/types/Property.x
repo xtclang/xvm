@@ -2,7 +2,7 @@
  * A Property represents a property of a particular class or type. A property has a type, a name,
  * and a value. At runtime, a property is itself of type {@code Ref}.
  */
-const Property<TargetType, PropertyType>(Method<TargetType, Tuple<Ref<PropertyType>>, Void> method)
+const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method)
     {
     /**
      * The property's name.
@@ -19,7 +19,7 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<Ref<PropertyTy
     Method? getter;
     Method? setter;
 
-    private Method<TargetType, Tuple<Ref<PropertyType>>, Void> method;
+    private Method<TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method;
 
     // ----- dynamic behavior ----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<Ref<PropertyTy
      * Given an object reference of a type that contains this property, modify the value of the
      * property.
      */
-    Void set(TargetType target, PropertyType value)
+    void set(TargetType target, PropertyType value)
         {
         return this.of(target).set(value);
         }

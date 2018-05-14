@@ -59,14 +59,14 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
      * A normal constructor is a function that operates on a read/write structure that will contain
      * the values of the newly constructed object.
      */
-    typedef function Void (StructType) Constructor;
+    typedef function void (StructType) Constructor;
 
     /**
      * The second half of the constructor-finally pair.
      *
      * @see ConstructorFinally
      */
-    typedef function Void (PrivateType) Completion;
+    typedef function void (PrivateType) Completion;
 
     /**
      * A constructor-finally pair is a combination of a constructor function that operates on the

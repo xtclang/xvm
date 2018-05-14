@@ -301,8 +301,8 @@ public class ClassStructure
                 }
             else if (constClz.equals(pool.clzTuple()))
                 {
-                // canonical Tuple is the same as Void
-                typeCanonical = pool.typeVoid();
+                // canonical Tuple
+                typeCanonical = pool.ensureParameterizedTypeConstant(pool.typeTuple());
                 }
             else
                 {
@@ -1596,18 +1596,16 @@ public class ClassStructure
                     // fill the missing actual parameters with the canonical types
                     // Note: since there is a possibility of Tuple self-reference
                     // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)
-                    // we'll prime the args as "Void"
-                    // (TODO: that needs to be re-worked when we get rid of Void)
+                    // we'll prime each args with Object for now
                     for (int i = cActual; i < cFormal; i++)
                         {
-                        listActual.add(pool.typeVoid());
+                        listActual.add(pool.typeObject());
                         }
 
                     for (int i = cActual; i < cFormal; i++)
                         {
-                        TypeConstant typeCanonical = entries.get(i).getValue();
-
                         // the canonical type itself could be formal, depending on another parameter
+                        TypeConstant typeCanonical = entries.get(i).getValue();
                         listActual.set(i, typeCanonical.resolveGenerics(this));
                         }
                     }

@@ -73,28 +73,28 @@ interface FileStore
      *
      * @throws IOException if the directory could not be created
      */
-    Void makeDir(Path path);
+    void makeDir(Path path);
 
     /**
      * Remove a file or directory denoted by the specified Path.
      *
      * @throws IOException if the file or directory could not be removed
      */
-    Void remove(Path path);
+    void remove(Path path);
 
     /**
      * Rename the file denoted by source path to the destination.
      *
      * @throws IOException if the operation has failed
      */
-    Void rename(Path sourcePath, Path newPath);
+    void rename(Path sourcePath, Path newPath);
 
     /**
      * Copy the file denoted by source path to the destination.
      *
      * @throws IOException if the operation has failed
      */
-    Void copy(Path sourcePath, Path newPath);
+    void copy(Path sourcePath, Path newPath);
 
     /**
      * Updates the last-modified time of the file denoted by the specified Path.

@@ -97,7 +97,7 @@ service Container
          * example `memory`, `time interval`, `cpu cycles` `network bandwidth`.
          * TODO: there has to be a full section on the names and valid ranges
          */
-        Void addConstraint(String name, Range<Int> range);
+        void addConstraint(String name, Range<Int> range);
 
         /**
          * Invoke the method with a given name and arguments.
@@ -108,23 +108,23 @@ service Container
          * Pause the application. This call will try a best effort attempt to stop the application
          * execution when it reaches a safe point (TODO: explain).
          */
-        Void pause();
+        void pause();
 
         /**
          * Persist the application state to the specified FileStore. This operation is allowed only
          * after the application has been paused.
          */
-        Void flush(FileStore store);
+        void flush(FileStore store);
 
         /**
          * Reload the application state from the specified FileStore and resume its execution.
          */
-        Void reactivate(FileStore store);
+        void reactivate(FileStore store);
 
         /**
          * Kill the application immediately.
          */
-        Void kill();
+        void kill();
         }
     }
 

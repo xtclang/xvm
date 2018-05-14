@@ -64,7 +64,7 @@ interface Buffer<DataType extends Const>
      *
      * @throws BufferException if the buffer's position is at its limit or this buffer is read-only
      */
-    Void put(DataType el);
+    void put(DataType el);
 
     /**
      * Write the specified element into this buffer at the specified position.
@@ -73,7 +73,7 @@ interface Buffer<DataType extends Const>
      *                         is read-only
      */
     @Override @Op("setElement")
-    Void put(Int ix, DataType el);
+    void put(Int ix, DataType el);
 
     /**
      * Clear this buffer. This sets the position to zero, the limit to the capacity,

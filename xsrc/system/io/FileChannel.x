@@ -34,7 +34,7 @@ interface FileChannel
      * To make the operation asynchronous, and allow an explicit completion check, use the
      * @Future annotation:
      *
-     *     @Future Void result = channel.read(buffer);
+     *     @Future void result = channel.read(buffer);
      *     while (&result.completion == FutureVar.Pending)
      *         {
      *         // do something else
@@ -46,7 +46,7 @@ interface FileChannel
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
-    Void read(Buffer<Byte> buffer);
+    void read(Buffer<Byte> buffer);
 
     /**
      * Read a sequence of bytes from this channel into the specified buffers starting at the
@@ -73,7 +73,7 @@ interface FileChannel
      * To make the operation asynchronous, and allow an explicit completion check, use the
      * @Future annotation:
      *
-     *     @Future Void result = channel.write(buffer);
+     *     @Future void result = channel.write(buffer);
      *     while (&result.completion == FutureVar.Pending)
      *         {
      *         // do something else
@@ -85,7 +85,7 @@ interface FileChannel
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
-    Void write(Buffer<Byte> buffer);
+    void write(Buffer<Byte> buffer);
 
     /**
      * Write a sequence of bytes from the specified buffers into this channel starting at the
@@ -95,12 +95,12 @@ interface FileChannel
      *
      * @throw IOException if the operation fails to complete due to an unrecoverable IO error
      */
-    Void write(Buffer<Byte>[] buffers);
+    void write(Buffer<Byte>[] buffers);
 
     /**
      * Ensure all the changes are written to the underlying storage medium.
      */
-    Void flush();
+    void flush();
 
     // TODO: modes and attributes...
     }

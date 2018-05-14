@@ -33,7 +33,7 @@
 const AsyncSection
         implements Closeable
     {
-    construct(function Void (Exception) notify)
+    construct(function void (Exception) notify)
         {
         // store off the previous AsyncSection; it will be restored when
         // this AsyncSection is closed
@@ -51,7 +51,7 @@ const AsyncSection
      *
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
-    function Void (Exception) notify;
+    function void (Exception) notify;
 
     /**
      * The {@code AsyncSection} that this AsyncSection replaced, if any.
@@ -91,7 +91,7 @@ const AsyncSection
      * {@code try} with-resources keywords.
      */
     @Override
-    Void close()
+    void close()
         {
         if (registered)
             {

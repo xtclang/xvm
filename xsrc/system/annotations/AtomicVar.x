@@ -19,7 +19,7 @@
  *       // the percentDone value, and monitor its progress from 0% to 100%
  *       @Atomic Int percentDone;
  *
- *       Void processBatch()
+ *       void processBatch()
  *           {
  *           Int lastPercent = 0;
  *           for (Int i : 0..work.length)

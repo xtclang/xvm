@@ -15,7 +15,7 @@ interface Iterator<ElementType>
      *
      * @param process  an action to perform on each element
      */
-    Void forEach(function Void (ElementType) process)
+    void forEach(function void (ElementType) process)
         {
         while (ElementType value : next())
             {

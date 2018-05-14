@@ -919,10 +919,6 @@ public class ConstantPool
             case "X":
                 break;
 
-            case "Void":
-                sDef = sName;
-                break;
-
             case "Bit":
             case "Boolean":
             case "Char":
@@ -1854,7 +1850,6 @@ public class ConstantPool
     public TypeConstant      typeTuple()        {TypeConstant      c = m_typeTuple;       if (c == null) {m_typeTuple       = c = ensureTerminalTypeConstant(clzTuple()                      );} return c;}
     public TypeConstant      typeFrame()        {TypeConstant      c = m_typeFrame;       if (c == null) {m_typeFrame       = c = ensureTerminalTypeConstant(clzFrame()                      );} return c;}
 
-    public TypeConstant      typeVoid()         {TypeConstant      c = m_typeVoid;        if (c == null) {m_typeVoid        = c = ensureParameterizedTypeConstant(typeTuple(), NO_TYPES);} return c;}
     public TypeConstant      typeByteArray()    {TypeConstant      c = m_typeByteArray;   if (c == null) {m_typeByteArray   = c = ensureClassTypeConstant(clzArray(), null, typeByte());} return c;}
     public TypeConstant      typeBinary()       {TypeConstant      c = m_typeBinary;      if (c == null) {m_typeBinary      = c = ensureImmutableTypeConstant(typeByteArray());} return c;}
 
@@ -1869,7 +1864,6 @@ public class ConstantPool
     public SingletonConstant valEqual()         {SingletonConstant c = m_valEqual;        if (c == null) {m_valEqual        = c = ensureSingletonConstConstant(clzEqual())                    ;} return c;}
     public SingletonConstant valGreater()       {SingletonConstant c = m_valGreater;      if (c == null) {m_valGreater      = c = ensureSingletonConstConstant(clzGreater())                  ;} return c;}
     public SingletonConstant valNull()          {SingletonConstant c = m_valNull;         if (c == null) {m_valNull         = c = ensureSingletonConstConstant(clzNull())                     ;} return c;}
-    public ArrayConstant     valVoid()          {ArrayConstant     c = m_valVoid;         if (c == null) {m_valVoid         = c = ensureTupleConstant(typeVoid(), Constant.NO_CONSTS)         ;} return c;}
 
     public SignatureConstant sigToString()      {SignatureConstant c = m_sigToString;     if (c == null) {m_sigToString     = c = ensureSignatureConstant("to", NO_TYPES, new TypeConstant[]{typeString()});} return c;}
     public SignatureConstant sigConstruct()     {SignatureConstant c = m_sigConstruct;    if (c == null) {m_sigConstruct    = c = ensureSignatureConstant("construct", NO_TYPES, NO_TYPES)    ;} return c;}
@@ -2542,7 +2536,6 @@ public class ConstantPool
         m_typeIterator    = null;
         m_typeTuple       = null;
         m_typeFrame       = null;
-        m_typeVoid        = null;
         m_val0            = null;
         m_val1            = null;
         m_valFalse        = null;
@@ -2551,7 +2544,6 @@ public class ConstantPool
         m_valEqual        = null;
         m_valGreater      = null;
         m_valNull         = null;
-        m_valVoid         = null;
 
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
@@ -2862,7 +2854,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeIterator;
     private transient TypeConstant      m_typeTuple;
     private transient TypeConstant      m_typeFrame;
-    private transient TypeConstant      m_typeVoid;
     private transient IntConstant       m_val0;
     private transient IntConstant       m_val1;
     private transient SingletonConstant m_valFalse;
@@ -2871,7 +2862,6 @@ public class ConstantPool
     private transient SingletonConstant m_valEqual;
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
-    private transient ArrayConstant     m_valVoid;
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigConstruct;
 
