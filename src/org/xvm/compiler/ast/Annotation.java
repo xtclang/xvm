@@ -188,7 +188,6 @@ public class Annotation
                 if (exprNew != exprOld)
                     {
                     args.set(iArg, exprNew);
-
                     }
 
                 if (exprNew instanceof LabeledExpression)
@@ -218,13 +217,14 @@ public class Annotation
                     TypeConstant.NO_TYPES, atypeArgs, asArgNames);
             if (idConstruct == null)
                 {
-                log(errs, Severity.ERROR, Compiler.ANNOTATION_DECL_UNRESOLVABLE, idAnno.getName());
+                // TODO uncomment this after we bother to create constructors :D
+                // log(errs, Severity.ERROR, Compiler.ANNOTATION_DECL_UNRESOLVABLE, idAnno.getName());
                 }
             else if (cArgs > 0)
                 {
                 // validate the argument expressions and fix up all of the constants used as
                 // arguments to construct the annotation
-                Constant[] aconstArgs = m_anno.getParams();
+                Constant[] aconstArgs = anno.getParams();
                 assert cArgs == aconstArgs.length;
 
                 TypeConstant[] atypeParams = idConstruct.getRawParams();
@@ -252,6 +252,8 @@ public class Annotation
                         aconstArgs[iArg] = exprNew.toConstant();
                         }
                     }
+
+                anno.resolveParams(aconstArgs);
                 }
             }
 

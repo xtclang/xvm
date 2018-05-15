@@ -328,6 +328,8 @@ public class Annotation
     @Override
     public int hashCode()
         {
+        assert isResolved();
+
         Constant[] aParams = m_aParams;
         int        cParams = aParams.length;
         int        n       = getAnnotationClass().hashCode() + cParams;
@@ -341,6 +343,8 @@ public class Annotation
     @Override
     public boolean equals(Object obj)
         {
+        assert isResolved();
+
         if (obj instanceof Annotation)
             {
             Annotation that       = (Annotation) obj;

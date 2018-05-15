@@ -1132,6 +1132,7 @@ public class InvocationExpression
      *                    function to select)
      * @param aArgs       the types of the arguments being provided (some of which may be null to
      *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     * TODO add array of names here
      * @param errs        the error list to log errors to
      *
      * @return the matching method, function, or (rarely) property
@@ -1153,7 +1154,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        MethodConstant method = infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null);
+        MethodConstant method = infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null); // TODO asArgNames
         if (method == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
