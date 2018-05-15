@@ -57,9 +57,27 @@ public class xString
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         StringHandle hThis = (StringHandle) hTarget;
-        StringHandle hThat = (StringHandle) hArg;
+        String       sThis = hThis.m_sValue;
 
-        return frame.assignValue(iReturn, makeHandle(hThis.m_sValue + hThat.m_sValue));
+        switch (hArg.getTemplate().buildStringValue(frame, hArg, Frame.RET_LOCAL))
+            {
+            case Op.R_NEXT:
+                return frame.assignValue(iReturn, makeHandle(sThis +
+                    ((StringHandle) frame.getFrameLocal()).m_sValue));
+
+            case Op.R_CALL:
+                frame.m_frameNext.setContinuation(frameCaller ->
+                    frameCaller.assignValue(iReturn, makeHandle(sThis +
+                        ((StringHandle) frame.getFrameLocal()).m_sValue)));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+
         }
 
     @Override
@@ -199,7 +217,7 @@ public class xString
     @Override
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return frame.assignValue(iReturn, hTarget);
+        return frame.assignValue(iReturn, (StringHandle) hTarget);
         }
 
     public static class StringHandle

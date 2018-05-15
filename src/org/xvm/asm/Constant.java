@@ -146,15 +146,6 @@ public abstract class Constant
         }
 
     /**
-     * @return true iff this constant represents a method at runtime, whether or not the exact
-     *         identity of the method is known at compile time
-     */
-    public boolean isMethod()
-        {
-        return false;
-        }
-
-    /**
      * @return false iff the constant is resolved, and all reachable constants within the constant
      *         are resolved
      */

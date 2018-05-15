@@ -125,8 +125,8 @@ public class DaemonPool
                             {
                             // TODO: RTError
                             frame = context.getCurrentFrame();
-                            Utils.log(frame, "\nUnhandled exception at " +
-                                    "iPC=" + (frame == null ? 0 : frame.m_iPC));
+                            Utils.log(frame, "\nUnhandled exception at " + frame +
+                                    "; iPC=" + (frame == null ? 0 : frame.m_iPC));
                             e.printStackTrace(System.out);
                             System.exit(-1);
                             }

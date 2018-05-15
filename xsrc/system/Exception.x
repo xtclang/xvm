@@ -11,11 +11,11 @@ const Exception
     {
     construct(String? text, Exception? cause = null)
         {
-        @Inject Iterable<StackFrame> stackTrace;
+        @Inject Iterable<StackFrame> stack;
 
         this.text = text;
         this.cause = cause;
-        this.stackTrace = stackTrace;
+        this.stackTrace = stack;
         }
 
     String? text;

@@ -189,6 +189,20 @@ public class MethodConstant
         }
 
     @Override
+    public TypeConstant getType()
+        {
+        TypeConstant type = m_type;
+        if (type == null)
+            {
+            // Note, that the implementation doesn't differentiate between methods and functions,
+            // making both the methods and the functions be of the "Function" type
+            // (@see InvocationExpression.generateArguments)
+            m_type = type = getSignature().asFunctionType();
+            }
+        return type;
+        }
+
+    @Override
     public Object getNestedIdentity()
         {
         // method can be identified with only a signature, assuming it is not recursively nested
@@ -358,4 +372,9 @@ public class MethodConstant
      * The constant that represents the signature of this method.
      */
     private SignatureConstant m_constSig;
+
+    /**
+     * Cached type.
+     */
+    private transient TypeConstant m_type;
     }

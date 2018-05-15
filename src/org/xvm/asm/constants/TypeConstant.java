@@ -274,34 +274,26 @@ public abstract class TypeConstant
      *
      * @param sName  the formal parameter name
      *
-     * @return the corresponding actual type
+     * @return the corresponding actual type or null if there is no matching formal type
      */
     public TypeConstant getGenericParamType(String sName)
         {
         if (isSingleDefiningConstant())
             {
             TypeInfo info = getTypeInfo();
-            if (info != null && info.getProgress().compareTo(Progress.Incomplete) >= 0)
+            if (info != null && info.getProgress() == Progress.Complete)
                 {
                 ParamInfo param = info.getTypeParams().get(sName);
-                if (param == null)
-                    {
-                    throw new IllegalArgumentException(
-                            "Invalid formal name: " + sName + " for " + getValueString());
-                    }
-                return param.getActualType();
+                return param == null
+                    ? null
+                    : param.getActualType();
                 }
 
             // because isA() uses this method, there is a chicken-and-egg problem, so instead of
             // materializing the TypeInfo at this point, just answer the question without it
             ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
-            if (type == null)
-                {
-                throw new IllegalArgumentException(
-                        "Invalid formal name: " + sName + " for " + this);
-                }
-            return type;
+
+            return clz.getGenericParamType(sName, getParamTypes());
             }
 
         throw new UnsupportedOperationException();

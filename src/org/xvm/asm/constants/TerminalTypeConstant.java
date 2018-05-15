@@ -283,9 +283,15 @@ public class TerminalTypeConstant
     public TypeConstant resolveGenerics(GenericTypeResolver resolver)
         {
         Constant constId = getDefiningConstant();
-        return constId instanceof PropertyConstant
-            ? resolver.resolveGenericType((PropertyConstant) constId)
-            : this;
+        if (constId instanceof PropertyConstant)
+            {
+            TypeConstant typeResolved = resolver.resolveGenericType((PropertyConstant) constId);
+            if (typeResolved != null)
+                {
+                return typeResolved;
+                }
+            }
+        return this;
         }
 
     @Override
