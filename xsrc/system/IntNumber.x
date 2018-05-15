@@ -130,30 +130,30 @@ interface IntNumber
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    @RO IntNumber leftmostBit;
+    @RO Int leftmostBit;
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    @RO IntNumber rightmostBit;
+    @RO Int rightmostBit;
 
     /**
      * Determine, from left-to-right (most significant to least) the number of bits that are zero
      * preceding the most significant (left-most) bit.
      */
-    @RO IntNumber leadingZeroCount;
+    @RO Int leadingZeroCount;
 
     /**
      * Determine, from right-to-left (least significant to most) the number of bits that are zero
      * following the least significant (right-most) bit.
      */
-    @RO IntNumber trailingZeroCount;
+    @RO Int trailingZeroCount;
 
     /**
      * Determine the number of bits that are set (non-zero) in the integer.
      */
-    @RO IntNumber bitCount;
+    @RO Int bitCount;
 
     /**
      * Swap the bit ordering of this integer's bits to produce a new integer with the

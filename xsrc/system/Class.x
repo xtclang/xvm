@@ -466,7 +466,7 @@ const Class<PublicType, ProtectedType extends PublicType, PrivateType extends Pr
     Class narrow(TypeParameter... params)
         {
         // first, verify that there is something that is being modified
-        Map<String, TypeParameter> mapParams = paramsByName;
+        Map<String, TypeParameter> mapParams = typeParamsByName;
         Boolean different = false;
         for (TypeParameter paramNew : params)
             {
