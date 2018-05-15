@@ -101,10 +101,11 @@ public class TupleExpression
             return TypeFit.NoFit;
             }
 
-        // for each requested type, verify that the underlying expression is willing to provide that
-        // type
+        // for each required type, verify that the underlying expression is willing to provide that
+        // type; if there are more types in the underlying expression than required, then the extras
+        // are always OK
         TypeFit fitOut = TypeFit.Fit;
-        for (int i = 0; i < cExprs; ++i)
+        for (int i = 0; i < cRequired; ++i)
             {
             TypeConstant typeRequired = atypeRequired[i];
             Expression   expr         = listExprs.get(i);
@@ -141,6 +142,7 @@ public class TupleExpression
             if (fit.isFit())
                 {
                 atypeRequired = aTypeFields;
+                cRequired     = atypeRequired.length;
                 fPack         = true;
                 }
             }

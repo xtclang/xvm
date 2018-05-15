@@ -146,6 +146,7 @@ public class VariableDeclarationStatement
             {
             if (typeVar.isTuple())
                 {
+                // determine if we can ask for the value(s) in tuple form and/or in separate form
                 TypeFit fitTup = value.testFit(ctx, typeVar, TuplePref.Rejected);
                 TypeFit fitSep = TypeFit.NoFit;
                 if (typeVar.isParamsSpecified())
