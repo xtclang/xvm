@@ -46,6 +46,14 @@ public class LiteralExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the literal token
+     */
+    public Token getLiteral()
+        {
+        return literal;
+        }
+
+    /**
      * @return true iff the LiteralExpression is the result of an empty T0D0 expression
      */
     public boolean isTODO()

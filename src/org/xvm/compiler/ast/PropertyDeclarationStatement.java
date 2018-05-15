@@ -208,7 +208,7 @@ public class PropertyDeclarationStatement
                     ConstantPool pool = pool();
                     for (Annotation annotation : annotations)
                         {
-                        prop.addAnnotation(annotation.buildAnnotation(pool));
+                        prop.addAnnotation(annotation.ensureAnnotation(pool));
                         }
                     }
                 }

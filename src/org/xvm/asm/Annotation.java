@@ -125,15 +125,37 @@ public class Annotation
         return m_aParams;
         }
 
+    /**
+     * Marks this Annotation as containing unresolved elements.
+     */
+    public void markUnresolved()
+        {
+        m_fUnresolved = true;
+        }
+
+    /**
+     * Allows the caller to provide resolved Annotation parameters.
+     *
+     * @param aParams
+     */
+    public void resolveParams(Constant[] aParams)
+        {
+        assert m_aParams.length == aParams.length;
+        m_aParams     = aParams;
+        m_fUnresolved = false;
+        }
+
 
     // ----- Constant helpers ----------------------------------------------------------------------
 
     /**
      * Helper for Constant.
+     *
+     * @return true if this Annotation contains any unresolved constants
      */
     public boolean containsUnresolved()
         {
-        if (getAnnotationClass().containsUnresolved())
+        if (m_fUnresolved || getAnnotationClass().containsUnresolved())
             {
             return true;
             }
@@ -400,4 +422,9 @@ public class Annotation
      * The annotation parameters.
      */
     private Constant[] m_aParams;
+
+    /**
+     * Used to track that the annotation is not resolved.
+     */
+    private transient boolean m_fUnresolved;
     }

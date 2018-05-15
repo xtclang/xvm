@@ -1151,7 +1151,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        MethodConstant method = infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs);
+        MethodConstant method = infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null);
         if (method == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);

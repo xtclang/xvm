@@ -71,6 +71,19 @@ public abstract class TypeExpression
         }
 
     /**
+     * Clear out this expression's type, if it is cached.
+     */
+    protected void resetTypeConstant()
+        {
+        m_constType = null;
+        AstNode parent = getParent();
+        if (parent instanceof TypeExpression)
+            {
+            ((TypeExpression) parent).resetTypeConstant();
+            }
+        }
+
+    /**
      * Perform right-to-left inference of type information, if possible.
      *
      * @param type  a type constant from an expression related to this TypeExpression, in such a

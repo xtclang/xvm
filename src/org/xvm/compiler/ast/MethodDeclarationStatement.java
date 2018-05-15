@@ -479,7 +479,7 @@ public class MethodDeclarationStatement
             aAnnotations = new org.xvm.asm.Annotation[cAnnotations];
             for (int i = 0; i < cAnnotations; ++i)
                 {
-                aAnnotations[i] = annotations.get(i).buildAnnotation(pool);
+                aAnnotations[i] = annotations.get(i).ensureAnnotation(pool);
                 }
             }
 

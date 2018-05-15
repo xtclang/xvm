@@ -6,15 +6,24 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
+
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -73,74 +82,175 @@ public class Annotation
         return CHILD_FIELDS;
         }
 
-    public org.xvm.asm.Annotation buildAnnotation(ConstantPool pool)
+    /**
+     * Build an XVM Annotation that corresponds to the information that this AST Annotation has
+     * available.
+     *
+     * @param pool  the ConstantPool to use to create the XVM structures
+     *
+     * @return an XVM Annotation
+     */
+    public org.xvm.asm.Annotation ensureAnnotation(ConstantPool pool)
         {
-        Constant constClass = getType().getIdentityConstant();
-        List<Expression> args       = getArguments();
-        Constant[]       aconstArgs = null;
-        if (args != null && !args.isEmpty())
+        if (m_anno != null)
             {
-            int cArgs = args.size();
+            return m_anno;
+            }
+
+        Constant         constClass  = getType().getIdentityConstant();
+        List<Expression> args        = getArguments();
+        Constant[]       aconstArgs  = Constant.NO_CONSTS;
+        int              cArgs       = args == null ? 0 : args.size();
+        Constant         constNoIdea = null;
+        if (cArgs > 0)
+            {
             aconstArgs = new Constant[cArgs];
-            Constant constNoIdea = pool.ensureStringConstant("???");
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
-                aconstArgs[iArg] = constNoIdea;
+                Expression exprArg = args.get(iArg);
+                if (exprArg.alreadyReached(Stage.Validated))
+                    {
+                    aconstArgs[iArg] = exprArg.toConstant();
+                    }
+                else if (exprArg instanceof LiteralExpression
+                        && ((LiteralExpression) exprArg).getLiteral().getId() == Id.LIT_STRING)
+                    {
+                    // only String literals have a predictable runtime type (no @Auto conversions)
+                    aconstArgs[iArg] = pool.ensureStringConstant(((LiteralExpression) exprArg)
+                            .getLiteral().getValue().toString());
+                    }
+                else
+                    {
+                    if (constNoIdea == null)
+                        {
+                        constNoIdea = pool.ensureStringConstant("???");
+                        }
+                    aconstArgs[iArg] = constNoIdea;
+                    }
                 }
             }
-        m_anno = new org.xvm.asm.Annotation(constClass, aconstArgs);
-        return m_anno;
+
+        org.xvm.asm.Annotation anno = new org.xvm.asm.Annotation(constClass, aconstArgs);
+        if (constNoIdea != null)
+            {
+            anno.markUnresolved();
+            }
+        m_anno = anno;
+        return anno;
         }
 
 
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        return super.resolveNames(listRevisit, errs);
-
-        }
-
-    @Override
     public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
         {
-        // before we let the children go, we need to fill in the annotation construction parameters
-        Constant[] aconstArgs = m_anno == null ? null : m_anno.getParams();
-        if (aconstArgs != null && aconstArgs.length > 0)
+        org.xvm.asm.Annotation anno = m_anno;
+        assert anno != null;
+
+        Constant constAnno = anno.getAnnotationClass();
+        assert !constAnno.containsUnresolved();
+
+        boolean       fValid   = true;
+        ClassConstant idAnno   = (ClassConstant) constAnno;
+        TypeInfo      infoAnno = idAnno.ensureTypeInfo(errs);
+        if (infoAnno.getFormat() != Format.MIXIN)
             {
-            ValidatingContext ctx   = new ValidatingContext();
-            List<Expression>  args  = getArguments();
-            int               cArgs = args.size();
-            assert cArgs == aconstArgs.length;
+            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idAnno.getName());
+            fValid = false;
+            }
+
+        // find a matching constructor on the annotation class
+        // before we let the children go, we need to fill in the annotation construction parameters
+        List<Expression>  args       = getArguments();
+        int               cArgs      = args == null ? 0 : args.size();
+        String[]          asArgNames = null;
+        boolean           fNameErr   = false;
+        TypeConstant[]    atypeArgs  = TypeConstant.NO_TYPES;
+        ValidatingContext ctx        = null;
+        if (cArgs > 0)
+            {
+            // build a list of argument types and names (used later to try to find an appropriate
+            // annotation constructor)
+            atypeArgs = new TypeConstant[cArgs];
+            ctx       = new ValidatingContext();
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
                 Expression exprOld = args.get(iArg);
                 Expression exprNew = (Expression) exprOld.validateExpressions(listRevisit, errs);
-                if (exprNew != null)
+                if (exprNew == null)
                     {
-                    exprNew = exprNew.validate(ctx, null, Expression.TuplePref.Rejected, errs);
+                    fValid = false;
+                    continue;
                     }
 
-                if (exprNew != null && exprNew != exprOld)
+                if (exprNew != exprOld)
                     {
                     args.set(iArg, exprNew);
+
                     }
 
-                if (exprNew == null || !exprNew.isConstant())
+                if (exprNew instanceof LabeledExpression)
                     {
-                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    if (asArgNames == null)
+                        {
+                        asArgNames = new String[cArgs];
+                        }
+                    asArgNames[iArg] = ((LabeledExpression) exprNew).getName();
                     }
-                else
+                else if (asArgNames != null && !fNameErr)
                     {
-                    // update the Annotation directly
-                    // Note: this is quite unusual, in that normally things like an annotation are
-                    //       treated as a constant once instantiated, but in this case, it was
-                    //       impossible to validate the arguments of the annotation when it was
-                    //       constructed, because we were too early in the compile cycle to resolve
-                    //       any constant expressions that refer to anything _by name_
-                    aconstArgs[iArg] = exprNew.toConstant();
+                    // there was already at least one arg with a name, so all trailing args MUST
+                    // have a name
+                    exprNew.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED);
+                    fNameErr = true;
+                    fValid   = false;
+                    }
+
+                atypeArgs[iArg] = exprOld.getImplicitType(ctx);
+                }
+            }
+
+        if (fValid)
+            {
+            MethodConstant idConstruct = infoAnno.findCallable("construct", false, true,
+                    TypeConstant.NO_TYPES, atypeArgs, asArgNames);
+            if (idConstruct == null)
+                {
+                log(errs, Severity.ERROR, Compiler.ANNOTATION_DECL_UNRESOLVABLE, idAnno.getName());
+                }
+            else if (cArgs > 0)
+                {
+                // validate the argument expressions and fix up all of the constants used as
+                // arguments to construct the annotation
+                Constant[] aconstArgs = m_anno.getParams();
+                assert cArgs == aconstArgs.length;
+
+                TypeConstant[] atypeParams = idConstruct.getRawParams();
+                for (int iArg = 0; iArg < cArgs; ++iArg)
+                    {
+                    Expression exprOld = args.get(iArg);
+                    Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], Expression.TuplePref.Rejected, errs);
+                    if (exprNew != null && exprNew != exprOld)
+                        {
+                        args.set(iArg, exprNew);
+                        }
+
+                    if (exprNew == null || !exprNew.isConstant())
+                        {
+                        exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        }
+                    else
+                        {
+                        // update the Annotation directly
+                        // Note: this is quite unusual, in that normally things like an annotation are
+                        //       treated as a constant once instantiated, but in this case, it was
+                        //       impossible to validate the arguments of the annotation when it was
+                        //       constructed, because we were too early in the compile cycle to resolve
+                        //       any constant expressions that refer to anything _by name_
+                        aconstArgs[iArg] = exprNew.toConstant();
+                        }
                     }
                 }
             }
@@ -192,6 +302,10 @@ public class Annotation
 
     // ----- inner class: ValidatingContext --------------------------------------------------------
 
+    /**
+     * A context implementation that allows us to validate the constant parameters of an annotation
+     * without having to be inside a StatementBlock of a method that is being compiled.
+     */
     protected class ValidatingContext
             extends Context
         {

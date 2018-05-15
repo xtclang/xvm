@@ -131,7 +131,7 @@ public class Container
                 }
 
             MethodConstant idMethod = infoApp.findCallable(sMethodName, true, false,
-                TypeConstant.NO_TYPES, atypeArg);
+                TypeConstant.NO_TYPES, atypeArg, null);
 
             if (idMethod == null)
                 {

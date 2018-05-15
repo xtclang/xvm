@@ -703,6 +703,14 @@ public class Compiler
      * The ".this" suffix must follow a parent class or parent property identity.
      */
     public static final String INVALID_OUTER_THIS                 = "COMPILER-59";
+    /**
+     * Because a previous argument specified a parameter name, the {0} argument must specify a parameter name.
+     */
+    public static final String ARG_NAME_REQUIRED                  = "COMPILER-60";
+    /**
+     * No matching annotation constructor for {0}.
+     */
+    public static final String ANNOTATION_DECL_UNRESOLVABLE       = "COMPILER-61";
 
 
     // ----- data members --------------------------------------------------------------------------

@@ -12,12 +12,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.ast.Statement.Context;
-import org.xvm.util.Severity;
 
 
 /**
@@ -38,35 +35,36 @@ public class AnnotatedTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the annotation
+     */
+    Annotation getAnnotation()
+        {
+        return annotation;
+        }
+
+    /**
      * @return true iff this AnnotatedTypeExpression has been instructed to disassociate its
      *         annotation from the underlying type, which will occur if the annotation needs to be
      *         associated with property, method, or variable, for example
      */
-    public boolean isAnnotationDisassociated()
+    public boolean isDisassociated()
         {
         return m_fDisassociateAnnotation;
         }
 
-    public void setAnnotationDisassociated(boolean fDisassociate)
+    /**
+     * This method allows a VariableDeclarationStatement (for example) to steal the annotation from
+     * the type expression, if the annotation applies to the variable and not the type. One example
+     * would be "@Inject Int i;", in which case the "Int" is not annotated (it is the variable "i"
+     * that is annotated).
+     *
+     * @return the annotation
+     */
+    public Annotation disassociateAnnotation()
         {
-        m_fDisassociateAnnotation = fDisassociate;
-
-        // reset the type constant if one was already created
-        if (getTypeConstant() != null)
-            {
-            setTypeConstant(instantiateTypeConstant());
-            AstNode parent = getParent();
-            while (parent instanceof TypeExpression)
-                {
-                TypeExpression exprParent = (TypeExpression) parent;
-                if (exprParent.getTypeConstant() != null)
-                    {
-                    exprParent.setTypeConstant(exprParent.instantiateTypeConstant());
-                    }
-
-                parent = parent.getParent();
-                }
-            }
+        m_fDisassociateAnnotation = true;
+        resetTypeConstant();
+        return annotation;
         }
 
     @Override
@@ -99,55 +97,17 @@ public class AnnotatedTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        TypeConstant typeUnderlying = type.ensureTypeConstant();
-        if (isAnnotationDisassociated())
-            {
-            // our annotation is not added to the underlying type constant
-            return typeUnderlying;
-            }
-
-        // TODO TODO TODO
-
         // this is a bit complicated:
-        // 1) we need the class of the annotation
-        // 2) we need a constant for each parameter (how do we know we're ready to ask for those at
-        //    this point? what do we do if the parameters are NOT constant? how do we log an error?)
-        // 3) we need the underlying type -- but this is easy: type.ensureTypeConstant()
-        //
-        // the question is, how do we put the resulting TypeConstant together in a way that if it's
-        // not all resolved at this point, that it will get resolved during the resolveNames pass?
-
-        TypeConstant constAnnotationType = annotation.getType().ensureTypeConstant();
-        if (!(constAnnotationType instanceof TerminalTypeConstant))
-            {
-            // TODO should this be a throw? or an error logged? or a temporary place-holder constant
-            // returned just to avoid blowing up?
-            throw new IllegalStateException("illegal annotation class: " + constAnnotationType);
-            }
-
-        Constant[]       aconstParam = null;
-        List<Expression> args = annotation.getArguments();
-        if (args != null)
-            {
-            int cArgs = args.size();
-            aconstParam = new Constant[cArgs];
-            for (int i = 0; i < cArgs; ++i)
-                {
-                Expression exprArg = args.get(i);
-                if (exprArg.isConstant())
-                    {
-                    aconstParam[i] = exprArg.toConstant();
-                    }
-                else
-                    {
-                    // TODO should this be a throw? or an error logged?
-                    throw new IllegalStateException("annotation param not constant: " + exprArg);
-                    }
-                }
-            }
-
-        return pool().ensureAnnotatedTypeConstant(
-                constAnnotationType.getDefiningConstant(), aconstParam, typeUnderlying);
+        // 1) we need the class of the annotation, which is resolved during validateExpressions()
+        // 2) we need a constant for each parameter, but those are only guaranteed to be correct
+        //    after validateExpressions()
+        // 3) a "dis-associated" annotation is one that does not apply to the underlying type, so
+        //    the underlying type is unchanged by this AnnotatedTypeExpression
+        ConstantPool pool           = pool();
+        TypeConstant typeUnderlying = type.ensureTypeConstant();
+        return isDisassociated()
+                ? typeUnderlying    // our annotation is not added to the underlying type constant
+                : pool.ensureAnnotatedTypeConstant(annotation.ensureAnnotation(pool), typeUnderlying);
         }
 
 
@@ -174,12 +134,10 @@ public class AnnotatedTypeExpression
                 return this;
                 }
 
-            // note: each of the parameters of the Annotation will be verified to be a compile-
-            // time constant, but that cannot be attempted until after the call to validate() /
-            // validateMulti(); @see Annotation#validateExpressions
-
             // store off a type constant for this type expression
-            // TODO setTC(initTC)
+            // note: each of the parameters of the Annotation will be verified to be a compile-time
+            //       constant, but that cannot be attempted until after the call to validate() /
+            //       validateMulti(); @see Annotation#validateExpressions
             ensureTypeConstant();
             }
 

@@ -6,12 +6,8 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
+import org.xvm.asm.*;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -347,6 +343,8 @@ public class VariableDeclarationStatement
 
     private Register m_reg;
     private boolean  m_fPackingInit;
+
+    private transient List<Annotation> m_listRefAnnotations;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }

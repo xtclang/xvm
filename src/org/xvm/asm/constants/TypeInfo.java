@@ -945,11 +945,13 @@ public class TypeInfo
      *                    function to select)
      * @param aArgs       the types of the arguments being provided (some of which may be null to
      *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
+     *                    an element in {@code aArgs}
      *
      * @return the matching method or function (null if none found)
      */
     public MethodConstant findCallable(String sName, boolean fMethods, boolean fFunctions,
-                                       TypeConstant[] aRedundant, TypeConstant[] aArgs)
+                                       TypeConstant[] aRedundant, TypeConstant[] aArgs, String[] asArgNames)
         {
         int cRedundant = aRedundant == null ? 0 : aRedundant.length;
         int cArgs      = aArgs      == null ? 0 : aArgs     .length;
