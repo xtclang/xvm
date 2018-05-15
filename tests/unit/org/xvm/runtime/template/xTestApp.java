@@ -39,7 +39,6 @@ public class xTestApp extends xModule
         {
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-        MethodStructure func = getMethodStructure("getIntValue", null, null);
 
         // --- test1()
         MethodStructure ftTest1 = getMethodStructure("test1", VOID, VOID);
@@ -257,15 +256,6 @@ public class xTestApp extends xModule
             .add(new Return_0());
 
         // --- testService2 ---
-
-        MethodStructure ftTestReturn = getMethodStructure("testBlockingReturn",
-            new String[]{"TestApp.TestService"}, INT);
-        ftTestReturn.createCode()
-            // #0 = svc
-            .add(new Invoke_01(0,
-                adapter.getMethodConstId("TestApp.TestService", "increment"),
-                1)) // next register #1
-            .add(new Return_1(1));
 
         MethodStructure ftTestService2 = getMethodStructure("testService2", VOID);
         ftTestService2.createCode()
@@ -750,7 +740,7 @@ public class xTestApp extends xModule
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testService")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testService2")))
             .add(new Call_10(adapter.getMethodConstId("TestApp", "testRef"),
-                    adapter.ensureValueConstantId("hi")))
+                adapter.ensureValueConstantId("hi")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testArray")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testTuple")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testConst")))

@@ -5,8 +5,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.StringConstant;
-
 import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
@@ -34,32 +32,11 @@ public class xTestService extends xService
         {
         adapter.addMethod(f_struct, "construct", INT, VOID);
 
-        MethodStructure mtGetCounter = ensureGetter("counter");
-        mtGetCounter.setOps(new Op[]
-            {
-            new X_Print(
-                adapter.ensureValueConstantId("# in TestService.counter.get #")),
-            new Call_01(Op.A_SUPER, 0), // next register #0
-            new Return_1(0),
-            });
-
-        MethodStructure mtSetCounter = ensureSetter("counter");
-        mtSetCounter.setOps(new Op[]
-            { // #0 = newValue
-            new X_Print(
-                    adapter.ensureValueConstantId("# in TestService.counter.set #")),
-            new X_Print(0),
-            new Call_10(Op.A_SUPER, 0),
-            new Invoke_01(Op.A_THIS, adapter.getMethodConstId("Object", "to"), 1), // next register #1
-            new X_Print(1),
-            new Return_0(),
-            });
-
         MethodStructure constructor = getMethodStructure("construct", INT);
         constructor.setOps(new Op[]
             { // #0 - counter
-            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
-            new Return_0(),
+                new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+                new Return_0(),
             });
 
         MethodStructure mtIncrement = getMethodStructure("increment", VOID, INT);
@@ -68,17 +45,6 @@ public class xTestService extends xService
             new X_Print(adapter.ensureValueConstantId("\n# in TestService.increment #")),
             new IP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0), // next register #0
             new Return_1(0),
-            });
-
-        MethodStructure mtTestConst = getMethodStructure("testConstant", VOID, VOID);
-        mtTestConst.setOps(new Op[]
-            {
-            new X_Print(adapter.ensureValueConstantId("\n# in TestService.testConstant #")),
-            new Var_IN(adapter.getClassType("TestApp.Point", this),
-                (StringConstant) adapter.ensureValueConstant("origin"),
-                adapter.getSingletonConstant("TestPackage.Origin")),  // #0
-            new X_Print(0),
-            new Return_0(),
             });
 
         MethodStructure ftLambda$1 = getMethodStructure("lambda_1",
@@ -117,19 +83,6 @@ public class xTestService extends xService
                     new int[] {3, 0}),
             new Return_1(2),
             new Exit(), // optimized out; unreachable
-            });
-
-        MethodStructure mtTo = getMethodStructure("to", VOID, STRING);
-        mtTo.setOps(new Op[]
-            {
-            new X_Print(adapter.ensureValueConstantId(
-                "# in TestService.to<String>() #")),
-            new Call_01(Op.A_SUPER, 0), // next register #0
-            new GP_Add(0, adapter.ensureValueConstantId(": counter2="), 0),
-            new Invoke_01(adapter.getPropertyConstId("TestApp.TestService", "counter2"),
-                adapter.getMethodConstId("Object", "to"), 1), // next register #1
-            new GP_Add(0, 1, 0),
-            new Return_1(0),
             });
         }
     }

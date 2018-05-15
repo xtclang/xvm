@@ -2,18 +2,22 @@ enum Boolean
     {
     False
         {
+        @Override
         Bit to<Bit>()
             {
             return 0;
             }
+        @Override
         Byte to<Byte>()
             {
             return 0;
             }
+        @Override
         Int to<Int>()
             {
             return 0;
             }
+        @Override
         UInt to<UInt>()
             {
             return 0;
@@ -38,18 +42,22 @@ enum Boolean
 
     True
         {
+        @Override
         Bit to<Bit>()
             {
             return 1;
             }
+        @Override
         Byte to<Byte>()
             {
             return 1;
             }
+        @Override
         Int to<Int>()
             {
             return 1;
             }
+        @Override
         UInt to<UInt>()
             {
             return 1;

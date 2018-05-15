@@ -4,12 +4,31 @@ module TestSimple.xqiz.it
 
     void run()
         {
-        console.println("\nHello world!!!");
+        test1();
+        test2();
+        test3();
+        }
+
+    void test1()
+        {
+        console.println("Hello world!!!");
+        }
+
+    void test2()
+        {
+        String s = "Hello";
+        console.println(s + " world!!!");
+        }
+
+    void test3()
+        {
+        Int i = 40;
+        i = i + 2;
+        console.println(i);
         }
     }
 
-/* REVIEW GG
-
+/*
 @CmdLine module TestComplex.xqiz.it
     {
     @Handler

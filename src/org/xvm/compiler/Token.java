@@ -421,6 +421,7 @@ public class Token
         CONST       ("const"          ),
         CONSTRUCT   ("construct"      ),
         CONTINUE    ("continue"       ),
+        DEBUG       ("DEBUG"          ),
         DEFAULT     ("default"        ),
         DELEGATES   ("delegates"      , true),
         DO          ("do"             ),

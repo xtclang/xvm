@@ -1033,12 +1033,14 @@ public class InvocationExpression
                     case Class:
                         ClassStructure clz  = (ClassStructure) parent;
                         TypeInfo       info = idParent.ensureTypeInfo(errs);
-                        Argument       arg  = findCallable(info, sName,
+
+                        IdentityConstant method  = findCallable(info, sName,
                                 (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, errs);
-                        if (arg != null)
+                        if (method != null)
                             {
-                            m_fBindTarget = true;
-                            m_argMethod   = arg;
+                            m_fBindTarget = !((MethodStructure) method.getComponent()).isFunction()
+                                            && !fNoMBind;
+                            m_argMethod   = method;
                             break NextParent;
                             }
 

@@ -52,13 +52,13 @@ public class CallChain
 
     public boolean isField()
         {
-        return f_aMethods.length > 0 ||
+        return f_aMethods.length > 0 &&
                f_aMethods[0].getImplementation() == Implementation.Field;
         }
 
     public boolean isExplicit()
         {
-        return f_aMethods.length > 0 ||
+        return f_aMethods.length > 0 &&
                f_aMethods[0].getImplementation() == Implementation.Explicit;
         }
 

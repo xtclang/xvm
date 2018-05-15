@@ -1349,6 +1349,13 @@ public class Parser
                 return new ShortCircuitStatement(keyword, name);
                 }
 
+            case DEBUG:
+                {
+                Token keyword = current();
+                expect(Id.SEMICOLON);
+                return new DebugStatement(keyword);
+                }
+
             case DO:
                 return parseDoStatement();
 

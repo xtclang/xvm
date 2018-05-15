@@ -8,6 +8,8 @@
 class ExtHashMap<KeyType, ValueType>
         implements Map<KeyType, ValueType>
     {
+    typedef ExtEntry<KeyType, ValueType> HashEntry;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -343,7 +345,7 @@ class ExtHashMap<KeyType, ValueType>
     /**
      * This is the Entry implementation used to store the ExtHashMap's keys and values.
      */
-    protected static class HashEntry
+    protected static class ExtEntry<KeyType, ValueType>
             implements Entry<KeyType, ValueType>
         {
         construct(KeyType key, Int keyhash, ValueType value, HashEntry next = null)

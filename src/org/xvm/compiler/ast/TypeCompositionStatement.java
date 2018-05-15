@@ -278,9 +278,12 @@ public class TypeCompositionStatement
         {
         assert getComponent() == null;
 
+        // if this is a module, this stage is responsible for linking each child AstNode to its
+        // parent (the parents already know the children, as a result of parsing)
         AstNode parent = getParent();
         if (parent == null)
             {
+            assert category.getId() == Token.Id.MODULE;
             introduceParentage();
             }
 

@@ -36,6 +36,7 @@ const Char
      * Note: The current version 9 of Unicode limits code points to 0x10FFFF, which
      * means that all UTF-8 encoding will use between 1-4 bytes.
      */
+    @Override
     Byte[] to<Byte[]>()
         {
         Int    length = calcUtf8Length();
@@ -55,6 +56,7 @@ const Char
         return codepoint.to<Int>();
         }
 
+    @Override
     @Auto String to<String>()
         {
         TODO

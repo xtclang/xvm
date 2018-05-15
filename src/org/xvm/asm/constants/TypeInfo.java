@@ -985,7 +985,11 @@ public class TypeInfo
                     {
                     TypeConstant typeReturn    = aReturns  [i];
                     TypeConstant typeRedundant = aRedundant[i];
-                    if (!typeReturn.isA(typeRedundant))
+
+                    assert typeRedundant.isA(pool().typeType()) &&
+                           typeRedundant.getParamsCount() == 1;
+
+                    if (!typeReturn.isA(typeRedundant.getParamTypesArray()[0]))
                         {
                         continue NextMethod;
                         }

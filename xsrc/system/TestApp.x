@@ -99,7 +99,7 @@ class TestApp
         Int method1()
             {
             String s = prop1;
-            Int of = s.indexOf("World", null);
+            (Boolean f, Int of) = s.indexOf("World", null);
             return of + s.size;
             }
 
@@ -121,6 +121,8 @@ class TestApp
         Int prop2;
         Int temp;
 
+        @Inject io.Console console;
+
         construct(Int i, String s)
             {
             prop2 = i;
@@ -135,6 +137,7 @@ class TestApp
         @Override
         Int method1()
             {
+            console.print("*** In TestClass2.method1");
             temp = super();
             return temp + prop2;
             }
@@ -142,7 +145,7 @@ class TestApp
         @Override
         String to<String>()
             {
-            return super() + ": prop2=" + prop2;
+            return super() + "; prop2=" + prop2;
             }
         }
 
@@ -268,19 +271,21 @@ class TestApp
 
     static service TestService(Int counter = 48)
         {
+        @Inject io.Console console;
+
         Int counter
             {
             @Override
             Int get()
                 {
-                print("In counter.get");
+                console.print("*** In counter.get");
                 return super();
                 }
             @Override
             void set(Int c)
                 {
-                print("In counter.set");
-                print(to<String>());
+                console.print("*** In counter.set");
+                // console.print(to<String>()); // TODO: what should that be?
                 super(c);
                 }
             }
@@ -292,13 +297,14 @@ class TestApp
         // pre-increment
         Int increment()
             {
+            console.print("*** In TestService.increment");
             return ++counter;
             }
 
         void testConstant()
             {
             TestApp.Point origin = TestPackage.Origin;
-            print(origin);
+            console.print("*** Origin=" + origin);
             }
 
         static void lambda_1(Var<Int> iRet, Int cDelay)
@@ -465,19 +471,24 @@ class TestApp
     enum Color
         {
         Red(0), Green(256), Blue(256*256);
+        // TODO: the following constructors should be generated
+        // class Red   { construct() {construct Color(0)    ;}
+        // class Green { construct() {construct Color(256)  ;}
+        // class Blue  { construct() {construct Color(65536);}
 
         construct(Int i)
             {
-            pix = i;
+            // TODO: re-introduce when constructors are generated
+            // pix = i;
             }
 
         @Override
         String to<String>()
             {
-            return super() + " " + pix;
+            return super(); // + " " + pix;
             }
 
-        Int pix;
+        // Int pix;
         }
 
     static void testConst()

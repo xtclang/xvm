@@ -152,14 +152,6 @@ public class UnresolvedNameConstant
         }
 
     @Override
-    public boolean isMethod()
-        {
-        return isNameResolved()
-                ? m_constId.isMethod()
-                : super.isMethod();
-        }
-
-    @Override
     public boolean containsUnresolved()
         {
         Constant constant = unwrap();

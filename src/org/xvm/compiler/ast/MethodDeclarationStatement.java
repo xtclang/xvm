@@ -17,10 +17,12 @@ import org.xvm.asm.ErrorList.ErrorInfo;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -105,6 +107,7 @@ public class MethodDeclarationStatement
             Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
             ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
             body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+            stmt.setParent(body);
             }
 
         body.setParent(this);
@@ -383,8 +386,11 @@ public class MethodDeclarationStatement
                 }
             else
                 {
-                String    sPath    = method.getIdentityConstant().getPathString();
-                Code      code     = method.createCode();
+                MethodConstant constMethod = method.getIdentityConstant();
+                ModuleStructure module = (ModuleStructure) constMethod.getModuleConstant().getComponent();
+                String sPath = module.getName() + "/" + constMethod.getPathString();
+                Code   code  = method.createCode();
+
                 ErrorList errsTemp = new ErrorList(10);
                 try
                     {
@@ -393,7 +399,7 @@ public class MethodDeclarationStatement
                     // TODO: temporary
                     if (errsTemp.getErrors().isEmpty())
                         {
-                        if (sPath.startsWith("Test"))
+                        if (sPath.contains("Test"))
                             {
                             if (sPath.contains("ExpectedFailure"))
                                 {
@@ -409,7 +415,7 @@ public class MethodDeclarationStatement
                         }
                     else
                         {
-                        if (sPath.startsWith("Test"))
+                        if (sPath.contains("Test"))
                             {
                             if (sPath.contains("ExpectedFailure"))
                                 {
@@ -437,7 +443,6 @@ public class MethodDeclarationStatement
                         }
                     }
                 catch (Throwable e) // TODO temporary
-                // catch (UnsupportedOperationException e) // TODO temporary
                     {
                     // copy over errors
                     for (ErrorInfo info : errsTemp.getErrors())
@@ -449,15 +454,12 @@ public class MethodDeclarationStatement
                     log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
                             + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
                     method.setNative(true);
-                    if (sPath.startsWith("TestCompiler"))
+                    if (sPath.contains("Test"))
                         {
+                        System.err.println("Compilation error: " + sPath + " " + e);
                         if (e instanceof AssertionError || e instanceof NullPointerException)
                             {
                             e.printStackTrace(System.err);
-                            }
-                        else
-                            {
-                            System.err.println("Compilation error: " + sPath + " " + sMsg);
                             }
                         }
                     }
