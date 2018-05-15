@@ -4,6 +4,8 @@ module TestSimple.xqiz.it
 
     void run()
         {
+        DEBUG;
+
         test1();
         test2();
         test3();
