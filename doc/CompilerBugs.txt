@@ -1,0 +1,3 @@
+- having two identical methods or properties produces a CompositeComponent for the corresponding Method/PropertyStructure
+
+- conditional multi return method declaration fails to compile, e.g.: "conditional (Int, Int) foo()"
