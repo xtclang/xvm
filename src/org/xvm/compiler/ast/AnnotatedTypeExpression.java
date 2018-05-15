@@ -37,6 +37,38 @@ public class AnnotatedTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff this AnnotatedTypeExpression has been instructed to disassociate its
+     *         annotation from the underlying type, which will occur if the annotation needs to be
+     *         associated with property, method, or variable, for example
+     */
+    public boolean isAnnotationDisassociated()
+        {
+        return m_fDisassociateAnnotation;
+        }
+
+    public void setAnnotationDisassociated(boolean fDisassociate)
+        {
+        m_fDisassociateAnnotation = fDisassociate;
+
+        // reset the type constant if one was already created
+        if (getTypeConstant() != null)
+            {
+            setTypeConstant(instantiateTypeConstant());
+            AstNode parent = getParent();
+            while (parent instanceof TypeExpression)
+                {
+                TypeExpression exprParent = (TypeExpression) parent;
+                if (exprParent.getTypeConstant() != null)
+                    {
+                    exprParent.setTypeConstant(exprParent.instantiateTypeConstant());
+                    }
+
+                parent = parent.getParent();
+                }
+            }
+        }
+
     @Override
     protected boolean canResolveNames()
         {
@@ -67,6 +99,15 @@ public class AnnotatedTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
+        TypeConstant typeUnderlying = type.ensureTypeConstant();
+        if (isAnnotationDisassociated())
+            {
+            // our annotation is not added to the underlying type constant
+            return typeUnderlying;
+            }
+
+        // TODO TODO TODO
+
         // this is a bit complicated:
         // 1) we need the class of the annotation
         // 2) we need a constant for each parameter (how do we know we're ready to ask for those at
@@ -106,7 +147,7 @@ public class AnnotatedTypeExpression
             }
 
         return pool().ensureAnnotatedTypeConstant(
-                constAnnotationType.getDefiningConstant(), aconstParam, type.ensureTypeConstant());
+                constAnnotationType.getDefiningConstant(), aconstParam, typeUnderlying);
         }
 
 
@@ -138,6 +179,7 @@ public class AnnotatedTypeExpression
             // validateMulti(); @see Annotation#validateExpressions
 
             // store off a type constant for this type expression
+            // TODO setTC(initTC)
             ensureTypeConstant();
             }
 
@@ -190,6 +232,8 @@ public class AnnotatedTypeExpression
 
     protected Annotation     annotation;
     protected TypeExpression type;
+
+    private boolean m_fDisassociateAnnotation;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
             "annotation", "type");
