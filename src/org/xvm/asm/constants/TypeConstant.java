@@ -3756,6 +3756,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a local variable
+     */
+    public boolean isIntoVariableType()
+        {
+        // this is a fairly simple way to check: a variable is just like a property, except it isn't
+        // a Property
+        return isIntoPropertyType() && getIntoPropertyType() != getConstantPool().typeProperty();
+        }
+
+    /**
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null

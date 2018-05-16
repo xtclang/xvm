@@ -91,6 +91,12 @@ public class AnnotatedTypeExpression
         return CHILD_FIELDS;
         }
 
+    @Override
+    public TypeExpression unwrapIntroductotryType()
+        {
+        return type;
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 

@@ -102,6 +102,19 @@ public abstract class TypeExpression
         return this;
         }
 
+    /**
+     * For introductory type expressions, obtain the underlying type expression. An introductory
+     * type expression is one that may be (or may contain) a separable TypeExpression that belongs
+     * to something other than the resulting type, such as an annotation that affects a variable
+     * implementation itself, instead of the type of the variable.
+     *
+     * @return the underlying TypeExpression, if any
+     */
+    public TypeExpression unwrapIntroductotryType()
+        {
+        return null;
+        }
+
 
     // ----- Expression methods --------------------------------------------------------------------
 

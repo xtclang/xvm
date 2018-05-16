@@ -75,6 +75,12 @@ public class DecoratedTypeExpression
             }
         }
 
+    @Override
+    public TypeExpression unwrapIntroductotryType()
+        {
+        return type;
+        }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

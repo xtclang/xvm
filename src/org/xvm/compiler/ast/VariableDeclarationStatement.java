@@ -3,15 +3,18 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.*;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Var;
@@ -134,6 +137,33 @@ public class VariableDeclarationStatement
             fValid = false;
             }
 
+        // before validating the type, disassociate any annotations that do not apply to the
+        // underlying type
+        TypeExpression typeOld  = type;
+        TypeExpression typeEach = typeOld;
+        while (typeEach != null)
+            {
+            if (typeEach instanceof AnnotatedTypeExpression)
+                {
+                Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
+                org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
+                if (annoAsm.getAnnotationType().isIntoVariableType())
+                    {
+                    // steal the annotation from the type held _in_ the variable
+                    ((AnnotatedTypeExpression) typeEach).disassociateAnnotation();
+
+                    // add the annotation to the type _of_ the variable implementation itself
+                    if (m_listRefAnnotations == null)
+                        {
+                        m_listRefAnnotations = new ArrayList<>();
+                        }
+                    m_listRefAnnotations.add(annoAst);
+                    }
+                }
+
+            typeEach = typeEach.unwrapIntroductotryType();
+            }
+
         ConstantPool   pool    = pool();
         TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
         if (typeNew != type)
@@ -242,7 +272,11 @@ public class VariableDeclarationStatement
                 break;
             }
 
-        // TODO DVAR support
+        TypeConstant typeVar
+        if (m_listRefAnnotations != null)
+            {
+            // TODO DVAR support
+            }
 
         // no value: declare named var
         StringConstant constName = pool().ensureStringConstant((String) name.getValue());
