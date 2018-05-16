@@ -236,7 +236,7 @@ public abstract class Expression
         switch (atypeRequired.length)
             {
             case 0:
-                // all expressions are required to be able to yield a Void result
+                // all expressions are required to be able to yield a void result
                 return TypeFit.Fit;
 
             case 1:
@@ -264,7 +264,7 @@ public abstract class Expression
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
-        if (typeOut == null || typeOut.isVoid() || typeIn.isA(typeOut))
+        if (typeOut == null || typeIn.isA(typeOut))
             {
             return pref == TuplePref.Required
                     ? TypeFit.Pack
@@ -475,7 +475,7 @@ public abstract class Expression
     /**
      * (Post-validation) Determine the number of values represented by the expression.
      * <ul>
-     * <li>A {@code Void} expression represents no values</li>
+     * <li>A {@code void} expression represents no values</li>
      * <li>An {@link #isSingle() isSingle()==true} expression represents exactly one value (most
      *     common)</li>
      * <li>A multi-value expression represents more than one value</li>
@@ -543,7 +543,7 @@ public abstract class Expression
      * first TypeConstant is returned. For a void expression, the result is null.
      *
      * @return the type of the validated Expression, which is null for a Expression that yields a
-     *         Void result, otherwise the type of the <i>first</i> (and typically <i>only</i>) value
+     *         void result, otherwise the type of the <i>first</i> (and typically <i>only</i>) value
      *         resulting from the Expression
      */
     public TypeConstant getType()
@@ -561,7 +561,7 @@ public abstract class Expression
      * For a void expression, the result is a zero-length array.
      *
      * @return the types of the multiple values yielded by the expression; a zero-length array
-     *         indicates a Void type
+     *         indicates a void type
      */
     public TypeConstant[] getTypes()
         {
@@ -667,7 +667,7 @@ public abstract class Expression
      * value.
      * <p/>
      * If the Expression has more than one value, then this will return the first constant value. If
-     * the Expression is <i>Void</i>, then this will return null.
+     * the Expression is <i>void</i>, then this will return null.
      * <p/>
      * An exception is thrown if the expression does not produce a compile-time constant.
      *
@@ -690,7 +690,7 @@ public abstract class Expression
      * {@link #hasConstantValue()} method returning true, obtain an array of constants that
      * represent the value of the Expression.
      * <p/>
-     * If the Expression is <i>Void</i>, then this will return an empty array.
+     * If the Expression is <i>void</i>, then this will return an empty array.
      * <p/>
      * An exception is thrown if the expression does not produce a compile-time constant.
      *
@@ -769,7 +769,7 @@ public abstract class Expression
         switch (atype.length)
             {
             case 0:
-                // Void means that the results of the expression are black-holed
+                // void means that the results of the expression are black-holed
                 generateAssignments(code, NO_LVALUES, errs);
                 return NO_RVALUES;
 

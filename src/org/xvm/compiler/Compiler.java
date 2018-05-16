@@ -230,7 +230,8 @@ public class Compiler
         if (fDone)
             {
             // force the reregistration of constants after the names are resolved to eliminate
-            // cruft from earlier passes, such as Void return types
+            // cruft from earlier passes, such as void return types
+            // REVIEW GG - do we still need this, now that we got rid of capital-V Void?
             m_structFile.reregisterConstants(false);
 
             setStage(Stage.Resolved);

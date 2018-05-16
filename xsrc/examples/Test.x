@@ -1,7 +1,14 @@
 module Test
     {
-    class C
+    // const Person(String name) 
+    const Person
         {
+        construct(String name)
+            {
+            this.name = name;
+            }
+
+        String name;
         }
 
     void run()

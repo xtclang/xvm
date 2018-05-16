@@ -129,7 +129,7 @@ public class FunctionTypeExpression
 
         if (returnValues.isEmpty())
             {
-            sb.append("Void");
+            sb.append("void");
             }
         else if (returnValues.size() == 1)
             {

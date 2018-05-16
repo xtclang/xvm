@@ -665,7 +665,7 @@ public class MethodDeclarationStatement
             }
         else if (returns.isEmpty())
             {
-            sb.append("Void ");
+            sb.append("void ");
             }
         else if (returns.size() == 1)
             {

@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
+import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
@@ -1123,11 +1124,15 @@ public class TypeCompositionStatement
 
         TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
 
+        Map<String, Component> mapChildren = component.ensureChildByNameMap();
+        boolean fHasConstructor = mapChildren.containsKey("construct");
+
         if (nodeNew == this && constructorParams != null && !constructorParams.isEmpty())
             {
             // if there are any constructor parameters, then that implies the existence both of
-            // properties and of a constructor; make sure that those exist (and that there are no
-            // obvious conflicts)
+            // properties and of a constructor; make sure that those exist, and that there are no
+            // obvious conflicts:
+
             // TODO for each constructor parameter, create the property if it does not already exist
             // TODO make sure the constructor exists
             // for a singleton, constructor parameters are not permitted unless they all have default

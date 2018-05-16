@@ -389,16 +389,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this is "Void".
-     *
-     * @return true iff this is provably "Void"
-     */
-    public boolean isVoid()
-        {
-        return isTuple() && getParamsCount() == 0;
-        }
-
-    /**
      * @return true iff this type is a nullable type
      */
     public boolean isNullable()

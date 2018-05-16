@@ -1354,7 +1354,7 @@ public class ClassStructure
                 }
             }
 
-        // there is no constructor; create Void default(StructType struct)
+        // there is no constructor; create "void default(StructType struct)"
         Parameter[] aParam = new Parameter[]
            {
            new Parameter(getConstantPool(), typeStruct, "struct", null, false, 0, false)

@@ -1149,12 +1149,6 @@ public class MethodStructure
         {
         super.registerConstants(pool);
 
-        // if the return type is Void, that means that there is no return type at all
-        if (m_aReturns.length == 1 && m_aReturns[0].getType().isVoid())
-            {
-            m_aReturns = NO_PARAMS;
-            }
-
         for (Parameter param : m_aReturns)
             {
             param.registerConstants(pool);
@@ -1753,7 +1747,7 @@ public class MethodStructure
     private Annotation[] m_aAnnotations;
 
     /**
-     * The return value types. (A zero-length array is "Void".)
+     * The return value types. (A zero-length array is "void".)
      */
     private Parameter[] m_aReturns;
 

@@ -95,7 +95,7 @@ public class ReturnStatement
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
-        // Void methods are the simplest
+        // void methods are the simplest
         if (cExprs == 0 || cRets == 0)
             {
             if (cExprs > 0)
@@ -115,7 +115,7 @@ public class ReturnStatement
                         }
                     }
 
-                // allow the (strange) use of T0D0 or the (strange) return of a Void expression
+                // allow the (strange) use of T0D0 or the (strange) return of a void expression
                 if (cExprs != 1 || !listExprs.get(0).isAborting() || !listExprs.get(0).isVoid())
                     {
                     // it was supposed to be a void return

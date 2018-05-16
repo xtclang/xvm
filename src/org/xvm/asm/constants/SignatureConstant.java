@@ -39,7 +39,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *     interface I
  *         {
  *         I foo();
- *         Void bar(I i);
+ *         void bar(I i);
  *         }
  * </pre></code>
  * <p/>
@@ -49,7 +49,7 @@ import static org.xvm.util.Handy.writePackedLong;
  *     class C
  *         {
  *         C! foo() {...}
- *         Void bar(C! c) {...}
+ *         void bar(C! c) {...}
  *         }
  * </pre></code>
  * <p/>
@@ -489,7 +489,7 @@ public class SignatureConstant
         switch (m_aconstReturns.length)
             {
             case 0:
-                sb.append("Void");
+                sb.append("void");
                 break;
 
             case 1:

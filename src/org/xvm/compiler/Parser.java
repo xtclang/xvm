@@ -2888,7 +2888,7 @@ public class Parser
                 Token tokLParen = expect(Id.L_PAREN);
                 if (match(Id.R_PAREN) != null)
                     {
-                    // Void lambda
+                    // void lambda
                     return new LambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }

@@ -53,7 +53,7 @@ public class xFutureVar
     @Override
     public void initDeclared()
         {
-        // FutureVar!<RefType> whenComplete(function Void (RefType?, Exception?) notify)
+        // FutureVar!<RefType> whenComplete(function void (RefType?, Exception?) notify)
         markNativeMethod("whenComplete", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("thenDo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
         markNativeMethod("passTo", new String[] {"Function"}, new String[] {"annotations.FutureVar!<RefType>"});
