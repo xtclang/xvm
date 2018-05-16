@@ -148,7 +148,7 @@ public class VariableDeclarationStatement
                 {
                 Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
                 org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
-                if (annoAsm.getAnnotationType().isIntoVariableType())
+                if (annoAsm.getAnnotationType().getExplicitClassInto().isIntoVariableType())
                     {
                     // steal the annotation from the type held _in_ the variable
                     ((AnnotatedTypeExpression) typeEach).disassociateAnnotation();

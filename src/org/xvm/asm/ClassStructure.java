@@ -736,7 +736,7 @@ public class ClassStructure
      * objects to the list of chains.
      *
      * @param idClzLeft   the identity of the class to look for
-     * @param listRight  the list of actual generic parameters for this class
+     * @param listRight   the list of actual generic parameters for this class
      * @param chains      the list of chains to add to
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
@@ -1283,6 +1283,8 @@ public class ClassStructure
                         {
                         continue nextContribution;
                         }
+                    break;
+
                 case Annotation:
                 case Incorporates:
                 case Extends:
