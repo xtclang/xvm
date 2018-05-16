@@ -1,15 +1,15 @@
 module Test
     {
-    // const Person(String name) 
-    const Person
-        {
-        construct(String name)
-            {
-            this.name = name;
-            }
-
-        String name;
-        }
+    const Person(String name) ;
+//    const Person
+//        {
+//        construct(String name)
+//            {
+//            this.name = name;
+//            }
+//
+//        String name;
+//        }
 
     void run()
         {

@@ -958,3 +958,49 @@ new C().foo()();
 typedef Function<<>, <Turtle>> Turtle;
 Turtle f = ...;
 f()()()()()()()()()()()();
+
+// ----- constructors
+
+// from Example.x, with modifications
+
+const Person(String name, Date dob)
+    {
+    // implicit:
+    String name;
+
+    // implicit:
+    Date dob;
+
+    // implicit:
+    construct(String name, Date dob)
+        {
+        construct Object();
+        this.name = name;
+        this.dob  = dob;
+        }
+    }
+
+mixin Taxable(String taxid)
+    {
+    // implicit:
+    String taxid;
+
+    // implicit:
+    construct(String taxid)
+        {
+        this.taxid = taxid;
+        }
+    }
+
+const Employee(String name, Date dob, String taxid)
+        extends Person(name, dob)
+        incorporates Taxable(taxid)
+    {
+    // implicit:
+    construct Employee(String name, Date dob, String taxid)
+        {
+        construct Person(name, dob);
+        construct Taxable(taxid);
+        }
+    }
+

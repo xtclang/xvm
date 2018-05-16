@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-
 import java.util.Map;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
@@ -19,6 +19,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
@@ -603,10 +604,12 @@ public class TypeCompositionStatement
         // validate that type parameters are allowed, and register them (the actual validation of
         // the type parameters themselves happens in a later phase)
         final ClassConstant OBJECT_CLASS = pool.clzObject();
+        boolean fSingleton = false;
         switch (component.getFormat())
             {
             case MODULE:
             case PACKAGE:
+                fSingleton = true;
                 // type parameters are not permitted
                 disallowTypeParams(errs);
                 // constructor params are only allowed if they have defaulted values
@@ -614,6 +617,7 @@ public class TypeCompositionStatement
                 break;
 
             case ENUMVALUE:
+                fSingleton = true;
                 // type parameters are not permitted
                 disallowTypeParams(errs);
                 // number of type arguments must match the number of the enum's type parameters
@@ -627,12 +631,12 @@ public class TypeCompositionStatement
 
             case SERVICE:
             case CONST:
-            case CLASS:
                 // these compositions are new-able, and thus can usually declare type parameters;
                 // the exception is when the composition is not new-able, which is the case for
                 // singleton compositions
                 if (fExplicitlyStatic && getDeclarationZone() == Zone.TopLevel)
                     {
+                    fSingleton = true;
                     disallowTypeParams(errs);
                     requireConstructorParamValues(errs);
                     break;
@@ -642,6 +646,7 @@ public class TypeCompositionStatement
                 // while an enum is not new-able (it is abstract), it can have type params which
                 // must each be explicitly defined by each enum value; the same goes for constructor
                 // params
+            case CLASS:
             case INTERFACE:
             case MIXIN:
                 // register the type parameters
@@ -1124,21 +1129,82 @@ public class TypeCompositionStatement
 
         TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
 
+        // if there are any constructor parameters, then that implies the existence both of
+        // properties and of a constructor; make sure that those exist, and that there are no
+        // obvious conflicts
         Map<String, Component> mapChildren = component.ensureChildByNameMap();
-        boolean fHasConstructor = mapChildren.containsKey("construct");
-
         if (nodeNew == this && constructorParams != null && !constructorParams.isEmpty())
             {
-            // if there are any constructor parameters, then that implies the existence both of
-            // properties and of a constructor; make sure that those exist, and that there are no
-            // obvious conflicts:
+            NextParam: for (Parameter param : constructorParams)
+                {
+                // the name should either not exist already, or if it does, it needs to be a
+                // property and the type will have to match the parameter
+                String    sParam = param.getName();
+                Component child  = mapChildren.get(sParam);
+                if (child == null)
+                    {
+                    // create the property and get it caught up to where we are
+                    PropertyDeclarationStatement prop = new PropertyDeclarationStatement(
+                            param.getStartPosition(), param.getEndPosition(), null, null, null,
+                            param.getType(), param.getNameToken(), null, null, null);
+                    prop.setParent(this);
+                    prop.registerStructures(errs);
+                    }
+                else if (child instanceof PropertyStructure)
+                    {
+                    // have the property declaration statement verify that the types match
+                    PropertyDeclarationStatement stmtProp = null;
+                    if (body != null && body.stmts != null)
+                        {
+                        for (Statement stmt : body.stmts)
+                            {
+                            if (stmt instanceof PropertyDeclarationStatement
+                                    && ((PropertyDeclarationStatement) stmt).getName().equals(sParam))
+                                {
+                                stmtProp = (PropertyDeclarationStatement) stmt;
 
-            // TODO for each constructor parameter, create the property if it does not already exist
-            // TODO make sure the constructor exists
+                                // the property statement will need to verify that the types match
+                                stmtProp.validateRedundantType(param.getType(), errs);
+
+                                continue NextParam;
+                                }
+                            }
+                        }
+
+                    // couldn't find the property; this should only be able to happen if there are
+                    // two parameters with the same name (which is obviously illegal)
+                    // TODO log error
+                    throw new IllegalStateException("TODO - dupl " + param);
+                    }
+                else
+                    {
+                    // the parameter implies a property, but we found something else instead
+                    // TODO log error
+                    throw new IllegalStateException("TODO - conflict error for " + param);
+                    }
+                }
+
+            // TODO make sure the constructor exists. here's the problem, though: the constructor may have been declared
+            //      explicitly, but we can't verify that for certain because the types may appears slightly different
+            //      here (since we can't resolve types at this stage), so we need to figure out how to make sure that
+            //      the constructor that we create doesn't collide with one explicitly declared, yet if one is not
+            //      explicitly declared that matches this "short hand notation" constructor, then we need to create it!
+
             // for a singleton, constructor parameters are not permitted unless they all have default
             // values (since the module is a singleton, and is automatically created, i.e. it has to
             // have all of its construction parameters available)
-            // TODO verify that singletons have values for all constructor params
+            if (fSingleton)
+                {
+                // TODO verify that singletons have values for all constructor params (move this check to a later stage?)
+                }
+            }
+
+        // all non-interfaces must have at least one constructor, even if the class is abstract
+        if (format != Format.INTERFACE && !mapChildren.containsKey("construct"))
+            {
+            // add a default constructor that will invoke the necessary super class and mixin
+            // constructors (if any)
+            // TODO
             }
 
         return nodeNew;

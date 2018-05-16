@@ -103,6 +103,16 @@ public abstract class TypeExpression
         }
 
     /**
+     * Determine if this is an introductory type expression.
+     *
+     * @return true iff this is an introductory type expression
+     */
+    public boolean isIntroductoryType()
+        {
+        return false;
+        }
+
+    /**
      * For introductory type expressions, obtain the underlying type expression. An introductory
      * type expression is one that may be (or may contain) a separable TypeExpression that belongs
      * to something other than the resulting type, such as an annotation that affects a variable
@@ -110,9 +120,21 @@ public abstract class TypeExpression
      *
      * @return the underlying TypeExpression, if any
      */
-    public TypeExpression unwrapIntroductotryType()
+    public TypeExpression unwrapIntroductoryType()
         {
+        assert !isIntroductoryType();
         return null;
+        }
+
+    /**
+     * Determine if this is an introductory type expression.
+     *
+     * @return true iff this is an introductory type expression
+     */
+    public void replaceIntroducedType(TypeExpression type)
+        {
+        assert !isIntroductoryType();
+        throw new IllegalStateException();
         }
 
 

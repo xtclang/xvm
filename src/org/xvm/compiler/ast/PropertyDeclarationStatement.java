@@ -6,9 +6,15 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.xvm.asm.*;
+import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Parameter;
+import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -42,6 +48,37 @@ public class PropertyDeclarationStatement
                                         Token            doc)
         {
         super(lStartPos, lEndPos);
+
+        // separate annotations from the type into their own list
+        TypeExpression typePrev = null;
+        TypeExpression typeNext = type;
+        while (typeNext.isIntroductoryType())
+            {
+            if (typeNext instanceof AnnotatedTypeExpression)
+                {
+                // remove the annotation from the type chain, and add it to the list of annotations
+                Annotation anno = ((AnnotatedTypeExpression) type).getAnnotation();
+                anno.setParent(this);
+                if (annotations == null || annotations.isEmpty())
+                    {
+                    annotations = new ArrayList<>();
+                    }
+                annotations.add(anno);
+
+                // unlink the annotated type from the type expression chain, and relink the chain
+                typeNext = typeNext.unwrapIntroductoryType();
+                if (typePrev != null)
+                    {
+                    typePrev.replaceIntroducedType(typeNext);
+                    }
+                typeNext.setParent(typePrev);
+                }
+            else
+                {
+                typePrev = typeNext;
+                typeNext = typeNext.unwrapIntroductoryType();
+                }
+            }
 
         this.condition   = condition;
         this.modifiers   = modifiers;
@@ -163,6 +200,24 @@ public class PropertyDeclarationStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+    /**
+     * @param type  the type expression to verify that matches this property's type
+     * @param errs  the error list to log errors to
+     *
+     * @return true if the compilation should proceed
+     */
+    public boolean validateRedundantType(TypeExpression type, ErrorListener errs)
+        {
+        if (redundant == null)
+            {
+            redundant = type;
+            return true;
+            }
+
+        // TODO log error
+        throw new IllegalStateException("redundant redundant: " + this);
         }
 
 
@@ -306,6 +361,7 @@ public class PropertyDeclarationStatement
         return super.validateExpressions(listRevisit, errs);
         }
 
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString()
@@ -401,7 +457,8 @@ public class PropertyDeclarationStatement
     protected Token              doc;
 
     protected transient MethodDeclarationStatement initializer;
+    protected transient TypeExpression             redundant;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body", "initializer");
+            "condition", "annotations", "type", "value", "body", "initializer", "redundant");
     }

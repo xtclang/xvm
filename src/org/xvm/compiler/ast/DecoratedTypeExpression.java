@@ -76,9 +76,22 @@ public class DecoratedTypeExpression
         }
 
     @Override
-    public TypeExpression unwrapIntroductotryType()
+    public boolean isIntroductoryType()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeExpression unwrapIntroductoryType()
         {
         return type;
+        }
+
+    @Override
+    public void replaceIntroducedType(TypeExpression type)
+        {
+        this.type = type;
+        type.setParent(this);
         }
 
 

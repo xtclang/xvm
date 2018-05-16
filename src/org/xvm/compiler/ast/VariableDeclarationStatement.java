@@ -7,14 +7,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.xvm.asm.*;
+import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Var;
@@ -162,10 +164,10 @@ public class VariableDeclarationStatement
                     }
                 }
 
-            typeEach = typeEach.unwrapIntroductotryType();
+            typeEach = typeEach.unwrapIntroductoryType();
             }
 
-        ConstantPool   pool    = pool();
+        ConstantPool pool    = pool();
         TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
         if (typeNew != type)
             {
