@@ -663,8 +663,8 @@ public abstract class Statement
                 return arg;
                 }
 
-            boolean      fNoFunction  = true;
-            boolean      fNoConstruct = true;
+            boolean      fNoFunction  = true;   // is this name disallowed in a function?
+            boolean      fNoConstruct = true;   // is this name disallowed in a constructor?
             ConstantPool pool         = pool();
             TypeConstant type;
             int          nReg;
@@ -769,6 +769,11 @@ public abstract class Statement
         @Override
         public boolean isFunction()
             {
+            if (isConstructor())
+                {
+                return false;
+                }
+
             Component parent = m_method;
             while (true)
                 {
