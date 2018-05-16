@@ -1034,8 +1034,8 @@ public class InvocationExpression
                         ClassStructure clz  = (ClassStructure) parent;
                         TypeInfo       info = idParent.ensureTypeInfo(errs);
 
-                        IdentityConstant method  = findCallable(info, sName,
-                                (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, errs);
+                        IdentityConstant method = findCallable(info, sName,
+                                (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs);
                         if (method != null)
                             {
                             m_fBindTarget = !((MethodStructure) method.getComponent()).isFunction()
@@ -1093,7 +1093,7 @@ public class InvocationExpression
                 //   method reference, there must not be any arg binding or actual invocation
                 // - functions are included because the left is identity-mode
                 TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs, errs);
+                arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs);
                 }
 
             if (arg == null)
@@ -1103,19 +1103,17 @@ public class InvocationExpression
                 // - methods are included because there is a left and it is NOT identity-mode
                 // - functions are NOT included because the left is NOT identity-mode
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-                arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs, errs);
+                arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs);
                 m_fBindTarget = arg != null;
                 }
+            m_argMethod = arg;
+            }
 
-            if (arg == null)
-                {
-                // error: could not find method
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
-                }
-            else
-                {
-                m_argMethod = arg;
-                }
+
+        if (m_argMethod == null)
+            {
+            // error: could not find method
+            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
             }
 
         return m_argMethod;
@@ -1133,8 +1131,6 @@ public class InvocationExpression
      * @param aArgs       the types of the arguments being provided (some of which may be null to
      *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
      * TODO add array of names here
-     * @param errs        the error list to log errors to
-     *
      * @return the matching method, function, or (rarely) property
      */
     protected IdentityConstant findCallable(
@@ -1143,8 +1139,7 @@ public class InvocationExpression
             boolean        fMethods,
             boolean        fFunctions,
             TypeConstant[] aRedundant,
-            TypeConstant[] aArgs,
-            ErrorListener  errs)
+            TypeConstant[] aArgs)
         {
         // check for a property of that name; if one exists, it must be of type function, or a type
         // with an @Auto conversion to function - which will be verified by validateFunction()
@@ -1154,12 +1149,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        MethodConstant method = infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null); // TODO asArgNames
-        if (method == null)
-            {
-            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
-            }
-        return method;
+        return infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null); // TODO asArgNames
         }
 
     /**
