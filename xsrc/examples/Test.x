@@ -7,6 +7,7 @@ module Test
     void run()
         {
         @Inject X.io.Console console;
+        console.println("Hello world!");
         // C c = new C();
         }
 

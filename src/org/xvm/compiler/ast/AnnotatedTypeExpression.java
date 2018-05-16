@@ -14,7 +14,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler.Stage;
 
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.util.Severity;
 
 
 /**
@@ -156,18 +158,38 @@ public class AnnotatedTypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        // we need to verify that the type specified in the annotation will "apply to" our
-        // right-hand-side type
-// TODO        org.xvm.asm.Annotation annoNew = annotation.validate(ctx, typeRequired, pref, errs);
-//        ConstantPool pool = pool();
-//        TypeConstant typeReferent  = getTypeConstant();
-//        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
-//
-//        // TODO pref etc. - this kind of nonsense should not have to show up on every single qExpression implementation!
-//        TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
-//                ? TypeFit.Fit
-//                : TypeFit.NoFit;
-        return super.validate(ctx, typeRequired, pref, errs);
+        boolean        fValid  = true;
+        ConstantPool   pool    = pool();
+        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool().typeType(), TuplePref.Rejected, errs);
+        if (typeNew == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            type = typeNew;
+            }
+
+        TypeConstant typeReferent  = ensureTypeConstant();
+        TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
+
+        if (fValid)
+            {
+            // the annotation must mix in to the underlying type
+            Annotation             annoAst = getAnnotation();
+            org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool);
+            if (annoAsm.getAnnotationType().isIntoVariableType() && !isDisassociated()
+                    || !typeReferent.isA(annoAsm.getAnnotationType().ensureTypeInfo(errs).getInto()))
+                {
+                annoAst.log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
+                        type.ensureTypeConstant().getValueString(),
+                        annoAsm.getAnnotationClass().getValueString(),
+                        annoAsm.getAnnotationType().ensureTypeInfo(errs).getInto().getValueString());
+                fValid = false;
+                }
+            }
+
+        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeReference, typeReferent);
         }
 
 

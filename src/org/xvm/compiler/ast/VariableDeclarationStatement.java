@@ -18,6 +18,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Var;
+import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 import org.xvm.asm.op.Var_SN;
@@ -229,6 +230,15 @@ public class VariableDeclarationStatement
                 }
             }
 
+        if (m_listRefAnnotations != null)
+            {
+            for (int i = m_listRefAnnotations.size()-1; i >= 0; --i)
+                {
+                typeVar = pool.ensureAnnotatedTypeConstant(
+                        m_listRefAnnotations.get(i).ensureAnnotation(pool), typeVar);
+                }
+            }
+
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
@@ -240,7 +250,8 @@ public class VariableDeclarationStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable && (value == null || !value.isAborting());
+        boolean      fCompletes = fReachable && (value == null || !value.isAborting());
+        ConstantPool pool       = pool();
 
         switch (getUsage())
             {
@@ -248,10 +259,10 @@ public class VariableDeclarationStatement
             case If:
                 // in the form "Type varname : conditional"
                 // first, declare an unnamed Boolean variable that will hold the conditional result
-                code.add(new Var(pool().typeBoolean()));
+                code.add(new Var(pool.typeBoolean()));
                 Register regCond = code.lastRegister();
                 // next, declare the named variable
-                code.add(new Var_N(m_reg, pool().ensureStringConstant((String) name.getValue())));
+                code.add(new Var_N(m_reg, pool.ensureStringConstant((String) name.getValue())));
                 // next, assign the r-value to the two variables
                 value.generateAssignments(code, new Assignable[]
                         {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
@@ -272,61 +283,64 @@ public class VariableDeclarationStatement
                 break;
             }
 
-        TypeConstant typeVar
-        if (m_listRefAnnotations != null)
+        StringConstant constName = pool.ensureStringConstant((String) name.getValue());
+        if (m_listRefAnnotations == null && value != null)
             {
-            // TODO DVAR support
+            // constant value: declare and initialize named var
+            if (value.hasConstantValue())
+                {
+                Constant constVal;
+                if (m_fPackingInit)
+                    {
+                    constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
+                            pool.typeTuple(), value.getTypes()), value.toConstants());
+                    }
+                else
+                    {
+                    constVal = value.toConstant();
+                    }
+                code.add(new Var_IN(m_reg, constName, constVal));
+                return fCompletes;
+                }
+
+            // declare and initialize named var
+            TypeConstant typeVar = m_reg.getType();
+            if (m_fPackingInit)
+                {
+                Argument[] aArgs = value.generateArguments(code, false, errs);
+                code.add(new Var_TN(m_reg, constName, aArgs));
+                return fCompletes;
+                }
+
+            if (value instanceof ListExpression && typeVar.isA(pool.typeSequence()))
+                {
+                // even though we validated the ListExpression to give us a single list value, it is
+                // tolerant of us asking for the values as individual values
+                List<Expression> listVals = ((ListExpression) value).getExpressions();
+                int cVals = listVals.size();
+                Argument[] aArgs = new Argument[cVals];
+                for (int i = 0; i < cVals; ++i)
+                    {
+                    aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
+                    }
+                code.add(new Var_SN(m_reg, constName, aArgs));
+                return fCompletes;
+                }
             }
 
         // no value: declare named var
-        StringConstant constName = pool().ensureStringConstant((String) name.getValue());
-        if (value == null)
+        if (m_listRefAnnotations == null)
             {
             code.add(new Var_N(m_reg, constName));
-            return fCompletes;
-            }
-
-        // constant value: declare and initialize named var
-        if (value.hasConstantValue())
-            {
-            Constant constVal;
-            if (m_fPackingInit)
-                {
-                ConstantPool pool = pool();
-                constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
-                        pool.typeTuple(), value.getTypes()), value.toConstants());
-                }
-            else
-                {
-                constVal = value.toConstant();
-                }
-            code.add(new Var_IN(m_reg, constName, constVal));
-            return fCompletes;
-            }
-
-        // declare and initialize named var
-        TypeConstant typeVar = m_reg.getType();
-        if (m_fPackingInit)
-            {
-            Argument[] aArgs = value.generateArguments(code, false, errs);
-            code.add(new Var_TN(m_reg, constName, aArgs));
-            }
-        else if (value instanceof ListExpression && typeVar.isA(pool().typeSequence()))
-            {
-            // even though we validated the ListExpression to give us a single list value, it is
-            // tolerant of us asking for the values as individual values
-            List<Expression> listVals = ((ListExpression) value).getExpressions();
-            int              cVals    = listVals.size();
-            Argument[]       aArgs    = new Argument[cVals];
-            for (int i = 0; i < cVals; ++i)
-                {
-                aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
-                }
-            code.add(new Var_SN(m_reg, constName, aArgs));
             }
         else
             {
-            code.add(new Var_N(m_reg, constName));
+            code.add(new Var_DN(m_reg, constName));
+            }
+
+        // assign initial value to var
+        if (value != null)
+            {
             value.generateAssignment(code, value.new Assignable(m_reg), errs);
             }
 
