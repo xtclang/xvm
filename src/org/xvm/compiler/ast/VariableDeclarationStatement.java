@@ -3,18 +3,22 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.*;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Var;
+import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 import org.xvm.asm.op.Var_SN;
@@ -134,6 +138,33 @@ public class VariableDeclarationStatement
             fValid = false;
             }
 
+        // before validating the type, disassociate any annotations that do not apply to the
+        // underlying type
+        TypeExpression typeOld  = type;
+        TypeExpression typeEach = typeOld;
+        while (typeEach != null)
+            {
+            if (typeEach instanceof AnnotatedTypeExpression)
+                {
+                Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
+                org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
+                if (annoAsm.getAnnotationType().isIntoVariableType())
+                    {
+                    // steal the annotation from the type held _in_ the variable
+                    ((AnnotatedTypeExpression) typeEach).disassociateAnnotation();
+
+                    // add the annotation to the type _of_ the variable implementation itself
+                    if (m_listRefAnnotations == null)
+                        {
+                        m_listRefAnnotations = new ArrayList<>();
+                        }
+                    m_listRefAnnotations.add(annoAst);
+                    }
+                }
+
+            typeEach = typeEach.unwrapIntroductotryType();
+            }
+
         ConstantPool   pool    = pool();
         TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
         if (typeNew != type)
@@ -199,6 +230,15 @@ public class VariableDeclarationStatement
                 }
             }
 
+        if (m_listRefAnnotations != null)
+            {
+            for (int i = m_listRefAnnotations.size()-1; i >= 0; --i)
+                {
+                typeVar = pool.ensureAnnotatedTypeConstant(
+                        m_listRefAnnotations.get(i).ensureAnnotation(pool), typeVar);
+                }
+            }
+
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
@@ -210,7 +250,8 @@ public class VariableDeclarationStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
-        boolean fCompletes = fReachable && (value == null || !value.isAborting());
+        boolean      fCompletes = fReachable && (value == null || !value.isAborting());
+        ConstantPool pool       = pool();
 
         switch (getUsage())
             {
@@ -218,10 +259,10 @@ public class VariableDeclarationStatement
             case If:
                 // in the form "Type varname : conditional"
                 // first, declare an unnamed Boolean variable that will hold the conditional result
-                code.add(new Var(pool().typeBoolean()));
+                code.add(new Var(pool.typeBoolean()));
                 Register regCond = code.lastRegister();
                 // next, declare the named variable
-                code.add(new Var_N(m_reg, pool().ensureStringConstant((String) name.getValue())));
+                code.add(new Var_N(m_reg, pool.ensureStringConstant((String) name.getValue())));
                 // next, assign the r-value to the two variables
                 value.generateAssignments(code, new Assignable[]
                         {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
@@ -242,57 +283,64 @@ public class VariableDeclarationStatement
                 break;
             }
 
-        // TODO DVAR support
-
-        // no value: declare named var
-        StringConstant constName = pool().ensureStringConstant((String) name.getValue());
-        if (value == null)
+        StringConstant constName = pool.ensureStringConstant((String) name.getValue());
+        if (m_listRefAnnotations == null && value != null)
             {
-            code.add(new Var_N(m_reg, constName));
-            return fCompletes;
-            }
+            // constant value: declare and initialize named var
+            if (value.hasConstantValue())
+                {
+                Constant constVal;
+                if (m_fPackingInit)
+                    {
+                    constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
+                            pool.typeTuple(), value.getTypes()), value.toConstants());
+                    }
+                else
+                    {
+                    constVal = value.toConstant();
+                    }
+                code.add(new Var_IN(m_reg, constName, constVal));
+                return fCompletes;
+                }
 
-        // constant value: declare and initialize named var
-        if (value.hasConstantValue())
-            {
-            Constant constVal;
+            // declare and initialize named var
+            TypeConstant typeVar = m_reg.getType();
             if (m_fPackingInit)
                 {
-                ConstantPool pool = pool();
-                constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
-                        pool.typeTuple(), value.getTypes()), value.toConstants());
+                Argument[] aArgs = value.generateArguments(code, false, errs);
+                code.add(new Var_TN(m_reg, constName, aArgs));
+                return fCompletes;
                 }
-            else
+
+            if (value instanceof ListExpression && typeVar.isA(pool.typeSequence()))
                 {
-                constVal = value.toConstant();
+                // even though we validated the ListExpression to give us a single list value, it is
+                // tolerant of us asking for the values as individual values
+                List<Expression> listVals = ((ListExpression) value).getExpressions();
+                int cVals = listVals.size();
+                Argument[] aArgs = new Argument[cVals];
+                for (int i = 0; i < cVals; ++i)
+                    {
+                    aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
+                    }
+                code.add(new Var_SN(m_reg, constName, aArgs));
+                return fCompletes;
                 }
-            code.add(new Var_IN(m_reg, constName, constVal));
-            return fCompletes;
             }
 
-        // declare and initialize named var
-        TypeConstant typeVar = m_reg.getType();
-        if (m_fPackingInit)
+        // no value: declare named var
+        if (m_listRefAnnotations == null)
             {
-            Argument[] aArgs = value.generateArguments(code, false, errs);
-            code.add(new Var_TN(m_reg, constName, aArgs));
-            }
-        else if (value instanceof ListExpression && typeVar.isA(pool().typeSequence()))
-            {
-            // even though we validated the ListExpression to give us a single list value, it is
-            // tolerant of us asking for the values as individual values
-            List<Expression> listVals = ((ListExpression) value).getExpressions();
-            int              cVals    = listVals.size();
-            Argument[]       aArgs    = new Argument[cVals];
-            for (int i = 0; i < cVals; ++i)
-                {
-                aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
-                }
-            code.add(new Var_SN(m_reg, constName, aArgs));
+            code.add(new Var_N(m_reg, constName));
             }
         else
             {
-            code.add(new Var_N(m_reg, constName));
+            code.add(new Var_DN(m_reg, constName));
+            }
+
+        // assign initial value to var
+        if (value != null)
+            {
             value.generateAssignment(code, value.new Assignable(m_reg), errs);
             }
 
