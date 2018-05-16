@@ -94,6 +94,33 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean isClassType()
+        {
+        return m_constType1.isClassType()
+             | m_constType2.isClassType();
+        }
+
+    @Override
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
+             ^ m_constType2.isSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        assert isSingleUnderlyingClass(fAllowInterface);
+
+        IdentityConstant clz = m_constType1.getSingleUnderlyingClass(fAllowInterface);
+        if (clz == null)
+            {
+            clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
+            }
+        return clz;
+        }
+
+    @Override
     public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
         {
         ResolutionResult result1 = m_constType1.resolveFormalType(sName, collector);
@@ -169,6 +196,8 @@ public class UnionTypeConstant
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
+        assert !isClassType();
+
         Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
         Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 

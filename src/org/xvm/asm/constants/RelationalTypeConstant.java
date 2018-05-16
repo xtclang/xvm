@@ -137,33 +137,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isClassType()
-        {
-        return m_constType1.isClassType()
-            || m_constType2.isClassType();
-        }
-
-    @Override
-    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
-        {
-        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
-             ^ m_constType2.isSingleUnderlyingClass(fAllowInterface);
-        }
-
-    @Override
-    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
-        {
-        assert isClassType() && isSingleUnderlyingClass(fAllowInterface);
-
-        IdentityConstant clz = m_constType1.getSingleUnderlyingClass(fAllowInterface);
-        if (clz == null)
-            {
-            clz = m_constType2.getSingleUnderlyingClass(fAllowInterface);
-            }
-        return clz;
-        }
-
-    @Override
     public Constant getDefiningConstant()
         {
         throw new UnsupportedOperationException();

@@ -108,6 +108,29 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isClassType()
+        {
+        return m_constType1.isClassType()
+            && m_constType2.isClassType();
+        }
+
+    @Override
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        return m_constType1.isSingleUnderlyingClass(fAllowInterface)
+            && m_constType2.isSingleUnderlyingClass(fAllowInterface)
+            && m_constType1.getSingleUnderlyingClass(fAllowInterface).equals(
+               m_constType2.getSingleUnderlyingClass(fAllowInterface));
+        }
+
+    @Override
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        assert isSingleUnderlyingClass(fAllowInterface);
+        return m_constType1.getSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // we've been asked to resolve some type defined as "T1 | T2";  first, resolve T1 and T2
@@ -169,21 +192,38 @@ public class IntersectionTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
-        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        assert !isClassType();
 
-        if (setMiss1.isEmpty())
+        TypeConstant thisLeft1 = getUnderlyingType();
+        TypeConstant thisLeft2 = getUnderlyingType2();
+
+        Set<SignatureConstant> setMiss1 = null;
+        Set<SignatureConstant> setMiss2 = null;
+
+        // a class cannot be assignable from an interface
+        if (!thisLeft1.isClassType())
             {
-            return setMiss1; // type1 is assignable from that
+            setMiss1 = thisLeft1.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            if (setMiss1.isEmpty())
+                {
+                return setMiss1; // type1 is assignable from that
+                }
             }
-        if (setMiss2.isEmpty())
+
+        if (!thisLeft2.isClassType())
             {
-            return setMiss2; // type2 is assignable from that
+            setMiss2 = thisLeft2.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            if (setMiss2.isEmpty() || setMiss1 == null)
+                {
+                return setMiss2; // type2 is assignable from that
+                }
             }
 
         // neither is assignable; merge the misses
-        setMiss1.addAll(setMiss2);
-
+        if (setMiss2 != null)
+            {
+            setMiss1.addAll(setMiss2);
+            }
         return setMiss1;
         }
 

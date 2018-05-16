@@ -176,15 +176,16 @@ public class AnnotatedTypeExpression
         if (fValid)
             {
             // the annotation must mix in to the underlying type
-            Annotation             annoAst = getAnnotation();
-            org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool);
-            if (annoAsm.getAnnotationType().isIntoVariableType() && !isDisassociated()
-                    || !typeReferent.isA(annoAsm.getAnnotationType().ensureTypeInfo(errs).getInto()))
+            Annotation             annoAst  = getAnnotation();
+            org.xvm.asm.Annotation annoAsm  = annoAst.ensureAnnotation(pool);
+            TypeConstant           typeAnno = annoAsm.getAnnotationType();
+            if (typeAnno.getExplicitClassInto().isIntoVariableType() && !isDisassociated()
+                    || !typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto()))
                 {
                 annoAst.log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
                         type.ensureTypeConstant().getValueString(),
                         annoAsm.getAnnotationClass().getValueString(),
-                        annoAsm.getAnnotationType().ensureTypeInfo(errs).getInto().getValueString());
+                        typeAnno.ensureTypeInfo(errs).getInto().getValueString());
                 fValid = false;
                 }
             }
