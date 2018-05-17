@@ -10,6 +10,9 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -99,6 +102,27 @@ public class DifferenceTypeConstant
         // a difference type is just a duck-type, and has no equality definition of its own -- it
         // uses the equality definition of the root object class itself
         return getConstantPool().typeObject();
+        }
+
+    @Override
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+        {
+        // for the DifferenceType to contribute a name, the first side needs to find it,
+        // but the second should not
+        SimpleCollector  collector1 = new SimpleCollector();
+        ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
+
+        if (result1 == ResolutionResult.RESOLVED)
+            {
+            ResolutionResult result2 = m_constType2.resolveContributedName(sName, new SimpleCollector());
+            if (result2 == ResolutionResult.RESOLVED)
+                {
+                return ResolutionResult.UNKNOWN;
+                }
+            collector.resolvedConstant(collector1.getResolvedConstant());
+            }
+
+        return result1;
         }
 
     @Override

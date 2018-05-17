@@ -143,12 +143,17 @@ public class P_Var
     @Override
     public void simulate(Scope scope)
         {
-        checkNextRegister(scope, m_argReturn);
-
         // TODO: remove when deprecated construction is removed
-        if (scope.isNextRegister(m_nRetValue))
+        if (m_argReturn == null)
             {
-            scope.allocVar();
+            if (scope.isNextRegister(m_nRetValue))
+                {
+                scope.allocVar();
+                }
+            }
+        else
+            {
+            checkNextRegister(scope, m_argReturn);
             }
         }
 

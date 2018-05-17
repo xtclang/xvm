@@ -587,7 +587,7 @@ public class InvocationExpression
             if (m_argMethod instanceof MethodConstant)
                 {
                 MethodConstant idMethod = (MethodConstant) m_argMethod;
-                boolean        fMethod  = !((MethodStructure) idMethod.getComponent()).isFunction();
+                boolean        fMethod  = m_fMethod;
                 if (fMethod)
                     {
                     // idMethod is a MethodConstant for a method (including "finally")
@@ -973,6 +973,7 @@ public class InvocationExpression
         boolean fNoCall  = isSuppressCall();
 
         m_argMethod   = null;
+        m_fMethod     = false;
         m_idConvert   = null;
         m_fBindTarget = false;
         m_fBindParams = !fNoFBind;
@@ -1038,9 +1039,9 @@ public class InvocationExpression
                                 (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs);
                         if (method != null)
                             {
-                            m_fBindTarget = !((MethodStructure) method.getComponent()).isFunction()
-                                            && !fNoMBind;
                             m_argMethod   = method;
+                            m_fMethod     = !((MethodStructure) method.getComponent()).isFunction();
+                            m_fBindTarget = m_fMethod && !fNoMBind;
                             break NextParent;
                             }
 
@@ -1094,6 +1095,11 @@ public class InvocationExpression
                 // - functions are included because the left is identity-mode
                 TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
                 arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs);
+
+                if (arg instanceof MethodConstant)
+                    {
+                    m_fMethod = !infoLeft.getMethodById((MethodConstant) arg).isFunction();
+                    }
                 }
 
             if (arg == null)
@@ -1104,8 +1110,14 @@ public class InvocationExpression
                 // - functions are NOT included because the left is NOT identity-mode
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
                 arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs);
-                m_fBindTarget = arg != null;
+
+                if (arg != null)
+                    {
+                    m_fBindTarget = true;
+                    m_fMethod     = true;
+                    }
                 }
+
             m_argMethod = arg;
             }
 
@@ -1333,6 +1345,7 @@ public class InvocationExpression
     private transient boolean        m_fBindTarget;
     private transient boolean        m_fBindParams;
     private transient boolean        m_fCall;
+    private transient boolean        m_fMethod; // does m_argMethod represent a method or function
     private transient Argument       m_argMethod;
     private transient MethodConstant m_idConvert;
 

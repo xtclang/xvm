@@ -230,7 +230,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
@@ -249,21 +249,21 @@ public class TerminalTypeConstant
                 ClassConstant constClz = (ClassConstant) constant;
 
                 return ((ClassStructure) constClz.getComponent()).
-                    resolveFormalType(sName, collector, true);
+                    resolveContributedName(sName, collector, Access.PUBLIC, true);
                 }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getType()
-                        .resolveFormalType(sName, collector);
+                        .resolveContributedName(sName, collector);
 
             case Typedef:
                 return getTypedefTypeConstant((TypedefConstant) constant).
-                    resolveFormalType(sName, collector);
+                    resolveContributedName(sName, collector);
 
             case UnresolvedName:
-                return ResolutionResult.POSSIBLE_FORMAL;
+                return ResolutionResult.POSSIBLE;
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);

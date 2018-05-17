@@ -444,17 +444,17 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if the specified name is referring to a formal type on any of the contributions
-     * for this class.
+     * Determine if the specified name is referring to a name introduced by any of the contributions
+     * for this type.
      *
      * @param sName      the name to resolve
      * @param collector  the collector to which the potential name matches will be reported
      *
      * @return the resolution result
      */
-    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
-        return getUnderlyingType().resolveFormalType(sName, collector);
+        return getUnderlyingType().resolveContributedName(sName, collector);
         }
 
     /**

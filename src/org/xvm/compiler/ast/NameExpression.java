@@ -8,8 +8,8 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -885,6 +885,7 @@ public class NameExpression
             Argument arg = ctx.resolveName(name, errs);
             if (arg == null)
                 {
+                // TODO: in many instances we double-report NAME_MISSING
                 log(errs, Severity.ERROR, Compiler.NAME_MISSING,
                         sName, ctx.getMethod().getIdentityConstant().getSignature());
                 }
@@ -1037,12 +1038,12 @@ public class NameExpression
                     && ((NameExpression) left).isIdentityMode(ctx, true))
                 {
                 // it must be a child of the component
-                NameExpression            exprLeft  = (NameExpression) left;
-                IdentityConstant          idLeft    = exprLeft.getIdentity(ctx);
-                SimpleResolutionCollector collector = new SimpleResolutionCollector();
+                NameExpression   exprLeft  = (NameExpression) left;
+                IdentityConstant idLeft    = exprLeft.getIdentity(ctx);
+                SimpleCollector  collector = new SimpleCollector();
                 if (idLeft.getComponent().resolveName(sName, collector) == ResolutionResult.RESOLVED)
                     {
-                    Constant constant = collector.getConstant();
+                    Constant constant = collector.getResolvedConstant();
                     switch (constant.getFormat())
                         {
                         case Package:
@@ -1469,44 +1470,6 @@ public class NameExpression
     public String getDumpDesc()
         {
         return toString();
-        }
-
-
-    // ----- inner class: SimpleResolutionCollector ------------------------------------------------
-
-    /**
-     * A simple implementation of the ResolutionCollector interface.
-     */
-    public static class SimpleResolutionCollector
-            implements ResolutionCollector
-        {
-        @Override
-        public ResolutionResult resolvedComponent(Component component)
-            {
-            m_constant  = component.getIdentityConstant();
-            m_component = component;
-            return ResolutionResult.RESOLVED;
-            }
-
-        @Override
-        public ResolutionResult resolvedType(Constant constType)
-            {
-            m_constant = constType;
-            return ResolutionResult.RESOLVED;
-            }
-
-        public Constant getConstant()
-            {
-            return m_constant;
-            }
-
-        public Component getComponent()
-            {
-            return m_component;
-            }
-
-        private Constant  m_constant;
-        private Component m_component;
         }
 
 

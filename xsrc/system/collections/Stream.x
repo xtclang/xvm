@@ -468,7 +468,7 @@ interface Stream<ElementType>
                     function ResultType accumulate(ResultType, ElementType),
                     function ResultType combine(ResultType, ResultType))
         {
-        return collect(UniformCollector.of(supply, accumulate, combine));
+        return collect(Collector.of(supply, accumulate, combine));
         }
 
     /**

@@ -10,8 +10,8 @@ const ContextToken<TokenType extends immutable Object>
         // this contextToken is closed
         previousContextToken = this:service.findContextToken(name);
 
-        startTime = runtimeClock.time;
-        deadline  = startTime + duration;
+//        startTime = runtimeClock.time;
+//        deadline  = startTime + duration;
         }
     finally
         {

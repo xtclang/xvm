@@ -5,8 +5,12 @@ import java.lang.reflect.Field;
 
 import java.util.Collections;
 
+import org.xvm.asm.Argument;
+import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -101,7 +105,29 @@ public class AssignmentStatement
 
         // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
         // and can validate that assignment can occur
-        Expression rvalueNew = rvalue.validate(ctx, lvalue.getType(), TuplePref.Rejected, errs);
+        TypeConstant typeLeft = lvalue.getType();
+        if (typeLeft != null)
+            {
+            // allow the r-value to resolve names based on the l-value type's contributions;
+            // as a result, it allows us to write:
+            //    Color c = Red;
+            // instead of
+            //    Color c = Color.Red;
+            ctx = new Context(ctx)
+                {
+                @Override
+                public Argument resolveRegularName(Token name, ErrorListener errs)
+                    {
+                    SimpleCollector collector = new SimpleCollector();
+                    return typeLeft.resolveContributedName(name.getValueText(), collector) ==
+                            ResolutionResult.RESOLVED
+                        ? collector.getResolvedConstant()
+                        : super.resolveRegularName(name, errs);
+                    }
+                };
+            }
+
+        Expression rvalueNew = rvalue.validate(ctx, typeLeft, TuplePref.Rejected, errs);
         if (rvalueNew != rvalue)
             {
             fValid &= rvalueNew != null;
