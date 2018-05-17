@@ -17,6 +17,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
@@ -1204,7 +1205,13 @@ public class TypeCompositionStatement
             {
             // add a default constructor that will invoke the necessary super class and mixin
             // constructors (if any)
-            // TODO
+            MethodStructure constructor = component.createMethod(true, Access.PUBLIC,
+                    org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
+                    "construct", org.xvm.asm.Parameter.NO_PARAMS, false);
+
+            // set the synthetic flag so that the constructor knows to provide its own
+            // default implementation when it emits code
+            constructor.setSynthetic(true);
             }
 
         return nodeNew;
