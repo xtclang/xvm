@@ -711,6 +711,7 @@ public abstract class Op
             case OP_MOV:         return new Move        (in, aconst);
             case OP_MOV_VAR:     return new MoveVar     (in, aconst);
             case OP_MOV_REF:     return new MoveRef     (in, aconst);
+            case OP_MOV_THIS:    return new MoveThis    (in, aconst);
             case OP_CAST:        return new MoveCast    (in, aconst);
 
             case OP_GP_ADD:      return new GP_Add      (in, aconst);
@@ -901,6 +902,7 @@ public abstract class Op
             case OP_MOV:         return "MOV";
             case OP_MOV_VAR:     return "MOV_VAR";
             case OP_MOV_REF:     return "MOV_REF";
+            case OP_MOV_THIS:    return "MOV_THIS";
             case OP_CAST:        return "CAST";
             case OP_GP_ADD:      return "GP_ADD";
             case OP_GP_SUB:      return "GP_SUB";

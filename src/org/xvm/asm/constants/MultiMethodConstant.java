@@ -37,7 +37,7 @@ public class MultiMethodConstant
      * Construct a constant whose value is a multi-method identifier.
      *
      * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the module, package, class, proprety, or method that contains this
+     * @param constParent  the module, package, class, property, or method that contains this
      *                     multi-method
      * @param sName        the method name
      */

@@ -415,30 +415,29 @@ public class MethodDeclarationStatement
                         }
                     else
                         {
+                        if (System.getProperty("GG") != null)
+                            {
+                            method.setNative(true);
+                            }
+
                         if (sPath.contains("Test"))
                             {
                             if (sPath.contains("ExpectedFailure"))
                                 {
-                                System.out.println("Successfully failed compilation: " + sPath);
+                                System.out.println("Successfully failed test compilation: " + sPath);
                                 }
                             else
                                 {
-                                System.err.println("Compilation error: " + sPath);
+                                System.err.println("Test compilation error: " + sPath);
                                 errsTemp.getErrors().forEach(System.err::println);
+                                errsTemp.clear();
                                 }
                             }
 
-                        if (System.getProperty("GG") == null)
+                        // copy over errors
+                        for (ErrorInfo info : errsTemp.getErrors())
                             {
-                            // copy over errors
-                            for (ErrorInfo info : errsTemp.getErrors())
-                                {
-                                errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
-                                }
-                            }
-                        else
-                            {
-                            method.setNative(true);
+                            errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
                             }
                         }
                     }
@@ -456,7 +455,7 @@ public class MethodDeclarationStatement
                     method.setNative(true);
                     if (sPath.contains("Test"))
                         {
-                        System.err.println("Compilation error: " + sPath + " " + e);
+                        System.err.println("Test compilation error: " + sPath + " " + e);
                         if (e instanceof AssertionError || e instanceof NullPointerException)
                             {
                             e.printStackTrace(System.err);
