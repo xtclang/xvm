@@ -398,31 +398,26 @@ public class ClassStructure
     @Override
     public ResolutionResult resolveName(String sName, ResolutionCollector collector)
         {
-        ResolutionResult result = super.resolveName(sName, collector);
-
-        return result == ResolutionResult.UNKNOWN
-            ? resolveFormalType(sName, collector, true)
-            : result;
+        return resolveContributedName(sName, collector, Access.PRIVATE, true);
         }
 
     /**
-     * Determine if the specified name is referring to a formal type on any of the contributions
+     * Determine if the specified name is referring to a name introduced by any of the contributions
      * for this class.
      *
      * @param sName       the name to resolve
      * @param collector   the collector to which the potential name matches will be reported
      * @param fAllowInto  if false, the "into" contributions should not be looked at
      *
-     * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE_FORMAL
+     * @return the resolution result is one of: RESOLVED, UNKNOWN or POSSIBLE
      */
-    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector,
-                                                 boolean fAllowInto)
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector,
+                                                   Access access, boolean fAllowInto)
         {
         Component child = getChild(sName);
-        if (child instanceof PropertyStructure && child.isSynthetic())
+        if (child != null)
             {
-            assert ((PropertyStructure) child).isTypeParameter();
-
+            // TODO: check access
             collector.resolvedComponent(child);
             return ResolutionResult.RESOLVED;
             }
@@ -437,14 +432,22 @@ public class ClassStructure
                         {
                         continue;
                         }
+                    access = Access.PROTECTED;
+                    break;
+
                 case Annotation:
                 case Delegates:
                 case Implements:
+                    access = Access.PUBLIC;
+                    break;
+
                 case Extends:
+                    access = Access.PROTECTED;
                     break;
 
                 case Incorporates:
                     fAllowInto = false;
+                    access = Access.PROTECTED;
                     break;
 
                 default:
@@ -454,21 +457,17 @@ public class ClassStructure
             TypeConstant typeContrib = contrib.getTypeConstant();
             if (typeContrib.containsUnresolved())
                 {
-                return ResolutionResult.POSSIBLE_FORMAL;
+                return ResolutionResult.POSSIBLE;
                 }
 
-            if (typeContrib.equals(getConstantPool().typeObject()))
-                {
-                // trivial optimization; no need to look into the Object
-                break;
-                }
-
-            if (typeContrib.isSingleDefiningConstant())
+            if (typeContrib.isSingleUnderlyingClass(true))
                 {
                 ClassStructure clzContrib = (ClassStructure)
                     typeContrib.getSingleUnderlyingClass(true).getComponent();
 
-                ResolutionResult result = clzContrib.resolveFormalType(sName, collector, fAllowInto);
+                ResolutionResult result = clzContrib.
+                    resolveContributedName(sName, collector, access, fAllowInto);
+
                 if (result != ResolutionResult.UNKNOWN)
                     {
                     return result;
@@ -476,7 +475,7 @@ public class ClassStructure
                 }
             else
                 {
-                return typeContrib.resolveFormalType(sName, collector);
+                return typeContrib.resolveContributedName(sName, collector);
                 }
             }
 

@@ -77,25 +77,35 @@ public abstract class OpInvocable extends Op
         {
         if (isMultiReturn())
             {
-            checkNextRegisters(scope, m_aArgReturn);
-
-            // TODO: remove when deprecated construction is removed
-            for (int i = 0, c = m_anRetValue.length; i < c; i++)
+            if (m_aArgReturn == null)
                 {
-                if (scope.isNextRegister(m_anRetValue[i]))
+                // TODO: remove when deprecated construction is removed
+                for (int i = 0, c = m_anRetValue.length; i < c; i++)
                     {
-                    scope.allocVar();
+                    if (scope.isNextRegister(m_anRetValue[i]))
+                        {
+                        scope.allocVar();
+                        }
                     }
+                }
+            else
+                {
+                checkNextRegisters(scope, m_aArgReturn);
                 }
             }
         else
             {
-            checkNextRegister(scope, m_argReturn);
-
-            // TODO: remove when deprecated construction is removed
-            if (scope.isNextRegister(m_nRetValue))
+            if (m_argReturn == null)
                 {
-                scope.allocVar();
+                // TODO: remove when deprecated construction is removed
+                if (scope.isNextRegister(m_nRetValue))
+                    {
+                    scope.allocVar();
+                    }
+                }
+            else
+                {
+                checkNextRegister(scope, m_argReturn);
                 }
             }
         }

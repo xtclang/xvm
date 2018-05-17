@@ -121,12 +121,33 @@ public class UnionTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
-        ResolutionResult result1 = m_constType1.resolveFormalType(sName, collector);
-        return result1 == ResolutionResult.UNKNOWN
-            ? m_constType2.resolveFormalType(sName, collector)
-            : result1;
+        // for the UnionType to contribute a name, either side needs to find it
+        ResolutionResult result1 = m_constType1.resolveContributedName(sName, collector);
+        if (result1 == ResolutionResult.RESOLVED)
+            {
+            return result1;
+            }
+
+        ResolutionResult result2 = m_constType2.resolveContributedName(sName, collector);
+        if (result2 == ResolutionResult.RESOLVED)
+            {
+            return result2;
+            }
+
+        // combine the results
+        switch (result1)
+            {
+            case POSSIBLE:
+            case DEFERRED:
+            case ERROR:
+                return result1;
+
+            case UNKNOWN:
+            default:
+                return result2;
+            }
         }
 
     @Override

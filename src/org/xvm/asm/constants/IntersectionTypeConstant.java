@@ -10,6 +10,10 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.ResolutionCollector;
+import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -128,6 +132,36 @@ public class IntersectionTypeConstant
         {
         assert isSingleUnderlyingClass(fAllowInterface);
         return m_constType1.getSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
+    public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
+        {
+        // for the IntersectionType to contribute a name, both sides need to find exactly
+        // the same component
+        SimpleCollector  collector1 = new SimpleCollector();
+        ResolutionResult result1    = m_constType1.resolveContributedName(sName, collector1);
+        if (result1 != ResolutionResult.RESOLVED)
+            {
+            return result1;
+            }
+
+        SimpleCollector  collector2 = new SimpleCollector();
+        ResolutionResult result2    = m_constType2.resolveContributedName(sName, collector2);
+        if (result2 != ResolutionResult.RESOLVED)
+            {
+            return result2;
+            }
+
+        Constant const1 = collector1.getResolvedConstant();
+        Constant const2 = collector2.getResolvedConstant();
+
+        if (const1.equals(const2))
+            {
+            collector.resolvedConstant(const1);
+            return ResolutionResult.RESOLVED;
+            }
+        return ResolutionResult.UNKNOWN; // ambiguous
         }
 
     @Override
