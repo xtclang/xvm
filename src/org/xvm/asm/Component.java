@@ -3119,7 +3119,7 @@ public abstract class Component
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
 
-    public enum ResolutionResult {UNKNOWN, RESOLVED, DEFERRED, POSSIBLE_FORMAL, ERROR}
+    public enum ResolutionResult {UNKNOWN, RESOLVED, POSSIBLE, DEFERRED, ERROR}
 
     /**
      * A callback interface used by the name resolution functionality of the Component.
@@ -3134,13 +3134,49 @@ public abstract class Component
         ResolutionResult resolvedComponent(Component component);
 
         /**
-         * Invoked when a name resolves to something that is a type constant, such as a type
-         * parameter of a parameterized type or of a method.
+         * Invoked when a name resolves to something that is a constant, such as a property
+         * constant of a parameterized type or of a method.
          *
-         * @param constType  a type; typically a type parameter, either a PropertyConstant or a
-         *                   RegisterConstant
+         * @param constant  either a PropertyConstant or a RegisterConstant
          */
-        ResolutionResult resolvedType(Constant constType);
+        ResolutionResult resolvedConstant(Constant constant);
+        }
+
+    /**
+     * A simple ResolutionCollector implementation.
+     */
+    public static class SimpleCollector
+            implements ResolutionCollector
+        {
+        @Override
+        public ResolutionResult resolvedComponent(Component component)
+            {
+            m_constant = component.getIdentityConstant();
+            return ResolutionResult.RESOLVED;
+            }
+
+        @Override
+        public ResolutionResult resolvedConstant(Constant constant)
+            {
+            m_constant = constant;
+            return ResolutionResult.RESOLVED;
+            }
+
+        /**
+         * @return the resolved constant
+         */
+        public Constant getResolvedConstant()
+            {
+            return m_constant;
+            }
+
+
+        // ----- data fields -----------------------------------------------------------------------
+
+        /**
+         * The resolved constant.
+         */
+        private Constant m_constant;
         }
 
 

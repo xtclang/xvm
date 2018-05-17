@@ -174,15 +174,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveFormalType(String sName, ResolutionCollector collector)
-        {
-        // we should not get here for the Intersection type, but instead of throwing,
-        // let's simply treat it in the same way as the DifferenceType -
-        // only looking into the first type
-        return m_constType1.resolveFormalType(sName, collector);
-        }
-
-    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal1 = m_constType1;

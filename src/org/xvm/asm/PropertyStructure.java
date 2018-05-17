@@ -491,6 +491,21 @@ public class PropertyStructure
         return !isStatic() && getParent().isAutoNarrowingAllowed();
         }
 
+    @Override
+    public ResolutionResult resolveName(String sName, ResolutionCollector collector)
+        {
+        // allow the property to resolve names based on the property type;
+        // it comes handy in the context inference scenario, allowing us to write:
+        //    Color c = Red;
+        // instead of
+        //    Color c = Color.Red;
+        // (see also AssignmentStatement.validate)
+        //
+        // Note; we don't call into the super since the PropertyStructure's children are
+        // "invisible" without the name qualification
+
+        return getType().resolveContributedName(sName, collector);
+        }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

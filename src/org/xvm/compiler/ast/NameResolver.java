@@ -187,7 +187,7 @@ public class NameResolver
                             // ask the component to resolve the name
                             switch (componentResolver.resolveName(m_sName, this))
                                 {
-                                case POSSIBLE_FORMAL:
+                                case POSSIBLE:
                                     // formal types could not be resolved; keep walking up
                                     fPossibleFormal = true;
                                     // break-through
@@ -497,7 +497,7 @@ public class NameResolver
             case TYPEDEF:
                 // while it resolved to a component, the component is a property, which indicates that
                 // the name resolved to a type parameter
-                return resolvedType(constId);
+                return resolvedConstant(constId);
 
             default:
                 if (m_fTypeMode)
@@ -517,11 +517,11 @@ public class NameResolver
         }
 
     @Override
-    public ResolutionResult resolvedType(Constant constType)
+    public ResolutionResult resolvedConstant(Constant constant)
         {
-        assert constType != null;
+        assert constant != null;
 
-        m_constant  = constType;
+        m_constant  = constant;
         m_component = null;
         m_fTypeMode = true;
 
