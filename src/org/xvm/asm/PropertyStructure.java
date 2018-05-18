@@ -240,7 +240,7 @@ public class PropertyStructure
      */
     public boolean hasInitialValue()
         {
-        return m_fHasValue;
+        return m_fHasValue || m_constVal != null;
         }
 
     /**

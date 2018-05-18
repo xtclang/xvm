@@ -19,6 +19,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Version;
@@ -26,6 +27,7 @@ import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -1131,17 +1133,19 @@ public class TypeCompositionStatement
         TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
 
         // if there are any constructor parameters, then that implies the existence both of
-        // properties and of a constructor; make sure that those exist, and that there are no
-        // obvious conflicts
-        Map<String, Component> mapChildren = component.ensureChildByNameMap();
+        // properties and of a constructor; we will handle the constructor creation later (the
+        // resolve-names pass) once we we can figure out what types mean; for now, if the properties
+        // are missing (i.e. not redundantly declared), then create them, and either way, we will
+        // double-check them once we can resolve types
         if (nodeNew == this && constructorParams != null && !constructorParams.isEmpty())
             {
-            NextParam: for (Parameter param : constructorParams)
+            Map<String, Component> mapChildren = component.ensureChildByNameMap();
+            for (Parameter param : constructorParams)
                 {
                 // the name should either not exist already, or if it does, it needs to be a
                 // property and the type will have to match the parameter
-                String    sParam = param.getName();
-                Component child  = mapChildren.get(sParam);
+                String sParam = param.getName();
+                Component child = mapChildren.get(sParam);
                 if (child == null)
                     {
                     // create the property and get it caught up to where we are
@@ -1150,53 +1154,132 @@ public class TypeCompositionStatement
                             param.getType(), param.getNameToken(), null, null, null);
                     prop.setParent(this);
                     prop.registerStructures(errs);
+                    PropertyStructure struct = (PropertyStructure) mapChildren.get(sParam);
+                    struct.setSynthetic(true);
                     }
-                else if (child instanceof PropertyStructure)
-                    {
-                    // have the property declaration statement verify that the types match
-                    PropertyDeclarationStatement stmtProp = null;
-                    if (body != null && body.stmts != null)
-                        {
-                        for (Statement stmt : body.stmts)
-                            {
-                            if (stmt instanceof PropertyDeclarationStatement
-                                    && ((PropertyDeclarationStatement) stmt).getName().equals(sParam))
-                                {
-                                stmtProp = (PropertyDeclarationStatement) stmt;
-
-                                // the property statement will need to verify that the types match
-                                stmtProp.validateRedundantType(param.getType(), errs);
-
-                                continue NextParam;
-                                }
-                            }
-                        }
-
-                    // couldn't find the property; this should only be able to happen if there are
-                    // two parameters with the same name (which is obviously illegal)
-                    // TODO log error
-                    throw new IllegalStateException("TODO - dupl " + param);
-                    }
-                else
+                else if (!(child instanceof PropertyStructure))
                     {
                     // the parameter implies a property, but we found something else instead
-                    // TODO log error
-                    throw new IllegalStateException("TODO - conflict error for " + param);
+                    param.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sParam);
+                    }
+                }
+            }
+
+        return nodeNew;
+        }
+
+    @Override
+    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+        {
+        Component component     = getComponent();
+        Format    format        = component.getFormat();
+        boolean   fModuleImport = false;
+        if (format == Format.PACKAGE && moduleImported == null)
+            {
+            for (Composition composition : compositions)
+                {
+                Token.Id keyword = composition.getKeyword().getId();
+                switch (keyword)
+                    {
+                    case IMPORT:
+                    case IMPORT_EMBED:
+                    case IMPORT_REQ:
+                    case IMPORT_WANT:
+                    case IMPORT_OPT:
+                        PackageStructure structPkg = (PackageStructure) component;
+                        ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
+                        ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
+                        if (structAct == null)
+                            {
+                            // this is obviously an error -- we can't compile without the module
+                            // being available
+                            Composition.Import  imp     = (Composition.Import) composition;
+                            NamedTypeExpression type    = (NamedTypeExpression) imp.type;
+                            String              sModule = type.getName();
+                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
+                            }
+                        else
+                            {
+                            moduleImported = structAct;
+                            }
+                        fModuleImport = true;
+                        break;
+                    }
+                }
+            }
+
+        TypeCompositionStatement stmtThis = (TypeCompositionStatement) super.resolveNames(listRevisit, errs);
+        if (stmtThis != null)
+            {
+            listRevisit.add(stmtThis);
+            return stmtThis;
+            }
+
+        Map<String, Component> mapChildren  = component.ensureChildByNameMap();
+        MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct"); 
+        if (constructorParams != null && !constructorParams.isEmpty())
+            {
+            if (fModuleImport) 
+                { 
+                // TODO log error
+                throw new IllegalStateException();
+                }
+
+            // resolve the type of each constructor parameter
+            int            cParams     = constructorParams.size();
+            TypeConstant[] atypeParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Parameter         param     = constructorParams.get(i);
+                TypeConstant      typeParam = param.getType().ensureTypeConstant();
+                String            sParam    = param.getName();
+                PropertyStructure prop      = (PropertyStructure) mapChildren.get(sParam);
+                TypeConstant      typeProp  = prop.getType();
+                if (typeParam.containsUnresolved() | typeProp.containsUnresolved())
+                    {
+                    listRevisit.add(this);
+                    return this;
+                    }
+
+                // the property type must be compatible with the parameter type
+                if (!(typeParam.isA(typeProp) && typeProp.isA(typeParam))) // REVIEW GG
+                    {
+                    param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            typeProp.getValueString(),
+                            typeParam.getValueString());
+                    }
+
+                atypeParams[i] = typeParam;
+                }
+
+            // look for a constructor that corresponds to those parameter types, and create the
+            // constructor if it does not already exist. the constructor may have been declared
+            // explicitly, but we can't verify that for certain because the types may appear
+            // slightly different here (since we can't resolve types at this stage), so what we
+            // will look for is any constructor that has a matching number of parameters (or a
+            // higher number of parameters if the additional parameters are optional), and each
+            // parameter type must match the type specified in the short-hand constructor notation
+            boolean fFound = false;
+            if (constructors != null)
+                {
+                for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+                    {
+                    org.xvm.asm.Parameter[] aParams = constructor.getParamArray();
+                    TypeConstant[] atypeParams = idConstruct.getRawParams();
+                    if (atypeParams >= cParams)
+                        {
+                        // verify that any additional parameters are defaulted
+                        for (int i = cParams, c = atypeParams.length; i < c; ++i)
+                            {
+                            if (idConstruct)
+                            }
+                        }
                     }
                 }
 
-            // TODO make sure the constructor exists. here's the problem, though: the constructor may have been declared
-            //      explicitly, but we can't verify that for certain because the types may appears slightly different
-            //      here (since we can't resolve types at this stage), so we need to figure out how to make sure that
-            //      the constructor that we create doesn't collide with one explicitly declared, yet if one is not
-            //      explicitly declared that matches this "short hand notation" constructor, then we need to create it!
-
-            // for a singleton, constructor parameters are not permitted unless they all have default
-            // values (since the module is a singleton, and is automatically created, i.e. it has to
-            // have all of its construction parameters available)
-            if (fSingleton)
+            if (!fFound)
                 {
-                // TODO verify that singletons have values for all constructor params (move this check to a later stage?)
+                // TODO
                 }
             }
 
@@ -1213,46 +1296,15 @@ public class TypeCompositionStatement
             // default implementation when it emits code
             constructor.setSynthetic(true);
             }
-
-        return nodeNew;
-        }
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (getComponent().getFormat() == Format.PACKAGE)
+        // for a singleton, constructor parameters are not permitted unless they all have default
+        // values (since the module is a singleton, and is automatically created, i.e. it has to
+        // have all of its construction parameters available)
+        else if (fSingleton)
             {
-            for (Composition composition : compositions)
-                {
-                Token.Id keyword = composition.getKeyword().getId();
-                switch (keyword)
-                    {
-                    case IMPORT:
-                    case IMPORT_EMBED:
-                    case IMPORT_REQ:
-                    case IMPORT_WANT:
-                    case IMPORT_OPT:
-                        PackageStructure structPkg = (PackageStructure) getComponent();
-                        ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
-                        ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
-                        if (structAct == null)
-                            {
-                            // this is obviously an error -- we can't compile without the module
-                            // being available
-                            NamedTypeExpression type = (NamedTypeExpression) ((Composition.Import) composition).type;
-                            String              sModule = type.getName();
-                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
-                            }
-                        else
-                            {
-                            moduleImported = structAct;
-                            }
-                        break;
-                    }
-                }
+            // TODO verify that singletons have values for all constructor params (move this check to a later stage?)
             }
 
-        return super.resolveNames(listRevisit, errs);
+        return this;
         }
 
     @Override

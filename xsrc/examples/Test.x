@@ -11,6 +11,11 @@ module Test
 //        String name;
 //        }
 
+    const Employee(String name)
+            extends Person(name)
+        {
+        }
+
     void run()
         {
         @Inject X.io.Console console;
