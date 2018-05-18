@@ -172,19 +172,44 @@ public class Parameter
         }
 
     /**
-     * @return true iff the parameter or return value has a default value
+     * Specify that the parameter will have a default value.
+     * <p/>
+     * This is a temporary value that is used as a place-holder until the property's actual value is
+     * available.
      */
-    public boolean isDefaulted()
+    public void markDefaultValue()
         {
-        return m_constDefault != null;
+        m_fHasDefault = true;
         }
 
     /**
-     * @return the default value of the parameter or return value, or null if there is none
+     * @return true iff the Property is known to have a value, even if the value has not yet been
+     *         determined
+     */
+    public boolean hasDefaultValue()
+        {
+        return m_fHasDefault || m_constDefault != null;
+        }
+
+    /**
+     * @return the default value of the parameter or return value, if it is a compile-time constant,
+     *         or null if there is none or the default value is computed by an initializer
      */
     public Constant getDefaultValue()
         {
         return m_constDefault;
+        }
+
+    /**
+     * Fill in the default value of the parameter.
+     *
+     * @param constDefault  the default value of the parameter
+     */
+    public void setDefaultValue(Constant constDefault)
+        {
+        assert hasDefaultValue();
+        assert constDefault == null;
+        m_constDefault = constDefault;
         }
 
 
@@ -251,7 +276,7 @@ public class Parameter
               .append(getName());
             }
 
-        if (isDefaulted())
+        if (hasDefaultValue())
             {
             sb.append(", default=")
               .append(m_constDefault.getValueString());
@@ -347,4 +372,9 @@ public class Parameter
      * "formal type parameter" or the boolean "conditional" return value.
      */
     private boolean m_fOrdinary;
+
+    /**
+     * True if there will be a default value, even if it is not yet known.
+     */
+    private transient boolean m_fHasDefault;
     }
