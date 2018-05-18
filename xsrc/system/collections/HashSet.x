@@ -12,8 +12,10 @@ class HashSet<ElementType>
 
     private Array<Entry<ElementType>?> buckets; // TODO
 
+    @Override
     public/private Int size;
 
+    @Override
     Boolean contains(ElementType value)
         {
         Int nHash   = hasher.hashOf(value);
