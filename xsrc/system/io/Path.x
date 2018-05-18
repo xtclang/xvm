@@ -56,7 +56,7 @@ const Path
     /**
      * Specifies whether this path is a relative or absolute one.
      */
-    Boolean isAbsolute.get()
+    Boolean absolute.get()
         {
         return pathName != "" && pathName[0] == separatorChar;
         }
@@ -169,7 +169,7 @@ const Path
     @Override
     Int hash.get()
         {
-        return pathName.hashCode;
+        return pathName.hash;
         }
 
     @Override

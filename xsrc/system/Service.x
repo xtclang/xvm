@@ -100,7 +100,7 @@ interface Service()
      *
      *   @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
      */
-    conditional ContextToken findContextToken(String name);
+    ContextToken? findContextToken(String name);
 
     /**
      * The current CriticalSection for the service, if any.
