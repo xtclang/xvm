@@ -1,6 +1,23 @@
 module Test
     {
-    const Person(String name) ;
+    class C {}
+    // class C
+    //   {
+    //   construct C()
+    //      {
+    //      construct Object();
+    //      }
+    //   }
+    const Person(String name) 
+        {
+        construct(String name, Int x = 4)
+            {
+            this.name = name;
+            }
+
+        String name;
+        }
+
 //    const Person
 //        {
 //        construct(String name)

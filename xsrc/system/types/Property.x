@@ -19,7 +19,7 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<P
     Method? getter;
     Method? setter;
 
-    private Method<TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method;
+    private Method<Property.TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method;
 
     // ----- dynamic behavior ----------------------------------------------------------------------
 

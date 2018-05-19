@@ -708,6 +708,14 @@ public class Compiler
      * No matching annotation constructor for {0}.
      */
     public static final String ANNOTATION_DECL_UNRESOLVABLE       = "COMPILER-61";
+    /**
+     * No-parameter constructor required for {0}.
+     */
+    public static final String DEFAULT_CONSTRUCTOR_REQUIRED       = "COMPILER-62";
+    /**
+     * Signature {0} is ambiguous.
+     */
+    public static final String SIGNATURE_AMBIGUOUS                = "COMPILER-63";
 
 
     // ----- data members --------------------------------------------------------------------------

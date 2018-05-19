@@ -86,3 +86,6 @@ Contributions and call chains:
 Exception in thread "main" java.lang.IllegalStateException: constant collision:
 old=Signature{name=chain, params=(Ecstasy:Function<Ecstasy:collections.Tuple, Ecstasy:collections.Tuple<Ecstasy:annotations.FutureVar.Completion, Ecstasy:Nullable | Ecstasy:annotations.FutureVar.RefType, Ecstasy:Nullable | Ecstasy:Exception>>), returns=()},
 new=Signature{name=chain, params=(Ecstasy:Function<Ecstasy:collections.Tuple, Ecstasy:collections.Tuple<Ecstasy:annotations.FutureVar.Completion, Ecstasy:Nullable | Ecstasy:annotations.FutureVar.RefType, Ecstasy:Nullable | Ecstasy:Exception>>), returns=()}
+
+typeParam=ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Property.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}
+typeProp =ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Method.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}

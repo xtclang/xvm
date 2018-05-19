@@ -1171,9 +1171,9 @@ public class TypeCompositionStatement
     @Override
     public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
         {
-        Component component     = getComponent();
-        Format    format        = component.getFormat();
-        boolean   fModuleImport = false;
+        ClassStructure component     = (ClassStructure) getComponent();
+        Format         format        = component.getFormat();
+        boolean        fModuleImport = false;
         if (format == Format.PACKAGE && moduleImported == null)
             {
             for (Composition composition : compositions)
@@ -1209,20 +1209,19 @@ public class TypeCompositionStatement
             }
 
         TypeCompositionStatement stmtThis = (TypeCompositionStatement) super.resolveNames(listRevisit, errs);
-        if (stmtThis != null)
+        if (stmtThis != this)
             {
             listRevisit.add(stmtThis);
             return stmtThis;
             }
 
         Map<String, Component> mapChildren  = component.ensureChildByNameMap();
-        MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct"); 
+        MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
         if (constructorParams != null && !constructorParams.isEmpty())
             {
-            if (fModuleImport) 
-                { 
-                // TODO log error
-                throw new IllegalStateException();
+            if (fModuleImport)
+                {
+                constructorParams.get(0).log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
                 }
 
             // resolve the type of each constructor parameter
@@ -1235,14 +1234,15 @@ public class TypeCompositionStatement
                 String            sParam    = param.getName();
                 PropertyStructure prop      = (PropertyStructure) mapChildren.get(sParam);
                 TypeConstant      typeProp  = prop.getType();
-                if (typeParam.containsUnresolved() | typeProp.containsUnresolved())
+                if (typeParam.containsUnresolved() || typeProp.containsUnresolved())
                     {
                     listRevisit.add(this);
                     return this;
                     }
 
                 // the property type must be compatible with the parameter type
-                if (!(typeParam.isA(typeProp) && typeProp.isA(typeParam))) // REVIEW GG
+                // note: it is too early in the compilation cycle to use "isA()" (REVIEW GG)
+                if (!typeParam.equals(typeProp))
                     {
                     param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             typeProp.getValueString(),
@@ -1262,24 +1262,97 @@ public class TypeCompositionStatement
             boolean fFound = false;
             if (constructors != null)
                 {
-                for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+                NextConstructor: for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
                     {
-                    org.xvm.asm.Parameter[] aParams = constructor.getParamArray();
-                    TypeConstant[] atypeParams = idConstruct.getRawParams();
-                    if (atypeParams >= cParams)
+                    org.xvm.asm.Parameter[] aConsParams = constructor.getParamArray();
+                    int                     cConsParams = aConsParams.length;
+                    if (cConsParams >= cParams)
                         {
                         // verify that any additional parameters are defaulted
-                        for (int i = cParams, c = atypeParams.length; i < c; ++i)
+                        for (int i = cParams; i < cConsParams; ++i)
                             {
-                            if (idConstruct)
+                            if (!aConsParams[i].hasDefaultValue())
+                                {
+                                continue NextConstructor;
+                                }
                             }
+
+                        // parameters are allowed to widen from the abbreviated declaration to the
+                        // explicit declaration
+                        for (int i = 0; i < cParams; ++i)
+                            {
+                            TypeConstant typeConsParam = aConsParams[i].getType();
+                            if (typeConsParam.containsUnresolved())
+                                {
+                                listRevisit.add(this);
+                                return this;
+                                }
+                            // note: it is too early in the compilation cycle to use "isA()" (REVIEW GG)
+                            if (!atypeParams[i].equals(typeConsParam))
+                                {
+                                continue NextConstructor;
+                                }
+                            }
+
+                        // should only find one match; make sure we didn't already find one
+                        if (fFound)
+                            {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("construct(");
+                            for (int i = 0; i < cParams; ++i)
+                                {
+                                if (i > 0)
+                                    {
+                                    sb.append(", ");
+                                    }
+                                sb.append(atypeParams[i].getValueString());
+                                }
+                            sb.append(')');
+
+                            long lStart = name.getStartPosition();
+                            long lEnd   = name.getEndPosition();
+                            if (cParams > 0)
+                                {
+                                lStart = constructorParams.get(0).getStartPosition();
+                                lEnd   = constructorParams.get(cParams - 1).getEndPosition();
+                                }
+                            errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
+                                    new String[] {sb.toString()}, getSource(), lStart, lEnd);
+                            break NextConstructor;
+                            }
+
+                        fFound = true;
                         }
                     }
                 }
 
             if (!fFound)
                 {
-                // TODO
+                // create a constructor based on the "short-hand notation" implicit constructor
+                // definition
+                org.xvm.asm.Parameter[] aParams = org.xvm.asm.Parameter.NO_PARAMS;
+                if (cParams > 0)
+                    {
+                    aParams = new org.xvm.asm.Parameter[cParams];
+                    ConstantPool pool = pool();
+                    for (int i = 0; i < cParams; ++i)
+                        {
+                        Parameter param = constructorParams.get(i);
+                        aParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i],
+                                param.getName(), null, false, i, false);
+                        if (param.value != null)
+                            {
+                            aParams[i].markDefaultValue();
+                            }
+                        }
+                    }
+                MethodStructure constructor = component.createMethod(true, Access.PUBLIC,
+                        org.xvm.asm.Annotation.NO_ANNOTATIONS, org.xvm.asm.Parameter.NO_PARAMS,
+                        "construct", aParams, false);
+
+                // set the synthetic flag so that the constructor knows to provide its own
+                // default implementation when it emits code
+                constructor.setSynthetic(true);
                 }
             }
 
@@ -1296,12 +1369,29 @@ public class TypeCompositionStatement
             // default implementation when it emits code
             constructor.setSynthetic(true);
             }
-        // for a singleton, constructor parameters are not permitted unless they all have default
-        // values (since the module is a singleton, and is automatically created, i.e. it has to
-        // have all of its construction parameters available)
-        else if (fSingleton)
+        else if (component.isSingleton())
             {
-            // TODO verify that singletons have values for all constructor params (move this check to a later stage?)
+            // for a singleton, constructor parameters are not permitted unless they all have
+            // default values (since the module is a singleton, and is automatically created,
+            // i.e. it has to have all of its construction parameters available)
+            boolean fFound = false;
+            NextConstructor: for (MethodStructure constructor : constructors.getMethodByConstantMap().values())
+                {
+                for (org.xvm.asm.Parameter param : constructor.getParamArray())
+                    {
+                    if (!param.hasDefaultValue())
+                        {
+                        continue NextConstructor;
+                        }
+                    }
+                fFound = true;
+                break;
+                }
+            if (!fFound)
+                {
+                name.log(errs, getSource(), Severity.ERROR, Compiler.DEFAULT_CONSTRUCTOR_REQUIRED,
+                        component.getName());
+                }
             }
 
         return this;
