@@ -2,10 +2,14 @@ import annotations.AtomicVar;
 
 class TestApp
     {
+    @Inject io.Console console1; // TODO: move inside of print
     static void print(Object o)
         {
-        @Inject io.Console console;
-        console.println(o);
+        console1.print(o);
+        }
+    static void println(Object o)
+        {
+        console1.println(o);
         }
 
     // entry point
@@ -45,7 +49,6 @@ class TestApp
         String s = getStringValue();
         console.print("\n*** ");
         console.println(s);
-        console.println();
 
         Int i = getIntValue();
         print(i);

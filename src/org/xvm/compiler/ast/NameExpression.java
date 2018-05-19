@@ -12,6 +12,7 @@ import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
@@ -1075,6 +1076,15 @@ public class NameExpression
                 if (typeLeft != null)
                     {
                     // TODO support or properties nested under something other than a class (need nested type infos?)
+                    if ((left instanceof NameExpression))
+                        {
+                        // "this:target" has private access in this context
+                        Argument arg = ((NameExpression) left).m_arg;
+                        if (arg instanceof Register && ((Register) arg).isTarget())
+                            {
+                            typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                            }
+                        }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);
                     if (infoProp == null)

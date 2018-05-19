@@ -93,7 +93,7 @@ interface Collection<ElementType>
      */
     Boolean containsAll(Collection!<ElementType> values)
         {
-        return values.iterator().matchAll(this.contains);
+        return values.iterator().whileEach(&contains(?));
         }
 
     /**

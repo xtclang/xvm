@@ -157,6 +157,14 @@ public class Register
         }
 
     /**
+     * @return true iff the register represents "this:target" pre-defined argument
+     */
+    public boolean isTarget()
+        {
+        return m_iArg == Op.A_TARGET;
+        }
+
+    /**
      * Determine if this register has an "unknown" index. This is used to indicate a "next"
      * index.
      *

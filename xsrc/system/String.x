@@ -10,7 +10,27 @@ const String
         TODO - native
         }
 
+    conditional Int lastIndexOf(Char separator)
+        {
+        TODO - native
+        }
+
+    String substring(Int position)
+        {
+        TODO -- native
+        }
+
     Char get(Int index);
+
+    String[] split(Char separator)
+        {
+        TODO -- native
+        }
+
+    String[] split(String separator)
+        {
+        TODO -- native
+        }
 
     @Override
     Iterator<Char> iterator()

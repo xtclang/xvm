@@ -547,6 +547,8 @@ public class MethodInfo
                 return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
                 }
 
+            boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
+
             // see if the chain will work as-is
             ArrayList  listNew     = null;
             MethodBody bodyDefault = null;
@@ -556,6 +558,17 @@ public class MethodInfo
                 switch (body.getImplementation())
                     {
                     case Implicit:
+                        if (fMixin)
+                            {
+                            // since mixins themselves are not concrete (instantiatable) we cannot
+                            // discard the Implicit body; it will be done by the concrete types
+                            if (listNew != null)
+                                {
+                                listNew.add(body);
+                                }
+                            break;
+                            }
+                        // fall through
                     case Declared:
                     case Abstract:
                     case SansCode:

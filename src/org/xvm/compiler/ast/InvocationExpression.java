@@ -9,6 +9,7 @@ import java.util.List;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -1032,10 +1033,12 @@ public class InvocationExpression
                     case Module:
                     case Package:
                     case Class:
+                        // TODO: we need to plug in the formal types somewhere before coming here
                         ClassStructure clz  = (ClassStructure) parent;
-                        TypeInfo       info = idParent.ensureTypeInfo(errs);
+                        TypeConstant   type = pool.ensureAccessTypeConstant(clz.getCanonicalType(),
+                                                    Access.PRIVATE);
 
-                        IdentityConstant method = findCallable(info, sName,
+                        IdentityConstant method = findCallable(type.ensureTypeInfo(errs), sName,
                                 (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs);
                         if (method != null)
                             {
@@ -1046,7 +1049,7 @@ public class InvocationExpression
                             }
 
                         // we're done once we have searched the top-level class
-                        if (parent instanceof ClassStructure && ((ClassStructure) parent).isTopLevel())
+                        if (parent instanceof ClassStructure && clz.isTopLevel())
                             {
                             break NextParent;
                             }

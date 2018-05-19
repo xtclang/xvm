@@ -206,7 +206,7 @@ class ExtHashMap<KeyType, ValueType>
 
     @Override
     <ResultType> ResultType process(KeyType key,
-            function ResultType (Entry<KeyType, ValueType>) compute)
+            function ResultType (ProcessableEntry<KeyType, ValueType>) compute)
         {
         return compute(new ProcessableHashEntry(key));
         }

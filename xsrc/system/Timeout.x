@@ -193,6 +193,7 @@ const Timeout
      * Close the timeout. This method is invoked automatically by the {@code using} or {@code try}
      * with-resources keywords.
      */
+    @Override
     void close()
         {
         if (registered)

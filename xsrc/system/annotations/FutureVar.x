@@ -720,8 +720,8 @@ mixin FutureVar<RefType>
 // TODO: CP
 //        public/private function FutureVar!<NewType> (RefType, other.RefType) combine;
 
-        private /* TODO property cannot be conditional */ InputType  input1 = false;      // REVIEW
-        private /* TODO property cannot be conditional */ Input2Type input2 = false;
+        private /* TODO property cannot be conditional */ InputType  input1;      // REVIEW
+        private /* TODO property cannot be conditional */ Input2Type input2;
 
         /**
          * Handle the completion of the first parent.
