@@ -453,7 +453,8 @@ public abstract class ClassTemplate
         {
         assert clazz.getTemplate() == this &&
              (f_struct.getFormat() == Component.Format.CLASS ||
-              f_struct.getFormat() == Component.Format.CONST);
+              f_struct.getFormat() == Component.Format.CONST ||
+              f_struct.getFormat() == Component.Format.ENUMVALUE);
 
         clazz = clazz.ensureAccess(Access.STRUCT);
 

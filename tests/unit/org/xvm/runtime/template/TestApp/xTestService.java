@@ -30,13 +30,11 @@ public class xTestService extends xService
     @Override
     public void initDeclared()
         {
-        adapter.addMethod(f_struct, "construct", INT, VOID);
-
         MethodStructure constructor = getMethodStructure("construct", INT);
         constructor.setOps(new Op[]
             { // #0 - counter
-                new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
-                new Return_0(),
+            new L_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0),
+            new Return_0(),
             });
 
         MethodStructure mtIncrement = getMethodStructure("increment", VOID, INT);

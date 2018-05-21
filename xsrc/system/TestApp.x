@@ -449,9 +449,6 @@ class TestApp
 
     static const Point(Int x, Int y)
         {
-        Int x; // TODO: remove
-        Int y; // TODO: remove
-
         @Override
         Int hash.get()
             {
@@ -465,10 +462,8 @@ class TestApp
             }
         }
 
-    static const Rectangle(Point topLeft, Int bottomRight)
+    static const Rectangle(Point topLeft, Point bottomRight)
         {
-        Point tl; // TODO: remove
-        Point br; // TODO: remove
         }
 
     enum Color
@@ -482,6 +477,7 @@ class TestApp
         construct(Int i)
             {
             // TODO: re-introduce when constructors are generated
+            // TODO: see MethodStructure.ensureInitialized()
             // pix = i;
             }
 
@@ -520,8 +516,6 @@ class TestApp
 
     mixin Formatter(String prefix) into Object
         {
-        String prefix; // TODO: remove
-
         @Override
         String to<String>()
             {

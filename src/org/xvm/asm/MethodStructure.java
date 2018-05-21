@@ -941,6 +941,12 @@ public class MethodStructure
                             break;
                             }
 
+                        if (template.f_struct.getFormat() == Format.ENUMVALUE)
+                            {
+                            // TODO: rework this when enum values constructors are generated
+                            return Op.R_NEXT;
+                            }
+
                         template.construct(frame, constructor,
                             template.getCanonicalClass(), Utils.OBJECTS_NONE, Frame.RET_LOCAL);
                         frame.m_frameNext.setContinuation(frameCaller ->

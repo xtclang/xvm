@@ -553,7 +553,6 @@ public class xTestApp extends xModule
         // ----- testConst()
 
         ClassTemplate ctPoint = f_templates.getTemplate("TestApp.Point");
-        adapter.addMethod(ctPoint.f_struct, "construct", new String[]{"Int64", "Int64"}, VOID);
         MethodStructure mtConst = ctPoint.getMethodStructure("construct",
             new String[]{"Int64", "Int64"});
         mtConst.createCode()
@@ -587,13 +586,12 @@ public class xTestApp extends xModule
             .add(new Return_1(0));
 
         ClassTemplate ctRectangle = f_templates.getTemplate("TestApp.Rectangle");
-        adapter.addMethod(ctRectangle.f_struct, "construct", new String[]{"TestApp.Point", "TestApp.Point"}, VOID);
         MethodStructure mtRectangle = ctRectangle.getMethodStructure("construct",
             new String[]{"TestApp.Point", "TestApp.Point"});
         mtRectangle.createCode()
             // #0 = tl; #1 = br
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "tl"), 0))
-            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "br"), 1))
+            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "topLeft"), 0))
+            .add(new L_Set(adapter.getPropertyConstId("TestApp.Rectangle", "bottomRight"), 1))
             .add(new Return_0());
 
         MethodStructure ftTestConst = getMethodStructure("testConst", VOID);
@@ -657,8 +655,6 @@ public class xTestApp extends xModule
             .add(new Return_0());
 
         ClassTemplate ctFormatter = f_templates.getTemplate("TestApp.Formatter");
-        adapter.addMethod(ctFormatter.f_struct, "construct", STRING, VOID);
-
         MethodStructure mtFormatter = ctFormatter.getMethodStructure("construct", STRING);
         mtFormatter.createCode()
             // #0 = prefix
@@ -671,28 +667,6 @@ public class xTestApp extends xModule
             .add(new Call_01(Op.A_SUPER, 1)) // next register #1
             .add(new GP_Add(0, 1, 0))
             .add(new Return_1(0));
-
-        ClassTemplate ctPrPoint = f_templates.getTemplate("TestApp.PrettyPoint");
-        MethodStructure mtPrPConst = ctPrPoint.getMethodStructure("construct",
-            new String[]{"Int64", "Int64", "String"});
-        mtPrPConst.createCode()
-            // #0 = x; #1 = y; #2 = prefix
-            .add(new Construct_N(adapter.getMethodConstId("TestApp.Point", "construct"),
-                new int[]{0, 1}))
-            .add(new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"),
-                    2))
-            .add(new Return_0());
-
-        ClassTemplate ctPrRectangle = f_templates.getTemplate("TestApp.PrettyRectangle");
-        MethodStructure mtPrRConst = ctPrRectangle.getMethodStructure("construct",
-            new String[]{"TestApp.Point", "TestApp.Point", "String"});
-        mtPrRConst.createCode()
-            // #0 = tl; #1 = br; #2 = prefix
-            .add(new Construct_N(adapter.getMethodConstId("TestApp.Rectangle", "construct"),
-                    new int[] {0, 1}))
-            .add(new Construct_1(adapter.getMethodConstId("TestApp.Formatter", "construct"),
-                    2))
-            .add(new Return_0());
 
         MethodStructure ftTestMixin = getMethodStructure("testMixin", VOID);
         ftTestMixin.createCode()

@@ -36,6 +36,9 @@ import org.xvm.asm.op.Call_1N;
 import org.xvm.asm.op.Call_N0;
 import org.xvm.asm.op.Call_N1;
 import org.xvm.asm.op.Call_NN;
+import org.xvm.asm.op.Construct_0;
+import org.xvm.asm.op.Construct_1;
+import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.Invoke_00;
 import org.xvm.asm.op.Invoke_01;
@@ -580,7 +583,8 @@ public class InvocationExpression
         {
         // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         // assertion or error if it tries; that is the responsibility of InvocationExpression
-        Argument argFn = null;
+        Argument argFn      = null;
+        boolean  fConstruct = false;
         if (expr instanceof NameExpression)
             {
             NameExpression exprName = (NameExpression) expr;
@@ -716,11 +720,12 @@ public class InvocationExpression
                         return new Argument[] {m_argMethod};
                         }
                     }
-                else // _NOT_ a method (so it must be a function)
+                else // _NOT_ a method (so it must be a function or a constructor)
                     {
                     // use the function identity as the argument & drop through to the function handling
                     assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects());
                     argFn = m_argMethod;
+                    fConstruct = ((MethodStructure) idMethod.getComponent()).isConstructor();
                     }
                 }
             else // it is a NameExpression but _NOT_ a MethodConstant
@@ -782,6 +787,30 @@ public class InvocationExpression
                     {
                     aArgs[i] = args.get(i).generateArgument(code, false, false, true, errs);
                     }
+                }
+
+            if (fConstruct)
+                {
+                MethodConstant idConstruct = (MethodConstant) argFn;
+                switch (chArgs)
+                    {
+                    case '0':
+                        code.add(new Construct_0(idConstruct));
+                        break;
+
+                    case '1':
+                        code.add(new Construct_1(idConstruct, arg));
+                        break;
+
+                    case 'N':
+                        code.add(new Construct_N(idConstruct, aArgs));
+                        break;
+
+                    case 'T':
+                    default:
+                        throw new UnsupportedOperationException("TODO constructor");
+                    }
+                return Register.NO_REGS;
                 }
 
             // generate registers for the return values

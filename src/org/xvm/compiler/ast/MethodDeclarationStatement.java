@@ -430,8 +430,8 @@ public class MethodDeclarationStatement
                                 {
                                 System.err.println("Test compilation error: " + sPath);
                                 errsTemp.getErrors().forEach(System.err::println);
-                                errsTemp.clear();
                                 }
+                            errsTemp.clear();
                             }
 
                         // copy over errors
