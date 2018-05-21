@@ -3698,7 +3698,7 @@ public abstract class TypeConstant
      */
     public boolean isIntoClassType()
         {
-        return equals(getConstantPool().typeClass());
+        return getUnderlyingType().isIntoClassType();
         }
 
     /**
@@ -3708,8 +3708,7 @@ public abstract class TypeConstant
      */
     public boolean isIntoPropertyType()
         {
-        ConstantPool pool = getConstantPool();
-        return equals(pool.typeProperty()) || isA(pool.typeRef());
+        return getUnderlyingType().isIntoPropertyType();
         }
 
     /**
@@ -3717,23 +3716,7 @@ public abstract class TypeConstant
      */
     public TypeConstant getIntoPropertyType()
         {
-        ConstantPool pool = getConstantPool();
-        if (this.equals(pool.typeProperty()))
-            {
-            return pool.typeProperty();
-            }
-        else if (this.isA(pool.typeVar()))
-            {
-            return pool.typeVar();
-            }
-        else if (this.isA(pool.typeRef()))
-            {
-            return pool.typeRef();
-            }
-        else
-            {
-            return null;
-            }
+        return getUnderlyingType().getIntoPropertyType();
         }
 
     /**
@@ -3742,7 +3725,7 @@ public abstract class TypeConstant
      */
     public boolean isIntoMethodType()
         {
-        return equals(getConstantPool().typeMethod());
+        return getUnderlyingType().isIntoMethodType();
         }
 
     /**

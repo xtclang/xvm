@@ -285,33 +285,34 @@ public class IntersectionTypeConstant
     @Override
     public TypeConstant getIntoPropertyType()
         {
-        TypeConstant type1 = getUnderlyingType().getIntoPropertyType();
-        TypeConstant type2 = getUnderlyingType2().getIntoPropertyType();
-        if (type1 == null && type2 == null)
+        TypeConstant typeInto1 = getUnderlyingType().getIntoPropertyType();
+        TypeConstant typeInto2 = getUnderlyingType2().getIntoPropertyType();
+
+        if (typeInto1 == null)
             {
-            return null;
+            return typeInto2;
+            }
+
+        if (typeInto2 == null)
+            {
+            return typeInto1;
             }
 
         ConstantPool pool     = getConstantPool();
         TypeConstant typeProp = pool.typeProperty();
-        if (typeProp.equals(type1) || typeProp.equals(type2))
+
+        if (typeInto1.equals(typeProp) || typeInto2.equals(typeProp))
             {
             return typeProp;
             }
 
         TypeConstant typeVar = pool.typeVar();
-        if (type1 != null && type1.isA(typeVar) || type2 != null && type2.isA(typeVar))
+        if (typeInto1.equals(typeVar) || typeInto2.equals(typeVar))
             {
             return typeVar;
             }
 
-        TypeConstant typeRef = pool.typeRef();
-        if (this.isA(typeRef))
-            {
-            return typeRef;
-            }
-
-        return null;
+        return pool.typeRef();
         }
 
     @Override

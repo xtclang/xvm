@@ -3,6 +3,6 @@
  * when the reference comes "in scope".
  */
 mixin InjectedRef<ResourceType>(String resourceName, Object? opts = null)
-        into Property | Ref<ResourceType>
+        into Property<Object, ResourceType> | Ref<ResourceType>
     {
     }
