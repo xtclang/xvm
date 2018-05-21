@@ -716,6 +716,45 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isIntoClassType()
+        {
+        return this.equals(getConstantPool().typeClass());
+        }
+
+    @Override
+    public boolean isIntoPropertyType()
+        {
+        ConstantPool pool = getConstantPool();
+        return this.equals(pool.typeProperty()) || this.isA(pool.typeRef());
+        }
+
+    @Override
+    public TypeConstant getIntoPropertyType()
+        {
+        ConstantPool pool = getConstantPool();
+
+        if (this.equals(pool.typeProperty()))
+            {
+            return pool.typeProperty();
+            }
+        if (this.isA(pool.typeVar()))
+            {
+            return pool.typeVar();
+            }
+        if (this.isA(pool.typeRef()))
+            {
+            return pool.typeRef();
+            }
+        return null;
+        }
+
+    @Override
+    public boolean isIntoMethodType()
+        {
+        return this.equals(getConstantPool().typeMethod());
+        }
+
+    @Override
     public boolean isConstant()
         {
         Constant constant = getDefiningConstant();
