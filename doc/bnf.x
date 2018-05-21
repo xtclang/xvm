@@ -371,11 +371,11 @@ AssignableList
     AssignableList "," Assignable
 
 # Assignable turns out to be just an Expression that meets certain requirements, i.e. one that ends
-# with a Name or an ArrayIndex
+# with a Name or an ArrayIndexes
 Assignable
     Name
     Expression "." Name
-    Expression ArrayIndex
+    Expression ArrayIndexes
 
 AssignmentOperator
     "="
@@ -676,7 +676,7 @@ PostfixExpression
     PostfixExpression "--"
     PostfixExpression ArgumentList
     PostfixExpression ArrayDims
-    PostfixExpression ArrayIndex
+    PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
     PostfixExpression ".new" TypeExpression ArgumentList-opt
@@ -685,10 +685,6 @@ PostfixExpression
     PostfixExpression ".instanceof" "(" TypeExpression ")"
 
 ArrayDims
-    ArrayDim
-    ArrayDims ArrayDim
-
-ArrayDim
     "[" DimIndicators-opt "]"
 
 DimIndicators
@@ -698,7 +694,7 @@ DimIndicators
 DimIndicator
     "?"
 
-ArrayIndex
+ArrayIndexes
     "[" ExpressionList "]"
 
 ExpressionList
@@ -980,8 +976,8 @@ NonBiTypeExpression
     NamedTypeExpression
     FunctionTypeExpression
     NonBiTypeExpression NoWhitespace "?"
-    NonBiTypeExpression ArrayDim
-    NonBiTypeExpression ArrayIndex
+    NonBiTypeExpression ArrayDims
+    NonBiTypeExpression ArrayIndexes             # ArrayIndexes is not consumed by this construction
     NonBiTypeExpression "..."
     "conditional" NonBiTypeExpression
     "immutable" NonBiTypeExpression

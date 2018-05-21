@@ -95,7 +95,7 @@ public abstract class TypeExpression
     public TypeExpression inferTypeFrom(TypeConstant type)
         {
         assert m_constType != null;
-        assert type.isA(m_constType);
+        assert type == null || type.isA(m_constType);
 
         // REVIEW this is where we could also add support for a "var" (and/or "val") keyword
 

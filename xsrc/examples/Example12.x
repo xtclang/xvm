@@ -1004,3 +1004,21 @@ const Employee(String name, Date dob, String taxid)
         }
     }
 
+// ----- array instantiation
+
+// old-style syntax: this means "create an array of 4 elements and set each element to the default value of the type" e.g. Int=0
+Int[] ai = new Int[4];
+
+// new-style syntax: this means "create an growable array of elements of the specified type, starting with an empty array"
+Int[] ai = new Int[];
+
+// ... or explicitly in the Array constructor
+Int[] ai = new Array<Int>(4, i -> i);
+
+// new-style syntax: this means "create an fixed size array of n elements of the specified type, using the provided function to initialize each element"
+Int[] ai = new Int[4].fill(i -> i);
+Int[] ai = new Int[].fill(0..3, i -> i);
+
+@Inject Database<Person> db;
+Person[] people = new Person[].cap(100).fill(0..99, i -> db.load(i));
+
