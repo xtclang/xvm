@@ -165,6 +165,7 @@ public class Parser
      *     "incorporates" Type ArgumentList-opt
      *     "into" Type
      *     "import" QualifiedName VersionRequirement-opt
+     *     "default" "(" Expression ")"
      *
      * TypeCompositionBody
      *     "{" EnumList-opt TypeCompositionComponents-opt "}"
@@ -386,7 +387,7 @@ public class Parser
                             }
                         type = new NamedTypeExpression(null, names, null, null, paramnames, getLastMatch().getEndPosition());
                         }
-                    List<Expression> args = parseArgumentList(false, false);
+                    List<Expression> args = parseArgumentList(false, false, false);
                     compositions.add(new Composition.Incorporates(exprCondition, keyword, type, args, constraints));
                     }
                 while (match(Id.COMMA) != null);
@@ -405,7 +406,7 @@ public class Parser
                         {
                                          keyword = expect(Id.EXTENDS);
                         TypeExpression   type    = parseTypeExpression();
-                        List<Expression> args    = parseArgumentList(false, false);
+                        List<Expression> args    = parseArgumentList(false, false, false);
                         compositions.add(new Composition.Extends(exprCondition, keyword, type, args));
                         fAny = true;
                         }
@@ -424,6 +425,16 @@ public class Parser
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
                                 versions, getLastMatch().getEndPosition()));
+                        fAny = true;
+                        }
+                        break;
+
+                    case DEFAULT:
+                        {
+                        keyword = expect(Id.DEFAULT);
+                        expect(Id.L_PAREN);
+                        compositions.add(new Composition.Default(exprCondition, keyword,
+                                parseExpression(), expect(Id.R_PAREN).getEndPosition()));
                         fAny = true;
                         }
                         break;
@@ -487,7 +498,7 @@ public class Parser
                 List<TypeExpression> typeParams = parseTypeParameterTypeList(false);
 
                 // argument list
-                List<Expression> args = parseArgumentList(false, false);
+                List<Expression> args = parseArgumentList(false, false, false);
 
                 StatementBlock body = null;
                 if (match(Id.L_CURLY) != null)
@@ -2502,7 +2513,7 @@ public class Parser
      *     PostfixExpression ArrayIndex
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
-     *     PostfixExpression ".new" ArgumentList-opt
+     *     PostfixExpression ".new" ArgumentList
      *     PostfixExpression ".instanceof" "(" TypeExpression ")"
      *     PostfixExpression ".as" "(" TypeExpression ")"
      *
@@ -2559,7 +2570,7 @@ public class Parser
                             {
                             Token            keyword = expect(Id.NEW);
                             TypeExpression   type    = parseTypeExpression();
-                            List<Expression> params  = parseArgumentList(false, false);
+                            List<Expression> params  = parseArgumentList(true, false, true);
                             long             lEndPos = params == null
                                     ? type.getEndPosition()
                                     : getLastMatch().getEndPosition();
@@ -2619,7 +2630,7 @@ public class Parser
 
                 case L_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, parseArgumentList(true, true),
+                    expr = new InvocationExpression(expr, parseArgumentList(true, true, false),
                             getLastMatch().getEndPosition());
                     break;
 
@@ -2681,7 +2692,7 @@ public class Parser
      * <p/><code><pre>
      * PrimaryExpression
      *     "(" Expression ")"
-     *     "new" TypeExpression NewFinish
+     *     "new" TypeExpression ArgumentList AnonClassBody-opt
      *     "construct" QualifiedName
      *     "&"-opt QualifiedName TypeParameterTypeList-opt
      *     StatementExpression
@@ -2705,7 +2716,7 @@ public class Parser
                 {
                 Token            keyword = expect(Id.NEW);
                 TypeExpression   type    = parseTypeExpression();
-                List<Expression> args    = parseArgumentList(false, false);
+                List<Expression> args    = parseArgumentList(true, false, true);
                 StatementBlock   body    = null;
                 if (peek().getId() == Id.L_CURLY)
                     {
@@ -3334,8 +3345,8 @@ public class Parser
      *     NamedTypeExpression
      *     FunctionTypeExpression
      *     NonBiTypeExpression "?"
-     *     NonBiTypeExpression ArrayDim
-     *     NonBiTypeExpression ArrayIndex
+     *     NonBiTypeExpression ArrayDims
+     *     NonBiTypeExpression ArrayIndexes
      *     NonBiTypeExpression "..."
      *     "conditional" NonBiTypeExpression
      *     "immutable" NonBiTypeExpression
@@ -3343,7 +3354,7 @@ public class Parser
      * NamedTypeExpression
      *     QualifiedName TypeParameterTypeList-opt
      *
-     * ArrayDim
+     * ArrayDims
      *     "[" DimIndicators-opt "]"
      *
      * DimIndicators
@@ -3353,7 +3364,7 @@ public class Parser
      * DimIndicator
      *     "?"
      *
-     * ArrayIndex
+     * ArrayIndexes
      *     "[" ExpressionList "]"
      *
      * ExpressionList
@@ -3396,32 +3407,54 @@ public class Parser
             switch (peek().getId())
                 {
                 case L_SQUARE:
+                    // this could be either:
+                    //  -> NonBiTypeExpression ArrayDims
+                    //  -> NonBiTypeExpression ArrayIndexes
+                    // in the case of the ArrayIndexes, we do NOT consume that portion of the
+                    // expression; we use it to give us a dimension count, as if it were ArrayDims
+                    Mark mark = mark();
+
                     expect(Id.L_SQUARE);
-                    int cExplicitDims = 0;
-                    List dimExprs = new ArrayList<>(3);
+                    int cDims    = 0;
+                    int cIndexes = 0;
                     while (match(Id.R_SQUARE) == null)
                         {
-                        if (cExplicitDims > 0)
+                        if (cDims + cIndexes > 0)
                             {
                             expect(Id.COMMA);
                             }
-                        Token dim = peek();
 
+                        Token dim = peek(); // just for error reporting
                         if (match(Id.COND) == null)
                             {
-                            dimExprs.add(parseExpression());
+                            parseExpression();
+                            if (cIndexes == 0 && cDims > 0)
+                                {
+                                // just log the first one that deviates
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                                }
+                            ++cIndexes;
                             }
-                        ++cExplicitDims;
-
-                        if (!dimExprs.isEmpty() && dimExprs.size() != cExplicitDims)
+                        else // we ate the "?"
                             {
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                            if (cDims == 0 && cIndexes > 0)
+                                {
+                                // just log the first one that deviates
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                                }
+                            ++cDims;
                             }
                         }
                     long lEndPos = getLastMatch().getEndPosition();
-                    type = dimExprs.isEmpty()
-                            ? new ArrayTypeExpression(type, cExplicitDims, lEndPos)
-                            : new ArrayTypeExpression(type, dimExprs, lEndPos);
+                    type = new ArrayTypeExpression(type, cDims + cIndexes, lEndPos);
+
+                    // if there were only indexes, then we need to leave them in place because the
+                    // type expression does not consume them
+                    if (cDims == 0 && cIndexes > 0)
+                        {
+                        restore(mark);
+                        return type;
+                        }
                     break;
 
                 case COND:
@@ -3738,7 +3771,7 @@ public class Parser
         Token token = peek();
         if (token != null && token.getId() == Id.L_PAREN && !token.hasLeadingWhitespace())
             {
-            args = parseArgumentList(true, false);
+            args = parseArgumentList(true, false, false);
             }
 
         long lEndPos = args == null ? type.getEndPosition() : getLastMatch().getEndPosition();
@@ -3956,31 +3989,61 @@ public class Parser
      * </pre></code>
      *
      *
-     * @param required       true iff the parenthesis are required
-     * @param allowCurrying  true iff the "?" argument and its variations are allowed
+     * @param required        true iff the parenthesis are required
+     * @param allowCurrying   true iff the "?" argument and its variations are allowed
+     * @param allowArraySize  true iff the argument(s) can be inside '[' and ']'
      *
      * @return a list of arguments, or null if no parenthesis were encountered
      */
-    List<Expression> parseArgumentList(boolean required, boolean allowCurrying)
+    List<Expression> parseArgumentList(boolean required, boolean allowCurrying, boolean allowArraySize)
         {
-        List<Expression> args = null;
-        if (match(Id.L_PAREN, required) != null)
+        Token.Id idClose;
+        boolean  fArray = false;
+        switch (peek().getId())
             {
-            args = new ArrayList<>();
-            boolean first = true;
-            while (match(Id.R_PAREN) == null)
-                {
-                if (first)
+            case L_PAREN:
+                expect(Id.L_PAREN);
+                idClose = Id.R_PAREN;
+                break;
+
+            case L_SQUARE:
+                if (!allowArraySize)
                     {
-                    first = false;
-                    }
-                else
-                    {
-                    expect(Id.COMMA);
+                    return null;
                     }
 
+                expect(Id.L_SQUARE);
+                idClose = Id.R_SQUARE;
+                fArray  = true;
+                break;
+
+            default:
+                if (required)
+                    {
+                    // this generates an error for the missing arguments list
+                    expect(Id.L_PAREN);
+                    }
+                return null;
+            }
+
+        List<Expression> args = null;
+        args = new ArrayList<>();
+        boolean first = true;
+        while (match(idClose) == null)
+            {
+            if (first)
+                {
+                first = false;
+                }
+            else
+                {
+                expect(Id.COMMA);
+                }
+
+            Token label = null;
+            if (!fArray)
+                {
                 // special case where the parameter names are being specified with the arguments
-                Token label = null;
                 if (peek().getId() == Id.IDENTIFIER)
                     {
                     Token name = expect(Id.IDENTIFIER);
@@ -3994,44 +4057,45 @@ public class Parser
                         label = name;
                         }
                     }
-
-                Expression expr;
-                if (allowCurrying)
-                    {
-                    switch (peek().getId())
-                        {
-                        case COND:
-                            {
-                            Token tokUnbound = match(Id.COND);
-                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
-                                    tokUnbound.getEndPosition(), null);
-                            }
-                            break;
-
-                        case COMP_LT:
-                            {
-                            Token          tokOpen    = match(Id.COMP_LT);
-                            TypeExpression type       = parseTypeExpression();
-                            Token          tokClose   = match(Id.COMP_GT);
-                            Token          tokUnbound = match(Id.COND);
-                            expr = new NonBindingExpression(tokOpen.getStartPosition(),
-                                    tokUnbound.getEndPosition(), type);
-                            }
-                            break;
-
-                        default:
-                            expr = parseExpression();
-                            break;
-                        }
-                    }
-                else
-                    {
-                    expr = parseExpression();
-                    }
-
-                args.add(label == null ? expr : new LabeledExpression(label, expr));
                 }
+
+            Expression expr;
+            if (allowCurrying && !fArray)
+                {
+                switch (peek().getId())
+                    {
+                    case COND:
+                        {
+                        Token tokUnbound = match(Id.COND);
+                        expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                                tokUnbound.getEndPosition(), null);
+                        }
+                        break;
+
+                    case COMP_LT:
+                        {
+                        Token          tokOpen    = match(Id.COMP_LT);
+                        TypeExpression type       = parseTypeExpression();
+                        Token          tokClose   = match(Id.COMP_GT);
+                        Token          tokUnbound = match(Id.COND);
+                        expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                                tokUnbound.getEndPosition(), type);
+                        }
+                        break;
+
+                    default:
+                        expr = parseExpression();
+                        break;
+                    }
+                }
+            else
+                {
+                expr = parseExpression();
+                }
+
+            args.add(label == null ? expr : new LabeledExpression(label, expr));
             }
+
         return args;
         }
 

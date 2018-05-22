@@ -230,7 +230,7 @@ public class PropertyDeclarationStatement
         if (getComponent() == null)
             {
             // create a structure for this type
-            String sName = (String) name.getValue();
+            String sName = (String) name.getValueText();
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {
@@ -388,7 +388,7 @@ public class PropertyDeclarationStatement
 
         sb.append(type)
                 .append(' ')
-          .append(name.getValue());
+          .append(name.getValueText());
 
         return sb.toString();
         }

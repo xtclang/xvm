@@ -96,9 +96,13 @@ public abstract class Composition
               .append(") { ");
             }
 
-        sb.append(keyword.getId().TEXT)
-          .append(' ')
-          .append(type);
+        sb.append(keyword.getId().TEXT);
+
+        if (type != null)
+            {
+            sb.append(' ')
+              .append(type);
+            }
 
         return sb.toString();
         }
@@ -475,6 +479,45 @@ public abstract class Composition
         protected long                  lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "type", "vers");
+        }
+
+
+    // ----- inner class: Default ------------------------------------------------------------------
+
+    public static class Default
+            extends Composition
+        {
+        public Default(Expression condition, Token keyword, Expression expr, long lEndPos)
+            {
+            super(condition, keyword, null);
+            this.expr    = expr;
+            this.lEndPos = lEndPos;
+            }
+
+        /**
+         * @return the expression representing the default value for the type composition
+         */
+        public Expression getValueExpression()
+            {
+            return expr;
+            }
+
+        @Override
+        public long getEndPosition()
+            {
+            return lEndPos;
+            }
+
+        @Override
+        public String toString()
+            {
+            return toStartString() + '(' + expr + ')' + toEndString();
+            }
+
+        protected Expression expr;
+        protected long       lEndPos;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Import.class, "condition", "expr");
         }
 
 

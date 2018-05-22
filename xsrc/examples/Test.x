@@ -8,15 +8,26 @@ module Test
     //      construct Object();
     //      }
     //   }
-    const Person(String name) 
-        {
-        construct(String name, Int x = 4)
-            {
-            this.name = name;
-            }
 
-        String name;
+    void run()
+        {
+        @Inject X.io.Console console;
+        console.println("Hello world!");
+
+        Int[] ai = new Int[4];
+        C c = new C();
         }
+
+    const Person(String name)  {}
+
+    const Point(Int x, Int y)
+        default(Origin);
+
+    const Point3d(Int x, Int y, Int z = 0)
+        extends Point(x, y);
+
+    static const Origin
+        extends Point(0, 0);
 
 //    const Person
 //        {
@@ -31,13 +42,6 @@ module Test
     const Employee(String name)
             extends Person(name)
         {
-        }
-
-    void run()
-        {
-        @Inject X.io.Console console;
-        console.println("Hello world!");
-        // C c = new C();
         }
 
 //    class Outer

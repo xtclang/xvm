@@ -62,7 +62,7 @@ module Ecstasy.xtclang.org
             }
         }
 
-    class Int64
+    class Int64 default(0)
         {
         @Op Int64 add(Int64 n);
         }
@@ -77,8 +77,8 @@ module Ecstasy.xtclang.org
         DataType foo(DataType dt) {return dt;}
         }
 
-    enum Nullable{Null}
-    enum Boolean{False, True}
+    enum Nullable default(Null) {Null}
+    enum Boolean default(False) {False, True}
 
     interface Iterator<ElementType>
         {

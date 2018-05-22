@@ -509,6 +509,22 @@ public interface Constants
      * {0} attempts to override the method {1} on {2}, but does not specify @Override.
      */
     public static final String VE_METHOD_OVERRIDE_REQUIRED            = "VERIFY-81";
+    /**
+     * "{0}" is not an instantiable type.
+     */
+    public static final String VE_NEW_ILLEGAL_TYPE                    = "VERIFY-82";
+    /**
+     "{0}" requires a parent instance in order to be instantiated.
+     */
+    public static final String VE_NEW_REQUIRES_PARENT                 = "VERIFY-83";
+    /**
+     "{0}" cannot be instantiated using a parent instance.
+     */
+    public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-84";
+    /**
+     "{0}" is not related to the provided parent instance type "{1}".
+     */
+    public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-85";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

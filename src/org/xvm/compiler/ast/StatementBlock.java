@@ -60,7 +60,20 @@ public class StatementBlock
     public void addStatement(Statement stmt)
         {
         stmt.setParent(this);
-        stmts.add(stmt);
+
+        boolean fHasEnclosed = containsEnclosed;
+        boolean fAddEnclosed = stmt instanceof StatementBlock && ((StatementBlock) stmt).boundary;
+        assert !(fHasEnclosed & fAddEnclosed);
+        if (fHasEnclosed)
+            {
+            // insert the new statement before the "enclosed" statements
+            stmts.add(stmts.size()-1, stmt);
+            }
+        else
+            {
+            stmts.add(stmt);
+            containsEnclosed |= fAddEnclosed;
+            }
         }
 
     /**
@@ -346,6 +359,7 @@ public class StatementBlock
     protected long            lStartPos;
     protected long            lEndPos;
     protected boolean         boundary;
+    protected boolean         containsEnclosed;
 
     protected Map<String, ImportStatement> imports;
 
