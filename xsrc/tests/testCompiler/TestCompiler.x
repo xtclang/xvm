@@ -358,6 +358,16 @@ class TestCompiler<TestType1 extends Number,
         Class<True> c = en;
         }
 
+    mixin MCI
+            into MyConsumer<Int> | Int
+        {
+        }
+
+    static void testIntersection(MCI mci)
+        {
+        Consumer<Int> | Number cnn = mci;
+        }
+
     // auto-narrowing tests
 
     interface ANIface1

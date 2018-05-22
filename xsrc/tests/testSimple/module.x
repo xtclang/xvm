@@ -22,9 +22,11 @@ module TestSimple.xqiz.it
 
     void test3()
         {
+        @Inject X.io.Console console2;
+
         Int i = 40;
         i = i + 2;
-        console.println(i);
+        console2.println(i);
         }
     }
 

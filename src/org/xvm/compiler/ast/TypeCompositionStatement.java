@@ -235,6 +235,13 @@ public class TypeCompositionStatement
      */
     public void addEnclosed(Statement stmt)
         {
+        // statement cannot be null, except that during development we ignore certain errors to
+        // allow the compiler to progress, so tolerate that condition for the time being
+        if (stmt == null)
+            {
+            return;
+            }
+
         if (enclosed == null)
             {
             enclosed = new StatementBlock(new ArrayList<>());

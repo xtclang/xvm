@@ -42,6 +42,14 @@ public class ArrayTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the number of array dimensions, 0 or more
+     */
+    public int getDimensions()
+        {
+        return dims;
+        }
+
     @Override
     protected boolean canResolveNames()
         {

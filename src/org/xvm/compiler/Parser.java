@@ -2716,12 +2716,17 @@ public class Parser
                 {
                 Token            keyword = expect(Id.NEW);
                 TypeExpression   type    = parseTypeExpression();
-                List<Expression> args    = parseArgumentList(true, false, true);
-                StatementBlock   body    = null;
-                if (peek().getId() == Id.L_CURLY)
-                    {
-                    body = parseTypeCompositionBody(keyword);
-                    }
+                // we always need arguments, but if the arguments are an empty array indicator,
+                // e.g. "new Int[]", then we've already eaten the arguments when we parsed the type
+                // expression
+                List<Expression> args = type instanceof ArrayTypeExpression &&
+                                        ((ArrayTypeExpression) type).getDimensions() == 0
+                                      ? Collections.EMPTY_LIST
+                                      : parseArgumentList(true, false, true);
+                StatementBlock   body = peek().getId() == Id.L_CURLY
+                                      ? parseTypeCompositionBody(keyword)
+                                      : null ;
+
                 return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
