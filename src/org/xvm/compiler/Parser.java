@@ -2513,7 +2513,7 @@ public class Parser
      *     PostfixExpression ArrayIndex
      *     PostfixExpression NoWhitespace "?"
      *     PostfixExpression "." Name
-     *     PostfixExpression ".new" ArgumentList-opt
+     *     PostfixExpression ".new" ArgumentList
      *     PostfixExpression ".instanceof" "(" TypeExpression ")"
      *     PostfixExpression ".as" "(" TypeExpression ")"
      *
@@ -2570,7 +2570,7 @@ public class Parser
                             {
                             Token            keyword = expect(Id.NEW);
                             TypeExpression   type    = parseTypeExpression();
-                            List<Expression> params  = parseArgumentList(false, false, true);
+                            List<Expression> params  = parseArgumentList(true, false, true);
                             long             lEndPos = params == null
                                     ? type.getEndPosition()
                                     : getLastMatch().getEndPosition();
@@ -2692,7 +2692,7 @@ public class Parser
      * <p/><code><pre>
      * PrimaryExpression
      *     "(" Expression ")"
-     *     "new" TypeExpression NewFinish
+     *     "new" TypeExpression ArgumentList AnonClassBody-opt
      *     "construct" QualifiedName
      *     "&"-opt QualifiedName TypeParameterTypeList-opt
      *     StatementExpression
@@ -2716,7 +2716,7 @@ public class Parser
                 {
                 Token            keyword = expect(Id.NEW);
                 TypeExpression   type    = parseTypeExpression();
-                List<Expression> args    = parseArgumentList(false, false, true);
+                List<Expression> args    = parseArgumentList(true, false, true);
                 StatementBlock   body    = null;
                 if (peek().getId() == Id.L_CURLY)
                     {

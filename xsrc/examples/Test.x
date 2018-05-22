@@ -15,13 +15,12 @@ module Test
         console.println("Hello world!");
 
         Int[] ai = new Int[4];
-//        C c = new C();
+        C c = new C();
         }
 
     const Person(String name)  {}
 
     const Point(Int x, Int y)
-        default(Origin)
         default(Origin);
 
     const Point3d(Int x, Int y, Int z = 0)

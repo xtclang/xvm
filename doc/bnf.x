@@ -662,13 +662,6 @@ PrefixExpression
     "!" PrefixExpression
     "~" PrefixExpression
 
-NewFinish
-     ArgumentList-opt
-     AnonClassBody-opt
-
-AnonClassBody
-    "{" TypeCompositionComponents "}"
-
 # see comment on primary expression to understand why type parameter list needs to be parsed as part
 # of name
 PostfixExpression
@@ -676,11 +669,11 @@ PostfixExpression
     PostfixExpression "++"
     PostfixExpression "--"
     PostfixExpression ArgumentList
-    PostfixExpression ArrayDims
+    PostfixExpression ArrayDims                                 # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
-    PostfixExpression ".new" TypeExpression ArgumentList-opt
+    PostfixExpression ".new" TypeExpression ArgumentList
     PostfixExpression ".as" "(" TypeExpression ")"
     PostfixExpression ".is" "(" TypeExpression ")"
     PostfixExpression ".instanceof" "(" TypeExpression ")"
@@ -714,7 +707,7 @@ ExpressionList
 #       parametized type.
 PrimaryExpression
     "(" Expression ")"
-    "new" TypeExpression NewFinish
+    "new" TypeExpression ArgumentList AnonClassBody-opt
     "throw" TernaryExpression
     "T0D0" TodoFinish-opt
     "&"-opt "construct"-opt QualifiedName TypeParameterTypeList-opt
@@ -723,6 +716,9 @@ PrimaryExpression
     LambdaExpression
     "_"
     Literal
+
+AnonClassBody
+    "{" TypeCompositionComponents "}"
 
 # a statement expression is a lambda with an implicit "()->" preamble and with an implicit "()"
 # trailing invocation, i.e. it is a block of statements that executes, and at the end, it must

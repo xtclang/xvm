@@ -11,9 +11,11 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -31,12 +33,16 @@ public class NewExpression
      *
      * @param operator  presumably, the "new" operator
      * @param type      the type being instantiated
-     * @param args      a list of constructor arguments for the type being instantiated, or null
+     * @param args      a list of constructor arguments for the type being instantiated
      * @param body      the body of the anonymous inner class being instantiated, or null
      * @param lEndPos   the expression's end position in the source code
      */
     public NewExpression(Token operator, TypeExpression type, List<Expression> args, StatementBlock body, long lEndPos)
         {
+        assert operator != null;
+        assert type != null;
+        assert args != null;
+
         this.left     = null;
         this.operator = operator;
         this.type     = type;
@@ -56,6 +62,11 @@ public class NewExpression
      */
     public NewExpression(Expression left, Token operator, TypeExpression type, List<Expression> args, long lEndPos)
         {
+        assert left != null;
+        assert operator != null;
+        assert type != null;
+        assert args != null;
+
         this.left     = left;
         this.operator = operator;
         this.type     = type;
@@ -168,15 +179,31 @@ public class NewExpression
         {
         boolean fValid = true;
 
+        Expression   exprLeftOld = this.left;
+        TypeConstant typeLeft    = null;
+        if (exprLeftOld != null)
+            {
+            Expression exprLeftNew = exprLeftOld.validate(ctx, null, TuplePref.Rejected, errs);
+            if (exprLeftNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                this.left = exprLeftNew;
+                typeLeft  = exprLeftNew.getType();
+                }
+            }
+
         TypeExpression exprTypeOld   = this.type;
         TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, pref, errs);
         TypeConstant   typeConstruct = null;
-        TypeInfo infoConstruct = null;
+        TypeInfo       infoConstruct = null;
         if (exprTypeNew == null)
             {
             fValid = false;
             }
-        else if (exprTypeNew != exprTypeOld)
+        else
             {
             this.type = exprTypeNew;
 
@@ -187,15 +214,46 @@ public class NewExpression
             // that makes the type new-able
             if (body == null && !infoConstruct.isNewable())
                 {
-                // TODO log error
+                log(errs, Severity.ERROR, Constants.VE_NEW_ILLEGAL_TYPE, typeConstruct.getValueString());
                 fValid = false;
                 }
 
-            if (left != null && !typeConstruct.isAutoNarrowing())
+            if (left != null)
                 {
-                // TODO log error - only auto-narrowing types can be constructed using ".new"
+                // figure out the relationship between the type of "left" and the type being
+                // constructed; they must both belong to the same "localized class tree", and the
+                // type being instantiated must either be a static child class, the top level class,
+                // or an instance class directly nested under the class specified by the "left" type
+                // TODO detect & log errors: VE_NEW_REQUIRES_PARENT VE_NEW_DISALLOWS_PARENT VE_NEW_UNRELATED_PARENT
+                throw new UnsupportedOperationException("instantiating child class not yet supported");
+                }
+            }
+
+        List<Expression> listArgs  = this.args;
+        int              cArgs     = listArgs.size();
+        TypeConstant[]   atypeArgs = cArgs == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            Expression exprArgOld = listArgs.get(i);
+            Expression exprArgNew = exprArgOld.validate(ctx, null, TuplePref.Rejected, errs);
+            if (exprArgNew == null)
+                {
                 fValid = false;
                 }
+            else
+                {
+                if (exprArgNew != exprArgOld)
+                    {
+                    listArgs.set(i, exprArgNew);
+                    }
+
+                atypeArgs[i] = exprArgNew.getType();
+                }
+            }
+
+        if (body != null)
+            {
+            throw new UnsupportedOperationException("anonymous inner class not yet supported");
             }
 
         return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeConstruct, null);
