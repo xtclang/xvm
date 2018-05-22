@@ -8,6 +8,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +16,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
+
+import org.xvm.asm.Op.Prefix;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -26,7 +29,6 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Nop;
-import org.xvm.asm.Op.Prefix;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -39,6 +41,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xNullable;
 
+import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -1247,6 +1250,10 @@ public class MethodStructure
     public String getDescription()
         {
         return new StringBuilder()
+                .append("native=")
+                .append(isNative())
+                .append("abstract=")
+                .append(isAbstract())
                 .append("host=\"")
                 .append(getParent().getParent().getName())
                 .append("\", id=\"")
@@ -1262,6 +1269,15 @@ public class MethodStructure
                 .toString();
         }
 
+    @Override
+    protected void dump(PrintWriter out, String sIndent)
+        {
+        super.dump(out, sIndent);
+        if (!isAbstract() && !isNative() && ensureCode().hasOps())
+            {
+            out.println(indentLines(ensureCode().toString(), nextIndent(sIndent)));
+            }
+        }
 
     // ----- inner class: Code ---------------------------------------------------------------------
 

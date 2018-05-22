@@ -720,6 +720,10 @@ public class Compiler
      * Type {0} has more than one default value for the type.
      */
     public static final String DUPLICATE_DEFAULT_VALUE            = "COMPILER-64";
+    /**
+     * Could not find a matching constructor for type "{0}".
+     */
+    public static final String MISSING_CONSTRUCTOR                = "COMPILER-65";
 
 
     // ----- data members --------------------------------------------------------------------------

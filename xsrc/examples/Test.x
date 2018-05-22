@@ -1,6 +1,19 @@
 module Test
     {
-    class C {}
+    class C
+        {
+        construct()
+            {
+            construct C(4);
+            }
+
+        construct(Int n)
+            {
+            this.n = n;
+            }
+
+        Int n;
+        }
     // class C
     //   {
     //   construct C()
@@ -11,13 +24,14 @@ module Test
 
     void run()
         {
-        @Inject X.io.Console console;
-        console.println("Hello world!");
+        // @Inject X.io.Console console;
+        // console.println("Hello world!");
 
-        Int[] ai = new Int[4];
+        // Int[] ai = new Int[4];
         C c = new C();
         }
 
+/*
     const Person(String name)  {}
 
     const Point(Int x, Int y)
@@ -43,6 +57,7 @@ module Test
             extends Person(name)
         {
         }
+*/
 
 //    class Outer
 //        {

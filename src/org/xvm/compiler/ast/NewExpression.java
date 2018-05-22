@@ -5,16 +5,25 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.asm.op.New_0;
+import org.xvm.asm.op.New_1;
+import org.xvm.asm.op.New_N;
+
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
@@ -229,9 +238,10 @@ public class NewExpression
                 }
             }
 
-        List<Expression> listArgs  = this.args;
-        int              cArgs     = listArgs.size();
-        TypeConstant[]   atypeArgs = cArgs == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cArgs];
+        List<Expression> listArgs   = this.args;
+        int              cArgs      = listArgs.size();
+        TypeConstant[]   atypeArgs  = cArgs == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cArgs];
+        String[]         asArgNames = null;
         for (int i = 0; i < cArgs; ++i)
             {
             Expression exprArgOld = listArgs.get(i);
@@ -248,6 +258,28 @@ public class NewExpression
                     }
 
                 atypeArgs[i] = exprArgNew.getType();
+
+                if (exprArgNew instanceof LabeledExpression)
+                    {
+                    String sName = ((LabeledExpression) exprArgNew).getName();
+
+                    if (asArgNames == null)
+                        {
+                        asArgNames = new String[cArgs];
+                        }
+                    else
+                        {
+                        for (int iPrev = 0; iPrev < i; ++iPrev)
+                            {
+                            if (asArgNames[iPrev] != null && asArgNames[iPrev].equals(sName))
+                                {
+                                exprArgNew.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
+                                fValid = false;
+                                }
+                            }
+                        }
+                    asArgNames[i] = sName;
+                    }
                 }
             }
 
@@ -256,13 +288,92 @@ public class NewExpression
             throw new UnsupportedOperationException("anonymous inner class not yet supported");
             }
 
+        if (fValid)
+            {
+            // find the constructor to use
+            m_idConstructor = infoConstruct.findCallable(
+                    "construct", false, true, null, atypeArgs, asArgNames);
+            if (m_idConstructor == null)
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeConstruct.getValueString());
+                fValid = false;
+                }
+            }
+
         return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeConstruct, null);
+        }
+
+    @Override
+    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        assert m_idConstructor != null;
+        assert left == null; // TODO construct child class
+        assert body == null; // TODO anonymous inner class
+
+        List<Expression> listArgs = args;
+        int              cArgs    = listArgs.size();
+        Argument[]       aArgs    = new Argument[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            }
+
+        Argument argResult = new Register(getType());
+        switch (cArgs)
+            {
+            case 0:
+                code.add(new New_0(m_idConstructor, argResult));
+                break;
+
+            case 1:
+                code.add(new New_1(m_idConstructor, aArgs[0], argResult));
+                break;
+
+            default:
+                code.add(new New_N(m_idConstructor, aArgs, argResult));
+                break;
+            }
+        return argResult;
         }
 
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        // TODO
+        assert m_idConstructor != null;
+        assert left == null; // TODO construct child class
+        assert body == null; // TODO anonymous inner class
+
+        List<Expression> listArgs = args;
+        int              cArgs    = listArgs.size();
+        Argument[]       aArgs    = new Argument[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            }
+
+        Argument argResult = LVal.isLocalArgument()
+                ? LVal.getLocalArgument()
+                : new Register(LVal.getType());
+
+        switch (cArgs)
+            {
+            case 0:
+                code.add(new New_0(m_idConstructor, argResult));
+                break;
+
+            case 1:
+                code.add(new New_1(m_idConstructor, aArgs[0], argResult));
+                break;
+
+            default:
+                code.add(new New_N(m_idConstructor, aArgs, argResult));
+                break;
+            }
+
+        if (!LVal.isLocalArgument())
+            {
+            LVal.assign(argResult, code, errs);
+            }
         }
 
 
@@ -342,6 +453,8 @@ public class NewExpression
     protected List<Expression> args;
     protected StatementBlock   body;
     protected long             lEndPos;
+
+    private transient MethodConstant m_idConstructor;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "body");
     }
