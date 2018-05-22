@@ -36,6 +36,8 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.Composition.Default;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -236,17 +238,22 @@ public class TypeCompositionStatement
         {
         if (enclosed == null)
             {
-            if (body == null)
-                {
-                body = new StatementBlock(new ArrayList<>());
-                }
-
             enclosed = new StatementBlock(new ArrayList<>());
             enclosed.markFileBoundary();
-            body.addStatement(enclosed);
+            ensureBody().addStatement(enclosed);
             }
 
         enclosed.addStatement(stmt);
+        }
+
+    public StatementBlock ensureBody()
+        {
+        if (body == null)
+            {
+            body = new StatementBlock(new ArrayList<>());
+            body.setParent(this);
+            }
+        return body;
         }
 
     /**
@@ -1077,6 +1084,34 @@ public class TypeCompositionStatement
                                     mapConstraints);
                             }
                         }
+                    break;
+
+                case DEFAULT:
+                    {
+                    // the default contribution becomes a constant property of the type
+                    if (component.getChild("=") != null)
+                        {
+                        composition.log(errs, Severity.ERROR, Compiler.DUPLICATE_DEFAULT_VALUE, sName);
+                        }
+                    else
+                        {
+                        NamedTypeExpression typeDefault = new NamedTypeExpression(null,
+                                Collections.singletonList(name), null, null, null, name.getEndPosition());
+                        Expression exprValue = ((Default) composition).getValueExpression();
+                        PropertyDeclarationStatement propDefault = new PropertyDeclarationStatement(
+                                composition.getStartPosition(),
+                                composition.getEndPosition(),
+                                composition.getCondition(),
+                                null, null,
+                                typeDefault,
+                                composition.keyword,
+                                exprValue,
+                                null, null);
+                        typeDefault.setParent(propDefault);
+                        exprValue.setParent(propDefault);
+                        ensureBody().addStatement(propDefault);
+                        }
+                    }
                     break;
 
                 default:

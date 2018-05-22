@@ -165,6 +165,7 @@ public class Parser
      *     "incorporates" Type ArgumentList-opt
      *     "into" Type
      *     "import" QualifiedName VersionRequirement-opt
+     *     "default" "(" Expression ")"
      *
      * TypeCompositionBody
      *     "{" EnumList-opt TypeCompositionComponents-opt "}"
@@ -424,6 +425,16 @@ public class Parser
                         List<VersionOverride> versions = parseVersionRequirement(false);
                         compositions.add(new Composition.Import(exprCondition, keyword, module,
                                 versions, getLastMatch().getEndPosition()));
+                        fAny = true;
+                        }
+                        break;
+
+                    case DEFAULT:
+                        {
+                        keyword = expect(Id.DEFAULT);
+                        expect(Id.L_PAREN);
+                        compositions.add(new Composition.Default(exprCondition, keyword,
+                                parseExpression(), expect(Id.R_PAREN).getEndPosition()));
                         fAny = true;
                         }
                         break;

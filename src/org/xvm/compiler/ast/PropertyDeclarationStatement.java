@@ -230,7 +230,7 @@ public class PropertyDeclarationStatement
         if (getComponent() == null)
             {
             // create a structure for this type
-            String sName = (String) name.getValue();
+            String sName = (String) name.getValueText();
             Component container = getParent().getComponent();
             if (container.isClassContainer())
                 {

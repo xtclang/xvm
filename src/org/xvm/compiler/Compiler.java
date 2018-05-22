@@ -716,6 +716,10 @@ public class Compiler
      * Signature {0} is ambiguous.
      */
     public static final String SIGNATURE_AMBIGUOUS                = "COMPILER-63";
+    /**
+     * Type {0} has more than one default value for the type.
+     */
+    public static final String DUPLICATE_DEFAULT_VALUE            = "COMPILER-64";
 
 
     // ----- data members --------------------------------------------------------------------------

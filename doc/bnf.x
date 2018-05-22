@@ -136,6 +136,7 @@ Composition
     "incorporates" IncorporatesFinish
     "into" TypeExpression
     ImportClause QualifiedName VersionRequirement-opt
+    "default" "(" Expression ")"
 
 IncorporatesFinish
     "conditional" QualifiedName TypeParameterList ArgumentList-opt

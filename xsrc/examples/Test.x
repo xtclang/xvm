@@ -18,7 +18,6 @@ module Test
 //        C c = new C();
         }
 
-/*
     const Person(String name)  {}
 
     const Point(Int x, Int y)
@@ -44,7 +43,6 @@ module Test
             extends Person(name)
         {
         }
-*/
 
 //    class Outer
 //        {
