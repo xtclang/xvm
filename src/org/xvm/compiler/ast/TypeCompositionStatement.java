@@ -27,7 +27,6 @@ import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -36,8 +35,8 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Composition.Default;
+
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -773,6 +772,7 @@ public class TypeCompositionStatement
 
         int                 cImports      = 0;
         ModuleStructure     moduleImport  = null;
+        boolean             fHasDefault   = false;
         Format              format        = component.getFormat();
         ComponentBifurcator bifurcator    = new ComponentBifurcator(component);
         ConditionalConstant condPrev      = null;
@@ -1089,7 +1089,7 @@ public class TypeCompositionStatement
                 case DEFAULT:
                     {
                     // the default contribution becomes a constant property of the type
-                    if (component.getChild("=") != null)
+                    if (fHasDefault)
                         {
                         composition.log(errs, Severity.ERROR, Compiler.DUPLICATE_DEFAULT_VALUE, sName);
                         }
@@ -1110,6 +1110,7 @@ public class TypeCompositionStatement
                         typeDefault.setParent(propDefault);
                         exprValue.setParent(propDefault);
                         ensureBody().addStatement(propDefault);
+                        fHasDefault = true;
                         }
                     }
                     break;

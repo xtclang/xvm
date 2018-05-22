@@ -21,6 +21,7 @@ module Test
     const Person(String name)  {}
 
     const Point(Int x, Int y)
+        default(Origin)
         default(Origin);
 
     const Point3d(Int x, Int y, Int z = 0)

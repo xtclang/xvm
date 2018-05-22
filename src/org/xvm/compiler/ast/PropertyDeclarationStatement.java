@@ -388,7 +388,7 @@ public class PropertyDeclarationStatement
 
         sb.append(type)
                 .append(' ')
-          .append(name.getValue());
+          .append(name.getValueText());
 
         return sb.toString();
         }
