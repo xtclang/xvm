@@ -2332,7 +2332,7 @@ public class ConstantPool
                         }
                     catch (IllegalStateException e)
                         {
-                        errlist.log(Severity.ERROR, VE_UNKNOWN, new Object[] {e.toString()}, type);
+                        errlist.log(Severity.INFO, VE_UNKNOWN, new Object[] {e.toString()}, type);
                         }
                     }
                 }

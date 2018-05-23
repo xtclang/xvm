@@ -1065,10 +1065,10 @@ public class InvocationExpression
                         // TODO: we need to plug in the formal types somewhere before coming here
                         ClassStructure clz  = (ClassStructure) parent;
                         TypeConstant   type = pool.ensureAccessTypeConstant(clz.getCanonicalType(),
-                                                    Access.PRIVATE);
+                                Access.PRIVATE);
 
                         IdentityConstant method = findCallable(type.ensureTypeInfo(errs), sName,
-                                (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs);
+                                (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, null);
                         if (method != null)
                             {
                             m_argMethod   = method;
@@ -1126,7 +1126,7 @@ public class InvocationExpression
                 //   method reference, there must not be any arg binding or actual invocation
                 // - functions are included because the left is identity-mode
                 TypeInfo infoLeft = ((NameExpression) exprLeft).getIdentity(ctx).ensureTypeInfo(errs);
-                arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs);
+                arg = findCallable(infoLeft, sName, fNoFBind && fNoCall, true, aRedundant, aArgs, null);
 
                 if (arg instanceof MethodConstant)
                     {
@@ -1141,7 +1141,7 @@ public class InvocationExpression
                 // - methods are included because there is a left and it is NOT identity-mode
                 // - functions are NOT included because the left is NOT identity-mode
                 TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-                arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs);
+                arg = findCallable(infoLeft, sName, true, false, aRedundant, aArgs, null);
 
                 if (arg != null)
                     {
@@ -1174,7 +1174,8 @@ public class InvocationExpression
      *                    function to select)
      * @param aArgs       the types of the arguments being provided (some of which may be null to
      *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
-     * TODO add array of names here
+     * @param asArgNames  optional array of argument names (from LabeledExpressions)
+     *
      * @return the matching method, function, or (rarely) property
      */
     protected IdentityConstant findCallable(
@@ -1183,7 +1184,8 @@ public class InvocationExpression
             boolean        fMethods,
             boolean        fFunctions,
             TypeConstant[] aRedundant,
-            TypeConstant[] aArgs)
+            TypeConstant[] aArgs,
+            String[]       asArgNames)
         {
         // check for a property of that name; if one exists, it must be of type function, or a type
         // with an @Auto conversion to function - which will be verified by validateFunction()
@@ -1193,7 +1195,7 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
-        return infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, null); // TODO asArgNames
+        return infoParent.findCallable(sName, fMethods, fFunctions, aRedundant, aArgs, asArgNames);
         }
 
     /**

@@ -2570,11 +2570,15 @@ public class Parser
                             {
                             Token            keyword = expect(Id.NEW);
                             TypeExpression   type    = parseTypeExpression();
-                            List<Expression> params  = parseArgumentList(true, false, true);
-                            long             lEndPos = params == null
-                                    ? type.getEndPosition()
-                                    : getLastMatch().getEndPosition();
-                            expr = new NewExpression(expr, keyword, type, params, lEndPos);
+                            long             lEndPos = type.getEndPosition();
+                            List<Expression> args    = Collections.EMPTY_LIST;
+                            if (!(type instanceof ArrayTypeExpression
+                                    && ((ArrayTypeExpression) type).getDimensions() == 0))
+                                {
+                                args    = parseArgumentList(true, false, true);
+                                lEndPos = getLastMatch().getEndPosition();
+                                }
+                            expr = new NewExpression(expr, keyword, type, args, lEndPos);
                             break;
                             }
 
@@ -2726,7 +2730,6 @@ public class Parser
                 StatementBlock   body = peek().getId() == Id.L_CURLY
                                       ? parseTypeCompositionBody(keyword)
                                       : null ;
-
                 return new NewExpression(keyword, type, args, body, getLastMatch().getEndPosition());
                 }
 
