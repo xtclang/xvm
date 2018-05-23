@@ -17,8 +17,6 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.xvm.asm.Op.Prefix;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -27,6 +25,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.Op.Prefix;
 
 import org.xvm.asm.op.Nop;
 
@@ -1251,9 +1251,9 @@ public class MethodStructure
         return new StringBuilder()
                 .append("native=")
                 .append(isNative())
-                .append("abstract=")
+                .append(", abstract=")
                 .append(isAbstract())
-                .append("host=\"")
+                .append(", host=\"")
                 .append(getParent().getParent().getName())
                 .append("\", id=\"")
                 .append(getIdentityConstant().getValueString())
