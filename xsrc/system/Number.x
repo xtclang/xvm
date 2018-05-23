@@ -156,7 +156,7 @@ interface Number
                 }
             }
 
-        return new SequenceImpl();
+        return new SequenceImpl(this);
         }
 
     /**
@@ -188,7 +188,7 @@ interface Number
                 }
             }
 
-        return new SequenceImpl();
+        return new SequenceImpl(this);
         }
 
     /**

@@ -89,6 +89,15 @@ module Ecstasy.xtclang.org
         }
 
     /**
+     * An IllegalArgumentException is raised when an invalid argument is passed to a method or a
+     * function.
+     */
+    const IllegalArgumentException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        }
+
+    /**
      * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */

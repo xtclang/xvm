@@ -157,4 +157,12 @@ const Char
             out.write(0b10_000000 | (ch >>> --cTrail * 6 & 0b00_111111));
             }
         }
+
+    /**
+     * A UTFDataFormatException is raised when an illegal character is encountered in a byte stream.
+     */
+    const UTFDataFormatException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        }
     }

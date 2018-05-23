@@ -3,6 +3,7 @@
  */
 const Int64
         implements IntNumber
+        default(0)
     {
     construct(Bit[] bits)
         {

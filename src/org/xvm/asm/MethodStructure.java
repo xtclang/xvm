@@ -1080,8 +1080,7 @@ public class MethodStructure
                 }
             }
 
-        // method short-circuits the search
-        return ResolutionResult.UNKNOWN;
+        return super.resolveName(sName, collector);
         }
 
 

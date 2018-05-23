@@ -263,23 +263,21 @@ public class MethodInfo
             return this;
             }
 
-        MethodBody bodyFirstDeclare = null;
-        MethodBody bodyFirstDefault = null;
+        MethodBody bodyFirstNonDefault = null;
+        MethodBody bodyFirstDefault    = null;
         for (MethodBody body : m_aBody)
             {
             switch (body.getImplementation())
                 {
                 case Implicit:
-                    break;
-
                 case Declared:
                 case Abstract:
                 case SansCode:
                     // methods that are declared but have no bodies (not even a default body) will
                     // automatically be marked as native
-                    if (bodyFirstDeclare == null)
+                    if (bodyFirstNonDefault == null)
                         {
-                        bodyFirstDeclare = body;
+                        bodyFirstNonDefault = body;
                         }
                     break;
 
@@ -307,22 +305,11 @@ public class MethodInfo
                 }
             }
 
-        MethodBody bodyResult;
-        if (bodyFirstDefault != null)
-            {
-            bodyResult = new MethodBody(bodyFirstDefault.getIdentity(),
+        MethodBody bodyResult = bodyFirstDefault == null
+            ? new MethodBody(bodyFirstNonDefault.getIdentity(),
+                bodyFirstNonDefault.getSignature(), Implementation.Native)
+            : new MethodBody(bodyFirstDefault.getIdentity(),
                 bodyFirstDefault.getSignature(), Implementation.Explicit);
-            }
-        else if (bodyFirstDeclare != null)
-            {
-            bodyResult = new MethodBody(bodyFirstDeclare.getIdentity(),
-                bodyFirstDeclare.getSignature(), Implementation.Native);
-            }
-        else
-            {
-            // nothing but "into" bodies
-            return this;
-            }
 
         return layerOn(new MethodInfo(bodyResult), true, errs);
         }
@@ -402,21 +389,30 @@ public class MethodInfo
         for (int i = 0, c = abody.length; i < c; ++i)
             {
             MethodBody body = abody[i];
-            if (body.isAbstract())
+            switch (body.getImplementation())
                 {
-                if (body.getImplementation() == Implementation.SansCode)
-                    {
-                    fIgnoreAbstract = true;
-                    }
-                else if (!fIgnoreAbstract || body.getImplementation() != Implementation.Abstract)
-                    {
+                case Implicit:
+                case Declared:
+                    break;
+
+                case Abstract:
+                    if (fIgnoreAbstract)
+                        {
+                        break;
+                        }
                     return true;
-                    }
-                // else ... a SansCode followed by any number of Abstract bodies are ignored
-                }
-            else
-                {
-                return false;
+
+                case SansCode:
+                    fIgnoreAbstract = true;
+                    break;
+
+                case Capped: // REVIEW?
+                case Default:
+                case Delegating:
+                case Field:
+                case Native:
+                case Explicit:
+                    return false;
                 }
             }
 

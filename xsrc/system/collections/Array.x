@@ -19,7 +19,7 @@ class Array<ElementType>
         {
         if (capacity < 0)
             {
-            throw new IllegalArgument("capacity", capacity, "must be >= 0");
+            throw new IllegalArgumentException("capacity", capacity, "must be >= 0");
             }
         this.capacity = capacity;
         }
@@ -72,7 +72,7 @@ class Array<ElementType>
         {
         if (index < 0 || index >= length)
             {
-            throw new IllegalArrayIndex(index, 0, length);
+            throw new BoundsException(index, 0, length);
             }
 
         Element element = head as Element;

@@ -26,7 +26,7 @@ mixin WatchVar<RefType>
     /**
      * The set of notify functions to call when the referent is set.
      */
-    private Set<function void (RefType)> notifies = new ListSet<>();
+    private Set<function void (RefType)> notifies = new collections.ListSet<>();
 
     @Override
     void set(RefType value)
