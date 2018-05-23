@@ -322,6 +322,39 @@ public class IntersectionTypeConstant
             || getUnderlyingType2().isIntoMethodType();
         }
 
+    @Override
+    public boolean isIntoVariableType()
+        {
+        return getUnderlyingType().isIntoVariableType()
+            || getUnderlyingType2().isIntoVariableType();
+        }
+
+    @Override
+    public TypeConstant getIntoVariableType()
+        {
+        TypeConstant typeInto1 = getUnderlyingType().getIntoVariableType();
+        TypeConstant typeInto2 = getUnderlyingType2().getIntoVariableType();
+
+        if (typeInto1 == null)
+            {
+            return typeInto2;
+            }
+
+        if (typeInto2 == null)
+            {
+            return typeInto1;
+            }
+
+        ConstantPool pool    = getConstantPool();
+        TypeConstant typeVar = pool.typeVar();
+        if (typeInto1.equals(typeVar) || typeInto2.equals(typeVar))
+            {
+            return typeVar;
+            }
+
+        return pool.typeRef();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

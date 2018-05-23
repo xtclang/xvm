@@ -24,8 +24,8 @@ module Test
 
     void run()
         {
-        // @Inject X.io.Console console;
-        // console.println("Hello world!");
+        @Inject X.io.Console console;
+        console.println("Hello world!");
 
         // Int[] ai = new Int[4];
         C c = new C();

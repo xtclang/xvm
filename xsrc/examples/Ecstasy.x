@@ -161,7 +161,7 @@ module Ecstasy.xtclang.org
         mixin ReadOnly into Property {}
         mixin Operator(String? token = null) into Method {}
         mixin Override into Property | Method {}
-        mixin InjectedRef<RefType> into Property /* TODO | Ref<RefType> */ {}
+        mixin InjectedRef<ResourceType>(String resourceName, Object? opts = null) into Property<Object, ResourceType> | Ref<ResourceType>;
         mixin UncheckedInt into Int64 {}
         mixin AnnotateRef<RefType> into Var<RefType> {}
         mixin AnnotateVar<RefType> into Var<RefType> {}
