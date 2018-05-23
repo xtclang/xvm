@@ -739,13 +739,118 @@ public class Compiler
         Loading,
         Loaded,
         Resolving,
-        Resolvable,
         Resolved,
         Validating,
         Validated,
         Emitting,
         Emitted,
-        Discarded
+        Discarded;
+
+        /**
+         * @return true if this stage is a "target-able" stage, i.e. a stage that a node can be
+         *         asked to process towards
+         */
+        public boolean isTargetable()
+            {
+            ensureValid();
+
+            // the even ordinals are targets
+            int n = ordinal();
+            return (n & 0x1) == 0 && n > 0;
+            }
+
+        /**
+         * @return true if this stage is a intermediate stage, i.e. indicating that a node is in
+         *         the process of moving towards a target-able stage
+         */
+        public boolean isIntermediate()
+            {
+            ensureValid();
+
+            // the odd ordinals are intermediates
+            return (ordinal() & 0x1) == 1;
+            }
+
+        public boolean isAtLeast(Stage stageTarget)
+            {
+            ensureValid();
+            assert stageTarget.isTargetable();
+            return this.ordinal() >= stageTarget.ordinal();
+            }
+
+        Stage getTransitionStage()
+            {
+            if (isTargetable())
+                {
+                return Stage.valueOf(ordinal() - 1);
+                }
+            int i = ordinal();
+
+            // TODO
+
+            }
+
+        public boolean canBegin(Stage stageTarget)
+            {
+            if (stageTarget.isIntermediate())
+                {
+// TODO
+                return
+                }
+// TODO
+            return
+            }
+
+        /**
+         * Make sure that the stage is not Discarded.
+         */
+        public void ensureValid()
+            {
+            if (this == Discarded)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * @return the Stage that comes before this Stage
+         */
+        public Stage prev()
+            {
+            ensureValid();
+            return Stage.valueOf(this.ordinal() - 1);
+            }
+
+        /**
+         * @return the Stage that comes after this Stage
+         */
+        public Stage next()
+            {
+            ensureValid();
+            return Stage.valueOf(this.ordinal() + 1);
+            }
+
+        /**
+         * Look up a Stage enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Stage enum for the specified ordinal
+         */
+        public static Stage valueOf(int i)
+            {
+            if (i >= 0 && i < STAGES.length)
+                {
+                return STAGES[i];
+                }
+
+            throw new IllegalArgumentException("no such stage ordinal: " + i);
+            }
+
+        /**
+         * All of the Stage enums.
+         */
+        private static final Stage[] STAGES = Stage.values();
         };
 
     /**

@@ -379,10 +379,6 @@ public abstract class AstNode
         ensureReached(Stage.Registered);
         setStage(Stage.Resolving);
 
-        // before resolving any children, mark this node as resolved, so that it is able to help
-        // resolve things on requests from children
-        setStage(Stage.Resolvable);
-
         ChildIterator children = children();
         for (AstNode node : children)
             {
@@ -607,7 +603,7 @@ public abstract class AstNode
         // for all other components (that don't override this method because they know more about
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
-        return alreadyReached(Stage.Resolvable);
+        return alreadyReached(Stage.Resolving);
         }
 
 

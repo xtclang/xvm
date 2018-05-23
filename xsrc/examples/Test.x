@@ -2,17 +2,17 @@ module Test
     {
     class C
         {
-        construct()
-            {
-            construct C(4);
-            }
-
-        construct(Int n)
-            {
-            this.n = n;
-            }
-
-        Int n;
+//        construct()
+//            {
+//            construct C(4);
+//            }
+//
+//        construct(Int n)
+//            {
+//            this.n = n;
+//            }
+//
+//        Int n;
         }
     // class C
     //   {
@@ -24,11 +24,16 @@ module Test
 
     void run()
         {
-        @Inject X.io.Console console;
-        console.println("Hello world!");
-
+        Int i = foo(); 
+//        @Inject X.io.Console console;
+//        console.println("Hello world!");
         // Int[] ai = new Int[4];
-        C c = new C();
+//        C c = new C();
+        }
+
+    IntLiteral foo()
+        {
+        return 0;
         }
 
 /*
