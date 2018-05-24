@@ -64,7 +64,8 @@ public class MethodStructure
      * @param constId    the constant that specifies the identity of the Module
      * @param condition  the optional condition for this ModuleStructure
      */
-    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId, ConditionalConstant condition)
+    protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
+                              ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }
@@ -79,11 +80,12 @@ public class MethodStructure
      * @param annotations  an array of Annotations
      * @param aReturns     an array of Parameters representing the "out" values
      * @param aParams      an array of Parameters representing the "in" values
+     * @param fHasCode     true indicates that the method has code
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      */
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
-            ConditionalConstant condition,
-            Annotation[] annotations, Parameter[] aReturns, Parameter[] aParams, boolean fUsesSuper)
+            ConditionalConstant condition, Annotation[] annotations,
+            Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
         {
         this(xsParent, nFlags, constId, condition);
 
@@ -109,6 +111,7 @@ public class MethodStructure
                 }
             }
         m_cTypeParams = cTypeParams;
+        m_FHasCode    = fHasCode;
         m_FUsesSuper  = fUsesSuper;
         }
 
@@ -408,7 +411,7 @@ public class MethodStructure
      */
     public Code ensureCode()
         {
-        if (isNative() || isAbstract())
+        if (isNative() || !hasCode())
             {
             return null;
             }
@@ -431,7 +434,6 @@ public class MethodStructure
         Code code;
 
         resetRuntimeInfo();
-        m_fAbstract   = false;
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
@@ -475,7 +477,6 @@ public class MethodStructure
         m_aconstLocal = null;
         m_abOps       = null;
         m_code        = new Code(this, aop);
-        m_fAbstract   = false;
         m_FUsesSuper  = null;
         markModified();
 
@@ -560,14 +561,6 @@ public class MethodStructure
         }
 
     /**
-     * @return true iff the method is present, but has no implementation at this virtual level
-     */
-    public boolean isAbstract()
-        {
-        return m_fAbstract;
-        }
-
-    /**
      * Specifies whether or not the method implementation is implemented at this virtual level.
      *
      * @param fAbstract  pass true to mark the method as abstract
@@ -581,7 +574,7 @@ public class MethodStructure
             m_fNative = false;
             }
 
-        m_fAbstract = fAbstract;
+        super.setAbstract(fAbstract);
         }
 
     /**
@@ -602,7 +595,7 @@ public class MethodStructure
         {
         if (fNative)
             {
-            m_fAbstract = false;
+            setAbstract(false);
             resetRuntimeInfo();
             }
         m_fNative = fNative;
@@ -737,7 +730,20 @@ public class MethodStructure
         }
 
     /**
-     * Indicates whether or not this method contains a call to its super.
+     * @return true iff this method has code
+     */
+    public boolean hasCode()
+        {
+        if (m_FHasCode != null)
+            {
+            return m_FHasCode;
+            }
+
+        return m_code != null && m_code.hasOps();
+        }
+
+    /**
+     * @return true iff this method contains a call to its super
      */
     public boolean usesSuper()
         {
@@ -1248,24 +1254,33 @@ public class MethodStructure
     @Override
     public String getDescription()
         {
-        return new StringBuilder()
-                .append("native=")
-                .append(isNative())
-                .append(", abstract=")
-                .append(isAbstract())
-                .append(", host=\"")
-                .append(getParent().getParent().getName())
-                .append("\", id=\"")
-                .append(getIdentityConstant().getValueString())
-                .append("\", sig=")
-                .append(getIdentityConstant().getSignature())
-                .append(", ")
-                .append(super.getDescription())
-                .append(", conditional=")
-                .append(isConditionalReturn())
-                .append(", type-param-count=")
-                .append(m_cTypeParams)
-                .toString();
+        StringBuilder sb = new StringBuilder();
+        sb.append("host=\"")
+          .append(getParent().getParent().getName())
+          .append("\", id=\"")
+          .append(getIdentityConstant().getValueString())
+          .append("\", sig=")
+          .append(getIdentityConstant().getSignature());
+
+        if (isNative())
+            {
+            sb.append(", native");
+            }
+        if (hasCode())
+            {
+            sb.append(", hasCode");
+            }
+        if (isConditionalReturn())
+            {
+            sb.append(", conditional");
+            }
+
+        sb.append(", type-param-count=")
+          .append(m_cTypeParams)
+          .append(", ")
+          .append(super.getDescription());
+
+        return sb.toString();
         }
 
     @Override
@@ -1784,11 +1799,6 @@ public class MethodStructure
     private Parameter[] m_aParams;
 
     /**
-     * True iff the method has been marked as "abstract".
-     */
-    private boolean m_fAbstract;
-
-    /**
      * The constants used by the Ops.
      */
     Constant[] m_aconstLocal;
@@ -1823,6 +1833,11 @@ public class MethodStructure
      * structure; it exists only to support the prototype interpreter implementation.
      */
     private transient boolean m_fNative;
+
+    /**
+     * Cached information about whether this method has code.
+     */
+    private transient Boolean m_FHasCode;
 
     /**
      * Cached information about whether this method uses its super.

@@ -1098,20 +1098,21 @@ public abstract class Component
      * @param returnTypes  the return values of the method
      * @param sName        the method name, or null if the name is unknown
      * @param paramTypes   the parameters for the method
+     * @param fHasCode     true indicates that the method is known to have a natural body
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
      * @return a new MethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
             Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes,
-            boolean fUsesSuper)
+            boolean fHasCode, boolean fUsesSuper)
         {
         assert sName != null;
         assert access != null;
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
         return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
-                fUsesSuper);
+                fHasCode, fUsesSuper);
         }
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName)
@@ -1761,10 +1762,35 @@ public abstract class Component
     @Override
     public String getDescription()
         {
-        return "name=" + getName() + ", format=" + getFormat() + ", access=" + getAccess()
-                + ", abstract=" + isAbstract()+ ", static=" + isStatic()
-                + ", synthetic=" + isSynthetic() + ", next-sibling=" + (m_sibling != null)
-                + ", modified=" + m_fModified;
+        StringBuilder sb = new StringBuilder();
+        sb.append("name=")
+          .append(getName())
+          .append(", format=")
+          .append(getFormat())
+          .append(", access=")
+          .append(getAccess());
+
+        if (isAbstract())
+            {
+            sb.append(", abstract");
+            }
+        if (isStatic())
+            {
+            sb.append(", static");
+            }
+        if (isSynthetic())
+            {
+            sb.append(", synthetic");
+            }
+        if (m_sibling != null)
+            {
+            sb.append(", next-sibling");
+            }
+        if (m_fModified)
+            {
+            sb.append(", modified");
+            }
+        return sb.toString();
         }
 
     /**

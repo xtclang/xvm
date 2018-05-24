@@ -360,6 +360,6 @@ public class Adapter
         MultiMethodStructure mms = structure.ensureMultiMethodStructure(sName);
         return mms.createMethod(false, Constants.Access.PUBLIC,
                 null, getTypeParameters(asRetType, true), getTypeParameters(asArgType, false),
-                true);
+                true, true);
         }
     }

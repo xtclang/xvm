@@ -117,7 +117,7 @@ public class FileStructureTest
         MethodStructure  structmethod  = structclass.createMethod(false, Constants.Access.PUBLIC, null,
                 new Parameter[]{},
                 "foo",
-                new Parameter[]{}, true);
+                new Parameter[]{}, true, true);
 
         testFileStructure(structfile);
         }

@@ -70,12 +70,13 @@ public class MultiMethodStructure
      * @param annotations  the annotations
      * @param aReturns     the return values (zero or more)
      * @param aParams      the parameters (zero or more)
+     * @param fHasCode     true indicates that the method has code
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
      * @return a method structure
      */
     public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
-            Parameter[] aReturns, Parameter[] aParams, boolean fUsesSuper)
+            Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
         {
         int nFlags   = Format.METHOD.ordinal() | access.FLAGS | (fFunction ? Component.STATIC_BIT : 0);
         int cReturns = aReturns.length;
@@ -127,7 +128,7 @@ public class MultiMethodStructure
         MethodConstant constId = getConstantPool().ensureMethodConstant(
                 getIdentityConstant(), getName(), aconstParams, aconstReturns);
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, annotations,
-                aReturns, aParams, fUsesSuper);
+                aReturns, aParams, fHasCode, fUsesSuper);
         addChild(struct);
         return struct;
         }

@@ -1130,8 +1130,9 @@ public class PropertyInfo
             Implementation implTail = chain[ixTail].getImplementation();
             if (implTail != Implementation.Field)
                 {
-                if (implTail == Implementation.Default)
+                if (implTail == Implementation.Native)
                     {
+                    // replace the "native" method with a field access
                     chain = chain.clone();
                     }
                 else

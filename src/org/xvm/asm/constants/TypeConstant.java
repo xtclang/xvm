@@ -2715,7 +2715,7 @@ public abstract class TypeConstant
         if (structContrib instanceof MethodStructure)
             {
             MethodStructure   method       = (MethodStructure) structContrib;
-            boolean           fHasNoCode   = method.isAbstract();
+            boolean           fHasNoCode   = !method.hasCode();
             boolean           fHasAbstract = method.findAnnotation(getConstantPool().clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(resolver);
