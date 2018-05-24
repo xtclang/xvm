@@ -492,7 +492,7 @@ public class PropertyInfo
      */
     public PropertyInfo asInto()
         {
-        // basically, if the method is a constant or type parameter, it stays as-is; otherwise, it
+        // basically, if the property is a constant or type parameter, it stays as-is; otherwise, it
         // needs to be "flattened" into a single implicit entry with the right signature
         if (isConstant() || isTypeParam())
             {
