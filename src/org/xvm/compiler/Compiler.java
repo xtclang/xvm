@@ -1,10 +1,6 @@
 package org.xvm.compiler;
 
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -12,7 +8,9 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+
 import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.Severity;
@@ -21,9 +19,9 @@ import org.xvm.util.Severity;
 /**
  * A module compiler for Ecstasy code.
  * <p/>
- * The compiler is a multi-step state machine. This is the result of the compiler for one module
- * needing to be able to be coordinated with compilers for other modules that are co-dependent,
- * i.e. that have dependencies on each other that need to be jointly resolved.
+ * The compiler is a multi-step state machine. This design is the result of the compiler for one
+ * module needing to be able to be coordinated with compilers for other modules that are
+ * co-dependent, i.e. that have dependencies on each other that need to be jointly resolved.
  */
 public class Compiler
     {
@@ -143,7 +141,13 @@ public class Compiler
         if (getStage() == Stage.Initial)
             {
             setStage(Stage.Registering);
-            m_structFile = m_stmtModule.createModuleStructure(m_errs);
+
+            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
+            if (!mgr.processComplete())
+                {
+                throw new CompilerException("failed to create module");
+                }
+            m_structFile = m_stmtModule.getComponent().getFileStructure();
             m_structFile.setErrorListener(m_errs);
             setStage(Stage.Registered);
             }
@@ -209,35 +213,15 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Resolving);
-            m_stmtModule = (TypeCompositionStatement) m_stmtModule.resolveNames(getDeferred(), m_errs);
-            }
-        else
-            {
-            // second through n-th time through: resolve starting from whatever didn't get resolved
-            // last time, and recurse down
-            for (AstNode node : takeDeferred())
-                {
-                AstNode nodeNew = node.resolveNames(getDeferred(), m_errs);
-                if (node != nodeNew)
-                    {
-                    node.getParent().replaceChild(node, nodeNew);
-                    }
-                }
+            m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
             }
 
-        // when there is nothing left deferred, the resolution stage is completed
-        boolean fDone = getDeferred().isEmpty() && !m_errs.isAbortDesired();
-        if (fDone)
+        if (m_mgr.processComplete())
             {
-            // force the reregistration of constants after the names are resolved to eliminate
-            // cruft from earlier passes, such as void return types
-            // REVIEW GG - do we still need this, now that we got rid of capital-V Void?
-            m_structFile.reregisterConstants(false);
-
             setStage(Stage.Resolved);
             }
 
-        return fDone;
+        return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
     /**
@@ -264,35 +248,20 @@ public class Compiler
             }
 
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
-        // in one pass, then store it off in a list to tackle next time
+        // in one pass, the manager will keep track of what remains to be done
         if (!alreadyReached(Stage.Validating))
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Validating);
-            m_stmtModule = (TypeCompositionStatement) m_stmtModule.validateExpressions(getDeferred(), m_errs);
-            }
-        else
-            {
-            // second through n-th time through: validate starting from whatever didn't get
-            // validated last time, and recurse down
-            for (AstNode node : takeDeferred())
-                {
-                AstNode nodeNew = node.validateExpressions(getDeferred(), m_errs);
-                if (node != nodeNew)
-                    {
-                    node.getParent().replaceChild(node, nodeNew);
-                    }
-                }
+            m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
             }
 
-        // when there is nothing left deferred, the resolution stage is completed
-        boolean fDone = getDeferred().isEmpty();
-        if (fDone)
+        if (m_mgr.processComplete())
             {
             setStage(Stage.Validated);
             }
 
-        return fDone;
+        return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
     /**
@@ -324,34 +293,19 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Emitting);
-            m_stmtModule = m_stmtModule.generateCode(getDeferred(), m_errs);
-            }
-        else
-            {
-            // second through n-th time through: validate starting from whatever didn't get
-            // validated last time, and recurse down
-            for (AstNode node : takeDeferred())
-                {
-                AstNode nodeNew = node.generateCode(getDeferred(), m_errs);
-                if (node != nodeNew)
-                    {
-                    node.getParent().replaceChild(node, nodeNew);
-                    }
-                }
+            m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
             }
 
-        // when there is nothing left deferred, the resolution stage is completed
-        boolean fDone = getDeferred().isEmpty();
-        if (fDone)
+        if (m_mgr.processComplete())
             {
+            setStage(Stage.Emitted);
+
             // do a final validation on the entire module structure
             m_structFile.validate(m_errs);
             m_structFile.setErrorListener(null);
-
-            setStage(Stage.Emitted);
             }
 
-        return fDone;
+        return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
     /**
@@ -360,7 +314,7 @@ public class Compiler
      */
     public void logRemainingDeferredAsErrors()
         {
-        for (AstNode node : getDeferred())
+        for (AstNode node : m_mgr.takeRevisitList())
             {
             Component        component = node.getComponent();
             IdentityConstant id        = component == null ? null : component.getIdentityConstant();
@@ -434,34 +388,166 @@ public class Compiler
             }
         }
 
-    /**
-     * @return the list of AST nodes that have been deferred for the current stage
-     */
-    private List<AstNode> getDeferred()
-        {
-        return m_listDeferred;
-        }
+
+    // ----- data members --------------------------------------------------------------------------
 
     /**
-     * Take the list of whatever AST nodes were previously deferred. This resets the list of
-     * deferred nodes.
-     *
-     * @return the list of AST nodes that were previously deferred within the current stage
+     * Current compilation stage.
      */
-    private List<AstNode> takeDeferred()
+    private Stage m_stage = Stage.Initial;
+
+    /**
+     * The module repository to use.
+     */
+    private final ModuleRepository m_repos;
+
+    /**
+     * The TypeCompositionStatement for the module being compiled. This is an object returned from
+     * the Parser, or one assembled from multiple objects returned from the Parser.
+     */
+    private TypeCompositionStatement m_stmtModule;
+
+    /**
+     * The ErrorListener to report errors to.
+     */
+    private final ErrorListener m_errs;
+
+    /**
+     * The FileStructure that this compiler is putting together in a series of passes.
+     */
+    private FileStructure m_structFile;
+
+    /**
+     * Within a compiler stage that may not complete in a single pass, a manager is responsible for
+     * getting all of the nodes to complete that stage.
+     */
+    private StageMgr m_mgr;
+
+
+    // ----- inner class: Stage enumeration --------------------------------------------------------
+
+    /**
+     * The stages of compilation.
+     */
+    public enum Stage
         {
-        List<AstNode> listPrevious = m_listDeferred;
-        if (listPrevious.isEmpty())
+        Initial,
+        Registering,
+        Registered,
+        Loading,
+        Loaded,
+        Resolving,
+        Resolved,
+        Validating,
+        Validated,
+        Emitting,
+        Emitted,
+        Discarded;
+
+        /**
+         * @return true if this stage is a "target-able" stage, i.e. a stage that a node can be
+         *         asked to process towards
+         */
+        public boolean isTargetable()
             {
-            return Collections.EMPTY_LIST;
+            ensureValid();
+
+            // the even ordinals are targets
+            int n = ordinal();
+            return (n & 0x1) == 0 && n > 0;
             }
 
-        m_listDeferred = new ArrayList<>();
-        return listPrevious;
+        /**
+         * @return true if this stage is a intermediate stage, i.e. indicating that a node is in
+         *         the process of moving towards a target-able stage
+         */
+        public boolean isTransition()
+            {
+            ensureValid();
+
+            // the odd ordinals are intermediates
+            return (ordinal() & 0x1) == 1;
+            }
+
+        /**
+         * @return the transition stage related to this stage
+         */
+        public Stage getTransitionStage()
+            {
+            ensureValid();
+            return isTransition()
+                    ? this
+                    : prev();
+            }
+
+        /**
+         * Determine if this stage is at least as far along as that stage.
+         *
+         * @param that  another Stage
+         *
+         * @return true iff this Stage is at least as advanced as that stage
+         */
+        public boolean isAtLeast(Stage that)
+            {
+            ensureValid();
+            assert that.isTargetable();
+            return this.compareTo(that) >= 0;
+            }
+
+        /**
+         * Make sure that the stage is not Discarded.
+         */
+        public void ensureValid()
+            {
+            if (this == Discarded)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * @return the Stage that comes before this Stage
+         */
+        public Stage prev()
+            {
+            ensureValid();
+            return Stage.valueOf(this.ordinal() - 1);
+            }
+
+        /**
+         * @return the Stage that comes after this Stage
+         */
+        public Stage next()
+            {
+            ensureValid();
+            return Stage.valueOf(this.ordinal() + 1);
+            }
+
+        /**
+         * Look up a Stage enum by its ordinal.
+         *
+         * @param i  the ordinal
+         *
+         * @return the Stage enum for the specified ordinal
+         */
+        public static Stage valueOf(int i)
+            {
+            if (i >= 0 && i < STAGES.length)
+                {
+                return STAGES[i];
+                }
+
+            throw new IllegalArgumentException("no such stage ordinal: " + i);
+            }
+
+        /**
+         * All of the Stage enums.
+         */
+        private static final Stage[] STAGES = Stage.values();
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- compiler errors -----------------------------------------------------------------------
 
     /**
      * Unknown fatal error.
@@ -724,169 +810,4 @@ public class Compiler
      * Could not find a matching constructor for type "{0}".
      */
     public static final String MISSING_CONSTRUCTOR                = "COMPILER-65";
-
-
-    // ----- data members --------------------------------------------------------------------------
-
-    /**
-     * The stages of compilation.
-     */
-    public enum Stage
-        {
-        Initial,
-        Registering,
-        Registered,
-        Loading,
-        Loaded,
-        Resolving,
-        Resolved,
-        Validating,
-        Validated,
-        Emitting,
-        Emitted,
-        Discarded;
-
-        /**
-         * @return true if this stage is a "target-able" stage, i.e. a stage that a node can be
-         *         asked to process towards
-         */
-        public boolean isTargetable()
-            {
-            ensureValid();
-
-            // the even ordinals are targets
-            int n = ordinal();
-            return (n & 0x1) == 0 && n > 0;
-            }
-
-        /**
-         * @return true if this stage is a intermediate stage, i.e. indicating that a node is in
-         *         the process of moving towards a target-able stage
-         */
-        public boolean isTransition()
-            {
-            ensureValid();
-
-            // the odd ordinals are intermediates
-            return (ordinal() & 0x1) == 1;
-            }
-
-        /**
-         * @return the transition stage related to this stage
-         */
-        public Stage getTransitionStage()
-            {
-            ensureValid();
-            return isTransition()
-                    ? this
-                    : prev();
-            }
-
-        /**
-         * @return the transition stage related to this stage
-         */
-        public Stage getPrevTargetStage()
-            {
-            ensureValid();
-            return getTransitionStage().prev();
-            }
-
-        /**
-         * Determine if this stage is at least as far along as that stage.
-         *
-         * @param that  another Stage
-         *
-         * @return true iff this Stage is at least as advanced as that stage
-         */
-        public boolean isAtLeast(Stage that)
-            {
-            ensureValid();
-            assert that.isTargetable();
-            return this.compareTo(that) >= 0;
-            }
-
-        /**
-         * Make sure that the stage is not Discarded.
-         */
-        public void ensureValid()
-            {
-            if (this == Discarded)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * @return the Stage that comes before this Stage
-         */
-        public Stage prev()
-            {
-            ensureValid();
-            return Stage.valueOf(this.ordinal() - 1);
-            }
-
-        /**
-         * @return the Stage that comes after this Stage
-         */
-        public Stage next()
-            {
-            ensureValid();
-            return Stage.valueOf(this.ordinal() + 1);
-            }
-
-        /**
-         * Look up a Stage enum by its ordinal.
-         *
-         * @param i  the ordinal
-         *
-         * @return the Stage enum for the specified ordinal
-         */
-        public static Stage valueOf(int i)
-            {
-            if (i >= 0 && i < STAGES.length)
-                {
-                return STAGES[i];
-                }
-
-            throw new IllegalArgumentException("no such stage ordinal: " + i);
-            }
-
-        /**
-         * All of the Stage enums.
-         */
-        private static final Stage[] STAGES = Stage.values();
-        }
-
-    /**
-     * Current compilation stage.
-     */
-    private Stage m_stage = Stage.Initial;
-
-    /**
-     * The module repository to use.
-     */
-    private final ModuleRepository m_repos;
-
-    /**
-     * The TypeCompositionStatement for the module being compiled. This is an object returned from
-     * the Parser, or one assembled from multiple objects returned from the Parser.
-     */
-    private TypeCompositionStatement m_stmtModule;
-
-    /**
-     * The ErrorListener to report errors to.
-     */
-    private final ErrorListener m_errs;
-
-    /**
-     * The FileStructure that this compiler is putting together in a series of passes.
-     */
-    private FileStructure m_structFile;
-
-    /**
-     * Within a compiler stage that may not complete in a single cass, this holds a list of AstNode
-     * objects that have explicitly registered themselves as needing to be revisited.
-     */
-    private transient List<AstNode> m_listDeferred = new ArrayList<>();
-    ;
     }
