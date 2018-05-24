@@ -195,6 +195,13 @@ public class MethodDeclarationStatement
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
+        // methods are opaque, so everything inside can be deferred until we get to the
+        // validateExpressions() stage
+        if (!alreadyReached(Stage.Validating))
+            {
+            mgr.deferChildren();
+            }
+
         // create the structure for this method
         CreateStructure: if (getComponent() == null)
             {
@@ -290,7 +297,6 @@ public class MethodDeclarationStatement
         if (!alreadyReached(Stage.Validating))
             {
             mgr.processChildrenExcept((child) -> child == body | child == continuation);
-            mgr.deferChildren();
             }
         }
 
@@ -429,6 +435,7 @@ public class MethodDeclarationStatement
                         {
                         node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
                                 node.getComponent().getIdentityConstant().toString());
+                        return;
                         }
                     }
                 }
