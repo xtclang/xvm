@@ -68,7 +68,7 @@ public class StageMgr
         }
 
     /**
-     * From whatever stage the node is at, iterate through the stages to the target stage.
+     * From whatever stage the one node is at, iterate through the stages to the target stage.
      *
      * @param cMaxIters the maximum number of iterations to try to fast-forward to the target stage
      *
@@ -76,20 +76,23 @@ public class StageMgr
      */
     public boolean fastForward(int cMaxIters)
         {
-        boolean fDone = false;
-        Stage stageUltimate = m_target;
+        boolean       fDone      = false;
+        Stage         stageGoal  = m_target;
+        List<AstNode> listSingle = m_listRevisit;
+        assert listSingle.size() == 1;
         try
             {
             m_target = Stage.Registered;
-            while (m_target.compareTo(stageUltimate) <= 0 && m_cIters < cMaxIters)
+            while (!fDone && m_cIters < cMaxIters)
                 {
+                m_listRevisit = listSingle;
                 while (!processComplete() && m_cIters < cMaxIters)
                     {
                     }
 
                 if (isComplete())
                     {
-                    if (m_target == stageUltimate)
+                    if (m_target == stageGoal)
                         {
                         fDone = true;
                         break;
@@ -102,7 +105,7 @@ public class StageMgr
             }
         finally
             {
-            m_target = stageUltimate;
+            m_target = stageGoal;
             }
         return fDone;
         }
@@ -167,8 +170,8 @@ public class StageMgr
                         break;
 
                     case Loaded:
-                        // nothing to do
-                        break;
+                        // nothing to do; this stage does not apply to most AstNodes
+                        return true;
 
                     case Resolved:
                         node.resolveNames(this, m_errs);

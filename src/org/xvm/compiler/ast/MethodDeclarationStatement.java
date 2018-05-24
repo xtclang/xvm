@@ -296,7 +296,9 @@ public class MethodDeclarationStatement
         // validateExpressions() stage
         if (!alreadyReached(Stage.Validating))
             {
-            mgr.processChildrenExcept((child) -> child == body | child == continuation);
+            mgr.processChildrenExcept(alreadyReached(Stage.Validating)
+                    ? null
+                    : (child) -> child == body | child == continuation);
             }
         }
 
