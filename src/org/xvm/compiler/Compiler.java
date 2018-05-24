@@ -293,7 +293,7 @@ public class Compiler
             {
             // first time through: resolve starting from the module, and recurse down
             setStage(Stage.Emitting);
-            m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
+            m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
             }
 
         if (m_mgr.processComplete())

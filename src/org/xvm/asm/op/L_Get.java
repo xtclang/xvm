@@ -129,6 +129,12 @@ public class L_Get
         registerArgument(m_argReturn, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()+ ", " + Argument.toIdString(m_argReturn, m_nRetValue);
+        }
+
     private int m_nRetValue;
 
     private Argument m_argReturn;

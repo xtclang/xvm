@@ -138,6 +138,14 @@ public class P_Set
         registerArgument(m_argValue, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argValue, m_nValue);
+        }
+
     private int m_nTarget;
     private int m_nValue;
 

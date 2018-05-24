@@ -111,6 +111,28 @@ public class Return_N
         registerArguments(m_aArg, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        StringBuffer sb = new StringBuffer();
+
+        sb.append(super.toString())
+          .append(" (");
+
+        int cArgs = m_anArg.length;
+        for (int i = 0; i < cArgs; i++)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(Argument.toIdString(m_aArg[i], m_anArg[i]));
+            }
+
+        sb.append(')');
+        return sb.toString();
+        }
+
     private int[] m_anArg;
 
     private Argument[] m_aArg;

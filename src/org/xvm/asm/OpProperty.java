@@ -57,7 +57,13 @@ public abstract class OpProperty extends Op
         registerArgument(m_constProperty, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()+ ' ' + Argument.toIdString(m_constProperty, m_nPropId);
+        }
+
     protected int m_nPropId;
 
-    private PropertyConstant m_constProperty;
+    protected PropertyConstant m_constProperty;
     }

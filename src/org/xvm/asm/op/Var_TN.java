@@ -158,6 +158,14 @@ public class Var_TN
         registerArguments(m_aArgValue, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' ' + Argument.toIdString(m_constName, m_nNameId);
+        // TODO arguments
+        }
+
     private int   m_nNameId;
     private int[] m_anArgValue;
 

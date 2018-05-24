@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
@@ -140,6 +141,13 @@ public class Var_DN
         super.registerConstants(registry);
 
         registerArgument(m_constName, registry);
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' ' + Argument.toIdString(m_constName, m_nNameId);
         }
 
     private int m_nNameId;
