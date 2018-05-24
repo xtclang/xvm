@@ -122,7 +122,7 @@ public class StatementBlock
      * Obtain the ImportStatement for a particular import alias. This method has different behaviors
      * depending on the phase of compilation. During the phase in which the imports are registered,
      * this will only provide an answer for the imports that have already been registered. For
-     * example, the {@link AstNode#resolveNames(List, ErrorListener)} method
+     * example, the {@link AstNode#resolveNames(StageMgr, ErrorListener)} method
      * is used to resolve all global names (all names, down to the method level, but not resolving
      * within any methods), and thus imports outside of methods are all registered during that
      * phase, such that only the ones registered will be visible via this method. The reason for

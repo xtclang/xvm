@@ -10,8 +10,8 @@ module Ecstasy.xtclang.org
 
     package types
         {
-        interface Property {}
-        interface Method {}
+        const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<PropertyType>>> method);
+        const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>;
         }
 
     typedef Tuple<> Void;

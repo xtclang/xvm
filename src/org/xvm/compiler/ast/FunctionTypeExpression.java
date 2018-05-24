@@ -92,32 +92,6 @@ public class FunctionTypeExpression
         }
 
 
-    // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (!alreadyReached(Stage.Resolved))
-            {
-            setStage(Stage.Resolving);
-
-            for (TypeExpression type : returnValues)
-                {
-                type.resolveNames(listRevisit, errs);
-                }
-            for (TypeExpression type : paramTypes)
-                {
-                type.resolveNames(listRevisit, errs);
-                }
-
-            // obtain and store off the Nullable form of the sub-type
-            ensureTypeConstant();
-            }
-
-        return super.resolveNames(listRevisit, errs);
-        }
-
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override

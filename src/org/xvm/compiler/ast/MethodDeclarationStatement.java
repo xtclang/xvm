@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -192,7 +193,7 @@ public class MethodDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // create the structure for this method
         CreateStructure: if (getComponent() == null)
@@ -284,12 +285,25 @@ public class MethodDeclarationStatement
                 }
             }
 
-        return super.registerStructures(errs);
+        // methods are opaque, so everything inside can be deferred until we get to the
+        // validateExpressions() stage
+        if (!alreadyReached(Stage.Validating))
+            {
+            mgr.processChildrenExcept((child) -> child == body | child == continuation);
+            mgr.deferChildren();
+            }
         }
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
+        // methods are opaque, so everything inside can be deferred until we get to the
+        // validateExpressions() stage
+        if (!alreadyReached(Stage.Validating))
+            {
+            mgr.deferChildren();
+            }
+
         if (getComponent() == null)
             {
             Component container = getParent().getComponent();
@@ -306,8 +320,8 @@ public class MethodDeclarationStatement
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params, errs);
                     if (methodSuper == null)
                         {
-                        listRevisit.add(this);
-                        return this;
+                        mgr.requestRevisit();
+                        return;
                         }
 
                     ConstantPool            pool     = container.getConstantPool();
@@ -324,8 +338,8 @@ public class MethodDeclarationStatement
                             if (constReturn.getFormat() == Constant.Format.UnresolvedName)
                                 {
                                 // not yet resolved; come back later
-                                listRevisit.add(this);
-                                return this;
+                                mgr.requestRevisit();
+                                return;
                                 }
 
                             if (constReturn.getFormat() == Constant.Format.Property
@@ -352,8 +366,11 @@ public class MethodDeclarationStatement
                 }
             }
 
-        AstNode nodeResult = super.resolveNames(listRevisit, errs);
-        assert nodeResult == this;
+        // methods are opaque, so everything inside the curlies can be deferred until we get to the
+        // validateExpressions() stage
+        mgr.processChildrenExcept(alreadyReached(Stage.Validating)
+                ? null
+                : (child) -> child == body | child == continuation);
 
         Component component = getComponent();
         if (component instanceof MethodStructure)
@@ -363,16 +380,64 @@ public class MethodDeclarationStatement
             // sort out which annotations go on the method, and which belong to the return type
             if (!method.resolveAnnotations())
                 {
-                listRevisit.add(this);
-                return this;
+                mgr.requestRevisit();
+                return;
                 }
             }
 
-        return this;
         }
 
     @Override
-    public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
+    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+        {
+        // method children are all deferred up until this stage, so we have to "catch them up" at
+        // this point, recreating the various compiler stages here
+        Stage stageOldest = null;
+        for (AstNode node : children())
+            {
+            Stage stage = node.getStage();
+            if (stageOldest == null)
+                {
+                stageOldest = stage;
+                }
+            else if (stage.compareTo(stageOldest) < 0)
+                {
+                stageOldest = stage;
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Registered) < 0)
+            {
+            // compiler stage 1: generateInitialFileStructure()
+            StageMgr mgrKids = new StageMgr(this, Stage.Registered, errs);
+            if (!mgrKids.processComplete())
+                {
+                // registration is supposed to always complete in a single pass
+                log(errs, Severity.FATAL, Compiler.FATAL_ERROR);
+                return;
+                }
+            }
+
+        if (stageOldest != null && stageOldest.compareTo(Stage.Resolved) < 0)
+            {
+            // compiler stage 2: resolveNames()
+            StageMgr mgrKids = new StageMgr(this, Stage.Resolved, errs);
+            while (!mgrKids.processComplete())
+                {
+                if (mgrKids.getIterations() > 20)
+                    {
+                    for (AstNode node : mgrKids.takeRevisitList())
+                        {
+                        node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
+                                node.getComponent().getIdentityConstant().toString());
+                        }
+                    }
+                }
+            }
+        }
+
+    @Override
+    public void generateCode(StageMgr mgr, ErrorListener errs)
         {
         ensureReached(Stage.Validated);
         if (!alreadyReached(Stage.Emitted))
@@ -407,7 +472,8 @@ public class MethodDeclarationStatement
                                 }
                             }
 
-                        return super.generateCode(listRevisit, errs);
+                        mgr.processChildren();
+                        return;
                         }
                     else
                         {
@@ -460,8 +526,6 @@ public class MethodDeclarationStatement
                     }
                 }
             }
-
-        return this;
         }
 
 

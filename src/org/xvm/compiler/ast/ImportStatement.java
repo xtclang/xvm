@@ -111,17 +111,16 @@ public class ImportStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         if (cond != null)
             {
             log(errs, Severity.WARNING, Compiler.CONDITIONAL_IMPORT);
             }
-        return super.registerStructures(errs);
         }
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
         setStage(Stage.Resolving);
 
@@ -143,11 +142,9 @@ public class ImportStatement
 
         if (getNameResolver().resolve(errs) == Result.DEFERRED)
             {
-            listRevisit.add(this);
-            return this;
+            mgr.requestRevisit();
+            return;
             }
-
-        return super.resolveNames(listRevisit, errs);
         }
 
 

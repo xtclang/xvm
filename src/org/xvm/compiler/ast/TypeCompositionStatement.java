@@ -262,39 +262,14 @@ public class TypeCompositionStatement
         return body;
         }
 
-    /**
-     * Instantiate and populate the initial FileStructure for this module.
-     *
-     * @return  a new FileStructure for this module, with the module, packages, and classes
-     *          registered
-     */
-    public FileStructure createModuleStructure(ErrorListener errs)
-        {
-        assert category.getId() == Token.Id.MODULE;     // it has to be a module!
-        assert condition == null;                       // module cannot be conditional
-        assert getComponent() == null;                  // it can't already have been created!
-
-        // validate the module name
-        String sName = getName();
-        if (!isValidQualifiedModule(sName))
-            {
-            log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sName);
-            throw new CompilerException("unable to create module with illegal name: " + sName);
-            }
-
-        TypeCompositionStatement nodeResult = registerStructures(errs);
-        if (nodeResult != this)
-            {
-            throw new IllegalStateException("module cannot replace itself");
-            }
-
-        return getComponent().getFileStructure();
-        }
-
     @Override
-    protected TypeCompositionStatement registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        assert getComponent() == null;
+        if (getComponent() != null)
+            {
+            // stage assumed to be complete
+            return;
+            }
 
         // if this is a module, this stage is responsible for linking each child AstNode to its
         // parent (the parents already know the children, as a result of parsing)
@@ -328,8 +303,16 @@ public class TypeCompositionStatement
                     }
                 else if (container == null)
                     {
+                    // validate the module name
+                    String sModule = getName();
+                    if (!isValidQualifiedModule(sModule))
+                        {
+                        log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
+                        throw new CompilerException("unable to create module with illegal name: " + sModule);
+                        }
+
                     // create the FileStructure and "this" ModuleStructure
-                    FileStructure struct = new FileStructure(getName());
+                    FileStructure struct = new FileStructure(sModule);
                     component = struct.getModule();
                     pool      = struct.getConstantPool();
 
@@ -430,7 +413,7 @@ public class TypeCompositionStatement
         if (component == null)
             {
             // must have been an error
-            return this;
+            return;
             }
 
         // documentation
@@ -1173,14 +1156,15 @@ public class TypeCompositionStatement
                 }
             }
 
-        TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
+        // recursively register structures
+        mgr.processChildren();
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
         // resolve-names pass) once we we can figure out what types mean; for now, if the properties
         // are missing (i.e. not redundantly declared), then create them, and either way, we will
         // double-check them once we can resolve types
-        if (nodeNew == this && constructorParams != null && !constructorParams.isEmpty())
+        if (constructorParams != null && !constructorParams.isEmpty())
             {
             Map<String, Component> mapChildren = component.ensureChildByNameMap();
             for (Parameter param : constructorParams)
@@ -1196,7 +1180,7 @@ public class TypeCompositionStatement
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
                             param.getType(), param.getNameToken(), null, null, null);
                     prop.setParent(this);
-                    prop.registerStructures(errs);
+                    prop.registerStructures(mgr, errs);
                     PropertyStructure struct = (PropertyStructure) mapChildren.get(sParam);
                     struct.setSynthetic(true);
                     }
@@ -1207,12 +1191,10 @@ public class TypeCompositionStatement
                     }
                 }
             }
-
-        return nodeNew;
         }
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
         ClassStructure component     = (ClassStructure) getComponent();
         Format         format        = component.getFormat();
@@ -1251,13 +1233,7 @@ public class TypeCompositionStatement
                 }
             }
 
-        TypeCompositionStatement stmtThis = (TypeCompositionStatement) super.resolveNames(listRevisit, errs);
-        if (stmtThis != this)
-            {
-            listRevisit.add(stmtThis);
-            return stmtThis;
-            }
-
+        mgr.processChildren();
         Map<String, Component> mapChildren  = component.ensureChildByNameMap();
         MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
         if (constructorParams != null && !constructorParams.isEmpty())
@@ -1279,8 +1255,8 @@ public class TypeCompositionStatement
                 TypeConstant      typeProp  = prop.getType();
                 if (typeParam.containsUnresolved() || typeProp.containsUnresolved())
                     {
-                    listRevisit.add(this);
-                    return this;
+                    mgr.requestRevisit();
+                    return;
                     }
 
                 // the property type must be compatible with the parameter type
@@ -1327,8 +1303,8 @@ public class TypeCompositionStatement
                             TypeConstant typeConsParam = aConsParams[i].getType();
                             if (typeConsParam.containsUnresolved())
                                 {
-                                listRevisit.add(this);
-                                return this;
+                                mgr.requestRevisit();
+                                return;
                                 }
                             // note: it is too early in the compilation cycle to use "isA()" (REVIEW GG)
                             if (!atypeParams[i].equals(typeConsParam))
@@ -1436,15 +1412,12 @@ public class TypeCompositionStatement
                         component.getName());
                 }
             }
-
-        return this;
         }
 
     @Override
-    public TypeCompositionStatement generateCode(List<AstNode> listRevisit, ErrorListener errs)
+    public void generateCode(StageMgr mgr, ErrorListener errs)
         {
         // TODO what things on the type require code gen? constructors? any other init work (e.g. prop vals)?
-        return (TypeCompositionStatement) super.generateCode(listRevisit, errs);
         }
 
     private void disallowTypeParams(ErrorListener errs)

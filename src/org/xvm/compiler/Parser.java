@@ -15,6 +15,7 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
@@ -128,11 +129,10 @@ public class Parser
                 type.getStartPosition(), type.getEndPosition(), null, null, null,
                 new Token(0, 0, Id.MODULE), null, null, null, null, null, body, null);
         module.buildDumpModule(ctx);
-        List list = new ArrayList<>();
-        module.resolveNames(list, m_errorListener);
-        assert list.isEmpty();
-        module.validateExpressions(list, m_errorListener);
-        assert list.isEmpty();
+        boolean fOK = new StageMgr(module, Stage.Registered, m_errorListener).processComplete()
+                   && new StageMgr(module, Stage.Resolved  , m_errorListener).processComplete()
+                   && new StageMgr(module, Stage.Validated , m_errorListener).processComplete();
+        assert fOK;
         return type.ensureTypeConstant();
         }
 

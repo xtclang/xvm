@@ -66,7 +66,7 @@ public class TypedefStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // create the structure for this method
         if (getComponent() == null)
@@ -87,8 +87,6 @@ public class TypedefStatement
                 throw new UnsupportedOperationException("not a typedef container: " + container);
                 }
             }
-
-        return super.registerStructures(errs);
         }
 
 

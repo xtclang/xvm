@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -82,26 +80,6 @@ public class BiTypeExpression
             default:
                 throw new IllegalStateException("unsupported operator: " + operator);
             }
-        }
-
-
-    // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (!alreadyReached(Stage.Resolved))
-            {
-            setStage(Stage.Resolving);
-
-            // resolve the sub-types
-            type1.resolveNames(listRevisit, errs);
-            type2.resolveNames(listRevisit, errs);
-
-            ensureTypeConstant();
-            }
-
-        return super.resolveNames(listRevisit, errs);
         }
 
 

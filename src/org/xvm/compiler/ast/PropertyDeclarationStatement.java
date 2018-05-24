@@ -224,7 +224,7 @@ public class PropertyDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // create the structure for this property
         if (getComponent() == null)
@@ -272,18 +272,16 @@ public class PropertyDeclarationStatement
                 log(errs, Severity.ERROR, Compiler.PROP_UNEXPECTED, sName, container);
                 }
             }
-
-        return super.registerStructures(errs);
         }
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        return super.resolveNames(listRevisit, errs);
+        // TODO?
         }
 
     @Override
-    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
+    public void validateExpressions(StageMgr mgr, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Validated))
             {
@@ -292,8 +290,8 @@ public class PropertyDeclarationStatement
             PropertyStructure prop = (PropertyStructure) getComponent();
             if (!prop.resolveAnnotations())
                 {
-                listRevisit.add(this);
-                return this;
+                mgr.requestRevisit();
+                return;
                 }
 
             if (prop.hasInitialValue())
@@ -313,21 +311,17 @@ public class PropertyDeclarationStatement
 
                 // we're going to compile the initializer now, so that we can determine if it could
                 // be discarded and replaced with a constant
-                List<AstNode> listTemp = new ArrayList<>();
-                stmtInit = (MethodDeclarationStatement) stmtInit.registerStructures(errs);
-                stmtInit = (MethodDeclarationStatement) stmtInit.resolveNames(listTemp, errs);
-                if (listTemp.isEmpty())
+                if (new StageMgr(stmtInit, Stage.Registered, errs).processComplete() &&
+                    new StageMgr(stmtInit, Stage.Resolved  , errs).processComplete() &&
+                    new StageMgr(stmtInit, Stage.Validated , errs).processComplete() &&
+                    new StageMgr(stmtInit, Stage.Emitted   , errs).processComplete())
                     {
-                    stmtInit = (MethodDeclarationStatement) stmtInit.validateExpressions(listTemp, errs);
-                    if (listTemp.isEmpty())
-                        {
-                        stmtInit.generateCode(listTemp, errs);
-                        }
+
                     }
-                if (!listTemp.isEmpty())
+                else
                     {
-                    listRevisit.add(this);
-                    return this;
+                    mgr.requestRevisit();
+                    return;
                     }
 
                 // if in the process of compiling the initializer, it became obvious that the result
@@ -357,8 +351,6 @@ public class PropertyDeclarationStatement
                     }
                 }
             }
-
-        return super.validateExpressions(listRevisit, errs);
         }
 
 

@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -92,26 +90,6 @@ public class DecoratedTypeExpression
         {
         this.type = type;
         type.setParent(this);
-        }
-
-
-    // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (!alreadyReached(Stage.Resolved))
-            {
-            setStage(Stage.Resolving);
-
-            // resolve the sub-type
-            type.resolveNames(listRevisit, errs);
-
-            // store off a type constant for this type expression
-            ensureTypeConstant();
-            }
-
-        return super.resolveNames(listRevisit, errs);
         }
 
 
