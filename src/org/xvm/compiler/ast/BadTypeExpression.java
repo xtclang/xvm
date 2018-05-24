@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -53,6 +54,14 @@ public class BadTypeExpression
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
+        }
+
+
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
         }
 
 

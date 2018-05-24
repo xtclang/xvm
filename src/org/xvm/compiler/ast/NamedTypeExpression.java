@@ -386,18 +386,22 @@ public class NamedTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        setStage(Stage.Resolving);
-
         NameResolver resolver = getNameResolver();
         switch (resolver.resolve(errs))
             {
             case DEFERRED:
-                listRevisit.add(this);
-                return this;
+                mgr.requestRevisit();
+                return;
 
             case RESOLVED:
+                if (!mgr.processChildren())
+                    {
+                    mgr.requestRevisit();
+                    return;
+                    }
+
                 // now that we have the resolved constId, update the unresolved m_constId to point to
                 // the resolved one (just in case anyone is holding the wrong one
                 Constant constId = inferAutoNarrowing(resolver.getConstant());
@@ -410,8 +414,6 @@ public class NamedTypeExpression
                 m_constId = constId;
                 ensureTypeConstant();
             }
-
-        return super.resolveNames(listRevisit, errs);
         }
 
     @Override

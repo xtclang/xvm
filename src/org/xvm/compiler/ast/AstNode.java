@@ -319,33 +319,11 @@ public abstract class AstNode
      * they will be required to already be present when the second pass begins.</li>
      * </ul>
      *
-     *
-     * @param mgr
-     * @param errs    the error list to log any errors etc. to
-     *
-     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
-     *         for "this" node, if appropriate
+     * @param mgr   the Stage Manager that is conducting the processing
+     * @param errs  the error list to log any errors etc. to
      */
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        ensureReached(Stage.Initial);
-        setStage(Stage.Registering);
-
-        ChildIterator children = children();
-        for (AstNode node : children)
-            {
-            if (!node.alreadyReached(Stage.Registered))
-                {
-                AstNode nodeNew = node.registerStructures(mgr, errs);
-                if (node != nodeNew)
-                    {
-                    children.replaceWith(nodeNew);
-                    }
-                }
-            }
-
-        setStage(Stage.Registered);
-        return this;
         }
 
     /**
@@ -369,34 +347,11 @@ public abstract class AstNode
      * present and which of their Compositions are in effect.</li>
      * </ul>
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
-     *                     pass
-     * @param errs         the error list to log any errors to
-     *
-     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
-     *         for "this" node, if appropriate
+     * @param mgr   the Stage Manager that is conducting the processing
+     * @param errs  the error list to log any errors etc. to
      */
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        ensureReached(Stage.Registered);
-        setStage(Stage.Resolving);
-
-        ChildIterator children = children();
-        for (AstNode node : children)
-            {
-            // don't visit children that have already successfully resolved
-            if (!node.alreadyReached(Stage.Resolved))
-                {
-                AstNode nodeNew = node.resolveNames(listRevisit, errs);
-                if (node != nodeNew)
-                    {
-                    children.replaceWith(nodeNew);
-                    }
-                }
-            }
-
-        setStage(Stage.Resolved);
-        return this;
         }
 
     /**
@@ -404,159 +359,21 @@ public abstract class AstNode
      * and structures within methods. To accomplish this, this pass must be able to resolve type
      * names, which is why the second pass was necessarily a separate pass.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
-     *                     pass
-     * @param errs         the error list to log any errors to
-     *
-     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
-     *         for "this" node, if appropriate
+     * @param mgr   the Stage Manager that is conducting the processing
+     * @param errs  the error list to log any errors etc. to
      */
-    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
+    public void validateExpressions(StageMgr mgr, ErrorListener errs)
         {
-        ensureReached(Stage.Resolved);
-        setStage(Stage.Validating);
-
-        // it's possible that there are children whose stages have been deferred until this point;
-        // quick scan children to determine oldest stage, and if any stages were deferred, then
-        // recreate the various compiler stages here
-        Stage stageOldest = null;
-        for (AstNode node : children())
-            {
-            Stage stage = node.getStage();
-            if (stageOldest == null)
-                {
-                stageOldest = stage;
-                }
-            else if (stage.compareTo(stageOldest) < 0)
-                {
-                stageOldest = stage;
-                }
-            }
-
-        if (stageOldest != null && stageOldest.compareTo(Stage.Registered) < 0)
-            {
-            // compiler stage 1: generateInitialFileStructure()
-            ChildIterator children = children();
-            for (AstNode node : children)
-                {
-                if (!node.alreadyReached(Stage.Registered))
-                    {
-                    AstNode nodeNew = node.registerStructures(mgr, errs);
-                    if (node != nodeNew)
-                        {
-                        children.replaceWith(nodeNew);
-                        }
-                    }
-                }
-            }
-
-        if (stageOldest != null && stageOldest.compareTo(Stage.Resolved) < 0)
-            {
-            // compiler stage 2: resolveNames()
-            List<AstNode> listDeferred = new ArrayList<>();
-            ChildIterator children     = children();
-            for (AstNode node : children)
-                {
-                if (node.alreadyReached(Stage.Registered) && !node.alreadyReached(Stage.Resolved))
-                    {
-                    AstNode nodeNew = node.resolveNames(listDeferred, errs);
-                    if (node != nodeNew)
-                        {
-                        children.replaceWith(nodeNew);
-                        }
-                    }
-                }
-
-            for (int cTries = 20; !listDeferred.isEmpty() && cTries > 0; --cTries)
-                {
-                List listDeferredAgain = new ArrayList<>();
-                for (AstNode node : listDeferred)
-                    {
-                    AstNode nodeNew = node.resolveNames(listDeferredAgain, errs);
-                    if (node != nodeNew)
-                        {
-                        node.getParent().replaceChild(node, nodeNew);
-                        }
-                    }
-                listDeferred = listDeferredAgain;
-                }
-
-            if (!listDeferred.isEmpty())
-                {
-                for (AstNode node : listDeferred)
-                    {
-                    node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
-                            node.getComponent().getIdentityConstant().toString());
-                    }
-                }
-            }
-
-        if (stageOldest != null && stageOldest.compareTo(Stage.Validated) < 0)
-            {
-            ChildIterator children = children();
-            for (AstNode node : children)
-                {
-                // don't visit children that have already successfully validated, and since it's
-                // possible that some children just got registered and resolved in this stage, don't
-                // try to validate any child that isn't caught up to this stage
-                // (see MethodDeclarationStatement.validateExpressions())
-                if (node.alreadyReached(Stage.Resolved) && !node.alreadyReached(Stage.Validated))
-                    {
-                    try
-                        {
-                        AstNode nodeNew = node.validateExpressions(listRevisit, errs);
-                        if (node != nodeNew)
-                            {
-                            children.replaceWith(nodeNew);
-                            }
-                        }
-                    catch (UnsupportedOperationException e) // TODO: remove when fully implemented
-                        {
-                        node.setStage(Stage.Validated);
-                        }
-                    }
-                }
-            }
-
-        setStage(Stage.Validated);
-        return this;
         }
 
     /**
      * Fourth logical compiler pass. Emits the resulting, finished structures.
      *
-     * @param listRevisit  a list to add any nodes to that need to be revisited during this compiler
-     *                     pass
-     * @param errs         the error list to log any errors to
-     *
-     * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
-     *         for "this" node, if appropriate
+     * @param mgr   the Stage Manager that is conducting the processing
+     * @param errs  the error list to log any errors etc. to
      */
-    public AstNode generateCode(List<AstNode> listRevisit, ErrorListener errs)
+    public void generateCode(StageMgr mgr, ErrorListener errs)
         {
-        ensureReached(Stage.Validated);
-        setStage(Stage.Emitting);
-
-        ChildIterator children = children();
-        for (AstNode node : children)
-            {
-            try
-                {
-                AstNode nodeNew = node.generateCode(listRevisit, errs);
-                if (node != nodeNew)
-                    {
-                    children.replaceWith(nodeNew);
-                    }
-                }
-            catch (UnsupportedOperationException e) // TODO: remove when fully implemented
-                {
-                node.setStage(Stage.Emitted);
-                }
-            }
-
-        setStage(Stage.Emitted);
-
-        return this;
         }
 
 

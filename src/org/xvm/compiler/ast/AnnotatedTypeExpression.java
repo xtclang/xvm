@@ -3,13 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.List;
-
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler.Stage;
@@ -129,40 +125,6 @@ public class AnnotatedTypeExpression
         return isDisassociated()
                 ? typeUnderlying    // our annotation is not added to the underlying type constant
                 : pool.ensureAnnotatedTypeConstant(annotation.ensureAnnotation(pool), typeUnderlying);
-        }
-
-
-    // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (!alreadyReached(Stage.Resolved))
-            {
-            setStage(Stage.Resolving);
-
-            // resolve the annotation and sub-type
-            AstNode annotationNew = annotation.resolveNames(listRevisit, errs);
-            AstNode typeNew       = type.resolveNames(listRevisit, errs);
-
-            assert annotationNew != null && typeNew != null;
-            annotation = (Annotation) annotationNew;
-            type       = (TypeExpression) typeNew;
-
-            if (!annotationNew.alreadyReached(Stage.Resolved) || !typeNew.alreadyReached(Stage.Resolved))
-                {
-                listRevisit.add(this);
-                return this;
-                }
-
-            // store off a type constant for this type expression
-            // note: each of the parameters of the Annotation will be verified to be a compile-time
-            //       constant, but that cannot be attempted until after the call to validate() /
-            //       validateMulti(); @see Annotation#validateExpressions
-            ensureTypeConstant();
-            }
-
-        return super.resolveNames(listRevisit, errs);
         }
 
 

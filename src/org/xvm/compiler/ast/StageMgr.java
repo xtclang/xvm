@@ -5,9 +5,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.function.Predicate;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler.Stage;
+
+import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 
 /**
@@ -21,39 +24,39 @@ public class StageMgr
      *
      * @param node         the node to process
      * @param stageTarget  the target stage
-     * @param errs         the error list to log to
+     * @param errs         the optional error list to log to
      */
     public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs)
         {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
-        assert stageTarget.isAtLeast(node.getStage());
-        assert node.getStage().isAtLeast(stageTarget.getPrevTargetStage());
 
-        m_cur    = node;
-        m_target = stageTarget;
-        m_errs   = errs == null ? ErrorListener.BLACKHOLE : errs;
+        m_listRevisit = Collections.singletonList(node);
+        m_target      = stageTarget;
+        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        }
+
+    /**
+     * @return true iff the stage manager has completed the processing of the nodes to achieve the
+     *         target stage
+     */
+    public boolean isComplete()
+        {
+        // complete if it isn't currently processing and there's nothing queued to process
+        return m_cur == null && m_listRevisit == null;
         }
 
     /**
      * Process all of the nodes that can be processed at this point.
      *
-     * @return true iff the stage manager has processing work left to do
+     * @return true iff the stage manager has completed the processing of the nodes to achieve the
+     *         target stage
      */
-    public boolean revisitRequired()
+    public boolean processComplete()
         {
-        // the first time through, m_cur is already set to the top node to process, and the revisit
-        // list is not present
-        AstNode node = m_cur;
-        assert node == null | m_listRevisit == null;
-        if (node != null)
+        if (m_listRevisit != null)
             {
-            m_cur = null;
-            processInternal(node);
-            }
-        else if (m_listRevisit != null)
-            {
-            for (node : takeRevisitList())
+            for (AstNode node : takeRevisitList())
                 {
                 processInternal(node);
                 }
@@ -61,6 +64,39 @@ public class StageMgr
 
         ++m_cIters;
         return m_listRevisit == null;
+        }
+
+    public boolean fastForward(int cMaxIters)
+        {
+        boolean fDone = false;
+        Stage stageUltimate = m_target;
+        try
+            {
+            m_target = Stage.Registered;
+            while (m_target.compareTo(stageUltimate) <= 0 && m_cIters < cMaxIters)
+                {
+                while (!processComplete() && m_cIters < cMaxIters)
+                    {
+                    }
+
+                if (isComplete())
+                    {
+                    if (m_target == stageUltimate)
+                        {
+                        fDone = true;
+                        break;
+                        }
+
+                    // advance to next target
+                    m_target = Stage.valueOf(m_target.ordinal() + 2);
+                    }
+                }
+            }
+        finally
+            {
+            m_target = stageUltimate;
+            }
+        return fDone;
         }
 
     /**
@@ -90,10 +126,11 @@ public class StageMgr
     /**
      * @param node  the node to attempt to advance to the target stage
      */
-    protected void processInternal(AstNode node)
+    protected boolean processInternal(AstNode node)
         {
-        AstNode nodePrev      = m_cur;
-        byte    nFlagsPrev    = m_nFlags;
+        boolean fDone      = true;
+        AstNode nodePrev   = m_cur;
+        byte    nFlagsPrev = m_nFlags;
         try
             {
             m_cur    = node;
@@ -103,12 +140,14 @@ public class StageMgr
             stageCur.ensureValid();
 
             Stage stageTarget = m_target;
-            if (!stageCur.isAtLeast(stageTarget))
+            if (stageCur.compareTo(stageTarget) < 0)
                 {
-                if (!stageCur.isAtLeast(stageTarget.getPrevTargetStage()))
+                Stage stageRequired = requiredStage(stageTarget);
+                if (stageCur.compareTo(stageRequired) < 0)
                     {
-                    throw new IllegalStateException("target stage=" + stageTarget
-                            + ", expected minimum stage=" + stageTarget.getPrevTargetStage()
+                    throw new IllegalStateException("current stage=" + stageCur
+                            + ", target stage=" + stageTarget
+                            + ", required stage=" + stageRequired
                             + ", node=" + node.getDumpDesc());
                     }
 
@@ -120,25 +159,36 @@ public class StageMgr
                         break;
 
                     case Loaded:
+                        // nothing to do
                         break;
+
                     case Resolved:
+                        node.resolveNames(this, m_errs);
                         break;
+
                     case Validated:
+                        node.validateExpressions(this, m_errs);
                         break;
+
                     case Emitted:
+                        node.generateCode(this, m_errs);
                         break;
+
+                    default:
+                        throw new IllegalStateException("unsupported target: " + stageTarget);
                     }
-
-                // TODO
-
                 }
 
             if (!isChildrenProcessed() && !isChildrenDeferred())
                 {
-                processChildren();
+                fDone &= processChildren();
                 }
 
-            if (!isRevisitRequested())
+            if (isRevisitRequested())
+                {
+                fDone = false;
+                }
+            else
                 {
                 markComplete();
                 }
@@ -147,6 +197,30 @@ public class StageMgr
             {
             m_cur    = nodePrev;
             m_nFlags = nFlagsPrev;
+            }
+
+        return fDone;
+        }
+
+    private Stage requiredStage(Stage target)
+        {
+        switch (target)
+            {
+            case Registered:
+                return Stage.Initial;
+
+            case Loaded:
+            case Resolved:
+                return Stage.Registered;
+
+            case Validated:
+                return Stage.Resolved;
+
+            case Emitted:
+                return Stage.Validated;
+
+            default:
+                throw new IllegalStateException("unsupported target: " + target);
             }
         }
 
@@ -168,7 +242,22 @@ public class StageMgr
      */
     public void replaceSelf(AstNode node)
         {
-        // TODO - as part of implementing processChildren()
+        AstNode       nodePrev = ensureCurrentNode();
+        ChildIterator iterKids = m_iterKids;
+        if (iterKids == null)
+            {
+            AstNode nodeParent = nodePrev.getParent();
+            if (nodeParent == null)
+                {
+                throw new IllegalStateException("not a replaceable child: "
+                        + nodePrev.getDumpDesc());
+                }
+            nodeParent.replaceChild(nodePrev, node);
+            }
+        else
+            {
+            iterKids.replaceWith(node);
+            }
         }
 
     /**
@@ -203,14 +292,44 @@ public class StageMgr
      * Suspend the processing of the current node and process each of its children, only returning
      * to the current node after all of the children return.
      */
-    public void processChildren()
+    public boolean processChildren()
         {
-        AstNode node = ensureCurrentNode();
+        return processChildrenExcept(null);
+        }
 
-        // mark this as having visited its children
-        m_nFlags = (byte) (m_nFlags | VISITED_KIDS);
+    /**
+     * Suspend the processing of the current node and process each of its children, only returning
+     * to the current node after all of the children return.
+     */
+    public boolean processChildrenExcept(Predicate exclude)
+        {
+        boolean fDone = true;
+        ChildIterator iterPrev = m_iterKids;
+        try
+            {
+            AstNode node = ensureCurrentNode();
 
-        // TODO TODO
+            // create a child iterator
+            ChildIterator iter = node.children();
+            m_iterKids = iter;
+
+            // mark this as having visited its children
+            m_nFlags = (byte) (m_nFlags | VISITED_KIDS);
+
+            while (iter.hasNext())
+                {
+                AstNode nodeChild = iter.next();
+                if (exclude == null || !exclude.test(nodeChild))
+                    {
+                    fDone &= processInternal(nodeChild);
+                    }
+                }
+            }
+        finally
+            {
+            m_iterKids = iterPrev;
+            }
+        return fDone;
         }
 
     /**
@@ -249,8 +368,8 @@ public class StageMgr
     /**
      * Obtain the list of nodes that still require processing.
      * <p/>
-     * Note: Normally the revisiting is performed by calling {@link #revisitRequired()} in a loop
-     * until it returns {@code false}. Only call this method directly if assuming the responsibility
+     * Note: Normally the revisiting is performed by calling {@link #processComplete()} in a loop
+     * until it returns {@code true}. Only call this method directly if assuming the responsibility
      * for finishing all of the processing.
      *
      * @return a list of nodes to revisit
@@ -264,15 +383,6 @@ public class StageMgr
                 : listPrevious;
         }
 
-    // TODO expression validation stuff:
-    public Expression validateExpression(Expression expr)
-        {
-        // TODO
-        return null;
-        }
-    // TODO pack()
-    // TODO unpack()
-    // TODO convert()
 
     // ------ data members -------------------------------------------------------------------------
 
@@ -297,7 +407,7 @@ public class StageMgr
     private ErrorListener m_errs;
 
     /**
-     * The top node to process, or the current node being processed if processing is occurring.
+     * The current node being processed if processing is occurring.
      */
     private AstNode m_cur;
 
@@ -305,6 +415,12 @@ public class StageMgr
      * The processing flags associated with the currently processing node.
      */
     private byte m_nFlags;
+
+    /**
+     * The current ChildIterator, if processing is currently active and the node being processed is
+     * a child node.
+     */
+    private ChildIterator m_iterKids;
 
     private static final int QUEUED_SELF  = 0x1;
     private static final int VISITED_KIDS = 0x2;

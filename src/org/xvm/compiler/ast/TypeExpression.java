@@ -138,6 +138,22 @@ public abstract class TypeExpression
         }
 
 
+    // ----- compile phases ------------------------------------------------------------------------
+
+    @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        if (mgr.processChildren())
+            {
+            ensureTypeConstant();
+            }
+        else
+            {
+            mgr.requestRevisit();
+            }
+        }
+
+
     // ----- Expression methods --------------------------------------------------------------------
 
     @Override

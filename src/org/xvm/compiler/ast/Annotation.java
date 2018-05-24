@@ -143,7 +143,7 @@ public class Annotation
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public AstNode validateExpressions(List<AstNode> listRevisit, ErrorListener errs)
+    public void validateExpressions(StageMgr mgr, ErrorListener errs)
         {
         org.xvm.asm.Annotation anno = m_anno;
         assert anno != null;
@@ -158,6 +158,12 @@ public class Annotation
             {
             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idAnno.getName());
             fValid = false;
+            }
+
+        if (!mgr.processChildren())
+            {
+            mgr.requestRevisit();
+            return;
             }
 
         // find a matching constructor on the annotation class
@@ -177,37 +183,25 @@ public class Annotation
 
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
-                Expression exprOld = args.get(iArg);
-                Expression exprNew = (Expression) exprOld.validateExpressions(listRevisit, errs);
-                if (exprNew == null)
-                    {
-                    fValid = false;
-                    continue;
-                    }
-
-                if (exprNew != exprOld)
-                    {
-                    args.set(iArg, exprNew);
-                    }
-
-                if (exprNew instanceof LabeledExpression)
+                Expression exprArg = args.get(iArg);
+                if (exprArg instanceof LabeledExpression)
                     {
                     if (asArgNames == null)
                         {
                         asArgNames = new String[cArgs];
                         }
-                    asArgNames[iArg] = ((LabeledExpression) exprNew).getName();
+                    asArgNames[iArg] = ((LabeledExpression) exprArg).getName();
                     }
                 else if (asArgNames != null && !fNameErr)
                     {
                     // there was already at least one arg with a name, so all trailing args MUST
                     // have a name
-                    exprNew.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED);
+                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED);
                     fNameErr = true;
                     fValid   = false;
                     }
 
-                atypeArgs[iArg] = exprOld.getImplicitType(ctx);
+                atypeArgs[iArg] = exprArg.getImplicitType(ctx);
                 }
             }
 
@@ -256,8 +250,6 @@ public class Annotation
                 anno.resolveParams(aconstArgs);
                 }
             }
-
-        return super.validateExpressions(listRevisit, errs);
         }
 
 

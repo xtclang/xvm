@@ -87,8 +87,6 @@ public class TypedefStatement
                 throw new UnsupportedOperationException("not a typedef container: " + container);
                 }
             }
-
-        return super.registerStructures(mgr, errs);
         }
 
 

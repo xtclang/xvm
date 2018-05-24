@@ -85,26 +85,6 @@ public class ArrayTypeExpression
         }
 
 
-    // ----- compile phases ------------------------------------------------------------------------
-
-    @Override
-    public AstNode resolveNames(List<AstNode> listRevisit, ErrorListener errs)
-        {
-        if (!alreadyReached(Stage.Resolved))
-            {
-            setStage(Stage.Resolving);
-
-            // resolve the sub-type
-            type.resolveNames(listRevisit, errs);
-
-            // store off the type that is an array of the sub-type
-            ensureTypeConstant();
-            }
-
-        return super.resolveNames(listRevisit, errs);
-        }
-
-
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override
