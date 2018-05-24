@@ -319,12 +319,14 @@ public abstract class AstNode
      * they will be required to already be present when the second pass begins.</li>
      * </ul>
      *
+     *
+     * @param mgr
      * @param errs    the error list to log any errors etc. to
      *
      * @return the AstNode to use as the result of this stage, allowing a substitute to be provided
      *         for "this" node, if appropriate
      */
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         ensureReached(Stage.Initial);
         setStage(Stage.Registering);
@@ -334,7 +336,7 @@ public abstract class AstNode
             {
             if (!node.alreadyReached(Stage.Registered))
                 {
-                AstNode nodeNew = node.registerStructures(errs);
+                AstNode nodeNew = node.registerStructures(mgr, errs);
                 if (node != nodeNew)
                     {
                     children.replaceWith(nodeNew);
@@ -439,7 +441,7 @@ public abstract class AstNode
                 {
                 if (!node.alreadyReached(Stage.Registered))
                     {
-                    AstNode nodeNew = node.registerStructures(errs);
+                    AstNode nodeNew = node.registerStructures(mgr, errs);
                     if (node != nodeNew)
                         {
                         children.replaceWith(nodeNew);

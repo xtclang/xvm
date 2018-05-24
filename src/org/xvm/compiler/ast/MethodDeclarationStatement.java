@@ -192,7 +192,7 @@ public class MethodDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // create the structure for this method
         CreateStructure: if (getComponent() == null)
@@ -284,7 +284,7 @@ public class MethodDeclarationStatement
                 }
             }
 
-        return super.registerStructures(errs);
+        return super.registerStructures(mgr, errs);
         }
 
     @Override

@@ -763,7 +763,7 @@ public class Compiler
          * @return true if this stage is a intermediate stage, i.e. indicating that a node is in
          *         the process of moving towards a target-able stage
          */
-        public boolean isIntermediate()
+        public boolean isTransition()
             {
             ensureValid();
 
@@ -771,34 +771,38 @@ public class Compiler
             return (ordinal() & 0x1) == 1;
             }
 
-        public boolean isAtLeast(Stage stageTarget)
+        /**
+         * @return the transition stage related to this stage
+         */
+        public Stage getTransitionStage()
             {
             ensureValid();
-            assert stageTarget.isTargetable();
-            return this.ordinal() >= stageTarget.ordinal();
+            return isTransition()
+                    ? this
+                    : prev();
             }
 
-        Stage getTransitionStage()
+        /**
+         * @return the transition stage related to this stage
+         */
+        public Stage getPrevTargetStage()
             {
-            if (isTargetable())
-                {
-                return Stage.valueOf(ordinal() - 1);
-                }
-            int i = ordinal();
-
-            // TODO
-
+            ensureValid();
+            return getTransitionStage().prev();
             }
 
-        public boolean canBegin(Stage stageTarget)
+        /**
+         * Determine if this stage is at least as far along as that stage.
+         *
+         * @param that  another Stage
+         *
+         * @return true iff this Stage is at least as advanced as that stage
+         */
+        public boolean isAtLeast(Stage that)
             {
-            if (stageTarget.isIntermediate())
-                {
-// TODO
-                return
-                }
-// TODO
-            return
+            ensureValid();
+            assert that.isTargetable();
+            return this.compareTo(that) >= 0;
             }
 
         /**
@@ -851,7 +855,7 @@ public class Compiler
          * All of the Stage enums.
          */
         private static final Stage[] STAGES = Stage.values();
-        };
+        }
 
     /**
      * Current compilation stage.

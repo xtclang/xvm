@@ -111,13 +111,13 @@ public class ImportStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         if (cond != null)
             {
             log(errs, Severity.WARNING, Compiler.CONDITIONAL_IMPORT);
             }
-        return super.registerStructures(errs);
+        return super.registerStructures(mgr, errs);
         }
 
     @Override

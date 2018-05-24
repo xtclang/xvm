@@ -224,7 +224,7 @@ public class PropertyDeclarationStatement
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    protected AstNode registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // create the structure for this property
         if (getComponent() == null)
@@ -273,7 +273,7 @@ public class PropertyDeclarationStatement
                 }
             }
 
-        return super.registerStructures(errs);
+        return super.registerStructures(mgr, errs);
         }
 
     @Override
@@ -314,7 +314,7 @@ public class PropertyDeclarationStatement
                 // we're going to compile the initializer now, so that we can determine if it could
                 // be discarded and replaced with a constant
                 List<AstNode> listTemp = new ArrayList<>();
-                stmtInit = (MethodDeclarationStatement) stmtInit.registerStructures(errs);
+                stmtInit = (MethodDeclarationStatement) stmtInit.registerStructures(mgr, errs);
                 stmtInit = (MethodDeclarationStatement) stmtInit.resolveNames(listTemp, errs);
                 if (listTemp.isEmpty())
                     {

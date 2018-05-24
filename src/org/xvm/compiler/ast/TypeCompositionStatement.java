@@ -282,7 +282,7 @@ public class TypeCompositionStatement
             throw new CompilerException("unable to create module with illegal name: " + sName);
             }
 
-        TypeCompositionStatement nodeResult = registerStructures(errs);
+        TypeCompositionStatement nodeResult = registerStructures(mgr, errs);
         if (nodeResult != this)
             {
             throw new IllegalStateException("module cannot replace itself");
@@ -292,7 +292,7 @@ public class TypeCompositionStatement
         }
 
     @Override
-    protected TypeCompositionStatement registerStructures(ErrorListener errs)
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         assert getComponent() == null;
 
@@ -1173,7 +1173,8 @@ public class TypeCompositionStatement
                 }
             }
 
-        TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(errs);
+        TypeCompositionStatement nodeNew = (TypeCompositionStatement) super.registerStructures(mgr,
+                errs);
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
@@ -1196,7 +1197,7 @@ public class TypeCompositionStatement
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
                             param.getType(), param.getNameToken(), null, null, null);
                     prop.setParent(this);
-                    prop.registerStructures(errs);
+                    prop.registerStructures(mgr, errs);
                     PropertyStructure struct = (PropertyStructure) mapChildren.get(sParam);
                     struct.setSynthetic(true);
                     }
