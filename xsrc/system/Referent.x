@@ -11,7 +11,7 @@ interface Referent
      * From the referrer's point of view, the ActualType represents the full set of methods that can
      * be invoked against the referent.
      */
-    @RO Type ActualType;
+    @RO Type actualType;
 
     /**
      * Obtain a new reference to the referent such that the reference contains only the methods and
