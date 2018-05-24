@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Predicate;
+
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.Compiler.Stage;
@@ -66,6 +67,13 @@ public class StageMgr
         return m_listRevisit == null;
         }
 
+    /**
+     * From whatever stage the node is at, iterate through the stages to the target stage.
+     *
+     * @param cMaxIters the maximum number of iterations to try to fast-forward to the target stage
+     *
+     * @return true iff the fast-forward was successful
+     */
     public boolean fastForward(int cMaxIters)
         {
         boolean fDone = false;

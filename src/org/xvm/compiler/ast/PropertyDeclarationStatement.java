@@ -311,14 +311,7 @@ public class PropertyDeclarationStatement
 
                 // we're going to compile the initializer now, so that we can determine if it could
                 // be discarded and replaced with a constant
-                if (new StageMgr(stmtInit, Stage.Registered, errs).processComplete() &&
-                    new StageMgr(stmtInit, Stage.Resolved  , errs).processComplete() &&
-                    new StageMgr(stmtInit, Stage.Validated , errs).processComplete() &&
-                    new StageMgr(stmtInit, Stage.Emitted   , errs).processComplete())
-                    {
-
-                    }
-                else
+                if (!(new StageMgr(stmtInit, Stage.Emitted, errs).fastForward(10)))
                     {
                     mgr.requestRevisit();
                     return;

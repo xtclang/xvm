@@ -7,12 +7,12 @@ module Test
 //            construct C(4);
 //            }
 //
-//        construct(Int n)
-//            {
-//            this.n = n;
-//            }
-//
-//        Int n;
+        construct(Int n)
+            {
+            this.n = n;
+            }
+
+        Int n;
         }
     // class C
     //   {

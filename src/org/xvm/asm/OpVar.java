@@ -109,6 +109,14 @@ public abstract class OpVar
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' ' + Argument.toIdString(null, m_nType)
+                + ", " + (m_reg == null ? "" : m_reg.toString());
+        }
+
     /**
      * The register that the VAR op is responsible for creating.
      */

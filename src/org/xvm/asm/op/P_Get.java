@@ -159,6 +159,14 @@ public class P_Get
         registerArgument(m_argReturn, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ", " + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
+        }
+
     private int m_nTarget;
     private int m_nRetValue;
 

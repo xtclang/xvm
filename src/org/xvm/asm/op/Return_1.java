@@ -99,6 +99,12 @@ public class Return_1
         registerArgument(m_arg, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()+ ' ' + Argument.toIdString(m_arg, m_nArg);
+        }
+
     private int m_nArg;
 
     private Argument m_arg;
