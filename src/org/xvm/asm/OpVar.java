@@ -63,7 +63,7 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            m_nType = encodeArgument(m_reg.getType(), registry);
+            m_nType = encodeArgument(getRegisterType(), registry);
             }
 
         out.writeByte(getOpCode());
@@ -71,14 +71,18 @@ public abstract class OpVar
         }
 
     /**
-     * @return the type of the variable
+     * Note: Used only during compilation.
+     *
+     * @return the type of the register
      */
-    public TypeConstant getType()
+    public TypeConstant getRegisterType()
         {
-        return m_reg.getType();
+        return m_reg.isDVar() ? m_reg.ensureRegType(!m_reg.isWritable()) : m_reg.getType();
         }
 
     /**
+     * Note: Used only during compilation.
+     *
      * @return the Register that holds the variable's value
      */
     public Register getRegister()
@@ -101,14 +105,14 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            registry.register(m_reg.getType());
+            registry.register(getRegisterType());
             }
         }
 
     /**
      * The register that the VAR op is responsible for creating.
      */
-    protected Register m_reg;
+    protected transient Register m_reg;
 
     /**
      * The type constant id.

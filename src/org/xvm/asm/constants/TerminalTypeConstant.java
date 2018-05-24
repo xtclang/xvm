@@ -755,6 +755,28 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isIntoVariableType()
+        {
+        return this.isA(getConstantPool().typeRef());
+        }
+
+    @Override
+    public TypeConstant getIntoVariableType()
+        {
+        ConstantPool pool = getConstantPool();
+
+        if (this.isA(pool.typeVar()))
+            {
+            return pool.typeVar();
+            }
+        if (this.isA(pool.typeRef()))
+            {
+            return pool.typeRef();
+            }
+        return null;
+        }
+
+    @Override
     public boolean isConstant()
         {
         Constant constant = getDefiningConstant();

@@ -142,15 +142,18 @@ public class VariableDeclarationStatement
 
         // before validating the type, disassociate any annotations that do not apply to the
         // underlying type
+        ConstantPool   pool     = pool();
         TypeExpression typeOld  = type;
         TypeExpression typeEach = typeOld;
+        boolean        fVar     = false;
         while (typeEach != null)
             {
             if (typeEach instanceof AnnotatedTypeExpression)
                 {
-                Annotation             annoAst = ((AnnotatedTypeExpression) typeEach).getAnnotation();
-                org.xvm.asm.Annotation annoAsm = annoAst.ensureAnnotation(pool());
-                if (annoAsm.getAnnotationType().getExplicitClassInto().isIntoVariableType())
+                Annotation             annoAst  = ((AnnotatedTypeExpression) typeEach).getAnnotation();
+                org.xvm.asm.Annotation annoAsm  = annoAst.ensureAnnotation(pool());
+                TypeConstant           typeInto = annoAsm.getAnnotationType().getExplicitClassInto();
+                if (typeInto.isIntoVariableType())
                     {
                     // steal the annotation from the type held _in_ the variable
                     ((AnnotatedTypeExpression) typeEach).disassociateAnnotation();
@@ -161,15 +164,15 @@ public class VariableDeclarationStatement
                         m_listRefAnnotations = new ArrayList<>();
                         }
                     m_listRefAnnotations.add(annoAst);
+                    fVar |= typeInto.getIntoVariableType().isA(pool.typeVar());
                     }
                 }
 
             typeEach = typeEach.unwrapIntroductoryType();
             }
 
-        ConstantPool pool    = pool();
-        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
-        if (typeNew != type)
+        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
+        if (typeNew != typeOld)
             {
             fValid &= typeNew != null;
             if (typeNew != null)
@@ -178,17 +181,17 @@ public class VariableDeclarationStatement
                 }
             }
 
-        TypeConstant typeVar = type.ensureTypeConstant();
+        TypeConstant typeVal = type.ensureTypeConstant();
         if (value != null)
             {
-            if (typeVar.isTuple())
+            if (typeVal.isTuple())
                 {
                 // determine if we can ask for the value(s) in tuple form and/or in separate form
-                TypeFit fitTup = value.testFit(ctx, typeVar, TuplePref.Rejected);
+                TypeFit fitTup = value.testFit(ctx, typeVal, TuplePref.Rejected);
                 TypeFit fitSep = TypeFit.NoFit;
-                if (typeVar.isParamsSpecified())
+                if (typeVal.isParamsSpecified())
                     {
-                    fitSep = value.testFitMulti(ctx, typeVar.getParamTypesArray(), TuplePref.Desired);
+                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Desired);
                     }
 
                 if (fitSep.isFit() && (!fitTup.isFit() || fitTup.isPacking()))
@@ -199,8 +202,8 @@ public class VariableDeclarationStatement
                 }
 
             Expression valueNew = m_fPackingInit
-                    ? value.validateMulti(ctx, typeVar.getParamTypesArray(), TuplePref.Rejected, errs)
-                    : value.validate(ctx, typeVar, TuplePref.Rejected, errs);
+                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Rejected, errs)
+                    : value.validate(ctx, typeVal, TuplePref.Rejected, errs);
             if (valueNew != value)
                 {
                 fValid &= valueNew != null;
@@ -223,25 +226,32 @@ public class VariableDeclarationStatement
             // use the type of the RValue to update the type of the LValue, if desired
             if (fValid)
                 {
-                typeVar = m_fPackingInit
+                typeVal = m_fPackingInit
                         ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), value.getTypes())
                         : value.getType();
 
-                type    = type.inferTypeFrom(typeVar);
-                typeVar = type.ensureTypeConstant();
+                type    = type.inferTypeFrom(typeVal);
+                typeVal = type.ensureTypeConstant();
                 }
             }
 
+        // create the register
+        m_reg = new Register(typeVal);
+
+        // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
+        // that gets held in the register)
         if (m_listRefAnnotations != null)
             {
+            TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
+                    fVar ? pool.typeVar() : pool.typeRef(), typeVal);
             for (int i = m_listRefAnnotations.size()-1; i >= 0; --i)
                 {
-                typeVar = pool.ensureAnnotatedTypeConstant(
-                        m_listRefAnnotations.get(i).ensureAnnotation(pool), typeVar);
+                typeReg = pool.ensureAnnotatedTypeConstant(
+                        m_listRefAnnotations.get(i).ensureAnnotation(pool), typeReg);
                 }
+            m_reg.specifyRegType(typeReg);
             }
 
-        m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
         return fValid
@@ -331,13 +341,13 @@ public class VariableDeclarationStatement
             }
 
         // no value: declare named var
-        if (m_listRefAnnotations == null)
+        if (m_reg.isDVar())
             {
-            code.add(new Var_N(m_reg, constName));
+            code.add(new Var_DN(m_reg, constName));
             }
         else
             {
-            code.add(new Var_DN(m_reg, constName));
+            code.add(new Var_N(m_reg, constName));
             }
 
         // assign initial value to var

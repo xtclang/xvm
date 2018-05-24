@@ -31,19 +31,6 @@ public class Register
      */
     public Register(TypeConstant type, int iArg)
         {
-        this(type, iArg, false);
-        }
-
-    /**
-     * Construct a Register of the specified type.
-     *
-     * @param type       the TypeConstant specifying the Register type
-     * @param iArg       the argument index, which is either a pre-defined argument index, or a
-     *                   register ID
-     * @param fReadOnly  true if the register cannot be modified
-     */
-    public Register(TypeConstant type, int iArg, boolean fReadOnly)
-        {
         if (type == null && iArg != Op.A_IGNORE)
             {
             throw new IllegalArgumentException("type required");
@@ -53,7 +40,7 @@ public class Register
 
         m_type = type;
         m_iArg = iArg;
-        m_fRO  = fReadOnly || iArg != UNKNOWN && isPredefinedRegister(iArg) && iArg != Op.A_IGNORE;
+        m_fRO  = isPredefinedReadonly(iArg);
         }
 
 
@@ -68,6 +55,44 @@ public class Register
     public TypeConstant getType()
         {
         return m_type;
+        }
+
+    /**
+     * @return true iff this register was created by a DVAR op
+     */
+    public boolean isDVar()
+        {
+        return m_typeReg != null;
+        }
+
+    public TypeConstant ensureRegType(boolean fRO)
+        {
+        assert fRO | !m_fRO;
+
+        if (m_typeReg != null)
+            {
+            return m_typeReg;
+            }
+
+        ConstantPool pool = m_type.getConstantPool();
+        return pool.ensureParameterizedTypeConstant(fRO ? pool.typeRef() : pool.typeVar(), m_type);
+        }
+
+    /**
+     * Specify the type of the register itself.
+     *
+     * @param typeReg  the type of the register (something that "is a" Ref)
+     */
+    public void specifyRegType(TypeConstant typeReg)
+        {
+        assert m_typeReg == null;
+        assert typeReg != null && typeReg.isA(typeReg.getConstantPool().typeRef());
+
+        this.m_typeReg = typeReg;
+        if (!typeReg.isA(typeReg.getConstantPool().typeVar()))
+            {
+            m_fRO = true;
+            }
         }
 
     /**
@@ -125,6 +150,7 @@ public class Register
         {
         switch (iArg)
             {
+            case Op.A_STACK:
             case Op.A_IGNORE:
             case Op.A_PUBLIC:
             case Op.A_PROTECTED:
@@ -144,6 +170,37 @@ public class Register
                     {
                     throw new IllegalArgumentException("illegal argument index: " + iArg);
                     }
+                return false;
+            }
+        }
+
+    /**
+     * Determine if the specified argument index is for a pre-defined read-only register.
+     *
+     * @param iArg  the argument index
+     *
+     * @return true iff the index specifies a pre-defined argument that is in a read-only register
+     */
+    protected static boolean isPredefinedReadonly(int iArg)
+        {
+        switch (iArg)
+            {
+            case Op.A_PUBLIC:
+            case Op.A_PROTECTED:
+            case Op.A_PRIVATE:
+            case Op.A_TARGET:
+            case Op.A_STRUCT:
+            case Op.A_FRAME:
+            case Op.A_SERVICE:
+            case Op.A_MODULE:
+            case Op.A_TYPE:
+            case Op.A_SUPER:
+            case Op.A_THIS:
+                return true;
+
+            default:
+            case Op.A_STACK:
+            case Op.A_IGNORE:
                 return false;
             }
         }
@@ -298,6 +355,11 @@ public class Register
      * The type of the value that will be held in the register.
      */
     private TypeConstant m_type;
+
+    /**
+     * The type of the register itself (typically null).
+     */
+    private TypeConstant m_typeReg;
 
     /**
      * The register ID (>=0), or the pre-defined argument identifier in the range -1 to -16.

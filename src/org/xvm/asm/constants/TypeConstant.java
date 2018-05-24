@@ -3740,9 +3740,15 @@ public abstract class TypeConstant
      */
     public boolean isIntoVariableType()
         {
-        // this is a fairly simple way to check: a variable is just like a property, except it isn't
-        // a Property
-        return isIntoPropertyType() && getIntoPropertyType() != getConstantPool().typeProperty();
+        return getUnderlyingType().isIntoVariableType();
+        }
+
+    /**
+     * @return one of: Ref, Var, or null
+     */
+    public TypeConstant getIntoVariableType()
+        {
+        return getUnderlyingType().getIntoVariableType();
         }
 
     /**

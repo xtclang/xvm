@@ -276,6 +276,18 @@ public abstract class RelationalTypeConstant
         return false;
         }
 
+    @Override
+    public boolean isIntoVariableType()
+        {
+        return false;
+        }
+
+    @Override
+    public TypeConstant getIntoVariableType()
+        {
+        return null;
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 
