@@ -34,7 +34,7 @@ module Ecstasy.xtclang.org
      * A DeadlockException is raised by the runtime in response to a situation in which re-entrancy
      * to a service is necessary, but for one of several reasons cannot be accomplished.
      */
-    const DeadlockException(String? text, Exception? cause)
+    const DeadlockException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         /**
@@ -48,7 +48,7 @@ module Ecstasy.xtclang.org
      * A TimeoutException is raised by the runtime in response to a thread-of-execution exceeding a
      * timeout (wall clock time) limitation within which it was running.
      */
-    const TimeoutException(Timeout timeout, String? text, Exception? cause)
+    const TimeoutException(Timeout timeout, String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -56,7 +56,7 @@ module Ecstasy.xtclang.org
     /**
      * A ReadOnlyException is raised when an attempt is made to modify a read-only value.
      */
-    const ReadOnlyException(String? text, Exception? cause)
+    const ReadOnlyException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -65,7 +65,7 @@ module Ecstasy.xtclang.org
      * A BoundsException is raised when an attempt is made to invoke an operation with a value that
      * is out-of-bounds, or if the operation would result in an out-of-bounds condition.
      */
-    const BoundsException(String? text, Exception? cause)
+    const BoundsException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -75,7 +75,7 @@ module Ecstasy.xtclang.org
      * not expecting, and is unable to predictably continue processing according to the contracts
      * that it provides.
      */
-    const ConcurrentModificationException(String? text, Exception? cause)
+    const ConcurrentModificationException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -83,7 +83,7 @@ module Ecstasy.xtclang.org
     /**
      * An AssertionException is raised when an assert fails.
      */
-    const AssertionException(String? text, Exception? cause)
+    const AssertionException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         }
@@ -101,7 +101,7 @@ module Ecstasy.xtclang.org
      * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */
-    const UnsupportedOperationException(String? text, Exception? cause)
+    const UnsupportedOperationException(String? text = null, Exception? cause = null)
             extends Exception(text, cause)
         {
         // TODO: remove
