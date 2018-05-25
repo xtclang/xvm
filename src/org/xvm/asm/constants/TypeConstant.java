@@ -1189,6 +1189,9 @@ public abstract class TypeConstant
                                 constId.getPathString(), sName,
                                 typeConstraint.getValueString(),
                                 typeActual.getValueString(), this.getValueString());
+
+                        // to avoid a repetitive errors; proceed with the constraint type
+                        typeActual = typeConstraint;
                         }
                     }
 
@@ -2775,11 +2778,11 @@ public abstract class TypeConstant
             }
 
         // recurse through children
-        for (Component child : structContrib.ensureChildByNameMap().values())
+        for (Component child : structContrib.children())
             {
             if (child instanceof MultiMethodStructure)
                 {
-                for (MethodStructure method : child.getMethodByConstantMap().values())
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
                     fComplete &= createMemberInfo(constId, fInterface, method, resolver,
                             mapProps, mapMethods, listExplode, errs);
@@ -2931,11 +2934,11 @@ public abstract class TypeConstant
         MethodStructure  methodBadGet   = null;
         MethodStructure  methodBadSet   = null;
         int              cCustomMethods = 0;
-        for (Component child : prop.getChildByNameMap().values())
+        for (Component child : prop.children())
             {
             if (child instanceof MultiMethodStructure)
                 {
-                for (MethodStructure method : child.getMethodByConstantMap().values())
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
                     if (method.isPotentialInitializer())
                         {

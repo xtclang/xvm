@@ -1047,12 +1047,11 @@ public class MethodStructure
     @Override
     protected Component getEldestSibling()
         {
-        Component parent = getParent();
+        MultiMethodStructure parent = (MultiMethodStructure) getParent();
         assert parent != null;
 
         Component sibling = parent.getMethodByConstantMap().get(getIdentityConstant());
         assert sibling != null;
-
         return sibling;
         }
 

@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
@@ -54,7 +55,7 @@ public class xEnum
             }
         else if (f_struct.getFormat() == Component.Format.ENUM)
             {
-            List<Component> listAll = f_struct.children();
+            Collection<? extends Component> listAll = f_struct.children();
             List<String> listNames = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 

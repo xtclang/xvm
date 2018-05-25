@@ -347,18 +347,6 @@ public class CompositeComponent
         }
 
     @Override
-    public Map<MethodConstant, MethodStructure> getMethodByConstantMap()
-        {
-        return m_siblings.get(0).getMethodByConstantMap();
-        }
-
-    @Override
-    public Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
-        {
-        return m_siblings.get(0).ensureMethodByConstantMap();
-        }
-
-    @Override
     protected void addChild(Component child)
         {
         // TODO - figure out how to add a child to multiple components

@@ -1,13 +1,20 @@
 package org.xvm.asm;
 
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import java.util.List;
+import org.xvm.util.ListMap;
 
 
 /**
@@ -38,6 +45,112 @@ public class MultiMethodStructure
 
 
     // ----- Component methods ---------------------------------------------------------------------
+
+    @Override
+    public int getChildrenCount()
+        {
+        return m_methodByConstant == null ? 0 : m_methodByConstant.size();
+        }
+
+    @Override
+    public boolean hasChildren()
+        {
+        return m_methodByConstant != null && !m_methodByConstant.isEmpty();
+        }
+
+    @Override
+    protected void addChild(Component child)
+        {
+        // MultiMethodStructure can only hold MethodStructures
+        assert child instanceof MethodStructure;
+
+        ensureChildren();
+
+        Map<MethodConstant, MethodStructure> kids = ensureMethodByConstantMap();
+
+        MethodStructure method = (MethodStructure) child;
+        MethodConstant  id     = method.getIdentityConstant();
+
+        MethodStructure sibling = kids.get(id);
+        if (sibling == null)
+            {
+            kids.put(id, method);
+            }
+        else
+            {
+            linkSibling(method, sibling);
+            }
+
+        markModified();
+        }
+
+    @Override
+    protected void adoptChildren(Component that)
+        {
+        assert that instanceof MultiMethodStructure;
+
+        super.adoptChildren(that);
+
+        m_methodByConstant = ((MultiMethodStructure) that).m_methodByConstant;
+        }
+
+    @Override
+    public void removeChild(Component child)
+        {
+        assert child instanceof MethodStructure;
+        assert child.getParent() == this;
+
+        Map<MethodConstant, MethodStructure> kids = ensureMethodByConstantMap();
+
+        MethodStructure method = (MethodStructure) child;
+        MethodConstant  id     = method.getIdentityConstant();
+
+        MethodStructure sibling = kids.remove(id);
+
+        unlinkSibling(kids, id, child, sibling);
+        }
+
+    @Override
+    protected boolean areChildrenIdentical(Component that)
+        {
+        ensureChildren();
+        return equalChildMaps(this.getMethodByConstantMap(),
+            ((MultiMethodStructure) that).getMethodByConstantMap());
+        }
+
+    @Override
+    public Component getChild(Constant constId)
+        {
+        assert constId instanceof MethodConstant;
+
+        MethodStructure firstSibling = getMethodByConstantMap().
+            get((MethodConstant) constId.resolveTypedefs());
+
+        return findLinkedChild(constId, firstSibling);
+        }
+
+    @Override
+    public Collection<? extends Component> children()
+        {
+        return methods();
+        }
+
+    @Override
+    public List<Component> safeChildren()
+        {
+        List<Component> list = new ArrayList<>();
+
+        for (MethodConstant id : getMethodByConstantMap().keySet())
+            {
+            MethodStructure method = (MethodStructure) getChild(id);
+            if (method != null)
+                {
+                list.add(method);
+                }
+            }
+
+        return list;
+        }
 
     @Override
     public boolean isAutoNarrowingAllowed()
@@ -134,10 +247,66 @@ public class MultiMethodStructure
         }
 
     /**
-     * Helper method to return a list of methods.
+     * Helper method to return a collection of methods.
      */
-    public List<MethodStructure> methods()
+    public Collection<MethodStructure> methods()
         {
-        return (List<MethodStructure>) (List) super.children();
+        Collection<MethodStructure> methods = getMethodByConstantMap().values();
+
+        assert (methods = Collections.unmodifiableCollection(methods)) != null;
+        return methods;
         }
+
+    /**
+     * Obtain a read-only map of all method children identified by method signature constant.
+     * <p/>
+     * Note: the returned map contains only methods
+     *
+     * @return a read-only map from method constant to method component; never null, even if there
+     *         are no child methods
+     */
+    public Map<MethodConstant, MethodStructure> getMethodByConstantMap()
+        {
+        ensureChildren();
+        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
+        return map == null ? Collections.EMPTY_MAP : map;
+        }
+
+    /**
+     * Obtain the actual read/write map of all method children identified by method signature
+     * constant.
+     * <p/>
+     * Note: the returned map contains only methods
+     *
+     * @return obtain the actual map from method constant to method component, creating the map if
+     *         necessary
+     */
+    protected Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
+        {
+        ensureChildren();
+
+        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
+        if (map == null)
+            {
+            map = new ListMap<>();
+
+            // store the map on every one of the siblings (including this component)
+            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
+                {
+                ((MultiMethodStructure) siblings.next()).m_methodByConstant = map;
+                }
+
+            // the corresponding field on this component should now be initialized
+            assert m_methodByConstant == map;
+            }
+        return map;
+        }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * This holds all of the method children. See the explanation of {@link #m_childByName}.
+     */
+    private Map<MethodConstant, MethodStructure> m_methodByConstant;
     }
