@@ -168,6 +168,14 @@ public class UnresolvedNameConstant
         }
 
     @Override
+    public Constant resolveTypedefs()
+        {
+        return m_constId == null
+                ? this
+                : m_constId.resolveTypedefs();
+        }
+
+    @Override
     protected void setPosition(int iPos)
         {
         throw new UnsupportedOperationException("unresolved: " + this);

@@ -237,6 +237,18 @@ public class IntervalConstant
         }
 
     @Override
+    public IntervalConstant resolveTypedefs()
+        {
+        Constant constOld1 = m_const1;
+        Constant constOld2 = m_const2;
+        Constant constNew1 = constOld1.resolveTypedefs();
+        Constant constNew2 = constOld2.resolveTypedefs();
+        return constNew1 == constOld1 && constNew2 == constOld2
+                ? this
+                : getConstantPool().ensureIntervalConstant(constNew1, constNew2);
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         int nResult = this.m_const1.compareTo(((IntervalConstant) that).m_const1);

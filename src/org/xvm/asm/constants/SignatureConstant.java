@@ -462,6 +462,48 @@ public class SignatureConstant
         }
 
     @Override
+    public SignatureConstant resolveTypedefs()
+        {
+        // params
+        TypeConstant[] atypeOldParams = m_aconstParams;
+        TypeConstant[] atypeNewParams = null;
+        for (int i = 0, c = atypeOldParams.length; i < c; ++i)
+            {
+            TypeConstant constOld = atypeOldParams[i];
+            TypeConstant constNew = constOld.resolveTypedefs();
+            if (constNew != constOld)
+                {
+                if (atypeNewParams == null)
+                    {
+                    atypeNewParams = atypeOldParams.clone();
+                    }
+                atypeNewParams[i] = constNew;
+                }
+            }
+
+        // returns
+        TypeConstant[] atypeOldReturns = m_aconstReturns;
+        TypeConstant[] atypeNewReturns = null;
+        for (int i = 0, c = atypeOldReturns.length; i < c; ++i)
+            {
+            TypeConstant constOld = atypeOldReturns[i];
+            TypeConstant constNew = constOld.resolveTypedefs();
+            if (constNew != constOld)
+                {
+                if (atypeNewReturns == null)
+                    {
+                    atypeNewReturns = atypeOldReturns.clone();
+                    }
+                atypeNewReturns[i] = constNew;
+                }
+            }
+
+        return atypeNewParams == null && atypeNewReturns == null
+                ? this
+                : getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns);
+        }
+
+    @Override
     protected int compareDetails(Constant obj)
         {
         SignatureConstant that = (SignatureConstant) obj;

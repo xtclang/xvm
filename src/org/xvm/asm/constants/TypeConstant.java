@@ -457,9 +457,7 @@ public abstract class TypeConstant
         return getUnderlyingType().resolveContributedName(sName, collector);
         }
 
-    /**
-     * @return this same type, but without any typedefs in it
-     */
+    @Override
     public TypeConstant resolveTypedefs()
         {
         TypeConstant constOriginal = getUnderlyingType();

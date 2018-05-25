@@ -124,6 +124,17 @@ public class SingletonConstant
         }
 
     @Override
+    public SingletonConstant resolveTypedefs()
+        {
+        IdentityConstant constOld = m_constClass;
+        IdentityConstant constNew = (IdentityConstant) constOld.resolveTypedefs();
+        return constNew == constOld
+                ? this
+                : (SingletonConstant) getConstantPool().register(
+                        new SingletonConstant(getConstantPool(), m_fmt, constNew));
+        }
+
+    @Override
     public Object getLocator()
         {
         return getValue();

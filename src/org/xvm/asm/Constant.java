@@ -155,6 +155,14 @@ public abstract class Constant
         }
 
     /**
+     * @return this same type, but without any typedefs in it
+     */
+    public Constant resolveTypedefs()
+        {
+        return this;
+        }
+
+    /**
      * Determine the type of a binary operator on two constant values.
      *
      * @param op    the token id representing the operation

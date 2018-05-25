@@ -81,8 +81,7 @@ public class MapConstant
      */
     public MapConstant(ConstantPool pool, TypeConstant constType, Constant constKey, Constant constVal)
         {
-        this(pool, constType, new Constant[] {constKey}, new Constant[] {constVal});
-        m_fmt = Format.MapEntry;
+        this(pool, Format.MapEntry, constType, new Constant[] {constKey}, new Constant[] {constVal});
         }
 
     /**
@@ -94,20 +93,26 @@ public class MapConstant
      */
     public MapConstant(ConstantPool pool, TypeConstant constType, Map<Constant, Constant> map)
         {
-        this(pool, constType, map.keySet().toArray(new Constant[map.size()]), map.values().toArray(new Constant[map.size()]));
+        this(pool, Format.Map, constType, map.keySet().toArray(new Constant[map.size()]), map.values().toArray(new Constant[map.size()]));
         }
 
     /**
      * Construct a constant whose value is a map entry.
      *
      * @param pool        the ConstantPool that will contain this Constant
+     * @param fmt         the constant format
      * @param constType   the data type of the map
      * @param aconstKey   the constant values of the map keys
      * @param aconstVal   the constant values of the map values
      */
-    public MapConstant(ConstantPool pool, TypeConstant constType, Constant[] aconstKey, Constant[] aconstVal)
+    public MapConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant[] aconstKey, Constant[] aconstVal)
         {
         super(pool);
+
+        if (!(fmt == Format.Map || fmt == Format.MapEntry))
+            {
+            throw new IllegalArgumentException("fmt required to be Map or MapEntry");
+            }
 
         if (constType == null)
             {
@@ -146,7 +151,7 @@ public class MapConstant
             // TODO other key/value validation?
             }
 
-        m_fmt        = Format.Map;
+        m_fmt        = fmt;
         m_constType  = constType;
         m_aconstKey  = aconstKey;
         m_aconstVal  = aconstVal;
@@ -192,6 +197,52 @@ public class MapConstant
             visitor.accept(aconstKey[i]);
             visitor.accept(aconstVal[i]);
             }
+        }
+
+    @Override
+    public MapConstant resolveTypedefs()
+        {
+        TypeConstant typeOld = m_constType;
+        TypeConstant typeNew = typeOld.resolveTypedefs();
+
+        // check keys
+        Constant[] aconstOldKey = m_aconstKey;
+        Constant[] aconstNewKey = null;
+        for (int i = 0, c = aconstOldKey.length; i < c; ++i)
+            {
+            Constant constOldKey = aconstOldKey[i];
+            Constant constNewKey = constOldKey.resolveTypedefs();
+            if (constNewKey != constOldKey)
+                {
+                if (aconstNewKey == null)
+                    {
+                    aconstNewKey = aconstOldKey.clone();
+                    }
+                aconstNewKey[i] = constNewKey;
+                }
+            }
+
+        // check values
+        Constant[] aconstOldVal = m_aconstVal;
+        Constant[] aconstNewVal = null;
+        for (int i = 0, c = aconstOldVal.length; i < c; ++i)
+            {
+            Constant constOldVal = aconstOldVal[i];
+            Constant constNewVal = constOldVal.resolveTypedefs();
+            if (constNewVal != constOldVal)
+                {
+                if (aconstNewVal == null)
+                    {
+                    aconstNewVal = aconstOldVal.clone();
+                    }
+                aconstNewVal[i] = constNewVal;
+                }
+            }
+
+        return typeNew == typeOld && aconstNewKey == null && aconstNewVal == null
+                ? this
+                : (MapConstant) getConstantPool().register(new MapConstant(
+                        getConstantPool(), m_fmt, typeNew, aconstNewKey, aconstNewVal));
         }
 
     @Override

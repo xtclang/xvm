@@ -178,6 +178,35 @@ public class ArrayConstant
         }
 
     @Override
+    public ArrayConstant resolveTypedefs()
+        {
+        TypeConstant typeOld = m_constType;
+        TypeConstant typeNew = typeOld.resolveTypedefs();
+
+        // check values
+        Constant[] aconstOld = m_aconstVal;
+        Constant[] aconstNew = null;
+        for (int i = 0, c = aconstOld.length; i < c; ++i)
+            {
+            Constant constOld = aconstOld[i];
+            Constant constNew = constOld.resolveTypedefs();
+            if (constNew != constOld)
+                {
+                if (aconstNew == null)
+                    {
+                    aconstNew = aconstOld.clone();
+                    }
+                aconstNew[i] = constNew;
+                }
+            }
+
+        return typeNew == typeOld && aconstNew == null
+                ? this
+                : (ArrayConstant) getConstantPool().register(
+                        new ArrayConstant(getConstantPool(), m_fmt, typeNew, aconstNew));
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         int nResult = this.m_constType.compareTo(((ArrayConstant) that).m_constType);

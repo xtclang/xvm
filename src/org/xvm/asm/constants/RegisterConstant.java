@@ -131,6 +131,16 @@ public class RegisterConstant
         }
 
     @Override
+    public RegisterConstant resolveTypedefs()
+        {
+        MethodConstant constOld = m_constMethod;
+        MethodConstant constNew = constOld.resolveTypedefs();
+        return constNew == constOld
+                ? this
+                : getConstantPool().ensureRegisterConstant(constNew, m_iReg);
+        }
+
+    @Override
     protected Object getLocator()
         {
         return m_iReg == 0

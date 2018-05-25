@@ -268,6 +268,16 @@ public class MethodConstant
         }
 
     @Override
+    public MethodConstant resolveTypedefs()
+        {
+        SignatureConstant sigOld = m_constSig;
+        SignatureConstant sigNew = sigOld.resolveTypedefs();
+        return sigNew == sigOld
+                ? this
+                : getConstantPool().ensureMethodConstant(m_constParent, sigNew);
+        }
+
+    @Override
     protected int compareDetails(Constant obj)
         {
         MethodConstant that = (MethodConstant) obj;
