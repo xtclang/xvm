@@ -199,10 +199,10 @@ public abstract class OpInPlace
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argTarget, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
         if (isAssignOp())
             {
-            registerArgument(m_argReturn, registry);
+            m_argReturn = registerArgument(m_argReturn, registry);
             }
         }
 

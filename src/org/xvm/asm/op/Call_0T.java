@@ -158,6 +158,6 @@ public class Call_0T
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argReturn, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
     }

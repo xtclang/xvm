@@ -134,8 +134,8 @@ public class P_Set
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argTarget, registry);
-        registerArgument(m_argValue, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     @Override

@@ -164,7 +164,7 @@ public class Invoke_T0
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     private int m_nArgTupleValue;

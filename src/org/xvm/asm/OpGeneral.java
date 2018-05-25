@@ -203,12 +203,12 @@ public abstract class OpGeneral
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argTarget, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
         if (isBinaryOp())
             {
-            registerArgument(m_argValue, registry);
+            m_argValue = registerArgument(m_argValue, registry);
             }
-        registerArgument(m_argReturn, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
 
     protected int m_nTarget;

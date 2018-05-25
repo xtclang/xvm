@@ -133,7 +133,7 @@ public class JumpInt
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argVal, registry);
+        m_argVal = registerArgument(m_argVal, registry);
         }
 
     protected int   m_nArg;

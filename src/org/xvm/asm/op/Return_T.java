@@ -102,7 +102,7 @@ public class Return_T
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argT, registry);
+        m_argT = registerArgument(m_argT, registry);
         }
 
     private int m_nArg;

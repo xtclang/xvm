@@ -109,7 +109,7 @@ public abstract class OpIndexInPlace
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     protected int m_nValue;

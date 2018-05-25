@@ -133,8 +133,8 @@ public class AssertM
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argTest, registry);
-        registerArgument(m_constMsg, registry);
+        m_argTest = registerArgument(m_argTest, registry);
+        m_constMsg = (StringConstant) registerArgument(m_constMsg, registry);
         }
 
     private int m_nTest;

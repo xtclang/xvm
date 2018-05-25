@@ -124,6 +124,20 @@ public class Register
         m_iArg = iArg;
         }
 
+    @Override
+    public Register registerConstants(Op.ConstantRegistry registry)
+        {
+        if (m_typeReg != null)
+            {
+            m_typeReg = (TypeConstant) registry.register(m_typeReg);
+            }
+        else if (m_type != null)
+            {
+            m_type = (TypeConstant) registry.register(m_type);
+            }
+        return this;
+        }
+
     /**
      * Verify that the specified argument index is valid.
      *

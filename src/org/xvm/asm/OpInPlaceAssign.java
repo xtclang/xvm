@@ -165,8 +165,8 @@ public abstract class OpInPlaceAssign
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argTarget, registry);
-        registerArgument(m_argValue, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     protected int m_nTarget;

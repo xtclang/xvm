@@ -148,8 +148,8 @@ public class Var_IN
         {
         super.registerConstants(registry);
 
-        registerArgument(m_constName, registry);
-        registerArgument(m_argValue, registry);
+        m_constName = (StringConstant) registerArgument(m_constName, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     private int m_nNameId;

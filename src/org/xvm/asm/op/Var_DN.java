@@ -140,7 +140,7 @@ public class Var_DN
         {
         super.registerConstants(registry);
 
-        registerArgument(m_constName, registry);
+        m_constName = (StringConstant) registerArgument(m_constName, registry);
         }
 
     @Override

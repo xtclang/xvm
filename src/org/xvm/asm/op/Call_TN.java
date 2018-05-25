@@ -207,7 +207,7 @@ public class Call_TN
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         registerArguments(m_aArgReturn, registry);
         }
 

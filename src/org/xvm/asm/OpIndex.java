@@ -180,11 +180,11 @@ public abstract class OpIndex
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argTarget, registry);
-        registerArgument(m_argIndex, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
+        m_argIndex = registerArgument(m_argIndex, registry);
         if (isAssignOp())
             {
-            registerArgument(m_argReturn, registry);
+            m_argReturn = registerArgument(m_argReturn, registry);
             }
         }
 

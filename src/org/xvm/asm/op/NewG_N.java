@@ -147,7 +147,7 @@ public class NewG_N
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argType, registry);
+        m_argType = registerArgument(m_argType, registry);
         registerArguments(m_aArgValue, registry);
         }
 

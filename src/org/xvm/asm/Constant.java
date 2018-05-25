@@ -109,17 +109,6 @@ public abstract class Constant
         }
 
     /**
-     * Obtain the TypeConstant that represents the runtime type of the value of this constant.
-     *
-     * @return a TypeConstant
-     */
-    @Override
-    public TypeConstant getType()
-        {
-        throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
-        }
-
-    /**
      * @return true iff this constant represents a class at runtime, whether or not the exact
      *         identity of the class is known at compile time
      */
@@ -500,6 +489,26 @@ public abstract class Constant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
+        }
+
+
+    // ----- Argument interface --------------------------------------------------------------------
+
+    /**
+     * Obtain the TypeConstant that represents the runtime type of the value of this constant.
+     *
+     * @return a TypeConstant
+     */
+    @Override
+    public TypeConstant getType()
+        {
+        throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());
+        }
+
+    @Override
+    public Constant registerConstants(Op.ConstantRegistry registry)
+        {
+        return registry.register(this);
         }
 
 

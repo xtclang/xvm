@@ -188,7 +188,7 @@ public class Call_NT
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        registerArgument(m_argReturn, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
 
     private int[] m_anArgValue;

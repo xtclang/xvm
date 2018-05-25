@@ -101,7 +101,7 @@ public abstract class OpCallable extends Op
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argFunction, registry);
+        m_argFunction = registerArgument(m_argFunction, registry);
 
         if (isMultiReturn())
             {
@@ -109,7 +109,7 @@ public abstract class OpCallable extends Op
             }
         else
             {
-            registerArgument(m_argReturn, registry);
+            m_argReturn = registerArgument(m_argReturn, registry);
             }
         }
 
