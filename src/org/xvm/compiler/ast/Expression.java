@@ -973,7 +973,7 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, false, false, false, errs);
+        Argument arg = generateArgument(code, false, true, true, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
@@ -1030,6 +1030,35 @@ public abstract class Expression
         }
 
     /**
+     * Given an constant, attempt to convert it to the specified type.
+     *
+     * @param constIn  the constant
+     * @param typeOut  the type that the constant must be assignable to
+     *
+     * @return the constant to use, or null if conversion is not possible
+     */
+    protected Constant convertConstant(Constant constIn, TypeConstant typeOut)
+        {
+        TypeConstant typeIn = constIn.getType();
+        if (typeIn.isA(typeOut))
+            {
+            // common case; no conversion is necessary
+            return constIn;
+            }
+
+        Constant constOut;
+        try
+            {
+            return constIn.convertTo(typeOut);
+            }
+        catch (ArithmeticException e)
+            {
+            }
+
+        return null;
+        }
+
+    /**
      * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
      * type, and do so.
      *
@@ -1040,8 +1069,7 @@ public abstract class Expression
      *
      * @return the constant to use
      */
-    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut,
-            ErrorListener errs)
+    protected Constant validateAndConvertConstant(Constant constIn, TypeConstant typeOut, ErrorListener errs)
         {
         TypeConstant typeIn = constIn.getType();
         if (typeIn.isA(typeOut))
@@ -1071,41 +1099,6 @@ public abstract class Expression
             }
 
         return constOut;
-        }
-
-    /**
-     * Given an argument, verify that it can be assigned to (or somehow converted to) the specified
-     * type, and do so.
-     *
-     * @param argIn    the argument that needs to be validated as assignable
-     * @param code     the code block
-     * @param typeOut  the type that the argument must be assignable to
-     * @param errs     the error list to log any errors to, for example if the object cannot be
-     *                 coerced in a manner to make it assignable
-     *
-     * @return the argument to use
-     */
-    protected Argument validateAndConvertSingle(Argument argIn, Code code, TypeConstant typeOut, ErrorListener errs)
-        {
-        // assume that the result is the same as what was passed in
-        Argument argOut = argIn;
-
-        TypeConstant typeIn = argIn.getType();
-        if (!typeIn.equals(typeOut) && !typeIn.isA(typeOut))
-            {
-            MethodConstant constConv = typeIn.ensureTypeInfo().findConversion(typeOut);
-            if (constConv == null)
-                {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeOut, typeIn);
-                }
-            else
-                {
-                argOut = new Register(typeOut);
-                code.add(new Invoke_01(argIn, constConv, argOut));
-                }
-            }
-
-        return argOut;
         }
 
     /**
