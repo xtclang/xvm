@@ -7,6 +7,8 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler.Stage;
+
 import org.xvm.compiler.ast.Statement.Context;
 
 
@@ -36,6 +38,16 @@ public abstract class SyntheticExpression
     public Expression getUnderlyingExpression()
         {
         return expr;
+        }
+
+    @Override
+    public Stage getStage()
+        {
+        Stage stageThis = super.getStage();
+        Stage stageThat = expr.getStage();
+        return stageThis.compareTo(stageThat) > 0
+                ? stageThis
+                : stageThat;
         }
 
     @Override
