@@ -271,8 +271,8 @@ public class MethodDeclarationStatement
                 org.xvm.asm.Parameter[] aParams = buildParameters(pool);
 
                 boolean fUsesSuper = !fFunction && access != Access.PRIVATE && usesSuper();
-                MethodStructure method = container.createMethod(
-                        fFunction, access, aAnnotations, aReturns, sName, aParams, fUsesSuper);
+                MethodStructure method = container.createMethod(fFunction, access, aAnnotations,
+                        aReturns, sName, aParams, body != null, fUsesSuper);
                 setComponent(method);
 
                 // "finally" continuation for constructors
@@ -281,7 +281,7 @@ public class MethodDeclarationStatement
                     assert fConstructor;
 
                     MethodStructure methodFinally = container.createMethod(false, Access.PRIVATE,
-                            null, aReturns, "finally", aParams, false);
+                            null, aReturns, "finally", aParams, true, false);
                     this.methodFinally = methodFinally;
                     }
                 }
@@ -367,7 +367,8 @@ public class MethodDeclarationStatement
                     org.xvm.asm.Annotation[] annos = new org.xvm.asm.Annotation[]
                             {new org.xvm.asm.Annotation(pool.clzOverride(), Constant.NO_CONSTS)};
                     MethodStructure method = container.createMethod(
-                            false, methodSuper.getAccess(), annos, aReturns, sName, aParams, usesSuper());
+                            false, methodSuper.getAccess(), annos, aReturns, sName, aParams,
+                            body != null, usesSuper());
                     setComponent(method);
                     }
                 }
@@ -453,12 +454,7 @@ public class MethodDeclarationStatement
             setStage(Stage.Emitting);
 
             MethodStructure method = (MethodStructure) getComponent();
-            if (body == null)
-                {
-                // it's abstract
-                method.setAbstract(true); // TODO this should also set the enclosing class to abstract? and so on?
-                }
-            else
+            if (body != null)
                 {
                 MethodConstant constMethod = method.getIdentityConstant();
                 ModuleStructure module = (ModuleStructure) constMethod.getModuleConstant().getComponent();

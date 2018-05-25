@@ -195,8 +195,8 @@ public class Call_11
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
-        registerArgument(m_argReturn, registry);
+        m_argValue = registerArgument(m_argValue, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
 
     private int m_nArgValue;

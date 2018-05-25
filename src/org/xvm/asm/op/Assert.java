@@ -123,7 +123,7 @@ public class Assert
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argTest, registry);
+        m_argTest = registerArgument(m_argTest, registry);
         }
 
     private int m_nTest;

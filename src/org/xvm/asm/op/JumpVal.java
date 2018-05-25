@@ -186,11 +186,11 @@ public class JumpVal
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argVal, registry);
+        m_argVal = registerArgument(m_argVal, registry);
 
-        for (Argument arg : m_aArgCase)
+        for (int i = 0, c = m_aArgCase.length; i < c; i++)
             {
-            registerArgument(arg, registry);
+            m_aArgCase[i] = registerArgument(m_aArgCase[i], registry);
             }
         }
 

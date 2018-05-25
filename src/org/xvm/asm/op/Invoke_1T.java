@@ -162,7 +162,7 @@ public class Invoke_1T
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     private int m_nArgValue;

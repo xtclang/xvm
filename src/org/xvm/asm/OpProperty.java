@@ -54,7 +54,7 @@ public abstract class OpProperty extends Op
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_constProperty, registry);
+        m_constProperty = (PropertyConstant) registerArgument(m_constProperty, registry);
         }
 
     @Override

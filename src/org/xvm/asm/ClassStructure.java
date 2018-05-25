@@ -1362,7 +1362,7 @@ public class ClassStructure
            };
 
         MethodStructure method = mms.createMethod(true, Access.PUBLIC, null,
-            Parameter.NO_PARAMS, aParam, false);
+            Parameter.NO_PARAMS, aParam, true, false);
 
         // TODO: use the TypeInfo when implemented
         MethodStructure.Code code = method.createCode();

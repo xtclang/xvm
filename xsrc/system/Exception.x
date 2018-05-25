@@ -9,7 +9,7 @@
  */
 const Exception
     {
-    construct(String? text, Exception? cause = null)
+    construct(String? text = null, Exception? cause = null)
         {
         @Inject Iterable<StackFrame> stack;
 

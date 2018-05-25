@@ -113,8 +113,8 @@ public abstract class OpInvocable extends Op
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argTarget, registry);
-        registerArgument(m_constMethod, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
+        m_constMethod = (MethodConstant) registerArgument(m_constMethod, registry);
 
         if (isMultiReturn())
             {
@@ -122,7 +122,7 @@ public abstract class OpInvocable extends Op
             }
         else
             {
-            registerArgument(m_argReturn, registry);
+            m_argReturn = registerArgument(m_argReturn, registry);
             }
         }
 

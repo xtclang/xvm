@@ -98,7 +98,7 @@ interface Ref<RefType>
      * the _compile-time type_ of the reference.)
      */
     @Override
-    @RO Type ActualType;
+    @RO Type actualType;
 
     /**
      * REVIEW: should we move this function to the Referent interface?

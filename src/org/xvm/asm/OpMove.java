@@ -75,7 +75,7 @@ public abstract class OpMove
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argFrom, registry);
+        m_argFrom = registerArgument(m_argFrom, registry);
         }
 
     protected int m_nFromValue;

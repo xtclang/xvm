@@ -96,7 +96,7 @@ public class Return_1
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_arg, registry);
+        m_arg = registerArgument(m_arg, registry);
         }
 
     @Override

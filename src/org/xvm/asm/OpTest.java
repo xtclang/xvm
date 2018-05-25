@@ -217,12 +217,12 @@ public abstract class OpTest
     @Override
     public void registerConstants(ConstantRegistry registry)
         {
-        registerArgument(m_argVal1, registry);
+        m_argVal1 = registerArgument(m_argVal1, registry);
         if (isBinaryOp())
             {
-            registerArgument(m_argVal2, registry);
+            m_argVal2 = registerArgument(m_argVal2, registry);
             }
-        registerArgument(m_argReturn, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
 
     @Override

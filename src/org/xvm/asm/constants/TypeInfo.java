@@ -23,6 +23,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
@@ -267,13 +268,17 @@ public class TypeInfo
                 // substitute a sub-class property or method if one is available
                 if (idParent instanceof PropertyConstant)
                     {
-                    idParent = m_mapVirtProps.get(idParent.resolveNestedIdentity(
-                        ensureTypeResolver())).getIdentity();
+                    Object       idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    PropertyInfo info       = m_mapVirtProps.get(idResolved);
+
+                    idParent = info.getIdentity();
                     }
                 else if (idParent instanceof MethodConstant)
                     {
-                    idParent = m_mapVirtMethods.get(idParent.resolveNestedIdentity(
-                        ensureTypeResolver())).getIdentity();
+                    Object     idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    MethodInfo info       = m_mapVirtMethods.get(idResolved);
+
+                    idParent = info.getIdentity();
                     }
                 }
 
@@ -283,8 +288,8 @@ public class TypeInfo
                 // a method cap will not have a real component because it is a fake identity
                 if (idParent instanceof MethodConstant)
                     {
-                    MethodInfo method = m_mapVirtMethods.get(idParent.resolveNestedIdentity(
-                        ensureTypeResolver()));
+                    Object       idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    MethodInfo method = m_mapVirtMethods.get(idResolved);
                     assert method != null;
                     assert method.getHead().getImplementation() == Implementation.Capped;
 
@@ -1012,13 +1017,17 @@ public class TypeInfo
                     // the challenge that we have here is that there are potentially a large number
                     // of MethodStructures that contribute to the resulting MethodInfo, and each can
                     // have different defaults for the parameters
-                    // MethodStructure struct = ...
-                    // for (int i = cArgs; i < cParams; ++i)
-                    //     {
-                    //     // make sure that the parameter is optional
-                    //     TODO
-                    //     }
-                    continue NextMethod;
+                    // TODO: improve the naive implementation below
+                    MethodBody      body   = info.getHead();
+                    MethodStructure method = body.getMethodStructure();
+                    for (int i = cArgs; i < cParams; ++i)
+                        {
+                        // make sure that the argument is optional
+                        if (!method.getParam(i).hasDefaultValue())
+                            {
+                            continue NextMethod;
+                            }
+                        }
                     }
 
                 if (entryBest == null && mapMatch == null)
@@ -1396,9 +1405,26 @@ public class TypeInfo
         return methodMatch;
         }
 
+    /**
+     * Helper method that finds the first abstract method.
+     *
+     * @return a first abstract method or null if all methods are not abstract
+     */
+    public MethodConstant firstAbstractMethod()
+        {
+        for (Map.Entry<MethodConstant, MethodInfo> entry : getMethods().entrySet())
+            {
+            if (entry.getValue().isAbstract())
+                {
+                return entry.getKey();
+                }
+            }
+        return null;
+        }
+
     private ConstantPool pool()
         {
-        return  m_type.getConstantPool();
+        return m_type.getConstantPool();
         }
 
 

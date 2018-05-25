@@ -105,7 +105,7 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            registry.register(getRegisterType());
+            m_reg.registerConstants(registry);
             }
         }
 

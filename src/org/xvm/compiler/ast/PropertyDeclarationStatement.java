@@ -303,7 +303,7 @@ public class PropertyDeclarationStatement
                 MethodStructure methodInit = prop.createMethod(true, Access.PRIVATE,
                         org.xvm.asm.Annotation.NO_ANNOTATIONS,
                         new Parameter[] {new Parameter(pool(), type, null, null, true, 0, false)},
-                        "=", Parameter.NO_PARAMS, false);
+                        "=", Parameter.NO_PARAMS, true, false);
 
                 // wrap it with a pretend function in the AST tree
                 MethodDeclarationStatement stmtInit = new MethodDeclarationStatement(methodInit, value);

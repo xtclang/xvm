@@ -86,27 +86,38 @@ public class ThrowExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
-        validateThrow(ctx, errs);
-        finishValidation(TypeFit.Fit, typeRequired, null);
-        return this;
+        if (validateThrow(ctx, errs))
+            {
+            finishValidation(TypeFit.Fit, typeRequired, null);
+            return this;
+            }
+        return finishValidation(TypeFit.NoFit, typeRequired, null);
         }
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
         {
-        validateThrow(ctx, errs);
-        finishValidations(TypeFit.Fit, atypeRequired, null);
-        return this;
+        if (validateThrow(ctx, errs))
+            {
+            finishValidations(TypeFit.Fit, atypeRequired, null);
+            return this;
+            }
+        return finishValidations(TypeFit.NoFit, atypeRequired, null);
         }
 
-    protected void validateThrow(Context ctx, ErrorListener errs)
+    protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
         // validate the throw value expressions
         Expression exprNew = expr.validate(ctx, pool().typeException(), TuplePref.Rejected, errs);
-        if (exprNew != expr && exprNew != null)
+        if (exprNew != expr)
             {
+            if (exprNew == null)
+                {
+                return false;
+                }
             expr = exprNew;
             }
+        return true;
         }
 
     @Override

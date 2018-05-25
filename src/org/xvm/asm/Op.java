@@ -206,12 +206,9 @@ public abstract class Op
      * @param arg       the argument or null
      * @param registry  the ConstantRegistry to use to register any constants used by this op
      */
-    protected static void registerArgument(Argument arg, ConstantRegistry registry)
+    protected static Argument registerArgument(Argument arg, ConstantRegistry registry)
         {
-        if (arg instanceof Constant)
-            {
-            registry.register((Constant) arg);
-            }
+        return arg == null ? null : arg.registerConstants(registry);
         }
 
     /**
@@ -219,15 +216,14 @@ public abstract class Op
      *
      * @param aArg      the argument array
      * @param registry  the ConstantRegistry that represents all of the constants used by the code
-     *                  containing the op
      */
     protected static void registerArguments(Argument[] aArg, ConstantRegistry registry)
         {
         if (aArg != null)
             {
-            for (Argument arg : aArg)
+            for (int i = 0, c = aArg.length; i < c; i++)
                 {
-                registerArgument(arg, registry);
+                aArg[i] = registerArgument(aArg[i], registry);
                 }
             }
         }

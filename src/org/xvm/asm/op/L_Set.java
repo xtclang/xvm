@@ -127,7 +127,7 @@ public class L_Set
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     @Override

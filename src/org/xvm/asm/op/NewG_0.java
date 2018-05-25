@@ -118,7 +118,7 @@ public class NewG_0
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argType, registry);
+        m_argType = registerArgument(m_argType, registry);
         }
 
     private int m_nTypeValue;

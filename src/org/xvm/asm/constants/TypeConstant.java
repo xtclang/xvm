@@ -1189,6 +1189,9 @@ public abstract class TypeConstant
                                 constId.getPathString(), sName,
                                 typeConstraint.getValueString(),
                                 typeActual.getValueString(), this.getValueString());
+
+                        // to avoid a repetitive errors; proceed with the constraint type
+                        typeActual = typeConstraint;
                         }
                     }
 
@@ -1955,11 +1958,14 @@ public abstract class TypeConstant
                     layerOnProp(constId, fSelf, resolver, mapProps, mapVirtProps,
                             typeContrib, idProp, prop, errs);
 
-                    // now that the necessary data is in place, explode the property
-                    if (!explodeProperty(constId, struct, idProp, prop, resolver,
-                            mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs))
+                    if (!fNative)
                         {
-                        fIncomplete = true;
+                        // now that the necessary data is in place, explode the property
+                        if (!explodeProperty(constId, struct, idProp, prop, resolver,
+                                mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs))
+                            {
+                            fIncomplete = true;
+                            }
                         }
                     }
                 }
@@ -2088,8 +2094,8 @@ public abstract class TypeConstant
                 // to be processed by "finishAdoption"
                 for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
                     {
-                    MethodInfo     infoOld = entry.getValue();
-                    MethodInfo     infoNew = infoOld.finishAdoption(fNative, errs);
+                    MethodInfo infoOld = entry.getValue();
+                    MethodInfo infoNew = infoOld.finishAdoption(fNative, errs);
                     if (infoNew != infoOld)
                         {
                         entry.setValue(infoNew);
@@ -2145,8 +2151,9 @@ public abstract class TypeConstant
         // layer on an "into" of either "into Ref" or "into Var"
         {
         ConstantPool pool     = getConstantPool();
-        TypeConstant typeInto = pool.ensureAccessTypeConstant(pool.ensureParameterizedTypeConstant(
-                info.isVar() ? pool.typeVar() : pool.typeRef(), info.getType()), Access.PROTECTED);
+        TypeConstant typeTerm = info.isVar() ? pool.typeVarRB() : pool.typeRefRB();
+        TypeConstant typeInto = pool.ensureAccessTypeConstant(
+            pool.ensureParameterizedTypeConstant(typeTerm, info.getType()), Access.PROTECTED);
         TypeInfo     infoInto = typeInto.ensureTypeInfoInternal(errs);
         if (infoInto == null)
             {
@@ -2155,7 +2162,7 @@ public abstract class TypeConstant
         else
             {
             nestAndLayerOn(constId, idProp, resolver, mapProps, mapVirtProps, mapMethods,
-                mapVirtMethods, typeInto, infoInto.asInto(), errs);
+                mapVirtMethods, typeInto, infoInto, errs);
             }
         }
 
@@ -2709,7 +2716,7 @@ public abstract class TypeConstant
         if (structContrib instanceof MethodStructure)
             {
             MethodStructure   method       = (MethodStructure) structContrib;
-            boolean           fHasNoCode   = method.isAbstract();
+            boolean           fHasNoCode   = !method.hasCode();
             boolean           fHasAbstract = method.findAnnotation(getConstantPool().clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(resolver);
@@ -2737,6 +2744,7 @@ public abstract class TypeConstant
                 }
             else
                 {
+                assert !(fNative && fInterface); // cannot be native and interface at the same time
                 info = createPropertyInfo(prop, constId, fNative, fInterface, resolver, errs);
                 }
             mapProps.put(id, info);
@@ -2770,11 +2778,11 @@ public abstract class TypeConstant
             }
 
         // recurse through children
-        for (Component child : structContrib.ensureChildByNameMap().values())
+        for (Component child : structContrib.children())
             {
             if (child instanceof MultiMethodStructure)
                 {
-                for (MethodStructure method : child.getMethodByConstantMap().values())
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
                     fComplete &= createMemberInfo(constId, fInterface, method, resolver,
                             mapProps, mapMethods, listExplode, errs);
@@ -2795,7 +2803,8 @@ public abstract class TypeConstant
      *
      * @param prop        the PropertyStructure
      * @param constId     the identity of the containing structure (used only for error messages)
-     * @param fInterface  true if the type is an interface, not a class or mixin
+     * @param fNative     true if the type is a native rebase
+     * @param fInterface  true if the type is an interface, not a class or mixin (only if not native)
      * @param resolver    the GenericTypeResolver that uses the known type parameters
      * @param errs        the error list to log any errors to
      *
@@ -2925,11 +2934,11 @@ public abstract class TypeConstant
         MethodStructure  methodBadGet   = null;
         MethodStructure  methodBadSet   = null;
         int              cCustomMethods = 0;
-        for (Component child : prop.getChildByNameMap().values())
+        for (Component child : prop.children())
             {
             if (child instanceof MultiMethodStructure)
                 {
-                for (MethodStructure method : child.getMethodByConstantMap().values())
+                for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
                     if (method.isPotentialInitializer())
                         {
@@ -2991,7 +3000,8 @@ public abstract class TypeConstant
                         }
 
                     // regardless of what the code does, there is custom code in the property
-                    if (!method.isAbstract() && !method.isStatic())
+                    // Note: any code in the native interfaces(Ref, Enum, etc.) is for show only
+                    if (!method.isAbstract() && !method.isStatic() && !fNative)
                         {
                         ++cCustomMethods;
                         }
@@ -3189,7 +3199,7 @@ public abstract class TypeConstant
             }
 
         return new PropertyInfo(new PropertyBody(prop, impl, null,
-                prop.getType().resolveGenerics(resolver), fRO, fRW, fNative | cCustomMethods > 0,
+                prop.getType().resolveGenerics(resolver), fRO, fRW, cCustomMethods > 0,
                 effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
                 methodInit == null ? null : methodInit.getIdentityConstant()));
         }

@@ -15,6 +15,15 @@ public interface Argument
     TypeConstant getType();
 
     /**
+     * Register all constants that this Argument depends on into the passed registry.
+     *
+     * @param registry  the code-local constant registry
+     *
+     * @return the Argument to use in place of this Argument
+     */
+    Argument registerConstants(Op.ConstantRegistry registry);
+
+    /**
      * For debugging purposes, format the optional "arg" and arg index.
      *
      * @param arg   an optional Argument (could be null)

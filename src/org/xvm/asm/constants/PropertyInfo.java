@@ -492,7 +492,7 @@ public class PropertyInfo
      */
     public PropertyInfo asInto()
         {
-        // basically, if the method is a constant or type parameter, it stays as-is; otherwise, it
+        // basically, if the property is a constant or type parameter, it stays as-is; otherwise, it
         // needs to be "flattened" into a single implicit entry with the right signature
         if (isConstant() || isTypeParam())
             {
@@ -1130,8 +1130,9 @@ public class PropertyInfo
             Implementation implTail = chain[ixTail].getImplementation();
             if (implTail != Implementation.Field)
                 {
-                if (implTail == Implementation.Default)
+                if (implTail == Implementation.Native)
                     {
+                    // replace the "native" method with a field access
                     chain = chain.clone();
                     }
                 else

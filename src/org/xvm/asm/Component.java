@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,6 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import org.xvm.util.Handy;
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -139,7 +139,7 @@ public abstract class Component
         assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
         m_nFlags  = (short) nFlags;
-        m_constId = constId;
+        m_constId = constId == null ? null : (IdentityConstant) constId.resolveTypedefs();
         m_cond    = condition;
         }
 
@@ -684,53 +684,9 @@ public abstract class Component
         }
 
     /**
-     * Obtain a read-only map of all method children identified by method signature constant.
-     * <p/>
-     * Note: the returned map contains only methods
-     *
-     * @return a read-only map from method constant to method component; never null, even if there
-     *         are no child methods
-     */
-    public Map<MethodConstant, MethodStructure> getMethodByConstantMap()
-        {
-        ensureChildren();
-        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-        return map == null ? Collections.EMPTY_MAP : map;
-        }
-
-    /**
-     * Obtain the actual read/write map of all method children identified by method signature
-     * constant.
-     * <p/>
-     * Note: the returned map contains only methods
-     *
-     * @return obtain the actual map from method constant to method component, creating the map if
-     *         necessary
-     */
-    public Map<MethodConstant, MethodStructure> ensureMethodByConstantMap()
-        {
-        ensureChildren();
-        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
-        if (map == null)
-            {
-            map = new ListMap<>();
-
-            // store the map on every one of the siblings (including this component)
-            for (Iterator<Component> siblings = siblings(); siblings.hasNext(); )
-                {
-                siblings.next().m_methodByConstant = map;
-                }
-
-            // the corresponding field on this component should now be initialized
-            assert m_methodByConstant == map;
-            }
-        return map;
-        }
-
-    /**
      * Make sure that any deferred child deserialization is complete
      */
-    private void ensureChildren()
+    protected void ensureChildren()
         {
         if (m_abChildren != null)
             {
@@ -766,24 +722,7 @@ public abstract class Component
      */
     protected void visitChildren(Consumer<Component> visitor, boolean fSiblings, boolean fRecursive)
         {
-        for (Component component : getChildByNameMap().values())
-            {
-            Component componentEldest = component;
-
-            do
-                {
-                visitor.accept(component);
-                component = component.getNextSibling();
-                }
-            while (fSiblings && component != null);
-
-            if (fRecursive)
-                {
-                componentEldest.visitChildren(visitor, fSiblings, fRecursive);
-                }
-            }
-
-        for (Component component : getMethodByConstantMap().values())
+        for (Component component : children())
             {
             Component componentEldest = component;
 
@@ -808,69 +747,79 @@ public abstract class Component
      */
     protected void addChild(Component child)
         {
+        // if the child is a method, it can only be contained by a MultiMethodStructure
+        assert !(child instanceof MethodStructure);
+
         ensureChildren();
 
-        // if the child is a method, it will be stored by its signature; otherwise, it is stored by
-        // its name
-        Map<Object, Component> kids;
-        Object id;
-        if (child instanceof MethodStructure)
-            {
-            kids = (Map) ensureMethodByConstantMap();
-            id   = child.getIdentityConstant();
-            }
-        else
-            {
-            kids = (Map) ensureChildByNameMap();
-            id   = child.getName();
-            }
+        Map<String, Component> kids  = ensureChildByNameMap();
+        String                 sName = child.getName();
 
-        Component sibling = kids.get(id);
+        Component sibling = kids.get(sName);
         if (sibling == null)
             {
-            kids.put(id, child);
+            kids.put(sName, child);
             }
         else
             {
-            // there has to be a condition that sets the new kid apart from its siblings, but that
-            // condition might not be available (resolved) when the kid is created, so defer the
-            // check for the existence of the condition and the mutual exclusivity of the condition
-            // until much later in the assembly
-            // if (child.m_cond == null)
-            //     {
-            //     throw new IllegalStateException("cannot add child with same ID (" + id
-            //             + ") if condition == null");
-            //     }
-            // if (sibling.m_cond == null)
-            //     {
-            //     throw new IllegalStateException("cannot add child if sibling with same ID (" + id
-            //             + ") has condition == null");
-            //     }
-
-            // make sure that the parent is set correctly
-            child.setContaining(this);
-
-            // the new kid gets put at the end of the linked list of siblings
-            Component lastSibling = sibling;
-            while (lastSibling.m_sibling != null)
-                {
-                lastSibling = lastSibling.m_sibling;
-                }
-            lastSibling.m_sibling = child;
-
-            // the child can't have any of its own children; that "merge" functionality is simply
-            // not supported by this operation
-            assert child.m_abChildren       == null;
-            assert child.m_childByName      == null;
-            assert child.m_methodByConstant == null;
-
-            // make sure that the various sibling-shared fields are configured
-            child.m_abChildren       = sibling.m_abChildren;
-            child.m_childByName      = sibling.m_childByName;
-            child.m_methodByConstant = sibling.m_methodByConstant;
+            linkSibling(child, sibling);
             }
 
         markModified();
+        }
+
+    /**
+     * Link a sibling to the specified child's chain.
+     *
+     * @param child    the child component to link
+     * @param sibling  the sibling component to link to
+     */
+    protected void linkSibling(Component child, Component sibling)
+        {
+        // there has to be a condition that sets the new kid apart from its siblings, but that
+        // condition might not be available (resolved) when the kid is created, so defer the
+        // check for the existence of the condition and the mutual exclusivity of the condition
+        // until much later in the assembly
+        // if (child.m_cond == null)
+        //     {
+        //     throw new IllegalStateException("cannot add child with same ID (" + id
+        //             + ") if condition == null");
+        //     }
+        // if (sibling.m_cond == null)
+        //     {
+        //     throw new IllegalStateException("cannot add child if sibling with same ID (" + id
+        //             + ") has condition == null");
+        //     }
+
+        // make sure that the parent is set correctly
+        child.setContaining(this);
+
+        // the new kid gets put at the end of the linked list of siblings
+        Component lastSibling = sibling;
+        while (lastSibling.m_sibling != null)
+            {
+            lastSibling = lastSibling.m_sibling;
+            }
+        lastSibling.m_sibling = child;
+
+        child.adoptChildren(sibling);
+        }
+
+    /**
+     * Adopt the children of the specified component
+     *
+     * @param that
+     */
+    protected void adoptChildren(Component that)
+        {
+        // the child can't have any of its own children; that "merge" functionality is simply
+        // not supported by this operation
+        assert m_abChildren       == null;
+        assert m_childByName      == null;
+
+        // make sure that the various sibling-shared fields are configured
+        m_abChildren  = that.m_abChildren;
+        m_childByName = that.m_childByName;
         }
 
     /**
@@ -882,22 +831,24 @@ public abstract class Component
         {
         assert child.getParent() == this;
 
-        // if the child is a method, it is stored by its signature; otherwise, it is stored by
-        // its name
-        Map<Object, Component> kids;
-        Object id;
-        if (child instanceof MethodStructure)
-            {
-            kids = (Map) ensureMethodByConstantMap();
-            id   = child.getIdentityConstant();
-            }
-        else
-            {
-            kids = (Map) ensureChildByNameMap();
-            id   = child.getName();
-            }
+        Map<String, Component> kids  = ensureChildByNameMap();
+        String                 sName = child.getName();
 
-        Component sibling = kids.remove(id);
+        Component sibling = kids.remove(sName);
+
+        unlinkSibling(kids, sName, child, sibling);
+        }
+
+    /**
+     * Unlink the sibling from the specified child's chain.
+     *
+     * @param kids     the map of children
+     * @param id       the child id
+     * @param child    the child component
+     * @param sibling  the sibling component to unlink
+     */
+    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling)
+        {
         if (sibling == child && child.m_sibling == null)
             {
             // most common case: the specified child is the only sibling with that id
@@ -915,24 +866,25 @@ public abstract class Component
             {
             // the child to remove is in the head of the linked list
             kids.put(id, child.m_sibling);
-            markModified();
-            return;
+            }
+        else
+            {
+            // the child to remove is in the middle of the linked list;
+            // put the linked list back first, then find and remove the child
+            kids.put(id, sibling);
+            do
+                {
+                if (sibling.m_sibling == child)
+                    {
+                    sibling.m_sibling = child.m_sibling;
+                    break;
+                    }
+                sibling = sibling.m_sibling;
+                }
+            while (sibling != null);
             }
 
-        // the child to remove is in the middle of the linked list;
-        // put the linked list back first, then find and remove the child
-        kids.put(id, sibling);
-        do
-            {
-            if (sibling.m_sibling == child)
-                {
-                sibling.m_sibling = child.m_sibling;
-                markModified();
-                return;
-                }
-            sibling = sibling.m_sibling;
-            }
-        while (sibling != null);
+        markModified();
         }
 
     /**
@@ -1098,20 +1050,21 @@ public abstract class Component
      * @param returnTypes  the return values of the method
      * @param sName        the method name, or null if the name is unknown
      * @param paramTypes   the parameters for the method
+     * @param fHasCode     true indicates that the method is known to have a natural body
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
      * @return a new MethodStructure
      */
     public MethodStructure createMethod(boolean fFunction, Access access,
             Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes,
-            boolean fUsesSuper)
+            boolean fHasCode, boolean fUsesSuper)
         {
         assert sName != null;
         assert access != null;
 
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
         return multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
-                fUsesSuper);
+                fHasCode, fUsesSuper);
         }
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName)
@@ -1223,12 +1176,11 @@ public abstract class Component
     protected boolean areChildrenIdentical(Component that)
         {
         ensureChildren();
-        return  equalChildMaps(this.getChildByNameMap(), that.getChildByNameMap()) &&
-                equalChildMaps(this.getMethodByConstantMap(), that.getMethodByConstantMap());
+        return equalChildMaps(this.getChildByNameMap(), that.getChildByNameMap());
         }
 
-    private boolean equalChildMaps(Map<?, ? extends Component> mapThis,
-                                   Map<?, ? extends Component> mapThat)
+    protected boolean equalChildMaps(Map<?, ? extends Component> mapThis,
+                                     Map<?, ? extends Component> mapThat)
         {
         if (mapThis.size() != mapThat.size())
             {
@@ -1274,10 +1226,21 @@ public abstract class Component
      */
     public Component getChild(Constant constId)
         {
-        Component firstSibling = constId instanceof MethodConstant
-                ? getMethodByConstantMap().get(constId)
-                : getChildByNameMap().get(((NamedConstant) constId).getName());
+        Component firstSibling = getChildByNameMap().get(((NamedConstant) constId).getName());
 
+        return findLinkedChild(constId, firstSibling);
+        }
+
+    /**
+     * Find a child in the chain with the specified id.
+     *
+     * @param constId       the id to match
+     * @param firstSibling  the first child
+     *
+     * @return the matching child
+     */
+    protected Component findLinkedChild(Constant constId, Component firstSibling)
+        {
         // common result: nothing for that constant
         if (firstSibling == null)
             {
@@ -1292,7 +1255,7 @@ public abstract class Component
             return firstSibling;
             }
 
-        List<Component>  matches = selectMatchingSiblings(firstSibling);
+        List<Component> matches = selectMatchingSiblings(firstSibling);
         if (matches.isEmpty())
             {
             return null;
@@ -1380,7 +1343,7 @@ public abstract class Component
             return firstSibling;
             }
 
-        List<Component>  matches = selectMatchingSiblings(firstSibling);
+        List<Component> matches = selectMatchingSiblings(firstSibling);
         if (matches.isEmpty())
             {
             return null;
@@ -1395,28 +1358,48 @@ public abstract class Component
         }
 
     /**
+     * @return the number of children
+     */
+    public int getChildrenCount()
+        {
+        return m_childByName == null ? 0 : m_childByName.size();
+        }
+
+    /**
+     * @return true iff this component has children
+     */
+    public boolean hasChildren()
+        {
+        return m_childByName != null && !m_childByName.isEmpty();
+        }
+
+    /**
+     * Obtain a collection of the child components contained within this Component.
+     *
+     * @return an immutable collection of the component's children
+     */
+    public Collection<? extends Component> children()
+        {
+        Collection<Component> children = getChildByNameMap().values();
+
+        assert (children = Collections.unmodifiableCollection(children)) != null;
+        return children;
+        }
+
+    /**
      * Obtain a list of the child components contained within this Component. Note that this is a
      * fairly expensive operation, because each potential child must be evaluated for inclusion as
      * if it were requested explicitly via {@link #getChild(String)} or {@link #getChild(Constant)}.
      *
      * @return a list of the component's children
      */
-    public List<Component> children()
+    public List<Component> safeChildren()
         {
         List<Component> list = new ArrayList<>();
 
         for (String sName : getChildByNameMap().keySet())
             {
             Component child = getChild(sName);
-            if (child != null)
-                {
-                list.add(child);
-                }
-            }
-
-        for (MethodConstant constId : getMethodByConstantMap().keySet())
-            {
-            Component child = getChild(constId);
             if (child != null)
                 {
                 list.add(child);
@@ -1566,12 +1549,7 @@ public abstract class Component
      */
     protected void registerChildrenConstants(ConstantPool pool)
         {
-        for (Component child : getChildByNameMap().values())
-            {
-            registerChildConstants(pool, child);
-            }
-
-        for (Component child : getMethodByConstantMap().values())
+        for (Component child : children())
             {
             registerChildConstants(pool, child);
             }
@@ -1606,20 +1584,14 @@ public abstract class Component
     protected void assembleChildren(DataOutput out)
             throws IOException
         {
-        int cKids = getChildByNameMap().size() + getMethodByConstantMap().size();
+        int cKids = getChildrenCount();
         writePackedLong(out, cKids);
 
         if (cKids > 0)
             {
             int cActual = 0;
 
-            for (Component child : getChildByNameMap().values())
-                {
-                assembleChild(out, child);
-                ++cActual;
-                }
-
-            for (Component child : getMethodByConstantMap().values())
+            for (Component child : children())
                 {
                 assembleChild(out, child);
                 ++cActual;
@@ -1670,11 +1642,7 @@ public abstract class Component
             }
 
         // children nested under these siblings are length-encoded as a group
-        if (child.getChildByNameMap().isEmpty() && child.getMethodByConstantMap().isEmpty())
-            {
-            writePackedLong(out, 0);
-            }
-        else
+        if (child.hasChildren())
             {
             ByteArrayOutputStream outNestedRaw = new ByteArrayOutputStream();
             DataOutputStream outNestedData = new DataOutputStream(outNestedRaw);
@@ -1682,6 +1650,10 @@ public abstract class Component
             byte[] abGrandChildren = outNestedRaw.toByteArray();
             writePackedLong(out, abGrandChildren.length);
             out.write(abGrandChildren);
+            }
+        else
+            {
+            writePackedLong(out, 0);
             }
         }
 
@@ -1707,21 +1679,7 @@ public abstract class Component
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        Iterator<? extends XvmStructure> iter = null;
-
-        ensureChildren();
-        if (m_childByName != null)
-            {
-            iter = m_childByName.values().iterator();
-            }
-
-        if (m_methodByConstant != null)
-            {
-            Iterator<? extends XvmStructure> iter2 = m_methodByConstant.values().iterator();
-            iter = iter == null ? iter2 : new LinkedIterator(iter, iter2);
-            }
-
-        return iter == null ? Collections.emptyIterator() : iter;
+        return children().iterator();
         }
 
     @Override
@@ -1761,10 +1719,35 @@ public abstract class Component
     @Override
     public String getDescription()
         {
-        return "name=" + getName() + ", format=" + getFormat() + ", access=" + getAccess()
-                + ", abstract=" + isAbstract()+ ", static=" + isStatic()
-                + ", synthetic=" + isSynthetic() + ", next-sibling=" + (m_sibling != null)
-                + ", modified=" + m_fModified;
+        StringBuilder sb = new StringBuilder();
+        sb.append("name=")
+          .append(getName())
+          .append(", format=")
+          .append(getFormat())
+          .append(", access=")
+          .append(getAccess());
+
+        if (isAbstract())
+            {
+            sb.append(", abstract");
+            }
+        if (isStatic())
+            {
+            sb.append(", static");
+            }
+        if (isSynthetic())
+            {
+            sb.append(", synthetic");
+            }
+        if (m_sibling != null)
+            {
+            sb.append(", next-sibling");
+            }
+        if (m_fModified)
+            {
+            sb.append(", modified");
+            }
+        return sb.toString();
         }
 
     /**
@@ -1915,11 +1898,7 @@ public abstract class Component
     protected void dumpChildren(PrintWriter out, String sIndent)
         {
         // go through each named and constant-identified child, and dump it, and its siblings
-        for (Component child : getChildByNameMap().values())
-            {
-            dumpChild(child, out, sIndent);
-            }
-        for (Component child : getMethodByConstantMap().values())
+        for (Component child : children())
             {
             dumpChild(child, out, sIndent);
             }
@@ -3264,11 +3243,6 @@ public abstract class Component
      * specified name.
      */
     private Map<String, Component> m_childByName;
-
-    /**
-     * This holds all of the method children. See the explanation of {@link #m_childByName}.
-     */
-    private Map<MethodConstant, MethodStructure> m_methodByConstant;
 
     /**
      * For XVM structures that can be modified, this flag tracks whether or not

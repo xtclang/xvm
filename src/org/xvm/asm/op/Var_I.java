@@ -135,7 +135,7 @@ public class Var_I
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argValue, registry);
+        m_argValue = registerArgument(m_argValue, registry);
         }
 
     @Override

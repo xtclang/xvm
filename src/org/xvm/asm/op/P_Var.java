@@ -162,8 +162,8 @@ public class P_Var
         {
         super.registerConstants(registry);
 
-        registerArgument(m_argTarget, registry);
-        registerArgument(m_argReturn, registry);
+        m_argTarget = registerArgument(m_argTarget, registry);
+        m_argReturn = registerArgument(m_argReturn, registry);
         }
 
     private int m_nTarget;
