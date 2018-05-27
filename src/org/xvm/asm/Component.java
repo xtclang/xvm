@@ -236,6 +236,35 @@ public abstract class Component
         }
 
     /**
+     * @param idNew  the new identity to use for this component
+     */
+    protected void replaceThisIdentityConstant(IdentityConstant idNew)
+        {
+        IdentityConstant idOld = m_constId;
+        for (Iterator<Component> iter = siblings(); iter.hasNext(); )
+            {
+            iter.next().m_constId = idNew;
+            }
+        Component parent = getParent();
+        if (parent != null)
+            {
+            parent.replaceChildIdentityConstant(idOld, idNew);
+            }
+        }
+
+    /**
+     * Replace all references to children that use the old identity with the new identity.
+     *
+     * @param idOld  the old identity
+     * @param idNew  the new identity to use instead of the old identity
+     */
+    protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew)
+        {
+        // nothing to do unless the name changed, which we don't support anyhow
+        assert idOld.getName().equals(idNew.getName());
+        }
+
+    /**
      * @return the Format that corresponds to this Component
      */
     public Format getFormat()

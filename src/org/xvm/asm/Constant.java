@@ -143,6 +143,11 @@ public abstract class Constant
         return false;
         }
 
+    public boolean canResolve()
+        {
+        return !containsUnresolved();
+        }
+
     /**
      * @return this same type, but without any typedefs in it
      */

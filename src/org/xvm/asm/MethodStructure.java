@@ -288,6 +288,31 @@ public class MethodStructure
             type = pool.ensureAnnotatedTypeConstant(annotations[i], type);
             }
         m_aReturns[iRet] = new Parameter(pool, type, ret.getName(), ret.getDefaultValue(), true, iRet, false);
+
+        // build a new MethodConstant
+        MethodConstant idOld = getIdentityConstant();
+        MethodConstant idNew = pool.ensureMethodConstant(idOld.getParentConstant(), idOld.getName(), getParamTypes(), getReturnTypes());
+        replaceThisIdentityConstant(idNew);
+        }
+
+    /**
+     * @return true if all typedefs have been resolved; false if this method has to be called later
+     *         in order to resolve typedefs
+     */
+    public boolean resolveTypedefs()
+        {
+        IdentityConstant idOld = getIdentityConstant();
+        if (idOld.containsUnresolved())
+            {
+            return false;
+            }
+
+        IdentityConstant idNew = (IdentityConstant) idOld.resolveTypedefs();
+        if (idNew != idOld)
+            {
+            replaceThisIdentityConstant(idNew);
+            }
+        return true;
         }
 
     /**

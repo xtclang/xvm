@@ -531,6 +531,13 @@ public abstract class IdentityConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        IdentityConstant parent = getParentConstant();
+        return parent != null && parent.containsUnresolved();
+        }
+
+    @Override
     protected Object getLocator()
         {
         // this protected method must be present here to make it accessible to other classes in this

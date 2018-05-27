@@ -112,6 +112,14 @@ public class RegisterConstant
         }
 
     @Override
+    public boolean canResolve()
+        {
+        // as soon as the containing MethodConstant knows where it exists in the universe, then we
+        // can safely resolve names
+        return m_constMethod.getParentConstant().canResolve();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         if (fReEntry)

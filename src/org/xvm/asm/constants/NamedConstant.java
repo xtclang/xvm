@@ -102,7 +102,7 @@ public abstract class NamedConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constParent.containsUnresolved() | m_constName.containsUnresolved();
+        return super.containsUnresolved() || m_constName.containsUnresolved();
         }
 
     @Override

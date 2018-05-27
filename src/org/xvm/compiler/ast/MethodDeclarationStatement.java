@@ -386,13 +386,12 @@ public class MethodDeclarationStatement
             MethodStructure method = (MethodStructure) component;
 
             // sort out which annotations go on the method, and which belong to the return type
-            if (!method.resolveAnnotations())
+            if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
                 mgr.requestRevisit();
                 return;
                 }
             }
-
         }
 
     @Override

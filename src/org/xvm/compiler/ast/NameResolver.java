@@ -280,13 +280,16 @@ public class NameResolver
                 // fall through
 
             case RESOLVING_TURTLES:
-                if (m_constant.containsUnresolved() && !(m_constant instanceof RegisterConstant))  // REVIEW GG - to discuss (this is necessary but not sufficient)
+                // note that
+                if (m_constant.canResolve())
+                    {
+                    // no turtles left to resolve
+                    m_status = Status.RESOLVED;
+                    }
+                else
                     {
                     return Result.DEFERRED;
                     }
-
-                // no turtles left to resolve
-                m_status = Status.RESOLVED;
                 // fall through
 
             case RESOLVED:

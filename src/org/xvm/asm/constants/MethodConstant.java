@@ -270,7 +270,7 @@ public class MethodConstant
     @Override
     public boolean containsUnresolved()
         {
-        return m_constSig.containsUnresolved();
+        return super.containsUnresolved() || m_constSig.containsUnresolved();
         }
 
     @Override

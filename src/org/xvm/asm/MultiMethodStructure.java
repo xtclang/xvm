@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -56,6 +57,23 @@ public class MultiMethodStructure
     public boolean hasChildren()
         {
         return m_methodByConstant != null && !m_methodByConstant.isEmpty();
+        }
+
+    @Override
+    protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew)
+        {
+        assert idOld instanceof MethodConstant;
+        assert idNew instanceof MethodConstant;
+
+        Map<MethodConstant, MethodStructure> map = m_methodByConstant;
+        if (map != null)
+            {
+            MethodStructure child = map.remove(idOld);
+            if (child != null)
+                {
+                map.put((MethodConstant) idNew, child);
+                }
+            }
         }
 
     @Override
