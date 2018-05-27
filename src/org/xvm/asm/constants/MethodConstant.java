@@ -268,6 +268,12 @@ public class MethodConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constSig.containsUnresolved();
+        }
+
+    @Override
     public MethodConstant resolveTypedefs()
         {
         SignatureConstant sigOld = m_constSig;

@@ -100,6 +100,12 @@ public abstract class NamedConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constParent.containsUnresolved() | m_constName.containsUnresolved();
+        }
+
+    @Override
     protected int compareDetails(Constant that)
         {
         int n = this.m_constParent.compareTo(((NamedConstant) that).m_constParent);
