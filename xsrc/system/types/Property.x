@@ -47,6 +47,14 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<P
      */
     void set(TargetType target, PropertyType value)
         {
-        return this.of(target).set(value);
+        Ref<PropertyType> ref = this.of(target);
+        if (ref instanceof Var<PropertyType>)
+            {
+            ref.set(value);
+            }
+        else
+            {
+            throw new Exception("Property is read-only");
+            }
         }
     }

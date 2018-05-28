@@ -77,7 +77,7 @@ const String
     @Override
     Int size.get()
         {
-        return chars.length;
+        return chars.size;
         }
 
     Char[] to<Char[]>()
@@ -110,7 +110,7 @@ const String
 
         construct(Sequence<Char> seq)
             {
-            Byte[] bytes  = new Byte[seq.length];
+            Byte[] bytes  = new Byte[seq.size];
             Int    offset = 0;
             for (Char ch : seq)
                 {
