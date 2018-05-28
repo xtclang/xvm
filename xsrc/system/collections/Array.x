@@ -72,7 +72,7 @@ class Array<ElementType>
         {
         if (index < 0 || index >= size)
             {
-            throw new BoundsException("index=" + index + ", size=", size);
+            throw new BoundsException("index=" + index + ", size=" + size);
             }
 
         Element element = head as Element;
