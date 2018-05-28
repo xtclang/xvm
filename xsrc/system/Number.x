@@ -141,7 +141,7 @@ interface Number
             {
             @Override @RO Int size.get()
                 {
-                return num.bitCount / 4;
+                return num.bitLength / 4;
                 }
 
             @Override Nibble get(Int index)
@@ -172,7 +172,7 @@ interface Number
             {
             @Override @RO Int size.get()
                 {
-                return num.bitCount / 8;
+                return num.bitLength / 8;
                 }
 
             @Override Boolean get(Int index)
