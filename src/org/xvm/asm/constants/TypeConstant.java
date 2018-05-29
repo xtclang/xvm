@@ -699,8 +699,17 @@ public abstract class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
             }
 
-        // build the TypeInfo for this type
-        info = buildTypeInfo(errs);
+        try
+            {
+            // build the TypeInfo for this type
+            info = buildTypeInfo(errs);
+            }
+        catch (Exception | Error e)
+            {
+            // clean up the deferred types
+            takeDeferredTypeInfo();
+            throw e;
+            }
 
         // info here can't be null, because we should be at the "zero level"; in other words, anyone
         // who calls ensureTypeInfo() should get a usable result, because nothing is already on the
