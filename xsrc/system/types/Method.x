@@ -3,9 +3,7 @@
  * parameter types, and a number of return types. A method can be bound to a particular target (of
  * a type containing the method) in order to obtain an invocable function.
  */
-const Method<TargetType,
-             ParamTypes extends Tuple<ParamTypes...>,
-             ReturnTypes extends Tuple<ReturnTypes...>>
+const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
     {
     /**
      * The method's name.
