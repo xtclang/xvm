@@ -8,8 +8,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler.Stage;
-
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.ast.Statement.Context;
 import org.xvm.util.Severity;
@@ -150,12 +148,13 @@ public class AnnotatedTypeExpression
 
         if (fValid)
             {
-            // the annotation must mix in to the underlying type
+            // the annotation must mix in to the Var (if it's disassociated), or into the underlying
+            // type otherwise
             Annotation             annoAst  = getAnnotation();
             org.xvm.asm.Annotation annoAsm  = annoAst.ensureAnnotation(pool);
             TypeConstant           typeAnno = annoAsm.getAnnotationType();
-            if (typeAnno.getExplicitClassInto().isIntoVariableType() && !isDisassociated()
-                    || !typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto()))
+            if (!  (isDisassociated() && typeAnno.getExplicitClassInto().isIntoVariableType()
+                || !isDisassociated() && typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto())))
                 {
                 annoAst.log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
                         type.ensureTypeConstant().getValueString(),
