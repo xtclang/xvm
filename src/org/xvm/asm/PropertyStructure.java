@@ -415,7 +415,7 @@ public class PropertyStructure
                     structMixin = null;
                     if (typeExtends.isExplicitClassIdentity(true))
                         {
-                        Constant constExtends = typeExtends.resolveTypedefs().getDefiningConstant();
+                        Constant constExtends = typeExtends.getDefiningConstant();
                         if (constExtends instanceof IdentityConstant)
                             {
                             structMixin = (ClassStructure) ((IdentityConstant) constExtends).getComponent();

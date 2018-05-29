@@ -16,17 +16,19 @@ module TestSimple.xqiz.it
 
     void test2()
         {
+        @Inject X.io.Console console;
+
         String s = "Hello";
         console.println(s + " world!!!");
         }
 
     void test3()
         {
-        @Inject X.io.Console console2;
+        @Inject X.io.Console console;
 
         Int i = 40;
         i = i + 2;
-        console2.println(i);
+        console.println(i);
         }
     }
 

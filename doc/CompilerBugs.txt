@@ -5,3 +5,18 @@
 missing ">" causes an NPE
     class C<T>
         into M1<T | M2<T>
+
+
+-- COMPILER-65: Could not find a matching constructor for type "Ecstasy:BoundsException". ("new BoundsException()")
+
+caused by an automatic (unnecessary) default constructor in addition to a correct constructor
+(see TypeInfo.findCallable())
+
+-- COMPILER-65: Could not find a matching constructor for type "Ecstasy:Exception". ("new Exception(s)")
+
+caused by a failure to correctly init a parameter with "markInitialValue"
+(see "T0D0" in MethodDeclarationStatement.buildParameters)
+
+
+
+

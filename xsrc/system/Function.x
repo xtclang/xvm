@@ -2,7 +2,7 @@
  * A Function represents a unit of invocation. A function has a name, a number of
  * parameter types, and a number of return types.
  */
-interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<Type...>>
+interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
     {
     @RO Parameter[] params;
     @RO Map<String, Parameter> paramsByName;
@@ -76,7 +76,7 @@ interface Function<ParamTypes extends Tuple<Type...>, ReturnTypes extends Tuple<
 
     // -----
 
-    private class PartiallyBound<ReturnTypes extends Tuple<ReturnTypes...>, ParamTypes extends Tuple<ParamTypes...>>
+    private class PartiallyBound<ReturnTypes extends Tuple, ParamTypes extends Tuple>
             implements Function<ReturnTypes, ParamTypes>
         {
         construct(Function fn, Map<Parameter, Object> params)
