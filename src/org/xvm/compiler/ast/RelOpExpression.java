@@ -404,7 +404,9 @@ public class RelOpExpression
         Expression expr2New = expr2.validate(ctx, type2, TuplePref.Rejected, errs);
         if (expr1New == null || expr2New == null)
             {
-            finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeBoolean() : typeRequired, null);
+            finishValidation(typeRequired,
+                    typeRequired == null ? pool().typeBoolean() : typeRequired, TypeFit.NoFit,
+                    null);
             return null;
             }
 
@@ -495,7 +497,8 @@ public class RelOpExpression
             // error: somehow, we got this far, but we couldn't find an op that matched the
             // necessary types
             operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-            finishValidation(TypeFit.NoFit, typeRequired == null ? type1 : typeRequired, null);
+            finishValidation(typeRequired, typeRequired == null ? type1 : typeRequired, TypeFit.NoFit,
+                    null);
             return null;
             }
 
@@ -527,11 +530,12 @@ public class RelOpExpression
                 constResult = Constant.defaultValue(typeResult);
                 }
 
-            finishValidation(TypeFit.Fit, constResult.getType(), constResult);
+            finishValidation(typeRequired, constResult.getType(), TypeFit.Fit, constResult);
             return this;
             }
 
-        finishValidation(m_convert == null ? TypeFit.Fit : TypeFit.Conv, typeResult, null);
+        finishValidation(typeRequired, typeResult, m_convert == null ? TypeFit.Fit : TypeFit.Conv,
+                null);
         return this;
         }
 

@@ -164,7 +164,8 @@ public class AnnotatedTypeExpression
                 }
             }
 
-        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeReference, typeReferent);
+        return finishValidation(typeRequired, typeReference, fValid ? TypeFit.Fit : TypeFit.NoFit,
+                typeReferent);
         }
 
 

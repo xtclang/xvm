@@ -25,7 +25,7 @@ public  class PackExpression
 
         ConstantPool pool = pool();
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
-        finishValidation(TypeFit.Fit, type, expr.isConstant()
+        finishValidation(typeRequired, type, TypeFit.Fit, expr.isConstant()
                 ? pool.ensureTupleConstant(type, expr.toConstants())
                 : null);
         }

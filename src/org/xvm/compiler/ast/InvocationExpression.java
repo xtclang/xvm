@@ -530,7 +530,7 @@ public class InvocationExpression
                         TypeConstant[] atypeResult   = m_fCall
                                 ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
                                 : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null);
                         }
 
                     // handle method or function
@@ -539,7 +539,7 @@ public class InvocationExpression
                         TypeConstant[] atypeResult = m_fCall
                                 ? ((MethodConstant) argMethod).getRawReturns()
                                 : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
-                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null);
                         }
 
                     // must be a property or a variable of type function (@Auto conversion possibility
@@ -551,7 +551,7 @@ public class InvocationExpression
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null);
                     }
                 }
             }
@@ -570,12 +570,14 @@ public class InvocationExpression
                             ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
 
-                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null);
                     }
                 }
             }
 
-        return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
+        return finishValidation(typeRequired,
+                typeRequired == null ? pool().typeObject() : typeRequired, TypeFit.NoFit,
+                null);
         }
 
     @Override

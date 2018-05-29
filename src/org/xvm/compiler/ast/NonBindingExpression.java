@@ -95,7 +95,7 @@ public class NonBindingExpression
                     }
                 }
             }
-        return finishValidation(fit, type, constant);
+        return finishValidation(typeRequired, type, fit, constant);
         }
 
     @Override

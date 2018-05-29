@@ -61,7 +61,7 @@ public class BinaryExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
         // TODO
-        finishValidation(TypeFit.Fit, pool().typeBinary(), pool().ensureByteStringConstant(bytes));
+        finishValidation(typeRequired, pool().typeBinary(), TypeFit.Fit, pool().ensureByteStringConstant(bytes));
         return this;
         }
 

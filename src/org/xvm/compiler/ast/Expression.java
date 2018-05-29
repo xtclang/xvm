@@ -15,13 +15,11 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodBody;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Set;
-import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
@@ -167,6 +165,31 @@ public abstract class Expression
         }
 
     /**
+     * @return true iff the expression is allowed to automatically convert to a required type (if
+     *         such a conversion is possible and marked as automatic)
+     */
+    protected boolean isAutoConversionAllowed()
+        {
+        return true;
+        }
+
+    /**
+     * @return true iff the expression is allowed to pack itself into a tuple if necessary
+     */
+    protected boolean isAutoPackingAllowed()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff the expression is allowed to unpack itself from a tuple if necessary
+     */
+    protected boolean isAutoUnpackingAllowed()
+        {
+        return false;
+        }
+
+    /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information. If an expression is not able to determine an implicit type, that
      * indicates that a compile time error is likely to occur when the expression is validated, but
@@ -237,14 +260,24 @@ public abstract class Expression
      */
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
-        if (!hasMultiValueImpl())
+        if (typeRequired == null)
             {
-            throw new UnsupportedOperationException();
+            // all expressions are required to be able to yield a void result
+            return TypeFit.Fit;
             }
 
-        checkDepth();
+        if (hasSingleValueImpl())
+            {
+            return calcFit(ctx, getImplicitType(ctx), typeRequired, pref);
+            }
 
-        return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
+        if (hasMultiValueImpl())
+            {
+            checkDepth();
+            return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
+            }
+
+        throw new UnsupportedOperationException();
         }
 
     /**
@@ -271,10 +304,20 @@ public abstract class Expression
                 return TypeFit.Fit;
 
             case 1:
-                return testFit(ctx, atypeRequired[0], pref);
+                if (hasSingleValueImpl())
+                    {
+                    return testFit(ctx, atypeRequired[0], pref);
+                    }
+                // fall through
 
             default:
-                // anything that can yield separate values must override this method
+                if (hasMultiValueImpl())
+                    {
+                    checkDepth();
+                    return calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired, pref);
+                    }
+
+                // anything that can yield separate values must have a "multi" implementation
                 return TypeFit.NoFit;
             }
         }
@@ -418,40 +461,56 @@ public abstract class Expression
         {
         checkDepth();
 
-        switch (atypeRequired.length)
+        int cTypesRequired = atypeRequired.length;
+        if (cTypesRequired > 1)
             {
-            case 0:
-                return validate(ctx, null, pref, errs);
-
-            case 1:
-                // single type expected
-                return validate(ctx, atypeRequired[0], pref, errs);
-
-            default:
-                // log the error, but allow validation to continue (with no particular
-                // expected type) so that we get as many errors exposed as possible in the
-                // validate phase
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                        atypeRequired.length, 1);
-                finishValidations(TypeFit.Fit, atypeRequired, null);
-                return null;
+            // log the error, but allow validation to continue (with no particular
+            // expected type) so that we get as many errors exposed as possible in the
+            // validate phase
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
+            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null);
+            return null;
             }
+
+        if (hasSingleValueImpl())
+            {
+            return validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], pref, errs);
+            }
+
+        throw new UnsupportedOperationException();
         }
 
     /**
      * Store the result of validating the Expression.
      *
-     * @param fit       the fit of that type that was determined by the validation
-     * @param type      the single type that results from the Expression
-     * @param constVal  a constant value, iff this expression is constant
+     * @param typeRequired  the type that the expression must yield (optional)
+     * @param typeActual    the type of the expression at this point (required)
+     * @param fit           the fit of that type that was determined by the validation (required)
+     * @param constVal      a constant value, iff this expression is constant (optional)
      *
-     * @return this or null
+     * @return an expression to use (which may or may not be "this"), or null to indicate that the
+     *         compilation should halt as soon as is practical
      */
-    protected Expression finishValidation(TypeFit fit, TypeConstant type, Constant constVal)
+    protected Expression finishValidation(
+            TypeConstant typeRequired,
+            TypeConstant typeActual,
+            TypeFit      fit,
+            Constant     constVal)
         {
+        assert typeActual != null;
+        assert fit != null;
+
+        if (typeRequired != null && !typeActual.isA(typeRequired))
+            {
+            // TODO - @Auto
+            }
+
+        m_fit    = fit == null ? TypeFit.Fit : fit;
+        m_aType  = aTypeActual;
+        m_aConst = aconstVal;
+
         finishValidations(
-                fit,
-                type == null ? null : new TypeConstant[] {type},
+                atypeRequired, typeActual == null ? null : new TypeConstant[] {typeActual}, fit,
                 constVal == null ? null : new Constant[] {constVal});
 
         return fit.isFit()
@@ -462,31 +521,33 @@ public abstract class Expression
     /**
      * Store the result of validating the Expression.
      *
-     * @param fit        the fit of those types that was determined by the validation
-     * @param aType      the types that result from the Expression
-     * @param aconstVal  an array of constant values, equal in length to the array of types, iff
-     *                   this expression is constant
+     * @param atypeRequired  the (optional) types required from the Expression (both the array and
+     *                       any of its elements can be null)
+     * @param aTypeActual    the types that result from the Expression (neither the array nor its
+     *                       elements can be null)
+     * @param fit            the fit of those types that was determined by the validation;
+     *                       {@link TypeFit#NoFit} indicates that a type error has already been
+     *                       logged; {@link TypeFit#isConverting()} indicates that a type conversion
+     *                       has already been applied; {@link TypeFit#isPacking()} indicates that a
+     *                       tuple packing has already been applied; {@link TypeFit#isUnpacking()}
+     *                       indicates that a tuple un-packing has already been applied
+     * @param aconstVal      an array of constant values, equal in length to the array of types, iff
+     *                       this expression is constant
      *
      * @return this or null
      */
-    protected Expression finishValidations(TypeFit fit, TypeConstant[] aType, Constant[] aconstVal)
+    protected Expression finishValidations(
+            TypeConstant[] atypeRequired,
+            TypeConstant[] aTypeActual,
+            TypeFit        fit,
+            Constant[]     aconstVal)
         {
-        if (aType == null)
-            {
-            aType = TypeConstant.NO_TYPES;
-            }
-
-        if (m_aType != null)
-            {
-            throw new IllegalStateException("Expression has already been validated: " + this);
-            }
-
-        assert checkElementsNonNull(aType);
+        assert aTypeActual != null && checkElementsNonNull(aTypeActual);
         assert aconstVal == null ||
-                (aconstVal.length == aType.length && checkElementsNonNull(aconstVal));
+                (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
 
         m_fit    = fit == null ? TypeFit.Fit : fit;
-        m_aType  = aType;
+        m_aType  = aTypeActual;
         m_aConst = aconstVal;
 
         return fit.isFit()

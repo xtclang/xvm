@@ -553,7 +553,7 @@ public class NameExpression
         if (!fValid)
             {
             // something failed previously, so we can't complete the validation
-            finishValidation(TypeFit.NoFit, typeRequired, null);
+            finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null);
             return null;
             }
 
@@ -643,7 +643,7 @@ public class NameExpression
                 }
             }
 
-        return finishValidation(fit, type, constant);
+        return finishValidation(typeRequired, type, fit, constant);
         }
 
     @Override

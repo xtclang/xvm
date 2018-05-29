@@ -39,7 +39,7 @@ public  class ConvertExpression
             val = convertConstant(expr.toConstant(), type);
             }
 
-        finishValidation(TypeFit.Fit, type, val);
+        finishValidation(typeRequired, type, TypeFit.Fit, val);
         }
 
 

@@ -23,7 +23,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -469,7 +468,7 @@ public class NamedTypeExpression
             }
         TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), type);
 
-        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeType, type);
+        return finishValidation(typeRequired, typeType, fValid ? TypeFit.Fit : TypeFit.NoFit, type);
         }
 
 

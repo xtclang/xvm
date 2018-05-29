@@ -300,7 +300,8 @@ public class NewExpression
                 }
             }
 
-        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeConstruct, null);
+        return finishValidation(typeRequired, typeConstruct, fValid ? TypeFit.Fit : TypeFit.NoFit,
+                null);
         }
 
     @Override

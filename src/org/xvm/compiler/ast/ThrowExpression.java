@@ -88,10 +88,10 @@ public class ThrowExpression
         {
         if (validateThrow(ctx, errs))
             {
-            finishValidation(TypeFit.Fit, typeRequired, null);
+            finishValidation(typeRequired, typeRequired, TypeFit.Fit, null);
             return this;
             }
-        return finishValidation(TypeFit.NoFit, typeRequired, null);
+        return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null);
         }
 
     @Override
@@ -99,10 +99,10 @@ public class ThrowExpression
         {
         if (validateThrow(ctx, errs))
             {
-            finishValidations(TypeFit.Fit, atypeRequired, null);
+            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null);
             return this;
             }
-        return finishValidations(TypeFit.NoFit, atypeRequired, null);
+        return finishValidations(atypeRequired, atypeRequired, TypeFit.NoFit, null);
         }
 
     protected boolean validateThrow(Context ctx, ErrorListener errs)

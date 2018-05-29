@@ -77,6 +77,12 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return true;
+        }
+
+    @Override
     public TypeConstant getImplicitType(Context ctx)
         {
         ConstantPool pool = pool();
@@ -99,12 +105,6 @@ public class LiteralExpression
             default:
                 throw new IllegalStateException(literal.getId().name() + "=" + literal.getValue());
             }
-        }
-
-    @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
-        {
-        return calcFit(ctx, getImplicitType(ctx), typeRequired, pref);
         }
 
     @Override
@@ -139,7 +139,7 @@ public class LiteralExpression
                 }
             }
 
-        finishValidation(fit, typeLiteral, constLiteral);
+        finishValidation(typeRequired, typeLiteral, fit, constLiteral);
         return this;
         }
 

@@ -180,7 +180,7 @@ public abstract class TypeExpression
         TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
                 ? TypeFit.Fit
                 : TypeFit.NoFit;
-        return finishValidation(fit, typeReference, typeReferent);
+        return finishValidation(typeRequired, typeReference, fit, typeReferent);
         }
 
 
