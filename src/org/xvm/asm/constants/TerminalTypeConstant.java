@@ -146,6 +146,12 @@ public class TerminalTypeConstant
     @Override
     public int getMaxParamsCount()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can happen if this type is a Typedef referring to a relational type
+            return 0;
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -232,6 +238,13 @@ public class TerminalTypeConstant
     @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).resolveContributedName(sName, collector);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -282,6 +295,13 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant resolveGenerics(GenericTypeResolver resolver)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).resolveGenerics(resolver);
+            }
+
         Constant constId = getDefiningConstant();
         if (constId instanceof PropertyConstant)
             {
@@ -297,6 +317,13 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).adoptParameters(atypeParams);
+            }
+
         Constant         constant = getDefiningConstant();
         IdentityConstant idClz;
         switch (constant.getFormat())
@@ -348,6 +375,13 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant resolveAutoNarrowing()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).resolveAutoNarrowing();
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -367,6 +401,13 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).inferAutoNarrowing(constThisClass);
+            }
+
         Constant constId = getDefiningConstant();
         if (constId.getFormat() == Format.Class)
             {
@@ -384,6 +425,13 @@ public class TerminalTypeConstant
     @Override
     public boolean isTuple()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isTuple();
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -419,6 +467,13 @@ public class TerminalTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).buildTypeInfo(errs);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -472,6 +527,13 @@ public class TerminalTypeConstant
     @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).extendsClass(constClass);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -501,6 +563,13 @@ public class TerminalTypeConstant
     @Override
     public boolean isClassType()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isClassType();
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -539,12 +608,20 @@ public class TerminalTypeConstant
     @Override
     public boolean isFormalType()
         {
-        return getDefiningConstant().getFormat() == Format.Property;
+        return isSingleDefiningConstant() &&
+               getDefiningConstant().getFormat() == Format.Property;
         }
 
     @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isSingleUnderlyingClass(fAllowInterface);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -585,6 +662,13 @@ public class TerminalTypeConstant
     @Override
     public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).getSingleUnderlyingClass(fAllowInterface);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -623,6 +707,13 @@ public class TerminalTypeConstant
     @Override
     public boolean isExplicitClassIdentity(boolean fAllowParams)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isExplicitClassIdentity(fAllowParams);
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -647,6 +738,13 @@ public class TerminalTypeConstant
     @Override
     public Component.Format getExplicitClassFormat()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).getExplicitClassFormat();
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -676,6 +774,13 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant getExplicitClassInto()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).getExplicitClassInto();
+            }
+
         Constant       constId = getDefiningConstant();
         ClassStructure structMixin;
         switch (constId.getFormat())
@@ -779,6 +884,13 @@ public class TerminalTypeConstant
     @Override
     public boolean isConstant()
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isConstant();
+            }
+
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
@@ -860,6 +972,13 @@ public class TerminalTypeConstant
             return chains;
             }
 
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).collectContributions(typeLeft, listRight, chains);
+            }
+
         Constant constIdRight = getDefiningConstant();
 
         if (typeLeft.isSingleDefiningConstant()
@@ -936,6 +1055,13 @@ public class TerminalTypeConstant
     protected List<ContributionChain> collectClassContributions(
             ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).collectClassContributions(clzRight, listRight, chains);
+            }
+
         Constant constIdLeft = getDefiningConstant();
         switch (constIdLeft.getFormat())
             {
@@ -1010,6 +1136,13 @@ public class TerminalTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            }
+
         Constant constIdLeft = getDefiningConstant();
         switch (constIdLeft.getFormat())
             {
@@ -1042,6 +1175,13 @@ public class TerminalTypeConstant
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).containsSubstitutableMethod(signature, access, listParams);
+            }
+
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
@@ -1073,6 +1213,13 @@ public class TerminalTypeConstant
     @Override
     public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).checkConsumption(sTypeName, access, listParams);
+            }
+
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
@@ -1140,9 +1287,15 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public Usage checkProduction(String sTypeName, Access access,
-                                 List<TypeConstant> listParams)
+    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).checkProduction(sTypeName, access, listParams);
+            }
+
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
@@ -1216,6 +1369,13 @@ public class TerminalTypeConstant
     @Override
     public OpSupport getOpSupport(TemplateRegistry registry)
         {
+        if (!isSingleDefiningConstant())
+            {
+            // this can only happen if this type is a Typedef referring to a relational type
+            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+            return getTypedefTypeConstant(constId).getOpSupport(registry);
+            }
+
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat())
             {
@@ -1358,6 +1518,13 @@ public class TerminalTypeConstant
         if (!isValidated())
             {
             fHalt |= super.validate(errs);
+
+            if (!isSingleDefiningConstant())
+                {
+                // this can only happen if this type is a Typedef referring to a relational type
+                TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+                return getTypedefTypeConstant(constId).validate(errs);
+                }
 
             Constant constant = getDefiningConstant();
             switch (constant.getFormat())

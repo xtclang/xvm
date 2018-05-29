@@ -2304,13 +2304,17 @@ public class ConstantPool
                             Constant idParent = type.getDefiningConstant();
                             for (TypeConstant typeParam : type.getParamTypesArray())
                                 {
-                                if (typeParam.isSingleDefiningConstant() && typeParam.getDefiningConstant() instanceof PropertyConstant)
+                                if (typeParam.isSingleDefiningConstant())
                                     {
-                                    IdentityConstant idPropParent = ((PropertyConstant) typeParam.getDefiningConstant()).getParentConstant();
-                                    ConstantPool     pool         = getConstantPool();
-                                    if (!idPropParent.equals(idParent))
+                                    Constant constParam = typeParam.getDefiningConstant();
+                                    if (constParam instanceof PropertyConstant)
                                         {
-                                        continue NextConst;
+                                        IdentityConstant idPropParent =
+                                            ((PropertyConstant) constParam).getParentConstant();
+                                        if (!idPropParent.equals(idParent))
+                                            {
+                                            continue NextConst;
+                                            }
                                         }
                                     }
                                 }
