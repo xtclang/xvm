@@ -278,8 +278,13 @@ public class Parameter
 
         if (hasDefaultValue())
             {
-            sb.append(", default=")
-              .append(m_constDefault.getValueString());
+            sb.append(", has default");
+
+            if (m_constDefault != null)
+                {
+                sb.append("=")
+                  .append(m_constDefault.getValueString());
+                }
             }
 
         return sb.toString();

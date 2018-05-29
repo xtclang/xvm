@@ -19,7 +19,7 @@ class Array<ElementType>
         {
         if (capacity < 0)
             {
-            throw new IllegalArgumentException("capacity", capacity, "must be >= 0");
+            throw new IllegalArgumentException("capacity " + capacity + " must be >= 0");
             }
         this.capacity = capacity;
         }
@@ -47,7 +47,7 @@ class Array<ElementType>
 
         this.head     = head;
         this.capacity = size;
-        this.length   = size;
+        this.size     = size;
         }
 
     public/private Int capacity = 0;
@@ -70,9 +70,9 @@ class Array<ElementType>
     @Override
     Ref<ElementType> elementAt(Int index)
         {
-        if (index < 0 || index >= length)
+        if (index < 0 || index >= size)
             {
-            throw new BoundsException(index, 0, length);
+            throw new BoundsException("index=" + index + ", size=" + size);
             }
 
         Element element = head as Element;
