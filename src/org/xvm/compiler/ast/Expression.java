@@ -15,6 +15,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -468,7 +469,7 @@ public abstract class Expression
             // expected type) so that we get as many errors exposed as possible in the
             // validate phase
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
-            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null);
+            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
             return null;
             }
 
@@ -485,24 +486,42 @@ public abstract class Expression
      *
      * @param typeRequired  the type that the expression must yield (optional)
      * @param typeActual    the type of the expression at this point (required)
-     * @param fit           the fit of that type that was determined by the validation (required)
+     * @param fit           the fit of that type that was determined by the validation (required);
+     *                      {@link TypeFit#NoFit} indicates that a type error has already been
+     *                      logged; {@link TypeFit#isConverting()} indicates that a type conversion
+     *                      has already been applied; {@link TypeFit#isPacking()} indicates that a
+     *                      tuple packing has already been applied; {@link TypeFit#isUnpacking()}
+     *                      indicates that a tuple un-packing has already been applied
      * @param constVal      a constant value, iff this expression is constant (optional)
+     * @param errs          the error list to log any errors to
      *
      * @return an expression to use (which may or may not be "this"), or null to indicate that the
      *         compilation should halt as soon as is practical
      */
     protected Expression finishValidation(
-            TypeConstant typeRequired,
-            TypeConstant typeActual,
-            TypeFit      fit,
-            Constant     constVal)
+            TypeConstant  typeRequired,
+            TypeConstant  typeActual,
+            TypeFit       fit,
+            Constant      constVal,
+            ErrorListener errs)
         {
         assert typeActual != null;
         assert fit != null;
 
-        if (typeRequired != null && !typeActual.isA(typeRequired))
+        if (typeRequired != null && !typeActual.isA(typeRequired) && isAutoConversionAllowed()
+                && !fit.isConverting())
             {
-            // TODO - @Auto
+            // check for the availability of an @Auto conversion
+            MethodConstant idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
+            if (idConv == null)
+                {
+                // cannot provide the required type
+                // TODO
+                }
+            else
+                {
+                // TODO - found an @Auto
+                }
             }
 
         m_fit    = fit == null ? TypeFit.Fit : fit;
@@ -511,7 +530,7 @@ public abstract class Expression
 
         finishValidations(
                 atypeRequired, typeActual == null ? null : new TypeConstant[] {typeActual}, fit,
-                constVal == null ? null : new Constant[] {constVal});
+                constVal == null ? null : new Constant[] {constVal}, errs);
 
         return fit.isFit()
                 ? this
@@ -533,6 +552,7 @@ public abstract class Expression
      *                       indicates that a tuple un-packing has already been applied
      * @param aconstVal      an array of constant values, equal in length to the array of types, iff
      *                       this expression is constant
+     * @param errs           the error list to log any errors to
      *
      * @return this or null
      */
@@ -540,7 +560,8 @@ public abstract class Expression
             TypeConstant[] atypeRequired,
             TypeConstant[] aTypeActual,
             TypeFit        fit,
-            Constant[]     aconstVal)
+            Constant[]     aconstVal,
+            ErrorListener  errs)
         {
         assert aTypeActual != null && checkElementsNonNull(aTypeActual);
         assert aconstVal == null ||

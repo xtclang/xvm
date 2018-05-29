@@ -301,7 +301,7 @@ public class NewExpression
             }
 
         return finishValidation(typeRequired, typeConstruct, fValid ? TypeFit.Fit : TypeFit.NoFit,
-                null);
+                null, errs);
         }
 
     @Override

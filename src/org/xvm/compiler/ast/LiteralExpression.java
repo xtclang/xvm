@@ -139,7 +139,7 @@ public class LiteralExpression
                 }
             }
 
-        finishValidation(typeRequired, typeLiteral, fit, constLiteral);
+        finishValidation(typeRequired, typeLiteral, fit, constLiteral, errs);
         return this;
         }
 

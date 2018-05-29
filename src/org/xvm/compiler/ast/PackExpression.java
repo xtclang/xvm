@@ -27,7 +27,7 @@ public  class PackExpression
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
         finishValidation(typeRequired, type, TypeFit.Fit, expr.isConstant()
                 ? pool.ensureTupleConstant(type, expr.toConstants())
-                : null);
+                : null, errs);
         }
 
     // ----- accessors -----------------------------------------------------------------------------

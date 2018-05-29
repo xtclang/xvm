@@ -226,7 +226,7 @@ public class TupleExpression
                 }
             }
 
-        finishValidations(atypeRequired, aTypes, fit, fConstant ? aVals : null);
+        finishValidations(atypeRequired, aTypes, fit, fConstant ? aVals : null, errs);
 
         return fHalted  ? null
                 : fPack ? new PackExpression(this)

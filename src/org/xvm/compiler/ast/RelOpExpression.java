@@ -406,7 +406,7 @@ public class RelOpExpression
             {
             finishValidation(typeRequired,
                     typeRequired == null ? pool().typeBoolean() : typeRequired, TypeFit.NoFit,
-                    null);
+                    null, errs);
             return null;
             }
 
@@ -498,7 +498,7 @@ public class RelOpExpression
             // necessary types
             operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
             finishValidation(typeRequired, typeRequired == null ? type1 : typeRequired, TypeFit.NoFit,
-                    null);
+                    null, errs);
             return null;
             }
 
@@ -530,12 +530,12 @@ public class RelOpExpression
                 constResult = Constant.defaultValue(typeResult);
                 }
 
-            finishValidation(typeRequired, constResult.getType(), TypeFit.Fit, constResult);
+            finishValidation(typeRequired, constResult.getType(), TypeFit.Fit, constResult, errs);
             return this;
             }
 
         finishValidation(typeRequired, typeResult, m_convert == null ? TypeFit.Fit : TypeFit.Conv,
-                null);
+                null, errs);
         return this;
         }
 
