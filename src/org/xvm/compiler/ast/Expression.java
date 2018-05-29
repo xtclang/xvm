@@ -151,6 +151,22 @@ public abstract class Expression
     // ----- Expression compilation ----------------------------------------------------------------
 
     /**
+     * @return true iff the expression implements the "single type" / "single value" code path
+     */
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    /**
+     * @return true iff the expression implements the "n type" / "n value" code path
+     */
+    protected boolean hasMultiValueImpl()
+        {
+        return false;
+        }
+
+    /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information. If an expression is not able to determine an implicit type, that
      * indicates that a compile time error is likely to occur when the expression is validated, but
@@ -164,6 +180,11 @@ public abstract class Expression
      */
     public TypeConstant getImplicitType(Context ctx)
         {
+        if (!hasMultiValueImpl())
+            {
+            throw new UnsupportedOperationException();
+            }
+
         checkDepth();
 
         TypeConstant[] aTypes = getImplicitTypes(ctx);
@@ -183,6 +204,11 @@ public abstract class Expression
      */
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
+        if (!hasSingleValueImpl())
+            {
+            throw new UnsupportedOperationException();
+            }
+
         checkDepth();
 
         TypeConstant type = getImplicitType(ctx);
@@ -211,6 +237,11 @@ public abstract class Expression
      */
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
         {
+        if (!hasMultiValueImpl())
+            {
+            throw new UnsupportedOperationException();
+            }
+
         checkDepth();
 
         return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
@@ -261,6 +292,11 @@ public abstract class Expression
      */
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut, TuplePref pref)
         {
+        if (!hasMultiValueImpl())
+            {
+            throw new UnsupportedOperationException();
+            }
+
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
@@ -347,6 +383,11 @@ public abstract class Expression
      */
     protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
         {
+        if (!hasMultiValueImpl())
+            {
+            throw new UnsupportedOperationException();
+            }
+
         checkDepth();
 
         TypeConstant[] aTypes = typeRequired == null
