@@ -183,7 +183,7 @@ public class TodoExpression
         Argument       argEx    = new Register(constEx.getType());
         Argument       argMsg   = message == null
                 ? pool.valNull()
-                : message.generateArgument(code, false, false, false, errs);
+                : message.generateArgument(code, false, false, errs);
 
         code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         code.add(new Throw(argEx));

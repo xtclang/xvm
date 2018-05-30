@@ -57,7 +57,8 @@ public  class ConvertExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
         if (fPack)
             {
@@ -66,12 +67,12 @@ public  class ConvertExpression
 
         if (isConstant())
             {
-            return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
+            return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
             }
 
         // generate the tuple fields
         TypeConstant type   = getType();
-        Argument     argIn  = expr.generateArgument(code, false, true, true, errs);
+        Argument     argIn  = expr.generateArgument(code, true, true, errs);
         Argument     argOut = fUsedOnce
                 ? new Register(type, Op.A_STACK)
                 : new Register(type);

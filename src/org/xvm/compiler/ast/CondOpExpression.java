@@ -116,7 +116,7 @@ public class CondOpExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
             boolean fUsedOnce, ErrorListener errs)
         {
         if (!isConstant())
@@ -128,7 +128,7 @@ public class CondOpExpression
             return regResult;
             }
 
-        return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
+        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
@@ -137,8 +137,8 @@ public class CondOpExpression
         if (LVal.isLocalArgument()) // REVIEW what other options are there?
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, false, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, false, false, errs);
+            Argument arg1 = expr1.generateArgument(code, false, false, errs);
+            Argument arg2 = expr2.generateArgument(code, false, false, errs);
 
             // generate the op that combines the two sub-expressions
             if (isAnd())

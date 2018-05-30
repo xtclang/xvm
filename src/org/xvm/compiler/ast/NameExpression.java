@@ -673,7 +673,8 @@ public class NameExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
 //        // TODO this code came from InvocationExpression; evaluate NameExpression code for necessary fixes
 //            Argument argMethod = m_argMethod;
@@ -809,7 +810,7 @@ public class NameExpression
                         }
                     else
                         {
-                        Argument argLeft = left.generateArgument(code, false, false, false, errs);
+                        Argument argLeft = left.generateArgument(code, false, false, errs);
                         code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
                         }
 
@@ -823,7 +824,7 @@ public class NameExpression
             case TypeOfClass:
             case Singleton:
                 assert hasConstantValue();
-                return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
+                return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);

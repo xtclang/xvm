@@ -1,10 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -12,16 +12,18 @@ import org.xvm.asm.op.Label;
 
 
 /**
- * A tuple packing expression. This packs the values from the sub-expression into a tuple.
+ * A tuple un-packing expression. This unpacks the values from the sub-expression tuple.
  */
-public  class PackExpression
+public  class UnpackExpression
         extends SyntheticExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PackExpression(Expression expr)
+    public UnpackExpression(Expression expr, int iField)
         {
         super(expr);
+
+        m_iField = iField;
 
         ConstantPool pool = pool();
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
@@ -32,8 +34,22 @@ public  class PackExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the tuple field index that this expression unpacks
+     */
+    public int getFieldIndex()
+        {
+        return m_iField;
+        }
 
     // ----- Expression compilation ----------------------------------------------------------------
+
+
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return true;
+        }
 
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk,
@@ -92,4 +108,5 @@ public  class PackExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private int m_iField;
     }

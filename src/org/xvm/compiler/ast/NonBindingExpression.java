@@ -105,7 +105,7 @@ public class NonBindingExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
             boolean fUsedOnce,
             ErrorListener errs)
         {

@@ -166,28 +166,37 @@ public abstract class Expression
         }
 
     /**
-     * @return true iff the expression is allowed to automatically convert to a required type (if
-     *         such a conversion is possible and marked as automatic)
+     * @return an expression that represents the value(s) of this expression as a tuple of those
+     *         same values
      */
-    protected boolean isAutoConversionAllowed()
+    protected Expression createPackedExpression()
         {
-        return true;
+        return new PackExpression(this);
         }
 
     /**
-     * @return true iff the expression is allowed to pack itself into a tuple if necessary
+     * @return an array of expressions, one for each field of this tuple
      */
-    protected boolean isAutoPackingAllowed()
+    protected Expression[] createUnpackedExpression()
         {
-        return false;
-        }
+        TypeConstant type = getType();
+        if (!type.isTuple())
+            {
+            throw new IllegalStateException("tuple required");
+            }
 
-    /**
-     * @return true iff the expression is allowed to unpack itself from a tuple if necessary
-     */
-    protected boolean isAutoUnpackingAllowed()
-        {
-        return false;
+        if (!type.isParamsSpecified())
+            {
+            throw new IllegalStateException("tuple field information required");
+            }
+
+        int c = type.getParamsCount();
+        UnpackExpression[] aExpr = new UnpackExpression[c];
+        for (int i = 0; i < c; ++i)
+            {
+            aExpr[i] = new UnpackExpression(this, i);
+            }
+        return aExpr;
         }
 
     /**
@@ -835,8 +844,8 @@ public abstract class Expression
      * This method (or the plural version) must be overridden by any expression that is not always
      * constant.
      *
-     * @param code          the code block
      * @param fPack         true if the result must be delivered wrapped in a tuple
+     * @param code          the code block
      * @param fLocalPropOk  enables use of local-property mode
      * @param fUsedOnce     enables use of the "frame-local stack"
      * @param errs          the error list to log any errors to
@@ -844,7 +853,7 @@ public abstract class Expression
      * @return a resulting argument of the specified type, or of a tuple of the specified type if
      *         that is both allowed and "free" to produce
      */
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         checkDepth();
         assert !isVoid();
@@ -897,7 +906,7 @@ public abstract class Expression
                 return NO_RVALUES;
 
             case 1:
-                return new Argument[] {generateArgument(code, fPack, false, false, errs)};
+                return new Argument[] {generateArgument(code, false, false, errs)};
 
             default:
                 // this must be overridden
@@ -1012,7 +1021,7 @@ public abstract class Expression
         if (isSingle())
             {
             // this will be overridden by classes that can push down the work
-            Argument arg = generateArgument(code, false, false, false, errs);
+            Argument arg = generateArgument(code, false, false, errs);
             LVal.assign(arg, code, errs);
             }
         else
@@ -1096,7 +1105,7 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, false, true, true, errs);
+        Argument arg = generateArgument(code, true, true, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));

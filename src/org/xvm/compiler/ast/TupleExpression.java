@@ -78,6 +78,41 @@ public class TupleExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        // a tuple expression is a single value, even though sometimes we treat it as if it is
+        // multiple separate values, but to do so, we need to think of it as a tuple (i.e. a single
+        // value of type "Tuple<T1, T2, ..., Tn>") that we can unpack as necessary into a number of
+        // separate values of types T1, T2, ..., Tn
+        return true;
+        }
+
+    @Override
+    protected boolean isAutoUnpackingAllowed()
+        {
+        // TODO
+        // this isn't the right question. what we want is to be able to ask ANY expression of type
+        // Tuple: "Hey, I need you to give me n separate expressions of the following types", and
+        // have it return those expressions (which may be Synthetic, or in this case, are just the
+        // underlying expressions, or conversions thereof)
+
+        return true;
+        }
+
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return super.getImplicitType(ctx);
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return super.getImplicitTypes(ctx);
+        }
+
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
         {
@@ -282,7 +317,7 @@ public class TupleExpression
         Argument[]       aArgs     = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            aArgs[i] = exprs.get(i).generateArgument(code, false, false, false, errs);
+            aArgs[i] = exprs.get(i).generateArgument(code, false, false, errs);
             }
 
         if (!fPack)

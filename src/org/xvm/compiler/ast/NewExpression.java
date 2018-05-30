@@ -305,7 +305,8 @@ public class NewExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
         assert m_idConstructor != null;
         assert left == null; // TODO construct child class
@@ -316,7 +317,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
             }
 
         Argument argResult = new Register(getType());
@@ -349,7 +350,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
             }
 
         Argument argResult = LVal.isLocalArgument()

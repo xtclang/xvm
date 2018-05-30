@@ -164,7 +164,7 @@ public class ThrowExpression
      */
     protected void generateThrow(Code code, ErrorListener errs)
         {
-        code.add(new Throw(expr.generateArgument(code, false, false, false, errs)));
+        code.add(new Throw(expr.generateArgument(code, false, false, errs)));
         }
 
 
