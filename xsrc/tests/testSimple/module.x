@@ -7,6 +7,7 @@ module TestSimple.xqiz.it
         test1();
         test2();
         test3();
+        test4();
         }
 
     void test1()
@@ -19,7 +20,7 @@ module TestSimple.xqiz.it
         @Inject X.io.Console console;
 
         String s = "Hello";
-        console.println(s + " world!!!");
+        console.println(s + " again!!!");
         }
 
     void test3()
@@ -29,6 +30,16 @@ module TestSimple.xqiz.it
         Int i = 40;
         i = i + 2;
         console.println(i);
+        }
+
+    void test4()
+        {
+        @Inject X.io.Console console;
+
+        console.print("Say something: ");
+
+        String s = console.readLine();
+        console.println(s);
         }
     }
 
