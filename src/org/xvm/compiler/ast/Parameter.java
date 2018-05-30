@@ -45,13 +45,13 @@ public class Parameter
         }
 
     @Override
-    public long getEndPosition()
+    public long getStartPosition()
         {
         return type.getStartPosition();
         }
 
     @Override
-    public long getStartPosition()
+    public long getEndPosition()
         {
         return value == null ? name.getEndPosition() : value.getEndPosition();
         }
