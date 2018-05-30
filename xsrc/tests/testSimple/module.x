@@ -7,7 +7,7 @@ module TestSimple.xqiz.it
         test1();
         test2();
         test3();
-        test4();
+        // test4(); // it works; but an interactive test is a nuisance to run
         }
 
     void test1()
