@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -25,8 +26,13 @@ public  class PackExpression
 
         ConstantPool pool = pool();
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
-        finishValidation(typeRequired, type, TypeFit.Fit, expr.isConstant()
-                ? pool.ensureTupleConstant(type, expr.toConstants())
+        Constant     val  = null;
+        if (expr.isConstant())
+            {
+            type = pool.ensureImmutableTypeConstant(type);
+            val  = pool.ensureTupleConstant(type, expr.toConstants());
+            }
+        finishValidation(null, type, TypeFit.Fit, expr.isConstant()
                 : null, errs);
         }
 

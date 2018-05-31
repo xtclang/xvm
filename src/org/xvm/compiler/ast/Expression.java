@@ -844,7 +844,6 @@ public abstract class Expression
      * This method (or the plural version) must be overridden by any expression that is not always
      * constant.
      *
-     * @param fPack         true if the result must be delivered wrapped in a tuple
      * @param code          the code block
      * @param fLocalPropOk  enables use of local-property mode
      * @param fUsedOnce     enables use of the "frame-local stack"

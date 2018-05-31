@@ -55,11 +55,6 @@ public  class UnpackExpression
     public Argument generateArgument(Code code, boolean fLocalPropOk,
             boolean fUsedOnce, ErrorListener errs)
         {
-        if (fPack)
-            {
-            throw new IllegalStateException(this.toString());
-            }
-
         if (isConstant())
             {
             return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
