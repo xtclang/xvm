@@ -3253,7 +3253,6 @@ public abstract class TypeConstant
             Map<Object, PropertyInfo> mapProps,
             ErrorListener             errs)
         {
-        ConstantPool pool = getConstantPool();
         for (ParamInfo param : mapTypeParams.values())
             {
             if (param.getNestedIdentity() instanceof NestedIdentity)
@@ -3835,7 +3834,8 @@ public abstract class TypeConstant
     @Override
     public TypeConstant getType()
         {
-        return this;
+        ConstantPool pool = getConstantPool();
+        return pool.ensureParameterizedTypeConstant(pool.typeType(), this);
         }
 
     @Override

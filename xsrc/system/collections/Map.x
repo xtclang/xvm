@@ -541,7 +541,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.keys} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedKeysSet<KeyType, ValueType>
+    class EntryBasedKeysSet
             implements Set<KeyType>
         {
         @Override
@@ -693,7 +693,7 @@ interface Map<KeyType, ValueType>
     /**
      * An implementation of ProcessableEntry that delegates back to the map for a specified key.
      */
-    class KeyBasedEntry<KeyType, ValueType>(KeyType key)
+    class KeyBasedEntry(KeyType key)
             implements ProcessableEntry<KeyType, ValueType>
         {
         @Override
@@ -737,8 +737,8 @@ interface Map<KeyType, ValueType>
      * An implementation of ProcessableEntry that can be used as a cursor over any number of keys,
      * and delegates back to the map for its functionality.
      */
-    class KeyBasedCursorEntry<KeyType, ValueType>
-            extends KeyBasedEntry<KeyType, ValueType>
+    class KeyBasedCursorEntry
+            extends KeyBasedEntry
         {
         /**
          * Specify the new "cursor key" for this Entry.
@@ -758,7 +758,7 @@ interface Map<KeyType, ValueType>
             {
             // this entry class is re-usable for different keys, so return an entry whose key cannot
             // be modified
-            return new KeyBasedEntry(Map.this, key);
+            return new KeyBasedEntry(key);
             }
         }
 
@@ -768,7 +768,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedValuesCollection<KeyType, ValueType>
+    class EntryBasedValuesCollection
             implements Collection<ValueType>
         {
         @Override
@@ -837,7 +837,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.keys keys}.
      */
-    class KeyBasedValuesCollection<KeyType, ValueType>
+    class KeyBasedValuesCollection
             implements Collection<ValueType>
         {
         @Override

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -504,7 +505,42 @@ public class PropertyStructure
         // Note; we don't call into the super since the PropertyStructure's children are
         // "invisible" without the name qualification
 
-        return getType().resolveContributedName(sName, collector);
+        SimpleCollector  collectorTemp = new SimpleCollector();
+        ResolutionResult result        = getType().resolveContributedName(sName, collectorTemp);
+        if (result == ResolutionResult.RESOLVED)
+            {
+            // we only allow static properties (constants) and singleton classes
+            result = ResolutionResult.UNKNOWN;
+
+            Constant constant = collectorTemp.getResolvedConstant();
+            switch (constant.getFormat())
+                {
+                case Property:
+                    {
+                    PropertyConstant  idProp = (PropertyConstant) constant;
+                    PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                    if (prop.isConstant())
+                        {
+                        collector.resolvedConstant(constant);
+                        return ResolutionResult.RESOLVED;
+                        }
+                    break;
+                    }
+
+                case Class:
+                    {
+                    ClassConstant  idClz = (ClassConstant) constant;
+                    ClassStructure clz   = (ClassStructure) idClz.getComponent();
+                    if (clz.isSingleton())
+                        {
+                        collector.resolvedConstant(constant);
+                        return ResolutionResult.RESOLVED;
+                        }
+                    break;
+                    }
+                }
+            }
+        return result;
         }
 
     // ----- XvmStructure methods ------------------------------------------------------------------

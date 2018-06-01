@@ -590,8 +590,19 @@ public class MethodInfo
 
                     case Delegating:
                     case Field:
-                    case Native:
                     case Explicit:
+                        // it's possible the method was marked as "native" after the body
+                        // was constructed; re-check it
+                        if (body.getMethodStructure().isNative())
+                            {
+                            if (listNew == null)
+                                {
+                                listNew = startList(chain, i);
+                                }
+                            body = new MethodBody(body, Implementation.Native);
+                            }
+                        // fall through
+                    case Native:
                         if (listNew != null)
                             {
                             listNew.add(body);
@@ -666,6 +677,76 @@ public class MethodInfo
             }
 
         return true;
+        }
+
+    /**
+     * @return true iff the method has a super for the specified type
+     */
+    public boolean hasSuper(TypeInfo infoType)
+        {
+        MethodBody[] chain = m_aBodyResolved;
+        if (chain != null)
+            {
+            return chain.length > 1;
+            }
+
+        // the logic below is a specialized version of the ensureOptimizedMethodChain() method
+        chain = getChain();
+
+        MethodBody bodyHead = chain[0];
+
+        if (bodyHead.getImplementation() == Implementation.Capped)
+            {
+            return infoType.getMethodByNestedId(bodyHead.getNarrowingNestedIdentity()).hasSuper(infoType);
+            }
+
+        // an accessor for a property with a field always has super()
+        MethodStructure method    = bodyHead.getMethodStructure();
+        Component       container = method.getParent().getParent();
+        if (container instanceof PropertyStructure)
+            {
+            PropertyStructure property = (PropertyStructure) container;
+            if (method == property.getGetter() || method == property.getSetter())
+                {
+                PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
+                if (infoProp.hasField())
+                    {
+                    return true;
+                    }
+                }
+            }
+
+        int cMethods = 0;
+        for (int i = 0, c = chain.length; i < c; ++i)
+            {
+            MethodBody body = chain[i];
+            switch (body.getImplementation())
+                {
+                case Implicit:
+                case Declared:
+                case Abstract:
+                case SansCode:
+                    break;
+
+                case Default:
+                    // only the first one is kept, and it will be placed at the end of the chain
+                    cMethods++;
+                    break;
+
+                case Delegating:
+                case Field:
+                case Native:
+                case Explicit:
+                    cMethods++;
+                    break;
+
+                default:
+                case Capped:
+                    throw new IllegalStateException();
+                }
+            }
+
+        return cMethods > 1;
         }
 
     /**

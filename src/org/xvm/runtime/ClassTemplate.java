@@ -1401,6 +1401,12 @@ public abstract class ClassTemplate
         PropertyStructure prop = getProperty(sPropName);
         assert prop != null;
         prop.markNativeGetter();
+
+        MethodStructure methGetter = prop.getGetter();
+        if (methGetter != null)
+            {
+            methGetter.setNative(true);
+            }
         }
 
     public MethodStructure ensureGetter(String sPropName)
@@ -1408,13 +1414,6 @@ public abstract class ClassTemplate
         PropertyStructure prop = getProperty(sPropName);
 
         return prop.getGetter();
-        }
-
-    public MethodStructure ensureSetter(String sPropName)
-        {
-        PropertyStructure prop = getProperty(sPropName);
-
-        return prop.getSetter();
         }
 
 
