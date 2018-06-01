@@ -517,33 +517,35 @@ public abstract class Expression
         assert typeActual != null;
         assert fit != null;
 
-        if (typeRequired != null && !typeActual.isA(typeRequired) && isAutoConversionAllowed()
-                && !fit.isConverting())
+        Expression exprResult = fit.isFit() ? this : null;
+
+        // if a required type is specified and the expression type isn't of the required type, then
+        // an @Auto conversion can be used, assuming that we haven't already given up on the type
+        // or already applied a type conversion
+        if (typeRequired != null && !typeActual.isA(typeRequired) && fit.isFit() && !fit.isConverting())
             {
-            // check for the availability of an @Auto conversion
+            // look for an @Auto conversion
             MethodConstant idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
             if (idConv == null)
                 {
                 // cannot provide the required type
-                // TODO
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                        typeRequired.getValueString(), typeActual.getValueString());
+                fit = TypeFit.NoFit;
                 }
             else
                 {
-                // TODO - found an @Auto
+                // found an @Auto conversion; create an expression that does the conversion work
+                exprResult = new ConvertExpression(exprResult, idConv);
+                fit        = fit.addConversion();
                 }
             }
 
-        m_fit    = fit == null ? TypeFit.Fit : fit;
-        m_aType  = aTypeActual;
-        m_aConst = aconstVal;
+        m_fit    = fit;
+        m_aType  = new TypeConstant[] {typeActual};
+        m_aConst = new Constant[] {constVal};
 
-        finishValidations(
-                atypeRequired, typeActual == null ? null : new TypeConstant[] {typeActual}, fit,
-                constVal == null ? null : new Constant[] {constVal}, errs);
-
-        return fit.isFit()
-                ? this
-                : null;
+        return exprResult;
         }
 
     /**
