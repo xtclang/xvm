@@ -371,7 +371,7 @@ public class TupleExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression   type;
+    protected TypeExpression   type; // TODO this is not used (which is wrong!)
     protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;

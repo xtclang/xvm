@@ -169,7 +169,7 @@ public abstract class Expression
      * @return an expression that represents the value(s) of this expression as a tuple of those
      *         same values
      */
-    protected Expression createPackedExpression()
+    protected Expression packedExpression()
         {
         return new PackExpression(this);
         }
@@ -177,7 +177,7 @@ public abstract class Expression
     /**
      * @return an array of expressions, one for each field of this tuple
      */
-    protected Expression[] createUnpackedExpression()
+    protected Expression[] unpackedExpressions()
         {
         TypeConstant type = getType();
         if (!type.isTuple())
