@@ -107,7 +107,8 @@ public class xTerminalConsole
 
     private static Frame.Continuation PRINT = frameCaller ->
         {
-        CONSOLE_OUT.println(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        CONSOLE_OUT.print(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        CONSOLE_OUT.flush();
         return Op.R_NEXT;
         };
 

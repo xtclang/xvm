@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1136,43 +1135,6 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable that has a return type of the specified method
-     * in the context of the specified target.
-     *
-     * Note: this method increments the "nextVar" index.
-     *
-     * @param nTargetId    if positive, the register number holding a target (handle);
-     *                      otherwise a constant id pointing to local property holding the target
-     * @param constMethod  the method constant whose return type needs to be resolved in the context
-     *                      of the target class
-     * @param iRet         the index of the return value
-     */
-    public void introduceReturnVar(int nTargetId, MethodConstant constMethod, int iRet)
-        {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), getReturnValueResolver(iRet));
-        }
-
-    /**
-     * Introduce a new standard variable that has a return type of a Tuple of the
-     * specified method return types in the context of the specified target.
-     *
-     * Note: this method increments the "nextVar" index.
-     *
-     * @param nTargetId    if positive, the register number holding a target (handle);
-     *                      otherwise a constant id pointing to local property holding the target
-     * @param constMethod  the method constant whose return types need to be resolved in the context
-     *                      of the target class
-     */
-    public void introduceReturnTuple(int nTargetId, MethodConstant constMethod)
-        {
-        int nVar = f_anNextVar[m_iScope]++;
-
-        f_aInfo[nVar] = new VarInfo(nTargetId, constMethod.getPosition(), TUPLE_RESOLVER);
-        }
-
-    /**
      * Introduce a new standard variable that has a type of the specified property in the context
      * of the specified target.
      *
@@ -1697,38 +1659,6 @@ public class Frame
         TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId);
         }
 
-    protected static VarTypeResolver getReturnValueResolver(int iRet)
-        {
-        int cMax = RETURN_RESOLVERS.length;
-        VarTypeResolver resolver = iRet < cMax ? RETURN_RESOLVERS[iRet] : null;
-
-        if (resolver == null)
-            {
-            resolver = (frame, nTargetReg, nMethodId) ->
-                {
-                ConstantPool pool = frame.f_context.f_pool;
-
-                MethodConstant constMethod = (MethodConstant) pool.getConstant(nMethodId);
-                TypeConstant typeRet = constMethod.getRawReturns()[iRet];
-
-                return nTargetReg == Op.A_THIS
-                    // a static method (function) resolution or "this" target
-                    ? typeRet.resolveGenerics(frame.getGenericsResolver())
-                    // a target type-based resolution
-                    : typeRet.resolveGenerics(frame.getLocalType(nTargetReg));
-                };
-
-            if (iRet < cMax)
-                {
-                RETURN_RESOLVERS[iRet] = resolver;
-                }
-            }
-        return resolver;
-        }
-
-    // cached single return value resolvers
-    protected static final VarTypeResolver[] RETURN_RESOLVERS = new VarTypeResolver[2];
-
     protected static final VarTypeResolver ARRAY_ELEMENT_RESOLVER = new VarTypeResolver()
         {
         @Override
@@ -1764,27 +1694,6 @@ public class Frame
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, iAuxId);
             ConstantPool pool = frame.f_context.f_pool;
             return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeEl);
-            }
-        };
-
-    protected static final VarTypeResolver TUPLE_RESOLVER = new VarTypeResolver()
-        {
-        // nTargetReg - the target register (or property)
-        // nAuxId  - the MethodConstant id
-        @Override
-        public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
-            {
-            ConstantPool pool = frame.f_context.f_pool;
-
-            MethodConstant constMethod = (MethodConstant) pool.getConstant(iAuxId);
-            TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(
-                pool.typeTuple(), constMethod.getRawReturns());
-
-            return nTargetReg == Op.A_THIS
-                // a static method (function) resolution or "this" target
-                ? typeTuple.resolveGenerics(frame.getGenericsResolver())
-                // a target type-based resolution
-                : typeTuple.resolveGenerics(frame.getLocalType(nTargetReg));
             }
         };
 

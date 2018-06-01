@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -150,7 +151,14 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnVar(m_nTarget, method.getIdentityConstant(), 0);
+            TypeConstant typeRet = m_typeRetReg;
+            if (typeRet == null)
+                {
+                typeRet = m_typeRetReg = method.getReturnTypes()[0].
+                    resolveGenerics(frame.getLocalType(m_nTarget));
+                }
+
+            frame.introduceResolvedVar(typeRet);
             }
         }
 
@@ -161,7 +169,17 @@ public abstract class OpInvocable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceReturnTuple(m_nTarget, method.getIdentityConstant());
+            TypeConstant typeRet = m_typeRetReg;
+            if (typeRet == null)
+                {
+                ConstantPool pool = method.getConstantPool();
+
+                typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
+                    pool.typeTuple(), method.getReturnTypes()).
+                        resolveGenerics(frame.getLocalType(m_nTarget));
+                }
+
+            frame.introduceResolvedVar(typeRet);
             }
         }
 
@@ -170,14 +188,22 @@ public abstract class OpInvocable extends Op
         {
         assert isMultiReturn();
 
-        MethodConstant constMethod = method.getIdentityConstant();
-
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                frame.introduceReturnVar(m_nTarget, constMethod, i);
+                TypeConstant[] atypeRet = m_atypeRetReg;
+                if (atypeRet == null)
+                    {
+                    atypeRet = m_atypeRetReg = method.getReturnTypes(); // a clone
+                    for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
+                        {
+                        atypeRet[j] = atypeRet[j].resolveGenerics(frame.getLocalType(m_nTarget));
+                        }
+                    }
+
+                frame.introduceResolvedVar(atypeRet[i]);
                 }
             }
         }
@@ -192,6 +218,9 @@ public abstract class OpInvocable extends Op
     protected Argument       m_argReturn;  // optional
     protected Argument[]     m_aArgReturn; // optional
 
-    private TypeComposition m_clazz;        // cached class
-    private CallChain       m_chain;        // cached call chain
+    private TypeComposition m_clazz;       // cached class
+    private CallChain       m_chain;       // cached call chain
+
+    private TypeConstant    m_typeRetReg;   // cached return register type
+    private TypeConstant[]  m_atypeRetReg;  // cached return registers types
     }
