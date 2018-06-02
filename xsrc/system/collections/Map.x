@@ -583,13 +583,13 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
+        conditional Collection<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
             {
             Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
             }
 
         @Override
-        Collection<KeyType> clear()
+        conditional Collection<KeyType> clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -653,7 +653,8 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
+        conditional Set<Entry<KeyType, ValueType>>
+        removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
@@ -667,7 +668,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> clear()
+        conditional Set<Entry<KeyType, ValueType>> clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -819,13 +820,13 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
+        conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
             Map.this.entries.removeIf(entry -> shouldRemove(entry.value));
             }
 
         @Override
-        Collection<ValueType> clear()
+        conditional Collection<ValueType> clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);
@@ -889,7 +890,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
+        conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
             Map.this.keys.removeIf(key ->
                 {
@@ -899,7 +900,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<ValueType> clear()
+        conditional Collection<ValueType> clear()
             {
             Map newMap = Map.this.clear();
             assert Ref.equals(Map.this, newMap);

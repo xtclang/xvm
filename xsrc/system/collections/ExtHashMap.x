@@ -378,7 +378,7 @@ class ExtHashMap<KeyType, ValueType>
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry
-            extends Map.KeyBasedEntry<KeyType, ValueType>
+            extends Map.KeyBasedEntry
         {
         @Override
         HashEntry reify()
