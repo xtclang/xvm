@@ -176,7 +176,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    ExtHashMap<KeyType, ValueType> clear()
+    conditional ExtHashMap<KeyType, ValueType> clear()
         {
         Int entryCount = size;
         if (entryCount > 0)
@@ -185,8 +185,9 @@ class ExtHashMap<KeyType, ValueType>
             buckets = new HashEntry?[bucketCount];
             removeCount += entryCount;
             assert size == 0;
+            return true, this;
             }
-        return this;
+        return false;
         }
 
     @Override
@@ -301,8 +302,9 @@ class ExtHashMap<KeyType, ValueType>
             }
 
         @Override
-        HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
+        conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
             {
+            boolean      modified    = false;
             HashEntry?[] buckets     = ExtHashMap.this.buckets;
             Int          bucketCount = buckets.size;
             for (Int i = 0; i < bucketCount; ++i)
@@ -325,7 +327,7 @@ class ExtHashMap<KeyType, ValueType>
                             {
                             buckets[i] = entry;
                             }
-
+                        modified = true;
                         ++ExtHashMap.this.removeCount;
                         }
                     else
@@ -336,7 +338,7 @@ class ExtHashMap<KeyType, ValueType>
                     }
                 }
 
-            return this;
+            return modified ? (true, this) : false;
             }
         }
 

@@ -31,16 +31,19 @@ interface UniformIndexed<IndexType, ElementType>
         class SimpleRef
                 delegates Ref<ElementType>(ref)
             {
+            @Override
             Boolean assigned.get()
                 {
                 return true;
                 }
 
+            @Override
             ElementType get()
                 {
                 return UniformIndexed.this.get(index);
                 }
 
+            @Override
             void set(ElementType value)
                 {
                 UniformIndexed.this.set(index, value);

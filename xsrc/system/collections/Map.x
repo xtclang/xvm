@@ -591,9 +591,12 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<KeyType> clear()
             {
-            Map newMap = Map.this.clear();
-            assert Ref.equals(Map.this, newMap);
-            return this;
+            if (Map newMap : Map.this.clear())
+                {
+                assert Ref.equals(Map.this, newMap);
+                return true, this;
+                }
+            return false;
             }
         }
 
@@ -670,9 +673,12 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Set<Entry<KeyType, ValueType>> clear()
             {
-            Map newMap = Map.this.clear();
-            assert Ref.equals(Map.this, newMap);
-            return this;
+            if (Map newMap : Map.this.clear())
+                {
+                assert Ref.equals(Map.this, newMap);
+                return true, this;
+                }
+            return false;
             }
         }
 
@@ -828,9 +834,12 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<ValueType> clear()
             {
-            Map newMap = Map.this.clear();
-            assert Ref.equals(Map.this, newMap);
-            return this;
+            if (Map newMap : Map.this.clear())
+                {
+                assert Ref.equals(Map.this, newMap);
+                return true, this;
+                }
+            return false;
             }
         }
 
@@ -902,9 +911,12 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<ValueType> clear()
             {
-            Map newMap = Map.this.clear();
-            assert Ref.equals(Map.this, newMap);
-            return this;
+            if (Map newMap : Map.this.clear())
+                {
+                assert Ref.equals(Map.this, newMap);
+                return true, this;
+                }
+            return false;
             }
         }
     }
