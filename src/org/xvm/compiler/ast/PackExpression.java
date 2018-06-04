@@ -64,7 +64,7 @@ public  class PackExpression
             }
 
         // generate the tuple fields
-        Argument[] args = expr.generateArguments(code, true, errs);
+        Argument[] args = expr.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
         assert args != null && args.length == 1;
         return args[0];
         }

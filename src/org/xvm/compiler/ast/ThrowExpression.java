@@ -84,7 +84,8 @@ public class ThrowExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
@@ -95,7 +96,8 @@ public class ThrowExpression
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
+            ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
@@ -108,7 +110,7 @@ public class ThrowExpression
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
         // validate the throw value expressions
-        Expression exprNew = expr.validate(ctx, pool().typeException(), TuplePref.Rejected, errs);
+        Expression exprNew = expr.validate(ctx, pool().typeException(), errs);
         if (exprNew != expr)
             {
             if (exprNew == null)
@@ -139,7 +141,8 @@ public class ThrowExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         generateThrow(code, errs);
 

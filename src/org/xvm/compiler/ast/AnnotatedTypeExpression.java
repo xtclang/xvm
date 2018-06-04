@@ -129,11 +129,12 @@ public class AnnotatedTypeExpression
     // ----- Expression methods --------------------------------------------------------------------
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         boolean        fValid  = true;
         ConstantPool   pool    = pool();
-        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool().typeType(), TuplePref.Rejected, errs);
+        TypeExpression typeNew = (TypeExpression) type.validate(ctx, pool().typeType(), errs);
         if (typeNew == null)
             {
             fValid = false;

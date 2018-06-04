@@ -416,7 +416,8 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -429,7 +430,7 @@ public class NamedTypeExpression
             for (int i = 0, c = paramTypes.size(); i < c; ++i)
                 {
                 TypeExpression exprOrig = paramTypes.get(i);
-                TypeExpression expr     = (TypeExpression) exprOrig.validate(ctx, null, TuplePref.Rejected, errs);
+                TypeExpression expr     = (TypeExpression) exprOrig.validate(ctx, null, errs);
                 if (expr == null)
                     {
                     fValid         = false;

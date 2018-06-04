@@ -104,7 +104,7 @@ public class ReturnStatement
                 for (int i = 0; i < cExprs; ++i)
                     {
                     Expression exprOld = listExprs.get(i);
-                    Expression exprNew = exprOld.validate(ctx, null, TuplePref.Accepted, errs);
+                    Expression exprNew = exprOld.validate(ctx, null, errs);
                     if (exprNew != exprOld)
                         {
                         fValid &= exprNew != null;
@@ -139,7 +139,7 @@ public class ReturnStatement
                         ? aRetTypes[i]
                         : null;
                 Expression exprOld = listExprs.get(i);
-                Expression exprNew = exprOld.validate(ctx, typeRet, TuplePref.Rejected, errs);
+                Expression exprNew = exprOld.validate(ctx, typeRet, errs);
                 if (exprNew != exprOld)
                     {
                     fValid &= exprNew != null;
@@ -165,7 +165,7 @@ public class ReturnStatement
             //    return type for the method
             if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0], TuplePref.Rejected).isFit())
                 {
-                exprNew = exprOld.validate(ctx, aRetTypes[0], TuplePref.Rejected, errs);
+                exprNew = exprOld.validate(ctx, aRetTypes[0], errs);
                 }
             else
                 {
@@ -174,13 +174,13 @@ public class ReturnStatement
                 TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
                 if (exprOld.testFit(ctx, typeTuple, TuplePref.Rejected).isFit())
                     {
-                    exprNew = exprOld.validate(ctx, typeTuple, TuplePref.Rejected, errs);
+                    exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     }
                 // 3) it could be a conditional false
                 else if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), TuplePref.Rejected).isFit())
                     {
-                    exprNew = exprOld.validate(ctx, pool.typeFalse(), TuplePref.Rejected, errs);
+                    exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))
                         {
                         // it's not clear how this could happen; it's more like an assertion
@@ -192,7 +192,7 @@ public class ReturnStatement
                 // will log the error)
                 else
                     {
-                    exprNew = exprOld.validateMulti(ctx, aRetTypes, TuplePref.Required, errs);
+                    exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     }
                 }
 

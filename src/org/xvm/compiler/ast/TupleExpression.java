@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -19,8 +18,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Var_T;
 
 import org.xvm.compiler.Compiler;
-
 import org.xvm.compiler.Compiler.Stage;
+
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -73,17 +72,20 @@ public class TupleExpression
 
             this.introduceParentage(exprChild);
 
-            if (fConstant)
+            if (fValidated)
                 {
                 aTypes[i] = exprChild.getType();
-                if (exprChild.isConstant())
+                if (fConstant)
                     {
-                    aVals[i] = exprChild.toConstant();
-                    }
-                else
-                    {
-                    aVals     = null;
-                    fConstant = false;
+                    if (exprChild.isConstant())
+                        {
+                        aVals[i] = exprChild.toConstant();
+                        }
+                    else
+                        {
+                        aVals     = null;
+                        fConstant = false;
+                        }
                     }
                 }
             }
@@ -107,11 +109,22 @@ public class TupleExpression
         }
 
     /**
-     * @return the expressions making up the tuple value
+     * @return a list of the expressions making up the tuple value
      */
     public List<Expression> getExpressions()
         {
         return exprs;
+        }
+
+    /**
+     * @return an array of the expressions making up the tuple value
+     */
+    public Expression[] getExpressionArray()
+        {
+        List<Expression> list   = exprs;
+        int              cExprs = list.size();
+        Expression[]     aExpr  = new Expression[cExprs];
+        return list.toArray(aExpr);
         }
 
     @Override
@@ -135,7 +148,6 @@ public class TupleExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     protected boolean hasSingleValueImpl()
         {
@@ -147,77 +159,53 @@ public class TupleExpression
         }
 
     @Override
-    protected boolean isAutoUnpackingAllowed()
+    protected Expression[] unpackedExpressions()
         {
-        // TODO
-        // this isn't the right question. what we want is to be able to ask ANY expression of type
-        // Tuple: "Hey, I need you to give me n separate expressions of the following types", and
-        // have it return those expressions (which may be Synthetic, or in this case, are just the
-        // underlying expressions, or conversions thereof)
-
-        return true;
+        return type == null || type.ensureTypeConstant().equals(pool().typeTuple())
+                ? getExpressionArray()
+                : super.unpackedExpressions();
         }
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return super.getImplicitType(ctx);
+        ConstantPool pool     = pool();
+        TypeConstant typeThis = type == null ? null : type.ensureTypeConstant();
+        if (typeThis == null)
+            {
+            typeThis = pool.typeTuple();
+            }
+        else if (!typeThis.isTuple() || typeThis.isParamsSpecified())
+            {
+            // an explicit, parameterized (field types specified) tuple type is assumed to be
+            // correct, and a non-tuple type is probably incorrect, but we'll defer that check until
+            // the validate stage
+            return typeThis;
+            }
+
+        // the type derives from the expressions in the tuple
+        List<Expression> listExprs  = exprs;
+        int              cExprs     = listExprs.size();
+        TypeConstant[]   atypeExprs = new TypeConstant[cExprs];
+        for (int i = 0; i < cExprs; ++i)
+            {
+            TypeConstant typeExpr = listExprs.get(i).getImplicitType(ctx);
+            atypeExprs[i] = typeExpr == null ? pool.typeObject() : typeExpr;
+            }
+
+        return typeThis.adoptParameters(atypeExprs);
         }
 
     @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
-        return super.getImplicitTypes(ctx);
-        }
-
-    @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
-        {
-        List<Expression> listExprs = exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        int              cRequired = atypeRequired.length;
-        if (cRequired == 1 && atypeRequired[0].isTuple() && pref != TuplePref.Required)
+        // can't pack a tuple into a tuple
+        if (pref == TuplePref.Required)
             {
-            // it is acceptable to ask a tuple expression to be of type tuple, which results in the
-            // tuple expression packing itself
-            TypeFit fit = testFitMulti(ctx, atypeRequired[0].getParamTypesArray(), TuplePref.Required);
-            if (fit.isFit())
-                {
-                return fit;
-                }
+
             }
 
-        if (cRequired > cExprs)
-            {
-            // we don't have enough expressions to satisfy the caller
-            return TypeFit.NoFit;
-            }
-
-        // for each required type, verify that the underlying expression is willing to provide that
-        // type; if there are more types in the underlying expression than required, then the extras
-        // are always OK
-        TypeFit fitOut = TypeFit.Fit;
-        for (int i = 0; i < cRequired; ++i)
-            {
-            TypeConstant typeRequired = atypeRequired[i];
-            Expression   expr         = listExprs.get(i);
-            TypeFit      fitExpr      = expr.testFit(ctx, typeRequired, TuplePref.Rejected);
-            if (!fitExpr.isFit())
-                {
-                return TypeFit.NoFit;
-                }
-
-            fitOut = fitOut.combineWith(fitExpr);
-            }
-
-        return pref == TuplePref.Required
-                ? fitOut.addPack()
-                : fitOut;
-        }
-
-    @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
-        {
         List<Expression> listExprs = exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
         TypeConstant[]   aTypes    = new TypeConstant[cExprs];
@@ -265,7 +253,7 @@ public class TupleExpression
                     : null;
 
             Expression exprOrig = listExprs.get(i);
-            Expression expr     = exprOrig.validate(ctx, typeRequired, TuplePref.Rejected, errs);
+            Expression expr     = exprOrig.validate(ctx, typeRequired, errs);
             if (expr == null)
                 {
                 fit       = TypeFit.NoFit;
@@ -352,7 +340,8 @@ public class TupleExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         ConstantPool pool = pool();
         TypeConstant type = fPack

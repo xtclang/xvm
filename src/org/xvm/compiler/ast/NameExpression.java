@@ -501,7 +501,8 @@ public class NameExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -509,7 +510,7 @@ public class NameExpression
         // argument)
         if (left != null)
             {
-            Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression leftNew = left.validate(ctx, null, errs);
             if (leftNew == null)
                 {
                 fValid = false;
@@ -537,7 +538,7 @@ public class NameExpression
                 {
                 TypeExpression exprOld = params.get(i);
                 TypeExpression exprNew = (TypeExpression) exprOld.validate(
-                        ctx, pool.typeType(), TuplePref.Rejected, errs);
+                        ctx, pool.typeType(), errs);
                 fValid &= exprNew != null;
                 if (fValid)
                     {

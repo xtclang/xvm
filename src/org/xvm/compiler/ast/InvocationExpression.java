@@ -418,7 +418,8 @@ public class InvocationExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         // validate the invocation arguments, some of which may be left unbound (e.g. "?")
         boolean          fValid   = true;
@@ -429,7 +430,7 @@ public class InvocationExpression
         for (int i = 0, c = listArgs.size(); i < c; ++i)
             {
             Expression exprOld = listArgs.get(i);
-            Expression exprNew = exprOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprNew = exprOld.validate(ctx, null, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -456,7 +457,7 @@ public class InvocationExpression
             TypeConstant   typeLeft = null;
             if (exprLeft != null)
                 {
-                Expression exprNew = exprLeft.validate(ctx, null, TuplePref.Rejected, errs);
+                Expression exprNew = exprLeft.validate(ctx, null, errs);
                 if (exprNew == null)
                     {
                     fValid = false;
@@ -489,7 +490,7 @@ public class InvocationExpression
                     {
                     TypeExpression typeOld = listRedundant.get(i);
                     TypeExpression typeNew = (TypeExpression) typeOld.validate(
-                            ctx, pool.typeType(), TuplePref.Rejected, errs);
+                            ctx, pool.typeType(), errs);
                     if (typeNew == null)
                         {
                         fValid = false;
@@ -559,7 +560,7 @@ public class InvocationExpression
             }
         else // the expr is NOT a NameExpression
             {
-            Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
+            Expression exprNew = expr.validate(ctx, pool().typeFunction(), errs);
             if (exprNew != null)
                 {
                 expr = exprNew;
@@ -583,7 +584,8 @@ public class InvocationExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         // assertion or error if it tries; that is the responsibility of InvocationExpression

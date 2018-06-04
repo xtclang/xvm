@@ -108,7 +108,8 @@ public class LiteralExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         TypeConstant typeLiteral  = getImplicitType(ctx);
         Constant     constLiteral = getLiteralConstant();

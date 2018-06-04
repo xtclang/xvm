@@ -170,7 +170,8 @@ public abstract class TypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         ConstantPool pool = pool();
         TypeConstant typeReferent  = getTypeConstant();

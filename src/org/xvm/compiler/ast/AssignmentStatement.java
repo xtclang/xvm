@@ -16,7 +16,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
-import org.xvm.compiler.ast.Expression.TuplePref;
 
 import org.xvm.util.Severity;
 
@@ -93,7 +92,7 @@ public class AssignmentStatement
 
         // REVIEW does this have to support multiple assignment? (I think that it does...)
 
-        Expression lvalueNew = lvalue.validate(ctx, null, TuplePref.Rejected, errs);
+        Expression lvalueNew = lvalue.validate(ctx, null, errs);
         if (lvalueNew != lvalue)
             {
             fValid &= lvalueNew != null;
@@ -127,7 +126,7 @@ public class AssignmentStatement
                 };
             }
 
-        Expression rvalueNew = rvalue.validate(ctx, typeLeft, TuplePref.Rejected, errs);
+        Expression rvalueNew = rvalue.validate(ctx, typeLeft, errs);
         if (rvalueNew != rvalue)
             {
             fValid &= rvalueNew != null;

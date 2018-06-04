@@ -320,7 +320,8 @@ public class RelOpExpression
     // TODO "/%" -> testFitMulti()
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         // all of these operators work the same way, in terms of types and left associativity:
         //
@@ -400,8 +401,8 @@ public class RelOpExpression
             }
 
         // using the inferred types (if any), validate the expressions
-        Expression expr1New = expr1.validate(ctx, type1, TuplePref.Rejected, errs);
-        Expression expr2New = expr2.validate(ctx, type2, TuplePref.Rejected, errs);
+        Expression expr1New = expr1.validate(ctx, type1, errs);
+        Expression expr2New = expr2.validate(ctx, type2, errs);
         if (expr1New == null || expr2New == null)
             {
             finishValidation(typeRequired,
@@ -585,7 +586,8 @@ public class RelOpExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         if (getValueCount() == 2)
             {
@@ -594,7 +596,7 @@ public class RelOpExpression
             throw new UnsupportedOperationException();
             }
 
-        return super.generateArguments(code, fPack, errs);
+        return super.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override

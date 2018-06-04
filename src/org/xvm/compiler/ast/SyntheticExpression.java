@@ -84,14 +84,14 @@ public abstract class SyntheticExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref,
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
             ErrorListener errs)
         {
         throw new UnsupportedOperationException();
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref,
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
             ErrorListener errs)
         {
         throw new UnsupportedOperationException();

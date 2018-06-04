@@ -28,6 +28,7 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.P_Set;
 
+import org.xvm.asm.op.Var;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -215,7 +216,7 @@ public abstract class Expression
         {
         if (!hasMultiValueImpl())
             {
-            throw new UnsupportedOperationException();
+            throw notImplemented();
             }
 
         checkDepth();
@@ -239,7 +240,7 @@ public abstract class Expression
         {
         if (!hasSingleValueImpl())
             {
-            throw new UnsupportedOperationException();
+            throw notImplemented();
             }
 
         checkDepth();
@@ -287,7 +288,7 @@ public abstract class Expression
             return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
             }
 
-        throw new UnsupportedOperationException();
+        throw notImplemented();
         }
 
     /**
@@ -347,7 +348,7 @@ public abstract class Expression
         {
         if (!hasMultiValueImpl())
             {
-            throw new UnsupportedOperationException();
+            throw notImplemented();
             }
 
         // there are two simple cases to consider:
@@ -415,6 +416,8 @@ public abstract class Expression
                 : fitOut;
         }
 
+    // TODO need a helper for tuple stuff
+
     /**
      * Given the specified required type for the expression, resolve names, values, verify definite
      * assignment, etc.
@@ -428,17 +431,15 @@ public abstract class Expression
      * @param typeRequired  the type that the expression is expected to be able to provide, or null
      *                      if no particular type is expected (which requires the expression to
      *                      settle on a type on its own)
-     * @param pref          indicates what options the Expression has in terms of resulting in a
-     *                      tuple
      * @param errs          the error listener to log to
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         if (!hasMultiValueImpl())
             {
-            throw new UnsupportedOperationException();
+            throw notImplemented();
             }
 
         checkDepth();
@@ -447,7 +448,7 @@ public abstract class Expression
                 ? TypeConstant.NO_TYPES
                 : new TypeConstant[] {typeRequired};
 
-        return validateMulti(ctx, aTypes, pref, errs);
+        return validateMulti(ctx, aTypes, errs);
         }
 
     /**
@@ -461,13 +462,11 @@ public abstract class Expression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  an array of required types
-     * @param pref           indicates what options the Expression has in terms of resulting in a
-     *                       tuple
      * @param errs           the error listener to log to
      *
      * @return the resulting expression (typically this), or null if compilation cannot proceed
      */
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         checkDepth();
 
@@ -484,10 +483,10 @@ public abstract class Expression
 
         if (hasSingleValueImpl())
             {
-            return validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], pref, errs);
+            return validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], errs);
             }
 
-        throw new UnsupportedOperationException();
+        throw notImplemented();
         }
 
     /**
@@ -542,8 +541,8 @@ public abstract class Expression
             }
 
         m_fit    = fit;
-        m_aType  = new TypeConstant[] {typeActual};
-        m_aConst = new Constant[] {constVal};
+        m_oType  = fit.isFit() || typeRequired == null ? typeActual : typeRequired;
+        m_oConst = constVal;
 
         return exprResult;
         }
@@ -574,17 +573,18 @@ public abstract class Expression
             Constant[]     aconstVal,
             ErrorListener  errs)
         {
+        assert atypeRequired == null || checkElementsNonNull(atypeRequired);
         assert aTypeActual != null && checkElementsNonNull(aTypeActual);
-        assert aconstVal == null ||
-                (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
+        assert fit != null;
+        assert aconstVal == null || (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
 
-        m_fit    = fit == null ? TypeFit.Fit : fit;
-        m_aType  = aTypeActual;
-        m_aConst = aconstVal;
+        // TODO conversions?
 
-        return fit.isFit()
-                ? this
-                : null;
+        m_fit    = fit;
+        m_oType  = fit.isFit() || atypeRequired == null ? aTypeActual : atypeRequired;
+        m_oConst = aconstVal;
+
+        return this;
         }
 
     /**
@@ -592,7 +592,7 @@ public abstract class Expression
      */
     public boolean isValidated()
         {
-        return m_aType != null;
+        return m_oType != null;
         }
 
     /**
@@ -621,7 +621,9 @@ public abstract class Expression
         {
         checkValidated();
 
-        return m_aType.length;
+        return m_oType instanceof TypeConstant[]
+                ? ((TypeConstant[]) m_oType).length
+                : 1;
         }
 
     /**
@@ -684,10 +686,9 @@ public abstract class Expression
         {
         checkValidated();
 
-        TypeConstant[] atype = m_aType;
-        return atype.length == 0
-                ? null
-                : atype[0];
+        return m_oType instanceof TypeConstant
+                ? (TypeConstant) m_oType
+                : ((TypeConstant[]) m_oType)[0];
         }
 
     /**
@@ -699,9 +700,12 @@ public abstract class Expression
      */
     public TypeConstant[] getTypes()
         {
-        checkValidated();
+        if (!(m_oType instanceof TypeConstant[]))
+            {
+            m_oType = new TypeConstant[] {getType()};
+            }
 
-        return m_aType;
+        return (TypeConstant[]) m_oType;
         }
 
     /**
@@ -778,7 +782,7 @@ public abstract class Expression
      */
     public boolean hasConstantValue()
         {
-        return m_aConst != null;
+        return m_oConst != null;
         }
 
     /**
@@ -814,9 +818,12 @@ public abstract class Expression
             throw new IllegalStateException();
             }
 
-        return isVoid()
-                ? null
-                : toConstants()[0];
+        if (m_oConst instanceof Constant)
+            {
+            return (Constant) m_oConst;
+            }
+
+        return ((Constant[]) m_oConst)[0];
         }
 
     /**
@@ -832,27 +839,60 @@ public abstract class Expression
      */
     public Constant[] toConstants()
         {
-        if (!hasConstantValue())
+        if (!(m_oConst instanceof Constant[]))
             {
-            throw new IllegalStateException();
+            m_oConst = new Constant[] {toConstant()};
             }
 
-        return m_aConst;
+        return (Constant[]) m_oConst;
+        }
+
+    /**
+     * Generate the necessary code that discards the value of this expression.
+     * <p/>
+     * This method should be overridden by any expression that can produce better code than the
+     * default discarded-assignment code.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     */
+    public void generateVoid(Code code, ErrorListener errs)
+        {
+        checkDepth();
+
+        // a lack of side effects means that the expression can be ignored altogether
+        if (hasSideEffects())
+            {
+            if (isVoid())
+                {
+                throw new IllegalStateException();
+                }
+            else if (isSingle() && hasSingleValueImpl())
+                {
+                generateAssignment(code, new Assignable(), errs);
+                }
+            else
+                {
+                Assignable[] asnVoid = new Assignable[getValueCount()];
+                Arrays.fill(asnVoid, new Assignable());
+                generateAssignments(code, asnVoid, errs);
+                }
+            }
         }
 
     /**
      * (Post-validation) Generate an argument that represents the result of this expression.
      * <p/>
-     * This method (or the plural version) must be overridden by any expression that is not always
-     * constant.
+     * If the expression {@link #hasSingleValueImpl()} is {@code true}, then this method or
+     * {@link #generateAssignment} must be overridden.
      *
      * @param code          the code block
-     * @param fLocalPropOk  enables use of local-property mode
+     * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
+     *                      if the argument values are local properties
      * @param fUsedOnce     enables use of the "frame-local stack"
      * @param errs          the error list to log any errors to
      *
-     * @return a resulting argument of the specified type, or of a tuple of the specified type if
-     *         that is both allowed and "free" to produce
+     * @return a resulting argument of the validated type
      */
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
@@ -861,13 +901,22 @@ public abstract class Expression
 
         if (hasConstantValue())
             {
-            return fPack
-                    ? pool().ensureTupleConstant(pool().ensureParameterizedTypeConstant(
-                            pool().typeTuple(), getTypes()), toConstants())
-                    : toConstant();
+            return toConstant();
             }
 
-        return generateArguments(code, fPack, errs)[0];
+        if (hasSingleValueImpl())
+            {
+            Assignable var = generateTemporary(code, getType(), fUsedOnce, errs);
+            generateAssignment(code, var, errs);
+            return var.getRegister();
+            }
+
+        if (hasMultiValueImpl())
+            {
+            return generateArguments(code, fLocalPropOk, fUsedOnce, errs)[0];
+            }
+
+        throw notImplemented();
         }
 
     /**
@@ -876,26 +925,24 @@ public abstract class Expression
      * <p/>
      * This method must be overridden by any expression that is multi-value-aware.
      *
-     * @param code   the code block
-     * @param fPack  true if the result must be delivered wrapped in a tuple
-     * @param errs   the error list to log any errors to
+     * @param code          the code block
+     * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
+     *                      if the argument values are local properties
+     * @param fUsedOnce     enables use of the "frame-local stack" (for <b><i>up to one of</i></b>
+     *                      the resulting arguments)
+     * @param errs          the error list to log any errors to
      *
      * @return an array of resulting arguments, which will either be the same length as the value
      *         count of the expression, or length 1 for a tuple result iff fPack is true
      */
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         checkDepth();
 
         if (hasConstantValue())
             {
-            return fPack
-                    ? new Argument[]
-                            {
-                            pool().ensureTupleConstant(pool().ensureParameterizedTypeConstant(
-                                    pool().typeTuple(), getTypes()), toConstants())
-                            }
-                    : toConstants();
+            return toConstants();
             }
 
         TypeConstant[] atype = getTypes();
@@ -907,12 +954,43 @@ public abstract class Expression
                 return NO_RVALUES;
 
             case 1:
-                return new Argument[] {generateArgument(code, false, false, errs)};
+                if (hasSingleValueImpl())
+                    {
+                    return new Argument[] {generateArgument(code, false, false, errs)};
+                    }
+                // fall through
 
             default:
                 // this must be overridden
                 throw notImplemented();
             }
+        }
+
+    /**
+     * Produce a temporary variable.
+     *
+     * @param code       the code block
+     * @param type       the type of the temporary variable
+     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
+     *                   stack can be utilized for storage)
+     * @param errs       the error list to log any errors to
+     *
+     * @return the Assignable representing the temporary variable; the Assignable will contain a
+     *         Register
+     */
+    protected Assignable generateTemporary(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
+        {
+        Register reg;
+        if (fUsedOnce)
+            {
+            reg = new Register(type, Op.A_STACK);
+            }
+        else
+            {
+            reg = new Register(type);
+            code.add(new Var(reg));
+            }
+        return new Assignable(reg);
         }
 
     /**
@@ -937,7 +1015,12 @@ public abstract class Expression
             throw new IllegalStateException();
             }
 
-        return generateAssignables(code, errs)[0];
+        if (hasMultiValueImpl())
+            {
+            return generateAssignables(code, errs)[0];
+            }
+
+        throw notImplemented();
         }
 
     /**
@@ -973,34 +1056,6 @@ public abstract class Expression
             default:
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, getValueCount());
                 return NO_LVALUES;
-            }
-        }
-
-    /**
-     * Generate the necessary code that discards the value of this expression.
-     * <p/>
-     * This method should be overridden by any expression that can produce better code than the
-     * default discarded-assignment code.
-     *
-     * @param code  the code block
-     * @param errs  the error list to log any errors to
-     */
-    public void generateVoid(Code code, ErrorListener errs)
-        {
-        checkDepth();
-
-        if (hasSideEffects())
-            {
-            if (isSingle())
-                {
-                generateAssignment(code, new Assignable(), errs);
-                }
-            else
-                {
-                Assignable[] asnVoid = new Assignable[getValueCount()];
-                Arrays.fill(asnVoid, new Assignable());
-                generateAssignments(code, asnVoid, errs);
-                }
             }
         }
 
@@ -1080,7 +1135,7 @@ public abstract class Expression
                     }
             }
 
-        Argument[] aArg = generateArguments(code, false, errs);
+        Argument[] aArg = generateArguments(code, fLocalPropOk, fUsedOnce, errs);
         for (int i = 0; i < cLVals; ++i)
             {
             aLVal[i].assign(aArg[i], code, errs);
@@ -1369,7 +1424,7 @@ public abstract class Expression
         public Assignable(Register regVar)
             {
             m_nForm = LocalVar;
-            m_reg = regVar;
+            m_reg   = regVar;
             }
 
         /**
@@ -1381,8 +1436,8 @@ public abstract class Expression
         public Assignable(Register regTarget, PropertyConstant constProp)
             {
             m_nForm = regTarget.getIndex() == Op.A_TARGET ? LocalProp : TargetProp;
-            m_reg = regTarget;
-            m_prop = constProp;
+            m_reg   = regTarget;
+            m_prop  = constProp;
             }
 
         /**
@@ -1393,8 +1448,8 @@ public abstract class Expression
          */
         public Assignable(Register argArray, Argument index)
             {
-            m_nForm = Indexed;
-            m_reg = argArray;
+            m_nForm  = Indexed;
+            m_reg    = argArray;
             m_oIndex = index;
             }
 
@@ -1408,8 +1463,8 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm = indexes.length == 1 ? Indexed : IndexedN;
-            m_reg = regArray;
+            m_nForm  = indexes.length == 1 ? Indexed : IndexedN;
+            m_reg    = regArray;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
@@ -1421,9 +1476,9 @@ public abstract class Expression
          */
         public Assignable(Register argArray, PropertyConstant constProp, Argument index)
             {
-            m_nForm = IndexedProp;
-            m_reg = argArray;
-            m_prop = constProp;
+            m_nForm  = IndexedProp;
+            m_reg    = argArray;
+            m_prop   = constProp;
             m_oIndex = index;
             }
 
@@ -1437,9 +1492,9 @@ public abstract class Expression
             {
             assert indexes != null && indexes.length > 0;
 
-            m_nForm = indexes.length == 1 ? IndexedProp : IndexedNProp;
-            m_reg = regArray;
-            m_prop = constProp;
+            m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
+            m_reg    = regArray;
+            m_prop   = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
@@ -1663,16 +1718,16 @@ public abstract class Expression
 
         // ----- fields ------------------------------------------------------------------------
 
-        public static final int BlackHole    = 0;
-        public static final int LocalVar     = 1;
-        public static final int LocalProp    = 2;
-        public static final int TargetProp   = 3;
-        public static final int Indexed      = 4;
-        public static final int IndexedN     = 5;
-        public static final int IndexedProp  = 6;
-        public static final int IndexedNProp = 7;
+        public static final byte BlackHole    = 0;
+        public static final byte LocalVar     = 1;
+        public static final byte LocalProp    = 2;
+        public static final byte TargetProp   = 3;
+        public static final byte Indexed      = 4;
+        public static final byte IndexedN     = 5;
+        public static final byte IndexedProp  = 6;
+        public static final byte IndexedNProp = 7;
 
-        private int              m_nForm;
+        private byte             m_nForm;
         private Register         m_reg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;
@@ -1964,15 +2019,16 @@ public abstract class Expression
     private TypeFit m_fit;
 
     /**
-     * After validation, contains the type(s) of the expression.
+     * After validation, contains the type(s) of the expression, stored as either a
+     * {@code TypeConstant} or a {@code TypeConstant[]}.
      */
-    private TypeConstant[] m_aType;
+    private Object m_oType;
 
     /**
      * After validation, contains the constant value(s) of the expression, iff the expression is a
-     * constant.
+     * constant, stored as either a {@code Constant} or a {@code Constant[]}.
      */
-    private Constant[] m_aConst;
+    private Object m_oConst;
 
     /**
      * This allows a sub-class to not override either generateAssignment() method, by having a
@@ -1984,5 +2040,5 @@ public abstract class Expression
     /**
      * (Temporary) Infinite recursion prevention.
      */
-    private transient int m_cDepth;
+    private transient byte m_cDepth;
     }

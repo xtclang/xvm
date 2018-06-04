@@ -184,7 +184,8 @@ public class NewExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -192,7 +193,7 @@ public class NewExpression
         TypeConstant typeLeft    = null;
         if (exprLeftOld != null)
             {
-            Expression exprLeftNew = exprLeftOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
             if (exprLeftNew == null)
                 {
                 fValid = false;
@@ -205,7 +206,7 @@ public class NewExpression
             }
 
         TypeExpression exprTypeOld   = this.type;
-        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, pref, errs);
+        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, errs);
         TypeConstant   typeConstruct = null;
         TypeInfo       infoConstruct = null;
         if (exprTypeNew == null)
@@ -245,7 +246,7 @@ public class NewExpression
         for (int i = 0; i < cArgs; ++i)
             {
             Expression exprArgOld = listArgs.get(i);
-            Expression exprArgNew = exprArgOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
             if (exprArgNew == null)
                 {
                 fValid = false;

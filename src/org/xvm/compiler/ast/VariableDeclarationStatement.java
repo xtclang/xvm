@@ -171,7 +171,7 @@ public class VariableDeclarationStatement
             typeEach = typeEach.unwrapIntroductoryType();
             }
 
-        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
+        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), errs);
         if (typeNew != typeOld)
             {
             fValid &= typeNew != null;
@@ -202,8 +202,8 @@ public class VariableDeclarationStatement
                 }
 
             Expression valueNew = m_fPackingInit
-                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Rejected, errs)
-                    : value.validate(ctx, typeVal, TuplePref.Rejected, errs);
+                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), errs)
+                    : value.validate(ctx, typeVal, errs);
             if (valueNew != value)
                 {
                 fValid &= valueNew != null;
@@ -319,7 +319,7 @@ public class VariableDeclarationStatement
             TypeConstant typeVar = m_reg.getType();
             if (m_fPackingInit)
                 {
-                Argument[] aArgs = value.generateArguments(code, false, errs);
+                Argument[] aArgs = value.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
                 code.add(new Var_TN(m_reg, constName, aArgs));
                 return fCompletes;
                 }

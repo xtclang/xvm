@@ -73,13 +73,14 @@ public class TodoExpression
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
+            ErrorListener errs)
         {
         boolean fValid = true;
 
         if (message != null)
             {
-            Expression exprNew = message.validate(ctx, pool().typeString(), TuplePref.Rejected, errs);
+            Expression exprNew = message.validate(ctx, pool().typeString(), errs);
             if (exprNew != message)
                 {
                 fValid &= exprNew != null;
@@ -128,7 +129,8 @@ public class TodoExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         generateTodo(code, errs);
 
