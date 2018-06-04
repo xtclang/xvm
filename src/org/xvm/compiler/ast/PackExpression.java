@@ -13,7 +13,7 @@ import org.xvm.asm.op.Label;
 
 
 /**
- * A tuple packing expression. This packs the values from the sub-expression into a tuple.
+ * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
 public  class PackExpression
         extends SyntheticExpression
@@ -36,10 +36,18 @@ public  class PackExpression
                 : null, errs);
         }
 
+
     // ----- accessors -----------------------------------------------------------------------------
 
 
     // ----- Expression compilation ----------------------------------------------------------------
+
+
+    @Override
+    protected Expression[] unpackedExpressions()
+        {
+        return super.unpackedExpressions();
+        }
 
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk,

@@ -3,10 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -17,6 +20,7 @@ import org.xvm.asm.op.Var_T;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -36,6 +40,59 @@ public class TupleExpression
         this.exprs       = exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
+        }
+
+    /**
+     * Constructs a "synthetic" Tuple Expression out of multiple expressions.
+     *
+     * @param aExprs  an array of at least one expression to turn into a tuple
+     */
+    TupleExpression(Expression[] aExprs, ErrorList errs)
+        {
+        int cExprs = aExprs.length;
+        assert cExprs > 0;
+
+        Expression expr0 = aExprs[0];
+
+        this.type        = null;
+        this.exprs       = Arrays.asList(aExprs);
+        this.m_lStartPos = expr0.getStartPosition();
+        this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
+
+        expr0.getParent().introduceParentage(this);
+        Stage          stage      = expr0.getStage();
+        boolean        fValidated = expr0.isValidated();
+        TypeConstant[] aTypes     = fValidated ? new TypeConstant[cExprs] : null;
+        boolean        fConstant  = fValidated && expr0.isConstant();
+        Constant[]     aVals      = fConstant ? new Constant[cExprs] : null;
+        for (int i = 0; i < cExprs; ++i)
+            {
+            Expression exprChild = aExprs[i];
+            assert exprChild.getStage() == stage;
+            assert exprChild.isValidated() == fValidated;
+
+            this.introduceParentage(exprChild);
+
+            if (fConstant)
+                {
+                aTypes[i] = exprChild.getType();
+                if (exprChild.isConstant())
+                    {
+                    aVals[i] = exprChild.toConstant();
+                    }
+                else
+                    {
+                    aVals     = null;
+                    fConstant = false;
+                    }
+                }
+            }
+
+        setStage(stage);
+        if (fValidated)
+            {
+            finishValidations(null, aTypes, TypeFit.Fit, aVals, errs);
+            }
         }
 
 
