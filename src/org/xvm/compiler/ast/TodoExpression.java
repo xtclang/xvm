@@ -66,7 +66,7 @@ public class TodoExpression
 
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         // sure, whatever you want
         return TypeFit.Fit;

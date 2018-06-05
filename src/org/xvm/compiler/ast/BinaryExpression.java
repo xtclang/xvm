@@ -51,7 +51,7 @@ public class BinaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         // TODO
         return TypeFit.Fit;

@@ -392,7 +392,7 @@ public class InvocationExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)   // TODO need testFitMulti() impl instead
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)   // TODO need testFitMulti() impl instead
         {
         TypeConstant typeThis = getImplicitType(ctx);
         if (typeThis == null)

@@ -88,7 +88,7 @@ public class CondOpExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         // TODO what about @Auto? need a simple way to tack on a conversion check to each expression type
         return pool().typeBoolean().isA(typeRequired)

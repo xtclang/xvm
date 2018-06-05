@@ -256,7 +256,7 @@ public class RelOpExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         // testing the fit of a particular type for the expression involves starting with an
         // implicit type, and determining if it:
@@ -361,13 +361,13 @@ public class RelOpExpression
         TypeConstant type2 = null;
         TypeInference: if (typeRequired != null)
             {
-            if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+            if (expr1.testFit(ctx, typeRequired).isFit())
                 {
                 Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
                         getDefaultMethodName(), getOperatorString(), 1);
                 for (MethodConstant idMethod : setOps)
                     {
-                    if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                    if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
                             && idMethod.getRawReturns()[0].isA(typeRequired))
                         {
                         type1 = typeRequired;
@@ -381,13 +381,13 @@ public class RelOpExpression
                 {
                 for (TypeConstant typeParam : typeRequired.getParamTypesArray())
                     {
-                    if (expr1.testFit(ctx, typeParam, TuplePref.Rejected).isFit())
+                    if (expr1.testFit(ctx, typeParam).isFit())
                         {
                         Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
                                 getDefaultMethodName(), getOperatorString(), 1);
                         for (MethodConstant idMethod : setOps)
                             {
-                            if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                            if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
                                     && idMethod.getRawReturns()[0].isA(typeRequired))
                                 {
                                 type1 = typeParam;

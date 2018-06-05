@@ -22,7 +22,6 @@ import org.xvm.asm.op.Return_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Expression.TuplePref;
 import org.xvm.util.Severity;
 
 
@@ -163,7 +162,7 @@ public class ReturnStatement
             // several possibilities:
             // 1) most likely the expression provides a single value, which matches the single
             //    return type for the method
-            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0], TuplePref.Rejected).isFit())
+            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0]).isFit())
                 {
                 exprNew = exprOld.validate(ctx, aRetTypes[0], errs);
                 }
@@ -172,13 +171,13 @@ public class ReturnStatement
                 // 2) it could be a tuple return
                 ConstantPool pool      = pool();
                 TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, TuplePref.Rejected).isFit())
+                if (exprOld.testFit(ctx, typeTuple).isFit())
                     {
                     exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     }
                 // 3) it could be a conditional false
-                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), TuplePref.Rejected).isFit())
+                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))

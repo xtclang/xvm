@@ -30,7 +30,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
-import org.xvm.compiler.ast.Expression.TuplePref;
 import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
@@ -187,11 +186,11 @@ public class VariableDeclarationStatement
             if (typeVal.isTuple())
                 {
                 // determine if we can ask for the value(s) in tuple form and/or in separate form
-                TypeFit fitTup = value.testFit(ctx, typeVal, TuplePref.Rejected);
+                TypeFit fitTup = value.testFit(ctx, typeVal);
                 TypeFit fitSep = TypeFit.NoFit;
                 if (typeVal.isParamsSpecified())
                     {
-                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Desired);
+                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray());
                     }
 
                 if (fitSep.isFit() && (!fitTup.isFit() || fitTup.isPacking()))

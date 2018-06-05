@@ -157,7 +157,7 @@ public class NewExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         // TODO there should be a default implementation of this
         TypeConstant typeThis = getImplicitType(ctx);

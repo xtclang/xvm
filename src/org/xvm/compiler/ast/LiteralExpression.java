@@ -118,7 +118,7 @@ public class LiteralExpression
         if (typeRequired != null)
             {
             // determine whether or not the constant can provide the requested type
-            fit = calcFit(ctx, typeLiteral, typeRequired, pref);
+            fit = calcFit(ctx, typeLiteral, typeRequired);
             if (!fit.isFit() || fit.isConverting())
                 {
                 // need to find a conversion (or in the case of "no fit", just pretend we're trying

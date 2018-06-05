@@ -72,13 +72,13 @@ public abstract class SyntheticExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         throw new UnsupportedOperationException();
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         throw new UnsupportedOperationException();
         }

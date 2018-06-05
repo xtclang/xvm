@@ -27,8 +27,8 @@ import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.P_Set;
-
 import org.xvm.asm.op.Var;
+
 import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -167,12 +167,14 @@ public abstract class Expression
         }
 
     /**
+     * @param errs  the error listener to log to 
+     *
      * @return an expression that represents the value(s) of this expression as a tuple of those
      *         same values
      */
-    protected Expression packedExpression()
+    protected Expression packedExpression(ErrorListener errs)
         {
-        return new PackExpression(this);
+        return new PackExpression(this, errs);
         }
 
     /**
@@ -252,25 +254,21 @@ public abstract class Expression
         }
 
     /**
-     * (Pre-validation) Determine if the expression can yield the specified type. Note that if a
-     * caller wants to test for a potential tuple result when the tuple would contain more than one
-     * value, it must <b>not</b> call this method with a tuple type, but instead it should use the
-     * {@link #testFitMulti} method asking for the individual types with the correct TuplePref
-     * specified. (A tuple type passed to this method will always return a tuple, and may even
-     * result in a tuple inside a tuple, depending on the TuplePref.)
+     * (Pre-validation) Determine if the expression can yield the specified type.
      * <p/>
      * This method should be overridden by any Expression type that only expects to result in a
-     * single value.
+     * single value and has the ability to yield different types depending on what type is required.
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
-     * @param pref          the TuplePref defining how the caller wants the result
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type
      */
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
+        checkDepth();
+
         if (typeRequired == null)
             {
             // all expressions are required to be able to yield a void result
@@ -279,13 +277,13 @@ public abstract class Expression
 
         if (hasSingleValueImpl())
             {
-            return calcFit(ctx, getImplicitType(ctx), typeRequired, pref);
+            return calcFit(ctx, getImplicitType(ctx), typeRequired);
             }
 
         if (hasMultiValueImpl())
             {
             checkDepth();
-            return testFitMulti(ctx, new TypeConstant[] {typeRequired}, pref);
+            return testFitMulti(ctx, new TypeConstant[] {typeRequired});
             }
 
         throw notImplemented();
@@ -294,17 +292,16 @@ public abstract class Expression
     /**
      * (Pre-validation) Determine if the expression can yield the specified types.
      * <p/>
-     * This method must be overridden by any Expression type that expects to result in multiple
-     * values.
+     * This method should be overridden by any Expression type that expects to result in multiple
+     * values and has the ability to yield different types depending on what types are required.
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked if it can provide
-     * @param pref           the TuplePref defining how the caller wants the result
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type(s)
      */
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         checkDepth();
 
@@ -317,7 +314,7 @@ public abstract class Expression
             case 1:
                 if (hasSingleValueImpl())
                     {
-                    return testFit(ctx, atypeRequired[0], pref);
+                    return testFit(ctx, atypeRequired[0]);
                     }
                 // fall through
 
@@ -325,10 +322,12 @@ public abstract class Expression
                 if (hasMultiValueImpl())
                     {
                     checkDepth();
-                    return calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired, pref);
+                    return calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired);
                     }
 
-                // anything that can yield separate values must have a "multi" implementation
+                // anything that is expected to yield separate values must have a "multi"
+                // implementation, so the lack of a "multi" implementation means that this
+                // expression can't yield the desired number of values
                 return TypeFit.NoFit;
             }
         }
@@ -339,34 +338,24 @@ public abstract class Expression
      * @param ctx      the compilation context for the statement
      * @param typeIn   the type being tested for fit
      * @param typeOut  the type that the expression is being asked if it can provide
-     * @param pref     the TuplePref defining how the caller wants the result
      *
      * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
      *         from the specified type
      */
-    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut, TuplePref pref)
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
-        if (!hasMultiValueImpl())
-            {
-            throw notImplemented();
-            }
-
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
         if (typeOut == null || typeIn.isA(typeOut))
             {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
+            return TypeFit.Fit;
             }
 
         // check for the existence of an @Auto conversion
         if (typeIn.ensureTypeInfo().findConversion(typeOut) != null)
             {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
+            return TypeFit.Conv;
             }
 
         return TypeFit.NoFit;
@@ -378,23 +367,22 @@ public abstract class Expression
      * @param ctx       the compilation context for the statement
      * @param atypeIn   the type(s) being tested for fit
      * @param atypeOut  the types that the expression is being asked if it can provide
-     * @param pref      the TuplePref defining how the caller wants the result;
      *
      * @return a TypeFit value describing the ability (or lack thereof) to produce the required type
      *         from the specified type
      */
-    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeIn, TypeConstant[] atypeOut, TuplePref pref)
+    protected TypeFit calcFitMulti(Context ctx, TypeConstant[] atypeIn, TypeConstant[] atypeOut)
         {
         int cTypesIn  = atypeIn.length;
         int cTypesOut = atypeOut.length;
-        if (cTypesIn == 1 && cTypesOut <= 1)
-            {
-            return calcFit(ctx, atypeIn[0], cTypesOut == 0 ? null : atypeOut[0], pref);
-            }
-
         if (cTypesIn < cTypesOut)
             {
             return TypeFit.NoFit;
+            }
+
+        if (cTypesIn == 1 && cTypesOut <= 1)
+            {
+            return calcFit(ctx, atypeIn[0], cTypesOut == 0 ? null : atypeOut[0]);
             }
 
         TypeFit fitOut = TypeFit.Fit;
@@ -402,7 +390,7 @@ public abstract class Expression
             {
             TypeConstant typeIn    = atypeIn [i];
             TypeConstant typeOut   = atypeOut[i];
-            TypeFit      fitSingle = calcFit(ctx, typeIn, typeOut, TuplePref.Rejected);
+            TypeFit      fitSingle = calcFit(ctx, typeIn, typeOut);
             if (!fitOut.isFit())
                 {
                 return TypeFit.NoFit;
@@ -411,9 +399,7 @@ public abstract class Expression
             fitOut = fitOut.combineWith(fitSingle);
             }
 
-        return pref == TuplePref.Required
-                ? fitOut.addPack()
-                : fitOut;
+        return fitOut;
         }
 
     // TODO need a helper for tuple stuff
@@ -1254,16 +1240,14 @@ public abstract class Expression
             return constIn;
             }
 
-        Constant constOut;
         try
             {
             return constIn.convertTo(typeOut);
             }
         catch (ArithmeticException e)
             {
+            return null;
             }
-
-        return null;
         }
 
     /**

@@ -218,7 +218,7 @@ public class TupleExpression
             // it is acceptable to ask a tuple expression to be of type tuple, which results in the
             // tuple expression packing itself
             TypeConstant[] aTypeFields = atypeRequired[0].getParamTypesArray();
-            TypeFit fit = testFitMulti(ctx, aTypeFields, TuplePref.Required);
+            TypeFit fit = testFitMulti(ctx, aTypeFields);
             if (fit.isFit())
                 {
                 atypeRequired = aTypeFields;

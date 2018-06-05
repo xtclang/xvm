@@ -475,7 +475,7 @@ public class NameExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         TypeConstant typeThis = getImplicitType(ctx);
         if (typeThis == null)

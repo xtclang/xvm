@@ -72,13 +72,13 @@ public class ThrowExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         return TypeFit.Fit;
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         return TypeFit.Fit;
         }
