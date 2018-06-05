@@ -592,7 +592,7 @@ public abstract class Expression
      */
     public boolean isValidated()
         {
-        return m_oType != null;
+        return m_fit != null;
         }
 
     /**
@@ -863,11 +863,7 @@ public abstract class Expression
         // a lack of side effects means that the expression can be ignored altogether
         if (hasSideEffects())
             {
-            if (isVoid())
-                {
-                throw new IllegalStateException();
-                }
-            else if (isSingle() && hasSingleValueImpl())
+            if (isSingle() && hasSingleValueImpl())
                 {
                 generateAssignment(code, new Assignable(), errs);
                 }
@@ -904,16 +900,16 @@ public abstract class Expression
             return toConstant();
             }
 
-        if (hasSingleValueImpl())
-            {
-            Assignable var = generateTemporary(code, getType(), fUsedOnce, errs);
-            generateAssignment(code, var, errs);
-            return var.getRegister();
-            }
-
-        if (hasMultiValueImpl())
+        if (hasMultiValueImpl() && (!hasSingleValueImpl() || !isSingle()))
             {
             return generateArguments(code, fLocalPropOk, fUsedOnce, errs)[0];
+            }
+
+        if (hasSingleValueImpl() && !isVoid())
+            {
+            Assignable var = createTempVar(code, getType(), fUsedOnce, errs);
+            generateAssignment(code, var, errs);
+            return var.getRegister();
             }
 
         throw notImplemented();
@@ -935,8 +931,7 @@ public abstract class Expression
      * @return an array of resulting arguments, which will either be the same length as the value
      *         count of the expression, or length 1 for a tuple result iff fPack is true
      */
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         checkDepth();
 
@@ -945,25 +940,37 @@ public abstract class Expression
             return toConstants();
             }
 
-        TypeConstant[] atype = getTypes();
-        switch (atype.length)
+        if (isVoid())
             {
-            case 0:
-                // void means that the results of the expression are black-holed
-                generateAssignments(code, NO_LVALUES, errs);
-                return NO_RVALUES;
-
-            case 1:
-                if (hasSingleValueImpl())
-                    {
-                    return new Argument[] {generateArgument(code, false, false, errs)};
-                    }
-                // fall through
-
-            default:
-                // this must be overridden
-                throw notImplemented();
+            // void means that the results of the expression are black-holed
+            generateAssignments(code, NO_LVALUES, errs);
+            return NO_RVALUES;
             }
+
+        if (hasSingleValueImpl() && isSingle())
+            {
+            // optimize for single argument case
+            return new Argument[] { generateArgument(code, fLocalPropOk, fUsedOnce, errs) };
+            }
+
+        TypeConstant[] aTypes = getTypes();
+        int            cTypes = aTypes.length;
+        Assignable[]   aLVals = new Assignable[cTypes];
+        aLVals[0] = createTempVar(code, aTypes[0], fUsedOnce, errs);
+        for (int i = 1; i < cTypes; ++i)
+            {
+            aLVals[i] = createTempVar(code, aTypes[i], false, errs);
+            }
+        generateAssignments(code, aLVals, errs);
+
+        // the temporaries are each represented by a register; return those registers as the
+        // generated arguments
+        Register[] aRegs = new Register[cTypes];
+        for (int i = 0; i < cTypes; ++i)
+            {
+            aRegs[i] = aLVals[i].getRegister();
+            }
+        return aRegs;
         }
 
     /**
@@ -978,7 +985,7 @@ public abstract class Expression
      * @return the Assignable representing the temporary variable; the Assignable will contain a
      *         Register
      */
-    protected Assignable generateTemporary(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
+    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
         {
         Register reg;
         if (fUsedOnce)
@@ -1039,24 +1046,22 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (!isAssignable())
+        if (isVoid())
             {
-            throw new IllegalStateException();
+            generateVoid(code, errs);
+            return NO_LVALUES;
             }
 
-        switch (getValueCount())
+        if (hasSingleValueImpl() && isSingle())
             {
-            case 0:
-                generateVoid(code, errs);
-                return NO_LVALUES;
-
-            case 1:
-                return new Assignable[] {generateAssignable(code, errs)};
-
-            default:
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, getValueCount());
-                return NO_LVALUES;
+            return new Assignable[] { generateAssignable(code, errs) };
             }
+
+        // a sub-class should have overridden this method
+        assert isAssignable();
+        throw hasMultiValueImpl()
+                ? notImplemented()
+                : new IllegalStateException();
         }
 
     /**
@@ -1074,16 +1079,21 @@ public abstract class Expression
         {
         checkDepth();
 
-        if (isSingle())
+        if (hasSingleValueImpl())
             {
             // this will be overridden by classes that can push down the work
-            Argument arg = generateArgument(code, false, false, errs);
+            Argument arg = generateArgument(code, LVal.supportsLocalPropMode(), true, errs);
             LVal.assign(arg, code, errs);
+            return;
             }
-        else
+
+        if (hasMultiValueImpl())
             {
             generateAssignments(code, new Assignable[] {LVal}, errs);
+            return;
             }
+
+        throw notImplemented();
         }
 
     /**
@@ -1114,32 +1124,43 @@ public abstract class Expression
             cLVals = cRVals;
             }
 
-        switch (cLVals)
+        if (!m_fInAssignment)
             {
-            case 0:
-                if (!m_fInAssignment)
-                    {
+            switch (cLVals)
+                {
+                case 0:
                     m_fInAssignment = true;
                     generateVoid(code, errs);
                     m_fInAssignment = false;
                     return;
-                    }
 
-            case 1:
-                if (!m_fInAssignment)
-                    {
-                    m_fInAssignment = true;
-                    generateAssignment(code, aLVal[0], errs);
-                    m_fInAssignment = false;
-                    return;
-                    }
+                case 1:
+                    if (hasSingleValueImpl())
+                        {
+                        m_fInAssignment = true;
+                        generateAssignment(code, aLVal[0], errs);
+                        m_fInAssignment = false;
+                        return;
+                        }
+                }
             }
 
-        Argument[] aArg = generateArguments(code, fLocalPropOk, fUsedOnce, errs);
-        for (int i = 0; i < cLVals; ++i)
+        if (hasMultiValueImpl())
             {
-            aLVal[i].assign(aArg[i], code, errs);
+            boolean fLocalPropOk = true;
+            for (int i = 0; i < cLVals; ++i)
+                {
+                fLocalPropOk &= aLVal[i].supportsLocalPropMode();
+                }
+            Argument[] aArg = generateArguments(code, fLocalPropOk, true, errs);
+            for (int i = 0; i < cLVals; ++i)
+                {
+                aLVal[i].assign(aArg[i], code, errs);
+                }
+            return;
             }
+
+        throw notImplemented();
         }
 
     /**
@@ -1152,8 +1173,7 @@ public abstract class Expression
      *                   whether to jump when this expression evaluates to false
      * @param errs       the error list to log any errors to
      */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
-            ErrorListener errs)
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         checkDepth();
 
@@ -1670,6 +1690,16 @@ public abstract class Expression
             }
 
         // ----- compilation -------------------------------------------------------------------
+
+        /**
+         * @return false iff the assignment of this LVal can<b>not</b> pull directly from a local
+         *         property using the optimized (property constant only) encoding
+         */
+        public boolean supportsLocalPropMode()
+            {
+            // TODO
+            return true;
+            }
 
         /**
          * Generate the assignment-specific assembly code.
