@@ -72,32 +72,6 @@ public abstract class SyntheticExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
-            ErrorListener errs)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
     public boolean isAssignable()
         {
         return expr.isAssignable();
@@ -135,6 +109,5 @@ public abstract class SyntheticExpression
      */
     protected Expression expr;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(SyntheticExpression.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(SyntheticExpression.class, "expr");
     }

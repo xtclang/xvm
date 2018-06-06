@@ -149,16 +149,6 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
-        // a tuple expression is a single value, even though sometimes we treat it as if it is
-        // multiple separate values, but to do so, we need to think of it as a tuple (i.e. a single
-        // value of type "Tuple<T1, T2, ..., Tn>") that we can unpack as necessary into a number of
-        // separate values of types T1, T2, ..., Tn
-        return true;
-        }
-
-    @Override
     protected Expression[] unpackedExpressions()
         {
         return type == null || type.ensureTypeConstant().equals(pool().typeTuple())

@@ -77,12 +77,6 @@ public class LiteralExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
-        return true;
-        }
-
-    @Override
     public TypeConstant getImplicitType(Context ctx)
         {
         ConstantPool pool = pool();

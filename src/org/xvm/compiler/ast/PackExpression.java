@@ -44,12 +44,6 @@ public  class PackExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    protected boolean hasSingleValueImpl()
-        {
-        return true;
-        }
-
-    @Override
     public TypeConstant getImplicitType(Context ctx)
         {
         return getType();
@@ -80,12 +74,6 @@ public  class PackExpression
         // generate the tuple value
         code.add(new Var_T(getType(), args));
         return code.lastRegister();
-        }
-
-    @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
-        {
-        throw new IllegalStateException(this.toString());
         }
 
     @Override

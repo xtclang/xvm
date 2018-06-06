@@ -155,7 +155,7 @@ public abstract class Expression
      */
     protected boolean hasSingleValueImpl()
         {
-        return false;
+        return true;
         }
 
     /**
@@ -197,7 +197,7 @@ public abstract class Expression
         UnpackExpression[] aExpr = new UnpackExpression[c];
         for (int i = 0; i < c; ++i)
             {
-            aExpr[i] = new UnpackExpression(this, i);
+            aExpr[i] = new UnpackExpression(this, aExpr, i);
             }
         return aExpr;
         }
