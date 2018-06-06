@@ -2,11 +2,17 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.I_Get;
 
 
 /**
@@ -17,18 +23,26 @@ public  class UnpackExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public UnpackExpression(Expression exprTuple, UnpackExpression[] aUnpackExprs, int iField)
+    public UnpackExpression(Expression exprTuple, UnpackExpression[] aUnpackExprs, int iField, ErrorListener errs)
         {
         super(exprTuple);
 
-        m_iField = iField;
+        m_aUnpackExprs = aUnpackExprs;
+        m_iField       = iField;
 
-        ConstantPool pool = pool();
-        TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), exprTuple.getTypes());
-        finishValidation(typeRequired, type, TypeFit.Fit, exprTuple.isConstant()
-                ? pool.ensureTupleConstant(type, exprTuple.toConstants())
-                : null, errs);
+        TypeConstant typeTuple = exprTuple.getType();
+        assert typeTuple.isTuple() && typeTuple.isParamsSpecified();
+        TypeConstant typeField = typeTuple.getParamTypesArray()[iField];
+        Constant     constVal  = null;
+        if (exprTuple.hasConstantValue())
+            {
+            Constant constTuple = exprTuple.toConstant();
+            assert constTuple.getFormat() == Format.Tuple;
+            constVal = ((ArrayConstant) constTuple).getValue()[iField];
+            }
+        finishValidation(null, typeField, expr.getTypeFit().addUnpack(), constVal, errs);
         }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -61,6 +75,7 @@ public  class UnpackExpression
         return m_iField;
         }
 
+
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
@@ -73,8 +88,29 @@ public  class UnpackExpression
             }
 
         Argument argTuple = ensureTuple(code, errs);
-        // TODO
-        return null;
+        Register regField = new Register(getType());
+        code.add(new I_Get(argTuple, pool().ensureIntConstant(m_iField), regField));
+        return regField;
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (hasConstantValue())
+            {
+            super.generateAssignment(code, LVal, errs);
+            }
+
+        Argument argTuple = ensureTuple(code, errs);
+        if (LVal.isLocalArgument())
+            {
+            code.add(new I_Get(argTuple, pool().ensureIntConstant(m_iField), LVal.getLocalArgument()));
+            }
+        else
+            {
+            Argument argField = generateArgument(code, LVal.supportsLocalPropMode(), true, errs);
+            LVal.assign(argField, code, errs);
+            }
         }
 
     @Override

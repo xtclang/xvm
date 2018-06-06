@@ -22,7 +22,7 @@ public  class ConvertExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ConvertExpression(Expression expr, MethodConstant idConv)
+    public ConvertExpression(Expression expr, MethodConstant idConv, ErrorListener errs)
         {
         super(expr);
 
@@ -39,7 +39,7 @@ public  class ConvertExpression
             val = convertConstant(expr.toConstant(), type);
             }
 
-        finishValidation(typeRequired, type, TypeFit.Fit, val, errs);
+        finishValidation(null, type, expr.getTypeFit().addConversion(), val, errs);
         }
 
 
@@ -57,45 +57,34 @@ public  class ConvertExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs)
-        {
-        if (fPack)
-            {
-            throw new IllegalStateException(this.toString());
-            }
-
-        if (isConstant())
-            {
-            return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
-            }
-
-        // generate the tuple fields
-        TypeConstant type   = getType();
-        Argument     argIn  = expr.generateArgument(code, true, true, errs);
-        Argument     argOut = fUsedOnce
-                ? new Register(type, Op.A_STACK)
-                : new Register(type);
-        code.add(new Invoke_01(argIn, m_idConv, argOut));
-        return argOut;
-        }
-
-    @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
-        {
-        throw new IllegalStateException(this.toString());
-        }
-
-    @Override
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
-        {
-        throw new IllegalStateException(this.toString());
-        }
-
-    @Override
     public void generateVoid(Code code, ErrorListener errs)
         {
         expr.generateVoid(code, errs);
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (hasConstantValue())
+            {
+            super.generateAssignment(code, LVal, errs);
+            return;
+            }
+
+        // get the value to be converted
+        Argument argIn = getUnderlyingExpression().generateArgument(code, true, true, errs);
+
+        // determine the destination of the conversion
+        if (LVal.isLocalArgument())
+            {
+            code.add(new Invoke_01(argIn, m_idConv, LVal.getLocalArgument()));
+            }
+        else
+            {
+            Register regResult = new Register(getType());
+            code.add(new Invoke_01(argIn, m_idConv, regResult));
+            LVal.assign(regResult, code, errs);
+            }
         }
 
 

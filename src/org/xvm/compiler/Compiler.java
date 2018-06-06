@@ -810,4 +810,8 @@ public class Compiler
      * Could not find a matching constructor for type "{0}".
      */
     public static final String MISSING_CONSTRUCTOR                = "COMPILER-65";
+    /**
+     * Tuple type has an unexpected number of field types; {0} expected, {1} found.
+     */
+    public static final String TUPLE_TYPE_WRONG_ARITY             = "COMPILER-66";
     }

@@ -13,6 +13,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_T;
@@ -149,100 +150,130 @@ public class TupleExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Expression[] unpackedExpressions()
+    protected Expression[] unpackedExpressions(ErrorListener errs)
         {
-        return type == null || type.ensureTypeConstant().equals(pool().typeTuple())
-                ? getExpressionArray()
-                : super.unpackedExpressions();
+        return getExpressionArray();
         }
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        ConstantPool pool     = pool();
-        TypeConstant typeThis = type == null ? null : type.ensureTypeConstant();
-        if (typeThis == null)
+        ConstantPool pool      = pool();
+        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant();
+        if (!typeTuple.isTuple())
             {
-            typeThis = pool.typeTuple();
+            // let someone else log an error later, e.g. during validation, if the specified type
+            // can't be achieved
+            return typeTuple;
             }
-        else if (!typeThis.isTuple() || typeThis.isParamsSpecified())
+
+        List<Expression> listFieldExprs = exprs;
+        int              cFields        = listFieldExprs.size();
+        TypeConstant[]   atypeFields    = new TypeConstant[cFields];
+        if (typeTuple.isParamsSpecified())
             {
-            // an explicit, parameterized (field types specified) tuple type is assumed to be
-            // correct, and a non-tuple type is probably incorrect, but we'll defer that check until
-            // the validate stage
-            return typeThis;
+            TypeConstant[] atypeSpecified = typeTuple.getParamTypesArray();
+            int            cSpecified     = atypeSpecified.length;
+            System.arraycopy(atypeSpecified, 0, atypeFields, 0, Math.min(cFields, cSpecified));
             }
 
         // the type derives from the expressions in the tuple
-        List<Expression> listExprs  = exprs;
-        int              cExprs     = listExprs.size();
-        TypeConstant[]   atypeExprs = new TypeConstant[cExprs];
-        for (int i = 0; i < cExprs; ++i)
+        for (int i = 0; i < cFields; ++i)
             {
-            TypeConstant typeExpr = listExprs.get(i).getImplicitType(ctx);
-            atypeExprs[i] = typeExpr == null ? pool.typeObject() : typeExpr;
-            }
-
-        return typeThis.adoptParameters(atypeExprs);
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
-        {
-        // can't pack a tuple into a tuple
-        if (pref == TuplePref.Required)
-            {
-
-            }
-
-        List<Expression> listExprs = exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        TypeConstant[]   aTypes    = new TypeConstant[cExprs];
-        Constant[]       aVals     = null;
-        boolean          fConstant = true;
-        int              cRequired = atypeRequired.length;
-        boolean          fPack     = false;
-        if (cRequired == 1 && atypeRequired[0].isTuple() && pref != TuplePref.Required)
-            {
-            // it is acceptable to ask a tuple expression to be of type tuple, which results in the
-            // tuple expression packing itself
-            TypeConstant[] aTypeFields = atypeRequired[0].getParamTypesArray();
-            TypeFit fit = testFitMulti(ctx, aTypeFields);
-            if (fit.isFit())
+            TypeConstant typeSpecified = atypeFields[i];
+            TypeConstant typeImplicit  = listFieldExprs.get(i).getImplicitType(ctx);
+            if (typeSpecified != null && typeImplicit != null)
                 {
-                atypeRequired = aTypeFields;
-                cRequired     = atypeRequired.length;
-                fPack         = true;
+                // assume that "isA" success indicates a narrower type is known implicitly
+                // assume that "isA" failure indicates a pending conversion to a specified type
+                atypeFields[i] = typeImplicit.isA(typeSpecified)
+                        ? typeImplicit
+                        : typeSpecified;
+                }
+            else if (typeImplicit != null)
+                {
+                atypeFields[i] = typeImplicit;
+                }
+            else if (typeSpecified == null)
+                {
+                atypeFields[i] = pool.typeObject();
                 }
             }
 
-        if (cRequired > cExprs)
-            {
-            // we don't have enough expressions to satisfy the caller
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cRequired, cExprs);
+        return typeTuple.adoptParameters(atypeFields);
+        }
 
-            // pretend that we can satisfy the caller (so that this doesn't prevent the compilation
-            // from continuing)
-            aTypes    = new TypeConstant[cRequired];
-            aVals     = new Constant[cRequired];
-            for (int i = cExprs; i < cRequired; ++i)
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeFit          fit            = TypeFit.Fit;
+        ConstantPool     pool           = pool();
+        List<Expression> listFieldExprs = exprs;
+        int              cFields        = listFieldExprs == null ? 0 : listFieldExprs.size();
+        TypeConstant[]   aFieldTypes    = new TypeConstant[cFields];
+        Constant[]       aFieldVals     = null;
+        boolean          fConstant      = true;
+        TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
+        int              cReqTypes      = 0;
+        TypeConstant[]   aSpecTypes     = TypeConstant.NO_TYPES;
+        int              cSpecTypes     = 0;
+        TypeConstant     typeSpecified  = type == null ? null : type.ensureTypeConstant();
+        if (typeSpecified != null)
+            {
+            // the specified type must be a tuple, since a tuple does not have any @Auto conversions
+            // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
+            if (typeSpecified.isTuple())
                 {
-                TypeConstant typeField = atypeRequired[i];
-                aTypes[i] = typeField;
-                aVals [i] = generateFakeConstant(typeField);
+                // the specified tuple type may have any of the field types specified as well
+                if (typeSpecified.isParamsSpecified())
+                    {
+                    aSpecTypes = typeSpecified.getParamTypesArray();
+                    cSpecTypes = aSpecTypes.length;
+
+                    // can't have more field types specified than we have fields
+                    if (cSpecTypes > cFields)
+                        {
+                        // log an error and ignore the additional specified fields
+                        type.log(errs, Severity.ERROR, Compiler.TUPLE_TYPE_WRONG_ARITY,
+                                cFields, cSpecTypes);
+                        }
+                    }
+                }
+            else
+                {
+                // log an error and ignore the specified type
+                type.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                        pool.typeTuple(), typeSpecified);
+                }
+            }
+
+        if (typeRequired != null && typeRequired.isTuple() && typeRequired.isParamsSpecified())
+            {
+            // the required type must be a tuple, or a tuple must be assignable to the required
+            // type, but most of that will be checked during finishValidation(); for now, just
+            // get the required field types to use while validating sub-expressions
+            aReqTypes = typeRequired.getParamTypesArray();
+            cReqTypes = aReqTypes.length;
+
+            // can't have more field types required than we have fields
+            if (cReqTypes > cFields)
+                {
+                // log an error and ignore the additional required fields
+                log(errs, Severity.ERROR, Compiler.TUPLE_TYPE_WRONG_ARITY,
+                        cReqTypes, cFields);
+                fit = TypeFit.NoFit;
                 }
             }
 
         boolean fHalted = false;
         TypeFit fit     = TypeFit.Fit;
-        for (int i = 0; i < cExprs; ++i)
+        for (int i = 0; i < cFields; ++i)
             {
-            TypeConstant typeRequired = i < cRequired
+            TypeConstant typeRequired = i < cReqTypes
                     ? atypeRequired[i]
                     : null;
 
-            Expression exprOrig = listExprs.get(i);
+            Expression exprOrig = listFieldExprs.get(i);
             Expression expr     = exprOrig.validate(ctx, typeRequired, errs);
             if (expr == null)
                 {
@@ -252,7 +283,7 @@ public class TupleExpression
                 }
             else if (expr != exprOrig)
                 {
-                listExprs.set(i, expr);
+                listFieldExprs.set(i, expr);
                 }
 
             // collect the fit of the validated expression
@@ -270,7 +301,7 @@ public class TupleExpression
                 }
 
             // collect the type of the validated expression
-            aTypes[i] = expr == null
+            aFieldTypes[i] = expr == null
                     ? typeRequired          // pretend we were able to get the requested type
                     : expr.getType();
 
@@ -279,28 +310,26 @@ public class TupleExpression
                 {
                 if (expr == null || expr.isConstant())
                     {
-                    if (aVals == null)
+                    if (aFieldVals == null)
                         {
-                        aVals = new Constant[cExprs];
+                        aFieldVals = new Constant[cFields];
                         }
 
-                    aVals[i] = expr == null
+                    aFieldVals[i] = expr == null
                             ? generateFakeConstant(typeRequired)        // pretend it's a constant
                             : expr.toConstant();
                     }
                 else
                     {
                     fConstant = false;
-                    aVals     = null;
+                    aFieldVals     = null;
                     }
                 }
             }
 
-        finishValidations(atypeRequired, aTypes, fit, fConstant ? aVals : null, errs);
-
-        return fHalted  ? null
-                : fPack ? new PackExpression(this)
-                : this;
+        TypeConstant  typeResult = pool.typeTuple(); // TODO use typeSpecified ?
+        ArrayConstant constVal   = fConstant ? pool.ensureTupleConstant(typeResult, aFieldVals) : null;
+        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
         }
 
     @Override
@@ -407,11 +436,10 @@ public class TupleExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression   type; // TODO this is not used (which is wrong!)
+    protected TypeExpression   type;
     protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(TupleExpression.class, "type", "exprs");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(TupleExpression.class, "type", "exprs");
     }

@@ -84,6 +84,12 @@ public class ImmutableTypeConstant
         }
 
     @Override
+    public boolean isImmutable()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isNullable()
         {
         return m_constType.isNullable();

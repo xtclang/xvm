@@ -178,6 +178,24 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this TypeConstant refers to an immutable type
+     */
+    public boolean isImmutable()
+        {
+        return getUnderlyingType().isImmutable();
+        }
+
+    /**
+     * @return a type constant that represents an immutable type of this type constant
+     */
+    public TypeConstant ensureImmutable()
+        {
+        return isImmutable()
+                ? this
+                : getConstantPool().ensureImmutableTypeConstant(this);
+        }
+
+    /**
      * @return true iff the type specifies accessibility
      */
     public boolean isAccessSpecified()

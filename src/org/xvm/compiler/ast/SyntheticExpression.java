@@ -3,13 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ErrorListener;
-
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.compiler.Compiler.Stage;
-
-import org.xvm.compiler.ast.Statement.Context;
 
 
 /**

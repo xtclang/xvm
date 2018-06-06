@@ -178,9 +178,11 @@ public abstract class Expression
         }
 
     /**
+     * @param errs  the error listener to log to  
+     *
      * @return an array of expressions, one for each field of this tuple
      */
-    protected Expression[] unpackedExpressions()
+    protected Expression[] unpackedExpressions(ErrorListener errs)
         {
         TypeConstant type = getType();
         if (!type.isTuple())
@@ -197,7 +199,7 @@ public abstract class Expression
         UnpackExpression[] aExpr = new UnpackExpression[c];
         for (int i = 0; i < c; ++i)
             {
-            aExpr[i] = new UnpackExpression(this, aExpr, i);
+            aExpr[i] = new UnpackExpression(this, aExpr, i, errs);
             }
         return aExpr;
         }
@@ -502,35 +504,47 @@ public abstract class Expression
         assert typeActual != null;
         assert fit != null;
 
-        Expression exprResult = fit.isFit() ? this : null;
+        // if there is a constant value, then the type itself indicates the immutable nature of the
+        // expression
+        if (constVal != null)
+            {
+            typeActual = typeActual.ensureImmutable();
+            }
 
         // if a required type is specified and the expression type isn't of the required type, then
         // an @Auto conversion can be used, assuming that we haven't already given up on the type
         // or already applied a type conversion
-        if (typeRequired != null && !typeActual.isA(typeRequired) && fit.isFit() && !fit.isConverting())
+        MethodConstant idConv = null;
+        if (typeRequired != null && fit.isFit() && !fit.isConverting() && !typeActual.isA(typeRequired))
             {
             // look for an @Auto conversion
-            MethodConstant idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
+            idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
             if (idConv == null)
                 {
                 // cannot provide the required type
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                         typeRequired.getValueString(), typeActual.getValueString());
-                fit = TypeFit.NoFit;
-                }
-            else
-                {
-                // found an @Auto conversion; create an expression that does the conversion work
-                exprResult = new ConvertExpression(exprResult, idConv);
-                fit        = fit.addConversion();
+
+                // pretend that we were able to do the necessary conversion (but note that there
+                // was a type fit error)
+                typeActual = typeRequired;
+                fit        = TypeFit.NoFit;
+                if (constVal != null)
+                    {
+                    constVal     = generateFakeConstant(typeRequired);
+                    typeRequired = typeRequired.ensureImmutable();
+                    }
                 }
             }
 
         m_fit    = fit;
-        m_oType  = fit.isFit() || typeRequired == null ? typeActual : typeRequired;
+        m_oType  = typeActual;
         m_oConst = constVal;
 
-        return exprResult;
+        // if we found an @Auto conversion, then create an expression that does the conversion work
+        return idConv == null
+                ? this
+                : new ConvertExpression(this, idConv, errs);
         }
 
     /**
@@ -564,7 +578,57 @@ public abstract class Expression
         assert fit != null;
         assert aconstVal == null || (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
 
+        // TODO incorporate ideas from finishValidation() above
+
+        int cActual   = aTypeActual.length;
+        int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;
+        if (cTypeReqs > cActual && fit.isFit())
+            {
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
+            }
+
+        // for expressions that yield constant values, make sure that the types reflect that
+        if (aconstVal != null)
+            {
+            for (int i = 0; i < cActual; ++i)
+                {
+                aTypeActual[i] = aTypeActual[i].ensureImmutable();
+                }
+            }
+        // it is possible that the expression appears to be constant at this point, but it won't be
+        // constant after we apply conversions (perhaps because not all of the constant values will
+        // have constant conversions available), so verify constant conversions first
+        if (aconstVal != null && cTypeReqs > 0)
+            {
+            for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i)
+                {
+                TypeConstant typeActual   = aTypeActual[i];
+                TypeConstant typeRequired = atypeRequired[i];
+                if (!typeActual.ensureImmutable().isA(typeRequired))
+                    {
+                    Constant constConv = convertConstant(aconstVal[i], typeRequired);
+                    if (constConv != null)
+                        {
+
+                        }
+                    }
+                }
+            }
+
+
         // TODO conversions?
+
+        if (aconstVal != null && cTypeReqs > cActual)
+            {
+            // we've already reported an error for there not being enough values in the
+            // expression to meet the required types, but since we're pretending to continue,
+            // we might as well make up some constants to match the number of required types
+            aconstVal = new Constant[cTypeReqs];
+            for (int i = cActual; i < cTypeReqs; ++i)
+                {
+                aconstVal[i] = generateFakeConstant(atypeRequired[i]);
+                }
+            }
 
         m_fit    = fit;
         m_oType  = fit.isFit() || atypeRequired == null ? aTypeActual : atypeRequired;
@@ -960,97 +1024,6 @@ public abstract class Expression
         }
 
     /**
-     * Produce a temporary variable.
-     *
-     * @param code       the code block
-     * @param type       the type of the temporary variable
-     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
-     *                   stack can be utilized for storage)
-     * @param errs       the error list to log any errors to
-     *
-     * @return the Assignable representing the temporary variable; the Assignable will contain a
-     *         Register
-     */
-    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
-        {
-        Register reg;
-        if (fUsedOnce)
-            {
-            reg = new Register(type, Op.A_STACK);
-            }
-        else
-            {
-            reg = new Register(type);
-            code.add(new Var(reg));
-            }
-        return new Assignable(reg);
-        }
-
-    /**
-     * For an L-Value expression with exactly one value, create a representation of the L-Value.
-     * <p/>
-     * An exception is generated if the expression is not assignable.
-     * <p/>
-     * This method must be overridden by any expression that is assignable, unless the multi-value
-     * version of this method is overridden instead.
-     *
-     * @param code  the code block
-     * @param errs  the error list to log any errors to
-     *
-     * @return an Assignable object
-     */
-    public Assignable generateAssignable(Code code, ErrorListener errs)
-        {
-        checkDepth();
-
-        if (!isAssignable() || isVoid())
-            {
-            throw new IllegalStateException();
-            }
-
-        if (hasMultiValueImpl())
-            {
-            return generateAssignables(code, errs)[0];
-            }
-
-        throw notImplemented();
-        }
-
-    /**
-     * For an L-Value expression, create representations of the L-Values.
-     * <p/>
-     * An exception is generated if the expression is not assignable.
-     * <p/>
-     * This method must be overridden by any expression that is assignable and multi-value-aware.
-     *
-     * @param code  the code block
-     * @param errs  the error list to log any errors to
-     *
-     * @return an array of {@link #getValueCount()} Assignable objects
-     */
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
-        {
-        checkDepth();
-
-        if (isVoid())
-            {
-            generateVoid(code, errs);
-            return NO_LVALUES;
-            }
-
-        if (hasSingleValueImpl() && isSingle())
-            {
-            return new Assignable[] { generateAssignable(code, errs) };
-            }
-
-        // a sub-class should have overridden this method
-        assert isAssignable();
-        throw hasMultiValueImpl()
-                ? notImplemented()
-                : new IllegalStateException();
-        }
-
-    /**
      * Generate the necessary code that assigns the value of this expression to the specified
      * L-Value, or generate an error if that is not possible.
      * <p/>
@@ -1171,6 +1144,97 @@ public abstract class Expression
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
+        }
+
+    /**
+     * Produce a temporary variable.
+     *
+     * @param code       the code block
+     * @param type       the type of the temporary variable
+     * @param fUsedOnce  true iff the value will be used once and only once (such that the local
+     *                   stack can be utilized for storage)
+     * @param errs       the error list to log any errors to
+     *
+     * @return the Assignable representing the temporary variable; the Assignable will contain a
+     *         Register
+     */
+    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
+        {
+        Register reg;
+        if (fUsedOnce)
+            {
+            reg = new Register(type, Op.A_STACK);
+            }
+        else
+            {
+            reg = new Register(type);
+            code.add(new Var(reg));
+            }
+        return new Assignable(reg);
+        }
+
+    /**
+     * For an L-Value expression with exactly one value, create a representation of the L-Value.
+     * <p/>
+     * An exception is generated if the expression is not assignable.
+     * <p/>
+     * This method must be overridden by any expression that is assignable, unless the multi-value
+     * version of this method is overridden instead.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     *
+     * @return an Assignable object
+     */
+    public Assignable generateAssignable(Code code, ErrorListener errs)
+        {
+        checkDepth();
+
+        if (!isAssignable() || isVoid())
+            {
+            throw new IllegalStateException();
+            }
+
+        if (hasMultiValueImpl())
+            {
+            return generateAssignables(code, errs)[0];
+            }
+
+        throw notImplemented();
+        }
+
+    /**
+     * For an L-Value expression, create representations of the L-Values.
+     * <p/>
+     * An exception is generated if the expression is not assignable.
+     * <p/>
+     * This method must be overridden by any expression that is assignable and multi-value-aware.
+     *
+     * @param code  the code block
+     * @param errs  the error list to log any errors to
+     *
+     * @return an array of {@link #getValueCount()} Assignable objects
+     */
+    public Assignable[] generateAssignables(Code code, ErrorListener errs)
+        {
+        checkDepth();
+
+        if (isVoid())
+            {
+            generateVoid(code, errs);
+            return NO_LVALUES;
+            }
+
+        if (hasSingleValueImpl() && isSingle())
+            {
+            return new Assignable[] { generateAssignable(code, errs) };
+            }
+
+        // a sub-class should have overridden this method
+        assert isAssignable();
+        throw hasMultiValueImpl()
+                ? notImplemented()
+                : new IllegalStateException();
         }
 
 

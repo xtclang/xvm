@@ -62,6 +62,12 @@ public class DifferenceTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isImmutable()
+        {
+        return m_constType1.isImmutable();
+        }
+
+    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         // a difference type is NEVER a class type; it always resolves to an interface type
