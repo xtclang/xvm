@@ -50,21 +50,17 @@ public class BinaryExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+    public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO
-        return TypeFit.Fit;
+        return pool().typeBinary();
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        // TODO
-        finishValidation(typeRequired, pool().typeBinary(), TypeFit.Fit, pool().ensureByteStringConstant(bytes),
-                errs);
-        return this;
+        return finishValidation(typeRequired, pool().typeBinary(), TypeFit.Fit, pool().ensureByteStringConstant(bytes), errs);
         }
 
 

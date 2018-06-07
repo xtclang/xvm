@@ -210,21 +210,20 @@ public class TupleExpression
         ConstantPool     pool           = pool();
         List<Expression> listFieldExprs = exprs;
         int              cFields        = listFieldExprs == null ? 0 : listFieldExprs.size();
-        TypeConstant[]   aFieldTypes    = new TypeConstant[cFields];
-        Constant[]       aFieldVals     = null;
-        boolean          fConstant      = true;
-        TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
-        int              cReqTypes      = 0;
+        TypeConstant     typeResult     = null;
         TypeConstant[]   aSpecTypes     = TypeConstant.NO_TYPES;
         int              cSpecTypes     = 0;
-        TypeConstant     typeSpecified  = type == null ? null : type.ensureTypeConstant();
-        if (typeSpecified != null)
+        TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
+        int              cReqTypes      = 0;
+        if (type != null)
             {
             // the specified type must be a tuple, since a tuple does not have any @Auto conversions
             // REVIEW many more checks, e.g. generally should not be relational, immutable actually means something, what annotations are allowed, etc.
+            TypeConstant typeSpecified = type.ensureTypeConstant();
             if (typeSpecified.isTuple())
                 {
                 // the specified tuple type may have any of the field types specified as well
+                typeResult = typeSpecified;
                 if (typeSpecified.isParamsSpecified())
                     {
                     aSpecTypes = typeSpecified.getParamTypesArray();
@@ -265,71 +264,81 @@ public class TupleExpression
                 }
             }
 
-        boolean fHalted = false;
-        TypeFit fit     = TypeFit.Fit;
-        for (int i = 0; i < cFields; ++i)
+        int            cMaxTypes   = Math.max(cFields, Math.max(cSpecTypes, cReqTypes));
+        TypeConstant[] aFieldTypes = new TypeConstant[cMaxTypes];
+        Constant[]     aFieldVals  = null;
+        boolean        fHalted     = false;
+        for (int i = 0; i < cMaxTypes; ++i)
             {
-            TypeConstant typeRequired = i < cReqTypes
-                    ? atypeRequired[i]
-                    : null;
-
-            Expression exprOrig = listFieldExprs.get(i);
-            Expression expr     = exprOrig.validate(ctx, typeRequired, errs);
-            if (expr == null)
+            TypeConstant typeReq   = i < cReqTypes ? aReqTypes[i] : null;
+            TypeConstant typeSpec  = i < cSpecTypes ? aSpecTypes[i] : null;
+            TypeConstant typeField = null;
+            Expression   exprOld   = i < cFields ? listFieldExprs.get(i) : null;
+            if (exprOld != null)
                 {
-                fit       = TypeFit.NoFit;
-                fHalted   = true;
-                fConstant = false;
-                }
-            else if (expr != exprOrig)
-                {
-                listFieldExprs.set(i, expr);
-                }
-
-            // collect the fit of the validated expression
-            if (fit.isFit())
-                {
-                TypeFit fitExpr = expr.getTypeFit();
-                if (fitExpr.isFit())
+                Expression exprNew = exprOld.validate(ctx, typeReq, errs);
+                if (exprNew == null)
                     {
-                    fit = fit.combineWith(fitExpr);
+                    fit     = TypeFit.NoFit;
+                    fHalted = true;
                     }
                 else
                     {
-                    fit = TypeFit.NoFit;
-                    }
-                }
-
-            // collect the type of the validated expression
-            aFieldTypes[i] = expr == null
-                    ? typeRequired          // pretend we were able to get the requested type
-                    : expr.getType();
-
-            // collect the constant value of the validated expression
-            if (fConstant)
-                {
-                if (expr == null || expr.isConstant())
-                    {
-                    if (aFieldVals == null)
+                    if (exprNew != exprOld)
                         {
-                        aFieldVals = new Constant[cFields];
+                        listFieldExprs.set(i, exprNew);
                         }
 
-                    aFieldVals[i] = expr == null
-                            ? generateFakeConstant(typeRequired)        // pretend it's a constant
-                            : expr.toConstant();
+                    typeField = exprNew.getType();
+
+                    if (i == 0 || aFieldVals != null)
+                        {
+                        Constant constVal = exprNew.toConstant();
+                        if (constVal == null)
+                            {
+                            aFieldVals = null;
+                            }
+                        else
+                            {
+                            if (aFieldVals == null)
+                                {
+                                aFieldVals = new Constant[cMaxTypes];
+                                }
+
+                            aFieldVals[i] = constVal;
+                            }
+                        }
+                    }
+                }
+
+            if (typeField == null)
+                {
+                if (typeSpec != null)
+                    {
+                    typeField = typeSpec;
+                    }
+                else if (typeReq != null)
+                    {
+                    typeField = typeReq;
                     }
                 else
                     {
-                    fConstant = false;
-                    aFieldVals     = null;
+                    typeField = pool.typeObject();
+                    }
+
+                if (aFieldVals != null)
+                    {
+                    aFieldVals[i] = generateFakeConstant(typeField);
                     }
                 }
+
+            aFieldTypes[i] = typeField;
             }
 
-        TypeConstant  typeResult = pool.typeTuple(); // TODO use typeSpecified ?
-        ArrayConstant constVal   = fConstant ? pool.ensureTupleConstant(typeResult, aFieldVals) : null;
-        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
+        typeResult = (typeResult == null ? pool.typeTuple() : typeResult).adoptParameters(aFieldTypes);
+        ArrayConstant constVal   = aFieldVals == null ? null : pool.ensureTupleConstant(typeResult, aFieldVals);
+        Expression    exprResult = finishValidation(typeRequired, typeResult, fit, constVal, errs);
+        return fHalted ? null : exprResult;
         }
 
     @Override

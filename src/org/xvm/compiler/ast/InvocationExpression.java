@@ -284,6 +284,19 @@ public class InvocationExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
@@ -392,34 +405,7 @@ public class InvocationExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)   // TODO need testFitMulti() impl instead
-        {
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         // validate the invocation arguments, some of which may be left unbound (e.g. "?")
         boolean          fValid   = true;
@@ -578,9 +564,7 @@ public class InvocationExpression
                 }
             }
 
-        return finishValidation(typeRequired,
-                typeRequired == null ? pool().typeObject() : typeRequired, TypeFit.NoFit,
-                null, errs);
+        return finishValidations(atypeRequired, atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override

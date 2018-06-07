@@ -167,7 +167,7 @@ public abstract class Expression
         }
 
     /**
-     * @param errs  the error listener to log to 
+     * @param errs  the error listener to log to
      *
      * @return an expression that represents the value(s) of this expression as a tuple of those
      *         same values
@@ -178,7 +178,7 @@ public abstract class Expression
         }
 
     /**
-     * @param errs  the error listener to log to  
+     * @param errs  the error listener to log to
      *
      * @return an array of expressions, one for each field of this tuple
      */
@@ -579,16 +579,12 @@ public abstract class Expression
         assert fit != null;
         assert aconstVal == null || (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
 
-        // TODO incorporate ideas from finishValidation() above
-
         int cActual   = aTypeActual.length;
         int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypeReqs > cActual && fit.isFit())
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             }
-
-        MethodConstant[] aIdConv = null;
 
         // for expressions that yield constant values, make sure that the types reflect that
         if (aconstVal != null)
@@ -598,35 +594,56 @@ public abstract class Expression
                 aTypeActual[i] = aTypeActual[i].ensureImmutable();
                 }
             }
-        // it is possible that the expression appears to be constant at this point, but it won't be
-        // constant after we apply conversions (perhaps because not all of the constant values will
-        // have constant conversions available), so verify constant conversions first
-        if (aconstVal != null && cTypeReqs > 0)
+
+        MethodConstant[] aIdConv = null;
+        if (cTypeReqs > 0 && fit.isFit() && !fit.isConverting())
             {
             for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i)
                 {
                 TypeConstant typeActual   = aTypeActual[i];
                 TypeConstant typeRequired = atypeRequired[i];
-                if (!typeActual.ensureImmutable().isA(typeRequired))
+                if (!typeActual.isA(typeRequired))
                     {
-                    Constant constConv = convertConstant(aconstVal[i], typeRequired);
-                    if (constConv != null)
+                    // look for an @Auto conversion
+                    MethodConstant idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
+                    if (idConv == null)
                         {
+                        // cannot provide the required type
+                        log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                typeRequired.getValueString(), typeActual.getValueString());
 
+                        // pretend that we were able to do the necessary conversion (but note that there
+                        // was a type fit error)
+                        fit        = TypeFit.NoFit;
+                        typeActual = typeRequired;
+                        if (aconstVal[i] != null)
+                            {
+                            // pretend that it was a constant
+                            aconstVal[i] = generateFakeConstant(typeRequired);
+                            typeActual   = typeActual.ensureImmutable();
+                            }
+                        aTypeActual[i] = typeActual;
+                        }
+                    else
+                        {
+                        if (aIdConv == null)
+                            {
+                            aIdConv = new MethodConstant[cActual];
+                            }
+                        aIdConv[i] = idConv;
                         }
                     }
                 }
             }
 
-
-        // TODO conversions?
-
-        if (aconstVal != null && cTypeReqs > cActual)
+        if (cTypeReqs > cActual && aconstVal != null)
             {
             // we've already reported an error for there not being enough values in the
             // expression to meet the required types, but since we're pretending to continue,
             // we might as well make up some constants to match the number of required types
-            aconstVal = new Constant[cTypeReqs];
+            Constant[] aconstNew = new Constant[cTypeReqs];
+            System.arraycopy(aconstVal, 0, aconstNew, 0, cActual);
+            aconstVal = aconstNew;
             for (int i = cActual; i < cTypeReqs; ++i)
                 {
                 aconstVal[i] = generateFakeConstant(atypeRequired[i]);

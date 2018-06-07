@@ -157,35 +157,7 @@ public class NewExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
-        {
-        // TODO there should be a default implementation of this
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -306,8 +278,7 @@ public class NewExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         assert m_idConstructor != null;
         assert left == null; // TODO construct child class

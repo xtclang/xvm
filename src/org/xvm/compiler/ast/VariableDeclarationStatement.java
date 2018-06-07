@@ -318,7 +318,7 @@ public class VariableDeclarationStatement
             TypeConstant typeVar = m_reg.getType();
             if (m_fPackingInit)
                 {
-                Argument[] aArgs = value.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
+                Argument[] aArgs = value.generateArguments(code, true, true, errs);
                 code.add(new Var_TN(m_reg, constName, aArgs));
                 return fCompletes;
                 }

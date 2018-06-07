@@ -27,7 +27,7 @@ module Test
         IntLiteral i = 1;
         Int j = i;
         // Tuple<Int, Int> t = (i, j);
-//        Int i = foo(); 
+//        Int i = foo();
 //        @Inject X.io.Console console;
 //        console.println("Hello world!");
 //         Int[] ai = new Int[4];
@@ -40,7 +40,7 @@ module Test
         }
 
 /*
-    const Person(String name)  {}
+    const Person(String name) {}
 
     const Point(Int x, Int y)
         default(Origin);

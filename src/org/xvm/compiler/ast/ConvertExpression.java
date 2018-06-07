@@ -56,7 +56,7 @@ public  class ConvertExpression
             TypeConstant[] aTypes = expr.getTypes().clone();
             aTypes[iVal] = type;
 
-            Constant[] aVals  = null;
+            Constant[] aVals = null;
             if (expr.isConstant())
                 {
                 Constant[] aOldVals = expr.toConstants();

@@ -475,32 +475,6 @@ public class NameExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
-        {
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired,
             ErrorListener errs)
         {
@@ -564,9 +538,7 @@ public class NameExpression
         Constant     constant = null;
         if (type != null)
             {
-            fit = pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
+            fit = TypeFit.Fit;
 
             if (typeRequired == null || type.isA(typeRequired))
                 {

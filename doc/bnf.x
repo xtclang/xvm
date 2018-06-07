@@ -568,7 +568,7 @@ WithDeclaration
 #   <  <=           relational                7     left to right
 #   >  >=
 #   <=>             order
-#   as              type assertion 
+#   as              type assertion
 #   is              type comparison
 #   instanceof      type comparison
 #
