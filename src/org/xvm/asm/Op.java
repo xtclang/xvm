@@ -895,6 +895,7 @@ public abstract class Op
             case OP_VAR_SN:      return "VAR_SN";
             case OP_VAR_T:       return "VAR_T";
             case OP_VAR_TN:      return "VAR_TN";
+            case OP_DUP:         return "DUP";
             case OP_MOV:         return "MOV";
             case OP_MOV_VAR:     return "MOV_VAR";
             case OP_MOV_REF:     return "MOV_REF";
@@ -1121,6 +1122,7 @@ public abstract class Op
     public static final int OP_VAR_SN       = 0x45;
     public static final int OP_VAR_T        = 0x46;
     public static final int OP_VAR_TN       = 0x47;
+    public static final int OP_DUP          = 0xE5; // TODO re-order
     public static final int OP_MOV          = 0x48;
     public static final int OP_MOV_VAR      = 0x49;
     public static final int OP_MOV_REF      = 0x4A;

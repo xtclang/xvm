@@ -893,13 +893,14 @@ public abstract class Expression
      * <p/>
      * An exception is thrown if the expression does not produce a compile-time constant.
      *
-     * @return the constant value of the expression
+     * @return the compile-time constant value of the expression, or null if the expression is not
+     *         constant
      */
     public Constant toConstant()
         {
         if (!hasConstantValue())
             {
-            throw new IllegalStateException();
+            return null;
             }
 
         if (m_oConst instanceof Constant)
@@ -916,13 +917,17 @@ public abstract class Expression
      * represent the value of the Expression.
      * <p/>
      * If the Expression is <i>void</i>, then this will return an empty array.
-     * <p/>
-     * An exception is thrown if the expression does not produce a compile-time constant.
      *
-     * @return the compile-times constant values of the expression
+     * @return the compile-time constant values of the expression, or null if the expression is not
+     *         constant
      */
     public Constant[] toConstants()
         {
+        if (!hasConstantValue())
+            {
+            return null;
+            }
+
         if (!(m_oConst instanceof Constant[]))
             {
             m_oConst = new Constant[] {toConstant()};
