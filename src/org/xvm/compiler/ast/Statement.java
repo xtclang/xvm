@@ -17,8 +17,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 
@@ -715,12 +715,12 @@ public abstract class Statement
 
                 case "super":
                     {
-                    TypeInfo        info     = getThisType().ensureTypeInfo(errs);
-                    MethodStructure method   = getMethod();
-                    MethodConstant  idMethod = method.getIdentityConstant();
-                    MethodBody[]    chain    = info.getOptimizedMethodChain(idMethod);
+                    TypeInfo        info       = getThisType().ensureTypeInfo(errs);
+                    MethodStructure method     = getMethod();
+                    MethodConstant  idMethod   = method.getIdentityConstant();
+                    MethodInfo      infoMethod = info.getMethodById(idMethod);
 
-                    if (chain == null || chain.length <= 1)
+                    if (!infoMethod.hasSuper(info))
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }

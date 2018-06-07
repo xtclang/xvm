@@ -60,6 +60,20 @@ public class MethodBody
         }
 
     /**
+     * A copy constructor that allows to change the implementation of the body.
+     *
+     * @param body  the method body to copy
+     * @param impl  the new implementation
+     */
+    public MethodBody(MethodBody body, Implementation impl)
+        {
+        m_id          = body.m_id;
+        m_sig         = body.m_sig;
+        m_constTarget = body.m_constTarget;
+        m_impl        = impl;
+        }
+
+    /**
      * @return the MethodConstant that this MethodBody represents
      */
     public MethodConstant getIdentity()

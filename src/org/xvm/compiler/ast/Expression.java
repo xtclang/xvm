@@ -14,8 +14,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1435,15 +1435,19 @@ public abstract class Expression
                 break;
 
             case Op.A_SUPER:
-                TypeInfo infoThis = type.ensureTypeInfo(errs);
-                MethodBody[] abody = infoThis.getOptimizedMethodChain(method.getIdentityConstant());
-                if (abody == null || abody.length <= 1)
+                {
+                TypeInfo       info       = type.ensureTypeInfo(errs);
+                MethodConstant idMethod   = method.getIdentityConstant();
+                MethodInfo     infoMethod = info.getMethodById(idMethod);
+
+                if (!infoMethod.hasSuper(info))
                     {
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
                     }
 
-                type  = method.getIdentityConstant().getSignature().asFunctionType();
+                type = idMethod.getSignature().asFunctionType();
                 break;
+                }
 
             default:
                 throw new IllegalArgumentException("nReg=" + nReg);

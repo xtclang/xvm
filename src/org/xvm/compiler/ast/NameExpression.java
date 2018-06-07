@@ -871,10 +871,17 @@ public class NameExpression
                     {
                     case Property:
                         {
-                        PropertyConstant idProp   = (PropertyConstant) arg;
-                        TypeConstant     typeClz  = idProp.getClassIdentity().getType();
-                        TypeInfo         infoClz  = typeClz.ensureTypeInfo(errs);
-                        PropertyInfo     infoProp = infoClz.findProperty(idProp);
+                        PropertyConstant idProp = (PropertyConstant) arg;
+                        ClassStructure   clzTop = ctx.getMethod().getContainingClass();
+
+                        // we will use the private access info here since the access restrictions
+                        // must have been already checked by the "resolveName"
+                        ConstantPool pool    = idProp.getConstantPool();
+                        TypeInfo     infoClz = pool.ensureAccessTypeConstant(clzTop.getFormalType(),
+                            Access.PRIVATE).ensureTypeInfo(errs);
+
+                        PropertyInfo infoProp = infoClz.findProperty(idProp);
+                        assert infoProp != null;
 
                         m_arg         = infoProp.getIdentity();
                         m_fAssignable = infoProp.isVar() && !infoProp.isInjected();

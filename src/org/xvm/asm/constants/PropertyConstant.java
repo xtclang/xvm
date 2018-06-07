@@ -81,6 +81,14 @@ public class PropertyConstant
         return getConstantPool().ensureTerminalTypeConstant(this);
         }
 
+    /**
+     * @return true iff this property is a type parameter
+     */
+    public boolean isTypeParameter()
+        {
+        PropertyStructure struct = (PropertyStructure) getComponent();
+        return struct != null && struct.isTypeParameter();
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -99,7 +107,8 @@ public class PropertyConstant
     @Override
     public TypeConstant getRefType()
         {
-        // TODO this is not correct, but it is close; what we really need is a type that points at the prop itself as if it were a class
+        // this is not correct, but it is close;
+        // TODO what we really need is a type that points at the prop itself as if it were a class
         // REVIEW GG
         TypeInfo     infoClz  = getClassIdentity().getType().ensureTypeInfo();
         PropertyInfo infoThis = infoClz.findProperty(this);
