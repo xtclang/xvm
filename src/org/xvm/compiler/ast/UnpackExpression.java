@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -13,6 +12,8 @@ import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.I_Get;
+
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -46,6 +47,9 @@ public  class UnpackExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return an argument holding the tuple value
+     */
     Argument ensureTuple(Code code, ErrorListener errs)
         {
         Argument arg = m_argTuple;
@@ -79,8 +83,25 @@ public  class UnpackExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs)
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return getType();
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        return this;
+        }
+
+    @Override
+    public void generateVoid(Code code, ErrorListener errs)
+        {
+        expr.generateVoid(code, errs);
+        }
+
+    @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (hasConstantValue())
             {
@@ -111,12 +132,6 @@ public  class UnpackExpression
             Argument argField = generateArgument(code, LVal.supportsLocalPropMode(), true, errs);
             LVal.assign(argField, code, errs);
             }
-        }
-
-    @Override
-    public void generateVoid(Code code, ErrorListener errs)
-        {
-        expr.generateVoid(code, errs);
         }
 
 

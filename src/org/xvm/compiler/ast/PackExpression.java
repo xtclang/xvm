@@ -52,11 +52,13 @@ public  class PackExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeConstant type     = getType();
-        Constant     constVal = hasConstantValue() ? toConstant() : null;
-        TypeFit      fit      = calcFit(ctx, getType(), typeRequired);
-        finishValidation(typeRequired, type, fit, constVal, errs);
         return this;
+        }
+
+    @Override
+    public void generateVoid(Code code, ErrorListener errs)
+        {
+        expr.generateVoid(code, errs);
         }
 
     @Override
@@ -74,12 +76,6 @@ public  class PackExpression
         // generate the tuple value
         code.add(new Var_T(getType(), args));
         return code.lastRegister();
-        }
-
-    @Override
-    public void generateVoid(Code code, ErrorListener errs)
-        {
-        expr.generateVoid(code, errs);
         }
 
 

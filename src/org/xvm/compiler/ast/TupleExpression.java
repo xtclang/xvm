@@ -359,22 +359,20 @@ public class TupleExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public void generateVoid(Code code, ErrorListener errs)
         {
-        ConstantPool pool = pool();
-        TypeConstant type = fPack
-                ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), getTypes())
-                : null;
-
-        if (isConstant())
+        for (Expression expr : exprs)
             {
-            if (!fPack)
-                {
-                return toConstants();
-                }
+            expr.generateVoid(code, errs);
+            }
+        }
 
-            return new Constant[] {pool.ensureTupleConstant(type, toConstants())};
+    @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        if (hasConstantValue())
+            {
+            return toConstant();
             }
 
         List<Expression> listExprs = exprs;
@@ -385,14 +383,9 @@ public class TupleExpression
             aArgs[i] = exprs.get(i).generateArgument(code, false, false, errs);
             }
 
-        if (!fPack)
-            {
-            return aArgs;
-            }
-
         // generate the tuple itself, and return it as an argument
-        code.add(new Var_T(type, aArgs));
-        return new Argument[] {code.lastRegister()};
+        code.add(new Var_T(getType(), aArgs));
+        return code.lastRegister();
         }
 
 

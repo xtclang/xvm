@@ -527,12 +527,13 @@ public abstract class Expression
 
                 // pretend that we were able to do the necessary conversion (but note that there
                 // was a type fit error)
-                typeActual = typeRequired;
                 fit        = TypeFit.NoFit;
+                typeActual = typeRequired;
                 if (constVal != null)
                     {
-                    constVal     = generateFakeConstant(typeRequired);
-                    typeRequired = typeRequired.ensureImmutable();
+                    // pretend that it was a constant
+                    constVal   = generateFakeConstant(typeRequired);
+                    typeActual = typeActual.ensureImmutable();
                     }
                 }
             }
@@ -544,7 +545,7 @@ public abstract class Expression
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
-                : new ConvertExpression(this, idConv, errs);
+                : new ConvertExpression(this, 0, idConv, errs);
         }
 
     /**
@@ -586,6 +587,8 @@ public abstract class Expression
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             }
+
+        MethodConstant[] aIdConv = null;
 
         // for expressions that yield constant values, make sure that the types reflect that
         if (aconstVal != null)
@@ -634,7 +637,21 @@ public abstract class Expression
         m_oType  = fit.isFit() || atypeRequired == null ? aTypeActual : atypeRequired;
         m_oConst = aconstVal;
 
-        return this;
+        // apply any conversions that we found previously to be necessary to deliver the required
+        // data types
+        Expression exprResult = this;
+        if (aIdConv != null)
+            {
+            for (int i = 0; i < cActual; ++i)
+                {
+                MethodConstant idConv = aIdConv[i];
+                if (idConv != null)
+                    {
+                    exprResult = new ConvertExpression(exprResult, i, idConv, errs);
+                    }
+                }
+            }
+        return exprResult;
         }
 
     /**
