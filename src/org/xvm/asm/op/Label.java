@@ -67,5 +67,5 @@ public class Label
      * A name of the label, which is typically auto-generated. This is only for debugging; it is
      * discarded on assembly, like the label itself.
      */
-    String m_sName;
+    transient String m_sName;
     }

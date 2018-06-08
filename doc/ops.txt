@@ -100,7 +100,6 @@
 +MOV_REF    rvalue-src, lvalue-dest                 ; move ("R"=) Ref-to-source to destination (read-only)
  MOV_THIS   #, lvalue-dest                          ; # (an inline unsigned byte) specifies the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
 +CAST       rvalue-src, lvalue-dest                 ; copy source to destination with cast
- DUP                                                ; top reference on the stack is duplicated (as if popped once, then pushed twice)
 
 // ("GP"=) general purpose register/local-property operations:
 // - rvalues could be a register or a constant value or a local-property indicator (PROPERTY)

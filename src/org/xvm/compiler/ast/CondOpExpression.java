@@ -6,18 +6,21 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
-import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpTrue;
+import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.Handy;
 
 
@@ -198,42 +201,71 @@ public class CondOpExpression
 
             case UorU:
             case UandU:
-                code.add(new V) // TODO
-                Register regAccum = new Register(getType());
-                Register reg2 = new Register(getType(), Op.A_STACK);
-                Register regResult = fUsedOnce ? new Register(getType(), Op.A_STACK) : new Register(getType())
-                break;
+                Label      labelEnd  = new Label();
+                Register   regAccum  = new Register(getType());
+                Assignable LValAccum = new Assignable(regAccum);
+
+                code.add(new Var(regAccum));
+                expr1.generateAssignment(code, LValAccum, errs);
+                if (isAnd())
+                    {
+                    code.add(new JumpFalse(regAccum, labelEnd));
+                    }
+                else
+                    {
+                    code.add(new JumpTrue(regAccum, labelEnd));
+                    }
+                expr2.generateAssignment(code, LValAccum, errs);
+                code.add(labelEnd);
+                return regAccum;
 
             default:
                 throw new IllegalStateException();
             }
-
-        // REVIEW
-        code.add(new Var(getType()));
-        Register regResult = code.lastRegister();
-        generateAssignment(code, new Assignable(regResult), errs);
-        return regResult;
         }
 
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isLocalArgument()) // REVIEW what other options are there?
+        if (hasConstantValue())
             {
-            // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, false, errs);
+            LVal.assign(toConstant(), code, errs);
+            }
+        else if (LVal.isLocalArgument() && LVal.getRegister().isNormal())
+            {
+            switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant()))
+                {
+                case UorF:
+                case UandT:
+                    // result is the same as the result of the first expression
+                    expr1.generateAssignment(code, LVal, errs);
+                    break;
 
-            // generate the op that combines the two sub-expressions
-            if (isAnd())
-                {
-                // TODO
-                throw new UnsupportedOperationException();
-                }
-            else
-                {
-                // TODO
-                throw new UnsupportedOperationException();
+                case ForU:
+                case TandU:
+                    // result is the same as the result of the second expression
+                    expr2.generateAssignment(code, LVal, errs);
+                    break;
+
+                case UorU:
+                case UandU:
+                    Label    labelEnd = new Label();
+                    Register regAccum = LVal.getRegister();
+                    expr1.generateAssignment(code, LVal, errs);
+                    if (isAnd())
+                        {
+                        code.add(new JumpFalse(regAccum, labelEnd));
+                        }
+                    else
+                        {
+                        code.add(new JumpTrue(regAccum, labelEnd));
+                        }
+                    expr2.generateAssignment(code, LVal, errs);
+                    code.add(labelEnd);
+                    break;
+
+                default:
+                    throw new IllegalStateException();
                 }
             }
         else

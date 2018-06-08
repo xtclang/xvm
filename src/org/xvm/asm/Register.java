@@ -270,6 +270,14 @@ public class Register
         return !m_fRO;
         }
 
+    /**
+     * @return true iff this is a normal (not D_VAR), readable and writable, local variable
+     */
+    public boolean isNormal()
+        {
+        return !isPredefined() && isReadable() && isWritable() && !isDVar();
+        }
+
     @Override
     public String toString()
         {
