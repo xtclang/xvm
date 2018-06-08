@@ -105,37 +105,38 @@ public class LiteralExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired,
             ErrorListener errs)
         {
-        TypeConstant typeLiteral  = getImplicitType(ctx);
-        Constant     constLiteral = getLiteralConstant();
+        TypeFit      fit        = TypeFit.Fit;
+        TypeConstant typeActual = getImplicitType(ctx);
+        Constant     constVal   = getLiteralConstant();
 
-        TypeFit fit = TypeFit.Fit;
-        if (typeRequired != null)
+        // verify fit
+        if (typeRequired != null && !typeActual.isA(typeRequired))
             {
-            // determine whether or not the constant can provide the requested type
-            fit = calcFit(ctx, typeLiteral, typeRequired);
-            if (!fit.isFit() || fit.isConverting())
+            // find an @Auto conversion if one exists, because that will tell us the type that is
+            // actually being converted to, and then we may be able to do the conversion at compile
+            // time (since we have a constant value that we can convert); if there is no conversion
+            // available, we'll let the finishValidation() take care of logging the error
+            MethodConstant idMethod = typeActual.ensureTypeInfo().findConversion(typeRequired);
+            if (idMethod != null)
                 {
-                // need to find a conversion (or in the case of "no fit", just pretend we're trying
-                // to find a conversion, since there is none, and then when we try to convert, we
-                // will log the appropriate error)
-                MethodConstant idMethod = typeLiteral.ensureTypeInfo().findConversion(typeRequired);
-                if (idMethod != null)
+                // use the return value from the conversion function to figure out what type the
+                // literal should be converted to, and then do the conversion here in the
+                // compiler (eventually, once boot-strapped into Ecstasy, the compiler should be
+                // able to rely on the runtime itself to do conversions, and using containers,
+                // should even be able to do so for user code)
+                TypeConstant typeConv = idMethod.getSignature().getRawReturns()[0];
+                Constant     constNew = convertConstant(constVal, typeConv, errs);
+                if (constNew != null)
                     {
-                    // use the return value from the conversion function to figure out what type the
-                    // literal should be converted to, and then do the conversion here in the
-                    // compiler (eventually, once boot-strapped into Ecstasy, the compiler will be
-                    // able to rely on the runtime itself to do conversions, and using containers,
-                    // can even do so for user code)
-                    typeRequired = idMethod.getSignature().getRawReturns()[0];
+                    typeActual = typeConv;
+                    constVal   = constNew;
+                    fit        = fit.addConversion();
                     }
-
-                constLiteral = convertConstant(constLiteral, typeRequired, errs);
-                typeLiteral  = fit.isFit() ? constLiteral.getType() : typeRequired;
                 }
             }
 
-        finishValidation(typeRequired, typeLiteral, fit, constLiteral, errs);
-        return this;
+        assert constVal != null;
+        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
         }
 
 
@@ -186,8 +187,6 @@ public class LiteralExpression
      */
     public Constant convertConstant(Constant val, TypeConstant type, ErrorListener errs)
         {
-        // TODO @Auto to<Object()>() - wraps around each of these
-
         ConstantPool pool = pool();
         switch (val.getFormat() + "->" + type.getEcstasyClassName())
             {

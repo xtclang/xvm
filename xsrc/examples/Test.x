@@ -34,7 +34,7 @@ module Test
 //        C c = new C();
         }
 
-    IntLiteral foo()
+    Int foo()
         {
         return 0;
         }

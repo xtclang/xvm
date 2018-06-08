@@ -596,24 +596,6 @@ public class NameExpression
                         break;
                     }
                 }
-            else
-                {
-                // look for a conversion
-                MethodConstant method = type.ensureTypeInfo(errs).findConversion(typeRequired);
-                if (method == null)
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeRequired.getValueString(), type.getValueString());
-                    fit  = TypeFit.NoFit;
-                    type = typeRequired;
-                    }
-                else
-                    {
-                    // REVIEW how to standardize how conversions are done?
-                    type = method.getRawReturns()[0];
-                    fit  = fit.addConversion();
-                    }
-                }
             }
 
         return finishValidation(typeRequired, type, fit, constant, errs);
