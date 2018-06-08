@@ -24,14 +24,17 @@ module Test
 
     void run()
         {
-        IntLiteral i = 1;
-        Int j = i;
         // Tuple<Int, Int> t = (i, j);
 //        Int i = foo();
 //        @Inject X.io.Console console;
 //        console.println("Hello world!");
 //         Int[] ai = new Int[4];
 //        C c = new C();
+        }
+
+    Int[] foo2()
+        {
+        return [foo(), 0, foo()];
         }
 
     Int foo()

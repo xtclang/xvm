@@ -4,8 +4,19 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Var_S;
+
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -14,7 +25,7 @@ import org.xvm.asm.constants.TypeConstant;
  * <p/>
  * <pre>
  * ListLiteral
- *     "{" ExpressionList-opt "}"
+ *     "[" ExpressionList-opt "]"
  *     "List:{" ExpressionList-opt "}"
  * </pre>
  */
@@ -60,62 +71,205 @@ public class ListExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
-    // TODO must implement the genArgumentMulti version even if validated with single
-
     @Override
-    public TypeConstant getType()
+    public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO lots of error checking required
-
-        if (type != null)
+        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant();
+        if (typeExplicit != null && typeExplicit.getGenericParamType("ElementType", true) != null)
             {
-            return type.getType();
+            return typeExplicit;
             }
 
-        TypeConstant typeArray = pool().typeArray();
-
-        ElementsAllSameType: if (!exprs.isEmpty())
+        // see if there is an implicit element type
+        TypeConstant typeArray = typeExplicit == null ? pool().typeList() : typeExplicit;
+        int cElements = exprs.size();
+        if (cElements > 0)
             {
-            TypeConstant typeElement = exprs.get(0).getType();
-            for (Expression expr : exprs)
+            TypeConstant[] aElementTypes = new TypeConstant[cElements];
+            for (int i = 0; i < cElements; ++i)
                 {
-                if (!typeElement.equals(expr.getType()))
-                    {
-                    break ElementsAllSameType;
-                    }
+                aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
                 }
-            typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
+            TypeConstant typeElement = inferCommonType(aElementTypes);
+            if (typeElement != null)
+                {
+                typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
+                }
             }
 
         return typeArray;
         }
 
     @Override
-    public boolean isConstant()
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        for (Expression expr : exprs)
+        ConstantPool     pool        = pool();
+        TypeFit          fit         = TypeFit.Fit;
+        List<Expression> listExprs   = exprs;
+        int              cExprs      = listExprs.size();
+        boolean          fConstant   = true;
+        TypeConstant     typeActual  = pool.typeList();
+        TypeConstant     typeElement = null;
+        if (typeRequired != null && typeRequired.isA(pool.typeList()))
             {
-            if (!expr.isConstant())
+            // if there is a required element type, then we'll use that to force the expressions to
+            // convert to that type if necessary
+            typeElement = typeRequired.getGenericParamType("ElementType", true);
+            }
+
+        TypeExpression exprOldType = type;
+        if (exprOldType != null)
+            {
+            TypeConstant   typeListType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeList());
+            TypeExpression exprNewType  = (TypeExpression) exprOldType.validate(ctx, typeListType, errs);
+            if (exprNewType == null)
                 {
-                return false;
+                fit       = TypeFit.NoFit;
+                fConstant = false;
+                }
+            else
+                {
+                if (exprNewType != exprOldType)
+                    {
+                    type = exprNewType;
+                    }
+                typeActual  = exprNewType.getType();
+                typeElement = typeActual.getGenericParamType("ElementType", true);
+
+                // currently, the only type that can parse to this expression is the type "List"
+                assert typeActual.isSingleUnderlyingClass(true) &&
+                        typeActual.getSingleUnderlyingClass(true).equals(
+                        pool.getImplicitlyImportedIdentity("List"));
                 }
             }
 
-        return type == null || type.isConstant();
+        if (typeElement == null && cExprs > 0)
+            {
+            // try to determine the element type
+            TypeConstant[] aElementTypes = new TypeConstant[cExprs];
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
+                }
+            typeElement = inferCommonType(aElementTypes);
+            }
+
+        for (int i = 0; i < cExprs; ++i)
+            {
+            Expression exprOld = listExprs.get(i);
+            Expression exprNew = exprOld.validate(ctx, typeElement, errs);
+            if (exprNew == null)
+                {
+                fit       = TypeFit.NoFit;
+                fConstant = false;
+                }
+            else
+                {
+                if (exprNew != exprOld)
+                    {
+                    listExprs.set(i, exprNew);
+                    }
+                fConstant &= exprNew.hasConstantValue();
+                }
+            }
+
+        // build a constant if it's a known container type and all of the elements are constants
+        Constant constVal = null;
+        if (fConstant)
+            {
+            Constant[] aconstVal = new Constant[cExprs];
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aconstVal[i] = listExprs.get(i).toConstant();
+                }
+            constVal = pool.ensureArrayConstant(typeActual, aconstVal);
+            }
+
+        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        }
+
+    /**
+     * Determine if the passed array of types indicates a particular common type.
+     *
+     * @param aTypes  an array of types, which can be null and which can contain nulls
+     *
+     * @return the inferred common type (including potentially requiring conversion), or null if no
+     *         common type can be determined
+     */
+    protected TypeConstant inferCommonType(TypeConstant[] aTypes)
+        {
+        if (aTypes == null || aTypes.length == 0)
+            {
+            return null;
+            }
+
+        TypeConstant typeCommon = aTypes[0];
+        if (typeCommon == null)
+            {
+            return null;
+            }
+
+        boolean fConvApplied = false;
+        for (int i = 1, c = aTypes.length; i < c; ++i)
+            {
+            TypeConstant type = aTypes[i];
+            if (type == null)
+                {
+                return null;
+                }
+
+            if (!type.isA(typeCommon))
+                {
+                if (typeCommon.isA(type))
+                    {
+                    typeCommon = type;
+                    continue;
+                    }
+
+                if (type.getConverterTo(typeCommon) != null)
+                    {
+                    fConvApplied = true;
+                    continue;
+                    }
+
+                if (!fConvApplied)
+                    {
+                    MethodConstant idConv = typeCommon.getConverterTo(type);
+                    if (idConv != null)
+                        {
+                        fConvApplied = true;
+                        typeCommon   = type;
+                        continue;
+                        }
+                    }
+
+                // no obvious common type
+                return null;
+                }
+            }
+
+        return typeCommon;
         }
 
     @Override
-    public Constant toConstant()
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        int        cConsts = exprs.size();
-        Constant[] aConsts = new Constant[cConsts];
-        for (int i = 0; i < cConsts; ++i)
+        if (hasConstantValue())
             {
-            aConsts[i] = exprs.get(i).toConstant();
+            return toConstant();
             }
-        return pool().ensureArrayConstant(getType(), aConsts);
+
+        List<Expression> listExprs = exprs;
+        int              cArgs     = listExprs.size();
+        Argument[]       aArgs     = new Argument[cArgs];
+        for (int i = 0; i < cArgs; ++i)
+            {
+            aArgs[i] = listExprs.get(i).generateArgument(code, false, true, errs);
+            }
+        code.add(new Var_S(getType(), aArgs));
+        return code.lastRegister();
         }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

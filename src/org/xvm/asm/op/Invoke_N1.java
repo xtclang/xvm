@@ -186,6 +186,12 @@ public class Invoke_N1
         registerArguments(m_aArgValue, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return getParamsString(m_anArgValue, m_aArgValue);
+        }
+
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;

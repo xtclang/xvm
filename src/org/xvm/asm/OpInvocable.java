@@ -43,8 +43,11 @@ public abstract class OpInvocable extends Op
     protected OpInvocable(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nTarget   = readPackedInt(in);
-        m_nMethodId = readPackedInt(in);
+        m_nTarget     = readPackedInt(in);
+        m_nMethodId   = readPackedInt(in);
+
+        // for debugging support
+        m_constMethod = (MethodConstant) aconst[m_nMethodId];
         }
 
     @Override
@@ -206,6 +209,64 @@ public abstract class OpInvocable extends Op
                 frame.introduceResolvedVar(atypeRet[i]);
                 }
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        return super.toString() + ' ' + getTargetString() + '.' + getMethodString() + '(' + getParamsString() + ") -> " + getReturnsString();
+        }
+    protected String getTargetString()
+        {
+        return Argument.toIdString(m_argTarget, m_nTarget);
+        }
+    protected String getMethodString()
+        {
+        return m_constMethod == null ? "???" : m_constMethod.getName();
+        }
+    protected String getParamsString()
+        {
+        return "";
+        }
+    protected static String getParamsString(int[] anArgValue, Argument[] aArgValue)
+        {
+        StringBuilder sb = new StringBuilder();
+        int cArgNums = anArgValue == null ? 0 : anArgValue.length;
+        int cArgRefs = aArgValue == null ? 0 : aArgValue.length;
+        for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append(Argument.toIdString(i < cArgRefs ? aArgValue[i] : null,
+                                          i < cArgNums ? anArgValue[i] : Register.UNKNOWN));
+            }
+        return sb.toString();
+        }
+    protected String getReturnsString()
+        {
+        if (m_anRetValue != null || m_aArgReturn != null)
+            {
+            // multi-return
+            StringBuilder sb = new StringBuilder();
+            int cArgNums = m_anRetValue == null ? 0 : m_anRetValue.length;
+            int cArgRefs = m_aArgReturn == null ? 0 : m_aArgReturn.length;
+            for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i)
+                {
+                sb.append(i == 0 ? "(" : ", ")
+                  .append(Argument.toIdString(i < cArgRefs ? m_aArgReturn[i] : null,
+                                              i < cArgNums ? m_anRetValue[i] : Register.UNKNOWN));
+                }
+            return sb.append(')').toString();
+            }
+
+        if (m_nRetValue != Frame.RET_UNUSED || m_argReturn != null)
+            {
+            return Argument.toIdString(m_argReturn, m_nRetValue);
+            }
+
+        return "void";
         }
 
     protected int   m_nTarget;
