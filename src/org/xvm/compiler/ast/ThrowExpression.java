@@ -64,11 +64,23 @@ public class ThrowExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO GG - I need a "happy type" i.e. a type that works for anything (isA() everything!!!)
         return null;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return TypeConstant.NO_TYPES;
         }
 
     @Override
@@ -84,8 +96,7 @@ public class ThrowExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
@@ -96,8 +107,7 @@ public class ThrowExpression
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
-            ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
@@ -141,8 +151,14 @@ public class ThrowExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        generateThrow(code, errs);
+        return generateBlackHole(getValueCount() == 0 || getType() == null ? pool().typeObject() : getType());
+        }
+
+    @Override
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         generateThrow(code, errs);
 
@@ -167,7 +183,7 @@ public class ThrowExpression
      */
     protected void generateThrow(Code code, ErrorListener errs)
         {
-        code.add(new Throw(expr.generateArgument(code, false, false, errs)));
+        code.add(new Throw(expr.generateArgument(code, true, true, errs)));
         }
 
 
