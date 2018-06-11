@@ -5,13 +5,20 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 import java.util.Set;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.compiler.Compiler;
+
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -86,6 +93,37 @@ public class ArrayAccessExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        TypeFit          fit            = TypeFit.Fit;
+        Expression       exprArray      = expr;
+        List<Expression> listIndexExprs = indexes;
+
+        // first, validate the array expression; there is no way to say "required type is something
+        // that has an operator for indexed look-up", since that could be Tuple, or List, or Array,
+        // or UniformIndexed, or Matrix, or ...
+        // REVIEW we could eventually explore possibilities starting with the implicit type and evaluating each @Auto conversion
+        TypeConstant typeArray;
+        Expression   exprArrayNew = exprArray.validate(ctx, null, errs);
+        if (exprArrayNew == null)
+            {
+            // TODO
+            exprArray.log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR, "[]");
+            fit       = TypeFit.NoFit;
+            typeArray = pool().typeArray();
+            }
+        else if (exprArrayNew != exprArray)
+            {
+            // TODO
+            }
+
+        // the array expression must yield a type that has a get (and optional set) element op
+        // :
+        // - if it looks like the array expression will automatically yield a type that has a get
+        //   element op, then validate with no required type
+        // - otherwise, if the array expression automatically yields a type that has an @Auto
+        //   conversion to a type that y
+        // - otherwise, use UniformIndexed as the required type (not because it is necessarily
+        //   correct, but because it is the only obvious default)
+        if (getImplicitType(ctx) == null ? pool().typeUniformIndexed : null)
         // TODO validate expr, figure out get/set (make sure at most one of each, and at least one between them, and verify that types match)
         m_idGet = null;
         m_idSet = null;

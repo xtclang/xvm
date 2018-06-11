@@ -972,6 +972,7 @@ public class ConstantPool
             case "Array":
             case "List":
             case "Hashable":
+            case "UniformIndexed":
                 sPkg = "collections";
                 sClz = sName;
                 break;
@@ -1781,6 +1782,7 @@ public class ConstantPool
     public ClassConstant     clzString()        {ClassConstant     c = m_clzString;       if (c == null) {m_clzString       = c = (ClassConstant) getImplicitlyImportedIdentity("String"     );} return c;}
     public ClassConstant     clzByte()          {ClassConstant     c = m_clzByte;         if (c == null) {m_clzByte         = c = (ClassConstant) getImplicitlyImportedIdentity("Byte"       );} return c;}
     public ClassConstant     clzInt()           {ClassConstant     c = m_clzInt;          if (c == null) {m_clzInt          = c = (ClassConstant) getImplicitlyImportedIdentity("Int"        );} return c;}
+    public ClassConstant     clzIndexed()       {ClassConstant     c = m_clzIndexed;      if (c == null) {m_clzIndexed      = c = (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
     public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"       );} return c;}
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
@@ -1839,6 +1841,7 @@ public class ConstantPool
     public TypeConstant      typeString()       {TypeConstant      c = m_typeString;      if (c == null) {m_typeString      = c = ensureTerminalTypeConstant(clzString()                     );} return c;}
     public TypeConstant      typeByte()         {TypeConstant      c = m_typeByte;        if (c == null) {m_typeByte        = c = ensureTerminalTypeConstant(clzByte()                       );} return c;}
     public TypeConstant      typeInt()          {TypeConstant      c = m_typeInt;         if (c == null) {m_typeInt         = c = ensureTerminalTypeConstant(clzInt()                        );} return c;}
+    public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
     public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                      );} return c;}
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
@@ -2473,6 +2476,7 @@ public class ConstantPool
         m_clzString       = null;
         m_clzByte         = null;
         m_clzInt          = null;
+        m_clzIndexed      = null;
         m_clzArray        = null;
         m_clzSequence     = null;
         m_clzOrderable    = null;
@@ -2533,6 +2537,7 @@ public class ConstantPool
         m_typeByteArray   = null;
         m_typeBinary      = null;
         m_typeInt         = null;
+        m_typeIndexed     = null;
         m_typeArray       = null;
         m_typeSequence    = null;
         m_typeOrderable   = null;
@@ -2791,6 +2796,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzString;
     private transient ClassConstant     m_clzByte;
     private transient ClassConstant     m_clzInt;
+    private transient ClassConstant     m_clzIndexed;
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzList;
     private transient ClassConstant     m_clzSequence;
@@ -2852,6 +2858,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeByteArray;
     private transient TypeConstant      m_typeBinary;
     private transient TypeConstant      m_typeInt;
+    private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeSequence;
