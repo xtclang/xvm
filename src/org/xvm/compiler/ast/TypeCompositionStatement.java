@@ -1259,15 +1259,10 @@ public class TypeCompositionStatement
                     return;
                     }
 
-                // the property type must be compatible with the parameter type
-                // note: it is too early in the compilation cycle to use "isA()" (REVIEW GG)
-                if (!typeParam.equals(typeProp))
-                    {
-                    param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeProp.getValueString(),
-                            typeParam.getValueString());
-                    }
-
+                // the property type must be compatible with the parameter type,
+                // but it is too early in the compilation cycle to use "isA()";
+                // we will check for the match while building the type info
+                // TODO: point where exactly
                 atypeParams[i] = typeParam;
                 }
 
