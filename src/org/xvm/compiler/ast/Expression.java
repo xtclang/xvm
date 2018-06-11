@@ -793,8 +793,8 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) Determine if the expression represents an L-Value, which means that this expression can be
-     * assigned to.
+     * (Post-validation) Determine if the expression represents an L-Value, which means that this
+     * expression can be assigned to.
      * <p/>
      * This method must be overridden by any expression that represents an L-Value, or that could
      * be composed of other expressions such that the result represents an L-Value.

@@ -1066,3 +1066,54 @@ class B
     {
     class Child
     }
+
+// ambiguity?
+
+// type: function Object foo(Object)
+void foo(Object o)
+void foo2(Object o, Object o2)
+void fooOpt(Object o, Int i = 0, String s = "hello");
+
+// option #1: disallow automatic unpacking altogether; treat the tuple argument as any other object
+// option #2: allow automatic unpacking only for functions/methods requiring more than one parameter;
+//            (i.e. disallow a tuple being used as an "unpack" argument to a single-parameter method,
+//            and instead treat tuple as any other object when calling with only one argument)
+//         2a: disallow only when the parameter type is wider than Tuple (e.g. Object)
+//         2b: disallow always (preference du jour)
+//           -> i) force widening type assertion, e.g. "t.as(Object)"
+//           -> ii) just treat it as a wider type automatically, as in #1
+//           -> iii) labeled expression: "foo(o=t)"
+
+// when making a call, passing only one argument, and that argument is a compile time tuple:
+// 1) there is more than one required parameter, the tuple is unpacked,
+
+Tuple<String> t = ...
+foo(t);     // could be ok, but that could be either way, which is ambiguous
+            // could be compiler error (or warning?)
+
+Tuple<String, Int> t2 = ...
+foo2(t2);   // error
+foo(t2);
+
+void zip(Tuple t) {...}
+void test()
+    {
+    Tuple<Tuple<Tuple>>> ttt = ...
+    zip(ttt); // ???
+    }
+
+// multiple returns
+
+(Int, Int) qoo();
+Tuple<Int,Int> t = qoo();
+
+(Int, Int) bar(Int i, Int j);
+bar(qoo());
+bar(bar(qoo()));
+
+// arbitrary analogy example
+Tuple t2 = (1,2);       // ok
+Tuple t2 = Tuple:(1,2); // ok (same as above)
+Tuple t  = 1;           // error
+Tuple t  = (1);         // error (same as "(1*1)" or "(1+0)", i.e. it's just a parenthesized expression) 
+Tuple t  = Tuple:(1);   // ok (explicit tuple literal)
