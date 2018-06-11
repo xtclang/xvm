@@ -60,6 +60,7 @@ public class TupleExpression
         this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
 
         expr0.getParent().introduceParentage(this);
+
         Stage          stage      = expr0.getStage();
         boolean        fValidated = expr0.isValidated();
         TypeConstant[] aTypes     = fValidated ? new TypeConstant[cExprs] : null;
@@ -122,10 +123,8 @@ public class TupleExpression
      */
     public Expression[] getExpressionArray()
         {
-        List<Expression> list   = exprs;
-        int              cExprs = list.size();
-        Expression[]     aExpr  = new Expression[cExprs];
-        return list.toArray(aExpr);
+        List<Expression> list = exprs;
+        return list.toArray(new Expression[list.size()]);
         }
 
     @Override
@@ -270,8 +269,8 @@ public class TupleExpression
         boolean        fHalted     = false;
         for (int i = 0; i < cMaxTypes; ++i)
             {
-            TypeConstant typeReq   = i < cReqTypes ? aReqTypes[i] : null;
             TypeConstant typeSpec  = i < cSpecTypes ? aSpecTypes[i] : null;
+            TypeConstant typeReq   = i < cReqTypes  ? aReqTypes[i]  : typeSpec;
             TypeConstant typeField = null;
             Expression   exprOld   = i < cFields ? listFieldExprs.get(i) : null;
             if (exprOld != null)
@@ -313,18 +312,7 @@ public class TupleExpression
 
             if (typeField == null)
                 {
-                if (typeSpec != null)
-                    {
-                    typeField = typeSpec;
-                    }
-                else if (typeReq != null)
-                    {
-                    typeField = typeReq;
-                    }
-                else
-                    {
-                    typeField = pool.typeObject();
-                    }
+                typeField = typeReq == null ? pool.typeObject() : typeReq;
 
                 if (aFieldVals != null)
                     {

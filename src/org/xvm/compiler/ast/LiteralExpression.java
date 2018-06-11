@@ -102,8 +102,7 @@ public class LiteralExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit        = TypeFit.Fit;
         TypeConstant typeActual = getImplicitType(ctx);

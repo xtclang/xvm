@@ -133,8 +133,13 @@ public class ListExpression
                     {
                     type = exprNewType;
                     }
-                typeActual  = exprNewType.getType();
-                typeElement = typeActual.getGenericParamType("ElementType", true);
+                typeActual = exprNewType.ensureTypeConstant();
+
+                TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType", true);
+                if (typeElementTemp != null)
+                    {
+                    typeElement = typeElementTemp;
+                    }
 
                 // currently, the only type that can parse to this expression is the type "List"
                 assert typeActual.isSingleUnderlyingClass(true) &&

@@ -154,7 +154,7 @@ public class ThrowExpression
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         generateThrow(code, errs);
-        return generateBlackHole(getValueCount() == 0 || getType() == null ? pool().typeObject() : getType());
+        return generateBlackHole(getValueCount() == 0 ? pool().typeObject() : getType());
         }
 
     @Override

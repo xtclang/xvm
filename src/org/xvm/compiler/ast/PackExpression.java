@@ -17,7 +17,7 @@ import org.xvm.compiler.ast.Statement.Context;
 /**
  * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
-public  class PackExpression
+public class PackExpression
         extends SyntheticExpression
     {
     // ----- constructors --------------------------------------------------------------------------
