@@ -3,13 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ErrorListener;
-
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.compiler.Compiler.Stage;
-
-import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -72,32 +66,6 @@ public abstract class SyntheticExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref,
-            ErrorListener errs)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref,
-            ErrorListener errs)
-        {
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
     public boolean isAssignable()
         {
         return expr.isAssignable();
@@ -135,6 +103,5 @@ public abstract class SyntheticExpression
      */
     protected Expression expr;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(SyntheticExpression.class, "expr");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(SyntheticExpression.class, "expr");
     }

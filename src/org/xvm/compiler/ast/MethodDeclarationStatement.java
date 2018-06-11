@@ -196,10 +196,7 @@ public class MethodDeclarationStatement
         {
         // methods are opaque, so everything inside can be deferred until we get to the
         // validateExpressions() stage
-        if (!alreadyReached(Stage.Validating))
-            {
-            mgr.deferChildren();
-            }
+        mgr.deferChildren();
 
         // create the structure for this method
         CreateStructure: if (getComponent() == null)
@@ -293,12 +290,7 @@ public class MethodDeclarationStatement
 
         // methods are opaque, so everything inside can be deferred until we get to the
         // validateExpressions() stage
-        if (!alreadyReached(Stage.Validating))
-            {
-            mgr.processChildrenExcept(alreadyReached(Stage.Validating)
-                    ? null
-                    : (child) -> child == body | child == continuation);
-            }
+        mgr.processChildrenExcept((child) -> child == body | child == continuation);
         }
 
     @Override
@@ -306,10 +298,7 @@ public class MethodDeclarationStatement
         {
         // methods are opaque, so everything inside can be deferred until we get to the
         // validateExpressions() stage
-        if (!alreadyReached(Stage.Validating))
-            {
-            mgr.deferChildren();
-            }
+        mgr.deferChildren();
 
         if (getComponent() == null)
             {
@@ -375,9 +364,7 @@ public class MethodDeclarationStatement
 
         // methods are opaque, so everything inside the curlies can be deferred until we get to the
         // validateExpressions() stage
-        mgr.processChildrenExcept(alreadyReached(Stage.Validating)
-                ? null
-                : (child) -> child == body | child == continuation);
+        mgr.processChildrenExcept((child) -> child == body | child == continuation);
 
         Component component = getComponent();
         if (component instanceof MethodStructure)
@@ -446,89 +433,83 @@ public class MethodDeclarationStatement
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
-        ensureReached(Stage.Validated);
-        if (!alreadyReached(Stage.Emitted))
+        MethodStructure method = (MethodStructure) getComponent();
+        if (body != null)
             {
-            setStage(Stage.Emitting);
+            MethodConstant constMethod = method.getIdentityConstant();
+            ModuleStructure module = (ModuleStructure) constMethod.getModuleConstant().getComponent();
+            String sPath = module.getName() + "/" + constMethod.getPathString();
+            Code   code  = method.createCode();
 
-            MethodStructure method = (MethodStructure) getComponent();
-            if (body != null)
+            ErrorList errsTemp = new ErrorList(10);
+            try
                 {
-                MethodConstant constMethod = method.getIdentityConstant();
-                ModuleStructure module = (ModuleStructure) constMethod.getModuleConstant().getComponent();
-                String sPath = module.getName() + "/" + constMethod.getPathString();
-                Code   code  = method.createCode();
+                body.compileMethod(code, errsTemp);
 
-                ErrorList errsTemp = new ErrorList(10);
-                try
+                // TODO: temporary
+                if (errsTemp.getErrors().isEmpty()) // TODO GG use errsTemp.getSeverity()
                     {
-                    body.compileMethod(code, errsTemp);
-
-                    // TODO: temporary
-                    if (errsTemp.getErrors().isEmpty())
+                    if (sPath.contains("Test"))
                         {
-                        if (sPath.contains("Test"))
+                        if (sPath.contains("ExpectedFailure"))
                             {
-                            if (sPath.contains("ExpectedFailure"))
-                                {
-                                System.err.println("Compilation should have failed: " + sPath);
-                                }
-                            else
-                                {
-                                System.out.println("Successfully compiled: " + sPath);
-                                }
+                            System.err.println("Compilation should have failed: " + sPath);
                             }
-
-                        mgr.processChildren();
-                        return;
-                        }
-                    else
-                        {
-                        if (System.getProperty("GG") != null)
+                        else
                             {
-                            method.setNative(true);
-                            }
-
-                        if (sPath.contains("Test"))
-                            {
-                            if (sPath.contains("ExpectedFailure"))
-                                {
-                                System.out.println("Successfully failed test compilation: " + sPath);
-                                }
-                            else
-                                {
-                                System.err.println("Test compilation error: " + sPath);
-                                errsTemp.getErrors().forEach(System.err::println);
-                                }
-                            errsTemp.clear();
-                            }
-
-                        // copy over errors
-                        for (ErrorInfo info : errsTemp.getErrors())
-                            {
-                            errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                            System.out.println("Successfully compiled: " + sPath);
                             }
                         }
                     }
-                catch (Throwable e) // TODO temporary
+                else
                     {
+                    mgr.deferChildren();
+                    if (System.getProperty("GG") != null)
+                        {
+                        method.setNative(true);
+                        }
+
+                    if (sPath.contains("Test"))
+                        {
+                        if (sPath.contains("ExpectedFailure"))
+                            {
+                            System.out.println("Successfully failed test compilation: " + sPath);
+                            }
+                        else
+                            {
+                            System.err.println("Test compilation error: " + sPath);
+                            errsTemp.getErrors().forEach(System.err::println);
+                            }
+                        errsTemp.clear();
+                        }
+
                     // copy over errors
                     for (ErrorInfo info : errsTemp.getErrors())
                         {
                         errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
                         }
+                    }
+                }
+            catch (Throwable e) // TODO temporary
+                {
+                mgr.deferChildren();
 
-                    String sMsg = e.getMessage();
-                    log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                            + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
-                    method.setNative(true);
-                    if (sPath.contains("Test"))
+                // copy over errors
+                for (ErrorInfo info : errsTemp.getErrors())
+                    {
+                    errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                    }
+
+                String sMsg = e.getMessage();
+                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
+                        + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
+                method.setNative(true);
+                if (sPath.contains("Test"))
+                    {
+                    System.err.println("Test compilation error: " + sPath + " " + e);
+                    if (e instanceof AssertionError || e instanceof NullPointerException)
                         {
-                        System.err.println("Test compilation error: " + sPath + " " + e);
-                        if (e instanceof AssertionError || e instanceof NullPointerException)
-                            {
-                            e.printStackTrace(System.err);
-                            }
+                        e.printStackTrace(System.err);
                         }
                     }
                 }

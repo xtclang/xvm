@@ -30,7 +30,6 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
-import org.xvm.compiler.ast.Expression.TuplePref;
 import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
@@ -171,7 +170,7 @@ public class VariableDeclarationStatement
             typeEach = typeEach.unwrapIntroductoryType();
             }
 
-        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), TuplePref.Rejected, errs);
+        TypeExpression typeNew = (TypeExpression) typeOld.validate(ctx, pool.typeType(), errs);
         if (typeNew != typeOld)
             {
             fValid &= typeNew != null;
@@ -187,11 +186,11 @@ public class VariableDeclarationStatement
             if (typeVal.isTuple())
                 {
                 // determine if we can ask for the value(s) in tuple form and/or in separate form
-                TypeFit fitTup = value.testFit(ctx, typeVal, TuplePref.Rejected);
+                TypeFit fitTup = value.testFit(ctx, typeVal);
                 TypeFit fitSep = TypeFit.NoFit;
                 if (typeVal.isParamsSpecified())
                     {
-                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Desired);
+                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray());
                     }
 
                 if (fitSep.isFit() && (!fitTup.isFit() || fitTup.isPacking()))
@@ -202,8 +201,8 @@ public class VariableDeclarationStatement
                 }
 
             Expression valueNew = m_fPackingInit
-                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), TuplePref.Rejected, errs)
-                    : value.validate(ctx, typeVal, TuplePref.Rejected, errs);
+                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), errs)
+                    : value.validate(ctx, typeVal, errs);
             if (valueNew != value)
                 {
                 fValid &= valueNew != null;
@@ -319,7 +318,7 @@ public class VariableDeclarationStatement
             TypeConstant typeVar = m_reg.getType();
             if (m_fPackingInit)
                 {
-                Argument[] aArgs = value.generateArguments(code, false, errs);
+                Argument[] aArgs = value.generateArguments(code, true, true, errs);
                 code.add(new Var_TN(m_reg, constName, aArgs));
                 return fCompletes;
                 }
@@ -333,7 +332,7 @@ public class VariableDeclarationStatement
                 Argument[] aArgs = new Argument[cVals];
                 for (int i = 0; i < cVals; ++i)
                     {
-                    aArgs[i] = listVals.get(i).generateArgument(code, false, false, false, errs);
+                    aArgs[i] = listVals.get(i).generateArgument(code, false, false, errs);
                     }
                 code.add(new Var_SN(m_reg, constName, aArgs));
                 return fCompletes;

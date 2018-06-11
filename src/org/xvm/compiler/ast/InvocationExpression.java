@@ -284,6 +284,19 @@ public class InvocationExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
@@ -392,33 +405,7 @@ public class InvocationExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)   // TODO need testFitMulti() impl instead
-        {
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         // validate the invocation arguments, some of which may be left unbound (e.g. "?")
         boolean          fValid   = true;
@@ -429,7 +416,7 @@ public class InvocationExpression
         for (int i = 0, c = listArgs.size(); i < c; ++i)
             {
             Expression exprOld = listArgs.get(i);
-            Expression exprNew = exprOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprNew = exprOld.validate(ctx, null, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -456,7 +443,7 @@ public class InvocationExpression
             TypeConstant   typeLeft = null;
             if (exprLeft != null)
                 {
-                Expression exprNew = exprLeft.validate(ctx, null, TuplePref.Rejected, errs);
+                Expression exprNew = exprLeft.validate(ctx, null, errs);
                 if (exprNew == null)
                     {
                     fValid = false;
@@ -489,7 +476,7 @@ public class InvocationExpression
                     {
                     TypeExpression typeOld = listRedundant.get(i);
                     TypeExpression typeNew = (TypeExpression) typeOld.validate(
-                            ctx, pool.typeType(), TuplePref.Rejected, errs);
+                            ctx, pool.typeType(), errs);
                     if (typeNew == null)
                         {
                         fValid = false;
@@ -530,7 +517,8 @@ public class InvocationExpression
                         TypeConstant[] atypeResult   = m_fCall
                                 ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
                                 : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null,
+                                errs);
                         }
 
                     // handle method or function
@@ -539,7 +527,8 @@ public class InvocationExpression
                         TypeConstant[] atypeResult = m_fCall
                                 ? ((MethodConstant) argMethod).getRawReturns()
                                 : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
-                        return finishValidations(TypeFit.Fit, atypeResult, null);
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null,
+                                errs);
                         }
 
                     // must be a property or a variable of type function (@Auto conversion possibility
@@ -551,13 +540,13 @@ public class InvocationExpression
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             }
         else // the expr is NOT a NameExpression
             {
-            Expression exprNew = expr.validate(ctx, pool().typeFunction(), TuplePref.Rejected, errs);
+            Expression exprNew = expr.validate(ctx, pool().typeFunction(), errs);
             if (exprNew != null)
                 {
                 expr = exprNew;
@@ -570,16 +559,17 @@ public class InvocationExpression
                             ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
 
-                    return finishValidations(TypeFit.Fit, atypeResult, null);
+                    return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
             }
 
-        return finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeObject() : typeRequired, null);
+        return finishValidations(atypeRequired, atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         // assertion or error if it tries; that is the responsibility of InvocationExpression
@@ -610,7 +600,7 @@ public class InvocationExpression
                             }
                         else
                             {
-                            argTarget = exprLeft.generateArgument(code, false, true, true, errs);
+                            argTarget = exprLeft.generateArgument(code, true, true, errs);
                             }
 
                         if (m_fCall)
@@ -627,7 +617,7 @@ public class InvocationExpression
                             if (cArgs == 1)
                                 {
                                 chArgs = '1';
-                                arg    = args.get(0).generateArgument(code, false, false, true, errs);
+                                arg    = args.get(0).generateArgument(code, false, true, errs);
                                 }
                             else if (cArgs > 1)
                                 {
@@ -635,7 +625,7 @@ public class InvocationExpression
                                 aArgs  = new Argument[cArgs];
                                 for (int i = 0; i < cArgs; ++i)
                                     {
-                                    aArgs[i] = args.get(i).generateArgument(code, false, false, true, errs);
+                                    aArgs[i] = args.get(i).generateArgument(code, false, true, errs);
                                     }
                                 }
 
@@ -739,7 +729,7 @@ public class InvocationExpression
             {
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(code, false, true, true, errs);
+            argFn = expr.generateArgument(code, true, true, errs);
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -777,7 +767,7 @@ public class InvocationExpression
             if (cArgs == 1)
                 {
                 chArgs = '1';
-                arg    = args.get(0).generateArgument(code, false, false, true, errs);
+                arg    = args.get(0).generateArgument(code, false, true, errs);
                 }
             else if (cArgs > 1)
                 {
@@ -785,7 +775,7 @@ public class InvocationExpression
                 aArgs  = new Argument[cArgs];
                 for (int i = 0; i < cArgs; ++i)
                     {
-                    aArgs[i] = args.get(i).generateArgument(code, false, false, true, errs);
+                    aArgs[i] = args.get(i).generateArgument(code, false, true, errs);
                     }
                 }
 
@@ -898,7 +888,7 @@ public class InvocationExpression
             if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(code, false, false, true, errs);
+                aArg [iNext] = args.get(i).generateArgument(code, false, true, errs);
                 }
             }
 

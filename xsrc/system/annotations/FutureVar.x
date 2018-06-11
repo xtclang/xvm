@@ -15,7 +15,7 @@
  *
  *   void test()
  *       {
- *       @Inject Console console
+ *       @Inject Console console;
  *       Pi pi = new Pi();
  *
  *       // blocking call to the Pi calculation service - wait for 100 digits

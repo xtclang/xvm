@@ -170,7 +170,8 @@ public abstract class TypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         ConstantPool pool = pool();
         TypeConstant typeReferent  = getTypeConstant();
@@ -180,7 +181,7 @@ public abstract class TypeExpression
         TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
                 ? TypeFit.Fit
                 : TypeFit.NoFit;
-        return finishValidation(fit, typeReference, typeReferent);
+        return finishValidation(typeRequired, typeReference, fit, typeReferent, errs);
         }
 
 

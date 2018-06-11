@@ -475,33 +475,8 @@ public class NameExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
-        {
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -509,7 +484,7 @@ public class NameExpression
         // argument)
         if (left != null)
             {
-            Expression leftNew = left.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression leftNew = left.validate(ctx, null, errs);
             if (leftNew == null)
                 {
                 fValid = false;
@@ -537,7 +512,7 @@ public class NameExpression
                 {
                 TypeExpression exprOld = params.get(i);
                 TypeExpression exprNew = (TypeExpression) exprOld.validate(
-                        ctx, pool.typeType(), TuplePref.Rejected, errs);
+                        ctx, pool.typeType(), errs);
                 fValid &= exprNew != null;
                 if (fValid)
                     {
@@ -553,7 +528,7 @@ public class NameExpression
         if (!fValid)
             {
             // something failed previously, so we can't complete the validation
-            finishValidation(TypeFit.NoFit, typeRequired, null);
+            finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
             return null;
             }
 
@@ -563,9 +538,7 @@ public class NameExpression
         Constant     constant = null;
         if (type != null)
             {
-            fit = pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
+            fit = TypeFit.Fit;
 
             if (typeRequired == null || type.isA(typeRequired))
                 {
@@ -623,27 +596,9 @@ public class NameExpression
                         break;
                     }
                 }
-            else
-                {
-                // look for a conversion
-                MethodConstant method = type.ensureTypeInfo(errs).findConversion(typeRequired);
-                if (method == null)
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeRequired.getValueString(), type.getValueString());
-                    fit  = TypeFit.NoFit;
-                    type = typeRequired;
-                    }
-                else
-                    {
-                    // REVIEW how to standardize how conversions are done?
-                    type = method.getRawReturns()[0];
-                    fit  = fit.addConversion();
-                    }
-                }
             }
 
-        return finishValidation(fit, type, constant);
+        return finishValidation(typeRequired, type, fit, constant, errs);
         }
 
     @Override
@@ -673,7 +628,8 @@ public class NameExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
+            boolean fUsedOnce, ErrorListener errs)
         {
 //        // TODO this code came from InvocationExpression; evaluate NameExpression code for necessary fixes
 //            Argument argMethod = m_argMethod;
@@ -809,7 +765,7 @@ public class NameExpression
                         }
                     else
                         {
-                        Argument argLeft = left.generateArgument(code, false, false, false, errs);
+                        Argument argLeft = left.generateArgument(code, false, false, errs);
                         code.add(new P_Get((PropertyConstant) argRaw, argLeft, reg));
                         }
 
@@ -823,7 +779,7 @@ public class NameExpression
             case TypeOfClass:
             case Singleton:
                 assert hasConstantValue();
-                return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
+                return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);

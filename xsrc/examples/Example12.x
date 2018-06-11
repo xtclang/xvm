@@ -935,6 +935,7 @@ Method m3 = C.foo(3, ?, ?);     // error (foo is not bound to a target; no parti
 
 Function f = new C().&foo(?, ?, ?);
 f(1, 2, "hello");                   // error - type is Function, not!!! Function<<Int, Int, String>, <>>
+                    // note: using type inference, this WILL work, i.e. NOT an error
 
 // not name expression example
 
@@ -955,7 +956,7 @@ new C().foo()();
 
 // turtles
 
-typedef Function<<>, <Turtle>> Turtle;
+typedef Function<<>, <Turtle>> Turtle;   // note: this capability is not yet supported
 Turtle f = ...;
 f()()()()()()()()()()()();
 
@@ -1022,3 +1023,46 @@ Int[] ai = new Int[].fill(0..3, i -> i);
 @Inject Database<Person> db;
 Person[] people = new Person[].cap(100).fill(0..99, i -> db.load(i));
 
+//
+
+Map.Entry<String, Int> e1 = ..
+Map.Entry<String, Int> e2 = ..
+if (e1 == e2)   // compiles as: Map.Entry.equals(Map.Entry<String, Int>, e1, e2)
+
+//
+
+interface I { void a(); void b(); void c(); }
+
+class B
+    {
+    void a()
+        {
+        print("on B");
+        }
+    }
+
+class D
+        extends B
+        delegates (I-B) (TODO("just mocking"))
+    {
+    I someOtherI;
+
+    void b()
+        {
+        print("on D");
+        super(); // goes to "delegates"
+        }
+    }
+
+//
+
+List<Animal> l0 = new List<Dog>;
+List<Dog>    l1 = l0.as(List<Dog>);
+List<Animal> l2 = l1;
+
+// child classes
+
+class B
+    {
+    class Child
+    }

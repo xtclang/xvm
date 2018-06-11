@@ -3088,7 +3088,7 @@ public class Parser
      *     "Tuple:{" ExpressionList-opt "}"
      *
      * ListLiteral
-     *     "{" ExpressionList-opt "}"
+     *     "[" ExpressionList-opt "]"
      *     "List:{" ExpressionList-opt "}"
      *
      * MapLiteral

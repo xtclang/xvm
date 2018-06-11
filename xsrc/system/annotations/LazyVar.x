@@ -40,7 +40,7 @@ mixin LazyVar<RefType>(function RefType ()? calculate = null)
         {
         if (!assigned)
             {
-            RefType value = calculate == null ? calc() : calculate();
+            RefType value = calculate?() : calc();
             try
                 {
                 assignable = true;

@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -8,27 +9,34 @@ import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Var_T;
+
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
- * A tuple packing expression. This packs the values from the sub-expression into a tuple.
+ * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
 public  class PackExpression
         extends SyntheticExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public PackExpression(Expression expr)
+    public PackExpression(Expression expr, ErrorListener errs)
         {
         super(expr);
 
         ConstantPool pool = pool();
         TypeConstant type = pool.ensureParameterizedTypeConstant(pool.typeTuple(), expr.getTypes());
-        finishValidation(TypeFit.Fit, type, expr.isConstant()
-                ? pool.ensureTupleConstant(type, expr.toConstants())
-                : null);
+        Constant     val  = null;
+        if (expr.isConstant())
+            {
+            type = pool.ensureImmutableTypeConstant(type);
+            val  = pool.ensureTupleConstant(type, expr.toConstants());
+            }
+        finishValidation(null, type, expr.getTypeFit().addPack(), val, errs);
         }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -36,35 +44,15 @@ public  class PackExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs)
+    public TypeConstant getImplicitType(Context ctx)
         {
-        if (fPack)
-            {
-            throw new IllegalStateException(this.toString());
-            }
-
-        if (isConstant())
-            {
-            return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
-            }
-
-        // generate the tuple fields
-        Argument[] args = expr.generateArguments(code, true, errs);
-        assert args != null && args.length == 1;
-        return args[0];
+        return getType();
         }
 
     @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        throw new IllegalStateException(this.toString());
-        }
-
-    @Override
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
-        {
-        throw new IllegalStateException(this.toString());
+        return this;
         }
 
     @Override
@@ -74,10 +62,20 @@ public  class PackExpression
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
-            ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        throw new IllegalStateException(this.toString());
+        if (hasConstantValue())
+            {
+            return toConstant();
+            }
+
+        // generate the tuple fields
+        Argument[] args = expr.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
+        assert args != null && args.length == 1;
+
+        // generate the tuple value
+        code.add(new Var_T(getType(), args));
+        return code.lastRegister();
         }
 
 

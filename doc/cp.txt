@@ -89,3 +89,13 @@ new=Signature{name=chain, params=(Ecstasy:Function<Ecstasy:collections.Tuple, Ec
 
 typeParam=ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Property.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}
 typeProp =ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Method.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}
+
+--
+
+genVoid  -> genAsn/genAsns
+genArg   -> genArgs/genAsn
+genArgs  -> genArg/genAsns
+genLVal  -> genLVals
+genLVals -> genVoid/genLVal
+genAsn   -> genVoid/genArg/genAsns
+genAsns  -> genVoid/genArgs/genAsn

@@ -312,7 +312,7 @@ public class StageMgr
      * Suspend the processing of the current node and process each of its children, only returning
      * to the current node after all of the children return.
      */
-    public boolean processChildrenExcept(Predicate exclude)
+    public boolean processChildrenExcept(Predicate<AstNode> exclude)
         {
         boolean fDone = true;
         ChildIterator iterPrev = m_iterKids;

@@ -11,7 +11,6 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
-import org.xvm.compiler.ast.Expression.TuplePref;
 
 
 /**
@@ -104,12 +103,12 @@ public class ExpressionStatement
         Expression exprNew;
         if (getUsage() == Usage.Standalone)
             {
-            exprNew = expr.validateMulti(ctx, TypeConstant.NO_TYPES, TuplePref.Rejected, errs);
+            exprNew = expr.validateMulti(ctx, TypeConstant.NO_TYPES, errs);
             }
         else
             {
             m_rte = RuntimeEval.RequiresEval;
-            exprNew = expr.validate(ctx, pool().typeBoolean(), TuplePref.Rejected, errs);
+            exprNew = expr.validate(ctx, pool().typeBoolean(), errs);
 
             // handle situations in which the expression is always true or always false
             if (exprNew != null && exprNew.hasConstantValue())

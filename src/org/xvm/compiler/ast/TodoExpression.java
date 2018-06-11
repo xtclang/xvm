@@ -66,20 +66,21 @@ public class TodoExpression
 
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         // sure, whatever you want
         return TypeFit.Fit;
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
+            ErrorListener errs)
         {
         boolean fValid = true;
 
         if (message != null)
             {
-            Expression exprNew = message.validate(ctx, pool().typeString(), TuplePref.Rejected, errs);
+            Expression exprNew = message.validate(ctx, pool().typeString(), errs);
             if (exprNew != message)
                 {
                 fValid &= exprNew != null;
@@ -98,7 +99,8 @@ public class TodoExpression
             atypeRequired = new TypeConstant[] {pool().typeBoolean()};
             }
 
-        finishValidations(fValid ? TypeFit.Fit : TypeFit.NoFit, atypeRequired, null);
+        finishValidations(atypeRequired, atypeRequired, fValid ? TypeFit.Fit : TypeFit.NoFit, null,
+                errs);
         return fValid
                 ? this
                 : null;
@@ -127,7 +129,8 @@ public class TodoExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         generateTodo(code, errs);
 
@@ -182,7 +185,7 @@ public class TodoExpression
         Argument       argEx    = new Register(constEx.getType());
         Argument       argMsg   = message == null
                 ? pool.valNull()
-                : message.generateArgument(code, false, false, false, errs);
+                : message.generateArgument(code, false, false, errs);
 
         code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         code.add(new Throw(argEx));

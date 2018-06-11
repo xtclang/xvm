@@ -32,7 +32,8 @@ public class ElseExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
 //            case COND_ELSE:
 //                m_constType = expr1.getType().nonNullable();

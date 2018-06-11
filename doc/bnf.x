@@ -317,7 +317,7 @@ Statement
     StatementBlock
 	VariableDeclaration ";"
 	Assignment ";"
-	Expression ";"
+	Expression ";" // REVIEW reduce this to ExpressionStatement with explicitly supported expressions?
     LabeledStatement
     AssertStatement
     "break" Name-opt ";"
@@ -555,9 +555,10 @@ WithDeclaration
 #   *               multiplicative            3     left to right
 #   /
 #   %
+#   /%
 #
-#   + -             additive                  4     left to right
-#   +               string concatenation
+#   +               additive                  4     left to right
+#   -
 #
 #   << >>           shift                     5     left to right
 #   >>>
@@ -567,7 +568,7 @@ WithDeclaration
 #   <  <=           relational                7     left to right
 #   >  >=
 #   <=>             order
-#   as              type assertion 
+#   as              type assertion
 #   is              type comparison
 #   instanceof      type comparison
 #

@@ -24,23 +24,26 @@ module Test
 
     void run()
         {
-        IntLiteral i = 1;
-        Int j = i;
         // Tuple<Int, Int> t = (i, j);
-//        Int i = foo(); 
+//        Int i = foo();
 //        @Inject X.io.Console console;
 //        console.println("Hello world!");
 //         Int[] ai = new Int[4];
 //        C c = new C();
         }
 
-    IntLiteral foo()
+    Int[] foo2()
+        {
+        return [foo(), 0, foo()];
+        }
+
+    Int foo()
         {
         return 0;
         }
 
 /*
-    const Person(String name)  {}
+    const Person(String name) {}
 
     const Point(Int x, Int y)
         default(Origin);

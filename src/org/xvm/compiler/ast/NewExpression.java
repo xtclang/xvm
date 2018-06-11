@@ -157,34 +157,7 @@ public class NewExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
-        {
-        // TODO there should be a default implementation of this
-        TypeConstant typeThis = getImplicitType(ctx);
-        if (typeThis == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        if (typeRequired == null || typeThis.isA(typeRequired))
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.Pack
-                    : TypeFit.Fit;
-            }
-
-        if (typeThis.getConverterTo(typeRequired) != null)
-            {
-            return pref == TuplePref.Required
-                    ? TypeFit.ConvPack
-                    : TypeFit.Conv;
-            }
-
-        return TypeFit.NoFit;
-        }
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
 
@@ -192,7 +165,7 @@ public class NewExpression
         TypeConstant typeLeft    = null;
         if (exprLeftOld != null)
             {
-            Expression exprLeftNew = exprLeftOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
             if (exprLeftNew == null)
                 {
                 fValid = false;
@@ -205,7 +178,7 @@ public class NewExpression
             }
 
         TypeExpression exprTypeOld   = this.type;
-        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, pref, errs);
+        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, errs);
         TypeConstant   typeConstruct = null;
         TypeInfo       infoConstruct = null;
         if (exprTypeNew == null)
@@ -245,7 +218,7 @@ public class NewExpression
         for (int i = 0; i < cArgs; ++i)
             {
             Expression exprArgOld = listArgs.get(i);
-            Expression exprArgNew = exprArgOld.validate(ctx, null, TuplePref.Rejected, errs);
+            Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
             if (exprArgNew == null)
                 {
                 fValid = false;
@@ -300,11 +273,12 @@ public class NewExpression
                 }
             }
 
-        return finishValidation(fValid ? TypeFit.Fit : TypeFit.NoFit, typeConstruct, null);
+        return finishValidation(typeRequired, typeConstruct, fValid ? TypeFit.Fit : TypeFit.NoFit,
+                null, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         assert m_idConstructor != null;
         assert left == null; // TODO construct child class
@@ -315,7 +289,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
             }
 
         Argument argResult = new Register(getType());
@@ -348,7 +322,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, false, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
             }
 
         Argument argResult = LVal.isLocalArgument()

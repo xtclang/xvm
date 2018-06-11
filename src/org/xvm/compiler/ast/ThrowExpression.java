@@ -64,51 +64,63 @@ public class ThrowExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO GG - I need a "happy type" i.e. a type that works for anything (isA() everything!!!)
         return null;
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return TypeConstant.NO_TYPES;
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         return TypeFit.Fit;
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
         {
         return TypeFit.Fit;
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
-            finishValidation(TypeFit.Fit, typeRequired, null);
+            finishValidation(typeRequired, typeRequired, TypeFit.Fit, null, errs);
             return this;
             }
-        return finishValidation(TypeFit.NoFit, typeRequired, null);
+        return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         if (validateThrow(ctx, errs))
             {
-            finishValidations(TypeFit.Fit, atypeRequired, null);
+            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
             return this;
             }
-        return finishValidations(TypeFit.NoFit, atypeRequired, null);
+        return finishValidations(atypeRequired, atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     protected boolean validateThrow(Context ctx, ErrorListener errs)
         {
         // validate the throw value expressions
-        Expression exprNew = expr.validate(ctx, pool().typeException(), TuplePref.Rejected, errs);
+        Expression exprNew = expr.validate(ctx, pool().typeException(), errs);
         if (exprNew != expr)
             {
             if (exprNew == null)
@@ -139,7 +151,14 @@ public class ThrowExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        generateThrow(code, errs);
+        return generateBlackHole(getValueCount() == 0 || getType() == null ? pool().typeObject() : getType());
+        }
+
+    @Override
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         generateThrow(code, errs);
 
@@ -164,7 +183,7 @@ public class ThrowExpression
      */
     protected void generateThrow(Code code, ErrorListener errs)
         {
-        code.add(new Throw(expr.generateArgument(code, false, false, false, errs)));
+        code.add(new Throw(expr.generateArgument(code, true, true, errs)));
         }
 
 

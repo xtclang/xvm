@@ -256,7 +256,7 @@ public class RelOpExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, TuplePref pref)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
         // testing the fit of a particular type for the expression involves starting with an
         // implicit type, and determining if it:
@@ -320,7 +320,8 @@ public class RelOpExpression
     // TODO "/%" -> testFitMulti()
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         // all of these operators work the same way, in terms of types and left associativity:
         //
@@ -360,13 +361,13 @@ public class RelOpExpression
         TypeConstant type2 = null;
         TypeInference: if (typeRequired != null)
             {
-            if (expr1.testFit(ctx, typeRequired, TuplePref.Rejected).isFit())
+            if (expr1.testFit(ctx, typeRequired).isFit())
                 {
                 Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
                         getDefaultMethodName(), getOperatorString(), 1);
                 for (MethodConstant idMethod : setOps)
                     {
-                    if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                    if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
                             && idMethod.getRawReturns()[0].isA(typeRequired))
                         {
                         type1 = typeRequired;
@@ -380,13 +381,13 @@ public class RelOpExpression
                 {
                 for (TypeConstant typeParam : typeRequired.getParamTypesArray())
                     {
-                    if (expr1.testFit(ctx, typeParam, TuplePref.Rejected).isFit())
+                    if (expr1.testFit(ctx, typeParam).isFit())
                         {
                         Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
                                 getDefaultMethodName(), getOperatorString(), 1);
                         for (MethodConstant idMethod : setOps)
                             {
-                            if (expr2.testFit(ctx, idMethod.getRawParams()[0], TuplePref.Rejected).isFit()
+                            if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
                                     && idMethod.getRawReturns()[0].isA(typeRequired))
                                 {
                                 type1 = typeParam;
@@ -400,11 +401,13 @@ public class RelOpExpression
             }
 
         // using the inferred types (if any), validate the expressions
-        Expression expr1New = expr1.validate(ctx, type1, TuplePref.Rejected, errs);
-        Expression expr2New = expr2.validate(ctx, type2, TuplePref.Rejected, errs);
+        Expression expr1New = expr1.validate(ctx, type1, errs);
+        Expression expr2New = expr2.validate(ctx, type2, errs);
         if (expr1New == null || expr2New == null)
             {
-            finishValidation(TypeFit.NoFit, typeRequired == null ? pool().typeBoolean() : typeRequired, null);
+            finishValidation(typeRequired,
+                    typeRequired == null ? pool().typeBoolean() : typeRequired, TypeFit.NoFit,
+                    null, errs);
             return null;
             }
 
@@ -495,7 +498,8 @@ public class RelOpExpression
             // error: somehow, we got this far, but we couldn't find an op that matched the
             // necessary types
             operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-            finishValidation(TypeFit.NoFit, typeRequired == null ? type1 : typeRequired, null);
+            finishValidation(typeRequired, typeRequired == null ? type1 : typeRequired, TypeFit.NoFit,
+                    null, errs);
             return null;
             }
 
@@ -527,11 +531,12 @@ public class RelOpExpression
                 constResult = Constant.defaultValue(typeResult);
                 }
 
-            finishValidation(TypeFit.Fit, constResult.getType(), constResult);
+            finishValidation(typeRequired, constResult.getType(), TypeFit.Fit, constResult, errs);
             return this;
             }
 
-        finishValidation(m_convert == null ? TypeFit.Fit : TypeFit.Conv, typeResult, null);
+        finishValidation(typeRequired, typeResult, m_convert == null ? TypeFit.Fit : TypeFit.Conv,
+                null, errs);
         return this;
         }
 
@@ -545,7 +550,7 @@ public class RelOpExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
             boolean fUsedOnce, ErrorListener errs)
         {
         if (!isConstant())
@@ -577,11 +582,12 @@ public class RelOpExpression
                 }
             }
 
-        return super.generateArgument(code, fPack, fLocalPropOk, fUsedOnce, errs);
+        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fPack, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         if (getValueCount() == 2)
             {
@@ -590,7 +596,7 @@ public class RelOpExpression
             throw new UnsupportedOperationException();
             }
 
-        return super.generateArguments(code, fPack, errs);
+        return super.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
@@ -599,8 +605,8 @@ public class RelOpExpression
         if (LVal.isLocalArgument())
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, false, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, false, false, errs);
+            Argument arg1 = expr1.generateArgument(code, false, false, errs);
+            Argument arg2 = expr2.generateArgument(code, false, false, errs);
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())

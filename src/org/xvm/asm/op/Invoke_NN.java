@@ -182,6 +182,12 @@ public class Invoke_NN
              : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return getParamsString(m_anArgValue, m_aArgValue);
+        }
+
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;

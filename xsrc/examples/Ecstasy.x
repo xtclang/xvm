@@ -88,7 +88,16 @@ module Ecstasy.xtclang.org
     package collections
         {
         interface Sequence<ElementType> {}
-        class Array<ElementType> {}
+
+        interface List<ElementType>
+                extends Sequence<ElementType>
+            {
+            }
+
+        class Array<ElementType>
+                implements List<ElementType>
+            {
+            }
 
         interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
             {

@@ -95,6 +95,19 @@ public class AccessTypeConstant
         }
 
     @Override
+    public boolean isImmutable()
+        {
+        // by default, the struct access for a type is a mutable structure that is used to construct
+        // an object of the corresponding class type
+        if (m_access == Access.STRUCT)
+            {
+            return false;
+            }
+
+        return super.isImmutable();
+        }
+
+    @Override
     public boolean isAccessSpecified()
         {
         return true;

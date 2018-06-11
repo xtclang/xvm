@@ -18,6 +18,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -122,25 +123,96 @@ public class TerminalTypeConstant
     @Override
     public boolean isImmutabilitySpecified()
         {
-        return false;
+        TypeConstant type = resolveTypedefs();
+        return type != this && type.isImmutabilitySpecified();
+        }
+
+    @Override
+    public boolean isImmutable()
+        {
+        TypeConstant type = resolveTypedefs();
+        if (type != this)
+            {
+            return type.isImmutable();
+            }
+
+        Constant      constant = getDefiningConstant();
+        IdentityConstant idClass;
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+                // always immutable
+                return true;
+
+            case Property:
+            case Register:
+                // TODO GG - is it possible from here to get the type of the type parameter and test it?
+                return false;
+
+            case NativeClass:
+                constant = ((NativeRebaseConstant) constant).getClassConstant();
+                // fall through
+            case Class:
+                idClass = (IdentityConstant) constant;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClass = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            case Typedef:
+            case UnresolvedName:
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+
+        switch (idClass.getComponent().getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+                return true;
+
+            case INTERFACE:     // interfaces cannot specify mutability
+            case CLASS:         // classes default to mutable
+            case SERVICE:       // service is always assumed to be NOT immutable
+                return false;
+
+            case MIXIN:
+                // a mixin is immutable iff its "into" is immutable
+                return idClass.getType().getExplicitClassInto().isImmutable();
+
+            default:
+                throw new IllegalStateException("unexpected class constant: " + idClass);
+            }
         }
 
     @Override
     public boolean isAccessSpecified()
         {
-        return false;
+        TypeConstant type = resolveTypedefs();
+        return type != this && type.isAccessSpecified();
         }
 
     @Override
     public Access getAccess()
         {
-        return Access.PUBLIC;
+        TypeConstant type = resolveTypedefs();
+        return type == this
+                ? Access.PUBLIC
+                : type.getAccess();
         }
 
     @Override
     public boolean isParamsSpecified()
         {
-        return false;
+        TypeConstant type = resolveTypedefs();
+        return type != this && type.isParamsSpecified();
         }
 
     @Override
@@ -185,7 +257,8 @@ public class TerminalTypeConstant
     @Override
     public boolean isAnnotated()
         {
-        return false;
+        TypeConstant type = resolveTypedefs();
+        return type != this && type.isAnnotated();
         }
 
     @Override
@@ -256,7 +329,7 @@ public class TerminalTypeConstant
 
             case NativeClass:
                 constant = ((NativeRebaseConstant) constant).getClassConstant();
-                // break through
+                // fall through
             case Class:
                 {
                 ClassConstant constClz = (ClassConstant) constant;
@@ -1071,7 +1144,7 @@ public class TerminalTypeConstant
 
             case NativeClass:
                 constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-                // break through
+                // fall through
             case Class:
                 {
                 ClassConstant constClzLeft = (ClassConstant) constIdLeft;

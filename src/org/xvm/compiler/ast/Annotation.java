@@ -225,7 +225,7 @@ public class Annotation
                 for (int iArg = 0; iArg < cArgs; ++iArg)
                     {
                     Expression exprOld = args.get(iArg);
-                    Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], Expression.TuplePref.Rejected, errs);
+                    Expression exprNew = exprOld.validate(ctx, atypeParams[iArg], errs);
                     if (exprNew != null && exprNew != exprOld)
                         {
                         args.set(iArg, exprNew);

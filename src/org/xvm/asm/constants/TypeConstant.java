@@ -178,6 +178,24 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this TypeConstant refers to an immutable type
+     */
+    public boolean isImmutable()
+        {
+        return getUnderlyingType().isImmutable();
+        }
+
+    /**
+     * @return a type constant that represents an immutable type of this type constant
+     */
+    public TypeConstant ensureImmutable()
+        {
+        return isImmutable()
+                ? this
+                : getConstantPool().ensureImmutableTypeConstant(this);
+        }
+
+    /**
      * @return true iff the type specifies accessibility
      */
     public boolean isAccessSpecified()
@@ -249,7 +267,7 @@ public abstract class TypeConstant
     /**
      * @return true iff this type has a formal type parameter with the specified name
      */
-     public boolean isGenericType(String sName)
+    public boolean isGenericType(String sName)
         {
         TypeInfo info = getTypeInfo();
         if (info != null)
@@ -278,15 +296,36 @@ public abstract class TypeConstant
      */
     public TypeConstant getGenericParamType(String sName)
         {
+        return getGenericParamType(sName, false);
+        }
+
+    /**
+     * Find the type of the specified formal parameter for this actual type.
+     * <p/>
+     * Note that the option to only obtain the type if it is explicitly specified will only work
+     * once the TypeInfo can be generated.
+     *
+     * @param sName             the formal parameter name
+     * @param fOnlyIfSpecified  pass true to obtain the type of the type parameter, iff the type of
+     *                          the type parameter is actually specified
+     *
+     * @return the corresponding actual type or null if there is no matching formal type
+     */
+    public TypeConstant getGenericParamType(String sName, boolean fOnlyIfSpecified)
+        {
         if (isSingleDefiningConstant())
             {
-            TypeInfo info = getTypeInfo();
+            TypeInfo info = fOnlyIfSpecified ? ensureTypeInfo() : getTypeInfo();
             if (info != null && info.getProgress() == Progress.Complete)
                 {
                 ParamInfo param = info.getTypeParams().get(sName);
-                return param == null
+                return param == null || fOnlyIfSpecified && !param.isActualTypeSpecified()
                     ? null
                     : param.getActualType();
+                }
+            else if (fOnlyIfSpecified)
+                {
+                throw new IllegalStateException(this.toString());
                 }
 
             // because isA() uses this method, there is a chicken-and-egg problem, so instead of

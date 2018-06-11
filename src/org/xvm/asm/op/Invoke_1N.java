@@ -163,6 +163,11 @@ public class Invoke_1N
             : hTarget.getTemplate().invokeN(frame, chain, hTarget, ahVar, m_anRetValue);
         }
 
+    protected String getParamsString()
+        {
+        return Argument.toIdString(m_argValue, m_nArgValue);
+        }
+
     private int m_nArgValue;
 
     private Argument m_argValue;

@@ -71,7 +71,8 @@ public class NonBindingExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, TuplePref pref, ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired,
+            ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
         TypeConstant type     = null;
@@ -79,7 +80,7 @@ public class NonBindingExpression
 
         if (this.type != null)
             {
-            TypeExpression exprNew = (TypeExpression) this.type.validate(ctx, typeRequired, pref, errs);
+            TypeExpression exprNew = (TypeExpression) this.type.validate(ctx, typeRequired, errs);
             if (exprNew == null)
                 {
                 fit  = TypeFit.NoFit;
@@ -95,7 +96,7 @@ public class NonBindingExpression
                     }
                 }
             }
-        return finishValidation(fit, type, constant);
+        return finishValidation(typeRequired, type, fit, constant, errs);
         }
 
     @Override
@@ -105,7 +106,7 @@ public class NonBindingExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fPack, boolean fLocalPropOk,
+    public Argument generateArgument(Code code, boolean fLocalPropOk,
             boolean fUsedOnce,
             ErrorListener errs)
         {

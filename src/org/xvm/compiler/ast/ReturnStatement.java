@@ -22,7 +22,6 @@ import org.xvm.asm.op.Return_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
-import org.xvm.compiler.ast.Expression.TuplePref;
 import org.xvm.util.Severity;
 
 
@@ -104,7 +103,7 @@ public class ReturnStatement
                 for (int i = 0; i < cExprs; ++i)
                     {
                     Expression exprOld = listExprs.get(i);
-                    Expression exprNew = exprOld.validate(ctx, null, TuplePref.Accepted, errs);
+                    Expression exprNew = exprOld.validate(ctx, null, errs);
                     if (exprNew != exprOld)
                         {
                         fValid &= exprNew != null;
@@ -139,7 +138,7 @@ public class ReturnStatement
                         ? aRetTypes[i]
                         : null;
                 Expression exprOld = listExprs.get(i);
-                Expression exprNew = exprOld.validate(ctx, typeRet, TuplePref.Rejected, errs);
+                Expression exprNew = exprOld.validate(ctx, typeRet, errs);
                 if (exprNew != exprOld)
                     {
                     fValid &= exprNew != null;
@@ -163,24 +162,24 @@ public class ReturnStatement
             // several possibilities:
             // 1) most likely the expression provides a single value, which matches the single
             //    return type for the method
-            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0], TuplePref.Rejected).isFit())
+            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0]).isFit())
                 {
-                exprNew = exprOld.validate(ctx, aRetTypes[0], TuplePref.Rejected, errs);
+                exprNew = exprOld.validate(ctx, aRetTypes[0], errs);
                 }
             else
                 {
                 // 2) it could be a tuple return
                 ConstantPool pool      = pool();
                 TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, TuplePref.Rejected).isFit())
+                if (exprOld.testFit(ctx, typeTuple).isFit())
                     {
-                    exprNew = exprOld.validate(ctx, typeTuple, TuplePref.Rejected, errs);
+                    exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     }
                 // 3) it could be a conditional false
-                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), TuplePref.Rejected).isFit())
+                else if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
                     {
-                    exprNew = exprOld.validate(ctx, pool.typeFalse(), TuplePref.Rejected, errs);
+                    exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))
                         {
                         // it's not clear how this could happen; it's more like an assertion
@@ -192,7 +191,7 @@ public class ReturnStatement
                 // will log the error)
                 else
                     {
-                    exprNew = exprOld.validateMulti(ctx, aRetTypes, TuplePref.Required, errs);
+                    exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     }
                 }
 
@@ -227,7 +226,7 @@ public class ReturnStatement
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
             ConstantPool pool = pool();
-            Argument     arg  = listExprs.get(0).generateArgument(code, false, false, false, errs);
+            Argument     arg  = listExprs.get(0).generateArgument(code, true, true, errs);
             code.add(new Return_T(arg));
             }
         else
@@ -239,7 +238,7 @@ public class ReturnStatement
                     break;
 
                 case 1:
-                    Argument arg = listExprs.get(0).generateArgument(code, false, false, false, errs);
+                    Argument arg = listExprs.get(0).generateArgument(code, true, true, errs);
                     code.add(new Return_1(arg));
                     break;
 
@@ -247,7 +246,7 @@ public class ReturnStatement
                     Argument[] args = new Argument[cExprs];
                     for (int i = 0; i < cExprs; ++i)
                         {
-                        args[i] = listExprs.get(i).generateArgument(code, false, false, false, errs);
+                        args[i] = listExprs.get(i).generateArgument(code, true, true, errs);
                         }
                     code.add(new Return_N(args));
                     break;
