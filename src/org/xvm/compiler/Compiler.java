@@ -814,4 +814,8 @@ public class Compiler
      * Tuple type has an unexpected number of field types; {0} expected, {1} found.
      */
     public static final String TUPLE_TYPE_WRONG_ARITY             = "COMPILER-66";
+    /**
+     * Expression does not yield a type that supports the "{0}" operator.
+     */
+    public static final String MISSING_OPERATOR                   = "COMPILER-67";
     }

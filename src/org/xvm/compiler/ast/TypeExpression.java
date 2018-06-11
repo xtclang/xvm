@@ -170,18 +170,12 @@ public abstract class TypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool = pool();
-        TypeConstant typeReferent  = getTypeConstant();
+        ConstantPool pool          = pool();
+        TypeConstant typeReferent  = ensureTypeConstant();
         TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
-
-        // TODO pref etc. - this kind of nonsense should not have to show up on every single Expression implementation!
-        TypeFit fit = typeRequired == null || typeRequired.isA(typeRequired)
-                ? TypeFit.Fit
-                : TypeFit.NoFit;
-        return finishValidation(typeRequired, typeReference, fit, typeReferent, errs);
+        return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
         }
 
 
