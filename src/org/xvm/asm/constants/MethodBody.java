@@ -316,37 +316,41 @@ public class MethodBody
     /**
      * Determine if this is a matching "@Op" method.
      *
-     * @param sName    the default name of the method
-     * @param sOp      the operator text
-     * @param cParams  the number of required method parameters
+     * @param sName    the default name of the method (optional)
+     * @param sOp      the operator text (optional)
+     * @param cParams  the number of method parameters, or -1 to match any
      *
      * @return true iff this is an "@Op" method that matches the specified attributes
      */
     public boolean isOp(String sName, String sOp, int cParams)
         {
+        // must be a method (not a function)
         // the number of parameters must match
-        if (m_id.getRawParams().length != cParams || m_id.getRawReturns().length == 0)
+        // must have at least one return value
+        if (isFunction()
+                || cParams >= 0 && m_id.getRawParams().length != cParams
+                || m_id.getRawReturns().length == 0)
             {
             return false;
             }
 
         // there has to be an @Op annotation
-        // if the method name matches the default method name for the op, then we're ok;
-        // otherwise we need to get the operator text from the operator annotation
-        // (it's the first of the @Op annotation parameters)
         Annotation annotation = findAnnotation(pool().clzOp());
         if (annotation == null)
             {
             return false;
             }
 
-        if (m_id.getName().equals(sName))
+        // if the method name matches the default method name for the op, then we're ok;
+        if (sName != null && m_id.getName().equals(sName))
             {
             return true;
             }
 
+        // otherwise we need to get the operator text from the operator annotation
+        // (it's the first of the @Op annotation parameters)
         Constant[] aconstParams = annotation.getParams();
-        return aconstParams.length >= 1
+        return sOp != null && aconstParams.length >= 1
                 && aconstParams[0] instanceof StringConstant
                 && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
         }

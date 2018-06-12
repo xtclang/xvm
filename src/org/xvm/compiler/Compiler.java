@@ -815,7 +815,15 @@ public class Compiler
      */
     public static final String TUPLE_TYPE_WRONG_ARITY             = "COMPILER-66";
     /**
-     * Expression does not yield a type that supports the "{0}" operator.
+     * Expression yields the type "{1}" that does not support the "{0}" operator.
      */
     public static final String MISSING_OPERATOR                   = "COMPILER-67";
+    /**
+     * Expression yields the type "{1}" that does not support the "{0}" operator with the {2} specified parameters.
+     */
+    public static final String MISSING_OPERATOR_SIGNATURE         = "COMPILER-68";
+    /**
+     * The use of the "{0}" operator does not resolve to a single, unambiguous operator implementation on the type "{1}".
+     */
+    public static final String AMBIGUOUS_OPERATOR_SIGNATURE       = "COMPILER-69";
     }

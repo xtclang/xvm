@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.Register;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -95,44 +97,98 @@ public class ArrayAccessExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit          fit            = TypeFit.Fit;
-        Expression       exprArray      = expr;
-        List<Expression> listIndexExprs = indexes;
+        TypeFit      fit          = TypeFit.Fit;
+        TypeConstant typeElement  = null;
+        Expression   exprArray    = expr;
+        int          cIndexes     = indexes.size();
+        Expression[] aexprIndexes = indexes.toArray(new Expression[cIndexes]);
 
         // first, validate the array expression; there is no way to say "required type is something
         // that has an operator for indexed look-up", since that could be Tuple, or List, or Array,
         // or UniformIndexed, or Matrix, or ...
         // REVIEW we could eventually explore possibilities starting with the implicit type and evaluating each @Auto conversion
-        TypeConstant typeArray;
-        Expression   exprArrayNew = exprArray.validate(ctx, null, errs);
+        TypeConstant   typeArray    = null;
+        TypeConstant[] aIndexTypes  = null;
+        Expression     exprArrayNew = exprArray.validate(ctx, null, errs);
         if (exprArrayNew == null)
             {
-            // TODO
-            exprArray.log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR, "[]");
-            fit       = TypeFit.NoFit;
-            typeArray = pool().typeArray();
+            fit = TypeFit.NoFit;
             }
-        else if (exprArrayNew != exprArray)
+        else
+            {
+            if (exprArrayNew != exprArray)
+                {
+                expr = exprArray = exprArrayNew;
+                }
+
+            // find the element access operator
+            typeArray = exprArray.getType();
+            MethodConstant idGet = findOpMethod(ctx, typeArray, "getElement", "[]", aexprIndexes,
+                                                typeArray.isTuple() ? null : typeRequired, true, errs);
+            if (idGet == null)
+                {
+                fit = TypeFit.NoFit;
+                }
+            else
+                {
+                aIndexTypes = idGet.getRawParams();
+                typeElement = idGet.getRawReturns()[0];
+                m_idGet     = idGet;
+                }
+            }
+
+        // validate the index expression(s)
+        for (int i = 0; i < cIndexes; ++i)
+            {
+            Expression exprOld = aexprIndexes[i];
+            Expression exprNew = exprOld.validate(ctx, aIndexTypes == null ? null : aIndexTypes[i], errs);
+            if (exprNew == null)
+                {
+                fit = TypeFit.NoFit;
+                }
+            else if (exprNew != exprOld)
+                {
+                aexprIndexes[i] = exprNew;
+                indexes.set(i, exprNew);
+                }
+            }
+
+        // bail out if the sub-expressions failed to validate and fit together correctly
+        if (!fit.isFit())
+            {
+            if (typeElement == null)
+                {
+                typeElement = typeRequired == null ? pool().typeObject() : typeRequired;
+                }
+            return finishValidation(typeRequired, typeElement, fit, null, errs);
+            }
+
+        // check for a matching setter
+        m_idSet = findOpMethod(ctx, typeArray, "setElement", "[]=", aexprIndexes,
+                               typeArray.isTuple() ? null : typeRequired, false, errs);
+
+        // the type of a tuple access expression is determinable iff the type is a tuple, it has
+        // a known number of field types, and the index is a constant that specifies a field within
+        // that domain of known field types
+        if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].hasConstantValue())
+            {
+            try
+                {
+                int i = ((IntConstant) aexprIndexes[0].toConstant()).getValue().getInt();
+                typeElement = typeArray.getParamTypesArray()[i];
+                }
+            catch (RuntimeException e) {}
+            }
+
+        // the expression yields a constant value iff the sub-expressions are all constants and the
+        // evaluation of the element access is legal
+        Constant constVal = null;
+        if (exprArray.hasConstantValue() && cIndexes == 1 && aexprIndexes[0].hasConstantValue())
             {
             // TODO
             }
 
-        // the array expression must yield a type that has a get (and optional set) element op
-        // :
-        // - if it looks like the array expression will automatically yield a type that has a get
-        //   element op, then validate with no required type
-        // - otherwise, if the array expression automatically yields a type that has an @Auto
-        //   conversion to a type that y
-        // - otherwise, use UniformIndexed as the required type (not because it is necessarily
-        //   correct, but because it is the only obvious default)
-        if (getImplicitType(ctx) == null ? pool().typeUniformIndexed : null)
-        // TODO validate expr, figure out get/set (make sure at most one of each, and at least one between them, and verify that types match)
-        m_idGet = null;
-        m_idSet = null;
-        // TODO validate indexes based on type implied by get/set methods
-        // TODO constant iff the expression and index(es?) are constant
-
-        return super.validate(ctx, typeRequired, errs);
+        return finishValidation(typeRequired, typeElement, fit, constVal, errs);
         }
 
     @Override
@@ -143,53 +199,56 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
         if (hasConstantValue())
             {
-            return toConstant();
-            }
-
-        // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
-        // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
-        Argument argArray  = expr.generateArgument(code, true, true, errs);
-        Register regResult = createTempVar(code, getType(), true, errs).getRegister();
-
-        List<Expression> listIndexExprs = indexes;
-        int              cIndexes       = listIndexExprs.size();
-        if (cIndexes == 1)
-            {
-            Argument argIndex = listIndexExprs.get(0).generateArgument(code, true, true, errs);
-            code.add(new I_Get(argArray, argIndex, regResult));
+            LVal.assign(toConstant(), code, errs);
             }
         else
             {
-            Argument[] aIndexArgs = new Argument[cIndexes];
-            for (int i = 0; i < cIndexes; ++i)
+            // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
+            // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
+            Register         regResult      = LVal.isLocalArgument()
+                                            ? LVal.getRegister()
+                                            : createTempVar(code, getType(), true, errs).getRegister();
+            Argument         argArray       = expr.generateArgument(code, true, true, errs);
+            List<Expression> listIndexExprs = indexes;
+            int              cIndexes       = listIndexExprs.size();
+            if (cIndexes == 1)
                 {
-                aIndexArgs[i] = listIndexExprs.get(i).generateArgument(code, true, true, errs);
+                Argument argIndex = listIndexExprs.get(0).generateArgument(code, true, true, errs);
+                code.add(new I_Get(argArray, argIndex, regResult));
                 }
-            // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
-            throw notImplemented();
-            }
-        return regResult;
-        }
+            else
+                {
+                Argument[] aIndexArgs = new Argument[cIndexes];
+                for (int i = 0; i < cIndexes; ++i)
+                    {
+                    aIndexArgs[i] = listIndexExprs.get(i).generateArgument(code, true, true, errs);
+                    }
+                throw notImplemented();
+                // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
+                }
 
-    @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
-        {
-        super.generateAssignment(code, LVal, errs);
+            // if we created a local variable as a temporary for the result, we need to transfer
+            // the result from that temporary to the specified LVal
+            if (!LVal.isLocalArgument())
+                {
+                LVal.assign(regResult, code, errs);
+                }
+            }
         }
 
     @Override
     public Assignable generateAssignable(Code code, ErrorListener errs)
         {
-        Argument         argArray  = expr.generateArgument(code, false, true, errs); // REVIEW local prop mode?
+        Argument         argArray  = expr.generateArgument(code, true, true, errs);
         List<Expression> listIndex = indexes;
         int              cIndexes  = listIndex.size();
         if (cIndexes == 1)
             {
-            Argument argIndex = listIndex.get(0).generateArgument(code, false, true, errs); // REVIEW local prop mode?
+            Argument argIndex = listIndex.get(0).generateArgument(code, true, true, errs);
             return new Assignable(argArray, argIndex);
             }
         else
@@ -197,11 +256,10 @@ public class ArrayAccessExpression
             Argument[] aArgIndexes = new Argument[cIndexes];
             for (int i = 0; i < cIndexes; ++i)
                 {
-                aArgIndexes[i] = listIndex.get(i).generateArgument(code, false, true, errs); // REVIEW local prop mode?
+                aArgIndexes[i] = listIndex.get(i).generateArgument(code, true, true, errs);
                 }
+            return new Assignable(argArray, aArgIndexes);
             }
-        new Assignable()
-        return super.generateAssignable(code, errs);
         }
 
 
