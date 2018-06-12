@@ -335,7 +335,7 @@ public abstract class TypeConstant
             return clz.getGenericParamType(sName, getParamTypes());
             }
 
-        throw new UnsupportedOperationException();
+        return null;
         }
 
     /**
@@ -380,6 +380,15 @@ public abstract class TypeConstant
     public boolean isConstant()
         {
         return getUnderlyingType().isConstant();
+        }
+
+    /**
+     * @return true iff this type constant is a non-relational type constant for the Ecstasy Type
+     *         type
+     */
+    public boolean isTypeOfType()
+        {
+        return getUnderlyingType().isTypeOfType();
         }
 
     /**

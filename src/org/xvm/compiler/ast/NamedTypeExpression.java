@@ -416,8 +416,7 @@ public class NamedTypeExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool pool = pool();
 

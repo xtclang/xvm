@@ -81,7 +81,7 @@ public class ListExpression
             }
 
         // see if there is an implicit element type
-        TypeConstant typeArray = typeExplicit == null ? pool().typeList() : typeExplicit;
+        TypeConstant typeArray = typeExplicit == null ? pool().typeArray() : typeExplicit;
         int cElements = exprs.size();
         if (cElements > 0)
             {
@@ -108,9 +108,10 @@ public class ListExpression
         List<Expression> listExprs   = exprs;
         int              cExprs      = listExprs.size();
         boolean          fConstant   = true;
-        TypeConstant     typeActual  = pool.typeList();
+        TypeConstant     typeActual  = pool.typeArray();
         TypeConstant     typeElement = null;
-        if (typeRequired != null && typeRequired.isA(pool.typeList()))
+
+        if (typeRequired != null && typeRequired.isA(pool.typeSequence()))
             {
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
@@ -215,6 +216,7 @@ public class ListExpression
             }
 
         boolean fConvApplied = false;
+        boolean fImmutable   = typeCommon.isImmutable();
         for (int i = 1, c = aTypes.length; i < c; ++i)
             {
             TypeConstant type = aTypes[i];
@@ -228,6 +230,7 @@ public class ListExpression
                 if (typeCommon.isA(type))
                     {
                     typeCommon = type;
+                    fImmutable = fImmutable && type.isImmutable();
                     continue;
                     }
 
@@ -244,6 +247,7 @@ public class ListExpression
                         {
                         fConvApplied = true;
                         typeCommon   = type;
+                        fImmutable   = fImmutable && type.isImmutable();
                         continue;
                         }
                     }
@@ -253,7 +257,7 @@ public class ListExpression
                 }
             }
 
-        return typeCommon;
+        return fImmutable ? typeCommon.ensureImmutable() : typeCommon;
         }
 
     @Override
@@ -283,7 +287,7 @@ public class ListExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append('{');
+        sb.append('[');
 
         boolean first = true;
         for (Expression expr : exprs)
@@ -299,7 +303,7 @@ public class ListExpression
             sb.append(expr);
             }
 
-        sb.append('}');
+        sb.append(']');
 
         return sb.toString();
         }

@@ -98,23 +98,21 @@ public class ThrowExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        if (validateThrow(ctx, errs))
-            {
-            finishValidation(typeRequired, typeRequired, TypeFit.Fit, null, errs);
-            return this;
-            }
-        return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
+        boolean fValid = validateThrow(ctx, errs);
+
+        Expression exprNew = finishValidation(typeRequired, typeRequired,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        return fValid ? exprNew : null;
         }
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        if (validateThrow(ctx, errs))
-            {
-            finishValidations(atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
-            return this;
-            }
-        return finishValidations(atypeRequired, atypeRequired, TypeFit.NoFit, null, errs);
+        boolean fValid = validateThrow(ctx, errs);
+
+        Expression exprNew = finishValidations(atypeRequired, atypeRequired,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        return fValid ? exprNew : null;
         }
 
     protected boolean validateThrow(Context ctx, ErrorListener errs)

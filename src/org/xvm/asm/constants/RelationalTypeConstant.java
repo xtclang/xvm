@@ -295,6 +295,12 @@ public abstract class RelationalTypeConstant
         return null;
         }
 
+    @Override
+    public boolean isTypeOfType()
+        {
+        return false;
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 

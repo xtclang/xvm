@@ -91,15 +91,6 @@ public abstract class Constant
     public abstract Format getFormat();
 
     /**
-     * @return true iff this constant represents a type at runtime, whether or not the exact
-     *         type is known at compile time
-     */
-    public boolean isType()
-        {
-        return false;
-        }
-
-    /**
      * @return true iff this constant represents a value at runtime, whether or not the exact
      *         value is known at compile time
      */

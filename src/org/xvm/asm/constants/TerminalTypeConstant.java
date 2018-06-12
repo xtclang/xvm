@@ -18,7 +18,6 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -974,6 +973,15 @@ public class TerminalTypeConstant
             default:
                 return true;
             }
+        }
+
+    @Override
+    public boolean isTypeOfType()
+        {
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.Typedef
+                ? getTypedefTypeConstant((TypedefConstant) constId).isTypeOfType()
+                : this.equals(getConstantPool().typeType());
         }
 
     @Override

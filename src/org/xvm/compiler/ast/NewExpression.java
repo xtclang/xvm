@@ -178,7 +178,7 @@ public class NewExpression
             }
 
         TypeExpression exprTypeOld   = this.type;
-        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired, errs);
+        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired.getType(), errs);
         TypeConstant   typeConstruct = null;
         TypeInfo       infoConstruct = null;
         if (exprTypeNew == null)
@@ -273,8 +273,9 @@ public class NewExpression
                 }
             }
 
-        return finishValidation(typeRequired, typeConstruct, fValid ? TypeFit.Fit : TypeFit.NoFit,
-                null, errs);
+        Expression exprNew = finishValidation(typeRequired, typeConstruct,
+                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        return fValid ? exprNew : null;
         }
 
     @Override
