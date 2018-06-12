@@ -440,7 +440,7 @@ public class TerminalTypeConstant
                 struct.normalizeParameters(atypeParams));
             }
 
-        assert atypeParams.length == 0;
+        // this type cannot adopt anything
         return this;
         }
 
