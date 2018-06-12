@@ -971,13 +971,6 @@ public abstract class TypeConstant
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
-        // it's possible that not all of the parameters have been specified, and while this type
-        // is not equal to the normalized type, the TypeInfo for the two will be identical
-        if (struct.getTypeParams().size() > getParamsCount() && !isTuple())
-            {
-            return normalizeParameters().ensureTypeInfoInternal(errs);
-            }
-
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
