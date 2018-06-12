@@ -112,14 +112,6 @@ public class UnresolvedNameConstant
         }
 
     @Override
-    public boolean isType()
-        {
-        return isNameResolved()
-            ? m_constId.isType()
-            : super.isType();
-        }
-
-    @Override
     public boolean isValue()
         {
         return isNameResolved()

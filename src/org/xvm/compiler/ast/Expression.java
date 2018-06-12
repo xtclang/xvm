@@ -354,6 +354,12 @@ public abstract class Expression
             return TypeFit.Fit;
             }
 
+        // see if we can infer some type information from the "required" type
+        if (inferTypeFromRequired(typeIn, typeOut) != null)
+            {
+            return TypeFit.Fit;
+            }
+
         // check for the existence of an @Auto conversion
         if (typeIn.ensureTypeInfo().findConversion(typeOut) != null)
             {
@@ -515,26 +521,36 @@ public abstract class Expression
         // an @Auto conversion can be used, assuming that we haven't already given up on the type
         // or already applied a type conversion
         MethodConstant idConv = null;
-        if (typeRequired != null && fit.isFit() && !fit.isConverting() && !typeActual.isA(typeRequired))
+        if (typeRequired != null && fit.isFit() && !typeActual.isA(typeRequired))
             {
-            // look for an @Auto conversion
-            idConv = typeActual.ensureTypeInfo().findConversion(typeRequired);
-            if (idConv == null)
+            // first, see if we can infer some type information from the "required" type
+            TypeConstant typeInferred = inferTypeFromRequired(typeActual, typeRequired);
+            if (typeInferred == null)
                 {
-                // cannot provide the required type
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        typeRequired.getValueString(), typeActual.getValueString());
-
-                // pretend that we were able to do the necessary conversion (but note that there
-                // was a type fit error)
-                fit        = TypeFit.NoFit;
-                typeActual = typeRequired;
-                if (constVal != null)
+                // a conversion may be necessary to deliver the required type, but only one
+                // conversion (per expression value) is allowed
+                if (fit.isConverting() ||
+                        (idConv = typeActual.ensureTypeInfo().findConversion(typeRequired)) == null)
                     {
-                    // pretend that it was a constant
-                    constVal   = generateFakeConstant(typeRequired);
-                    typeActual = typeActual.ensureImmutable();
+                    // cannot provide the required type
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            typeRequired.getValueString(), typeActual.getValueString());
+
+                    // pretend that we were able to do the necessary conversion (but note that there
+                    // was a type fit error)
+                    fit        = TypeFit.NoFit;
+                    typeActual = typeRequired;
+                    if (constVal != null)
+                        {
+                        // pretend that it was a constant
+                        constVal   = generateFakeConstant(typeRequired);
+                        typeActual = typeActual.ensureImmutable();
+                        }
                     }
+                }
+            else
+                {
+                typeActual = typeInferred;
                 }
             }
 
@@ -546,6 +562,28 @@ public abstract class Expression
         return idConv == null
                 ? this
                 : new ConvertExpression(this, 0, idConv, errs);
+        }
+
+    /**
+     * Perform left-to-right inference of type information by augmenting the actual (right)
+     * expression type from the required (left) type.
+     *
+     * @param typeActual    the actual type
+     * @param typeRequired  the required type
+     *
+     * @return the inferred actual type iff it "isA" required type; null otherwise
+     */
+    protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
+        {
+        if (typeRequired.isParamsSpecified() && !typeActual.isParamsSpecified())
+            {
+            TypeConstant typeInferred = typeActual.adoptParameters(typeRequired.getParamTypesArray());
+            if (typeInferred.isA(typeRequired))
+                {
+                return typeInferred;
+                }
+            }
+        return null;
         }
 
     /**

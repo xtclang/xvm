@@ -170,12 +170,46 @@ public abstract class TypeExpression
         }
 
     @Override
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        return typeIn.isTypeOfType() && (typeOut == null || typeOut.isTypeOfType())
+            ? super.calcFit(ctx, getSafeDataType(typeIn), getSafeDataType(typeOut))
+            : super.calcFit(ctx, typeIn, typeOut);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool pool          = pool();
         TypeConstant typeReferent  = ensureTypeConstant();
         TypeConstant typeReference = pool.ensureParameterizedTypeConstant(pool.typeType(), typeReferent);
         return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
+        }
+
+
+    @Override
+    protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)
+        {
+        if (typeActual.isTypeOfType() && typeRequired.isTypeOfType())
+            {
+            TypeConstant typeInferredReferent = super.inferTypeFromRequired(
+                getSafeDataType(typeActual), getSafeDataType(typeRequired));
+            if (typeInferredReferent != null)
+                {
+                return typeInferredReferent.getType();
+                }
+            }
+        return null;
+        }
+
+    /**
+     * Trivial helper.
+     */
+    protected static TypeConstant getSafeDataType(TypeConstant type)
+        {
+        return type == null || !type.isParamsSpecified()
+            ? null
+            : type.getGenericParamType("DataType", true);
         }
 
 
