@@ -10,10 +10,12 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.I_Get;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -141,10 +143,36 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+        if (hasConstantValue())
+            {
+            return toConstant();
+            }
+
+        // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
+        // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
+        Argument argArray  = expr.generateArgument(code, true, true, errs);
+        Register regResult = createTempVar(code, getType(), true, errs).getRegister();
+
+        List<Expression> listIndexExprs = indexes;
+        int              cIndexes       = listIndexExprs.size();
+        if (cIndexes == 1)
+            {
+            Argument argIndex = listIndexExprs.get(0).generateArgument(code, true, true, errs);
+            code.add(new I_Get(argArray, argIndex, regResult));
+            }
+        else
+            {
+            Argument[] aIndexArgs = new Argument[cIndexes];
+            for (int i = 0; i < cIndexes; ++i)
+                {
+                aIndexArgs[i] = listIndexExprs.get(i).generateArgument(code, true, true, errs);
+                }
+            // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
+            throw notImplemented();
+            }
+        return regResult;
         }
 
     @Override
