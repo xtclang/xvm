@@ -286,7 +286,8 @@ public abstract class Expression
         if (hasMultiValueImpl())
             {
             checkDepth();
-            return testFitMulti(ctx, new TypeConstant[] {typeRequired});
+            return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
+                                                          : new TypeConstant[] {typeRequired});
             }
 
         throw notImplemented();
@@ -322,16 +323,12 @@ public abstract class Expression
                 // fall through
 
             default:
-                if (hasMultiValueImpl())
-                    {
-                    checkDepth();
-                    return calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired);
-                    }
-
                 // anything that is expected to yield separate values must have a "multi"
                 // implementation, so the lack of a "multi" implementation means that this
                 // expression can't yield the desired number of values
-                return TypeFit.NoFit;
+                return hasMultiValueImpl()
+                        ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
+                        : TypeFit.NoFit;
             }
         }
 
@@ -347,6 +344,12 @@ public abstract class Expression
      */
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
+        // starting type is required
+        if (typeIn == null)
+            {
+            return TypeFit.NoFit;
+            }
+
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out

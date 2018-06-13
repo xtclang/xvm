@@ -24,7 +24,7 @@ module Test
 
     void run()
         {
-        // Tuple<Int, Int> t = (i, j);
+        Tuple<Int, Int> t = (0, 1);
 //        Int i = foo();
 //        @Inject X.io.Console console;
 //        console.println("Hello world!");
@@ -39,7 +39,7 @@ module Test
 
     Int foo()
         {
-        return 0;
+        return foo2()[0];
         }
 
 /*

@@ -10,19 +10,17 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
 import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Get;
-import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.Statement.Context;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -174,6 +172,9 @@ public class ArrayAccessExpression
             {
             try
                 {
+                // lots of things can fail here, causing an exception, so if anything goes wrong,
+                // we can correctly assume that we don't know more about the element type than the
+                // "Object" that the Tuple interface suggests
                 int i = ((IntConstant) aexprIndexes[0].toConstant()).getValue().getInt();
                 typeElement = typeArray.getParamTypesArray()[i];
                 }
@@ -185,7 +186,12 @@ public class ArrayAccessExpression
         Constant constVal = null;
         if (exprArray.hasConstantValue() && cIndexes == 1 && aexprIndexes[0].hasConstantValue())
             {
-            // TODO
+            // similar to above, lots of things can fail here, causing an exception, so if anything
+            // goes wrong, we can correctly assume that we can't determine the compile-time constant
+            // value of the expression
+            // REVIEW GG we could issue a compile-time error though, e.g. index out of bounds!!!
+            int i = ((IntConstant) aexprIndexes[0].toConstant()).getValue().getInt();
+            constVal = ((ArrayConstant) exprArray.toConstant()).getValue()[i];
             }
 
         return finishValidation(typeRequired, typeElement, fit, constVal, errs);
