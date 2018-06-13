@@ -296,36 +296,15 @@ public abstract class TypeConstant
      */
     public TypeConstant getGenericParamType(String sName)
         {
-        return getGenericParamType(sName, false);
-        }
-
-    /**
-     * Find the type of the specified formal parameter for this actual type.
-     * <p/>
-     * Note that the option to only obtain the type if it is explicitly specified will only work
-     * once the TypeInfo can be generated.
-     *
-     * @param sName             the formal parameter name
-     * @param fOnlyIfSpecified  pass true to obtain the type of the type parameter, iff the type of
-     *                          the type parameter is actually specified
-     *
-     * @return the corresponding actual type or null if there is no matching formal type
-     */
-    public TypeConstant getGenericParamType(String sName, boolean fOnlyIfSpecified)
-        {
         if (isSingleDefiningConstant())
             {
-            TypeInfo info = fOnlyIfSpecified ? ensureTypeInfo() : getTypeInfo();
+            TypeInfo info = getTypeInfo();
             if (info != null && info.getProgress() == Progress.Complete)
                 {
                 ParamInfo param = info.getTypeParams().get(sName);
-                return param == null || fOnlyIfSpecified && !param.isActualTypeSpecified()
-                    ? null
-                    : param.getActualType();
-                }
-            else if (fOnlyIfSpecified)
-                {
-                throw new IllegalStateException(this.toString());
+                return param != null && param.isActualTypeSpecified()
+                        ? param.getActualType()
+                        : null;
                 }
 
             // because isA() uses this method, there is a chicken-and-egg problem, so instead of
@@ -1877,24 +1856,34 @@ public abstract class TypeConstant
                         }
 
                     // collect type parameters
-                    for (ParamInfo paramNew : infoContrib.getTypeParams().values())
+                    for (ParamInfo paramContrib : infoContrib.getTypeParams().values())
                         {
-                        Object    nid      = paramNew.getNestedIdentity();
-                        ParamInfo paramOld = mapTypeParams.get(nid);
-                        if (paramOld == null)
+                        Object    nid       = paramContrib.getNestedIdentity();
+                        ParamInfo paramCurr = mapTypeParams.get(nid);
+                        if (paramCurr == null)
                             {
-                            mapTypeParams.put(nid, paramNew);
+                            mapTypeParams.put(nid, paramContrib);
                             }
                         else
                             {
-                            // check that everything matches between the old and new parameter
-                            if (paramNew.isActualTypeSpecified() != paramOld.isActualTypeSpecified())
+                            // check that everything matches between the current and contributed parameter
+                            if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified())
                                 {
-                                if (paramOld.isActualTypeSpecified())
+                                if (paramContrib.isFormalType() &&
+                                    paramContrib.getFormalTypeName().equals(paramCurr.getName()))
+                                    {
+                                    // TODO both the current and contributed parameters have a constraint type;
+                                    //      if those types are different, then keep the narrower of the two; if
+                                    //      there is no "narrower of the two", then keep the union of the two;
+                                    //      if there is no union of the two (e.g. 2 class types), then it's an error
+                                    continue;
+                                    }
+
+                                if (paramCurr.isActualTypeSpecified())
                                     {
                                     log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
                                             this.getValueString(), nid,
-                                            paramOld.getActualType().getValueString(),
+                                            paramCurr.getActualType().getValueString(),
                                             typeContrib.getValueString());
                                     }
                                 else
@@ -1902,16 +1891,16 @@ public abstract class TypeConstant
                                     log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
                                             this.getValueString(), nid,
                                             typeContrib.getValueString(),
-                                            paramNew.getActualType().getValueString());
+                                            paramContrib.getActualType().getValueString());
                                     }
                                 }
-                            else if (!paramNew.getActualType().equals(paramOld.getActualType()))
+                            else if (!paramContrib.getActualType().equals(paramCurr.getActualType()))
                                 {
                                 log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
                                         this.getValueString(), nid,
-                                        paramOld.getActualType().getValueString(),
+                                        paramCurr.getActualType().getValueString(),
                                         typeContrib.getValueString(),
-                                        paramNew.getActualType().getValueString());
+                                        paramContrib.getActualType().getValueString());
                                 }
                             }
                         }

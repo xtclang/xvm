@@ -675,9 +675,7 @@ public class ClassStructure
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0)
             {
-            return ix < listActual.size()
-                ? listActual.get(ix)
-                : getTypeParamsAsList().get(ix).getValue();
+            return ix < listActual.size() ? listActual.get(ix) : null;
             }
 
         for (Contribution contrib : getContributionsAsList())

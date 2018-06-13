@@ -77,7 +77,7 @@ public class ListExpression
     public TypeConstant getImplicitType(Context ctx)
         {
         TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant();
-        if (typeExplicit != null && typeExplicit.getGenericParamType("ElementType", true) != null)
+        if (typeExplicit != null && typeExplicit.getGenericParamType("ElementType") != null)
             {
             return typeExplicit;
             }
@@ -117,7 +117,7 @@ public class ListExpression
             {
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
-            typeElement = typeRequired.getGenericParamType("ElementType", true);
+            typeElement = typeRequired.getGenericParamType("ElementType");
             }
 
         TypeExpression exprOldType = type;
@@ -138,7 +138,7 @@ public class ListExpression
                     }
                 typeActual = exprNewType.ensureTypeConstant();
 
-                TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType", true);
+                TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType");
                 if (typeElementTemp != null)
                     {
                     typeElement = typeElementTemp;

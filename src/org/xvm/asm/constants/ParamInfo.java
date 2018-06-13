@@ -3,6 +3,7 @@ package org.xvm.asm.constants;
 
 import java.util.Map;
 
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 
 
@@ -86,6 +87,22 @@ public class ParamInfo
         return m_nid;
         }
 
+    public boolean isFormalType()
+        {
+        TypeConstant typeActual = m_typeActual;
+        return typeActual != null
+                && typeActual.isSingleDefiningConstant()
+                && typeActual.getDefiningConstant().getFormat() == Format.Property;
+        }
+
+    public String getFormalTypeName()
+        {
+        assert isFormalType();
+
+        TypeConstant typeActual = m_typeActual;
+        return ((PropertyConstant) typeActual.getDefiningConstant()).getName();
+        }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -140,7 +157,7 @@ public class ParamInfo
             ParamInfo info = parameters.get(constProperty.getName());
             return info != null && info.isActualTypeSpecified()
                     ? info.getActualType()
-                    : constProperty.getFormalType();
+                    : null;
             }
 
         @Override

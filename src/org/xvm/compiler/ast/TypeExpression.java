@@ -207,9 +207,9 @@ public abstract class TypeExpression
      */
     protected static TypeConstant getSafeDataType(TypeConstant type)
         {
-        return type == null || !type.isParamsSpecified()
-            ? null
-            : type.getGenericParamType("DataType", true);
+        return type != null && type.isParamsSpecified()
+            ? type.getGenericParamType("DataType")
+            : null;
         }
 
 
