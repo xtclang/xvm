@@ -160,10 +160,12 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            (result, Boolean added) = add(value);
-            modified |= added;
+            if (result : add(value))
+                {
+                modified = true;
+                }
             }
-        return result, modified;
+        return modified, result;
         }
 
     /**

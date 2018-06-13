@@ -392,6 +392,7 @@ AssignmentOperator
     "^="
     "|="
     "?="
+# TODO ":=" conditional assignment operator?
 
 LabeledStatement
     Name ":" Statement

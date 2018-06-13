@@ -111,7 +111,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    List<ElementType> insert(Int index, ElementType value);
+    conditional List<ElementType> insert(Int index, ElementType value);
 
     /**
      * Insert the specified values into the List at the specified index, shifting the contents of
@@ -130,7 +130,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    List<ElementType> insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
+    conditional List<ElementType> insertAll(Int index, Sequence<ElementType> | Collection<ElementType> values)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to insert multiple elements efficiently
@@ -138,9 +138,16 @@ interface List<ElementType>
         List<ElementType> result = this;
         for (ElementType value : values)
             {
-            result = result.insert(i++, value);
+            if (result : result.insert(i, value))
+                {
+                ++i;
+                }
+            else
+                {
+                return false;
+                }
             }
-        return result;
+        return true, result;
         }
 
     /**
@@ -158,7 +165,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (exclusive)
      */
-    List<ElementType> delete(Int index);
+    conditional List<ElementType> delete(Int index);
 
     /**
      * Delete the elements within the specified range, shifting the contents of the entire remainder
