@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 
+import java.util.Set;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -285,7 +286,8 @@ public abstract class Expression
         if (hasMultiValueImpl())
             {
             checkDepth();
-            return testFitMulti(ctx, new TypeConstant[] {typeRequired});
+            return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
+                                                          : new TypeConstant[] {typeRequired});
             }
 
         throw notImplemented();
@@ -321,16 +323,12 @@ public abstract class Expression
                 // fall through
 
             default:
-                if (hasMultiValueImpl())
-                    {
-                    checkDepth();
-                    return calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired);
-                    }
-
                 // anything that is expected to yield separate values must have a "multi"
                 // implementation, so the lack of a "multi" implementation means that this
                 // expression can't yield the desired number of values
-                return TypeFit.NoFit;
+                return hasMultiValueImpl()
+                        ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
+                        : TypeFit.NoFit;
             }
         }
 
@@ -346,6 +344,12 @@ public abstract class Expression
      */
     protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
         {
+        // starting type is required
+        if (typeIn == null)
+            {
+            return TypeFit.NoFit;
+            }
+
         // there are two simple cases to consider:
         // 1) it is always a fit for an expression to go "to void"
         // 2) the most common / desired case is that the type-in is compatible with the type-out
@@ -831,8 +835,8 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) Determine if the expression represents an L-Value, which means that this expression can be
-     * assigned to.
+     * (Post-validation) Determine if the expression represents an L-Value, which means that this
+     * expression can be assigned to.
      * <p/>
      * This method must be overridden by any expression that represents an L-Value, or that could
      * be composed of other expressions such that the result represents an L-Value.
@@ -1435,6 +1439,131 @@ public abstract class Expression
         }
 
     /**
+     * Helper to find an op method.
+     *
+     * @param ctx          the compilation context
+     * @param typeTarget   the type on which to search for the op
+     * @param sMethodName  default name of the op method
+     * @param sOp          the operator string
+     * @param aexprParams  the (optional) parameter expressions (which may not yet be validated)
+     * @param typeReturn   the (optional) return type from the op
+     * @param fRequired    true if the op method must be found
+     * @param errs         listener to log any errors to
+     *
+     * @return the MethodConstant for the desired op, or null if an exact match was not found
+     */
+    public MethodConstant findOpMethod(
+            Context       ctx,
+            TypeConstant  typeTarget,
+            String        sMethodName,
+            String        sOp,
+            Expression[]  aexprParams,
+            TypeConstant  typeReturn,
+            boolean       fRequired,
+            ErrorListener errs)
+        {
+        assert sMethodName != null && sMethodName.length() > 0;
+        assert sOp         != null && sOp        .length() > 0;
+
+        TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
+        int      cParams    = aexprParams == null ? -1 : aexprParams.length;
+        Set<MethodConstant> setMethods = infoTarget.findOpMethods(sMethodName, sOp, cParams);
+        if (setMethods.isEmpty())
+            {
+            if (fRequired)
+                {
+                if (cParams < 0 || infoTarget.findOpMethods(sMethodName, sOp, -1).isEmpty())
+                    {
+                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
+                            sOp, typeTarget.getValueString());
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
+                            sOp, typeTarget.getValueString(), cParams);
+                    }
+                }
+            return null;
+            }
+
+        TypeConstant[] atypeParams = null;
+        if (cParams > 0)
+            {
+            atypeParams = new TypeConstant[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Expression exprParam = aexprParams[i];
+                if (exprParam != null)
+                    {
+                    atypeParams[i] = exprParam.isValidated() ? getType() : getImplicitType(ctx);
+                    }
+                }
+            }
+
+        MethodConstant idBest = null;
+        NextOp: for (MethodConstant idOp : setMethods)
+            {
+            if (cParams > 0)
+                {
+                // TODO eventually this logic has to support parameters with default values
+                TypeConstant[] atypeOpParams = idOp.getRawParams();
+                int            cOpParams     = atypeOpParams.length;
+                if (cParams != cOpParams)
+                    {
+                    continue NextOp;
+                    }
+
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    if (atypeParams[i] != null && atypeParams[i].isAssignableTo(atypeOpParams[i]))
+                        {
+                        continue NextOp;
+                        }
+                    }
+                }
+
+            if (typeReturn != null)
+                {
+                TypeConstant typeOpReturn = idOp.getRawReturns()[0];
+                if (!typeOpReturn.isAssignableTo(typeReturn))
+                    {
+                    continue NextOp;
+                    }
+                }
+
+            if (idBest != null)
+                {
+                boolean fOldBetter = idOp.getSignature().isSubstitutableFor(idBest.getSignature(), typeTarget);
+                boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idOp.getSignature(), typeTarget);
+                if (fOldBetter ^ fNewBetter)
+                    {
+                    if (fNewBetter)
+                        {
+                        idBest = idOp;
+                        }
+                    }
+                else
+                    {
+                    // note: theoretically could still be one better than either of these two, but
+                    // for now, just assume it's an error at this point
+                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                                sOp, typeTarget.getValueString());
+                    return null;
+                    }
+                }
+            }
+
+        if (idBest == null && fRequired)
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
+                    sOp, typeTarget.getValueString(), cParams);
+            }
+
+        return idBest;
+        }
+
+
+    /**
      * Generate a "this" or some other reserved register.
      *
      * @param nReg  the register identifier
@@ -1573,7 +1702,7 @@ public abstract class Expression
         public Assignable(Register regVar)
             {
             m_nForm = LocalVar;
-            m_reg   = regVar;
+            m_arg   = regVar;
             }
 
         /**
@@ -1585,7 +1714,7 @@ public abstract class Expression
         public Assignable(Register regTarget, PropertyConstant constProp)
             {
             m_nForm = regTarget.getIndex() == Op.A_TARGET ? LocalProp : TargetProp;
-            m_reg   = regTarget;
+            m_arg   = regTarget;
             m_prop  = constProp;
             }
 
@@ -1595,10 +1724,10 @@ public abstract class Expression
          * @param argArray  the Register, representing the local variable holding an array
          * @param index     the index into the array
          */
-        public Assignable(Register argArray, Argument index)
+        public Assignable(Argument argArray, Argument index)
             {
             m_nForm  = Indexed;
-            m_reg    = argArray;
+            m_arg    = argArray;
             m_oIndex = index;
             }
 
@@ -1608,12 +1737,12 @@ public abstract class Expression
          * @param regArray  the Register, representing the local variable holding an array
          * @param indexes   an array of indexes into the array
          */
-        public Assignable(Register regArray, Argument[] indexes)
+        public Assignable(Argument regArray, Argument[] indexes)
             {
             assert indexes != null && indexes.length > 0;
 
             m_nForm  = indexes.length == 1 ? Indexed : IndexedN;
-            m_reg    = regArray;
+            m_arg    = regArray;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
 
@@ -1623,26 +1752,26 @@ public abstract class Expression
          * @param argArray  the Register, representing the local variable holding an array
          * @param index     the index into the array
          */
-        public Assignable(Register argArray, PropertyConstant constProp, Argument index)
+        public Assignable(Argument argArray, PropertyConstant constProp, Argument index)
             {
             m_nForm  = IndexedProp;
-            m_reg    = argArray;
+            m_arg    = argArray;
             m_prop   = constProp;
             m_oIndex = index;
             }
 
         /**
-         * Construct an Assignable based on a local property that is a a multi (any) dimension array.
+         * Construct an Assignable based on a local property that is a multi (any) dimension array.
          *
          * @param regArray  the Register, representing the local variable holding an array
          * @param indexes   an array of indexes into the array
          */
-        public Assignable(Register regArray, PropertyConstant constProp, Argument[] indexes)
+        public Assignable(Argument regArray, PropertyConstant constProp, Argument[] indexes)
             {
             assert indexes != null && indexes.length > 0;
 
             m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
-            m_reg    = regArray;
+            m_arg    = regArray;
             m_prop   = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
@@ -1708,7 +1837,7 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return m_reg;
+            return (Register) m_arg;
             }
 
         /**
@@ -1760,7 +1889,7 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return m_reg;
+            return m_arg;
             }
 
         /**
@@ -1784,7 +1913,7 @@ public abstract class Expression
                 {
                 throw new IllegalStateException();
                 }
-            return m_reg;
+            return m_arg;
             }
 
         /**
@@ -1887,13 +2016,14 @@ public abstract class Expression
         public static final byte IndexedNProp = 7;
 
         private byte             m_nForm;
-        private Register         m_reg;
+        private Argument         m_arg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;
         }
 
 
     // ----- TypeFit enumeration -------------------------------------------------------------------
+
 
     /**
      * Represents the ability of an expression to yield a requested type:
@@ -1916,15 +2046,15 @@ public abstract class Expression
      */
     public enum TypeFit
         {
-            NoFit         (0b0000),
+            NoFit(0b0000),
             ConvPackUnpack(0b1111),
-            ConvPack      (0b1011),
-            ConvUnpack    (0b0111),
-            Conv          (0b0011),
-            PackUnpack    (0b1101),
-            Pack          (0b0101),
-            Unpack        (0b1001),
-            Fit           (0b0001);
+            ConvPack(0b1011),
+            ConvUnpack(0b0111),
+            Conv(0b0011),
+            PackUnpack(0b1101),
+            Pack(0b0101),
+            Unpack(0b1001),
+            Fit(0b0001);
 
         /**
          * Constructor.
@@ -2129,6 +2259,7 @@ public abstract class Expression
          * All of the TypeFit enums, by flags.
          */
         private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
+
         static
             {
             for (TypeFit fit : BY_ORDINAL)
@@ -2151,6 +2282,7 @@ public abstract class Expression
 
     // ----- TuplePref enumeration -----------------------------------------------------------------
 
+
     /**
      * Represents the form that the Expression can or does yield a tuple:
      * <ul>
@@ -2164,7 +2296,10 @@ public abstract class Expression
      * </ul>
      */
     // REVIEW could it simplify to: Never, Either, Always?
-    public enum TuplePref {Rejected, Accepted, Desired, Required}
+    public enum TuplePref
+        {
+            Rejected, Accepted, Desired, Required
+        }
 
 
     // ----- fields --------------------------------------------------------------------------------

@@ -21,11 +21,26 @@ module Ecstasy.xtclang.org
     class Object
         {
         @Inject protected Meta<Object:public, Object:protected, Object:private> meta;
-        static Boolean equals(Object o1, Object o2) { TODO(""); }
-        String to<String>() { TODO(""); }
-        Object[] to<Object[]>() { TODO(""); }
-        Tuple<Object> to<Tuple<Object>>() { TODO(""); }
-        @Auto function Object() to<function Object()>() { TODO(""); }
+        static Boolean equals(Object o1, Object o2)
+            {
+            TODO
+            }
+        String to<String>()
+            {
+            TODO
+            }
+        Object[] to<Object[]>()
+            {
+            TODO
+            }
+        Tuple<Object> to<Tuple<Object>>()
+            {
+            TODO
+            }
+        @Auto function Object() to<function Object()>()
+            {
+            TODO
+            }
         }
 
     interface Enum extends Const
@@ -41,7 +56,6 @@ module Ecstasy.xtclang.org
             into Class<EnumType>
         {
         String name;
-
         Int count;
         String[] names;
         EnumType[] values;
@@ -69,6 +83,10 @@ module Ecstasy.xtclang.org
 
     class String
         {
+        @Op("+") String append(Object o)
+            {
+            TODO
+            }
         }
 
     const Type<DataType>
@@ -80,6 +98,11 @@ module Ecstasy.xtclang.org
     enum Nullable default(Null) {Null}
     enum Boolean default(False) {False, True}
 
+    interface Iterable<ElementType>
+        {
+        Iterator<ElementType> iterator();
+        }
+
     interface Iterator<ElementType>
         {
         conditional ElementType next();
@@ -87,20 +110,139 @@ module Ecstasy.xtclang.org
 
     package collections
         {
-        interface Sequence<ElementType> {}
+        interface UniformIndexed<IndexType, ElementType>
+            {
+            @Op ElementType getElement(IndexType index);
+            @Op void setElement(IndexType index, ElementType value)
+                {
+                TODO
+                }
+            }
+
+        interface Sequence<ElementType>
+                extends UniformIndexed<Int, ElementType>
+                extends Iterable<ElementType>
+            {
+            @RO Int size;
+            @Override Iterator<ElementType> iterator()
+                {
+                TODO
+                }
+            }
+
+        interface Collection<ElementType>
+                extends Iterable<ElementType>
+            {
+            @RO Int size;
+            @RO Boolean empty.get()
+                {
+                return size > 0;
+                }
+            @Override Iterator<ElementType> iterator();
+            @Op conditional Collection<ElementType> add(ElementType value)
+                {
+                TODO element addition is not supported
+                }
+            @Op("-") conditional Collection<ElementType> remove(ElementType value)
+                {
+                TODO element removal is not supported
+                }
+            }
 
         interface List<ElementType>
                 extends Sequence<ElementType>
+                extends Collection<ElementType>
             {
             }
 
         class Array<ElementType>
                 implements List<ElementType>
             {
+            construct(Int capacity = 0)
+                {
+                if (capacity < 0)
+                    {
+                    throw new IllegalArgumentException("capacity " + capacity + " must be >= 0");
+                    }
+                this.capacity = capacity;
+                }
+
+            construct(Int size, function ElementType(Int) supply) // fixed size
+                {
+                construct Array(size);
+
+                Element<ElementType>? head = null;
+                if (size > 0)
+                    {
+                    head = new Element<ElementType>(supply(0));
+
+                    Element<ElementType> tail = head;
+                    for (Int i : 1..size)
+                        {
+                        Element<ElementType> node = new Element<>(supply(i));
+                        tail.next = node;
+                        tail      = node;
+                        }
+                    }
+
+                this.head     = head;
+                this.capacity = size;
+                this.size     = size;
+                }
+
+            public/private Int capacity = 0;
+
+            @Override
+            public/private Int size     = 0;
+
+            @Override
+            @Op ElementType getElement(Int index)
+                {
+                return elementAt(index).get();
+                }
+
+            @Override
+            @Op void setElement(Int index, ElementType value)
+                {
+                elementAt(index).set();
+                }
+
+            // @Override
+            Ref<ElementType> elementAt(Int index)
+                {
+                if (index < 0 || index >= size)
+                    {
+                    throw new BoundsException("index=" + index + ", size=" + size);
+                    }
+
+                Element element = head as Element;
+                while (index-- > 0)
+                    {
+                    element = element.next as Element;
+                    }
+
+                return element;
+                }
+
+            @Op Array!<ElementType> add(Array!<ElementType> that);
+            @Op Array!<ElementType> replace(Int index, ElementType value);
+
+            private class Element(ElementType value, Element? next = null)
+                    delegates Ref<ElementType>(valueRef)
+                {
+                Ref<ElementType> valueRef.get()
+                    {
+                    return &value;
+                    }
+                }
             }
 
-        interface Tuple<ElementTypes extends Tuple<ElementTypes...>>
+        interface Tuple<ElementTypes extends Tuple>
             {
+            @RO Int size;
+            @Op Object getElement(Int index);
+            @Op void setElement(Int index, Object newValue);
+            @Op Tuple add(Tuple that);
             }
 
         interface Map<KeyType, ValueType>
@@ -158,10 +300,20 @@ module Ecstasy.xtclang.org
     const Exception(String? text, Exception? cause = null)
         {
         }
+
     const UnsupportedOperationException(String? text, Exception? cause)
             extends Exception(text, cause)
         {
-        construct (String? text, Exception? cause) {} // TODO bug that this is necessary
+        }
+
+    const BoundsException(String? text = null, Exception? cause = null)
+            extends Exception(text, cause)
+        {
+        }
+
+    const IllegalArgumentException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
         }
 
     package annotations

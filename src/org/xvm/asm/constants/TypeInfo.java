@@ -23,7 +23,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
@@ -1274,9 +1273,9 @@ public class TypeInfo
      * Obtain all of the matching op methods for the specified name and/or the operator string, that
      * take the specified number of params.
      *
-     * @param sName    the default op name, such as "add"
-     * @param sOp      the operator string, such as "+"
-     * @param cParams  the number of parameters for the operator method, such as 1
+     * @param sName    the default op name, such as "add" (optional)
+     * @param sOp      the operator string, such as "+" (optional)
+     * @param cParams  the number of parameters for the operator method, or -1 to match any
      *
      * @return a set of zero or more method constants
      */
@@ -1284,7 +1283,7 @@ public class TypeInfo
         {
         Set<MethodConstant> setOps = null;
 
-        String sKey = sName + sOp + cParams;
+        String sKey = String.valueOf(sName) + sOp + cParams;
         if (m_sOp != null && sKey.equals(m_sOp))
             {
             setOps = m_setOp;
