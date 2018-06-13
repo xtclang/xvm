@@ -128,6 +128,52 @@ public class MethodConstant
         return getSignature().getReturns();
         }
 
+    /**
+     * Note: This is just a helper method; the "whether this refers to a function or not" question
+     * belongs to either the component or the type info, and not to the constant, but we need this
+     * information.
+     *
+     * @return true iff this method represents a function
+     */
+    boolean isFunction()
+        {
+        MethodStructure method = (MethodStructure) getComponent();
+
+        // we treat an absence of a component as a sign that the method is virtual
+        // (because when this code was written, that could only occur on a method "cap")
+        return method != null && method.isFunction();
+        }
+
+    /**
+     * If any of this method's signature components are auto-narrowing (or have any references to
+     * auto-narrowing types), replace any auto-narrowing portion with an explicit class identity in
+     * the context of the specified target.
+     *
+     * Note 1: this functionality is not applicable to functions.
+     * Note 2: the target type must be "isA" of this method's containing class
+     *
+     * @param typeTarget  the type of a method's target (null if the target is the containing class)
+     *
+     * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public SignatureConstant resolveAutoNarrowing(TypeConstant typeTarget)
+        {
+        assert !isFunction();
+
+        IdentityConstant idClass = getClassIdentity();
+
+        // 1. a relational type should not be able to influence the resolution
+        // 2. the target must be a subtype of the containing class
+        if (typeTarget != null && typeTarget.isSingleUnderlyingClass(true)
+                && typeTarget.isA(idClass.getType()))
+            {
+            idClass = typeTarget.getSingleUnderlyingClass(true);
+            }
+
+        return getSignature().resolveAutoNarrowing(idClass);
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
@@ -246,18 +292,15 @@ public class MethodConstant
         }
 
     @Override
-    public TypeConstant getRefType()
+    public TypeConstant getRefType(TypeConstant typeTarget)
         {
-        ConstantPool    pool    = getConstantPool();
-        MethodStructure method  = (MethodStructure) getComponent();
-        TypeConstant    params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawParams());
-        TypeConstant    returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawReturns());
-        return method.isStatic()
-                // Function<Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
-                ? pool.ensureParameterizedTypeConstant(pool.typeFunction(), params, returns)
-                // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
-                : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
-                        getNamespace().getType(), params, returns);
+        if (isFunction())
+            {
+            assert typeTarget == null;
+            return getSignature().getRefType(null);
+            }
+
+        return resolveAutoNarrowing(typeTarget).getRefType(typeTarget);
         }
 
     @Override

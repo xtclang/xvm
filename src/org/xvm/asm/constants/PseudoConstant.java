@@ -54,6 +54,19 @@ public abstract class PseudoConstant
         throw new UnsupportedOperationException();
         }
 
+    /**
+     * Note: This only applies to {@link ThisClassConstant}, {@link ChildClassConstant}, and
+     * {@link ParentClassConstant}.
+     *
+     * @param idTarget  the id of a target class (null for the declaration class)
+     *
+     * @return the TypeConstant with explicit target identities swapped in for any auto-narrowing
+     *         identities
+     */
+    public IdentityConstant resolveClass(IdentityConstant idTarget)
+        {
+        throw new UnsupportedOperationException();
+        }
 
     // ----- Constant methods ----------------------------------------------------------------------
 

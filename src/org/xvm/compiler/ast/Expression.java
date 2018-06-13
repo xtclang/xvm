@@ -2,8 +2,8 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Arrays;
-
 import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;

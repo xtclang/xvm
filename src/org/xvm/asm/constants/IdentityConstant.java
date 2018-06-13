@@ -487,11 +487,14 @@ public abstract class IdentityConstant
         }
 
     /**
-     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this constant.
+     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for this constant in
+     * the context of the specified target.
+     *
+     * @param typeTarget  the target type (null if the identity is itself the target)
      *
      * @return a TypeConstant
      */
-    public TypeConstant getRefType()
+    public TypeConstant getRefType(TypeConstant typeTarget)
         {
         if (isClass())
             {

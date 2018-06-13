@@ -26,7 +26,9 @@ import org.xvm.compiler.ast.Statement.Context;
  * <pre>
  * ListLiteral
  *     "[" ExpressionList-opt "]"
+ *     "Sequence:{" ExpressionList-opt "}"
  *     "List:{" ExpressionList-opt "}"
+ *     "Array:{" ExpressionList-opt "}"
  * </pre>
  */
 public class ListExpression
@@ -121,8 +123,8 @@ public class ListExpression
         TypeExpression exprOldType = type;
         if (exprOldType != null)
             {
-            TypeConstant   typeListType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeList());
-            TypeExpression exprNewType  = (TypeExpression) exprOldType.validate(ctx, typeListType, errs);
+            TypeConstant   typeArrayType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeSequence());
+            TypeExpression exprNewType   = (TypeExpression) exprOldType.validate(ctx, typeArrayType, errs);
             if (exprNewType == null)
                 {
                 fit       = TypeFit.NoFit;
@@ -141,11 +143,6 @@ public class ListExpression
                     {
                     typeElement = typeElementTemp;
                     }
-
-                // currently, the only type that can parse to this expression is the type "List"
-                assert typeActual.isSingleUnderlyingClass(true) &&
-                        typeActual.getSingleUnderlyingClass(true).equals(
-                        pool.getImplicitlyImportedIdentity("List"));
                 }
             }
 
@@ -158,6 +155,7 @@ public class ListExpression
                 aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
             typeElement = inferCommonType(aElementTypes);
+            typeActual  = typeActual.adoptParameters(new TypeConstant[] {typeElement});
             }
 
         for (int i = 0; i < cExprs; ++i)
@@ -183,12 +181,17 @@ public class ListExpression
         Constant constVal = null;
         if (fConstant)
             {
+            TypeConstant typeImpl = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                    typeElement == null ? pool.typeObject() : typeElement);
+            assert typeImpl.isA(typeRequired); // typeActual is either Array<ElType> or List<ElType>
+
             Constant[] aconstVal = new Constant[cExprs];
             for (int i = 0; i < cExprs; ++i)
                 {
                 aconstVal[i] = listExprs.get(i).toConstant();
                 }
-            constVal = pool.ensureArrayConstant(typeActual, aconstVal);
+
+            constVal = pool.ensureArrayConstant(typeImpl, aconstVal);
             }
 
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);

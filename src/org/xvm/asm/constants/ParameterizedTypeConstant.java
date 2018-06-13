@@ -234,10 +234,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing()
+    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idTarget);
         boolean      fDiff         = constOriginal != constResolved;
 
         TypeConstant[] aconstOriginal = m_atypeParams;
@@ -245,7 +245,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing();
+            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(idTarget);
             if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == aconstOriginal)

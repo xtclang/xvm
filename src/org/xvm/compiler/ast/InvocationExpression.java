@@ -314,9 +314,9 @@ public class InvocationExpression
 
         if (expr instanceof NameExpression)
             {
-            NameExpression exprName   = (NameExpression) expr;
-            Expression     exprLeft   = exprName.left;
-            TypeConstant   typeLeft   = null;
+            NameExpression exprName = (NameExpression) expr;
+            Expression     exprLeft = exprName.left;
+            TypeConstant   typeLeft = null;
             if (exprLeft != null)
                 {
                 typeLeft = exprLeft.getImplicitType(ctx);
@@ -363,16 +363,30 @@ public class InvocationExpression
                 TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
                 return m_fCall
                         ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
-                        : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                        : atypeConvRets;
+                // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
                 }
 
             // handle method or function
             if (argMethod instanceof MethodConstant)
                 {
-                return m_fCall
-                        ? ((MethodConstant) argMethod).getRawReturns()
-                        : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
-                                                                                       // TODO                      if (m_fBindParams) { ...
+                MethodConstant constMethod = (MethodConstant) argMethod;
+                if (typeLeft == null)
+                    {
+                    typeLeft = ctx.getThisClass().getFormalType();
+                    }
+
+                if (m_fCall)
+                    {
+                    return (m_fMethod ? constMethod.resolveAutoNarrowing(typeLeft)
+                                      : constMethod.getSignature()
+                           ).getRawReturns();
+                    }
+                else
+                    {
+                    return new TypeConstant[] {constMethod.getRefType(typeLeft)};
+                    }
+                // TODO if (m_fBindTarget) { bind; result will be a Function
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
@@ -381,9 +395,11 @@ public class InvocationExpression
             assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
             TypeConstant typeArg = argMethod.getType();
             assert typeArg.isA(pool().typeFunction());
+
             return m_fCall
                     ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
-                    : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                    : new TypeConstant[] {typeArg};
+            // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
             }
         else // not a NameExpression
             {
@@ -396,7 +412,8 @@ public class InvocationExpression
                     {
                     return m_fCall
                             ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
-                            : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
+                            : new TypeConstant[] {typeFn};
+                    // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
                     }
                 }
 
@@ -516,19 +533,33 @@ public class InvocationExpression
                         TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
                         TypeConstant[] atypeResult   = m_fCall
                                 ? atypeConvRets[0].getParamTypesArray()[F_RETS].getParamTypesArray()
-                                : atypeConvRets; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
-                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null,
-                                errs);
+                                : atypeConvRets;
+                        // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                         }
 
                     // handle method or function
                     if (argMethod instanceof MethodConstant)
                         {
-                        TypeConstant[] atypeResult = m_fCall
-                                ? ((MethodConstant) argMethod).getRawReturns()
-                                : new TypeConstant[] {((MethodConstant) argMethod).getRefType()}; // TODO if (m_fBindTarget) { // bind; result will be a Function
-                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null,
-                                errs);
+                        MethodConstant constMethod = (MethodConstant) argMethod;
+                        if (typeLeft == null)
+                            {
+                            typeLeft = ctx.getThisClass().getFormalType();
+                            }
+                        TypeConstant[] atypeResult;
+                        if (m_fCall)
+                            {
+                            atypeResult = (m_fMethod ? constMethod.resolveAutoNarrowing(typeLeft)
+                                                     : constMethod.getSignature()
+                                          ).getRawReturns();
+                            }
+                        else
+                            {
+                            atypeResult = new TypeConstant[] {constMethod.getRefType(typeLeft)};
+                            }
+                        // TODO if (m_fBindTarget) { // bind; result will be a Function
+
+                        return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                         }
 
                     // must be a property or a variable of type function (@Auto conversion possibility
@@ -539,7 +570,8 @@ public class InvocationExpression
                     assert typeArg.isA(pool().typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
-                            : new TypeConstant[] {typeArg}; // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                            : new TypeConstant[] {typeArg};
+                    // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
                     return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }
@@ -557,8 +589,8 @@ public class InvocationExpression
                     {
                     TypeConstant[] atypeResult = m_fCall
                             ? typeFn.getParamTypesArray()[F_RETS].getParamTypesArray()
-                            : new TypeConstant[] {typeFn}; // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
-
+                            : new TypeConstant[] {typeFn};
+                    // TODO calculate resulting function type by partially (or completely) binding the method/function as specified by "args"
                     return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                     }
                 }

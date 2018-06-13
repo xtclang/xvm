@@ -559,15 +559,19 @@ public abstract class TypeConstant
 
     /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
-     * any auto-narrowing portion with an explicit class identity.
+     * any auto-narrowing portion with an explicit class identity in the context of the target type.
+     *
+     * Note that the target identity must be a sub-type of this type.
+     *
+     * @param idTarget  the id of a target class (null for this type's underlying class)
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing()
+    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idTarget);
 
         return constResolved == constOriginal
             ? this
@@ -664,7 +668,7 @@ public abstract class TypeConstant
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
 
-        constThis = constThis.resolveAutoNarrowing();
+        constThis = constThis.resolveAutoNarrowing(null);
         return     constThis.isEcstasy("String")
                 || constThis.isEcstasy("Array")
                 || constThis.isEcstasy("List")
@@ -925,7 +929,7 @@ public abstract class TypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // resolve the type to make sure that typedefs etc. are removed from the equation
-        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing();
+        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
         if (typeResolved != this)
             {
             return typeResolved.buildTypeInfo(errs);

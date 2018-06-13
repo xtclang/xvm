@@ -91,6 +91,11 @@ public class ParentClassConstant
             }
         }
 
+    @Override
+    public IdentityConstant resolveClass(IdentityConstant idTarget)
+        {
+        return idTarget == null ? getDeclarationLevelClass() : idTarget.getParentConstant();
+        }
 
     @Override
     public boolean isCongruentWith(PseudoConstant that)

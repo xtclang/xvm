@@ -153,6 +153,7 @@ public class Annotation
 
         boolean       fValid   = true;
         ClassConstant idAnno   = (ClassConstant) constAnno;
+        // TODO: this should "steal" any matching type parameters from the underlying type
         TypeInfo      infoAnno = idAnno.ensureTypeInfo(errs);
         if (infoAnno.getFormat() != Format.MIXIN)
             {

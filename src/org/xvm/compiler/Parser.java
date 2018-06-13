@@ -3084,12 +3084,14 @@ public class Parser
      *
      * TupleLiteral
      *     "(" ExpressionList "," Expression ")"
-     *     "Tuple:(" ExpressionList-opt ")"
+     *     "Tuple:(" ExpressionList-opt ")"         // REVIEW drop this odd-man-out support?
      *     "Tuple:{" ExpressionList-opt "}"
      *
      * ListLiteral
      *     "[" ExpressionList-opt "]"
+     *     "Sequence:{" ExpressionList-opt "}"
      *     "List:{" ExpressionList-opt "}"
+     *     "Array:{" ExpressionList-opt "}"
      *
      * MapLiteral
      *     "Map:{" Entries-opt "}"
@@ -3112,7 +3114,7 @@ public class Parser
         String sType;
         if (type == null)
             {
-            sType = "List";
+            sType = "Array";
             }
         else
             {
@@ -3179,6 +3181,8 @@ public class Parser
                         getLastMatch().getEndPosition());
                 }
 
+            case "Array":
+            case "Sequence":
             case "List":
                 {
                 long     lStartPos;

@@ -403,6 +403,14 @@ class TestCompiler<TestType1 extends Number,
         ANIface2 iface22 = clz2;
         }
 
+    static void testList()
+        {
+        List<String> ls = List:{"a", "b", "c"};
+        List<String> ls2 = ["a", "b", "c"];
+        List<Int> li = List:{1, 2, 3};
+        List<Int> li2 = [1, 2, 3];
+        }
+
     class Person
         {
         Person parent;

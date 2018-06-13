@@ -22,7 +22,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParentClassConstant;
@@ -736,7 +735,8 @@ public class NameExpression
                             code.add(new MoveThis(cSteps, regThis));
                             }
 
-                        TypeConstant type     = idProp.getRefType();
+                        TypeConstant typeLeft = left == null ? null : left.getType();
+                        TypeConstant type     = idProp.getRefType(typeLeft);
                         Register     regOuter = new Register(type);
                         code.add(type.isA(pool().typeVar())
                                 ? new P_Var(idProp, regThis, regOuter)
@@ -1165,9 +1165,14 @@ public class NameExpression
                 else
                     {
                     m_plan = Plan.None;
+
+                    ClassStructure   clazz     = ctx.getThisClass();
+                    IdentityConstant idClass   = clazz.getIdentityConstant();
+                    TypeConstant     typeClass = clazz.getFormalType();
+
                     return constant instanceof PseudoConstant
-                            ? ((PseudoConstant) constant).getDeclarationLevelClass().getRefType()
-                            : ((IdentityConstant) constant).getRefType();
+                            ? ((PseudoConstant) constant).resolveClass(idClass).getRefType(typeClass)
+                            : ((IdentityConstant) constant).getRefType(typeClass);
                     }
 
             case Property:
@@ -1181,7 +1186,7 @@ public class NameExpression
                     {
                     assert left instanceof NameExpression;
                     m_plan = Plan.OuterThis;
-                    return ((PropertyConstant) constant).getRefType();
+                    return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
                 PropertyConstant  id   = (PropertyConstant) argRaw;

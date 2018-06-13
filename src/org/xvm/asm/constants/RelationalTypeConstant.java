@@ -11,8 +11,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.xvm.asm.Component.ContributionChain;
-import org.xvm.asm.Component.ResolutionCollector;
-import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -220,12 +218,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing()
+    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing();
-        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing();
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(idTarget);
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(idTarget);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this

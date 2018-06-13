@@ -445,13 +445,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing()
+    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefTypeConstant(constId).resolveAutoNarrowing();
+            return getTypedefTypeConstant(constId).resolveAutoNarrowing(idTarget);
             }
 
         Constant constant = getDefiningConstant();
@@ -460,7 +460,7 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().getType();
+                return ((PseudoConstant) constant).resolveClass(idTarget).getType();
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);

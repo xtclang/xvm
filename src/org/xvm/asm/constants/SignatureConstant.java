@@ -238,20 +238,23 @@ public class SignatureConstant
         }
 
     /**
-     * If any of the signature components are auto-narrowing (or have any references to auto-narrowing
-     * types), replace the any auto-narrowing portion with an explicit class identity.
+     * If any of the signature components are auto-narrowing (or have any references to
+     * auto-narrowing types), replace the any auto-narrowing portion with an explicit class identity
+     * in the context of the specified class.
+     *
+     * @param idClass  the target class
      *
      * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public SignatureConstant resolveAutoNarrowing()
+    public SignatureConstant resolveAutoNarrowing(IdentityConstant idClass)
         {
         TypeConstant[] aconstParamOriginal = m_aconstParams;
         TypeConstant[] aconstParamResolved = null;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idClass);
             if (constOriginal != constResolved)
                 {
                 if (aconstParamResolved == null)
@@ -268,7 +271,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing();
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idClass);
             if (constOriginal != constResolved)
                 {
                 if (aconstReturnResolved == null)
@@ -296,6 +299,28 @@ public class SignatureConstant
 
         return getConstantPool().
             ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
+        }
+
+    /**
+     * Obtain the TypeConstant that represents the runtime type of a Ref/Var for a function or a
+     * method represented by this signature.
+     *
+     * @param typeTarget  the type of a target (null for a function)
+     *
+     * @return a TypeConstant (Function or Method)
+     */
+    public TypeConstant getRefType(TypeConstant typeTarget)
+        {
+        ConstantPool pool    = getConstantPool();
+        TypeConstant params  = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawParams());
+        TypeConstant returns = pool.ensureParameterizedTypeConstant(pool.typeTuple(), getRawReturns());
+
+        return typeTarget == null
+                // Function<Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
+                ? pool.ensureParameterizedTypeConstant(pool.typeFunction(), params, returns)
+                // Method<TargetType, Tuple<ParamTypes...>, Tuple<ReturnTypes...>>
+                : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
+                        typeTarget, params, returns);
         }
 
     /**

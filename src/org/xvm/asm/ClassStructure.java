@@ -597,10 +597,7 @@ public class ClassStructure
             case CONST:
             case SERVICE:
                 // only if the format differs from the format of the super
-                ClassStructure structSuper = (ClassStructure)
-                        getExtendsType().getSingleUnderlyingClass(false).getComponent();
-
-                if (format != structSuper.getFormat())
+                if (format != getSuper().getFormat())
                     {
                     return format == Format.CONST ? pool.typeConstRB() : pool.typeServiceRB();
                     }
@@ -611,26 +608,20 @@ public class ClassStructure
         }
 
     /**
-     * @return the type that this ClassStructure extends, or null if this ClassStructure does not
-     *         contain an Extends contribution.
+     * @return the ClassStructure that this ClassStructure extends, or null if this ClassStructure
+     *         is an interface or does not contain an Extends contribution
      */
-    public TypeConstant getExtendsType()    // TODO helper to return a structure
+    public ClassStructure getSuper()
         {
-        // mixin contributions are: optional annotations followed by optional into followed by
-        // optional extends
         for (Contribution contrib : getContributionsAsList())
             {
-            switch (contrib.getComposition())
+            if (contrib.getComposition() == Composition.Extends)
                 {
-                case Annotation:
-                case Into:
-                    break;
-
-                case Extends:
-                    return contrib.getTypeConstant();
-
-                default:
-                    return null;
+                TypeConstant typeExtends = contrib.getTypeConstant();
+                if (typeExtends.isSingleUnderlyingClass(false))
+                    {
+                    return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
+                    }
                 }
             }
         return null;

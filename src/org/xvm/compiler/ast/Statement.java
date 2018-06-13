@@ -242,6 +242,14 @@ public abstract class Statement
             }
 
         /**
+         * @return the containing ClassStructure for the method
+         */
+        public ClassStructure getThisClass()
+            {
+            return m_ctxOuter.getThisClass();
+            }
+
+        /**
          * @return the ConstantPool
          */
         public ConstantPool pool()
@@ -557,6 +565,17 @@ public abstract class Statement
             }
 
         @Override
+        public ClassStructure getThisClass()
+            {
+            Component parent = m_method;
+            while (!(parent instanceof ClassStructure))
+                {
+                parent = parent.getParent();
+                }
+            return (ClassStructure) parent;
+            }
+
+        @Override
         public ConstantPool pool()
             {
             return m_method.getConstantPool();
@@ -813,16 +832,6 @@ public abstract class Statement
         public boolean isConstructor()
             {
             return m_method.isConstructor();
-            }
-
-        ClassStructure getThisClass()
-            {
-            Component parent = m_method;
-            while (!(parent instanceof ClassStructure))
-                {
-                parent = parent.getParent();
-                }
-            return (ClassStructure) parent;
             }
 
         TypeConstant getThisType()
