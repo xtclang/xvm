@@ -160,10 +160,12 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            (result, Boolean added) = add(value);
-            modified |= added;
+            if (result : add(value))
+                {
+                modified = true;
+                }
             }
-        return result, modified;
+        return modified, result;
         }
 
     /**
@@ -202,7 +204,7 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            (result, Boolean removed) = remove(value);
+            (Boolean removed, result) = remove(value);
             modified |= removed;
             }
         return result, modified;
@@ -231,7 +233,7 @@ interface Collection<ElementType>
             {
             if (shouldRemove(value))
                 {
-                (result, Boolean removed) = remove(value);
+                (Boolean removed, result) = remove(value);
                 modified |= removed;
                 }
             }

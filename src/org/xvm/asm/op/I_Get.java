@@ -34,8 +34,8 @@ public class I_Get
         {
         super(null, null, null);
 
-        m_nTarget = nTarget;
-        m_nIndex = nIndex;
+        m_nTarget   = nTarget;
+        m_nIndex    = nIndex;
         m_nRetValue = nRet;
         }
 

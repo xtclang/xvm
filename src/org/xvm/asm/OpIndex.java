@@ -188,6 +188,15 @@ public abstract class OpIndex
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' '  + Argument.toIdString(m_argTarget, m_nTarget)
+                + ", " + Argument.toIdString(m_argIndex,  m_nIndex)
+                + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
+        }
+
     protected int m_nTarget;
     protected int m_nIndex;
     protected int m_nRetValue;

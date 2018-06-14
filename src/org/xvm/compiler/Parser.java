@@ -1071,7 +1071,6 @@ public class Parser
                 return new ExpressionStatement(expr);
 
             case ASN:
-            case COND_ASN:
             case ADD_ASN:
             case SUB_ASN:
             case MUL_ASN:
@@ -1083,6 +1082,10 @@ public class Parser
             case BIT_AND_ASN:
             case BIT_OR_ASN:
             case BIT_XOR_ASN:
+            case COND_ASN:
+            case COND_AND_ASN:
+            case COND_OR_ASN:
+            case COND_ELSE_ASN:
                 {
                 AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
                 expect(Id.SEMICOLON);
@@ -1577,7 +1580,6 @@ public class Parser
                     update.add(new ExpressionStatement(exprUpdate, false));
                     break;
 
-                case COND_ASN:
                 case ADD_ASN:
                 case SUB_ASN:
                 case MUL_ASN:
@@ -1589,6 +1591,10 @@ public class Parser
                 case BIT_AND_ASN:
                 case BIT_OR_ASN:
                 case BIT_XOR_ASN:
+                case COND_ASN:
+                case COND_AND_ASN:
+                case COND_OR_ASN:
+                case COND_ELSE_ASN:
                     update.add(new AssignmentStatement(exprUpdate, current(), parseExpression(), false));
                     break;
 

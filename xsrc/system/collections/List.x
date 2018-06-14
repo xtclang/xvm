@@ -22,9 +22,17 @@ interface List<ElementType>
     interface Cursor<ElementType>
         {
         /**
+         * The containing list.
+         */
+        @ro List<ElementType> list;
+
+        /**
          * The current index of the cursor within the list, which is a value between {@code 0}
          * (inclusive) and {@code size} (inclusive). If the index is equal to {@code size}, then the
          * cursor is "beyond the end of the list", and refers to a non-existent element.
+         *
+         * @throws BoundsException  if an attempt is made to set the index to a position less than
+         *                          {@code 0} or more than {@code size}
          */
         Int index;
 
@@ -62,18 +70,28 @@ interface List<ElementType>
 
         /**
          * Insert the specified element at the current index, shifting the contents of the entire
-         * remainder of the list as a result. If the index is beyond the end of the list, this
-         * operation has the same effect as setting the {@link Cursor.value} property.
+         * remainder of the list "to the right" as a result. If the index is beyond the end of the
+         * list, this operation has the same effect as setting the {@link Cursor.value} property.
+         *
+         * After this method completes successfully, the cursor will be positioned on the newly
+         * inserted element.
          *
          * @throws ReadOnlyException  if the List is not _mutable_
          */
         void insert(ElementType value);
 
         /**
-         * Delete the element at the current index. If the index is beyond the end of the list, this
-         * operation has no effect.
+         * Delete the element at the current index, shifting the contents of the entire remainder of
+         * the list "to the left" as a result.
+         *
+         * After this method completes successfully, the cursor will be positioned on the element
+         * that immediately followed the element that was just deleted, or on the non-existent
+         * element "beyond the end of the list" if the element deleted was the last element in the
+         * list.
          *
          * @throws ReadOnlyException  if the List is not _mutable_
+         * @throws BoundsException    if an attempt is made to delete the value when the cursor is
+         *                            beyond the end of the list
          */
         void delete();
         }
@@ -111,7 +129,10 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    List<ElementType> insert(Int index, ElementType value);
+    List<ElementType> insert(Int index, ElementType value)
+        {
+        TODO element addition is not supported
+        }
 
     /**
      * Insert the specified values into the List at the specified index, shifting the contents of
@@ -158,7 +179,10 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (exclusive)
      */
-    List<ElementType> delete(Int index);
+    List<ElementType> delete(Int index)
+        {
+         TODO element removal is not supported 
+        }
 
     /**
      * Delete the elements within the specified range, shifting the contents of the entire remainder
