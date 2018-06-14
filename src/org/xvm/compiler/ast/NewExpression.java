@@ -190,6 +190,12 @@ public class NewExpression
             this.type = exprTypeNew;
 
             typeConstruct = exprTypeNew.ensureTypeConstant();
+
+            TypeConstant typeInferred = inferTypeFromRequired(typeConstruct, typeRequired);
+            if (typeInferred != null)
+                {
+                typeConstruct = typeInferred;
+                }
             infoConstruct = typeConstruct.ensureTypeInfo(errs);
 
             // if the type is not new-able, then it must be an anonymous inner class with a body

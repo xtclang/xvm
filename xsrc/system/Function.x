@@ -3,6 +3,7 @@
  * parameter types, and a number of return types.
  */
 interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
+        extends Hashable
     {
     @RO Parameter[] params;
     @RO Map<String, Parameter> paramsByName;

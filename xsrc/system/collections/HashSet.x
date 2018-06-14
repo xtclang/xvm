@@ -3,7 +3,9 @@ class HashSet<ElementType>
     {
     construct()
         {
-        Hasher<ElementType> hasher = new NaturalHasher();
+        assert(ElementType instanceof Hashable);
+
+        Hasher<ElementType> hasher = new NaturalHasher<Hashable+ElementType>();
         }
 
     public/private Hasher<ElementType> hasher;
