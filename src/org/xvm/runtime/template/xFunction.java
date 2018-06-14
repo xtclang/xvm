@@ -67,6 +67,20 @@ public class xFunction
         return null;
         }
 
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        FunctionHandle hFunc = (FunctionHandle) hTarget;
+
+        switch (sPropName)
+            {
+            case "hash":
+                return frame.assignValue(iReturn, xInt64.makeHandle(hFunc.getMethod().hashCode()));
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
     public static class FunctionHandle
             extends ObjectHandle
         {
