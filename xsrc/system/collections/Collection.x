@@ -204,7 +204,7 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            (result, Boolean removed) = remove(value);
+            (Boolean removed, result) = remove(value);
             modified |= removed;
             }
         return result, modified;
@@ -233,7 +233,7 @@ interface Collection<ElementType>
             {
             if (shouldRemove(value))
                 {
-                (result, Boolean removed) = remove(value);
+                (Boolean removed, result) = remove(value);
                 modified |= removed;
                 }
             }

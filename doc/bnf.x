@@ -379,20 +379,22 @@ Assignable
     Expression ArrayIndexes
 
 AssignmentOperator
-    "="
-    "*="
-    "/="
-    "%="
-    "+="
-    "-="
-    "<<="
-    ">>="
-    ">>>="
-    "&="
-    "^="
-    "|="
-    "?="
-# TODO ":=" conditional assignment operator?
+    "="                 // straight assignment
+    "*="                // multiply-assign
+    "/="                // divide-assign
+    "%="                // modulo-assign
+    "+="                // add-assign
+    "-="                // subtract-assign
+    "<<="               // shift-left-assign
+    ">>="               // shift-right-assign
+    ">>>="              // unsigned-shift-right-assign
+    "&="                // and-assign
+    "&&="               // and-assign (short-circuiting)
+    "|="                // or-assign
+    "||="               // or-assign (short-circuiting)
+    "^="                // xor-assign
+    "?:="               // elvis-assign (assigns only if the LVal is null)
+    ":="                // conditional assign (RVal must be @Conditional; assigns starting with 2nd tuple field iff expression is true)
 
 LabeledStatement
     Name ":" Statement

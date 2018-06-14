@@ -225,19 +225,31 @@ public class Lexer
             case '?':
                 if (source.hasNext())
                     {
-                    switch (nextChar())
+                    if (nextChar() == ':')
                         {
-                        case '=':
-                            return new Token(lInitPos, source.getPosition(), Id.COND_ASN);
-
-                        case ':':
-                            return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
+                        if (source.hasNext())
+                            {
+                            if (nextChar() == '=')
+                                {
+                                return new Token(lInitPos, source.getPosition(), Id.COND_ELSE_ASN);
+                                }
+                            source.rewind();
+                            }
+                        return new Token(lInitPos, source.getPosition(), Id.COND_ELSE);
                         }
                     source.rewind();
                     }
                 return new Token(lInitPos, source.getPosition(), Id.COND);
 
             case ':':
+                if (source.hasNext())
+                    {
+                    if (nextChar() == '=')
+                        {
+                        return new Token(lInitPos, source.getPosition(), Id.COND_ASN);
+                        }
+                    source.rewind();
+                    }
                 return new Token(lInitPos, source.getPosition(), Id.COLON);
 
             case '+':
@@ -377,6 +389,14 @@ public class Lexer
                     switch (nextChar())
                         {
                         case '&':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '=')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.COND_AND_ASN);
+                                    }
+                                source.rewind();
+                                }
                             return new Token(lInitPos, source.getPosition(), Id.COND_AND);
 
                         case '=':
@@ -392,6 +412,14 @@ public class Lexer
                     switch (nextChar())
                         {
                         case '|':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '=')
+                                    {
+                                    return new Token(lInitPos, source.getPosition(), Id.COND_OR_ASN);
+                                    }
+                                source.rewind();
+                                }
                             return new Token(lInitPos, source.getPosition(), Id.COND_OR);
 
                         case '=':
