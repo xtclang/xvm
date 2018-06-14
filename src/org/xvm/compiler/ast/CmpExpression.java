@@ -145,10 +145,12 @@ public class CmpExpression
             case COMP_LTEQ:
             case COMP_GTEQ:
                 // TODO pool.typeBoolean();
+                notImplemented();
                 break;
 
             case COMP_ORD:
                 // TODO pool.typeOrdered();
+                notImplemented();
                 break;
 
             default:

@@ -658,7 +658,7 @@ public abstract class Expression
                         // was a type fit error)
                         fit        = TypeFit.NoFit;
                         typeActual = typeRequired;
-                        if (aconstVal[i] != null)
+                        if (aconstVal != null && aconstVal[i] != null)
                             {
                             // pretend that it was a constant
                             aconstVal[i] = generateFakeConstant(typeRequired);
@@ -2178,7 +2178,9 @@ public abstract class Expression
          */
         public TypeFit combineWith(TypeFit that)
             {
-            return forFlags(this.FLAGS | that.FLAGS);
+            return this.isFit() && that.isFit()
+                    ? forFlags(this.FLAGS | that.FLAGS)
+                    : NoFit;
             }
 
         /**

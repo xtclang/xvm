@@ -1084,17 +1084,18 @@ public class InvocationExpression
                     case Module:
                     case Package:
                     case Class:
-                        // TODO: we need to plug in the formal types somewhere before coming here
                         ClassStructure clz  = (ClassStructure) parent;
-                        TypeConstant   type = pool.ensureAccessTypeConstant(clz.getCanonicalType(),
+                        TypeConstant   type = pool.ensureAccessTypeConstant(clz.getFormalType(),
                                 Access.PRIVATE);
 
-                        IdentityConstant method = findCallable(type.ensureTypeInfo(errs), sName,
+                        IdentityConstant idCallable = findCallable(type.ensureTypeInfo(errs), sName,
                                 (fNoCall && fNoFBind) || fHasThis, true, aRedundant, aArgs, null);
-                        if (method != null)
+                        if (idCallable != null)
                             {
-                            m_argMethod   = method;
-                            m_fMethod     = !((MethodStructure) method.getComponent()).isFunction();
+                            Component callable = idCallable.getComponent();
+
+                            m_argMethod   = idCallable;
+                            m_fMethod     = callable == null || !callable.isStatic();
                             m_fBindTarget = m_fMethod && !fNoMBind;
                             break NextParent;
                             }

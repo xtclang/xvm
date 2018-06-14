@@ -826,4 +826,8 @@ public class Compiler
      * The use of the "{0}" operator does not resolve to a single, unambiguous operator implementation on the type "{1}".
      */
     public static final String AMBIGUOUS_OPERATOR_SIGNATURE       = "COMPILER-69";
+    /**
+     * Expression yields the type \"{0}\" that cannot be used in a conditional assignment statement.
+     */
+    public static final String INVALID_CONDITIONAL_TYPE          = "COMPILER-70";
     }
