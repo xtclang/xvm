@@ -24,7 +24,7 @@ interface List<ElementType>
         /**
          * The containing list.
          */
-        @ro List<ElementType> list;
+        @RO List<ElementType> list;
 
         /**
          * The current index of the cursor within the list, which is a value between {@code 0}

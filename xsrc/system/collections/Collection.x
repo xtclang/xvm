@@ -204,10 +204,12 @@ interface Collection<ElementType>
         Boolean                 modified = false;
         for (ElementType value : values)
             {
-            (Boolean removed, result) = remove(value);
-            modified |= removed;
+            if (result : remove(value))
+                {
+                modified = true;
+                }
             }
-        return result, modified;
+        return modified, result;
         }
 
     /**
@@ -233,11 +235,13 @@ interface Collection<ElementType>
             {
             if (shouldRemove(value))
                 {
-                (Boolean removed, result) = remove(value);
-                modified |= removed;
+                if (result : remove(value))
+                    {
+                    modified = true;
+                    }
                 }
             }
-        return result, modified;
+        return modified, result;
         }
 
     /**

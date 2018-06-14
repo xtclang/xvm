@@ -304,7 +304,7 @@ class ExtHashMap<KeyType, ValueType>
         @Override
         conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
             {
-            boolean      modified    = false;
+            Boolean      modified    = false;
             HashEntry?[] buckets     = ExtHashMap.this.buckets;
             Int          bucketCount = buckets.size;
             for (Int i = 0; i < bucketCount; ++i)
