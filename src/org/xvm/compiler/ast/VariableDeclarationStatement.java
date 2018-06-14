@@ -24,13 +24,11 @@ import org.xvm.asm.op.Var_DN;
 import org.xvm.asm.op.Var_IN;
 import org.xvm.asm.op.Var_N;
 import org.xvm.asm.op.Var_SN;
-import org.xvm.asm.op.Var_TN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Expression.Assignable;
-import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
 
@@ -63,6 +61,9 @@ public class VariableDeclarationStatement
         this.value = value;
         this.op    = op;
         this.term  = standalone;
+
+        // assignment and conditional usage requires a value
+        assert op == null || value != null;
         }
 
 
@@ -180,69 +181,133 @@ public class VariableDeclarationStatement
                 }
             }
 
-        TypeConstant typeVal = type.ensureTypeConstant();
-        if (value != null)
+        TypeConstant typeVar  = type.ensureTypeConstant();
+        Expression   valueNew = null;
+
+        if (isConditional())
             {
-            if (typeVal.isTuple())
-                {
-                // determine if we can ask for the value(s) in tuple form and/or in separate form
-                TypeFit fitTup = value.testFit(ctx, typeVal);
-                TypeFit fitSep = TypeFit.NoFit;
-                if (typeVal.isParamsSpecified())
-                    {
-                    fitSep = value.testFitMulti(ctx, typeVal.getParamTypesArray());
-                    }
+            // what it means to be conditional:
+            // 1. there is a boolean value that the RVal expression must yield that satisfies the
+            //    "conditional" portion of the statement
+            // 2. there is at least one additional value that the RVal expression must yield that
+            //    satisfies the typeVar constraint, i.e. that is assigned to the variable
+            // 3. the RVal expression is fairly flexible in what we will accept, specifically:
+            // 3.1 an expression that yields multiple values of which the first is a boolean and the
+            //     second is compatible with typeVar:
+            //          while (Person p : iter.next())
+            // 3.2 an expression that yields a tuple, of whose fields the first is a boolean and the
+            //     second is compatible with typeVar:
+            //          if (Person p : (True, person))
+            // 3.3 an expression that yields an Iterator:
+            //          while (Person p : iter)
+            // 3.4 an expression that yields an Iterable:
+            //          while (Person p : peopleList)
+            TypeConstant[] atypeRequired = new TypeConstant[2];
+            atypeRequired[0] = pool.typeBoolean();
+            atypeRequired[1] = typeVar;
 
-                if (fitSep.isFit() && (!fitTup.isFit() || fitTup.isPacking()))
-                    {
-                    // special case: we'll do the packing ourselves
-                    m_fPackingInit = true;
-                    }
+            TypeConstant typeRequired;
+            if (value.testFitMulti(ctx, atypeRequired).isFit())
+                {
+                // validate scenario 3.1
+                valueNew   = value.validateMulti(ctx, atypeRequired, errs);
+                m_scenario = Scenario.FromCondValue;
                 }
-
-            Expression valueNew = m_fPackingInit
-                    ? value.validateMulti(ctx, typeVal.getParamTypesArray(), errs)
-                    : value.validate(ctx, typeVal, errs);
-            if (valueNew != value)
+            else if (value.testFit(ctx, typeRequired =
+                    pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeRequired)).isFit())
                 {
-                fValid &= valueNew != null;
+                // validate scenario 3.2
+                valueNew   = value.validate(ctx, typeRequired, errs);
                 if (valueNew != null)
                     {
-                    value = valueNew;
+                    valueNew = new MultiValueExpression(valueNew.unpackedExpressions(errs), errs);
                     }
+                m_scenario = Scenario.FromCondValue;
                 }
-
-            // conditional declarations (e.g. inside a while clause) must yield a boolean as the
-            // first value
-            if (isConditional() && !value.isTypeBoolean())
+            else if (value.testFit(ctx, typeRequired =
+                    pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeVar)).isFit())
+                {
+                // validate scenario 3.3
+                valueNew   = value.validate(ctx, typeRequired, errs);
+                m_scenario = Scenario.FromIterator;
+                }
+            else if (value.testFit(ctx, typeRequired =
+                    pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeVar)).isFit())
+                {
+                // validate scenario 3.4
+                valueNew   = value.validate(ctx, typeRequired, errs);
+                m_scenario = Scenario.FromIterable;
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.INVALID_CONDITIONAL_TYPE,
+                        value.getType().getValueString());
+                }
+            }
+        else if (value != null)
+            {
+            // what it means to be an assignment:
+            // 1. there is a value that the RVal expression must yield that satisfies the type of
+            //    the variable
+            //          Int i = 0;
+            //          Tuple<Int, String, Int> t3 = (0, "hello", 1);
+            // 2. there is a value of type tuple that the RVal expression must yield, whose first
+            //    field satisfies the type of the variable
+            //          Int i = t3;
+            //    This is supported to be consistent with multi variable declaration, e.g.
+            //          (Int i, String s) = t3;
+            TypeConstant typeRequired;
+            if (value.testFit(ctx, typeVar).isFit())
+                {
+                valueNew   = value.validate(ctx, typeVar, errs);
+                m_scenario = Scenario.DeclareAssign;
+                }
+            else if (value.testFit(ctx, typeRequired =
+                    pool.ensureParameterizedTypeConstant(pool.typeTuple(), typeVar)).isFit())
+                {
+                valueNew = value.validate(ctx, typeRequired, errs);
+                if (valueNew != null)
+                    {
+                    valueNew = valueNew.unpackedExpressions(errs)[0];
+                    }
+                m_scenario = Scenario.DeclareAssign;
+                }
+            else
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        pool.typeBoolean().getValueString(),
-                        value.isVoid() ? "void" : value.getTypes()[0].getValueString());
-                fValid = false;
+                        typeVar.getValueString(), value.getType().getValueString());
                 }
+            }
+        else
+            {
+            m_scenario = Scenario.DeclareOnly;
+            }
 
-            // use the type of the RValue to update the type of the LValue, if desired
-            if (fValid)
+        if (valueNew != value)
+            {
+            fValid &= valueNew != null;
+            if (valueNew != null)
                 {
-                typeVal = m_fPackingInit
-                        ? pool.ensureParameterizedTypeConstant(pool.typeTuple(), value.getTypes())
-                        : value.getType();
-
-                type    = type.inferTypeFrom(typeVal);
-                typeVal = type.ensureTypeConstant();
+                value = valueNew;
                 }
             }
 
+        // use the type of the RValue to update the type of the LValue, if desired
+        if (fValid)
+            {
+            type    = type.inferTypeFrom(typeVar);
+            typeVar = type.ensureTypeConstant();
+            }
+
         // create the register
-        m_reg = new Register(typeVal);
+        m_reg = new Register(typeVar);
 
         // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
         // that gets held in the register)
         if (m_listRefAnnotations != null)
             {
             TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
-                    fVar ? pool.typeVar() : pool.typeRef(), typeVal);
+                    fVar ? pool.typeVar() : pool.typeRef(), typeVar);
             for (int i = m_listRefAnnotations.size()-1; i >= 0; --i)
                 {
                 typeReg = pool.ensureAnnotatedTypeConstant(
@@ -253,9 +318,7 @@ public class VariableDeclarationStatement
 
         ctx.registerVar(name, m_reg, errs);
 
-        return fValid
-                ? this
-                : null;
+        return fValid ? this : null;
         }
 
     @Override
@@ -268,7 +331,7 @@ public class VariableDeclarationStatement
             {
             case While:
             case If:
-                // in the form "Type varname : conditional"
+                // in the form "Type var : conditional"
                 // first, declare an unnamed Boolean variable that will hold the conditional result
                 code.add(new Var(pool.typeBoolean()));
                 Register regCond = code.lastRegister();
@@ -283,7 +346,7 @@ public class VariableDeclarationStatement
                 return fCompletes;
 
             case For:
-                // in the form "Type varname : Iterable"
+                // in the form "Type var : Iterable"
                 // TODO
                 throw new UnsupportedOperationException();
 
@@ -300,30 +363,44 @@ public class VariableDeclarationStatement
             // constant value: declare and initialize named var
             if (value.hasConstantValue())
                 {
-                Constant constVal;
-                if (m_fPackingInit)
+                Constant constVal = null;
+                switch (m_scenario)
                     {
-                    constVal = pool.ensureTupleConstant(pool.ensureParameterizedTypeConstant(
-                            pool.typeTuple(), value.getTypes()), value.toConstants());
+                    case DeclareAssign:
+                        constVal = value.toConstant();
+                        break;
+
+                    case FromCondValue:
+                        {
+                        Constant[] aconst = value.toConstants();
+                        if (aconst[0].equals(pool.valTrue()))
+                            {
+                            constVal = aconst[1];
+                            }
+                        break;
+                        }
+
+                    case FromIterable:
+                    case FromIterator:
+                        notImplemented(); // is it possible to have a constant iterator ?
+                        break;
+
+                    default:
+                        throw new IllegalStateException();
                     }
-                else
+
+                if (constVal != null)
                     {
-                    constVal = value.toConstant();
+                    code.add(new Var_IN(m_reg, constName, constVal));
                     }
-                code.add(new Var_IN(m_reg, constName, constVal));
                 return fCompletes;
                 }
 
-            // declare and initialize named var
             TypeConstant typeVar = m_reg.getType();
-            if (m_fPackingInit)
-                {
-                Argument[] aArgs = value.generateArguments(code, true, true, errs);
-                code.add(new Var_TN(m_reg, constName, aArgs));
-                return fCompletes;
-                }
 
-            if (value instanceof ListExpression && typeVar.isA(pool.typeSequence()))
+            // an optimization for a list assignment
+            if (m_scenario == Scenario.DeclareAssign &&
+                    value instanceof ListExpression && typeVar.isA(pool.typeSequence()))
                 {
                 // even though we validated the ListExpression to give us a single list value, it is
                 // tolerant of us asking for the values as individual values
@@ -339,7 +416,7 @@ public class VariableDeclarationStatement
                 }
             }
 
-        // no value: declare named var
+        // declare named var
         if (m_reg.isDVar())
             {
             code.add(new Var_DN(m_reg, constName));
@@ -349,10 +426,24 @@ public class VariableDeclarationStatement
             code.add(new Var_N(m_reg, constName));
             }
 
-        // assign initial value to var
-        if (value != null)
+        switch (m_scenario)
             {
-            value.generateAssignment(code, value.new Assignable(m_reg), errs);
+            case DeclareAssign:
+                value.generateAssignment(code, value.new Assignable(m_reg), errs);
+                break;
+
+            case FromCondValue:
+            case FromIterable:
+            case FromIterator:
+                notImplemented(); // is it possible to have a constant iterator ?
+                break;
+
+            case DeclareOnly:
+                // all done
+                break;
+
+            default:
+                throw new IllegalStateException();
             }
 
         return fCompletes;
@@ -401,10 +492,11 @@ public class VariableDeclarationStatement
     protected Expression     value;
     protected boolean        term;
 
-    private Register m_reg;
-    private boolean  m_fPackingInit;
+    enum Scenario {DeclareOnly, DeclareAssign, FromCondValue, FromIterator, FromIterable}
 
+    private transient Register m_reg;
     private transient List<Annotation> m_listRefAnnotations;
+    private transient Scenario m_scenario;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type", "value");
     }
