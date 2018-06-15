@@ -511,8 +511,20 @@ public abstract class Expression
             Constant      constVal,
             ErrorListener errs)
         {
-        assert typeActual != null;
         assert fit != null;
+
+        // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
+        if (typeActual == null)
+            {
+            assert !fit.isFit();
+            assert constVal == null;
+
+            m_fit    = TypeFit.NoFit;
+            m_oType  = typeRequired == null ? pool().typeObject() : typeRequired;
+            m_oConst = null;
+
+            return null;
+            }
 
         // if there is a constant value, then the type itself indicates the immutable nature of the
         // expression
@@ -616,10 +628,23 @@ public abstract class Expression
             Constant[]     aconstVal,
             ErrorListener  errs)
         {
-        assert atypeRequired == null || checkElementsNonNull(atypeRequired);
-        assert aTypeActual != null && checkElementsNonNull(aTypeActual);
         assert fit != null;
-        assert aconstVal == null || (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
+        assert atypeRequired == null || checkElementsNonNull(atypeRequired);
+        assert aTypeActual   == null || checkElementsNonNull(aTypeActual);
+        assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == aTypeActual.length;
+
+        // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
+        if (aTypeActual == null)
+            {
+            assert !fit.isFit();
+            assert aconstVal == null;
+
+            m_fit    = TypeFit.NoFit;
+            m_oType  = atypeRequired == null ? pool().typeObject() : atypeRequired;
+            m_oConst = null;
+
+            return null;
+            }
 
         int cActual   = aTypeActual.length;
         int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;

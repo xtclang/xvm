@@ -181,7 +181,7 @@ interface List<ElementType>
      */
     List<ElementType> delete(Int index)
         {
-         TODO element removal is not supported 
+        TODO element removal is not supported
         }
 
     /**
