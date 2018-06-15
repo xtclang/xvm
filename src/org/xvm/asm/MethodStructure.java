@@ -1007,6 +1007,26 @@ public class MethodStructure
             : frame.call(frameNext);
         }
 
+    /**
+     * Find a parameter by name.
+     *
+     * @param sParam  the parameter name
+     *
+     * @return a parameter index; -1 if not found
+     */
+    public int findParameter(String sParam)
+        {
+        for (int i = 0, c = getParamCount(); i < c; i++)
+            {
+            Parameter param = getParam(i);
+            if (sParam.equals(param.getName()))
+                {
+                return i;
+                }
+            }
+        return -1;
+        }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 

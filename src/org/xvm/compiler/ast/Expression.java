@@ -843,6 +843,49 @@ public abstract class Expression
         }
 
     /**
+     * For debugging and error reporting, provide a non-null String representation of the type of
+     * this expression which is tolerant of the stage of the compilation.
+     *
+     * @param ctx  an optional context
+     *
+     * @return a String that best describes the type of this expression
+     */
+    public String getTypeString(Context ctx)
+        {
+        if (m_oType instanceof TypeConstant)
+            {
+            return ((TypeConstant) m_oType).getValueString();
+            }
+
+        if (m_oType instanceof TypeConstant[])
+            {
+            TypeConstant[] aTypes = (TypeConstant[]) m_oType;
+            switch (aTypes.length)
+                {
+                case 0:
+                    return "void";
+
+                case 1:
+                    return aTypes[0].getValueString();
+
+                default:
+                    return aTypes[0].getValueString() + " (+" + (aTypes.length-1) + " more)";
+                }
+            }
+
+        if (ctx != null)
+            {
+            TypeConstant type = getImplicitType(ctx);
+            if (type != null)
+                {
+                return type.getValueString();
+                }
+            }
+
+        return "(unknown)";
+        }
+
+    /**
      * (Post-validation) Obtain an array of types, one for each value that this expression yields.
      * For a void expression, the result is a zero-length array.
      *

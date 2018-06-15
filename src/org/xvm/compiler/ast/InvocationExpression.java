@@ -1084,6 +1084,7 @@ public class InvocationExpression
                     case Module:
                     case Package:
                     case Class:
+                        {
                         ClassStructure clz  = (ClassStructure) parent;
                         TypeConstant   type = pool.ensureAccessTypeConstant(clz.getFormalType(),
                                 Access.PRIVATE);
@@ -1113,10 +1114,29 @@ public class InvocationExpression
                             fHasThis = false;
                             }
                         break;
+                        }
 
                     case Method:
-                        // TODO
+                        {
+                        MethodStructure method = (MethodStructure) parent;
+
+                        int iParam = method.findParameter(sName);
+                        if (iParam >= 0)
+                            {
+                            TypeConstant typeParam = method.getParam(iParam).getType();
+                            if (typeParam.isA(pool.typeFunction()))
+                                {
+                                return m_argMethod = new Register(typeParam, iParam);
+                                }
+                            else
+                                {
+                                // TODO: check for @Auto conv
+                                // TODO: log an error
+                                notImplemented();
+                                }
+                            }
                         break;
+                        }
 
                     case Property:
                         // Starting at the first scope, check for a property of that name; if one exists, treat it using
@@ -1179,7 +1199,7 @@ public class InvocationExpression
 
         if (m_argMethod == null)
             {
-            // error: could not find method
+            // error: could not find a matching method
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName);
             }
 

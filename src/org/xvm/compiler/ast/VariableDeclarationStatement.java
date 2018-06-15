@@ -240,8 +240,9 @@ public class VariableDeclarationStatement
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.INVALID_CONDITIONAL_TYPE,
-                        value.getType().getValueString());
+                // nothing fits, so force the value to do the assumed default path
+                valueNew = value.validateMulti(ctx, atypeRequired, errs);
+                m_scenario = Scenario.FromCondValue;
                 }
             }
         else if (value != null)
@@ -274,8 +275,9 @@ public class VariableDeclarationStatement
                 }
             else
                 {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        typeVar.getValueString(), value.getType().getValueString());
+                // nothing fits, so force the value to do the assumed default path
+                valueNew   = value.validate(ctx, typeVar, errs);
+                m_scenario = Scenario.DeclareAssign;
                 }
             }
         else
@@ -285,7 +287,7 @@ public class VariableDeclarationStatement
 
         if (valueNew != value)
             {
-            fValid &= valueNew != null;
+            fValid &= valueNew != null && valueNew.getTypeFit().isFit();
             if (valueNew != null)
                 {
                 value = valueNew;

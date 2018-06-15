@@ -70,8 +70,8 @@ public class FunctionTypeExpression
         {
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzFunction(), null,
-                toTupleType(toTypeConstantArray(returnValues)),
-                toTupleType(toTypeConstantArray(paramTypes)));
+                toTupleType(toTypeConstantArray(paramTypes)),
+                toTupleType(toTypeConstantArray(returnValues)));
         }
 
     private TypeConstant toTupleType(TypeConstant[] aconstTypes)

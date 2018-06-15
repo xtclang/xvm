@@ -255,7 +255,7 @@ const Method<TargetType, ParamTypes extends Tuple, ReturnTypes extends Tuple>
      * Given an object reference of a type that contains this method, obtain the invocable function
      * that corresponds to this method on that object.
      */
-    Function<ReturnTypes, ParamTypes> bindTarget(TargetType target)
+    Function<ParamTypes, ReturnTypes> bindTarget(TargetType target)
         {
         // this can not be abstract .. maybe "&target.getFunction(this)" or something like that?
         TODO;
