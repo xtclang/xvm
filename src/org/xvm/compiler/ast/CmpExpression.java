@@ -20,6 +20,7 @@ import org.xvm.asm.op.Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -80,14 +81,61 @@ public class CmpExpression
 
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return operator.getId() == Id.COMP_ORD
+                ? pool().typeOrdered()
+                : pool().typeBoolean();
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool pool   = pool();
         boolean      fValid = true;
 
-        // expr1.validate(ctx, null, errs);
-        // fValid &= expr2.validate(ctx, null, errs);      // TODO need a type here
+        Expression   expr1New = expr1.validate(ctx, null, errs);
+        TypeConstant type1    = null;
+        if (expr1New == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            expr1   = expr1New;
+            type1   = expr1New.getType();
+            fValid &= expr1New.getTypeFit().isFit();
+            }
+
+        Expression   expr2New = expr2.validate(ctx, type1, errs);
+        TypeConstant type2    = null;
+        if (expr2New == null)
+            {
+            fValid = false;
+            }
+        else
+            {
+            expr2   = expr2New;
+            type2   = expr2New.getType();
+            fValid &= expr2New.getTypeFit().isFit();
+            }
+
+        if (!fValid)
+            {
+            return finishValidation(typeRequired, getImplicitType(ctx), TypeFit.NoFit, null, errs);
+            }
+
+        // not counting immutability, the types must be the same REVIEW GG
+        if (!type1.ensureImmutable().equals(type2.ensureImmutable()))
+            {
+            // TODO log error
+            }
+
+        // @See
+        // TypeInfo.findEqualsFunction
+        // TypeInfo.findCompareFunction
+        // TypeConstant.callEquals
+        // TypeConstant.callCompare
 
 //        // validation of a constant expression is simpler, so do it first
 //        TypeConstant type1 = expr1.getType();

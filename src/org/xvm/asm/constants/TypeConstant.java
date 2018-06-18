@@ -655,6 +655,17 @@ public abstract class TypeConstant
                 || constThis.isA(getConstantPool().typeSequence());
         }
 
+    public boolean supportsEquals()
+        {
+        return false;
+        }
+
+    public boolean supportsCompare()
+        {
+        return false;
+        }
+
+
     /**
      * Obtain the type of the specified tuple field.
      *
