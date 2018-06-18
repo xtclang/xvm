@@ -31,7 +31,7 @@ public class xTestApp extends xModule
             {
             INSTANCE = this;
             }
-        adapter = templates.f_container.f_adapter;
+        adapter = templates.f_adapter;
         }
 
     @Override

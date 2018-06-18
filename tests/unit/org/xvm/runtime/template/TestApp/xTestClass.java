@@ -23,7 +23,7 @@ public class xTestClass extends xObject
         {
         super(templates, structure, false);
 
-        adapter = templates.f_container.f_adapter;
+        adapter = templates.f_adapter;
         }
 
     @Override

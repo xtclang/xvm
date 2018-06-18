@@ -140,7 +140,13 @@ public class CmpExpression
             fValid &= expr1New.getTypeFit().isFit();
             }
 
-        Expression expr2New = expr2.validate(ctx, type1, errs);
+        // allow the second expression to resolve names based on the first value type's
+        // contributions
+        Context ctx2 = type1 == null
+                ? ctx
+                : ctx.createInferringContext(type1);
+
+        Expression expr2New = expr2.validate(ctx2, type1, errs);
         TypeConstant type2 = null;
         if (expr2New == null)
             {

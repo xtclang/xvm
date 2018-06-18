@@ -184,6 +184,9 @@ public class VariableDeclarationStatement
         TypeConstant typeVar  = type.ensureTypeConstant();
         Expression   valueNew = null;
 
+        // allow the r-value to resolve names based on the l-value type's contributions
+        ctx = ctx.createInferringContext(typeVar);
+
         if (isConditional())
             {
             // what it means to be conditional:

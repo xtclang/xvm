@@ -8,6 +8,11 @@ class HashSet<ElementType>
         Hasher<ElementType> hasher = new NaturalHasher<Hashable+ElementType>();
         }
 
+    construct(Hasher<ElementType> hasher)
+        {
+        this.hasher = hasher;
+        }
+
     public/private Hasher<ElementType> hasher;
 
     private class Entry<ElementType>(ElementType value, Entry? next);

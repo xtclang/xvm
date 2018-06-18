@@ -40,11 +40,11 @@ public class Adapter
     // the template composition: name -> the corresponding ClassConstant id
     private Map<String, Integer> m_mapClasses = new HashMap<>();
 
-    public Adapter(ConstantPool pool, TemplateRegistry registry, ModuleStructure moduleRoot)
+    public Adapter(TemplateRegistry registry, ModuleStructure moduleRoot)
         {
-        f_pool = pool;
         f_templates = registry;
         f_moduleRoot = moduleRoot;
+        f_pool = moduleRoot.getConstantPool();
         }
 
     // get a "relative" type id for the specified name in the context of the

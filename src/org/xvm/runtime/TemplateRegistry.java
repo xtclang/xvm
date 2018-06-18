@@ -33,7 +33,8 @@ import org.xvm.runtime.template.xService;
  */
 public class TemplateRegistry
     {
-    public final Container f_container;
+    public final ModuleStructure f_moduleRoot;
+    public final Adapter f_adapter;
 
     // cache - TypeConstant by name (only for core classes)
     private final Map<String, TypeConstant> f_mapTypesByName = new ConcurrentHashMap<>();
@@ -41,9 +42,10 @@ public class TemplateRegistry
     // cache - ClassTemplates by type
     private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
 
-    TemplateRegistry(Container container)
+    TemplateRegistry(ModuleStructure moduleRoot)
         {
-        f_container = container;
+        f_moduleRoot = moduleRoot;
+        f_adapter = new Adapter(this, moduleRoot);
         }
 
     void loadNativeTemplates(ModuleStructure moduleRoot)
@@ -173,7 +175,7 @@ public class TemplateRegistry
     public ClassStructure getClassStructure(String sName)
         {
         // this call (class by name) can only come from the root module
-        Component comp = f_container.f_moduleRoot.getChildByPath(sName);
+        Component comp = f_moduleRoot.getChildByPath(sName);
         if (comp instanceof ClassStructure)
             {
             return (ClassStructure) comp;

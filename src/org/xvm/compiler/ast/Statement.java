@@ -530,6 +530,55 @@ public abstract class Statement
                 }
             }
 
+        /**
+         * Create a delegating context that allows an expression to resolve names based on the
+         * specified type's contributions.
+         *
+         * As a result, it allows us to write:
+         * <pre><code>
+         *    Color color = Red;
+         * </code></pre>
+         *  instead of
+         * <pre><code>
+         *    Color color = Color.Red;
+         * </code></pre>
+         * or
+         * <pre><code>
+         *    if (color == Red)
+         * </code></pre>
+         *  instead of
+         * <pre><code>
+         *    if (color == Color.Red)
+         * </code></pre>
+         *
+         * @param typeLeft  the "infer from" type
+         *
+         * @return a new context
+         */
+        public Context createInferringContext(TypeConstant typeLeft)
+            {
+            return new Context(this)
+                {
+                @Override
+                public Argument resolveRegularName(Token name, ErrorListener errs)
+                    {
+                    Component.SimpleCollector collector = new Component.SimpleCollector();
+                    return typeLeft.resolveContributedName(name.getValueText(), collector) ==
+                            Component.ResolutionResult.RESOLVED
+                        ? collector.getResolvedConstant()
+                        : super.resolveRegularName(name, errs);
+                    }
+
+                @Override
+                public void registerVar(Token tokName, Register reg, ErrorListener errs)
+                    {
+                    m_ctxOuter.registerVar(tokName, reg, errs);
+                    }
+                };
+
+            // REVIEW: what else do we need to delegate?
+            }
+
         Context m_ctxOuter;
         Context m_ctxInner;
 
