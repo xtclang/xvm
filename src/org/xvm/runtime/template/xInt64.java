@@ -77,7 +77,7 @@ public class xInt64
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeInt(lr));
         }
 
     @Override
@@ -92,7 +92,7 @@ public class xInt64
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeInt(lr));
         }
 
     @Override
@@ -114,7 +114,7 @@ public class xInt64
                }
             }
 
-        return frame.assignValue(iReturn, makeHandle(lr));
+        return frame.assignValue(iReturn, makeInt(lr));
         }
 
     @Override
@@ -127,7 +127,7 @@ public class xInt64
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(-l));
+        return frame.assignValue(iReturn, makeInt(-l));
         }
 
     @Override
@@ -140,7 +140,7 @@ public class xInt64
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(l - 1));
+        return frame.assignValue(iReturn, makeInt(l - 1));
         }
 
     @Override
@@ -153,7 +153,7 @@ public class xInt64
             return overflow(frame);
             }
 
-        return frame.assignValue(iReturn, makeHandle(l+1));
+        return frame.assignValue(iReturn, makeInt(l + 1));
         }
 
     @Override
@@ -168,6 +168,12 @@ public class xInt64
     protected int overflow(Frame frame)
         {
         return frame.raiseException(xException.makeHandle("Int overflow"));
+        }
+
+    @Override
+    protected JavaLong makeInt(long lValue)
+        {
+        return new JavaLong(INSTANCE.getCanonicalClass(), lValue);
         }
 
     public static JavaLong makeHandle(long lValue)

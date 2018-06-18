@@ -111,7 +111,7 @@ public class xUncheckedInt64
             case "abs":
                 {
                 long l = ((JavaLong) hTarget).getValue();
-                return frame.assignValue(iReturn, l >= 0 ? hTarget : makeHandle(-l));
+                return frame.assignValue(iReturn, l >= 0 ? hTarget : makeInt(-l));
                 }
 
             case "neg":
@@ -127,7 +127,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 + l2));
+        return frame.assignValue(iReturn, makeInt(l1 + l2));
         }
 
     @Override
@@ -136,7 +136,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 - l2));
+        return frame.assignValue(iReturn, makeInt(l1 - l2));
         }
 
     @Override
@@ -145,7 +145,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 * l2));
+        return frame.assignValue(iReturn, makeInt(l1 * l2));
         }
 
     @Override
@@ -154,7 +154,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 / l2));
+        return frame.assignValue(iReturn, makeInt(l1 / l2));
         }
 
     @Override
@@ -169,7 +169,7 @@ public class xUncheckedInt64
             lMod += (l2 < 0 ? -l2 : l2);
             }
 
-        return frame.assignValue(iReturn, makeHandle(lMod));
+        return frame.assignValue(iReturn, makeInt(lMod));
         }
 
     @Override
@@ -178,7 +178,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 << l2));
+        return frame.assignValue(iReturn, makeInt(l1 << l2));
         }
 
     @Override
@@ -187,7 +187,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 >> l2));
+        return frame.assignValue(iReturn, makeInt(l1 >> l2));
         }
 
     @Override
@@ -196,7 +196,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 >>> l2));
+        return frame.assignValue(iReturn, makeInt(l1 >>> l2));
         }
 
     @Override
@@ -205,7 +205,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 & l2));
+        return frame.assignValue(iReturn, makeInt(l1 & l2));
         }
 
     @Override
@@ -214,7 +214,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 | l2));
+        return frame.assignValue(iReturn, makeInt(l1 | l2));
         }
 
     @Override
@@ -223,7 +223,7 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 ^ l2));
+        return frame.assignValue(iReturn, makeInt(l1 ^ l2));
         }
 
     @Override
@@ -238,7 +238,7 @@ public class xUncheckedInt64
             lMod += (l2 < 0 ? -l2 : l2);
             }
 
-        return frame.assignValues(aiReturn, makeHandle(l1 / l2), makeHandle(lMod));
+        return frame.assignValues(aiReturn, makeInt(l1 / l2), makeInt(lMod));
         }
 
     @Override
@@ -246,7 +246,7 @@ public class xUncheckedInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(-l));
+        return frame.assignValue(iReturn, makeInt(-l));
         }
 
     @Override
@@ -254,7 +254,7 @@ public class xUncheckedInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(~l));
+        return frame.assignValue(iReturn, makeInt(~l));
         }
 
     @Override
@@ -262,7 +262,7 @@ public class xUncheckedInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l - 1));
+        return frame.assignValue(iReturn, makeInt(l - 1));
         }
 
     @Override
@@ -270,7 +270,7 @@ public class xUncheckedInt64
         {
         long l = ((JavaLong) hTarget).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l + 1));
+        return frame.assignValue(iReturn, makeInt(l + 1));
         }
 
     @Override
@@ -325,9 +325,8 @@ public class xUncheckedInt64
         return frame.assignValue(iReturn, xString.makeHandle(String.valueOf(l)));
         }
 
-    public static JavaLong makeHandle(long lValue)
+    protected JavaLong makeInt(long lValue)
         {
-        // TODO: use a cache of common values
         return new JavaLong(INSTANCE.getCanonicalClass(), lValue);
         }
     }
