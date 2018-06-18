@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.function.Supplier;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -62,20 +61,19 @@ public class Container
         f_repository = repository;
         f_moduleRoot = repository.loadModule(Constants.ECSTASY_MODULE);
 
-        ConstantPool poolRoot = f_moduleRoot.getConstantPool();
-        f_templates = new TemplateRegistry(this);
-        f_adapter = new Adapter(poolRoot, f_templates, f_moduleRoot);
-        f_heapGlobal = new ObjectHeap(poolRoot, f_templates);
+        f_templates = new TemplateRegistry(f_moduleRoot);
+        f_adapter = f_templates.f_adapter;
+        f_heapGlobal = new ObjectHeap(f_moduleRoot.getConstantPool(), f_templates);
 
         if (sAppName.equals("TestApp"))
             {
             // TODO: remove -- but for now TestApp is a part of the "system"
-            f_constModule = (ModuleConstant) f_moduleRoot.getIdentityConstant();
+            f_constModule = f_moduleRoot.getIdentityConstant();
             }
         else
             {
             ModuleStructure module = repository.loadModule(sAppName);
-            f_constModule = (ModuleConstant) module.getIdentityConstant();
+            f_constModule = module.getIdentityConstant();
             }
         }
 

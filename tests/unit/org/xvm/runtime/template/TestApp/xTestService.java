@@ -24,7 +24,7 @@ public class xTestService extends xService
         {
         super(templates, structure, false);
 
-        adapter = templates.f_container.f_adapter;
+        adapter = templates.f_adapter;
         }
 
     @Override
