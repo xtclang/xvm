@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Set;
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
@@ -491,7 +492,7 @@ public abstract class Expression
      * Store the result of validating the Expression.
      *
      * @param typeRequired  the type that the expression must yield (optional)
-     * @param typeActual    the type of the expression at this point (required)
+     * @param typeActual    the type of the expression at this point (optional, in case of error)
      * @param fit           the fit of that type that was determined by the validation (required);
      *                      {@link TypeFit#NoFit} indicates that a type error has already been
      *                      logged; {@link TypeFit#isConverting()} indicates that a type conversion
@@ -511,8 +512,20 @@ public abstract class Expression
             Constant      constVal,
             ErrorListener errs)
         {
-        assert typeActual != null;
         assert fit != null;
+
+        // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
+        if (typeActual == null)
+            {
+            assert !fit.isFit();
+            assert constVal == null;
+
+            m_fit    = TypeFit.NoFit;
+            m_oType  = typeRequired == null ? pool().typeObject() : typeRequired;
+            m_oConst = null;
+
+            return null;
+            }
 
         // if there is a constant value, then the type itself indicates the immutable nature of the
         // expression
@@ -596,7 +609,8 @@ public abstract class Expression
      * @param atypeRequired  the (optional) types required from the Expression (both the array and
      *                       any of its elements can be null)
      * @param aTypeActual    the types that result from the Expression (neither the array nor its
-     *                       elements can be null)
+     *                       elements can be null, except in the case of an error, in which the
+     *                       array can be null)
      * @param fit            the fit of those types that was determined by the validation;
      *                       {@link TypeFit#NoFit} indicates that a type error has already been
      *                       logged; {@link TypeFit#isConverting()} indicates that a type conversion
@@ -616,10 +630,23 @@ public abstract class Expression
             Constant[]     aconstVal,
             ErrorListener  errs)
         {
-        assert atypeRequired == null || checkElementsNonNull(atypeRequired);
-        assert aTypeActual != null && checkElementsNonNull(aTypeActual);
         assert fit != null;
-        assert aconstVal == null || (aconstVal.length == aTypeActual.length && checkElementsNonNull(aconstVal));
+        assert atypeRequired == null || checkElementsNonNull(atypeRequired);
+        assert aTypeActual   == null || checkElementsNonNull(aTypeActual);
+        assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == aTypeActual.length;
+
+        // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
+        if (aTypeActual == null)
+            {
+            assert !fit.isFit();
+            assert aconstVal == null;
+
+            m_fit    = TypeFit.NoFit;
+            m_oType  = atypeRequired == null ? pool().typeObject() : atypeRequired;
+            m_oConst = null;
+
+            return null;
+            }
 
         int cActual   = aTypeActual.length;
         int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;
@@ -1261,6 +1288,15 @@ public abstract class Expression
         checkDepth();
 
         assert !isVoid() && getType().isA(pool().typeBoolean());
+
+        if (hasConstantValue())
+            {
+            if (fWhenTrue == toConstant().equals(pool().valTrue()))
+                {
+                code.add(new Jump(label));
+                }
+            return;
+            }
 
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)

@@ -160,34 +160,12 @@ module Ecstasy.xtclang.org
             {
             construct(Int capacity = 0)
                 {
-                if (capacity < 0)
-                    {
-                    throw new IllegalArgumentException("capacity " + capacity + " must be >= 0");
-                    }
-                this.capacity = capacity;
+                TODO
                 }
 
             construct(Int size, function ElementType(Int) supply) // fixed size
                 {
-                construct Array(size);
-
-                Element<ElementType>? head = null;
-                if (size > 0)
-                    {
-                    head = new Element<ElementType>(supply(0));
-
-                    Element<ElementType> tail = head;
-                    for (Int i : 1..size)
-                        {
-                        Element<ElementType> node = new Element<>(supply(i));
-                        tail.next = node;
-                        tail      = node;
-                        }
-                    }
-
-                this.head     = head;
-                this.capacity = size;
-                this.size     = size;
+                TODO
                 }
 
             public/private Int capacity = 0;
@@ -198,43 +176,17 @@ module Ecstasy.xtclang.org
             @Override
             @Op ElementType getElement(Int index)
                 {
-                return elementAt(index).get();
+                TODO
                 }
 
             @Override
             @Op void setElement(Int index, ElementType value)
                 {
-                elementAt(index).set();
-                }
-
-            // @Override
-            Ref<ElementType> elementAt(Int index)
-                {
-                if (index < 0 || index >= size)
-                    {
-                    throw new BoundsException("index=" + index + ", size=" + size);
-                    }
-
-                Element element = head as Element;
-                while (index-- > 0)
-                    {
-                    element = element.next as Element;
-                    }
-
-                return element;
+                TODO
                 }
 
             @Op Array!<ElementType> add(Array!<ElementType> that);
             @Op Array!<ElementType> replace(Int index, ElementType value);
-
-            private class Element(ElementType value, Element? next = null)
-                    delegates Ref<ElementType>(valueRef)
-                {
-                Ref<ElementType> valueRef.get()
-                    {
-                    return &value;
-                    }
-                }
             }
 
         interface Tuple<ElementTypes extends Tuple>

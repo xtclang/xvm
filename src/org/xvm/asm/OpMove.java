@@ -78,6 +78,14 @@ public abstract class OpMove
         m_argFrom = registerArgument(m_argFrom, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' ' + Argument.toIdString(m_argFrom, m_nFromValue)
+                + ", " + Argument.toIdString(m_regTo, m_nToValue);
+        }
+
     protected int m_nFromValue;
     protected int m_nToValue;
 

@@ -656,6 +656,51 @@ public abstract class TypeConstant
         }
 
     /**
+     * Determine compatibility for purposes of comparing equality.
+     *
+     * @param that             another type
+     * @param fThatIsConstant  if the value of the other type is a constant
+     * @param errs             the error list to log any errors or warnings to
+     *
+     * @return true iff a value of this type can be compared with a value of the other type for
+     *         equality
+     */
+    public boolean supportsEquals(TypeConstant that, boolean fThatIsConstant, ErrorListener errs)
+        {
+        assert that != null;
+        if (this.equals(that) || fThatIsConstant && that.isA(this))
+            {
+            // TODO log warning for non-Const sans equals() at this inheritance level, and/or for any stateful mixins sans equals()
+            return true;
+            }
+
+        return false;
+        }
+
+    /**
+     * Determine compatibility for purposes of comparing order.
+     *
+     * @param that             another type
+     * @param fThatIsConstant  if the value of the other type is a constant
+     * @param errs             the error list to log any errors or warnings to
+     *
+     * @return true iff a value of this type can be compared with a value of the other type for
+     *         order
+     */
+    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant, ErrorListener errs)
+        {
+        assert that != null;
+        if (this.equals(that) || fThatIsConstant && that.isA(this))
+            {
+            // TODO log warning for non-Const sans compare() at this inheritance level, and/or for any stateful mixins sans compare()
+            return ensureTypeInfo(errs).findCompareFunction() != null;
+            }
+
+        return false;
+        }
+
+
+    /**
      * Obtain the type of the specified tuple field.
      *
      * @param i  the 0-based tuple field index

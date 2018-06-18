@@ -692,6 +692,7 @@ public abstract class Op
             case OP_IS_SVC:      return new IsService   (in, aconst);
             case OP_IS_CONST:    return new IsConst     (in, aconst);
             case OP_IS_IMMT:     return new IsImmutable (in, aconst);
+            case OP_CMP:         return new Cmp         (in, aconst);
 
             case OP_VAR:         return new Var         (in, aconst);
             case OP_VAR_I:       return new Var_I       (in, aconst);
@@ -885,6 +886,7 @@ public abstract class Op
             case OP_IS_SVC:      return "IS_SVC";
             case OP_IS_CONST:    return "IS_CONST";
             case OP_IS_IMMT:     return "IS_IMMUT";
+            case OP_CMP:         return "CMP";
             case OP_VAR:         return "VAR";
             case OP_VAR_I:       return "VAR_I";
             case OP_VAR_N:       return "VAR_N";
@@ -1110,6 +1112,7 @@ public abstract class Op
     public static final int OP_IS_SVC       = 0x3B;
     public static final int OP_IS_CONST     = 0x3C;
     public static final int OP_IS_IMMT      = 0x3D;
+    public static final int OP_CMP          = 0xE5; // TODO re-order
 
     public static final int OP_VAR          = 0x3E;
     public static final int OP_VAR_I        = 0x3F;
