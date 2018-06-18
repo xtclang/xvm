@@ -723,6 +723,11 @@ public abstract class Expression
         m_oType  = fit.isFit() || atypeRequired == null ? aTypeActual : atypeRequired;
         m_oConst = aconstVal;
 
+        if (!fit.isFit())
+            {
+            return null;
+            }
+
         // apply any conversions that we found previously to be necessary to deliver the required
         // data types
         Expression exprResult = this;
