@@ -1,29 +1,34 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.IsGt;
 import org.xvm.asm.op.IsGte;
 import org.xvm.asm.op.IsLt;
 import org.xvm.asm.op.IsLte;
 import org.xvm.asm.op.IsNotEq;
-import org.xvm.asm.op.Var;
+import org.xvm.asm.op.JumpEq;
+import org.xvm.asm.op.JumpGt;
+import org.xvm.asm.op.JumpGte;
+import org.xvm.asm.op.JumpLt;
+import org.xvm.asm.op.JumpLte;
+import org.xvm.asm.op.JumpNotEq;
+import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.Statement.Context;
 
-import org.xvm.util.Severity;
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -50,6 +55,13 @@ import org.xvm.util.Severity;
         case COMP_GTEQ:
         case COMP_ORD:
         }
+ *
+ * @see TypeInfo#findEqualsFunction
+ * @see TypeInfo#findCompareFunction
+ * @see TypeConstant#supportsEquals
+ * @see TypeConstant#supportsCompare
+ * @see TypeConstant#callEquals
+ * @see TypeConstant#callCompare
  */
 public class CmpExpression
         extends BiExpression
@@ -77,47 +89,75 @@ public class CmpExpression
         }
 
 
-    // ----- compilation ---------------------------------------------------------------------------
+    // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the expression produces a Boolean value, or false iff the expression
+     *         produces an Ordered value
+     */
+    public boolean producesBoolean()
+        {
+        return operator.getId() != Id.COMP_ORD;
+        }
+
+    /**
+     * @return true iff the expression uses a type composition's equals() function, or false iff the
+     *         expression uses a type composition's compare() function
+     */
+    public boolean usesEquals()
+        {
+        Id id = operator.getId();
+        return id == Id.COMP_EQ | id == Id.COMP_NEQ;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return operator.getId() == Id.COMP_ORD
-                ? pool().typeOrdered()
-                : pool().typeBoolean();
+        return producesBoolean()
+                ? pool().typeBoolean()
+                : pool().typeOrdered();
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool   = pool();
-        boolean      fValid = true;
+        ConstantPool pool = pool();
+        boolean fValid = true;
 
-        Expression   expr1New = expr1.validate(ctx, null, errs);
-        TypeConstant type1    = null;
+        Expression expr1New = expr1.validate(ctx, null, errs);
+        TypeConstant type1 = null;
         if (expr1New == null)
             {
             fValid = false;
             }
         else
             {
-            expr1   = expr1New;
-            type1   = expr1New.getType();
+            expr1 = expr1New;
+            type1 = expr1New.getType();
             fValid &= expr1New.getTypeFit().isFit();
             }
 
-        Expression   expr2New = expr2.validate(ctx, type1, errs);
-        TypeConstant type2    = null;
+        Expression expr2New = expr2.validate(ctx, type1, errs);
+        TypeConstant type2 = null;
         if (expr2New == null)
             {
             fValid = false;
             }
         else
             {
-            expr2   = expr2New;
-            type2   = expr2New.getType();
+            expr2 = expr2New;
+            type2 = expr2New.getType();
             fValid &= expr2New.getTypeFit().isFit();
+            }
+
+        if (fValid)
+            {
+            fValid &= usesEquals()
+                    ? type1.supportsEquals(type2, expr2New.hasConstantValue(), errs)
+                    : type1.supportsCompare(type2, expr2New.hasConstantValue(), errs);
             }
 
         if (!fValid)
@@ -125,119 +165,27 @@ public class CmpExpression
             return finishValidation(typeRequired, getImplicitType(ctx), TypeFit.NoFit, null, errs);
             }
 
-        // not counting immutability, the types must be the same REVIEW GG
-        if (!type1.ensureImmutable().equals(type2.ensureImmutable()))
+        TypeConstant typeResult = getImplicitType(ctx);
+        Constant     constVal   = null;
+        if (expr1New.hasConstantValue() && expr2.hasConstantValue())
             {
-            // TODO log error
-            }
-
-        // @See
-        // TypeInfo.findEqualsFunction
-        // TypeInfo.findCompareFunction
-        // TypeConstant.callEquals
-        // TypeConstant.callCompare
-
-//        // validation of a constant expression is simpler, so do it first
-//        TypeConstant type1 = expr1.getType();
-//        TypeConstant type2 = expr2.getType();
-//        if (isConstant())
-//            {
-//            // first determine the type of the result, and pick a suitable default value just in
-//            // case everything blows up
-//            Constant const1 = expr1.toConstant();
-//            Constant const2 = expr2.toConstant();
-//            switch (operator.getId())
-//                {
-//                case COMP_EQ:
-//                case COMP_NEQ:
-//                case COMP_LT:
-//                case COMP_LTEQ:
-//                case COMP_GT:
-//                case COMP_GTEQ:
-//                    m_constType = pool.typeBoolean();
-//                    m_constVal  = pool.valFalse();
-//                    break;
-//
-//                case COMP_ORD:
-//                    m_constType = pool.typeOrdered();
-//                    m_constVal  = pool.valEqual();
-//                    break;
-//
-//                default:
-//                    operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-//                    return false;
-//                }
-//
-//            // delegate the operation to the constants
-//            try
-//                {
-//                m_constVal  = const1.apply(operator.getId(), const2);
-//                return fValid;
-//                }
-//            catch (ArithmeticException e)
-//                {
-//                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, m_constType,
-//                        getSource().toString(getStartPosition(), getEndPosition()));
-//                return false;
-//                }
-//            }
-
-        // determine the type of this expression; this is even done if the sub-expressions did not
-        // validate, so that compilation doesn't have to grind to a halt for just one error
-        switch (operator.getId())
-            {
-            case COMP_EQ:
-            case COMP_NEQ:
-            case COMP_LT:
-            case COMP_GT:
-            case COMP_LTEQ:
-            case COMP_GTEQ:
-                // TODO pool.typeBoolean();
-                notImplemented();
-                break;
-
-            case COMP_ORD:
-                // TODO pool.typeOrdered();
-                notImplemented();
-                break;
-
-            default:
-                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-                // TODO assume required type or expr1.getType();
-                fValid = false;
-                break;
-            }
-
-        return fValid
-                ? this
-                : null;
-        }
-
-    @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk,
-            boolean fUsedOnce, ErrorListener errs)
-        {
-        if (!isConstant())
-            {
-            switch (operator.getId())
+            try
                 {
-                case COMP_EQ:
-                case COMP_NEQ:
-                case COMP_LT:
-                case COMP_GT:
-                case COMP_LTEQ:
-                case COMP_GTEQ:
-                case COMP_ORD:
-                    code.add(new Var(getType()));
-                    Register regResult = code.lastRegister();
-                    generateAssignment(code, new Assignable(regResult), errs);
-                    return regResult;
+                constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                }
+            catch (RuntimeException e)
+                {
+                // it's an error, but pick some arbitrary default
+                fValid = false;
+                constVal = producesBoolean()
+                        ? pool.valFalse()
+                        : pool.valEqual();
                 }
             }
 
-        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+        return finishValidation(typeRequired, typeResult, fValid ? TypeFit.Fit : TypeFit.NoFit,
+                constVal, errs);
         }
-
 
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
@@ -245,39 +193,39 @@ public class CmpExpression
         if (LVal.isLocalArgument())
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, false, errs);
+            Argument arg1      = expr1.generateArgument(code, true, true, errs);
+            Argument arg2      = expr2.generateArgument(code, true, true, errs);
+            Argument argResult = LVal.getLocalArgument();
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())
                 {
                 case COMP_EQ:
-                    code.add(new IsEq(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsEq(arg1, arg2, argResult));
                     break;
 
                 case COMP_NEQ:
-                    code.add(new IsNotEq(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsNotEq(arg1, arg2, argResult));
                     break;
 
                 case COMP_LT:
-                    code.add(new IsLt(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsLt(arg1, arg2, argResult));
                     break;
 
                 case COMP_GT:
-                    code.add(new IsGt(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsGt(arg1, arg2, argResult));
                     break;
 
                 case COMP_LTEQ:
-                    code.add(new IsLte(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsLte(arg1, arg2, argResult));
                     break;
 
                 case COMP_GTEQ:
-                    code.add(new IsGte(arg1, arg2, LVal.getLocalArgument()));
+                    code.add(new IsGte(arg1, arg2, argResult));
                     break;
 
                 case COMP_ORD:
-                    // TODO
-                    throw new UnsupportedOperationException();
+                    code.add(new Cmp(arg1, arg2, argResult));
                 }
 
             return;
@@ -286,6 +234,50 @@ public class CmpExpression
         super.generateAssignment(code, LVal, errs);
         }
 
+    @Override
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+        {
+        if (!hasConstantValue() && producesBoolean())
+            {
+            // evaluate the sub-expressions
+            Argument arg1 = expr1.generateArgument(code, true, true, errs);
+            Argument arg2 = expr2.generateArgument(code, true, true, errs);
+
+            // generate the op that combines the two sub-expressions
+            switch (operator.getId())
+                {
+                case COMP_EQ:
+                    code.add(new JumpEq(arg1, arg2, label));
+                    return;
+
+                case COMP_NEQ:
+                    code.add(new JumpNotEq(arg1, arg2, label));
+                    return;
+
+                case COMP_LT:
+                    code.add(new JumpLt(arg1, arg2, label));
+                    return;
+
+                case COMP_GT:
+                    code.add(new JumpGt(arg1, arg2, label));
+                    return;
+
+                case COMP_LTEQ:
+                    code.add(new JumpLte(arg1, arg2, label));
+                    return;
+
+                case COMP_GTEQ:
+                    code.add(new JumpGte(arg1, arg2, label));
+                    return;
+
+                default:
+                case COMP_ORD:
+                    throw new IllegalStateException();
+                }
+            }
+
+        super.generateConditionalJump(code, label, fWhenTrue, errs);
+        }
 
     // ----- fields --------------------------------------------------------------------------------
 

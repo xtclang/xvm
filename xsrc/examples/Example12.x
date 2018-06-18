@@ -1115,5 +1115,50 @@ bar(bar(qoo()));
 Tuple t2 = (1,2);       // ok
 Tuple t2 = Tuple:(1,2); // ok (same as above)
 Tuple t  = 1;           // error
-Tuple t  = (1);         // error (same as "(1*1)" or "(1+0)", i.e. it's just a parenthesized expression) 
+Tuple t  = (1);         // error (same as "(1*1)" or "(1+0)", i.e. it's just a parenthesized expression)
 Tuple t  = Tuple:(1);   // ok (explicit tuple literal)
+
+// -- equals()
+
+Object  o1 = ..
+Object  o2 = ..
+if (o1 == o2) {..}      // ok because there is an equals() function on Object itself
+
+class C extends Object {}
+C c1 = ..
+C c2 = ..
+if (c1 == c2) {..}      // should this be allowed? (no equals() function on C, but one is on Object)
+
+class A {}              // assume that it has both equals() and compare() function
+class B {}              // assume that it has both equals() and compare() function
+if (a1 == a2) ...
+if (a1 < a2) ...
+
+(A | B) ab1 = ..
+(A | B) ab2 = ..
+if (ab1 == ab2) ...     // ok
+if (ab1 < ab2) ...      // ... is this ok?
+
+// something simpler
+
+@M1 Int mi1 = ..
+@M1 Int mi2 = ..
+if (mi1 == mi2) {..}        // what does it mean?
+
+
+@M1 @M2 (A | B) mmab1 = ..
+@M1 @M2 (A | B) mmab2 = ..
+if (mmab1 == mmab2) ...     // ???
+
+
+(A | B) ab1 = ..
+(B | A) ba2 = ..
+if (ab1 == ba2) ...         // ok? Gene says no
+
+A a1 = ..
+immutable A a2 = ...
+if (a1 == a2)               // Gene says no
+
+// problem with mutable / immutable, List/Array etc. when constants are involved
+List<Int> list = ...
+if (list == [0,1,2]) ...    // what is the type of the constant? it's an Array<Int>, not a List<Int>

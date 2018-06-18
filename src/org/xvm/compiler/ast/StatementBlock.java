@@ -12,6 +12,7 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
+import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
@@ -180,7 +181,7 @@ public class StatementBlock
         {
         RootContext ctx = new RootContext(code.getMethodStructure(), this);
 
-        Statement that = validate(ctx.validatingContext(), errs);
+        Statement that = this.validate(ctx.validatingContext(), errs);
         if (that != null && !errs.isAbortDesired())
             {
             boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
@@ -197,6 +198,13 @@ public class StatementBlock
                     errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, source,
                             getEndPosition(), getEndPosition());
                     }
+                }
+            else
+                {
+                // it is is possible that there is a dangling label at the end that is unreachable,
+                // and it will not have been eliminated at this point, so "cap" the op code stream
+                // with a Nop that will get removed by "dead code elimination"
+                code.add(new Nop());
                 }
             }
         }
