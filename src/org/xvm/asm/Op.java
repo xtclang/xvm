@@ -716,7 +716,15 @@ public abstract class Op
             case OP_GP_MUL:      return new GP_Mul      (in, aconst);
             case OP_GP_DIV:      return new GP_Div      (in, aconst);
             case OP_GP_MOD:      return new GP_Mod      (in, aconst);
+            case OP_GP_SHL:      return new GP_Shl      (in, aconst);
+            case OP_GP_SHR:      return new GP_Shr      (in, aconst);
+            case OP_GP_USHR:     return new GP_ShrAll   (in, aconst);
+            case OP_GP_AND:      return new GP_And      (in, aconst);
+            case OP_GP_OR:       return new GP_Or       (in, aconst);
+            case OP_GP_XOR:      return new GP_Xor      (in, aconst);
+            case OP_GP_DIVMOD:   return new GP_DivMod   (in, aconst);
             case OP_GP_NEG:      return new GP_Neg      (in, aconst);
+            case OP_GP_COMPL:    return new GP_Compl    (in, aconst);
 
             case OP_IP_INC:      return new IP_Inc      (in, aconst);
             case OP_IP_DEC:      return new IP_Dec      (in, aconst);
@@ -907,7 +915,15 @@ public abstract class Op
             case OP_GP_MUL:      return "GP_MUL";
             case OP_GP_DIV:      return "GP_DIV";
             case OP_GP_MOD:      return "GP_MOD";
+            case OP_GP_SHL:      return "GP_SHL";
+            case OP_GP_SHR:      return "GP_SHR";
+            case OP_GP_USHR:     return "GP_USHR";
+            case OP_GP_AND:      return "GP_AND";
+            case OP_GP_OR:       return "GP_OR";
+            case OP_GP_XOR:      return "GP_XOR";
+            case OP_GP_DIVMOD:   return "GP_DIVMOD";
             case OP_GP_NEG:      return "GP_NEG";
+            case OP_GP_COMPL:    return "GP_COMPL";
             case OP_L_GET:       return "L_GET";
             case OP_L_SET:       return "L_SET";
             case OP_P_GET:       return "P_GET";

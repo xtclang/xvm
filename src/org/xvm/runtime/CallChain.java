@@ -88,6 +88,17 @@ public class CallChain
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
 
+    // natural chain invocation with one arg and multiple return values
+    public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        assert !isNative();
+
+        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ahVar[0] = hArg;
+
+        return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
+        }
+
     public int callSuper01(Frame frame, int iReturn)
         {
         ObjectHandle hThis = frame.getThis();

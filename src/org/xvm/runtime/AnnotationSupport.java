@@ -112,11 +112,83 @@ public class AnnotationSupport
         }
 
     @Override
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain("<<", 2);
+        return chain == null
+            ? f_support.invokeShl(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain(">>", 2);
+        return chain == null
+            ? f_support.invokeShr(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain(">>>", 2);
+        return chain == null
+            ? f_support.invokeShrAll(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain("&", 2);
+        return chain == null
+            ? f_support.invokeAnd(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain("|", 2);
+        return chain == null
+            ? f_support.invokeOr(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain("^", 2);
+        return chain == null
+            ? f_support.invokeXor(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        CallChain chain = getOpChain("/%", 2);
+        return chain == null
+            ? f_support.invokeDivMod(frame, hTarget, hArg, aiReturn)
+            : chain.invoke(frame, hTarget, hArg, aiReturn);
+        }
+
+    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("neg", 1);
+        CallChain chain = getOpChain("!", 1);
         return chain == null
             ? f_support.invokeNeg(frame, hTarget, iReturn)
+            : chain.invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        CallChain chain = getOpChain("~", 1);
+        return chain == null
+            ? f_support.invokeCompl(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
         }
 

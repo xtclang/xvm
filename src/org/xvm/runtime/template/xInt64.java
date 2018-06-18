@@ -118,26 +118,6 @@ public class xInt64
         }
 
     @Override
-    public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 / l2;
-
-        return frame.assignValue(iReturn, makeHandle(lr));
-        }
-
-    @Override
-    public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        long l1 = ((JavaLong) hTarget).getValue();
-        long l2 = ((JavaLong) hArg).getValue();
-        long lr = l1 % l2;
-
-        return frame.assignValue(iReturn, makeHandle(lr));
-        }
-
-    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         long l = ((JavaLong) hTarget).getValue();

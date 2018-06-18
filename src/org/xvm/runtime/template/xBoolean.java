@@ -47,6 +47,36 @@ public class xBoolean
         }
 
     @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle(((BooleanHandle) hTarget).get() & ((BooleanHandle) hArg).get()));
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle(((BooleanHandle) hTarget).get() | ((BooleanHandle) hArg).get()));
+        }
+
+    @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return frame.assignValue(iReturn, makeHandle(((BooleanHandle) hTarget).get() ^ ((BooleanHandle) hArg).get()));
+        }
+
+    @Override
+    public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, not((BooleanHandle) hTarget));
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return frame.assignValue(iReturn, not((BooleanHandle) hTarget));
+        }
+
+    @Override
     public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,

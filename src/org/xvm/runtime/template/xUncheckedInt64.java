@@ -163,7 +163,82 @@ public class xUncheckedInt64
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(l1 % l2));
+        long lMod = l1 % l2;
+        if (lMod < 0)
+            {
+            lMod += (l2 < 0 ? -l2 : l2);
+            }
+
+        return frame.assignValue(iReturn, makeHandle(lMod));
+        }
+
+    @Override
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 << l2));
+        }
+
+    @Override
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 >> l2));
+        }
+
+    @Override
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 >>> l2));
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 & l2));
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 | l2));
+        }
+
+    @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(l1 ^ l2));
+        }
+
+    @Override
+    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        long lMod = l1 % l2;
+        if (lMod < 0)
+            {
+            lMod += (l2 < 0 ? -l2 : l2);
+            }
+
+        return frame.assignValues(aiReturn, makeHandle(l1 / l2), makeHandle(lMod));
         }
 
     @Override
@@ -172,6 +247,14 @@ public class xUncheckedInt64
         long l = ((JavaLong) hTarget).getValue();
 
         return frame.assignValue(iReturn, makeHandle(-l));
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+
+        return frame.assignValue(iReturn, makeHandle(~l));
         }
 
     @Override

@@ -696,7 +696,7 @@ public class RelOpExpression
             return super.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        // TODO
+        // TODO /%
         notImplemented();
         return null;
         }
@@ -742,34 +742,27 @@ public class RelOpExpression
                     throw new UnsupportedOperationException();
 
                 case ADD:
-// TODO convert?
                     code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case SUB:
-// TODO convert?
                     code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case MUL:
-// TODO convert?
                     code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case DIVMOD:
-                    if (LVal.getType().isTuple())
-                        {
-                        // TODO
-                        throw new UnsupportedOperationException();
-                        }
-                    // fall through
+                    // TODO /% with one real register and one black hole
+                    notImplemented();
+                    break;
+
                 case DIV:
-// TODO convert?
                     code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
                     break;
 
                 case MOD:
-// TODO convert?
                     code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
                     break;
                 }
@@ -786,7 +779,7 @@ public class RelOpExpression
         if (getValueCount() == 2)
             {
             assert operator.getId() == Id.DIVMOD;
-            // TODO
+            // TODO /%
             throw new UnsupportedOperationException();
             }
 

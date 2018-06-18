@@ -1305,13 +1305,61 @@ public abstract class ClassTemplate
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
+        return getOpChain(hTarget, "%", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, "<<", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, ">>", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, ">>>", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
         return getOpChain(hTarget, "&", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, "|", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, "&", 2).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        return getOpChain(hTarget, "/%", 2).invoke(frame, hTarget, hArg, aiReturn);
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "neg", 1).invoke(frame, hTarget, iReturn);
+        return getOpChain(hTarget, "!", 1).invoke(frame, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        return getOpChain(hTarget, "~", 1).invoke(frame, hTarget, iReturn);
         }
 
     @Override

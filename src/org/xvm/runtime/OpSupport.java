@@ -88,6 +88,97 @@ public interface OpSupport
      */
     int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
+    /**
+     * Perform an "shl" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "shr" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "ushr" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "and" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "or" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "xor" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform an "divmod" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param aiReturn the two register ids to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
+
 
     // ----- built-in unary operations -------------------------------------------------------------
 
@@ -102,6 +193,18 @@ public interface OpSupport
      *         or {@link Op#R_BLOCK} values
      */
     int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn);
+
+    /**
+     * Perform a "complement" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn);
 
     /**
      * Perform a "sequential next" operation.
