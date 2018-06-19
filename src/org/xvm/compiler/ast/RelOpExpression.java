@@ -10,7 +10,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -20,11 +19,17 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.GP_Add;
+import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
+import org.xvm.asm.op.GP_DivMod;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
+import org.xvm.asm.op.GP_Or;
+import org.xvm.asm.op.GP_Shl;
+import org.xvm.asm.op.GP_Shr;
+import org.xvm.asm.op.GP_ShrAll;
 import org.xvm.asm.op.GP_Sub;
-import org.xvm.asm.op.Var;
+import org.xvm.asm.op.GP_Xor;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -38,7 +43,7 @@ import org.xvm.util.Severity;
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
  * "expression operator expression".
- *
+ * <p/>
  * <ul>
  * <li><tt>BIT_OR:     "|"</tt> - </li>
  * <li><tt>BIT_XOR:    "^"</tt> - </li>
@@ -54,24 +59,6 @@ import org.xvm.util.Severity;
  * <li><tt>MOD:        "%"</tt> - </li>
  * <li><tt>DIVMOD:     "/%"</tt> - </li>
  * </ul>
- *
- * TODO remove cut&paste:
-    switch (operator.getId())
-        {
-        case BIT_OR:
-        case BIT_XOR:
-        case BIT_AND:
-        case DOTDOT:
-        case SHL:
-        case SHR:
-        case USHR:
-        case ADD:
-        case SUB:
-        case MUL:
-        case DIV:
-        case MOD:
-        case DIVMOD:
-        }
  */
 public class RelOpExpression
         extends BiExpression
@@ -658,132 +645,114 @@ public class RelOpExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (!hasConstantValue())
-            {
-            switch (operator.getId())
-                {
-                case DIVMOD:
-                case DOTDOT:
-                case ADD:
-                case SUB:
-                case MUL:
-                case DIV:
-                case MOD:
-                case BIT_OR:
-                case BIT_XOR:
-                case BIT_AND:
-                case SHL:
-                case SHR:
-                case USHR:
-                    code.add(new Var(getType()));
-                    Register regResult = code.lastRegister();
-                    generateAssignment(code, new Assignable(regResult), errs);
-                    return regResult;
-                }
-            }
-
-        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
-        }
-
-    @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
-        {
-        if (operator.getId() != Id.DIVMOD || isSingle())
-            {
-            return super.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
-            }
-
-        // TODO /%
-        notImplemented();
-        return null;
-        }
-
-    @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (LVal.isLocalArgument())
+        if (!LVal.isLocalArgument())
             {
-            // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, false, false, errs);
-            Argument arg2 = expr2.generateArgument(code, false, false, errs);
-
-            // generate the op that combines the two sub-expressions
-            switch (operator.getId())
-                {
-                case BIT_OR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case BIT_XOR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case BIT_AND:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case DOTDOT:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case SHL:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case SHR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case USHR:
-                    // TODO
-                    throw new UnsupportedOperationException();
-
-                case ADD:
-                    code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case SUB:
-                    code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case MUL:
-                    code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case DIVMOD:
-                    // TODO /% with one real register and one black hole
-                    notImplemented();
-                    break;
-
-                case DIV:
-                    code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-
-                case MOD:
-                    code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
-                    break;
-                }
-
-            return;
+            super.generateAssignment(code, LVal, errs);
             }
 
-        super.generateAssignment(code, LVal, errs);
+        // evaluate the sub-expressions
+        Argument arg1 = expr1.generateArgument(code, true, true, errs);
+        Argument arg2 = expr2.generateArgument(code, true, true, errs);
+
+        // generate the op that combines the two sub-expressions
+        switch (operator.getId())
+            {
+            case BIT_OR:
+                code.add(new GP_Or(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case BIT_XOR:
+                code.add(new GP_Xor(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case BIT_AND:
+                code.add(new GP_And(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case DOTDOT:
+                notImplemented();
+                // TODO code.add(new GP_(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case SHL:
+                code.add(new GP_Shl(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case SHR:
+                code.add(new GP_Shr(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case USHR:
+                code.add(new GP_ShrAll(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case ADD:
+                code.add(new GP_Add(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case SUB:
+                code.add(new GP_Sub(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case MUL:
+                code.add(new GP_Mul(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case DIVMOD:
+                // "/%" needs one real register and one black hole
+                generateAssignments(code, new Assignable[] {LVal, new Assignable()}, errs);
+                return;
+
+            case DIV:
+                code.add(new GP_Div(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            case MOD:
+                code.add(new GP_Mod(arg1, arg2, LVal.getLocalArgument()));
+                return;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
     public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        if (getValueCount() == 2)
+        switch (aLVal.length)
             {
-            assert operator.getId() == Id.DIVMOD;
-            // TODO /%
-            throw new UnsupportedOperationException();
-            }
+            default:
+                throw new IllegalStateException();
 
-        super.generateAssignments(code, aLVal, errs);
+            case 2:
+                if (operator.getId() != Id.DIVMOD)
+                    {
+                    throw new IllegalStateException();
+                    }
+
+                if (aLVal[0].isLocalArgument() && aLVal[1].isLocalArgument())
+                    {
+                    Argument arg1 = expr1.generateArgument(code, true, true, errs);
+                    Argument arg2 = expr2.generateArgument(code, true, true, errs);
+                    code.add(new GP_DivMod(arg1, arg2, new Argument[]
+                            {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
+                    }
+                else
+                    {
+                    super.generateAssignments(code, aLVal, errs);
+                    }
+                return;
+
+            case 1:
+                generateAssignment(code, aLVal[0], errs);
+                return;
+
+            case 0:
+                generateAssignment(code, new Assignable(), errs);
+                return;
+            }
         }
 
 

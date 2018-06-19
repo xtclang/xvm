@@ -1162,3 +1162,22 @@ if (a1 == a2)               // Gene says no
 // problem with mutable / immutable, List/Array etc. when constants are involved
 List<Int> list = ...
 if (list == [0,1,2]) ...    // what is the type of the constant? it's an Array<Int>, not a List<Int>
+
+//
+
+class C
+    {
+    construct (Int n) {..}
+    (String, Int) foo(String s, Int i, Boolean f) {..}
+    Int bar() {..}
+    }
+
+C c = ...
+function (String, Int) (String) f = c.foo(?, 5, true);
+function (String, Int) (String) f = (String s) -> c.foo(s, 5, true);
+
+function List<String> () f = () -> new List<String>(5);
+
+function Int () f = c.&bar();
+
+Class.Constructor f = &construct c(5)

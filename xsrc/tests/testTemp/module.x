@@ -7,6 +7,7 @@ module TestTemp.xqiz.it
         console.println("hello world!");
 
         testInts();
+        testBools();
         }
 
     void testInts()
@@ -24,10 +25,12 @@ module TestTemp.xqiz.it
         {
         Boolean a = true;
         Boolean b = false;
+
+//      Boolean c = true == false;
 //        Boolean c = a & b;
 //
-//        console.println("a=" + a);
-//        console.println("b=" + b);
+        console.println("a=" + a);
+        console.println("b=" + b);
 //        console.println("c=" + c);
         }
     }
