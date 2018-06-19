@@ -26,7 +26,7 @@ module TestTemp.xqiz.it
         {
         Boolean a = true;
         Boolean b = false;
-        Boolean c = true & false;
+        Boolean c = true == false;
 //      Boolean c = true == false;
 //        Boolean c = a & b;
 //

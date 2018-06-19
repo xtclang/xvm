@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -115,8 +116,12 @@ public class CmpExpression
         ConstantPool pool = pool();
         boolean fValid = true;
 
-        Expression expr1New = expr1.validate(ctx, null, errs);
-        TypeConstant type1 = null;
+        // attempt to guess the types that are being compared
+        TypeConstant type1       = expr1.getImplicitType(ctx);
+        TypeConstant type2       = expr2.getImplicitType(ctx);
+        TypeConstant typeRequest = selectType(type1, type2, errs);
+
+        Expression expr1New = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
             fValid = false;
@@ -126,6 +131,11 @@ public class CmpExpression
             expr1 = expr1New;
             type1 = expr1New.getType();
             fValid &= expr1New.getTypeFit().isFit();
+
+            if (typeRequest == null)
+                {
+                typeRequest = selectType(type1, type2, errs);
+                }
             }
 
         // allow the second expression to resolve names based on the first value type's
@@ -134,8 +144,7 @@ public class CmpExpression
                 ? ctx
                 : ctx.createInferringContext(type1);
 
-        Expression expr2New = expr2.validate(ctx2, type1, errs);
-        TypeConstant type2 = null;
+        Expression expr2New = expr2.validate(ctx2, typeRequest, errs);
         if (expr2New == null)
             {
             fValid = false;
@@ -144,14 +153,9 @@ public class CmpExpression
             {
             expr2 = expr2New;
             type2 = expr2New.getType();
-            fValid &= expr2New.getTypeFit().isFit();
-            }
-
-        if (fValid)
-            {
-            fValid &= usesEquals()
-                    ? type1.supportsEquals(type2, expr2New.hasConstantValue(), errs)
-                    : type1.supportsCompare(type2, expr2New.hasConstantValue(), errs);
+            fValid &= expr2New.getTypeFit().isFit() & usesEquals()
+                    ? typeRequest.supportsEquals (type2, expr2New.hasConstantValue(), errs)
+                    : typeRequest.supportsCompare(type2, expr2New.hasConstantValue(), errs);
             }
 
         if (!fValid)
@@ -167,14 +171,7 @@ public class CmpExpression
                 {
                 constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                 }
-            catch (RuntimeException e)
-                {
-                // it's an error, but pick some arbitrary default
-                fValid = false;
-                constVal = producesBoolean()
-                        ? pool.valFalse()
-                        : pool.valEqual();
-                }
+            catch (RuntimeException e) {}
             }
 
         return finishValidation(typeRequired, typeResult, fValid ? TypeFit.Fit : TypeFit.NoFit,
@@ -272,6 +269,59 @@ public class CmpExpression
 
         super.generateConditionalJump(code, label, fWhenTrue, errs);
         }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Given two types that should have some point of immediate commonality, select a target type.
+     *
+     * @param type1  the first type
+     * @param type2  the second type
+     * @param errs   an error list
+     *
+     * @return a target type or null
+     */
+    public static TypeConstant selectType(TypeConstant type1, TypeConstant type2, ErrorListener errs)
+        {
+        if (type1 == null && type2 == null)
+            {
+            return null;
+            }
+
+        if (type1 != null && type2 != null)
+            {
+            if (type2.isAssignableTo(type1))
+                {
+                return type1;
+                }
+
+            if (type1.isAssignableTo(type2))
+                {
+                return type2;
+                }
+
+            TypeInfo info1 = type1.ensureTypeInfo(errs);
+            if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
+                {
+                return info1.getExtends();
+                }
+
+            TypeInfo info2 = type2.ensureTypeInfo(errs);
+            if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends()))
+                {
+                return info2.getExtends();
+                }
+
+            return null;
+            }
+
+        TypeConstant typeResult = type1 == null ? type2 : type1;
+        TypeInfo     typeinfo   = typeResult.ensureTypeInfo(errs);
+        return typeinfo.getFormat() == Format.ENUMVALUE
+                ? typeinfo.getExtends()
+                : typeResult;
+        }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

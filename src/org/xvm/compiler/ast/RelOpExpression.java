@@ -433,32 +433,14 @@ public class RelOpExpression
             {
             // delegate the operation to the constants
             TypeConstant typeResult  = atypeResults[0];
-            Constant     constResult;
             try
                 {
-                constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                aconstResult = fMulti
+                        ? ((ArrayConstant) constResult).getValue() // divmod result is in a tuple
+                        : new Constant[] {constResult};
                 }
-            catch (ArithmeticException e)
-                {
-                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeResult,
-                        getSource().toString(getStartPosition(), getEndPosition()));
-                constResult = Constant.defaultValue(typeResult);
-                }
-            catch (UnsupportedOperationException | IllegalStateException e)
-                {
-                operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
-                constResult = Constant.defaultValue(typeResult);
-                }
-
-            if (fMulti)
-                {
-                // divmod result comes back as a tuple
-                aconstResult = ((ArrayConstant) constResult).getValue();
-                }
-            else
-                {
-                aconstResult = new Constant[] {constResult};
-                }
+            catch (RuntimeException e) {}
             }
 
         return finishValidations(atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
@@ -629,8 +611,8 @@ public class RelOpExpression
         else if (setOps != null)
             {
             // find the best op method out of the multiple options
-            notImplemented(); // TODO
-            return null;
+            System.err.println("TODO multi setOps on RelOpExpression for op=" + operator.getValueText() + ", type=" + type1.getValueString());
+            return setOps.iterator().next(); // TODO
             }
         else if (idConv != null)
             {
@@ -640,8 +622,8 @@ public class RelOpExpression
         else if (setConvs != null)
             {
             // find the best op method and conversion out of the multiple options
-            notImplemented(); // TODO
-            return null;
+            System.err.println("TODO multi setConvs on RelOpExpression for op=" + operator.getValueText() + ", type=" + type1.getValueString());
+            return setConvs.iterator().next(); // TODO
             }
         else
             {

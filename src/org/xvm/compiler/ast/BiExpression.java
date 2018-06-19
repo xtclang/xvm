@@ -109,6 +109,5 @@ public abstract class BiExpression
     protected Token      operator;
     protected Expression expr2;
 
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(BiExpression.class, "expr1", "expr2");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(BiExpression.class, "expr1", "expr2");
     }
