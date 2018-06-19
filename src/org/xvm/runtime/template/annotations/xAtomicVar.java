@@ -238,10 +238,10 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                        if (frameCaller.popStack() == xBoolean.FALSE)
                             {
                             return frameCaller.assignValue(iReturn, xBoolean.FALSE);
                             }
@@ -270,7 +270,7 @@ public class xAtomicVar
         @Override
         public int proceed(Frame frameCaller)
             {
-            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+            if (frameCaller.popStack() == xBoolean.FALSE)
                 {
                 return frameCaller.assignValue(iReturn, xBoolean.FALSE);
                 }
@@ -309,7 +309,7 @@ public class xAtomicVar
         @Override
         public int proceed(Frame frameCaller)
             {
-            if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+            if (frameCaller.popStack() == xBoolean.FALSE)
                 {
                 return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hExpect);
                 }
@@ -328,10 +328,10 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        if (frameCaller.getFrameLocal() == xBoolean.FALSE)
+                        if (frameCaller.popStack() == xBoolean.FALSE)
                             {
                             return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hCurrent);
                             }

@@ -104,16 +104,16 @@ public class Call_0T
 
             checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-            switch (chain.callSuper01(frame, A_LOCAL))
+            switch (chain.callSuper01(frame, A_STACK))
                 {
                 case R_NEXT:
                     return frame.assignTuple(m_nRetValue,
-                        new ObjectHandle[] {frame.getFrameLocal()});
+                        new ObjectHandle[] {frame.popStack()});
 
                 case R_CALL:
                     frame.m_frameNext.setContinuation(frameCaller ->
                         frameCaller.assignTuple(m_nRetValue,
-                            new ObjectHandle[] {frame.getFrameLocal()}));
+                            new ObjectHandle[] {frame.popStack()}));
                     return R_CALL;
 
                 case R_EXCEPTION:

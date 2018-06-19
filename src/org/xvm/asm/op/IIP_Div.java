@@ -58,10 +58,10 @@ public class IIP_Div
         long lIndex = hIndex.getValue();
 
         ObjectHandle hCurrent;
-        switch (template.extractArrayValue(frame, hTarget, lIndex, A_LOCAL))
+        switch (template.extractArrayValue(frame, hTarget, lIndex, A_STACK))
             {
             case R_NEXT:
-                hCurrent = frame.getFrameLocal();
+                hCurrent = frame.popStack();
                 break;
 
             case R_EXCEPTION:
@@ -72,7 +72,7 @@ public class IIP_Div
                 throw new IllegalStateException();
             }
 
-        switch (hCurrent.getOpSupport().invokeDiv(frame, hCurrent, hValue, A_LOCAL))
+        switch (hCurrent.getOpSupport().invokeDiv(frame, hCurrent, hValue, A_STACK))
             {
             case R_NEXT:
                 return template.assignArrayValue(frame, hTarget, lIndex, hValue);

@@ -81,16 +81,16 @@ public class IsLte
     protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callCompare(frame, hValue1, hValue2, A_LOCAL))
+        switch (type.callCompare(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
                 return frame.assignValue(m_nRetValue, xBoolean.makeHandle(
-                        frame.getFrameLocal() != xOrdered.GREATER));
+                        frame.popStack() != xOrdered.GREATER));
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue, xBoolean.makeHandle(
-                            frameCaller.getFrameLocal() != xOrdered.GREATER)));
+                            frameCaller.popStack() != xOrdered.GREATER)));
                 return R_CALL;
 
             case R_EXCEPTION:

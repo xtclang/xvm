@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.Constant;
@@ -68,7 +70,8 @@ public class Frame
     public  CallChain               m_chain;        // an invocation call chain
     public  int                     m_nDepth;       // this frame's depth in the call chain
 
-    private ObjectHandle            m_hFrameLocal;  // a "frame local" holding area
+    private ObjectHandle            m_hStackTop;    // the top of the local stack
+    private Deque<ObjectHandle>     m_stack;        // a remainder of the stack
 
     public static final int VAR_STANDARD         = 0;
     public static final int VAR_DYNAMIC_REF      = 1;
@@ -333,10 +336,7 @@ public class Frame
         switch (nArgId)
             {
             case Op.A_STACK:
-            // TODO GG implement A_STACK
-            // TODO remove A_LOCAL and replace usages with A_STACK instead?
-            case Op.A_LOCAL:
-                return m_hFrameLocal;
+                return popStack();
 
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hThis;
@@ -473,9 +473,49 @@ public class Frame
         return f_hThis == null ? f_function : f_hThis.getType();
         }
 
-    public ObjectHandle getFrameLocal()
+    /**
+     * Push a value on the local stack.
+     *
+     * @param hValue  a value to push
+     */
+    protected void pushStack(ObjectHandle hValue)
         {
-        return m_hFrameLocal;
+        if (m_hStackTop == null)
+            {
+            m_hStackTop = hValue;
+            }
+        else
+            {
+            Deque<ObjectHandle> stack = m_stack;
+            if (stack == null)
+                {
+                stack = m_stack = new ArrayDeque<>();
+                }
+            stack.push(hValue);
+            }
+        }
+
+    /**
+     * Pop a value from the local stack.
+     *
+     * @return a value from the stack
+     */
+    public ObjectHandle popStack()
+        {
+        Deque<ObjectHandle> stack = m_stack;
+        if (stack == null || stack.isEmpty())
+            {
+            ObjectHandle hValue = m_hStackTop;
+
+            assert hValue != null;
+
+            m_hStackTop = null;
+            return hValue;
+            }
+        else
+            {
+            return stack.pop();
+            }
         }
 
     // assign a specified register on this frame
@@ -578,8 +618,7 @@ public class Frame
                 return Op.R_NEXT;
 
             case Op.A_STACK:
-            case Op.A_LOCAL:
-                m_hFrameLocal = hValue;
+                pushStack(hValue);
                 return Op.R_NEXT;
 
             default:
@@ -937,10 +976,10 @@ public class Frame
                     case VAR_DYNAMIC_REF:
                         {
                         RefHandle hRef = (RefHandle) hValue;
-                        switch (hRef.getVarSupport().get(this, hRef, Op.A_LOCAL))
+                        switch (hRef.getVarSupport().get(this, hRef, Op.A_STACK))
                             {
                             case Op.R_NEXT:
-                                return getFrameLocal();
+                                return popStack();
 
                             case Op.R_CALL:
                                 return new DeferredCallHandle(m_frameNext);

@@ -594,10 +594,10 @@ public abstract class ClassTemplate
                         }
 
                 case 1:
-                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_LOCAL))
+                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_STACK))
                         {
                         case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
+                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.popStack()});
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;
@@ -630,10 +630,10 @@ public abstract class ClassTemplate
                         }
 
                 case 1:
-                    switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_LOCAL))
+                    switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_STACK))
                         {
                         case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
+                            return frame.assignTuple(iReturn, new ObjectHandle[]{frame.popStack()});
 
                         case Op.R_EXCEPTION:
                             return Op.R_EXCEPTION;

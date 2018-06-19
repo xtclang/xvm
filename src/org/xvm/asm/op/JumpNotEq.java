@@ -81,18 +81,18 @@ public class JumpNotEq
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callEquals(frame, hValue1, hValue2, A_LOCAL))
+        switch (type.callEquals(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
                 {
-                BooleanHandle hValue = (BooleanHandle) frame.getFrameLocal();
+                BooleanHandle hValue = (BooleanHandle) frame.popStack();
                 return hValue.get() ? iPC + 1 : iPC + m_ofJmp;
                 }
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    BooleanHandle hValue = (BooleanHandle) frameCaller.getFrameLocal();
+                    BooleanHandle hValue = (BooleanHandle) frameCaller.popStack();
                     return hValue.get() ? iPC + 1 : iPC + m_ofJmp;
                     });
                 return R_CALL;

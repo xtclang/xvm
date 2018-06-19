@@ -534,7 +534,7 @@ public class ServiceContext
                     {
                     case Op.R_NEXT:
                         Utils.log(frame, "\nUnhandled exception: " +
-                            ((StringHandle) frame.getFrameLocal()).getValue());
+                            ((StringHandle) frame.popStack()).getValue());
                         return Op.R_NEXT;
 
                     case Op.R_CALL:
@@ -542,7 +542,7 @@ public class ServiceContext
                             frameCaller ->
                                 {
                                 Utils.log(frameCaller, "\nUnhandled exception: " +
-                                    ((StringHandle) frame.getFrameLocal()).getValue());
+                                    ((StringHandle) frame.popStack()).getValue());
                                 return Op.R_NEXT;
                                 }
                             );

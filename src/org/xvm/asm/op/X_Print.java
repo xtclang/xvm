@@ -77,24 +77,24 @@ public class X_Print
             if (chain.isNative())
                 {
                 iResult = hValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue,
-                        Utils.OBJECTS_NONE, A_LOCAL);
+                        Utils.OBJECTS_NONE, A_STACK);
                 if (iResult == R_NEXT)
                     {
-                    sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
+                    sb.append(((xString.StringHandle) frame.popStack()).getValue());
                     }
                 }
             else
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-                iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, A_LOCAL);
+                iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, A_STACK);
                 }
 
             if (iResult == R_CALL)
                 {
                 frame.m_frameNext.setContinuation(frameCaller->
                     {
-                    sb.append(((xString.StringHandle) frameCaller.getFrameLocal()).getValue());
+                    sb.append(((xString.StringHandle) frameCaller.popStack()).getValue());
                     Utils.log(frame, sb.toString());
                     return Op.R_NEXT;
                     });

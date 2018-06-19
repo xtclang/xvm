@@ -99,10 +99,10 @@ public interface IndexSupport
     default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_STACK))
             {
             case Op.R_NEXT:
-                hValue = frame.getFrameLocal();
+                hValue = frame.popStack();
                 break;
 
             case Op.R_EXCEPTION:
@@ -113,11 +113,11 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_LOCAL))
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_STACK))
             {
             case Op.R_NEXT:
                 {
-                ObjectHandle hValueNew = frame.getFrameLocal();
+                ObjectHandle hValueNew = frame.popStack();
                 return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
                 }
@@ -125,7 +125,7 @@ public interface IndexSupport
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    ObjectHandle hValueNew = frameCaller.popStack();
                     return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
                     });
@@ -153,10 +153,10 @@ public interface IndexSupport
     default int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_STACK))
             {
             case Op.R_NEXT:
-                hValue = frame.getFrameLocal();
+                hValue = frame.popStack();
                 break;
 
             case Op.R_EXCEPTION:
@@ -167,15 +167,15 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_LOCAL))
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_STACK))
             {
             case Op.R_NEXT:
-                return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                return assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                    assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
                 return Op.R_CALL;
 
@@ -201,10 +201,10 @@ public interface IndexSupport
     default int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_STACK))
             {
             case Op.R_NEXT:
-                hValue = frame.getFrameLocal();
+                hValue = frame.popStack();
                 break;
 
             case Op.R_EXCEPTION:
@@ -215,11 +215,11 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_LOCAL))
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_STACK))
             {
             case Op.R_NEXT:
                 {
-                ObjectHandle hValueNew = frame.getFrameLocal();
+                ObjectHandle hValueNew = frame.popStack();
                 return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
                 }
@@ -227,7 +227,7 @@ public interface IndexSupport
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    ObjectHandle hValueNew = frameCaller.popStack();
                     return assignArrayValue(frame, hTarget, lIndex, hValueNew) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValueNew);
                     });
@@ -255,10 +255,10 @@ public interface IndexSupport
     default int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_STACK))
             {
             case Op.R_NEXT:
-                hValue = frame.getFrameLocal();
+                hValue = frame.popStack();
                 break;
 
             case Op.R_EXCEPTION:
@@ -269,15 +269,15 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_LOCAL))
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_STACK))
             {
             case Op.R_NEXT:
-                return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                return assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                     Op.R_EXCEPTION : frame.assignValue(iReturn, hValue);
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
+                    assignArrayValue(frame, hTarget, lIndex, frame.popStack()) == Op.R_EXCEPTION ?
                         Op.R_EXCEPTION : frame.assignValue(iReturn, hValue));
                 return Op.R_CALL;
 
@@ -298,10 +298,10 @@ public interface IndexSupport
 
         for (int i = 0; i < cValues; i++)
             {
-            switch (extractArrayValue(frame, hTarget, i, Op.A_LOCAL))
+            switch (extractArrayValue(frame, hTarget, i, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    ahValue[i] = frame.getFrameLocal();
+                    ahValue[i] = frame.popStack();
                     break;
 
                 case Op.R_EXCEPTION:
@@ -322,10 +322,10 @@ public interface IndexSupport
 
         for (int i = 0; i < cValues; i++)
             {
-            switch (extractArrayValue(frame, hTarget, i, Op.A_LOCAL))
+            switch (extractArrayValue(frame, hTarget, i, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    consumer.accept(frame.getFrameLocal());
+                    consumer.accept(frame.popStack());
                     break;
 
                 case Op.R_EXCEPTION:

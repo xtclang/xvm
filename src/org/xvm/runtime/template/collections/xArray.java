@@ -82,13 +82,13 @@ public class xArray
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Op.A_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Op.A_STACK);
         if (nR == Op.R_EXCEPTION)
             {
             throw new IllegalStateException("Failed to create an array " + typeArray);
             }
 
-        ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
+        ArrayHandle hArray = (ArrayHandle) frame.popStack();
         IndexSupport templateArray = (IndexSupport) hArray.getOpSupport();
 
         ObjectHeap heap = frame.f_context.f_heapGlobal;
@@ -120,13 +120,13 @@ public class xArray
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Op.A_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Op.A_STACK);
         if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
             }
 
-        ArrayHandle hArray = (ArrayHandle) frame.getFrameLocal();
+        ArrayHandle hArray = (ArrayHandle) frame.popStack();
 
         if (cCapacity > 0)
             {
@@ -301,7 +301,7 @@ public class xArray
         @Override
         public int proceed(Frame frameCaller)
             {
-            return template.assignArrayValue(frameCaller, hArray, index, frameCaller.getFrameLocal())
+            return template.assignArrayValue(frameCaller, hArray, index, frameCaller.popStack())
                     == Op.R_EXCEPTION ?
                 Op.R_EXCEPTION : doNext(frameCaller);
             }
@@ -312,7 +312,7 @@ public class xArray
                 {
                 ahVar[0] = xInt64.makeHandle(index);
 
-                switch (hSupplier.call1(frameCaller, null, ahVar, Op.A_LOCAL))
+                switch (hSupplier.call1(frameCaller, null, ahVar, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         break;
@@ -359,7 +359,7 @@ public class xArray
         @Override
         public int proceed(Frame frameCaller)
             {
-            ObjectHandle hResult = frameCaller.getFrameLocal();
+            ObjectHandle hResult = frameCaller.popStack();
             if (hResult == xBoolean.FALSE)
                 {
                 return frameCaller.assignValue(iReturn, hResult);
@@ -372,10 +372,10 @@ public class xArray
             int iEl;
             while ((iEl = holder[0]++) < cElements)
                 {
-                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Op.A_LOCAL))
+                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        ObjectHandle hResult = frameCaller.getFrameLocal();
+                        ObjectHandle hResult = frameCaller.popStack();
                         if (hResult == xBoolean.FALSE)
                             {
                             return frameCaller.assignValue(iReturn, hResult);
