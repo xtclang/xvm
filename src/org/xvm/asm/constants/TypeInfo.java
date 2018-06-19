@@ -513,8 +513,7 @@ public class TypeInfo
         }
 
     /**
-     * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
-     *         not a mixin
+     * @return the TypeConstant representing the "native rebase" type
      */
     public TypeConstant getRebases()
         {
@@ -522,8 +521,7 @@ public class TypeInfo
         }
 
     /**
-     * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
-     *         not a mixin
+     * @return the TypeConstant representing the super class
      */
     public TypeConstant getExtends()
         {

@@ -78,7 +78,7 @@ public class TypedefConstant
     public boolean containsUnresolved()
         {
         TypedefStructure typedef = (TypedefStructure) getComponent();
-        return typedef == null || typedef.getType().containsUnresolved();
+        return super.containsUnresolved() || typedef == null || typedef.getType().containsUnresolved();
         }
 
     @Override

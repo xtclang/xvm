@@ -46,6 +46,13 @@ public class NativeRebaseConstant
 
     // ----- Constant methods ----------------------------------------------------------------------
 
+
+    @Override
+    public boolean containsUnresolved()
+        {
+        return super.containsUnresolved() || m_constIface.containsUnresolved();
+        }
+
     @Override
     public boolean validate(ErrorListener errlist)
         {

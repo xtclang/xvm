@@ -31,6 +31,21 @@ public class TupleElementsTypeConstant
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
+
+    @Override
+    public boolean containsUnresolved()
+        {
+        for (TypeConstant type : m_atypeElements)
+            {
+            if (type.containsUnresolved())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
     @Override
     public TypeConstant[] getParamTypesArray()
         {

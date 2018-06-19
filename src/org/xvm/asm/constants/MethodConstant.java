@@ -243,7 +243,11 @@ public class MethodConstant
             // Note, that the implementation doesn't differentiate between methods and functions,
             // making both the methods and the functions be of the "Function" type
             // (@see InvocationExpression.generateArguments)
-            m_type = type = getSignature().asFunctionType();
+            type = getSignature().asFunctionType();
+            if (!type.containsUnresolved())
+                {
+                m_type = type;
+                }
             }
         return type;
         }
