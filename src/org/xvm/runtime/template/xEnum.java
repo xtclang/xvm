@@ -149,6 +149,22 @@ public class xEnum
         }
 
     @Override
+    public int callEquals(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        EnumHandle hEnum1 = (EnumHandle) hValue1;
+        EnumHandle hEnum2 = (EnumHandle) hValue2;
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hEnum1.getValue() == hEnum2.getValue()));
+        }
+
+    @Override
+    public int callCompare(Frame frame, TypeComposition clazz, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        EnumHandle hEnum1 = (EnumHandle) hValue1;
+        EnumHandle hEnum2 = (EnumHandle) hValue2;
+        return frame.assignValue(iReturn, xOrdered.makeHandle(hEnum1.getValue() - hEnum2.getValue()));
+        }
+
+    @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
         return ((EnumHandle) hValue1).getValue() == ((EnumHandle) hValue2).getValue();
