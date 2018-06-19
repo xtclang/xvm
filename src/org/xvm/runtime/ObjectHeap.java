@@ -58,7 +58,6 @@ public class ObjectHeap
                 {
                 return hValue;
                 }
-            System.out.println("unresolved " + constValue);
             }
 
         TypeConstant type = getConstType(constValue);

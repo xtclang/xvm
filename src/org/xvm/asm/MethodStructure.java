@@ -975,7 +975,8 @@ public class MethodStructure
                             break;
                             }
 
-                        if (template.f_struct.getFormat() == Format.ENUMVALUE)
+                        if (template.f_struct.getFormat() == Format.ENUMVALUE ||
+                            template.f_struct.getFormat() == Format.ENUM)
                             {
                             // TODO: rework this when enum values constructors are generated
                             return Op.R_NEXT;

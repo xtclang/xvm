@@ -97,7 +97,7 @@ public class IntervalConstant
         {
         // only indicate "Reverse" if the first constant is greater than the second constant when
         // they are compared; apply() must return either valTrue() or valFalse() for this op
-        return m_const1.apply(Id.COMP_GT, m_const2) == getConstantPool().valTrue();
+        return getConstantPool().valTrue().equals(m_const1.apply(Id.COMP_GT, m_const2));
         }
 
     /**

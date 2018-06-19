@@ -67,7 +67,7 @@ public class xEnum
                     {
                     listNames.add(child.getName());
 
-                    EnumHandle hValue = new EnumHandle(getCanonicalClass(), cValues++);
+                    EnumHandle hValue = makeEnumHandle(cValues++);
                     listHandles.add(hValue);
 
                     pool.ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
@@ -82,12 +82,50 @@ public class xEnum
             }
         }
 
+    /**
+     * Create an EnumHandle for the specified ordinal value.
+     *
+     * @param iOrdinal  the ordinal value
+     *
+     * @return the corresponding EnumHandle
+     */
+    protected EnumHandle makeEnumHandle(int iOrdinal)
+        {
+        return new EnumHandle(getCanonicalClass(), iOrdinal);
+        }
+
     @Override
     public ObjectHandle createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof SingletonConstant)
             {
-            return ((SingletonConstant) constant).getHandle();
+            SingletonConstant constValue = (SingletonConstant) constant;
+            EnumHandle hValue = (EnumHandle) constValue.getHandle();
+
+            if (hValue == null)
+                {
+                // it's possible that the value comes from a different constant pool;
+                // find a match
+                ConstantPool pool = f_struct.getConstantPool();
+                int iOrdinal = 0;
+                for (Component child : f_struct.children())
+                    {
+                    if (child.getFormat() == Component.Format.ENUMVALUE)
+                        {
+                        SingletonConstant constEnum =
+                            pool.ensureSingletonConstConstant(child.getIdentityConstant());
+
+                        if (constEnum.equals(constValue))
+                            {
+                            hValue = m_listHandles.get(iOrdinal);
+                            constEnum.setHandle(hValue);
+                            break;
+                            }
+                        iOrdinal++;
+                        }
+                    }
+                }
+            return hValue;
             }
         return null;
         }
