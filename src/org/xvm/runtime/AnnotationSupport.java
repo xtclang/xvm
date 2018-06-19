@@ -1,8 +1,8 @@
 package org.xvm.runtime;
 
 import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
