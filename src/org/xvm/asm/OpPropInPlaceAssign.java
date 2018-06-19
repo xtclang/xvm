@@ -196,11 +196,11 @@ public abstract class OpPropInPlaceAssign
                 switch (nStep)
                     {
                     case 0: // get
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, A_LOCAL);
                         break;
 
                     case 1:
-                        iResult = action.action(frameCaller, hValueOld, hValue, Frame.RET_LOCAL);
+                        iResult = action.action(frameCaller, hValueOld, hValue, A_LOCAL);
                         break;
 
                     case 2:

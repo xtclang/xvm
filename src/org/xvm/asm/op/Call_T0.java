@@ -175,7 +175,7 @@ public class Call_T0
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
 
-        return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+        return frame.call1(function, null, ahVar, A_IGNORE);
         }
 
     protected int complete(Frame frame, FunctionHandle hFunction, TupleHandle hArg)
@@ -188,7 +188,7 @@ public class Call_T0
 
         ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
 
-        return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+        return hFunction.call1(frame, null, ahVar, A_IGNORE);
         }
 
     @Override

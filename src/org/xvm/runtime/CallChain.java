@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody;
@@ -145,7 +146,7 @@ public class CallChain
 
             case Native:
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
-                    hThis, hArg, Frame.RET_UNUSED);
+                    hThis, hArg, Op.A_IGNORE);
 
             case Explicit:
                 {
@@ -153,7 +154,7 @@ public class CallChain
                 ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
                 ahVar[1] = hArg;
 
-                return frame.invoke1(this, nDepth, hThis, ahVar, Frame.RET_UNUSED);
+                return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
                 }
 
             default:

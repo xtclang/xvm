@@ -82,7 +82,7 @@ public class xArray
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Frame.RET_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Op.A_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
             throw new IllegalStateException("Failed to create an array " + typeArray);
@@ -120,7 +120,7 @@ public class xArray
 
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Frame.RET_LOCAL);
+        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Op.A_LOCAL);
         if (nR == Op.R_EXCEPTION)
             {
             return Op.R_EXCEPTION;
@@ -312,7 +312,7 @@ public class xArray
                 {
                 ahVar[0] = xInt64.makeHandle(index);
 
-                switch (hSupplier.call1(frameCaller, null, ahVar, Frame.RET_LOCAL))
+                switch (hSupplier.call1(frameCaller, null, ahVar, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         break;
@@ -372,7 +372,7 @@ public class xArray
             int iEl;
             while ((iEl = holder[0]++) < cElements)
                 {
-                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Frame.RET_LOCAL))
+                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         ObjectHandle hResult = frameCaller.getFrameLocal();

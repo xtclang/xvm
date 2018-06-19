@@ -52,7 +52,7 @@ public class IP_PreDec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, Frame.RET_LOCAL))
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, A_LOCAL))
             {
             case R_NEXT:
                 {

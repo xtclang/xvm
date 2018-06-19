@@ -406,7 +406,7 @@ public class ServiceContext
         ObjectHandle[] ahVar = new ObjectHandle[cReturns];
 
         Fiber fiber = new Fiber(this, msg);
-        Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Frame.RET_UNUSED, null);
+        Frame frame = new Frame(fiber, msg.f_iCallerPC, aopNative, ahVar, Op.A_IGNORE, null);
 
         for (int nVar = 0; nVar < cReturns; nVar++)
             {
@@ -712,7 +712,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, null, f_ahArg, Frame.RET_UNUSED);
+                    return f_hFunction.call1(frame, null, f_ahArg, A_IGNORE);
                     }
 
                 public String toString()
@@ -774,7 +774,7 @@ public class ServiceContext
                 public int process(Frame frame, int iPC)
                     {
                     return f_hFunction.call1(frame, context.getService(),
-                        f_ahArg, f_cReturns == 1 ? 0 : Frame.RET_UNUSED);
+                        f_ahArg, f_cReturns == 1 ? 0 : A_IGNORE);
                     }
 
                 public String toString()

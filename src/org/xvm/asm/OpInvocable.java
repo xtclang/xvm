@@ -261,7 +261,7 @@ public abstract class OpInvocable extends Op
             return sb.append(')').toString();
             }
 
-        if (m_nRetValue != Frame.RET_UNUSED || m_argReturn != null)
+        if (m_nRetValue != A_IGNORE || m_argReturn != null)
             {
             return Argument.toIdString(m_argReturn, m_nRetValue);
             }
@@ -271,7 +271,7 @@ public abstract class OpInvocable extends Op
 
     protected int   m_nTarget;
     protected int   m_nMethodId;
-    protected int   m_nRetValue = Frame.RET_UNUSED;
+    protected int   m_nRetValue = A_IGNORE;
     protected int[] m_anRetValue;
 
     protected Argument       m_argTarget;

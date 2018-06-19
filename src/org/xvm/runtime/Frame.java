@@ -70,21 +70,16 @@ public class Frame
 
     private ObjectHandle            m_hFrameLocal;  // a "frame local" holding area
 
-    // positive return values indicate a caller's frame register
-    // negative value above RET_LOCAL indicate an automatic tuple conversion
-    public final static int RET_LOCAL  = -65000;
-
-    // an indicator for the "frame local single value"
-    public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
-    public final static int RET_MULTI  = -65002;  // an indicator for "multiple return values"
-    public final static int RET_TUPLE  = -65003;  // an indicator for a "tuple return"
-
     public static final int VAR_STANDARD         = 0;
     public static final int VAR_DYNAMIC_REF      = 1;
     public static final int VAR_STANDARD_WAITING = 2;
     public static final int VAR_DYNAMIC_WAITING  = 3;
 
-    // construct a frame
+    /**
+     * Construct a frame.
+     *
+     * @param iReturn  positive values indicate the caller's frame register
+     */
     protected Frame(Frame framePrev, MethodStructure function,
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn)
         {
@@ -179,7 +174,7 @@ public class Frame
     public Frame createFrameT(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, method, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
+        return new Frame(this, method, hTarget, ahVar, Op.A_TUPLE, new int[] {iReturn});
         }
 
     // create a new frame that returns multiple values into the specified slots
@@ -187,7 +182,7 @@ public class Frame
     public Frame createFrameN(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, method, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
+        return new Frame(this, method, hTarget, ahVar, Op.A_MULTI, aiReturn);
         }
 
     // ensure that all the singleton constants are initialized for the specified method
@@ -338,8 +333,10 @@ public class Frame
         switch (nArgId)
             {
             case Op.A_STACK:
-                // TODO GG implement this
-                throw new UnsupportedOperationException();
+            // TODO GG implement A_STACK
+            // TODO remove A_LOCAL and replace usages with A_STACK instead?
+            case Op.A_LOCAL:
+                return m_hFrameLocal;
 
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hThis;
@@ -387,10 +384,6 @@ public class Frame
             case Op.A_SERVICE:
                 return ServiceContext.getCurrentContext().m_hService;
 
-            // TODO remove this and replace usages with A_STACK instead?
-            case Op.A_LOCAL:
-                return m_hFrameLocal;
-
             // TODO remove the rest of these?
             case Op.A_THIS:
                 if (f_hThis == null)
@@ -405,9 +398,6 @@ public class Frame
                     throw new IllegalStateException();
                     }
                 return f_hThis.getType().getTypeHandle();
-
-            case Op.A_FRAME:
-                throw new UnsupportedOperationException("TODO");
 
             case Op.A_MODULE:
                 return f_context.f_container.getModule();
@@ -584,10 +574,11 @@ public class Frame
 
         switch (nVar)
             {
-            case RET_UNUSED:
+            case Op.A_IGNORE:
                 return Op.R_NEXT;
 
-            case RET_LOCAL:
+            case Op.A_STACK:
+            case Op.A_LOCAL:
                 m_hFrameLocal = hValue;
                 return Op.R_NEXT;
 
@@ -676,13 +667,13 @@ public class Frame
         {
         switch (f_iReturn)
             {
-            case RET_UNUSED:
+            case Op.A_IGNORE:
                 return Op.R_RETURN;
 
-            case RET_MULTI:
+            case Op.A_MULTI:
                 throw new IllegalStateException();
 
-            case RET_TUPLE:
+            case Op.A_TUPLE:
                 return returnAsTuple(new ObjectHandle[]{hValue});
 
             default:
@@ -718,7 +709,7 @@ public class Frame
     // return R_RETURN, R_CALL, R_RETURN_EXCEPTION or R_BLOCK_RETURN
     private int returnAsTuple(ObjectHandle[] ahValue)
         {
-        assert f_iReturn == RET_TUPLE;
+        assert f_iReturn == Op.A_TUPLE;
 
         int iReturn = f_aiReturn[0];
 
@@ -732,10 +723,10 @@ public class Frame
         {
         switch (f_iReturn)
             {
-            case RET_UNUSED:
+            case Op.A_IGNORE:
                 return Op.R_RETURN;
 
-            case RET_MULTI:
+            case Op.A_MULTI:
                 switch (new Utils.AssignValues(f_aiReturn, ahValue).proceed(f_framePrev))
                     {
                     case Op.R_NEXT:
@@ -751,7 +742,7 @@ public class Frame
                         throw new IllegalStateException();
                     }
 
-            case RET_TUPLE:
+            case Op.A_TUPLE:
                 return returnAsTuple(ahValue);
 
             default:
@@ -764,10 +755,10 @@ public class Frame
         {
         switch (f_iReturn)
             {
-            case Frame.RET_MULTI:
+            case Op.A_MULTI:
                 return returnValues(hTuple.m_ahValue);
 
-            case Frame.RET_TUPLE:
+            case Op.A_TUPLE:
                 return returnValue(f_aiReturn[0], hTuple);
 
             default:
@@ -946,7 +937,7 @@ public class Frame
                     case VAR_DYNAMIC_REF:
                         {
                         RefHandle hRef = (RefHandle) hValue;
-                        switch (hRef.getVarSupport().get(this, hRef, RET_LOCAL))
+                        switch (hRef.getVarSupport().get(this, hRef, Op.A_LOCAL))
                             {
                             case Op.R_NEXT:
                                 return getFrameLocal();

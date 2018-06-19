@@ -57,6 +57,6 @@ public class PIP_Dec
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        return hTarget.getTemplate().invokePreDec(frame, hTarget, sPropName, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokePreDec(frame, hTarget, sPropName, A_IGNORE);
         }
     }

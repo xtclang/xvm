@@ -402,7 +402,7 @@ public abstract class ClassTemplate
             frameCaller -> frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
         Frame frameRC1 = frame.ensureInitialized(constructor,
-            frame.createFrame1(constructor, hStruct, ahVar, Frame.RET_UNUSED));
+            frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
         frameRC1.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
@@ -434,7 +434,7 @@ public abstract class ClassTemplate
             return frame.call(frameRC1);
             }
 
-        Frame frameDC = frame.createFrame1(methodDC, hStruct, ahVar, Frame.RET_UNUSED);
+        Frame frameDC = frame.createFrame1(methodDC, hStruct, ahVar, Op.A_IGNORE);
 
         frameDC.setContinuation(frameCaller -> frameCaller.call(frameRC1));
 
@@ -581,7 +581,7 @@ public abstract class ClassTemplate
             switch (method.getReturnCount())
                 {
                 case 0:
-                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Frame.RET_UNUSED))
+                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_IGNORE))
                         {
                         case Op.R_NEXT:
                             return frame.assignValue(iReturn, xTuple.H_VOID);
@@ -594,7 +594,7 @@ public abstract class ClassTemplate
                         }
 
                 case 1:
-                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Frame.RET_LOCAL))
+                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_LOCAL))
                         {
                         case Op.R_NEXT:
                             return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
@@ -617,7 +617,7 @@ public abstract class ClassTemplate
             switch (method.getReturnCount())
                 {
                 case 0:
-                    switch (invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_UNUSED))
+                    switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_IGNORE))
                         {
                         case Op.R_NEXT:
                             return frame.assignValue(iReturn, xTuple.H_VOID);
@@ -630,7 +630,7 @@ public abstract class ClassTemplate
                         }
 
                 case 1:
-                    switch (invokeNativeN(frame, method, hTarget, ahArg, Frame.RET_LOCAL))
+                    switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_LOCAL))
                         {
                         case Op.R_NEXT:
                             return frame.assignTuple(iReturn, new ObjectHandle[]{frame.getFrameLocal()});
@@ -815,7 +815,7 @@ public abstract class ClassTemplate
         ObjectHandle[] ahVar = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        return frame.invoke1(chain, 0, hTarget, ahVar, Frame.RET_UNUSED);
+        return frame.invoke1(chain, 0, hTarget, ahVar, Op.A_IGNORE);
         }
 
     /**

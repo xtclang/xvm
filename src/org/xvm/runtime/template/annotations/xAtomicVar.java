@@ -238,7 +238,7 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         if (frameCaller.getFrameLocal() == xBoolean.FALSE)
@@ -328,7 +328,7 @@ public class xAtomicVar
                 {
                 ObjectHandle hCurrent = atomic.get();
 
-                switch (type.callEquals(frameCaller, hCurrent, hExpect, Frame.RET_LOCAL))
+                switch (type.callEquals(frameCaller, hCurrent, hExpect, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         if (frameCaller.getFrameLocal() == xBoolean.FALSE)

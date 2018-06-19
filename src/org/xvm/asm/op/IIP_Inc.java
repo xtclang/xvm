@@ -77,6 +77,6 @@ public class IIP_Inc
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        return template.invokePreInc(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
+        return template.invokePreInc(frame, hTarget, hIndex.getValue(), A_IGNORE);
         }
     }

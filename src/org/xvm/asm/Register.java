@@ -180,7 +180,6 @@ public class Register
             case Op.A_PRIVATE:
             case Op.A_TARGET:
             case Op.A_STRUCT:
-            case Op.A_FRAME:
             case Op.A_SERVICE:
             case Op.A_MODULE:
             case Op.A_TYPE:
@@ -213,7 +212,6 @@ public class Register
             case Op.A_PRIVATE:
             case Op.A_TARGET:
             case Op.A_STRUCT:
-            case Op.A_FRAME:
             case Op.A_SERVICE:
             case Op.A_MODULE:
             case Op.A_TYPE:

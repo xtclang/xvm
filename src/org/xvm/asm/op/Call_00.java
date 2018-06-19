@@ -86,7 +86,7 @@ public class Call_00
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
 
-            return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+            return frame.call1(function, null, ahVar, A_IGNORE);
             }
 
         try
@@ -97,7 +97,7 @@ public class Call_00
                 return R_REPEAT;
                 }
 
-            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
             }
         catch (ExceptionHandle.WrapperException e)
             {

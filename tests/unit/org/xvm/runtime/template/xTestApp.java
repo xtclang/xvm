@@ -13,7 +13,6 @@ import org.xvm.asm.op.*;
 
 import org.xvm.runtime.Adapter;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.Frame;
 import org.xvm.runtime.TemplateRegistry;
 
 /**
@@ -166,14 +165,14 @@ public class xTestApp extends xModule
 
             .add(new IP_Add(1, adapter.ensureValueConstantId(47)))
             .add(new IP_Div(1, adapter.ensureValueConstantId(2)))
-            .add(new IsEq(1, adapter.ensureValueConstantId(48), Frame.RET_LOCAL))
+            .add(new IsEq(1, adapter.ensureValueConstantId(48), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("counter == 48")))
 
             .add(new P_Set(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0,
                 adapter.ensureValueConstantId(17)))
             .add(new P_Get(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 1))
 
-            .add(new IsEq(1, adapter.ensureValueConstantId(17), Frame.RET_LOCAL))
+            .add(new IsEq(1, adapter.ensureValueConstantId(17), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("c == 17")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Function"),
@@ -230,15 +229,15 @@ public class xTestApp extends xModule
 
             .add(new PIP_PreInc(adapter.getPropertyConstId("TestApp.TestService", "counter2"), 0,
                 8))  // next register #8
-            .add(new IsEq(8, adapter.ensureValueConstantId(6), Frame.RET_LOCAL))
+            .add(new IsEq(8, adapter.ensureValueConstantId(6), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("++counter2 == 6")))
 
             .add(new PIP_PostInc(adapter.getPropertyConstId("TestApp.TestService", "counter"), 0, 8))
-            .add(new IsEq(8, adapter.ensureValueConstantId(20), Frame.RET_LOCAL))
+            .add(new IsEq(8, adapter.ensureValueConstantId(20), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("counter++ == 20")))
 
             .add(new Invoke_01(0, adapter.getMethodConstId("TestApp.TestService", "increment"), 8))
-            .add(new IsEq(8, adapter.ensureValueConstantId(22), Frame.RET_LOCAL))
+            .add(new IsEq(8, adapter.ensureValueConstantId(22), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("svc.increment() == 22")))
 
             .add(new P_Get(adapter.getPropertyConstId("Ref", "RefType"), 4, 9)) // next register #9
@@ -341,7 +340,7 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("bye")))
             .add(new X_Print(0))
 
-            .add(new P_Get(adapter.getPropertyConstId("Referent", "const_"), 1, Frame.RET_LOCAL))
+            .add(new P_Get(adapter.getPropertyConstId("Referent", "const_"), 1, Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("ra.const_")))
 
             .add(new Var_N(adapter.getClassTypeConstId("Var<Int64>"),
@@ -355,7 +354,7 @@ public class xTestApp extends xModule
             .add(new MoveVar(4, 5))
             .add(new MoveVar(4, 3))
 
-            .add(new IsEq(3, 5, Frame.RET_LOCAL))
+            .add(new IsEq(3, 5, Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("ri != ri2")))
 
             .add(new Invoke_01(3, adapter.getMethodConstId("Ref", "get"), 6)) // next register #6
@@ -697,7 +696,7 @@ public class xTestApp extends xModule
                 adapter.ensureValueConstantId("zero"))) // #3 (zero)
             .add(new Move(adapter.ensureValueConstantId(1), 3))
 
-            .add(new IsEq(3, adapter.ensureValueConstantId(0), Frame.RET_LOCAL))
+            .add(new IsEq(3, adapter.ensureValueConstantId(0), Op.A_LOCAL))
             .add(new AssertM(Op.A_LOCAL, adapter.ensureValueConstantId("zero == 0")))
 
             .add(new Var_DN(adapter.getClassTypeConstId("@annotations.AtomicVar Var<Int64>"),

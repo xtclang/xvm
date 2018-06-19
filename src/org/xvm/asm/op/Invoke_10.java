@@ -144,8 +144,8 @@ public class Invoke_10
         ahVar[0] = hArg;
 
         return chain.isNative()
-            ? hTarget.getTemplate().invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], Frame.RET_UNUSED)
-            : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
+            ? hTarget.getTemplate().invokeNative1(frame, chain.getTop(), hTarget, ahVar[0], A_IGNORE)
+            : hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
         }
 
     @Override

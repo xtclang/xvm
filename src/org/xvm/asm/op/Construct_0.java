@@ -73,6 +73,6 @@ public class Construct_0
 
         frame.chainFinalizer(Utils.makeFinalizer(constructor, hStruct, ahVar));
 
-        return frame.call1(constructor, hStruct, ahVar, Frame.RET_UNUSED);
+        return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
         }
     }

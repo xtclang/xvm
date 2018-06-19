@@ -185,7 +185,7 @@ public class xConst
                 TypeConstant typeProp = getProperty(sProp).getType().
                     resolveGenerics(frameCaller.getGenericsResolver());
 
-                switch (typeProp.callEquals(frameCaller, h1, h2, Frame.RET_LOCAL))
+                switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         ObjectHandle hResult = frameCaller.getFrameLocal();
@@ -259,7 +259,7 @@ public class xConst
                 TypeConstant typeProp = getProperty(sProp).getType().
                     resolveGenerics(frameCaller.getGenericsResolver());
 
-                switch (typeProp.callCompare(frameCaller, h1, h2, Frame.RET_LOCAL))
+                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();

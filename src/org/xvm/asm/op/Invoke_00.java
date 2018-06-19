@@ -101,11 +101,11 @@ public class Invoke_00
         if (chain.isNative())
             {
             return hTarget.getTemplate().invokeNativeN(frame, chain.getTop(), hTarget,
-                Utils.OBJECTS_NONE, Frame.RET_UNUSED);
+                Utils.OBJECTS_NONE, A_IGNORE);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invoke1(frame, chain, hTarget, ahVar, A_IGNORE);
         }
     }

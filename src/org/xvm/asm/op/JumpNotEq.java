@@ -81,7 +81,7 @@ public class JumpNotEq
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
+        switch (type.callEquals(frame, hValue1, hValue2, A_LOCAL))
             {
             case R_NEXT:
                 {

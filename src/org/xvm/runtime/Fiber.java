@@ -17,9 +17,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
-import org.xvm.runtime.template.xFunction.NativeMethodHandle;
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xString.StringHandle;
 
 
 /**
@@ -346,7 +344,7 @@ public class Fiber
             while (!listEx.isEmpty())
                 {
                 switch (hNotify.call1(frameCaller, null,
-                        new ObjectHandle[] {listEx.remove(0)}, Frame.RET_UNUSED))
+                        new ObjectHandle[] {listEx.remove(0)}, Op.A_IGNORE))
                     {
                     case Op.R_NEXT:
                         continue;
