@@ -3,9 +3,14 @@ package org.xvm.runtime;
 
 import org.xvm.api.Connector;
 
+import org.xvm.asm.Component;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.asm.constants.MethodConstant;
+
 import org.xvm.compiler.CommandLine;
+
 
 /**
  * The connector test,
@@ -29,12 +34,18 @@ public class TestConnector
             }
 
         String sModule = asArg[0];
-        String sFile = asArg[1];
+        String sFile   = asArg[1];
 
         CommandLine cmd = new CommandLine(
             new String[] {"system", sFile});
 
         ModuleRepository repository = cmd.build();
+
+        if (System.getProperty("CP") != null)
+            {
+            out("Code dump:");
+            dump(repository.loadModule(sModule));
+            }
 
         // +++ that is the actual use +++
         Connector connector = new Connector(repository);
@@ -47,6 +58,35 @@ public class TestConnector
         connector.invoke0("run", Utils.OBJECTS_NONE);
 
         connector.join();
+        }
+
+    public static void dump(Component component)
+        {
+        if (component instanceof MethodStructure)
+            {
+            MethodStructure method = (MethodStructure) component;
+            MethodConstant  id     = method.getIdentityConstant();
+            if (method.hasCode() && method.ensureCode() != null && !method.isNative())
+                {
+                out("** code for " + id);
+                out(method.ensureCode().toString());
+                }
+            else
+                {
+                out("no code for " + id);
+                }
+
+            }
+
+        for (Component child : component.children())
+            {
+            dump(child);
+            }
+        }
+
+    public static void out(String s)
+        {
+        System.out.println(s);
         }
     }
 
