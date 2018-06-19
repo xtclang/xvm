@@ -11,6 +11,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -370,9 +371,12 @@ public class RelOpExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         // figure out the best types to use to validate the two sub-expressions
+        TypeConstant typeRequired = atypeRequired != null && atypeRequired.length >= 1
+                ? atypeRequired[0]
+                : null;
         TypeConstant type1 = null;
         TypeConstant type2 = null;
         if (typeRequired != null)
@@ -387,7 +391,7 @@ public class RelOpExpression
         Expression expr2New = expr2.validate(ctx, type2, errs);
         if (expr1New == null || expr2New == null)
             {
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         // store the updates to the expressions (if any)
@@ -398,23 +402,37 @@ public class RelOpExpression
         type1 = expr1New.getType();
         type2 = expr2New.getType();
 
-        MethodConstant idOp = determineOperator(type1, type2, typeRequired, errs);
-        if (idOp == null)
+        boolean        fMulti       = operator.getId() == Id.DIVMOD;
+        int            cExpected    = fMulti ? 2 : 1;
+        int            cResults     = cExpected;
+        TypeConstant[] atypeResults = null;
+        MethodConstant idOp         = determineOperator(type1, type2, typeRequired, errs);
+        if (idOp != null)
             {
-            return finishValidation(typeRequired, type1, TypeFit.NoFit, null, errs);
+            atypeResults = idOp.getRawReturns();
+            cResults     = atypeResults.length;
+            }
+        if (idOp == null || cResults < cExpected)
+            {
+            if (cResults < cExpected)
+                {
+                operator.log(errs, getSource(), Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cExpected, cResults);
+                }
+
+            TypeConstant[] atypeFake = fMulti
+                    ? new TypeConstant[] {type1, type1}
+                    : new TypeConstant[] {type1};
+            return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
         m_idOp = idOp;
 
-        // determine the actual result type
-        TypeConstant typeResult = idOp.getRawReturns()[0];
-
         // determine if the result of this expression is itself constant
-        Constant constResult = null;
+        Constant[] aconstResult = null;
         if (expr1New.hasConstantValue() && expr2New.hasConstantValue())
             {
             // delegate the operation to the constants
-            Constant const1 = expr1New.toConstant();
-            Constant const2 = expr2New.toConstant();
+            TypeConstant typeResult  = atypeResults[0];
+            Constant     constResult;
             try
                 {
                 constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
@@ -430,23 +448,19 @@ public class RelOpExpression
                 operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION);
                 constResult = Constant.defaultValue(typeResult);
                 }
+
+            if (fMulti)
+                {
+                // divmod result comes back as a tuple
+                aconstResult = ((ArrayConstant) constResult).getValue();
+                }
+            else
+                {
+                aconstResult = new Constant[] {constResult};
+                }
             }
 
-        return finishValidation(typeRequired, typeResult, TypeFit.Fit, constResult, errs);
-        }
-
-    @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
-            ErrorListener errs)
-        {
-        if (operator.getId() != Id.DIVMOD || atypeRequired.length < 2)
-            {
-            return super.validateMulti(ctx, atypeRequired, errs);
-            }
-
-        // TODO "/%" -> validateMulti()
-        notImplemented();
-        return this;
+        return finishValidations(atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
         }
 
     /**
@@ -654,7 +668,7 @@ public class RelOpExpression
 
         // evaluate the sub-expressions
         Argument arg1 = expr1.generateArgument(code, true, true, errs);
-        Argument arg2 = expr2.generateArgument(code, true, true, errs);
+        Argument arg2 = expr2.generateArgument(code, true, !arg1.isStack(), errs);
 
         // generate the op that combines the two sub-expressions
         switch (operator.getId())
@@ -673,7 +687,7 @@ public class RelOpExpression
 
             case DOTDOT:
                 notImplemented();
-                // TODO code.add(new GP_(arg1, arg2, LVal.getLocalArgument()));
+                // TODO code.add(new GP_DotDot(arg1, arg2, LVal.getLocalArgument()));
                 return;
 
             case SHL:
@@ -735,7 +749,7 @@ public class RelOpExpression
                 if (aLVal[0].isLocalArgument() && aLVal[1].isLocalArgument())
                     {
                     Argument arg1 = expr1.generateArgument(code, true, true, errs);
-                    Argument arg2 = expr2.generateArgument(code, true, true, errs);
+                    Argument arg2 = expr2.generateArgument(code, true, !arg1.isStack(), errs);
                     code.add(new GP_DivMod(arg1, arg2, new Argument[]
                             {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
                     }

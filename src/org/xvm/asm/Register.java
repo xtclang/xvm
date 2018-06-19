@@ -44,7 +44,7 @@ public class Register
         }
 
 
-    // ----- Register methods ----------------------------------------------------------------------
+    // ----- Argument methods ----------------------------------------------------------------------
 
     /**
      * Determine the type of the value that the Register holds.
@@ -56,6 +56,29 @@ public class Register
         {
         return m_type;
         }
+
+    @Override
+    public boolean isStack()
+        {
+        return m_iArg == Op.A_STACK;
+        }
+
+    @Override
+    public Register registerConstants(Op.ConstantRegistry registry)
+        {
+        if (m_typeReg != null)
+            {
+            m_typeReg = (TypeConstant) registry.register(m_typeReg);
+            }
+        else if (m_type != null)
+            {
+            m_type = (TypeConstant) registry.register(m_type);
+            }
+        return this;
+        }
+
+
+    // ----- Register methods ----------------------------------------------------------------------
 
     /**
      * @return true iff this register was created by a DVAR op
@@ -122,20 +145,6 @@ public class Register
 
         validateIndex(iArg);
         m_iArg = iArg;
-        }
-
-    @Override
-    public Register registerConstants(Op.ConstantRegistry registry)
-        {
-        if (m_typeReg != null)
-            {
-            m_typeReg = (TypeConstant) registry.register(m_typeReg);
-            }
-        else if (m_type != null)
-            {
-            m_type = (TypeConstant) registry.register(m_type);
-            }
-        return this;
         }
 
     /**

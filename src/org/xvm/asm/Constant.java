@@ -502,6 +502,12 @@ public abstract class Constant
         }
 
     @Override
+    public boolean isStack()
+        {
+        return false;
+        }
+
+    @Override
     public Constant registerConstants(Op.ConstantRegistry registry)
         {
         return registry.register(this);

@@ -15,6 +15,11 @@ public interface Argument
     TypeConstant getType();
 
     /**
+     * @return true iff the argument refers to the local stack in the frame
+     */
+    boolean isStack();
+
+    /**
      * Register all constants that this Argument depends on into the passed registry.
      *
      * @param registry  the code-local constant registry

@@ -44,18 +44,6 @@ import org.xvm.compiler.ast.Statement.Context;
  * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
  * </ul>
  *
- * TODO remove cut&paste:
-    switch (operator.getId())
-        {
-        case COMP_EQ:
-        case COMP_NEQ:
-        case COMP_LT:
-        case COMP_GT:
-        case COMP_LTEQ:
-        case COMP_GTEQ:
-        case COMP_ORD:
-        }
- *
  * @see TypeInfo#findEqualsFunction
  * @see TypeInfo#findCompareFunction
  * @see TypeConstant#supportsEquals

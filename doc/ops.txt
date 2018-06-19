@@ -111,15 +111,16 @@
 +GP_MUL     rvalue1, rvalue2, lvalue                ; T * T -> T
 +GP_DIV     rvalue1, rvalue2, lvalue                ; T / T -> T
 +GP_MOD     rvalue1, rvalue2, lvalue                ; T % T -> T
- GP_SHL     rvalue1, rvalue2, lvalue                ; T << Int -> T
- GP_SHR     rvalue1, rvalue2, lvalue                ; T >> Int -> T
- GP_USHR    rvalue1, rvalue2, lvalue                ; T >>> Int -> T
- GP_AND     rvalue1, rvalue2, lvalue                ; T & T -> T
- GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
- GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
- GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
++GP_SHL     rvalue1, rvalue2, lvalue                ; T << Int -> T
++GP_SHR     rvalue1, rvalue2, lvalue                ; T >> Int -> T
++GP_USHR    rvalue1, rvalue2, lvalue                ; T >>> Int -> T
++GP_AND     rvalue1, rvalue2, lvalue                ; T & T -> T
++GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
++GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
++GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
+ GP_DOTDOT  rvalue1, rvalue2, lvalue                ; T .. T -> Interval<T>
 +GP_NEG     rvalue, lvalue                          ; -T -> T
- GP_COMPL   rvalue, lvalue                          ; ~T -> T
++GP_COMPL   rvalue, lvalue                          ; ~T -> T
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate
