@@ -159,7 +159,7 @@ public class xConst
         @Override
         public int proceed(Frame frameCaller)
             {
-            ObjectHandle hResult = frameCaller.getFrameLocal();
+            ObjectHandle hResult = frameCaller.popStack();
             if (hResult == xBoolean.FALSE)
                 {
                 return frameCaller.assignValue(iReturn, hResult);
@@ -185,10 +185,10 @@ public class xConst
                 TypeConstant typeProp = getProperty(sProp).getType().
                     resolveGenerics(frameCaller.getGenericsResolver());
 
-                switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_LOCAL))
+                switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        ObjectHandle hResult = frameCaller.getFrameLocal();
+                        ObjectHandle hResult = frameCaller.popStack();
                         if (hResult == xBoolean.FALSE)
                             {
                             return frameCaller.assignValue(iReturn, hResult);
@@ -233,7 +233,7 @@ public class xConst
         @Override
         public int proceed(Frame frameCaller)
             {
-            EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();
+            EnumHandle hResult = (EnumHandle) frameCaller.popStack();
             if (hResult != xOrdered.EQUAL)
                 {
                 return frameCaller.assignValue(iReturn, hResult);
@@ -259,10 +259,10 @@ public class xConst
                 TypeConstant typeProp = getProperty(sProp).getType().
                     resolveGenerics(frameCaller.getGenericsResolver());
 
-                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_LOCAL))
+                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        EnumHandle hResult = (EnumHandle) frameCaller.getFrameLocal();
+                        EnumHandle hResult = (EnumHandle) frameCaller.popStack();
                         if (hResult != xOrdered.EQUAL)
                             {
                             return frameCaller.assignValue(iReturn, hResult);
@@ -314,7 +314,7 @@ public class xConst
 
         protected void updateResult(Frame frameCaller)
             {
-            sb.append(((StringHandle) frameCaller.getFrameLocal()).getValue())
+            sb.append(((StringHandle) frameCaller.popStack()).getValue())
               .append(", ");
             }
 
@@ -393,7 +393,7 @@ public class xConst
 
         protected void updateResult(Frame frameCaller)
             {
-            holder[0] = 37 * holder[0] + ((JavaLong) frameCaller.getFrameLocal()).getValue();
+            holder[0] = 37 * holder[0] + ((JavaLong) frameCaller.popStack()).getValue();
             }
 
         protected int doNext(Frame frameCaller)

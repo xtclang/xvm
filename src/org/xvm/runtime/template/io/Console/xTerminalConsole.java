@@ -50,7 +50,7 @@ public class xTerminalConsole
             case "print": // Object o
                 {
                 int iResult = hArg.getComposition().getTemplate().
-                    buildStringValue(frame, hArg, Op.A_LOCAL);
+                    buildStringValue(frame, hArg, Op.A_STACK);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -67,7 +67,7 @@ public class xTerminalConsole
             case "println": // Object o
                 {
                 int iResult = hArg.getComposition().getTemplate().
-                    buildStringValue(frame, hArg, Op.A_LOCAL);
+                    buildStringValue(frame, hArg, Op.A_STACK);
                 switch (iResult)
                     {
                     case Op.R_NEXT:
@@ -107,14 +107,14 @@ public class xTerminalConsole
 
     private static Frame.Continuation PRINT = frameCaller ->
         {
-        CONSOLE_OUT.print(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        CONSOLE_OUT.print(((StringHandle) frameCaller.popStack()).getValue());
         CONSOLE_OUT.flush();
         return Op.R_NEXT;
         };
 
     private static Frame.Continuation PRINTLN = frameCaller ->
         {
-        CONSOLE_OUT.println(((StringHandle) frameCaller.getFrameLocal()).getValue());
+        CONSOLE_OUT.println(((StringHandle) frameCaller.popStack()).getValue());
         return Op.R_NEXT;
         };
     }

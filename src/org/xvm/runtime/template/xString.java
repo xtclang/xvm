@@ -59,16 +59,16 @@ public class xString
         StringHandle hThis = (StringHandle) hTarget;
         String       sThis = hThis.m_sValue;
 
-        switch (hArg.getTemplate().buildStringValue(frame, hArg, Op.A_LOCAL))
+        switch (hArg.getTemplate().buildStringValue(frame, hArg, Op.A_STACK))
             {
             case Op.R_NEXT:
                 return frame.assignValue(iReturn, makeHandle(sThis +
-                    ((StringHandle) frame.getFrameLocal()).m_sValue));
+                    ((StringHandle) frame.popStack()).m_sValue));
 
             case Op.R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     frameCaller.assignValue(iReturn, makeHandle(sThis +
-                        ((StringHandle) frame.getFrameLocal()).m_sValue)));
+                        ((StringHandle) frame.popStack()).m_sValue)));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:

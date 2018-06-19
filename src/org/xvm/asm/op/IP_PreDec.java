@@ -52,11 +52,11 @@ public class IP_PreDec
     @Override
     protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
         {
-        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, A_LOCAL))
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, A_STACK))
             {
             case R_NEXT:
                 {
-                ObjectHandle hValueNew = frame.getFrameLocal();
+                ObjectHandle hValueNew = frame.popStack();
                 return frame.assignValues(new int[]{m_nRetValue, m_nTarget},
                     hValueNew, hValueNew);
                 }
@@ -64,7 +64,7 @@ public class IP_PreDec
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     {
-                    ObjectHandle hValueNew = frameCaller.getFrameLocal();
+                    ObjectHandle hValueNew = frameCaller.popStack();
                     return frameCaller.assignValues(new int[]{m_nRetValue, m_nTarget},
                         hValueNew, hValueNew);
                     });

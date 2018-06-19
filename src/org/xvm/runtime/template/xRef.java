@@ -65,16 +65,16 @@ public class xRef
         switch (sPropName)
             {
             case "ActualType":
-                switch (get(frame, hRef, Op.A_LOCAL))
+                switch (get(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            frame.getFrameLocal().getType().getTypeHandle());
+                            frame.popStack().getType().getTypeHandle());
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                frameCaller.getFrameLocal().getType().getTypeHandle()));
+                                frameCaller.popStack().getType().getTypeHandle()));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -103,16 +103,16 @@ public class xRef
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
 
             case "service_":
-                switch (get(frame, hRef, Op.A_LOCAL))
+                switch (get(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.getFrameLocal().getComposition().isService()));
+                            xBoolean.makeHandle(frame.popStack().getComposition().isService()));
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.getFrameLocal().getComposition().isService())));
+                                xBoolean.makeHandle(frame.popStack().getComposition().isService())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -126,16 +126,16 @@ public class xRef
                     }
 
             case "const_":
-                switch (get(frame, hRef, Op.A_LOCAL))
+                switch (get(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(frame.getFrameLocal().getComposition().isConst()));
+                            xBoolean.makeHandle(frame.popStack().getComposition().isConst()));
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(frame.getFrameLocal().getComposition().isConst())));
+                                xBoolean.makeHandle(frame.popStack().getComposition().isConst())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -149,16 +149,16 @@ public class xRef
                     }
 
             case "immutable_":
-                switch (get(frame, hRef, Op.A_LOCAL))
+                switch (get(frame, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
-                            xBoolean.makeHandle(!frame.getFrameLocal().isMutable()));
+                            xBoolean.makeHandle(!frame.popStack().isMutable()));
 
                     case Op.R_CALL:
                         frame.setContinuation(frameCaller ->
                             frameCaller.assignValue(iReturn,
-                                xBoolean.makeHandle(!frame.getFrameLocal().isMutable())));
+                                xBoolean.makeHandle(!frame.popStack().isMutable())));
                         return Op.R_CALL;
 
                     case Op.R_BLOCK:
@@ -204,14 +204,14 @@ public class xRef
             case "peek":
                 if (hRef.isAssigned(frame))
                     {
-                    switch (get(frame, hRef, Op.A_LOCAL))
+                    switch (get(frame, hRef, Op.A_STACK))
                         {
                         case Op.R_NEXT:
-                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal());
+                            return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
 
                         case Op.R_CALL:
                             frame.setContinuation(frameCaller ->
-                                frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal()));
+                                frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -567,11 +567,11 @@ public class xRef
             {
             if (index == 0)
                 {
-                hReferent1 = frameCaller.getFrameLocal();
+                hReferent1 = frameCaller.popStack();
                 }
             else
                 {
-                hReferent2 = frameCaller.getFrameLocal();
+                hReferent2 = frameCaller.popStack();
                 }
             }
 
@@ -581,7 +581,7 @@ public class xRef
                 {
                 RefHandle hRef = index == 0 ? hRef1 : hRef2;
 
-                switch (template.get(frameCaller, hRef, Op.A_LOCAL))
+                switch (template.get(frameCaller, hRef, Op.A_STACK))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);

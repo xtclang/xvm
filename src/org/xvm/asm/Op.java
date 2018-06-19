@@ -1313,7 +1313,7 @@ public abstract class Op
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
-     * Pre-defined argument: a local stack
+     * Pre-defined argument: a frame-local stack
      */
     public static final int A_STACK     = -1;
 
@@ -1370,10 +1370,6 @@ public abstract class Op
      * Pre-defined argument: a target for local invocation
      */
     public static final int A_THIS = -12;
-    /**
-     * Pre-defined argument: the frame local
-     */
-    public static final int A_LOCAL = -13;
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      */

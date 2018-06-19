@@ -81,18 +81,18 @@ public class IsNotEq
     protected int completeBinaryOp(Frame frame, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callEquals(frame, hValue1, hValue2, m_nRetValue))
+        switch (type.callEquals(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
                 {
                 return frame.assignValue(m_nRetValue,
-                    xBoolean.not((BooleanHandle) frame.getFrameLocal()));
+                    xBoolean.not((BooleanHandle) frame.popStack()));
                 }
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
                     frameCaller.assignValue(m_nRetValue,
-                        xBoolean.not((BooleanHandle) frameCaller.getFrameLocal())));
+                        xBoolean.not((BooleanHandle) frameCaller.popStack())));
                 return R_CALL;
 
             case R_EXCEPTION:

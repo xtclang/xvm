@@ -116,11 +116,11 @@ public abstract class Utils
         if (chain.isNative())
             {
             xConst template = (xConst) clzConst.getTemplate();
-            return template.buildHashCode(frame, hConst, Op.A_LOCAL);
+            return template.buildHashCode(frame, hConst, Op.A_STACK);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Op.A_LOCAL);
+        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Op.A_STACK);
         }
 
     // ----- to<String> support -----
@@ -134,11 +134,11 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            return clzValue.getTemplate().buildStringValue(frame, hValue, Op.A_LOCAL);
+            return clzValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_LOCAL);
+        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_STACK);
         }
 
 
@@ -164,7 +164,7 @@ public abstract class Utils
         protected void updateResult(Frame frameCaller)
             {
             // replace a property handle with the value
-            ahArg[index] = frameCaller.getFrameLocal();
+            ahArg[index] = frameCaller.popStack();
             }
 
         public int doNext(Frame frameCaller)
@@ -184,7 +184,7 @@ public abstract class Utils
                     String sProp = ((DeferredPropertyHandle) hArg).m_property.getName();
 
                     switch (hThis.getTemplate().getPropertyValue(
-                            frameCaller, hThis, sProp, Op.A_LOCAL))
+                            frameCaller, hThis, sProp, Op.A_STACK))
                         {
                         case Op.R_NEXT:
                             // replace the property handle with the value
@@ -270,7 +270,7 @@ public abstract class Utils
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        switch (type1.callEquals(frame, hValue1, hValue2, Op.A_LOCAL))
+        switch (type1.callEquals(frame, hValue1, hValue2, Op.A_STACK))
             {
             case Op.R_NEXT:
                 return completeEquals(frame, type2, hValue1, hValue2, iReturn);
@@ -291,7 +291,7 @@ public abstract class Utils
     protected static int completeEquals(Frame frame, TypeConstant type2,
                                         ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        ObjectHandle hResult = frame.getFrameLocal();
+        ObjectHandle hResult = frame.popStack();
         return hResult == xBoolean.FALSE
             ? frame.assignValue(iReturn, hResult)
             : type2.callEquals(frame, hValue1, hValue2, iReturn);
@@ -305,7 +305,7 @@ public abstract class Utils
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        switch (type1.callCompare(frame, hValue1, hValue2, Op.A_LOCAL))
+        switch (type1.callCompare(frame, hValue1, hValue2, Op.A_STACK))
             {
             case Op.R_NEXT:
                 return completeCompare(frame, type2, hValue1, hValue2, iReturn);
@@ -329,7 +329,7 @@ public abstract class Utils
     protected static int completeCompare(Frame frame, TypeConstant type2,
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        ObjectHandle hResult = frame.getFrameLocal();
+        ObjectHandle hResult = frame.popStack();
         return hResult != xOrdered.EQUAL
             ? frame.assignValue(iReturn, hResult)
             : type2.callCompare(frame, hValue1, hValue2, iReturn);
@@ -365,7 +365,7 @@ public abstract class Utils
         // return false if the buffer is full
         protected boolean updateResult(Frame frameCaller)
             {
-            StringHandle hString = (StringHandle) frameCaller.getFrameLocal();
+            StringHandle hString = (StringHandle) frameCaller.popStack();
             String sLabel = asLabel == null ? null : asLabel[index];
 
             if (sLabel != null)
@@ -550,11 +550,11 @@ public abstract class Utils
             switch (ixStep)
                 {
                 case 0: // get
-                    hValueOld = frameCaller.getFrameLocal();
+                    hValueOld = frameCaller.popStack();
                     break;
 
                 case 1: // action
-                    hValueNew = frameCaller.getFrameLocal();
+                    hValueNew = frameCaller.popStack();
                     break;
 
                 case 2: // set
@@ -602,7 +602,7 @@ public abstract class Utils
                     {
                     case 0:
                         iResult = template.
-                            getPropertyValue(frameCaller, hTarget, sPropName, Op.A_LOCAL);
+                            getPropertyValue(frameCaller, hTarget, sPropName, Op.A_STACK);
                         break;
 
                     case 1:
@@ -671,7 +671,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Op.A_LOCAL);
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Op.A_STACK);
                         break;
 
                     case 1:
@@ -741,7 +741,7 @@ public abstract class Utils
                 switch (nStep)
                     {
                     case 0:
-                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_STACK);
                         break;
 
                     case 1:
@@ -804,7 +804,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_STACK);
                         break;
 
                     case 1:
@@ -847,13 +847,13 @@ public abstract class Utils
         // ----- action constants ------------------------------------------------------------------
 
         UnaryAction INC = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokeNext(frameCaller, hValue, Op.A_LOCAL);
+            hValue.getOpSupport().invokeNext(frameCaller, hValue, Op.A_STACK);
 
         UnaryAction DEC = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokePrev(frameCaller, hValue, Op.A_LOCAL);
+            hValue.getOpSupport().invokePrev(frameCaller, hValue, Op.A_STACK);
 
         UnaryAction NEG = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Op.A_LOCAL);
+            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Op.A_STACK);
         }
 
     // the lambda for binary actions
@@ -865,18 +865,18 @@ public abstract class Utils
         // ----- action constants ------------------------------------------------------------------
 
         BinaryAction ADD = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeAdd(frameCaller, hValue, hArg, Op.A_LOCAL);
+            hValue.getOpSupport().invokeAdd(frameCaller, hValue, hArg, Op.A_STACK);
 
         BinaryAction SUB = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeSub(frameCaller, hValue, hArg, Op.A_LOCAL);
+            hValue.getOpSupport().invokeSub(frameCaller, hValue, hArg, Op.A_STACK);
 
         BinaryAction MUL = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeMul(frameCaller, hValue, hArg, Op.A_LOCAL);
+            hValue.getOpSupport().invokeMul(frameCaller, hValue, hArg, Op.A_STACK);
 
         BinaryAction DIV = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeDiv(frameCaller, hValue, hArg, Op.A_LOCAL);
+            hValue.getOpSupport().invokeDiv(frameCaller, hValue, hArg, Op.A_STACK);
 
         BinaryAction MOD = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Op.A_LOCAL);
+            hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Op.A_STACK);
         }
     }

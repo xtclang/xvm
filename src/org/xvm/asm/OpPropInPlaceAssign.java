@@ -174,11 +174,11 @@ public abstract class OpPropInPlaceAssign
             switch (ixStep)
                 {
                 case 0: // getProperty
-                    hValueOld = frameCaller.getFrameLocal();
+                    hValueOld = frameCaller.popStack();
                     break;
 
                 case 1: // the action
-                    hValueNew = frameCaller.getFrameLocal();
+                    hValueNew = frameCaller.popStack();
                     break;
 
                 default:
@@ -196,11 +196,11 @@ public abstract class OpPropInPlaceAssign
                 switch (nStep)
                     {
                     case 0: // get
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, A_LOCAL);
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, A_STACK);
                         break;
 
                     case 1:
-                        iResult = action.action(frameCaller, hValueOld, hValue, A_LOCAL);
+                        iResult = action.action(frameCaller, hValueOld, hValue, A_STACK);
                         break;
 
                     case 2:

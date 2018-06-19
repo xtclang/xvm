@@ -81,14 +81,14 @@ public class JumpLt
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callCompare(frame, hValue1, hValue2, A_LOCAL))
+        switch (type.callCompare(frame, hValue1, hValue2, A_STACK))
             {
             case R_NEXT:
-                return frame.getFrameLocal() == xOrdered.LESSER ? iPC + m_ofJmp : iPC + 1;
+                return frame.popStack() == xOrdered.LESSER ? iPC + m_ofJmp : iPC + 1;
 
             case R_CALL:
                 frame.m_frameNext.setContinuation(frameCaller ->
-                    frameCaller.getFrameLocal() == xOrdered.LESSER ? iPC + m_ofJmp : iPC + 1);
+                    frameCaller.popStack() == xOrdered.LESSER ? iPC + m_ofJmp : iPC + 1);
                 return R_CALL;
 
             case R_EXCEPTION:
