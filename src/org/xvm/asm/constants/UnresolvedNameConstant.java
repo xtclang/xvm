@@ -146,8 +146,11 @@ public class UnresolvedNameConstant
     @Override
     public boolean containsUnresolved()
         {
-        Constant constant = unwrap();
-        return constant instanceof ResolvableConstant || constant.containsUnresolved();
+        unwrap();
+// REVIEW GG
+//        Constant constant = unwrap();
+//        return constant instanceof ResolvableConstant || constant.containsUnresolved();
+        return true;
         }
 
     @Override

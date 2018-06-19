@@ -187,6 +187,27 @@ public class MapConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (m_constType.containsUnresolved())
+            {
+            return true;
+            }
+
+        Constant[] aconstKey = m_aconstKey;
+        Constant[] aconstVal = m_aconstVal;
+        for (int i = 0, c = aconstKey.length; i < c; ++i)
+            {
+            if (aconstKey[i].containsUnresolved() || aconstVal[i].containsUnresolved())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);

@@ -230,6 +230,12 @@ public class IntervalConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_const1.containsUnresolved() || m_const2.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_const1);

@@ -522,6 +522,12 @@ public class LiteralConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constStr.containsUnresolved();
+        }
+
+    @Override
     public TypeConstant resultType(Id op, Constant that)
         {
         // order of automatic type promotion is from IntLiteral to FPLiteral to any "actual" types

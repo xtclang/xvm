@@ -118,6 +118,12 @@ public class SingletonConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        return m_constClass.containsUnresolved();
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constClass);

@@ -167,6 +167,26 @@ public class ArrayConstant
         }
 
     @Override
+    public boolean containsUnresolved()
+        {
+        if (m_constType.containsUnresolved())
+            {
+            return true;
+            }
+
+        Constant[] aconstVal = m_aconstVal;
+        for (int i = 0, c = aconstVal.length; i < c; ++i)
+            {
+            if (aconstVal[i].containsUnresolved())
+                {
+                return true;
+                }
+            }
+
+        return false;
+        }
+
+    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
