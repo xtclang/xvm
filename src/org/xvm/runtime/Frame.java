@@ -71,11 +71,10 @@ public class Frame
     private ObjectHandle            m_hFrameLocal;  // a "frame local" holding area
 
     // positive return values indicate a caller's frame register
-    // negative value above RET_LOCAL indicate an automatic tuple conversion
-    public final static int RET_LOCAL  = -65000;
+    public final static int RET_LOCAL  = Op.A_LOCAL;
 
     // an indicator for the "frame local single value"
-    public final static int RET_UNUSED = -65001;  // an indicator for an "unused return value"
+    public final static int RET_UNUSED = Op.A_IGNORE;  // an indicator for an "unused return value"
     public final static int RET_MULTI  = -65002;  // an indicator for "multiple return values"
     public final static int RET_TUPLE  = -65003;  // an indicator for a "tuple return"
 
@@ -179,7 +178,7 @@ public class Frame
     public Frame createFrameT(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return new Frame(this, method, hTarget, ahVar, Frame.RET_TUPLE, new int[] {iReturn});
+        return new Frame(this, method, hTarget, ahVar, RET_TUPLE, new int[] {iReturn});
         }
 
     // create a new frame that returns multiple values into the specified slots
@@ -187,7 +186,7 @@ public class Frame
     public Frame createFrameN(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return new Frame(this, method, hTarget, ahVar, Frame.RET_MULTI, aiReturn);
+        return new Frame(this, method, hTarget, ahVar, RET_MULTI, aiReturn);
         }
 
     // ensure that all the singleton constants are initialized for the specified method
@@ -338,8 +337,10 @@ public class Frame
         switch (nArgId)
             {
             case Op.A_STACK:
-                // TODO GG implement this
-                throw new UnsupportedOperationException();
+            // TODO GG implement A_STACK
+            // TODO remove A_LOCAL and replace usages with A_STACK instead?
+            case Op.A_LOCAL:
+                return m_hFrameLocal;
 
             case Op.A_SUPER:
                 ObjectHandle hThis = f_hThis;
@@ -386,10 +387,6 @@ public class Frame
 
             case Op.A_SERVICE:
                 return ServiceContext.getCurrentContext().m_hService;
-
-            // TODO remove this and replace usages with A_STACK instead?
-            case Op.A_LOCAL:
-                return m_hFrameLocal;
 
             // TODO remove the rest of these?
             case Op.A_THIS:
@@ -587,6 +584,7 @@ public class Frame
             case RET_UNUSED:
                 return Op.R_NEXT;
 
+            case Op.A_STACK:
             case RET_LOCAL:
                 m_hFrameLocal = hValue;
                 return Op.R_NEXT;
@@ -764,10 +762,10 @@ public class Frame
         {
         switch (f_iReturn)
             {
-            case Frame.RET_MULTI:
+            case RET_MULTI:
                 return returnValues(hTuple.m_ahValue);
 
-            case Frame.RET_TUPLE:
+            case RET_TUPLE:
                 return returnValue(f_aiReturn[0], hTuple);
 
             default:

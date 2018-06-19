@@ -1310,7 +1310,7 @@ public abstract class Op
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
-     * Pre-defined argument: a write-only "black hole" register, akin to {@code /dev/null}
+     * Pre-defined argument: a local stack
      */
     public static final int A_STACK     = -1;
 
