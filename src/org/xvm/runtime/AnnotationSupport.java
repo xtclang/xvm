@@ -176,6 +176,15 @@ public class AnnotationSupport
         }
 
     @Override
+    public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        CallChain chain = getOpChain("..", 2);
+        return chain == null
+            ? f_support.invokeDotDot(frame, hTarget, hArg, iReturn)
+            : chain.invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         CallChain chain = getOpChain("!", 1);

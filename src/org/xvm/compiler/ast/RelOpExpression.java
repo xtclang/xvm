@@ -23,6 +23,7 @@ import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivMod;
+import org.xvm.asm.op.GP_DotDot;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;
@@ -686,8 +687,7 @@ public class RelOpExpression
                 return;
 
             case DOTDOT:
-                notImplemented();
-                // TODO code.add(new GP_DotDot(arg1, arg2, LVal.getLocalArgument()));
+                code.add(new GP_DotDot(arg1, arg2, LVal.getLocalArgument()));
                 return;
 
             case SHL:

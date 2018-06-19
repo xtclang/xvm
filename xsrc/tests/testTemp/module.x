@@ -8,6 +8,7 @@ module TestTemp.xqiz.it
 
         testInts();
         testBools();
+        testInterval();
         }
 
     void testInts()
@@ -32,5 +33,14 @@ module TestTemp.xqiz.it
         console.println("a=" + a);
         console.println("b=" + b);
 //        console.println("c=" + c);
+        }
+
+    void testInterval()
+        {
+        Int a = 2;
+        Int b = 5;
+        Object c = a..b;
+        // Range<Int> c = a..b;
+        console.println("range=" + c);
         }
     }

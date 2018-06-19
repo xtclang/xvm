@@ -167,7 +167,7 @@ public interface OpSupport
     int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
-     * Perform an "divmod" operation.
+     * Perform a "divmod" operation.
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
@@ -178,6 +178,19 @@ public interface OpSupport
      *         or {@link Op#R_BLOCK} values
      */
     int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
+
+    /**
+     * Perform an "interval" / "range" operation.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
+     *         or {@link Op#R_BLOCK} values
+     */
+    int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
 
     // ----- built-in unary operations -------------------------------------------------------------

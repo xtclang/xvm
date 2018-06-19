@@ -1341,13 +1341,19 @@ public abstract class ClassTemplate
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "&", 2).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(hTarget, "^", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
         return getOpChain(hTarget, "/%", 2).invoke(frame, hTarget, hArg, aiReturn);
+        }
+
+    @Override
+    public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(hTarget, "..", 2).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
