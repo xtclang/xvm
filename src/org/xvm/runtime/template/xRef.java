@@ -9,7 +9,6 @@ import org.xvm.asm.constants.ClassConstant;
 
 import org.xvm.asm.constants.NativeRebaseConstant;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -66,7 +65,7 @@ public class xRef
         switch (sPropName)
             {
             case "ActualType":
-                switch (get(frame, hRef, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -104,7 +103,7 @@ public class xRef
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isSelfContained()));
 
             case "service_":
-                switch (get(frame, hRef, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -127,7 +126,7 @@ public class xRef
                     }
 
             case "const_":
-                switch (get(frame, hRef, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -150,7 +149,7 @@ public class xRef
                     }
 
             case "immutable_":
-                switch (get(frame, hRef, Frame.RET_LOCAL))
+                switch (get(frame, hRef, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         return frame.assignValue(iReturn,
@@ -205,7 +204,7 @@ public class xRef
             case "peek":
                 if (hRef.isAssigned(frame))
                     {
-                    switch (get(frame, hRef, Frame.RET_LOCAL))
+                    switch (get(frame, hRef, Op.A_LOCAL))
                         {
                         case Op.R_NEXT:
                             return frame.assignValues(aiReturn, xBoolean.TRUE, frame.getFrameLocal());
@@ -582,7 +581,7 @@ public class xRef
                 {
                 RefHandle hRef = index == 0 ? hRef1 : hRef2;
 
-                switch (template.get(frameCaller, hRef, Frame.RET_LOCAL))
+                switch (template.get(frameCaller, hRef, Op.A_LOCAL))
                     {
                     case Op.R_NEXT:
                         updateResult(frameCaller);

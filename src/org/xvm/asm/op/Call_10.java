@@ -166,7 +166,7 @@ public class Call_10
         ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
         ahVar[0] = hArg;
 
-        return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+        return frame.call1(function, null, ahVar, A_IGNORE);
         }
 
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction)
@@ -174,7 +174,7 @@ public class Call_10
         ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
         ahVar[0] = hArg;
 
-        return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+        return hFunction.call1(frame, null, ahVar, A_IGNORE);
         }
 
     @Override

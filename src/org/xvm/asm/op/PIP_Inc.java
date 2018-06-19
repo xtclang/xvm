@@ -58,6 +58,6 @@ public class PIP_Inc
     @Override
     protected int complete(Frame frame, ObjectHandle hTarget, String sPropName)
         {
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, sPropName, A_IGNORE);
         }
     }

@@ -1356,25 +1356,30 @@ public abstract class Op
 
     // TODO GG try to remove (or make "internal") all of the below
     /**
-     * Pre-defined argument: {@code this:frame} // currently unused
-     */
-    public static final int A_FRAME = -10;
-    /**
      * Pre-defined argument: {@code this:module}
      */
-    public static final int A_MODULE = -11;
+    public static final int A_MODULE = -10;
     /**
      * Pre-defined argument: {@code this:type}
      */
-    public static final int A_TYPE = -12;
+    public static final int A_TYPE = -11;
     /**
      * Pre-defined argument: a target for local invocation
      */
-    public static final int A_THIS = -13;
+    public static final int A_THIS = -12;
     /**
-     * Pre-defined argument: the frame local (used only for testing)
+     * Pre-defined argument: the frame local
      */
-    public static final int A_LOCAL = -14;
+    public static final int A_LOCAL = -13;
+    /**
+     * Pre-defined argument: an indicator for "multiple return values" (internal)
+     */
+    public final static int A_MULTI = -14;
+    /**
+     * Pre-defined argument: an indicator for a "tuple return" (internal)
+     */
+    public final static int A_TUPLE = -15;
+
 
 
     // ----- return values from the Op.process() method --------------------------------------------

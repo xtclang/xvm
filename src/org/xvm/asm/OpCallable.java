@@ -195,7 +195,7 @@ public abstract class OpCallable extends Op
         }
 
     protected int   m_nFunctionId;
-    protected int   m_nRetValue = Frame.RET_UNUSED;
+    protected int   m_nRetValue = A_IGNORE;
     protected int[] m_anRetValue;
 
     protected Argument   m_argFunction;

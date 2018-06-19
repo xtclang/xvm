@@ -110,12 +110,12 @@ public class Call_N0
                 if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED, false);
+                        chain.callSuperN1(frame, ahVar, A_IGNORE, false);
 
                     return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
 
-                return chain.callSuperN1(frame, ahVar, Frame.RET_UNUSED, false);
+                return chain.callSuperN1(frame, ahVar, A_IGNORE, false);
                 }
 
             if (m_nFunctionId < 0)
@@ -131,11 +131,11 @@ public class Call_N0
                 if (anyDeferred(ahVar))
                     {
                     Frame.Continuation stepNext = frameCaller ->
-                        frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+                        frame.call1(function, null, ahVar, A_IGNORE);
 
                     return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                     }
-                return frame.call1(function, null, ahVar, Frame.RET_UNUSED);
+                return frame.call1(function, null, ahVar, A_IGNORE);
                 }
 
             FunctionHandle hFunction = (FunctionHandle) frame.getArgument(m_nFunctionId);
@@ -153,12 +153,12 @@ public class Call_N0
             if (anyDeferred(ahVar))
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    hFunction.call1(frameCaller, null, ahVar, Frame.RET_UNUSED);
+                    hFunction.call1(frameCaller, null, ahVar, A_IGNORE);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
                 }
 
-            return hFunction.call1(frame, null, ahVar, Frame.RET_UNUSED);
+            return hFunction.call1(frame, null, ahVar, A_IGNORE);
             }
         catch (ExceptionHandle.WrapperException e)
             {

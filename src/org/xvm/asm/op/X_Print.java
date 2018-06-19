@@ -77,7 +77,7 @@ public class X_Print
             if (chain.isNative())
                 {
                 iResult = hValue.getTemplate().invokeNativeN(frame, chain.getTop(), hValue,
-                        Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                        Utils.OBJECTS_NONE, A_LOCAL);
                 if (iResult == R_NEXT)
                     {
                     sb.append(((xString.StringHandle) frame.getFrameLocal()).getValue());
@@ -87,7 +87,7 @@ public class X_Print
                 {
                 ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
 
-                iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+                iResult = hValue.getTemplate().invoke1(frame, chain, hValue, ahVar, A_LOCAL);
                 }
 
             if (iResult == R_CALL)

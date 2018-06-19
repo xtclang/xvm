@@ -153,7 +153,7 @@ public class xVar
         CallChain chain = getOpChain(hTarget, "+=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.ADD, hTarget, hArg).doNext(frame)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -162,7 +162,7 @@ public class xVar
         CallChain chain = getOpChain(hTarget, "-=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.SUB, hTarget, hArg).doNext(frame)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -171,7 +171,7 @@ public class xVar
         CallChain chain = getOpChain(hTarget, "*=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MUL, hTarget, hArg).doNext(frame)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -180,7 +180,7 @@ public class xVar
         CallChain chain = getOpChain(hTarget, "/=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.DIV, hTarget, hArg).doNext(frame)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -189,6 +189,6 @@ public class xVar
         CallChain chain = getOpChain(hTarget, "%=", 2);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MOD, hTarget, hArg).doNext(frame)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
     }

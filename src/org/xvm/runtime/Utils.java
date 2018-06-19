@@ -116,11 +116,11 @@ public abstract class Utils
         if (chain.isNative())
             {
             xConst template = (xConst) clzConst.getTemplate();
-            return template.buildHashCode(frame, hConst, Frame.RET_LOCAL);
+            return template.buildHashCode(frame, hConst, Op.A_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Frame.RET_LOCAL);
+        return clzConst.getTemplate().invoke1(frame, chain, hConst, ahVar, Op.A_LOCAL);
         }
 
     // ----- to<String> support -----
@@ -134,11 +134,11 @@ public abstract class Utils
 
         if (chain.isNative())
             {
-            return clzValue.getTemplate().buildStringValue(frame, hValue, Frame.RET_LOCAL);
+            return clzValue.getTemplate().buildStringValue(frame, hValue, Op.A_LOCAL);
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[chain.getTop().getMaxVars()];
-        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Frame.RET_LOCAL);
+        return clzValue.getTemplate().invoke1(frame, chain, hValue, ahVar, Op.A_LOCAL);
         }
 
 
@@ -184,7 +184,7 @@ public abstract class Utils
                     String sProp = ((DeferredPropertyHandle) hArg).m_property.getName();
 
                     switch (hThis.getTemplate().getPropertyValue(
-                            frameCaller, hThis, sProp, Frame.RET_LOCAL))
+                            frameCaller, hThis, sProp, Op.A_LOCAL))
                         {
                         case Op.R_NEXT:
                             // replace the property handle with the value
@@ -270,7 +270,7 @@ public abstract class Utils
             return frame.assignValue(iReturn, xBoolean.TRUE);
             }
 
-        switch (type1.callEquals(frame, hValue1, hValue2, Frame.RET_LOCAL))
+        switch (type1.callEquals(frame, hValue1, hValue2, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 return completeEquals(frame, type2, hValue1, hValue2, iReturn);
@@ -305,7 +305,7 @@ public abstract class Utils
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        switch (type1.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
+        switch (type1.callCompare(frame, hValue1, hValue2, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 return completeCompare(frame, type2, hValue1, hValue2, iReturn);
@@ -458,7 +458,7 @@ public abstract class Utils
         int cReturns = aiReturn.length;
 
         ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
-        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, Frame.RET_MULTI, aiReturn);
+        Frame frameNext = frame.createNativeFrame(GET_AND_RETURN, ahFuture, Op.A_MULTI, aiReturn);
 
         // create a pseudo frame to deal with the multiple waits
         for (int i = 0; i < cReturns; i++)
@@ -499,7 +499,7 @@ public abstract class Utils
                         return frame.returnValue(hValue);
                         }
 
-                    assert frame.f_iReturn == Frame.RET_MULTI;
+                    assert frame.f_iReturn == A_MULTI;
 
                     ObjectHandle[] ahValue = new ObjectHandle[cValues];
                     for (int i = 0; i < cValues; i++)
@@ -602,7 +602,7 @@ public abstract class Utils
                     {
                     case 0:
                         iResult = template.
-                            getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                            getPropertyValue(frameCaller, hTarget, sPropName, Op.A_LOCAL);
                         break;
 
                     case 1:
@@ -671,7 +671,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Frame.RET_LOCAL);
+                        iResult = template.getPropertyValue(frameCaller, hTarget, sPropName, Op.A_LOCAL);
                         break;
 
                     case 1:
@@ -741,7 +741,7 @@ public abstract class Utils
                 switch (nStep)
                     {
                     case 0:
-                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Frame.RET_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_LOCAL);
                         break;
 
                     case 1:
@@ -804,7 +804,7 @@ public abstract class Utils
                 switch (++ixStep)
                     {
                     case 0:
-                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Frame.RET_LOCAL);
+                        iResult = hTarget.getVarSupport().get(frameCaller, hTarget, Op.A_LOCAL);
                         break;
 
                     case 1:
@@ -841,42 +841,42 @@ public abstract class Utils
     // the lambda for unary actions
     public interface UnaryAction
         {
-        // invoke and place the result into Frame.RET_LOCAL
+        // invoke and place the result into A_LOCAL
         int invoke(Frame frame, ObjectHandle hTarget);
 
         // ----- action constants ------------------------------------------------------------------
 
         UnaryAction INC = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokeNext(frameCaller, hValue, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeNext(frameCaller, hValue, Op.A_LOCAL);
 
         UnaryAction DEC = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokePrev(frameCaller, hValue, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokePrev(frameCaller, hValue, Op.A_LOCAL);
 
         UnaryAction NEG = (frameCaller, hValue) ->
-            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeNeg(frameCaller, hValue, Op.A_LOCAL);
         }
 
     // the lambda for binary actions
     public interface BinaryAction
         {
-        // invoke and place the result into Frame.RET_LOCAL
+        // invoke and place the result into A_LOCAL
         int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg);
 
         // ----- action constants ------------------------------------------------------------------
 
         BinaryAction ADD = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeAdd(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeAdd(frameCaller, hValue, hArg, Op.A_LOCAL);
 
         BinaryAction SUB = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeSub(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeSub(frameCaller, hValue, hArg, Op.A_LOCAL);
 
         BinaryAction MUL = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeMul(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeMul(frameCaller, hValue, hArg, Op.A_LOCAL);
 
         BinaryAction DIV = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeDiv(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeDiv(frameCaller, hValue, hArg, Op.A_LOCAL);
 
         BinaryAction MOD = (frameCaller, hValue, hArg) ->
-            hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Frame.RET_LOCAL);
+            hValue.getOpSupport().invokeMod(frameCaller, hValue, hArg, Op.A_LOCAL);
         }
     }

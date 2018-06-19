@@ -59,7 +59,7 @@ public class xString
         StringHandle hThis = (StringHandle) hTarget;
         String       sThis = hThis.m_sValue;
 
-        switch (hArg.getTemplate().buildStringValue(frame, hArg, Frame.RET_LOCAL))
+        switch (hArg.getTemplate().buildStringValue(frame, hArg, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 return frame.assignValue(iReturn, makeHandle(sThis +

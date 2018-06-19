@@ -99,7 +99,7 @@ public interface IndexSupport
     default int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 hValue = frame.getFrameLocal();
@@ -113,7 +113,7 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 {
@@ -153,7 +153,7 @@ public interface IndexSupport
     default int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 hValue = frame.getFrameLocal();
@@ -167,7 +167,7 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokeNext(frame, hValue, Frame.RET_LOCAL))
+        switch (hValue.getOpSupport().invokeNext(frame, hValue, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
@@ -201,7 +201,7 @@ public interface IndexSupport
     default int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 hValue = frame.getFrameLocal();
@@ -215,7 +215,7 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 {
@@ -255,7 +255,7 @@ public interface IndexSupport
     default int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ObjectHandle hValue;
-        switch (extractArrayValue(frame, hTarget, lIndex, Frame.RET_LOCAL))
+        switch (extractArrayValue(frame, hTarget, lIndex, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 hValue = frame.getFrameLocal();
@@ -269,7 +269,7 @@ public interface IndexSupport
                 throw new IllegalStateException();
             }
 
-        switch (hValue.getOpSupport().invokePrev(frame, hValue, Frame.RET_LOCAL))
+        switch (hValue.getOpSupport().invokePrev(frame, hValue, Op.A_LOCAL))
             {
             case Op.R_NEXT:
                 return assignArrayValue(frame, hTarget, lIndex, frame.getFrameLocal()) == Op.R_EXCEPTION ?
@@ -298,7 +298,7 @@ public interface IndexSupport
 
         for (int i = 0; i < cValues; i++)
             {
-            switch (extractArrayValue(frame, hTarget, i, Frame.RET_LOCAL))
+            switch (extractArrayValue(frame, hTarget, i, Op.A_LOCAL))
                 {
                 case Op.R_NEXT:
                     ahValue[i] = frame.getFrameLocal();
@@ -322,7 +322,7 @@ public interface IndexSupport
 
         for (int i = 0; i < cValues; i++)
             {
-            switch (extractArrayValue(frame, hTarget, i, Frame.RET_LOCAL))
+            switch (extractArrayValue(frame, hTarget, i, Op.A_LOCAL))
                 {
                 case Op.R_NEXT:
                     consumer.accept(frame.getFrameLocal());

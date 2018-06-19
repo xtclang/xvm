@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.Op;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -270,7 +271,7 @@ public class AnnotationSupport
         CallChain chain = getSetChain();
         return chain == null
             ? ensureVarSupport().set(frame, hTarget, hValue)
-            : chain.invoke(frame, hTarget, hValue, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hValue, Op.A_IGNORE);
         }
 
     @Override
@@ -279,7 +280,7 @@ public class AnnotationSupport
         CallChain chain = getOpChain("+=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarAdd(frame, hTarget, hArg)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -288,7 +289,7 @@ public class AnnotationSupport
         CallChain chain = getOpChain("-=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarSub(frame, hTarget, hArg)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -297,7 +298,7 @@ public class AnnotationSupport
         CallChain chain = getOpChain("*=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarMul(frame, hTarget, hArg)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -306,7 +307,7 @@ public class AnnotationSupport
         CallChain chain = getOpChain("/=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarDiv(frame, hTarget, hArg)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     @Override
@@ -315,7 +316,7 @@ public class AnnotationSupport
         CallChain chain = getOpChain("%=", 1);
         return chain == null
             ? ensureVarSupport().invokeVarMod(frame, hTarget, hArg)
-            : chain.invoke(frame, hTarget, hArg, Frame.RET_UNUSED);
+            : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
 

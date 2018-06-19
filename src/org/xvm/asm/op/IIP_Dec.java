@@ -61,6 +61,6 @@ public class IIP_Dec
         {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
 
-        return template.invokePreDec(frame, hTarget, hIndex.getValue(), Frame.RET_UNUSED);
+        return template.invokePreDec(frame, hTarget, hIndex.getValue(), A_IGNORE);
         }
     }

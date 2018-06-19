@@ -79,7 +79,7 @@ public class JumpLte
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
                                    ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        switch (type.callCompare(frame, hValue1, hValue2, Frame.RET_LOCAL))
+        switch (type.callCompare(frame, hValue1, hValue2, A_LOCAL))
             {
             case R_NEXT:
                 return frame.getFrameLocal() == xOrdered.GREATER ? iPC + 1 : iPC + m_ofJmp;

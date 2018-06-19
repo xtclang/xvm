@@ -104,7 +104,7 @@ public class Call_0T
 
             checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-            switch (chain.callSuper01(frame, Frame.RET_LOCAL))
+            switch (chain.callSuper01(frame, A_LOCAL))
                 {
                 case R_NEXT:
                     return frame.assignTuple(m_nRetValue,

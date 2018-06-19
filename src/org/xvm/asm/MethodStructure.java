@@ -910,7 +910,7 @@ public class MethodStructure
                             ctxMain.sendConstantRequest(frame, this);
 
                         // create a pseudo frame to deal with the wait
-                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Frame.RET_LOCAL);
+                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_LOCAL);
                         frameWait.setContinuation(
                             frameCaller -> frameCaller.call(frameNext));
 
@@ -983,7 +983,7 @@ public class MethodStructure
                             }
 
                         template.construct(frame, constructor,
-                            template.getCanonicalClass(), Utils.OBJECTS_NONE, Frame.RET_LOCAL);
+                            template.getCanonicalClass(), Utils.OBJECTS_NONE, Op.A_LOCAL);
                         frame.m_frameNext.setContinuation(frameCaller ->
                             {
                             constSingleton.setHandle(frameCaller.getFrameLocal());

@@ -77,7 +77,7 @@ public class IP_Inc
     @Override
     protected int completeWithVar(Frame frame, RefHandle hTarget)
         {
-        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, Frame.RET_UNUSED);
+        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, A_IGNORE);
         }
 
     @Override
@@ -85,6 +85,6 @@ public class IP_Inc
         {
         ObjectHandle hTarget = frame.getThis();
 
-        return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, Frame.RET_UNUSED);
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, sProperty, A_IGNORE);
         }
     }

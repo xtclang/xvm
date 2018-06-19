@@ -443,7 +443,7 @@ public class xFunction
 
             Frame frameSave = frame.m_frameNext;
 
-            call1(frame, hTarget, Utils.OBJECTS_NONE, Frame.RET_UNUSED);
+            call1(frame, hTarget, Utils.OBJECTS_NONE, Op.A_IGNORE);
 
             // TODO: what if this function is async and frameThis is null
             Frame frameThis = frame.m_frameNext;
@@ -501,7 +501,7 @@ public class xFunction
 
             // TODO: validate that all the arguments are immutable or ImmutableAble;
             //       replace functions with proxies
-            int cReturns = iReturn == Frame.RET_UNUSED ? 0 : 1;
+            int cReturns = iReturn == Op.A_IGNORE ? 0 : 1;
 
             CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendInvoke1Request(
                 frame, this, ahVar, cReturns);
@@ -542,7 +542,7 @@ public class xFunction
                 return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
                 }
 
-            // the return value is either a RET_LOCAL or a local property;
+            // the return value is either a A_LOCAL or a local property;
             // in either case there is no "VarInfo" to mark as "waiting", so we need to create
             // a pseudo frame to deal with the wait
             return frame.call(Utils.createWaitFrame(frame, cfResult, iReturn));
