@@ -33,17 +33,20 @@ public class xNullable
 
             f_templates.registerNativeTemplate(pool.typeNull(), this);
 
-            NULL = new NullHandle(getCanonicalClass());
+            super.initDeclared();
 
-            m_listNames = Collections.singletonList("Null");
-            m_listHandles = Collections.singletonList(NULL);
-
-            pool.valNull().setHandle(NULL);
+            NULL = (NullHandle) m_listHandles.get(0);
             }
         else
             {
             getSuper(); // this will initialize all the handles
             }
+        }
+
+    @Override
+    protected EnumHandle makeEnumHandle(int iOrdinal)
+        {
+        return new NullHandle(getCanonicalClass());
         }
 
     private static class NullHandle

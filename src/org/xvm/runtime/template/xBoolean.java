@@ -34,16 +34,21 @@ public class xBoolean
             f_templates.registerNativeTemplate(pool.typeTrue(), this);
             f_templates.registerNativeTemplate(pool.typeFalse(), this);
 
-            FALSE = new BooleanHandle(getCanonicalClass(), false);
-            TRUE = new BooleanHandle(getCanonicalClass(), true);
+            super.initDeclared();
 
-            pool.valTrue().setHandle(TRUE);
-            pool.valFalse().setHandle(FALSE);
+            FALSE = (BooleanHandle) m_listHandles.get(0);
+            TRUE = (BooleanHandle) m_listHandles.get(1);
             }
         else
             {
             getSuper(); // this will initialize all the handles
             }
+        }
+
+    @Override
+    protected EnumHandle makeEnumHandle(int iOrdinal)
+        {
+        return new BooleanHandle(getCanonicalClass(), iOrdinal != 0);
         }
 
     @Override
