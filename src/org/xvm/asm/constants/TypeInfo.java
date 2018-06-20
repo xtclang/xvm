@@ -941,8 +941,8 @@ public class TypeInfo
      * Find a named method or function that best matches the specified requirements.
      *
      * @param sName       the name of the method or function
-     * @param fMethods    true to include methods in the search
-     * @param fFunctions  true to include functions in the search
+     * @param fMethod     true to include methods in the search
+     * @param fFunction   true to include functions in the search
      * @param aRedundant  the redundant return type information (helps to clarify which method or
      *                    function to select)
      * @param aArgs       the types of the arguments being provided (some of which may be null to
@@ -950,9 +950,9 @@ public class TypeInfo
      * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
      *                    an element in {@code aArgs}
      *
-     * @return the matching method or function (null if none found)
+     * @return the id of a matching method or function (null if none found)
      */
-    public MethodConstant findCallable(String sName, boolean fMethods, boolean fFunctions,
+    public MethodConstant findCallable(String sName, boolean fMethod, boolean fFunction,
                                        TypeConstant[] aRedundant, TypeConstant[] aArgs, String[] asArgNames)
         {
         int cRedundant = aRedundant == null ? 0 : aRedundant.length;
@@ -978,7 +978,7 @@ public class TypeInfo
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant
-                    && (info.isFunction() ? fFunctions : fMethods))
+                    && (info.isFunction() ? fFunction : fMethod))
                 {
                 SignatureConstant sig      = info.getSignature();
                 TypeConstant[]    aParams  = sig.getRawParams();
@@ -1068,6 +1068,21 @@ public class TypeInfo
         // - Otherwise, the ambiguity is an error.
         // TODO - how to factor in conversions?
         return null;
+        }
+
+    /**
+     * Find a constructor that best matches the specified requirements.
+     *
+     * @param aArgs       the types of the arguments being provided (some of which may be null to
+     *                    indicate "unknown" in a pre-validation stage, or "non-binding unknown")
+     * @param asArgNames  an optional array of argument names, each (if provided) corresponding to
+     *                    an element in {@code aArgs}
+     *
+     * @return the matching constructor id (null if none found)
+     */
+    public MethodConstant findConstructor(TypeConstant[] aArgs, String[] asArgNames)
+        {
+        return findCallable("construct", false, true, TypeConstant.NO_TYPES, aArgs, asArgNames);
         }
 
     /**

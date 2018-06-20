@@ -929,6 +929,7 @@ public class ConstantPool
             case "Exception":
             case "Function":
             case "FPLiteral":
+            case "Interval":
             case "IntLiteral":
             case "Iterable":
             case "Iterator":

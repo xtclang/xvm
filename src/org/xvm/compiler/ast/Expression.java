@@ -606,9 +606,12 @@ public abstract class Expression
     /**
      * Store the result of validating the Expression.
      *
+     * Important note: the array of actual types comes from the actual signature and
+     * must be cloned if it's to be changed.
+     *
      * @param atypeRequired  the (optional) types required from the Expression (both the array and
      *                       any of its elements can be null)
-     * @param aTypeActual    the types that result from the Expression (neither the array nor its
+     * @param atypeActual    the types that result from the Expression (neither the array nor its
      *                       elements can be null, except in the case of an error, in which the
      *                       array can be null)
      * @param fit            the fit of those types that was determined by the validation;
@@ -625,18 +628,18 @@ public abstract class Expression
      */
     protected Expression finishValidations(
             TypeConstant[] atypeRequired,
-            TypeConstant[] aTypeActual,
+            TypeConstant[] atypeActual,
             TypeFit        fit,
             Constant[]     aconstVal,
             ErrorListener  errs)
         {
         assert fit != null;
         assert atypeRequired == null || checkElementsNonNull(atypeRequired);
-        assert aTypeActual   == null || checkElementsNonNull(aTypeActual);
-        assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == aTypeActual.length;
+        assert atypeActual == null || checkElementsNonNull(atypeActual);
+        assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
-        if (aTypeActual == null)
+        if (atypeActual == null)
             {
             assert !fit.isFit();
             assert aconstVal == null;
@@ -648,19 +651,32 @@ public abstract class Expression
             return null;
             }
 
-        int cActual   = aTypeActual.length;
+        int cActual   = atypeActual.length;
         int cTypeReqs = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypeReqs > cActual && fit.isFit())
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             }
 
+        boolean fCloneActual = true;
+
         // for expressions that yield constant values, make sure that the types reflect that
         if (aconstVal != null)
             {
             for (int i = 0; i < cActual; ++i)
                 {
-                aTypeActual[i] = aTypeActual[i].ensureImmutable();
+                TypeConstant typeOrg = atypeActual[i];
+                TypeConstant typeImm = typeOrg.ensureImmutable();
+
+                if (!typeOrg.equals(typeImm))
+                    {
+                    if (fCloneActual)
+                        {
+                        atypeActual  = atypeActual.clone();
+                        fCloneActual = false;
+                        }
+                    atypeActual[i] = typeImm;
+                    }
                 }
             }
 
@@ -669,7 +685,7 @@ public abstract class Expression
             {
             for (int i = 0, c = Math.min(cActual, cTypeReqs); i < c; ++i)
                 {
-                TypeConstant typeActual   = aTypeActual[i];
+                TypeConstant typeActual   = atypeActual[i];
                 TypeConstant typeRequired = atypeRequired[i];
                 if (!typeActual.isA(typeRequired))
                     {
@@ -691,7 +707,13 @@ public abstract class Expression
                             aconstVal[i] = generateFakeConstant(typeRequired);
                             typeActual   = typeActual.ensureImmutable();
                             }
-                        aTypeActual[i] = typeActual;
+
+                        if (fCloneActual)
+                            {
+                            atypeActual  = atypeActual.clone();
+                            fCloneActual = false;
+                            }
+                        atypeActual[i] = typeActual;
                         }
                     else
                         {
@@ -720,7 +742,7 @@ public abstract class Expression
             }
 
         m_fit    = fit;
-        m_oType  = fit.isFit() || atypeRequired == null ? aTypeActual : atypeRequired;
+        m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : atypeRequired;
         m_oConst = aconstVal;
 
         if (!fit.isFit())

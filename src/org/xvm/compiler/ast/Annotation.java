@@ -208,8 +208,7 @@ public class Annotation
 
         if (fValid)
             {
-            MethodConstant idConstruct = infoAnno.findCallable("construct", false, true,
-                    TypeConstant.NO_TYPES, atypeArgs, asArgNames);
+            MethodConstant idConstruct = infoAnno.findConstructor(atypeArgs, asArgNames);
             if (idConstruct == null)
                 {
                 // TODO uncomment this after we bother to create constructors :D
