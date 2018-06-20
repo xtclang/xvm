@@ -944,6 +944,7 @@ public class ConstantPool
             case "Type":
             case "Orderable":
             case "Sequential":
+            case "Number":
             case "Var":
                 sClz = sName;
                 break;
@@ -1788,6 +1789,7 @@ public class ConstantPool
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
     public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
     public ClassConstant     clzSequential()    {ClassConstant     c = m_clzSequential;   if (c == null) {m_clzSequential   = c = (ClassConstant) getImplicitlyImportedIdentity("Sequential" );} return c;}
+    public ClassConstant     clzNumber()        {ClassConstant     c = m_clzNumber;       if (c == null) {m_clzNumber       = c = (ClassConstant) getImplicitlyImportedIdentity("Number"     );} return c;}
     public ClassConstant     clzRange()         {ClassConstant     c = m_clzRange;        if (c == null) {m_clzRange        = c = (ClassConstant) getImplicitlyImportedIdentity("Range"      );} return c;}
     public ClassConstant     clzInterval()      {ClassConstant     c = m_clzInterval;     if (c == null) {m_clzInterval     = c = (ClassConstant) getImplicitlyImportedIdentity("Interval"   );} return c;}
     public ClassConstant     clzHashable()      {ClassConstant     c = m_clzHashable;     if (c == null) {m_clzHashable     = c = (ClassConstant) getImplicitlyImportedIdentity("Hashable"   );} return c;}
@@ -1847,6 +1849,7 @@ public class ConstantPool
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
     public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
     public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
+    public TypeConstant      typeNumber()       {TypeConstant      c = m_typeNumber;      if (c == null) {m_typeNumber      = c = ensureTerminalTypeConstant(clzNumber()                     );} return c;}
     public TypeConstant      typeRange()        {TypeConstant      c = m_typeRange;       if (c == null) {m_typeRange       = c = ensureTerminalTypeConstant(clzRange()                      );} return c;}
     public TypeConstant      typeInterval()     {TypeConstant      c = m_typeInterval;    if (c == null) {m_typeInterval    = c = ensureTerminalTypeConstant(clzInterval()                   );} return c;}
     public TypeConstant      typeHashable()     {TypeConstant      c = m_typeHashable;    if (c == null) {m_typeHashable    = c = ensureTerminalTypeConstant(clzHashable()                   );} return c;}
@@ -2481,6 +2484,7 @@ public class ConstantPool
         m_clzSequence     = null;
         m_clzOrderable    = null;
         m_clzSequential   = null;
+        m_clzNumber       = null;
         m_clzHashable     = null;
         m_clzRange        = null;
         m_clzInterval     = null;
@@ -2542,6 +2546,7 @@ public class ConstantPool
         m_typeSequence    = null;
         m_typeOrderable   = null;
         m_typeSequential  = null;
+        m_typeNumber      = null;
         m_typeHashable    = null;
         m_typeRange       = null;
         m_typeInterval    = null;
@@ -2802,6 +2807,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzSequence;
     private transient ClassConstant     m_clzOrderable;
     private transient ClassConstant     m_clzSequential;
+    private transient ClassConstant     m_clzNumber;
     private transient ClassConstant     m_clzHashable;
     private transient ClassConstant     m_clzRange;
     private transient ClassConstant     m_clzInterval;
@@ -2864,6 +2870,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeSequence;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;
+    private transient TypeConstant      m_typeNumber;
     private transient TypeConstant      m_typeHashable;
     private transient TypeConstant      m_typeRange;
     private transient TypeConstant      m_typeInterval;

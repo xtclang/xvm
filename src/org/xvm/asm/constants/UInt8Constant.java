@@ -144,8 +144,15 @@ public class UInt8Constant
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
-        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+        switch (that == null
+                ? op.TEXT + this.getFormat().name()
+                : this.getFormat().name() + op.TEXT + that.getFormat().name())
             {
+            case "-UInt8":
+                return validate(-this.m_nVal);
+            case "~UInt8":
+                return validate(~this.m_nVal);
+
             case "UInt8+IntLiteral":
             case "UInt8-IntLiteral":
             case "UInt8*IntLiteral":
@@ -205,7 +212,7 @@ public class UInt8Constant
                 return getConstantPool().valOf(this.m_nVal > ((UInt8Constant) that).m_nVal);
             case "UInt8>=UInt8":
                 return getConstantPool().valOf(this.m_nVal >= ((UInt8Constant) that).m_nVal);
-            
+
             case "UInt8<=>UInt8":
                 return getConstantPool().valOrd(this.m_nVal - ((UInt8Constant) that).m_nVal);
             }

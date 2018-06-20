@@ -255,6 +255,38 @@ public class PackedInteger
         }
 
     /**
+     * @return the negated form of this packed integer
+     */
+    public PackedInteger negate()
+        {
+        return new PackedInteger(this.getBigInteger().negate());
+        }
+
+    /**
+     * @return the complemented form of this packed integer
+     */
+    public PackedInteger complement()
+        {
+        return new PackedInteger(this.getBigInteger().not());
+        }
+
+    /**
+     * @return the packed integer that is one less than this packed integer
+     */
+    public PackedInteger previous()
+        {
+        return sub(ONE);
+        }
+
+    /**
+     * @return the packed integer that is one more than this packed integer
+     */
+    public PackedInteger next()
+        {
+        return add(ONE);
+        }
+
+    /**
      * Add the value of a specified PackedInteger to this PackedInteger, resulting in a new
      * PackedInteger.
      *

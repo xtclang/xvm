@@ -22,19 +22,23 @@ enum Boolean
             {
             return 0;
             }
+        @Override
         @Op Boolean and(Boolean that)
             {
             return this;
             }
+        @Override
         @Op Boolean or(Boolean that)
             {
             return that;
             }
+        @Override
         @Op Boolean xor(Boolean that)
             {
             return that;
             }
-        @Op Boolean not()
+        @Override
+        @Op("~") Boolean not()
             {
             return True;
             }
@@ -62,19 +66,23 @@ enum Boolean
             {
             return 1;
             }
+        @Override
         @Op Boolean and(Boolean that)
             {
             return that;
             }
+        @Override
         @Op Boolean or(Boolean that)
             {
             return this;
             }
+        @Override
         @Op Boolean xor(Boolean that)
             {
             return !that;
             }
-        @Op Boolean not()
+        @Override
+        @Op("~") Boolean not()
             {
             return False;
             }
@@ -88,5 +96,5 @@ enum Boolean
     @Op Boolean and(Boolean that);
     @Op Boolean or(Boolean that);
     @Op Boolean xor(Boolean that);
-    @Op Boolean not();
+    @Op("~") Boolean not();
     }

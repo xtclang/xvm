@@ -101,6 +101,53 @@ public class LiteralExpression
             }
         }
 
+    /**
+     * Take a unary prefix token ('+' or '-') and prepend it to this literal.
+     *
+     * @param tokenPrefix  the unary prefix token
+     * @param errs         an error list to log any errors to
+     *
+     * @return the expression to use in place of this expression
+     */
+    Expression adoptUnaryPrefix(Token tokenPrefix, ErrorListener errs)
+        {
+        assert tokenPrefix.getId() == Id.ADD || tokenPrefix.getId() == Id.SUB;
+
+        // this must be a numeric literal
+        Object  oValue;
+        boolean fNegate   = tokenPrefix.getId() == Id.SUB;
+        Token   tokNumber = literal;
+        switch (tokNumber.getId())
+            {
+            default:
+                tokenPrefix.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
+                        tokenPrefix.getValueText(), getImplicitType(null).getValueString());
+                return this;
+
+            case LIT_INT:
+                PackedInteger pint = (PackedInteger) tokNumber.getValue();
+                oValue = fNegate ? PackedInteger.ZERO.sub(pint) : pint;
+                break;
+
+            case LIT_DEC:
+                BigDecimal dec = (BigDecimal) tokNumber.getValue();
+                oValue = fNegate ? dec.negate() : dec;
+                break;
+
+            case LIT_BIN:
+                // it's just a string
+                oValue = getSource().toString(tokenPrefix.getStartPosition(), tokNumber.getEndPosition());
+                break;
+            }
+
+        Token tokenMerged = new Token(
+                tokenPrefix.getStartPosition(),
+                tokNumber.getEndPosition(),
+                tokNumber.getId(),
+                oValue);
+        return replaceThisWith(new LiteralExpression(tokenMerged));
+        }
+
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {

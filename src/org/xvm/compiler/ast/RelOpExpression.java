@@ -407,7 +407,7 @@ public class RelOpExpression
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        MethodConstant idOp         = determineOperator(type1, type2, typeRequired, errs);
+        MethodConstant idOp         = findOpMethod(type1, type2, typeRequired, errs);
         if (idOp != null)
             {
             atypeResults = idOp.getRawReturns();
@@ -548,7 +548,11 @@ public class RelOpExpression
      * @return the op method, or null if no appropriate op method was found, or no one op method was
      *         the unambiguous best
      */
-    private MethodConstant determineOperator(TypeConstant type1, TypeConstant type2, TypeConstant typeRequired, ErrorListener errs)
+    private MethodConstant findOpMethod(
+            TypeConstant  type1,
+            TypeConstant  type2,
+            TypeConstant  typeRequired,
+            ErrorListener errs)
         {
         // select the method on expr1 that will be used to implement the op
         MethodConstant      idOp     = null;

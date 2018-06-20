@@ -379,8 +379,58 @@ public class IntConstant
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
-        switch (this.getFormat().name() + op.TEXT + that.getFormat().name())
+        switch (that == null
+                    ? op.TEXT + this.getFormat().name()
+                    : this.getFormat().name() + op.TEXT + that.getFormat().name())
             {
+            case "++Int16":
+            case "++Int32":
+            case "++Int64":
+            case "++Int128":
+            case "++VarInt":
+            case "++UInt16":
+            case "++UInt32":
+            case "++UInt64":
+            case "++UInt128":
+            case "++VarUInt":
+                return validate(this.getValue().next());
+
+            case "--Int16":
+            case "--Int32":
+            case "--Int64":
+            case "--Int128":
+            case "--VarInt":
+            case "--UInt16":
+            case "--UInt32":
+            case "--UInt64":
+            case "--UInt128":
+            case "--VarUInt":
+                return validate(this.getValue().previous());
+
+            case "-Int16":
+            case "-Int32":
+            case "-Int64":
+            case "-Int128":
+            case "-VarInt":
+            case "-UInt16":
+            case "-UInt32":
+            case "-UInt64":
+            case "-UInt128":
+            case "-VarUInt":
+                return validate(this.getValue().negate());
+
+            case "~Int16":
+            case "~Int32":
+            case "~Int64":
+            case "~Int128":
+            case "~VarInt":
+            case "~UInt16":
+            case "~UInt32":
+            case "~UInt64":
+            case "~UInt128":
+            case "~VarUInt":
+                return validate(this.getValue().complement());
+
             case "Int16+IntLiteral":
             case "Int16-IntLiteral":
             case "Int16*IntLiteral":

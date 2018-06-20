@@ -2493,12 +2493,16 @@ public class Parser
         {
         switch (peek().getId())
             {
-            case INC:
-            case DEC:
             case ADD:
+                return new UnaryPlusExpression(current(), parsePrefixExpression());
+
             case SUB:
+                return new UnaryMinusExpression(current(), parsePrefixExpression());
+
             case NOT:
             case BIT_NOT:
+            case INC:
+            case DEC:
                 return new PrefixExpression(current(), parsePrefixExpression());
 
             default:

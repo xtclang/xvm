@@ -745,6 +745,13 @@ public abstract class Expression
         return exprResult;
         }
 
+    protected Expression replaceThisWith(Expression that)
+        {
+        getParent().introduceParentage(that);
+        that.setStage(getStage());
+        return that;
+        }
+
     /**
      * @return true iff the Expression has been validated
      */

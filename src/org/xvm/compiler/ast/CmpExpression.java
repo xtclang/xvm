@@ -132,6 +132,8 @@ public class CmpExpression
             type1 = expr1New.getType();
             fValid &= expr1New.getTypeFit().isFit();
 
+            // if we weren't previously able to determine a "target" type to use, then try again now
+            // that the first expression is validated
             if (typeRequest == null)
                 {
                 typeRequest = selectType(type1, type2, errs);

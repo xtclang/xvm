@@ -82,7 +82,7 @@ const Int64
     Int64 abs();
 
 // TODO
-    @Op Int64 neg();
+    @Op("-#") Int64 neg();
 
 // TODO
     Int64 pow(Int64 n);
