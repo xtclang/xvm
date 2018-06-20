@@ -2501,8 +2501,11 @@ public class Parser
 
             case NOT:
             case BIT_NOT:
+                return new UnaryComplementExpression(current(), parsePrefixExpression());
+
             case INC:
             case DEC:
+                // TODO create pre-inc/pre-dec expressions
                 return new PrefixExpression(current(), parsePrefixExpression());
 
             default:
