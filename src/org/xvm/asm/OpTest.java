@@ -174,10 +174,13 @@ public abstract class OpTest
                 type2 = frame.getArgumentType(m_nValue2);
                 }
 
-            if (type1 != type2)
+            if (!type1.equals(type2) &&
+                    (type1.ensureTypeInfo().getFormat() != Component.Format.ENUMVALUE ||
+                     type2.ensureTypeInfo().getFormat() != Component.Format.ENUMVALUE))
                 {
                 // this shouldn't have compiled
-                throw new IllegalStateException();
+                throw new IllegalStateException("type1=" + type1.getValueString()
+                    + ", type2=" + type2.getValueString());
                 }
 
             if (fAnyProp)
