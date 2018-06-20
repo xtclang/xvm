@@ -115,7 +115,7 @@ interface Number
     /**
      * Obtain an interval beginning with this number and proceeding to the specified number.
      */
-    @Op Interval<Number> to(Number n)
+    @Op("..") Interval<Number> to(Number n)
         {
         return new Interval<Number>(this, n);
         }

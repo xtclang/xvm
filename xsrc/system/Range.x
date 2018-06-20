@@ -21,6 +21,7 @@ mixin Range<ElementType extends Sequential>
                 private ElementType nextValue = upperBound;
                 private Boolean done = false;
 
+                @Override
                 conditional ElementType next()
                     {
                     if (done)
@@ -45,6 +46,7 @@ mixin Range<ElementType extends Sequential>
                 private ElementType nextValue = lowerBound;
                 private Boolean done = false;
 
+                @Override
                 conditional ElementType next()
                     {
                     if (done)
@@ -64,7 +66,6 @@ mixin Range<ElementType extends Sequential>
             }
         }
 
-    @Override
     void forEach(function void(ElementType) process)
         {
         if (reversed)
@@ -143,7 +144,6 @@ mixin Range<ElementType extends Sequential>
     /**
      * Two ranges that are contiguous or overlap can be joined together to form a larger range.
      */
-    @Override
     conditional Range<ElementType> union(Range<ElementType> that)
         {
         if (!this.adjoins(that))
