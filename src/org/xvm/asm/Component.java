@@ -823,6 +823,9 @@ public abstract class Component
         // make sure that the parent is set correctly
         child.setContaining(this);
 
+        // TODO: remove eventually
+        System.err.println("*** Component " + toString() + " has duplicate children " + child.toString());
+
         // the new kid gets put at the end of the linked list of siblings
         Component lastSibling = sibling;
         while (lastSibling.m_sibling != null)

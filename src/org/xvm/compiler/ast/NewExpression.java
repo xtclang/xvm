@@ -177,10 +177,10 @@ public class NewExpression
                 }
             }
 
-        TypeExpression exprTypeOld   = this.type;
-        TypeExpression exprTypeNew   = (TypeExpression) exprTypeOld.validate(ctx, typeRequired.getType(), errs);
-        TypeConstant   typeConstruct = null;
-        TypeInfo       infoConstruct = null;
+        TypeExpression exprTypeOld = this.type;
+        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeRequired.getType(), errs);
+        TypeConstant   typeTarget  = null;
+        TypeInfo       infoTarget  = null;
         if (exprTypeNew == null)
             {
             fValid = false;
@@ -189,20 +189,20 @@ public class NewExpression
             {
             this.type = exprTypeNew;
 
-            typeConstruct = exprTypeNew.ensureTypeConstant();
+            typeTarget = exprTypeNew.ensureTypeConstant();
 
-            TypeConstant typeInferred = inferTypeFromRequired(typeConstruct, typeRequired);
+            TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
             if (typeInferred != null)
                 {
-                typeConstruct = typeInferred;
+                typeTarget = typeInferred;
                 }
-            infoConstruct = typeConstruct.ensureTypeInfo(errs);
+            infoTarget = typeTarget.ensureTypeInfo(errs);
 
             // if the type is not new-able, then it must be an anonymous inner class with a body
             // that makes the type new-able
-            if (body == null && !infoConstruct.isNewable())
+            if (body == null && !infoTarget.isNewable())
                 {
-                log(errs, Severity.ERROR, Constants.VE_NEW_ILLEGAL_TYPE, typeConstruct.getValueString());
+                log(errs, Severity.ERROR, Constants.VE_NEW_ILLEGAL_TYPE, typeTarget.getValueString());
                 fValid = false;
                 }
 
@@ -270,16 +270,19 @@ public class NewExpression
         if (fValid)
             {
             // find the constructor to use
-            m_idConstructor = infoConstruct.findCallable(
-                    "construct", false, true, null, atypeArgs, asArgNames);
-            if (m_idConstructor == null)
+            MethodConstant idConstruct = infoTarget.findConstructor(atypeArgs, asArgNames);
+            if (idConstruct == null)
                 {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeConstruct.getValueString());
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
                 fValid = false;
+                }
+            else
+                {
+                m_idConstructor = idConstruct;
                 }
             }
 
-        Expression exprNew = finishValidation(typeRequired, typeConstruct,
+        Expression exprNew = finishValidation(typeRequired, typeTarget,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         return fValid ? exprNew : null;
         }

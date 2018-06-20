@@ -10,10 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.xvm.asm.Constants;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -142,7 +142,8 @@ public class Container
             if (m_hModule == null)
                 {
                 // TODO: remove along with the TestApp
-                hFunction = xFunction.makeHandle((MethodStructure) idMethod.getComponent());
+                MethodBody[] aBody = infoApp.getOptimizedMethodChain(idMethod);
+                hFunction = xFunction.makeHandle(aBody[0].getMethodStructure());
                 }
             else
                 {

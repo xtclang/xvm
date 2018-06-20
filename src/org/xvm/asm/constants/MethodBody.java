@@ -2,6 +2,7 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -107,7 +108,13 @@ public class MethodBody
                     return null;
 
                 default:
-                    m_structMethod = structMethod = (MethodStructure) m_id.getComponent();
+                    {
+                    Component component = m_id.getComponent();
+                    if (component instanceof MethodStructure)
+                        {
+                        return m_structMethod = (MethodStructure) component;
+                        }
+                    }
                 }
             }
         return structMethod;
