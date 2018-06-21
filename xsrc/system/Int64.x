@@ -57,6 +57,7 @@ const Int64
         }
 
 // TODO
+    @Override
     @Op Int64 add(Int64 n);
 
 // TODO / REVIEW
@@ -67,24 +68,31 @@ const Int64
     Int64 add(IntNumber n);
 
 // TODO
+    @Override
     @Op Int64 sub(Int64 n);
 
 // TODO
+    @Override
     @Op Int64 mul(Int64 n);
 
 // TODO
+    @Override
     @Op Int64 div(Int64 n);
 
 // TODO
+    @Override
     @Op Int64 mod(Int64 n);
 
 // TODO
+    @Override
     Int64 abs();
 
 // TODO
+    @Override
     @Op("-#") Int64 neg();
 
 // TODO
+    @Override
     Int64 pow(Int64 n);
 
     @Op Int64 shl(Int64 count)
