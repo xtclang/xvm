@@ -70,10 +70,7 @@ interface Function<ParamTypes extends Tuple, ReturnTypes extends Tuple>
      * annotation, so that functions do not try to automatically convert themselves to functions.
      */
     @Override
-    function Function() to<function Function()>()
-        {
-        return super();
-        }
+    function Function() to<function Function()>();
 
     // -----
 

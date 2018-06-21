@@ -716,6 +716,8 @@ public class MethodInfo
                 }
             }
 
+        boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
+
         int cMethods = 0;
         for (int i = 0, c = chain.length; i < c; ++i)
             {
@@ -723,6 +725,11 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
+                    if (fMixin)
+                        {
+                        cMethods++;
+                        }
+                    // fall through
                 case Declared:
                 case Abstract:
                 case SansCode:
