@@ -87,7 +87,7 @@ public class xInt64
         long l2 = ((JavaLong) hArg).getValue();
         long lr = l1 - l2;
 
-        if (((l1 ^ lr) & (l2 ^ lr)) < 0)
+        if (((l1 ^ l2) & (l1 ^ lr)) < 0)
             {
             return overflow(frame);
             }
