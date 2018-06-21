@@ -5,7 +5,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.Register;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -27,6 +26,7 @@ import org.xvm.asm.op.PIP_PostDec;
 import org.xvm.asm.op.PIP_PostInc;
 import org.xvm.asm.op.PIP_PreDec;
 import org.xvm.asm.op.PIP_PreInc;
+
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -44,14 +44,14 @@ public class SequentialAssignExpression
     public SequentialAssignExpression(Token operator, Expression expr)
         {
         super(operator, expr);
-        assert operator.getId() == Id.ADD || operator.getId() == Id.SUB;
+        assert operator.getId() == Id.INC || operator.getId() == Id.DEC;
         m_fPre = true;
         }
 
     public SequentialAssignExpression(Expression expr, Token operator)
         {
         super(operator, expr);
-        assert operator.getId() == Id.ADD || operator.getId() == Id.SUB;
+        assert operator.getId() == Id.INC || operator.getId() == Id.DEC;
         m_fPre = false;
         }
 
@@ -69,9 +69,9 @@ public class SequentialAssignExpression
     /**
      * @return true iff this is a pre-inc or post-inc; false iff this is a pre-dec or  post-dec
      */
-    public boolean isAdd()
+    public boolean isInc()
         {
-        return operator.getId() == Id.ADD;
+        return operator.getId() == Id.INC;
         }
 
 
@@ -128,25 +128,25 @@ public class SequentialAssignExpression
         switch (LVal.getForm())
             {
             case Assignable.LocalVar:
-                code.add(isAdd()
+                code.add(isInc()
                         ? new IP_Inc(LVal.getRegister())
                         : new IP_Dec(LVal.getRegister()));
                 break;
 
             case Assignable.LocalProp:
-                code.add(isAdd()
+                code.add(isInc()
                         ? new IP_Inc(LVal.getProperty())
                         : new IP_Dec(LVal.getProperty()));
                 break;
 
             case Assignable.TargetProp:
-                code.add(isAdd()
+                code.add(isInc()
                         ? new PIP_Inc(LVal.getProperty(), LVal.getTarget())
                         : new PIP_Dec(LVal.getProperty(), LVal.getTarget()));
                 break;
 
             case Assignable.Indexed:
-                code.add(isAdd()
+                code.add(isInc()
                         ? new IIP_Inc(LVal.getArray(), LVal.getIndex())
                         : new IIP_Dec(LVal.getArray(), LVal.getIndex()));
                 break;
@@ -156,7 +156,7 @@ public class SequentialAssignExpression
                 throw notImplemented();
 
             case Assignable.IndexedProp:
-                code.add(isAdd()
+                code.add(isInc()
                         ? new IIP_Inc(LVal.getProperty(), LVal.getIndex())
                         : new IIP_Dec(LVal.getProperty(), LVal.getIndex()));
                 break;
@@ -191,12 +191,12 @@ public class SequentialAssignExpression
                         {
                         Argument argTarget = LValTarget.getLocalArgument();
                         code.add(isPre()
-                                ? isAdd()
-                                        ? new IP_PreInc(argTarget, argReturn)
-                                        : new IP_PreDec(argTarget, argReturn)
-                                : isAdd()
-                                        ? new IP_PostInc(argTarget, argReturn)
-                                        : new IP_PostDec(argTarget, argReturn));
+                                ? isInc()
+                                        ? new IP_PreInc(argTarget, argReturn)       // ++x
+                                        : new IP_PreDec(argTarget, argReturn)       // --x
+                                : isInc()
+                                        ? new IP_PostInc(argTarget, argReturn)      // x++
+                                        : new IP_PostDec(argTarget, argReturn));    // x--
                         }
                         break;
 
@@ -205,10 +205,10 @@ public class SequentialAssignExpression
                         Argument         argTarget  = LValTarget.getLocalArgument();
                         PropertyConstant propTarget = LValTarget.getProperty();
                         code.add(isPre()
-                                ? isAdd()
+                                ? isInc()
                                         ? new PIP_PreInc(propTarget, argTarget, argReturn)
                                         : new PIP_PreDec(propTarget, argTarget, argReturn)
-                                : isAdd()
+                                : isInc()
                                         ? new PIP_PostInc(propTarget, argTarget, argReturn)
                                         : new PIP_PostDec(propTarget, argTarget, argReturn));
                         }
@@ -220,10 +220,10 @@ public class SequentialAssignExpression
                         Argument argTarget = LValTarget.getLocalArgument();
                         Argument argIndex  = LValTarget.getIndex();
                         code.add(isPre()
-                                ? isAdd()
+                                ? isInc()
                                         ? new IIP_PreInc(argTarget, argIndex, argReturn)
                                         : new IIP_PreDec(argTarget, argIndex, argReturn)
-                                : isAdd()
+                                : isInc()
                                         ? new IIP_PostInc(argTarget, argIndex, argReturn)
                                         : new IIP_PostDec(argTarget, argIndex, argReturn));
                         }
