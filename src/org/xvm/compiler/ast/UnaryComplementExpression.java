@@ -14,8 +14,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.GP_Compl;
 
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
