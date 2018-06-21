@@ -49,9 +49,9 @@ public class UnaryComplementExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit       = TypeFit.Fit;
+        Constant     constVal  = null;
         Expression   exprRight = expr;
         TypeConstant typeRight = null;
-        Constant     constVal  = null;
         if (operator.getId() == Id.NOT)
             {
             // the "!" operator only applies to a boolean
@@ -62,6 +62,7 @@ public class UnaryComplementExpression
             {
             typeRight = typeRequired;
             }
+
         exprRight = exprRight.validate(ctx, typeRight, errs);
         if (exprRight == null)
             {
@@ -69,7 +70,7 @@ public class UnaryComplementExpression
             }
         else
             {
-            expr       = exprRight;
+            expr      = exprRight;
             typeRight = exprRight.getType();
 
             Set<MethodConstant> setOps = typeRight.ensureTypeInfo(errs).findOpMethods("not", "~", 0);
@@ -84,11 +85,11 @@ public class UnaryComplementExpression
                 if (setOps.size() > 1)
                     {
                     // TODO pick the best one, otherwise log an error (current naive implementation just grabs the first one)
-                    // fit = TypeFit.NoFit;
-                    // log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                    //         operator.getValueText(), typeTarget.getValueString());
+                    fit = TypeFit.NoFit;
+                    log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                            operator.getValueText(), typeRight.getValueString());
                     }
-                m_idOp     = setOps.iterator().next();
+                m_idOp    = setOps.iterator().next();
                 typeRight = m_idOp.getSignature().getRawReturns()[0];
                 if (fit.isFit() && exprRight.hasConstantValue())
                     {
@@ -117,6 +118,7 @@ public class UnaryComplementExpression
             super.generateAssignment(code, LVal, errs);
             }
         }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

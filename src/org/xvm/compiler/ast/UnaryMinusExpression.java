@@ -94,9 +94,9 @@ public class UnaryMinusExpression
                 if (setOps.size() > 1)
                     {
                     // TODO pick the best one, otherwise log an error (current naive implementation just grabs the first one)
-                    // fit = TypeFit.NoFit;
-                    // log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                    //         operator.getValueText(), typeTarget.getValueString());
+                    fit = TypeFit.NoFit;
+                    log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                            operator.getValueText(), typeRight.getValueString());
                     }
                 m_idOp     = setOps.iterator().next();
                 typeResult = m_idOp.getSignature().getRawReturns()[0];
@@ -127,6 +127,7 @@ public class UnaryMinusExpression
             super.generateAssignment(code, LVal, errs);
             }
         }
+
 
     // ----- fields --------------------------------------------------------------------------------
 

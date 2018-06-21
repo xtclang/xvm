@@ -6,7 +6,7 @@ module TestTemp.xqiz.it
         {
         console.println("hello world!");
 
-        testInts();
+        // testInts();
         testBools();
         // testInterval();
         }
@@ -38,14 +38,17 @@ module TestTemp.xqiz.it
         {
         console.println("\n** testBools()");
 
+        console.println("!true=" + !true);
+        console.println("!false=" + !false);
+
         Boolean a = true;
         Boolean b = false;
-        Boolean c = true == false;
-//        Boolean c = a & b;
-//
         console.println("a=" + a);
         console.println("b=" + b);
-        console.println("c=" + c);
+        console.println("!a=" + !a);
+        console.println("!b=" + !b);
+        console.println("~a=" + ~a);
+        console.println("~b=" + ~b);
         }
 
     void testInterval()
