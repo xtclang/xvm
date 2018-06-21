@@ -2567,7 +2567,7 @@ public class Parser
                         // it indicates a ternary operator
                         return expr;
                         }
-                    expr = new PostfixExpression(expr, current());
+                    expr = new NotNullExpression(expr, current());
                     break;
 
                 case INC:

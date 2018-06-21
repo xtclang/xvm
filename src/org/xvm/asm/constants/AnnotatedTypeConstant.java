@@ -195,11 +195,11 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    public TypeConstant nonNullable()
+    public TypeConstant removeNullable()
         {
         return isNullable()
                 ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
-                        getAnnotationParams(), m_constType.nonNullable())
+                        getAnnotationParams(), m_constType.removeNullable())
                 : this;
         }
 
@@ -208,13 +208,6 @@ public class AnnotatedTypeConstant
         {
         return getConstantPool().ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
             m_annotation.getParams(), type);
-        }
-
-    @Override
-    protected TypeConstant unwrapForCongruence()
-        {
-        // TODO this is wrong, but the annotations aren't being applied correctly right now, so defer ...
-        return m_constType.unwrapForCongruence();
         }
 
 

@@ -221,12 +221,6 @@ public class AccessTypeConstant
         return false;
         }
 
-    @Override
-    protected TypeConstant unwrapForCongruence()
-        {
-        return m_constType.unwrapForCongruence();
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

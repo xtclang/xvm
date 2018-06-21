@@ -96,10 +96,10 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant nonNullable()
+    public TypeConstant removeNullable()
         {
         return isNullable()
-                ? getConstantPool().ensureImmutableTypeConstant(m_constType.nonNullable())
+                ? getConstantPool().ensureImmutableTypeConstant(m_constType.removeNullable())
                 : this;
         }
 
@@ -107,12 +107,6 @@ public class ImmutableTypeConstant
     protected TypeConstant cloneSingle(TypeConstant type)
         {
         return getConstantPool().ensureImmutableTypeConstant(type);
-        }
-
-    @Override
-    protected TypeConstant unwrapForCongruence()
-        {
-        return m_constType.unwrapForCongruence();
         }
 
     @Override

@@ -435,29 +435,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * Determine if this type can be compared with another type, because the types are identical, or
-     * because they differ only in irrelevant ways, such as one being immutable.
-     *
-     * @param that  another type
-     *
-     * @return true iff the two types are compatible for purposes of value comparison
-     */
-    public boolean isCongruentWith(TypeConstant that)
-        {
-        return this == that || this.unwrapForCongruence().equals(that.unwrapForCongruence());
-        }
-
-    /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
-     * @return a TypeConstant without
+     * @return a TypeConstant without Nullable
      */
-    public TypeConstant nonNullable()
-        {
-        return this;
-        }
-
-    protected TypeConstant unwrapForCongruence()
+    public TypeConstant removeNullable()
         {
         return this;
         }

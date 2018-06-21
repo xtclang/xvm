@@ -590,35 +590,6 @@ public class ParameterizedTypeConstant
         return false;
         }
 
-    @Override
-    public boolean isCongruentWith(TypeConstant that)
-        {
-        that = that.unwrapForCongruence();
-        if (that instanceof ParameterizedTypeConstant)
-            {
-            ParameterizedTypeConstant thatP = (ParameterizedTypeConstant) that;
-            if (this.m_constType.isCongruentWith(thatP.m_constType))
-                {
-                TypeConstant[] atypeThis = this.m_atypeParams;
-                TypeConstant[] atypeThat = thatP.m_atypeParams;
-                int cParams = atypeThis.length;
-                if (atypeThat.length == cParams)
-                    {
-                    for (int i = 0; i < cParams; ++i)
-                        {
-                        if (!atypeThis[i].isCongruentWith(atypeThat[i]))
-                            {
-                            return false;
-                            }
-                        }
-                    return true;
-                    }
-                }
-            }
-
-        return false;
-        }
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
