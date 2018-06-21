@@ -6,8 +6,9 @@ module TestTemp.xqiz.it
         {
         console.println("hello world!");
 
-        testInts();
         testBools();
+        testInts();
+
         // testInterval();
         }
 
@@ -32,20 +33,34 @@ module TestTemp.xqiz.it
         console.println("a << b = "  + (a << b));
         console.println("a >> b = "  + (a >> b));
         console.println("a >>> b = " + (a >>> b));
+
+        console.println("\n** pre/post inc/dec");
+        console.println("a   = " + a);
+        console.println("a++ = " + a++);
+        console.println("a   = " + a);
+        console.println("++a = " + ++a);
+        console.println("a   = " + a);
+        console.println("a-- = " + a--);
+        console.println("a   = " + a);
+        console.println("--a = " + --a);
+        console.println("a   = " + a);
         }
 
     void testBools()
         {
         console.println("\n** testBools()");
 
+        console.println("!true=" + !true);
+        console.println("!false=" + !false);
+
         Boolean a = true;
         Boolean b = false;
-        Boolean c = true == false;
-//        Boolean c = a & b;
-//
         console.println("a=" + a);
         console.println("b=" + b);
-        console.println("c=" + c);
+        console.println("!a=" + !a);
+        console.println("!b=" + !b);
+        console.println("~a=" + ~a);
+        console.println("~b=" + ~b);
         }
 
     void testInterval()

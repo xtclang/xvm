@@ -2501,9 +2501,11 @@ public class Parser
 
             case NOT:
             case BIT_NOT:
+                return new UnaryComplementExpression(current(), parsePrefixExpression());
+
             case INC:
             case DEC:
-                return new PrefixExpression(current(), parsePrefixExpression());
+                return new SequentialAssignExpression(current(), parsePrefixExpression());
 
             default:
                 return parsePostfixExpression();
@@ -2565,10 +2567,12 @@ public class Parser
                         // it indicates a ternary operator
                         return expr;
                         }
-                    // fall through;
+                    expr = new PostfixExpression(expr, current());
+                    break;
+
                 case INC:
                 case DEC:
-                    expr = new PostfixExpression(expr, current());
+                    expr = new SequentialAssignExpression(expr, current());
                     break;
 
                 case DOT:

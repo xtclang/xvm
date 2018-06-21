@@ -21,6 +21,11 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.IIP_Dec;
+import org.xvm.asm.op.IIP_Inc;
+import org.xvm.asm.op.IP_Dec;
+import org.xvm.asm.op.IP_Inc;
+import org.xvm.asm.op.IP_PreInc;
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
@@ -28,6 +33,8 @@ import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
+import org.xvm.asm.op.PIP_Dec;
+import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
 
@@ -953,6 +960,19 @@ public abstract class Expression
         }
 
     /**
+     * Check to make sure that the expression can be assigned to, and log an error if it cannot.
+     *
+     * @param errs  the error list to log to
+     */
+    public void requireAssignable(ErrorListener errs)
+        {
+        if (!isAssignable())
+            {
+            log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
+            }
+        }
+
+    /**
      * (Post-validation) Determine if the expression aborts.
      * <p/>
      * This method must be overridden by any expression does not complete, or that contains
@@ -1862,13 +1882,12 @@ public abstract class Expression
         /**
          * Construct an Assignable based on a local property that is a single dimension array.
          *
-         * @param argArray  the Register, representing the local variable holding an array
-         * @param index     the index into the array
+         * @param constProp  the PropertyConstant
+         * @param index      the index into the array
          */
-        public Assignable(Argument argArray, PropertyConstant constProp, Argument index)
+        public Assignable(PropertyConstant constProp, Argument index)
             {
             m_nForm  = IndexedProp;
-            m_arg    = argArray;
             m_prop   = constProp;
             m_oIndex = index;
             }
@@ -1876,15 +1895,14 @@ public abstract class Expression
         /**
          * Construct an Assignable based on a local property that is a multi (any) dimension array.
          *
-         * @param regArray  the Register, representing the local variable holding an array
-         * @param indexes   an array of indexes into the array
+         * @param constProp  the PropertyConstant
+         * @param indexes    an array of indexes into the array
          */
-        public Assignable(Argument regArray, PropertyConstant constProp, Argument[] indexes)
+        public Assignable(PropertyConstant constProp, Argument[] indexes)
             {
             assert indexes != null && indexes.length > 0;
 
             m_nForm  = indexes.length == 1 ? IndexedProp : IndexedNProp;
-            m_arg    = regArray;
             m_prop   = constProp;
             m_oIndex = indexes.length == 1 ? indexes[0] : indexes;
             }
@@ -1906,13 +1924,16 @@ public abstract class Expression
 
                 case LocalProp:
                 case TargetProp:
-                case IndexedProp:
-                case IndexedNProp:
                     return getProperty().getType();
 
                 case Indexed:
                 case IndexedN:
                     return getArray().getType();
+
+                case IndexedProp:
+                case IndexedNProp:
+                    // TODO
+                    throw notImplemented();
 
                 default:
                     throw new IllegalStateException();
@@ -1951,6 +1972,14 @@ public abstract class Expression
                 throw new IllegalStateException();
                 }
             return (Register) m_arg;
+            }
+
+        /**
+         * @return true iff the lvalue is a local variable register that is "normal"
+         */
+        public boolean isNormalVariable()
+            {
+            return m_nForm == LocalVar && ((Register) m_arg).isNormal();
             }
 
         /**
@@ -2010,7 +2039,7 @@ public abstract class Expression
          */
         public PropertyConstant getProperty()
             {
-            if (m_nForm != LocalProp && m_nForm != TargetProp)
+            if (m_nForm != LocalProp && m_nForm != TargetProp && m_nForm != IndexedProp && m_nForm != IndexedNProp)
                 {
                 throw new IllegalStateException();
                 }
@@ -2117,6 +2146,7 @@ public abstract class Expression
                 }
             }
 
+
         // ----- fields ------------------------------------------------------------------------
 
         public static final byte BlackHole    = 0;
@@ -2159,15 +2189,15 @@ public abstract class Expression
      */
     public enum TypeFit
         {
-            NoFit(0b0000),
-            ConvPackUnpack(0b1111),
-            ConvPack(0b1011),
-            ConvUnpack(0b0111),
-            Conv(0b0011),
-            PackUnpack(0b1101),
-            Pack(0b0101),
-            Unpack(0b1001),
-            Fit(0b0001);
+        NoFit         (0b0000),
+        ConvPackUnpack(0b1111),
+        ConvPack      (0b1011),
+        ConvUnpack    (0b0111),
+        Conv          (0b0011),
+        PackUnpack    (0b1101),
+        Pack          (0b0101),
+        Unpack        (0b1001),
+        Fit           (0b0001);
 
         /**
          * Constructor.

@@ -38,7 +38,7 @@ enum Boolean
             return that;
             }
         @Override
-        @Op("~") Boolean not()
+        @Op Boolean not()
             {
             return True;
             }
@@ -82,7 +82,7 @@ enum Boolean
             return !that;
             }
         @Override
-        @Op("~") Boolean not()
+        @Op Boolean not()
             {
             return False;
             }
@@ -96,5 +96,5 @@ enum Boolean
     @Op Boolean and(Boolean that);
     @Op Boolean or(Boolean that);
     @Op Boolean xor(Boolean that);
-    @Op("~") Boolean not();
+    @Op Boolean not();
     }
