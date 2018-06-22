@@ -1247,10 +1247,21 @@ public class Lexer
                 // could be ".."
                 if (source.hasNext())
                     {
-                    if (source.next() == '.')
+                    boolean fNotDecimal = source.next() == '.';
+                    // whatever it was, spit it back out
+                    source.rewind();
+
+                    // if it's not "..", it could be something else, e.g. a method name on type Int
+                    if (!fNotDecimal && !isNextCharDigit(mantissaRadix))
                         {
+                        fNotDecimal = true;
+                        }
+
+                    if (fNotDecimal)
+                        {
+                        // spit back out the first dot
                         source.rewind();
-                        source.rewind();
+
                         return new Token(lPosStart, source.getPosition(), Id.LIT_INT, piWhole);
                         }
                     }
@@ -1413,6 +1424,42 @@ public class Lexer
             }
 
         return eatDigits(fNeg, radix, null);
+        }
+
+    protected boolean isNextCharDigit(int radix)
+        {
+        boolean fDigit = false;
+
+        final Source source = m_source;
+        if (source.hasNext())
+            {
+            switch (nextChar())
+                {
+                case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                    fDigit = radix >= 16;
+                    break;
+
+                case '9': case '8':
+                    fDigit = radix >= 10;
+                    break;
+
+                case '7': case '6': case '5': case '4': case '3': case '2':
+                    fDigit = radix >= 8;
+                    break;
+
+                case '1':
+                case '0':
+                    fDigit = true;
+                    break;
+
+                default:
+                    break;
+                }
+            source.rewind();
+            }
+
+        return fDigit;
         }
 
     /**

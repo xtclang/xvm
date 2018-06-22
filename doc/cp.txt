@@ -1,8 +1,6 @@
 - expressions
   - Ternary
-  - NotNull
-  - As
-  - Is
+  - NotNull (wip)
   - Else : ?:
   - Map
   - Version

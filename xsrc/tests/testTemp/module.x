@@ -9,6 +9,7 @@ module TestTemp.xqiz.it
         testBools();
         testInts();
         testIsA();
+        testCast();
 
         // testInterval();
         }
@@ -124,5 +125,24 @@ module TestTemp.xqiz.it
             {
             console.println("i.is(String) false (good)");
             }
+        }
+
+    void testCast()
+        {
+        console.println("\n** testCast()");
+
+        // TODO GG - need "IntLiteral" support for:
+        //
+        //    Object o = 4.to<Int>();
+        //
+        // java.lang.UnsupportedOperationException: TODO: IntLiteral{value="4"}
+        //   	at org.xvm.runtime.ObjectHeap.getConstType(ObjectHeap.java:110)
+        //   	at org.xvm.runtime.ObjectHeap.createConstHandle(ObjectHeap.java:63)
+
+        Int    i = 42;
+        Object o = i;
+        console.println("o=" + o);
+        Int    n = o.as(Int);
+        console.println("n=" + n);
         }
     }
