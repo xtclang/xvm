@@ -211,6 +211,20 @@ public abstract class OpGeneral
         m_argReturn = registerArgument(m_argReturn, registry);
         }
 
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+        sb.append(toName(getOpCode()))
+          .append(' ')
+          .append(Argument.toIdString(m_argTarget, m_nTarget))
+          .append(", ")
+          .append(Argument.toIdString(m_argValue, m_nArgValue))
+          .append(", ")
+          .append(Argument.toIdString(m_argReturn, m_nRetValue));
+        return sb.toString();
+        }
+
     protected int m_nTarget;
     protected int m_nArgValue;
     protected int m_nRetValue;

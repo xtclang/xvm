@@ -3,12 +3,15 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.ast.Statement.Context;
 
 
@@ -140,18 +143,17 @@ public class TernaryExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
-        {
-        // TODO
-        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
-        }
-
-    @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        // TODO
-        super.generateAssignment(code, LVal, errs);
+        Label labelElse = new Label("else");
+        Label labelEnd  = new Label("end");
+
+        cond.generateConditionalJump(code, labelElse, false, errs);
+        exprThen.generateAssignment(code, LVal, errs);
+        code.add(new Jump(labelEnd));
+        code.add(labelElse);
+        exprElse.generateAssignment(code, LVal, errs);
+        code.add(labelEnd);
         }
 
 
