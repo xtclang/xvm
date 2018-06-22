@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -271,59 +270,6 @@ public class CmpExpression
 
         super.generateConditionalJump(code, label, fWhenTrue, errs);
         }
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Given two types that should have some point of immediate commonality, select a target type.
-     *
-     * @param type1  the first type
-     * @param type2  the second type
-     * @param errs   an error list
-     *
-     * @return a target type or null
-     */
-    public static TypeConstant selectType(TypeConstant type1, TypeConstant type2, ErrorListener errs)
-        {
-        if (type1 == null && type2 == null)
-            {
-            return null;
-            }
-
-        if (type1 != null && type2 != null)
-            {
-            if (type2.isAssignableTo(type1))
-                {
-                return type1;
-                }
-
-            if (type1.isAssignableTo(type2))
-                {
-                return type2;
-                }
-
-            TypeInfo info1 = type1.ensureTypeInfo(errs);
-            if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
-                {
-                return info1.getExtends();
-                }
-
-            TypeInfo info2 = type2.ensureTypeInfo(errs);
-            if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends()))
-                {
-                return info2.getExtends();
-                }
-
-            return null;
-            }
-
-        TypeConstant typeResult = type1 == null ? type2 : type1;
-        TypeInfo     typeinfo   = typeResult.ensureTypeInfo(errs);
-        return typeinfo.getFormat() == Format.ENUMVALUE
-                ? typeinfo.getExtends()
-                : typeResult;
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

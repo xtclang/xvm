@@ -10,9 +10,9 @@ module TestTemp.xqiz.it
         testInts();
         testIsA();
         testCast();
-        testTernary();
-
+        // testTernary();
         // testInterval();
+        testSpaceship();
         }
 
     void testInts()
@@ -157,5 +157,14 @@ module TestTemp.xqiz.it
 
         console.println("i>40?greater:not -> " + (i > 40 ? "greater" : "not greater"));
         console.println("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
+        }
+
+    void testSpaceship()
+        {
+        console.println("\n** testSpaceship()");
+
+        Int a = 42;
+        Int b = 45;
+        console.println("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
         }
     }

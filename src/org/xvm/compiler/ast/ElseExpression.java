@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -31,31 +33,76 @@ public class ElseExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    public TypeConstant getImplicitType(Context ctx)
         {
-//            case COND_ELSE:
-//                m_constType = expr1.getType().removeNullable();
-//                if (fValid)
-//                    {
-//                    // the left side must be nullable, and the right expression must be assignable
-//                    // to the non-nullable type of the left expression, otherwise we cannot
-//                    // determine an "implicit type" (the error is deferred until the compilation
-//                    // stage, so if the type is pushed to this expression, it can use that)
-//                    // TODO
-//                    }
-//                break;
+        TypeConstant type1 = expr1.getImplicitType(ctx);
+        TypeConstant type2 = expr2.getImplicitType(ctx);
 
-//            case COLON:
-//                // the types have to be equal, or the right expression must be assignable to the
-//                // type of the left expression, otherwise we cannot determine an "implicit type"
-//                // (the error is deferred until the compilation stage, so if the type is pushed
-//                // to this expression, it can use that, i.e. type inference)
-//                m_constType = expr1.getType();
-//                break;
+        if (type1 != null)
+            {
+            type1 = type1.removeNullable();
+            }
 
-        throw new UnsupportedOperationException();
+        return selectType(type1, type2, ErrorListener.BLACKHOLE);
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        TypeFit      fit      = TypeFit.Fit;
+        ConstantPool pool     = pool();
+        Expression   expr1New = expr1.validate(ctx, null, errs);
+        TypeConstant type1    = null;
+        if (expr1New == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            expr1 = expr1New;
+            type1 = expr1New.getType();
+            }
+
+        TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(), null, errs);
+        Expression   expr2New = expr2.validate(ctx, type2Req, errs);
+        if (expr2New == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            expr2 = expr2New;
+            }
+
+        if (!fit.isFit())
+            {
+            return finishValidation(typeRequired, null, fit, null, errs);
+            }
+
+        if (type1.isOnlyNullable())
+            {
+            // TODO log error only nullable
+            return expr2New;
+            }
+
+        if (!type1.isNullable() && !pool.typeNull().isA(type1))
+            {
+            // TODO log error not nullable
+            return expr1New;
+            }
+
+
+        TypeConstant type2      = expr2New.getType();
+        TypeConstant typeResult = selectType(type1.removeNullable(), type2, errs);
+        Constant     constVal   = null;
+        if (expr1.hasConstantValue())
+            {
+            // TODO calculate the constant value
+            }
+
+        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
         }
 
     @Override
