@@ -65,8 +65,59 @@ public class TernaryExpression
         TypeFit      fit         = TypeFit.Fit;
         ConstantPool pool        = pool();
         Expression   exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
-        // TODO see cmp
-        return super.validate(ctx, typeRequired, errs);
+        if (exprNewCond == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            cond = exprNewCond;
+            // TODO check if it is short circuiting
+            }
+
+        TypeConstant typeRequest = typeRequired == null
+                ? getImplicitType(ctx)
+                : typeRequired;
+        Expression   exprNewThen = exprThen.validate(ctx, typeRequest, errs);
+        TypeConstant typeThen    = null;
+        if (exprNewThen == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            exprThen = exprNewThen;
+            typeThen = exprNewThen.getType();
+            // TODO check if it is short circuiting
+
+            if (typeRequest == null)
+                {
+                typeRequest = CmpExpression.selectType(exprNewThen.getType(), null, errs);
+                }
+            }
+
+        Expression   exprNewElse = exprElse.validate(ctx, typeRequest, errs);
+        TypeConstant typeElse    = null;
+        if (exprNewElse == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            exprElse = exprNewElse;
+            typeElse = exprNewElse.getType();
+            // TODO check if it is short circuiting
+            }
+
+        if (fit.isFit() && exprNewCond.hasConstantValue())
+            {
+            return exprNewCond.toConstant().equals(pool.valTrue())
+                    ? exprNewThen
+                    : exprNewElse;
+            }
+
+        TypeConstant typeResult = CmpExpression.selectType(typeThen, typeElse, errs);
+        return finishValidation(typeRequired, typeResult, fit, null, errs);
         }
 
     @Override
@@ -92,12 +143,14 @@ public class TernaryExpression
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
             ErrorListener errs)
         {
+        // TODO
         return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
+        // TODO
         super.generateAssignment(code, LVal, errs);
         }
 
