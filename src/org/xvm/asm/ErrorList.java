@@ -230,7 +230,7 @@ public class ErrorList
             }
 
         /**
-         * @return the line number (zero based) at which the error occurrred
+         * @return the line number (zero based) at which the error occurred
          */
         public int getLine()
             {
