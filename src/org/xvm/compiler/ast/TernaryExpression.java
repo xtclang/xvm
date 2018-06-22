@@ -3,7 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -45,45 +51,54 @@ public class TernaryExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    @Override
-    public boolean isConstant()
-        {
-        if (!cond.isConstant())
-            {
-            return false;
-            }
 
-        Constant constant = cond.toConstant();
-        if (constant == pool().valTrue())
-            {
-            return exprThen.isConstant();
-            }
-        else if (constant == pool().valFalse())
-            {
-            return exprElse.isConstant();
-            }
-        else
-            {
-            return false;
-            }
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return CmpExpression.selectType(exprThen.getImplicitType(ctx),
+                exprElse.getImplicitType(ctx), ErrorListener.BLACKHOLE);
         }
 
     @Override
-    public Constant toConstant()
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        Constant constant = cond.toConstant();
-        if (constant == pool().valTrue())
-            {
-            return exprThen.toConstant();
-            }
-        else if (constant == pool().valFalse())
-            {
-            return exprElse.toConstant();
-            }
-        else
-            {
-            return super.toConstant();
-            }
+        TypeFit      fit         = TypeFit.Fit;
+        ConstantPool pool        = pool();
+        Expression   exprNewCond = cond.validate(ctx, pool.typeBoolean(), errs);
+        // TODO see cmp
+        return super.validate(ctx, typeRequired, errs);
+        }
+
+    @Override
+    public boolean isAssignable()
+        {
+        return exprThen.isAssignable() && exprElse.isAssignable();
+        }
+
+    @Override
+    public boolean isAborting()
+        {
+        return cond.isAborting() || exprThen.isAborting() || exprElse.isAborting();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        // REVIEW cond.isShortCircuiting() || exprThen.isShortCircuiting() || exprElse.isShortCircuiting();
+        return false;
+        }
+
+    @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
+        {
+        return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        super.generateAssignment(code, LVal, errs);
         }
 
 
