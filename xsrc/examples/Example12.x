@@ -1181,3 +1181,7 @@ function List<String> () f = () -> new List<String>(5);
 function Int () f = c.&bar();
 
 Class.Constructor f = &construct c(5)
+
+// -- .is()
+
+if (x.is(String)) {...}

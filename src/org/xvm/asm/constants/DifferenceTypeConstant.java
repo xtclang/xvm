@@ -103,14 +103,6 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected TypeConstant unwrapForCongruence()
-        {
-        // a difference type is just a duck-type, and has no equality definition of its own -- it
-        // uses the equality definition of the root object class itself
-        return getConstantPool().typeObject();
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, ResolutionCollector collector)
         {
         // for the DifferenceType to contribute a name, the first side needs to find it,

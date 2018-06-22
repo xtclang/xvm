@@ -70,7 +70,7 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant nonNullable()
+    public TypeConstant removeNullable()
         {
         if (!isNullable())
             {
@@ -80,35 +80,17 @@ public class IntersectionTypeConstant
         if (m_constType1.isOnlyNullable())
             {
             assert !m_constType2.isOnlyNullable();
-            return m_constType2.nonNullable();
+            return m_constType2.removeNullable();
             }
 
         if (m_constType2.isOnlyNullable())
             {
             assert !m_constType1.isOnlyNullable();
-            return m_constType1.nonNullable();
+            return m_constType1.removeNullable();
             }
 
-        return getConstantPool().ensureIntersectionTypeConstant(m_constType1.nonNullable(),
-                                                                m_constType2.nonNullable());
-        }
-
-    @Override
-    public boolean isCongruentWith(TypeConstant that)
-        {
-        that = that.unwrapForCongruence();
-        if (that instanceof IntersectionTypeConstant)
-            {
-            TypeConstant             this1 = this.m_constType1;
-            TypeConstant             this2 = this.m_constType2;
-            IntersectionTypeConstant thatI = (IntersectionTypeConstant) that;
-            TypeConstant             that1 = thatI.m_constType1;
-            TypeConstant             that2 = thatI.m_constType2;
-            return     (this1.isCongruentWith(that1) && this2.isCongruentWith(that2))
-                    || (this1.isCongruentWith(that2) && this2.isCongruentWith(that1));
-            }
-
-        return false;
+        return getConstantPool().ensureIntersectionTypeConstant(m_constType1.removeNullable(),
+                                                                m_constType2.removeNullable());
         }
 
     @Override

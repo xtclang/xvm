@@ -588,15 +588,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected TypeConstant unwrapForCongruence()
-        {
-        TypeConstant typeResolved = resolveTypedefs();
-        return typeResolved == this
-                ? this
-                : typeResolved.unwrapForCongruence();
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         if (!isSingleDefiningConstant())

@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.util.Map;
 
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -50,7 +52,6 @@ public class BinaryExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
@@ -60,7 +61,9 @@ public class BinaryExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        return finishValidation(typeRequired, pool().typeBinary(), TypeFit.Fit, pool().ensureByteStringConstant(bytes), errs);
+        ConstantPool pool     = pool();
+        Constant     constVal = pool.ensureByteStringConstant(bytes);
+        return finishValidation(typeRequired, pool.typeBinary(), TypeFit.Fit, constVal, errs);
         }
 
 

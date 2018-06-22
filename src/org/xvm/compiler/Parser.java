@@ -2348,10 +2348,10 @@ public class Parser
                     break;
 
                 case AS:
-                case IS:
                     expr = new AsExpression(expr, current(), parseTypeExpression());
                     break;
 
+                case IS:
                 case INSTANCEOF:
                     expr = new IsExpression(expr, current(), parseTypeExpression());
                     break;
@@ -2567,7 +2567,7 @@ public class Parser
                         // it indicates a ternary operator
                         return expr;
                         }
-                    expr = new PostfixExpression(expr, current());
+                    expr = new NotNullExpression(expr, current());
                     break;
 
                 case INC:

@@ -1,3 +1,14 @@
+- expressions
+  - Ternary
+  - NotNull (wip)
+  - Else : ?:
+  - Map
+  - Version
+  - merge Throw and Todo?
+  - Switch expression
+  - Lambda
+
+
 - test static property with value (both constant and init function)
 
 - verify that inner structs are getting created correctly:

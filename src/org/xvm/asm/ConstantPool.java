@@ -1700,9 +1700,11 @@ public class ConstantPool
      *
      * @return the intersection of the specified type and Nullable
      */
-    public IntersectionTypeConstant ensureNullableTypeConstant(TypeConstant constType)
+    public TypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
-        return ensureIntersectionTypeConstant(typeNullable(), constType);
+        return constType.isNullable()
+                ? constType
+                : ensureIntersectionTypeConstant(typeNullable(), constType);
         }
 
     /**

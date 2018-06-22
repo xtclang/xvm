@@ -36,7 +36,7 @@ public class ElseExpression
             ErrorListener errs)
         {
 //            case COND_ELSE:
-//                m_constType = expr1.getType().nonNullable();
+//                m_constType = expr1.getType().removeNullable();
 //                if (fValid)
 //                    {
 //                    // the left side must be nullable, and the right expression must be assignable

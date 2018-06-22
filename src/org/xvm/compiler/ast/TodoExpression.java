@@ -64,6 +64,23 @@ public class TodoExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return TypeConstant.NO_TYPES;
+        }
 
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired)
@@ -99,11 +116,7 @@ public class TodoExpression
             atypeRequired = new TypeConstant[] {pool().typeBoolean()};
             }
 
-        finishValidations(atypeRequired, atypeRequired, fValid ? TypeFit.Fit : TypeFit.NoFit, null,
-                errs);
-        return fValid
-                ? this
-                : null;
+        return finishValidations(atypeRequired, atypeRequired, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         }
 
     @Override

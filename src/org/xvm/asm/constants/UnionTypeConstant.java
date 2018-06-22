@@ -67,30 +67,12 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant nonNullable()
+    public TypeConstant removeNullable()
         {
         return isNullable()
-                ? getConstantPool().ensureUnionTypeConstant(m_constType1.nonNullable(),
-                                                            m_constType2.nonNullable())
+                ? getConstantPool().ensureUnionTypeConstant(m_constType1.removeNullable(),
+                                                            m_constType2.removeNullable())
                 : this;
-        }
-
-    @Override
-    public boolean isCongruentWith(TypeConstant that)
-        {
-        that = that.unwrapForCongruence();
-        if (that instanceof UnionTypeConstant)
-            {
-            TypeConstant      this1 = this.m_constType1;
-            TypeConstant      this2 = this.m_constType2;
-            UnionTypeConstant thatU = (UnionTypeConstant) that;
-            TypeConstant      that1 = thatU.m_constType1;
-            TypeConstant      that2 = thatU.m_constType2;
-            return     (this1.isCongruentWith(that1) && this2.isCongruentWith(that2))
-                    || (this1.isCongruentWith(that2) && this2.isCongruentWith(that1));
-            }
-
-        return false;
         }
 
     @Override

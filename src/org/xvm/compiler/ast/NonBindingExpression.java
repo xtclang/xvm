@@ -14,9 +14,8 @@ import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
- * A name expression specifies a name; this is a special kind of name that no one cares about. The
- * ignored name expression is used as a lambda parameter when nobody cares what the parameter is
- * and they just want it to go away quietly.
+ * This is used to specify an argument ("?") for a function that indicates that the corresponding
+ * parameter of the function should remain unbound.
  */
 public class NonBindingExpression
         extends Expression
@@ -71,32 +70,36 @@ public class NonBindingExpression
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
-        TypeConstant type     = null;
+        TypeConstant typeArg  = null;
         Constant     constant = null;
 
-        if (this.type != null)
+        TypeExpression exprOldType = this.type;
+        if (exprOldType != null)
             {
-            TypeExpression exprNew = (TypeExpression) this.type.validate(ctx, typeRequired, errs);
-            if (exprNew == null)
+            TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeRequired, errs);
+            if (exprNewType == null)
                 {
-                fit  = TypeFit.NoFit;
-                type = typeRequired;
+                fit     = TypeFit.NoFit;
+                typeArg = typeRequired;
                 }
             else
                 {
-                fit  = TypeFit.Fit;
-                type = exprNew.getType();
-                if (exprNew.isConstant())
-                    {
-                    constant = exprNew.toConstant();
-                    }
+                this.type = exprNewType;
+                typeArg   = exprNewType.ensureTypeConstant();
                 }
             }
-        return finishValidation(typeRequired, type, fit, constant, errs);
+
+        // unfortunately, we have to make up a type here if none is specified or required; this will
+        // necessarily complicate the logic of the invocation expression
+        if (typeArg == null)
+            {
+            typeArg = pool().typeObject();
+            }
+
+        return finishValidation(typeRequired, typeArg, fit, constant, errs);
         }
 
     @Override
