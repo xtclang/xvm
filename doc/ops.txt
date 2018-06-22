@@ -78,7 +78,7 @@
 +IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
 +IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
 +IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
-+CMP        rvalue, lvalue-return                   ; (T is an immutable) -> Ordered
++CMP        rvalue1, rvalue2, lvalue-return         ; T <=> T -> Ordered
 
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode

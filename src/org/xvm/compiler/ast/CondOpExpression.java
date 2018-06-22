@@ -89,15 +89,6 @@ public class CondOpExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public boolean isAborting()
-        {
-        // these can complete if the first expression can complete, because the result can
-        // be calculated from the first expression, depending on what its answer is; thus
-        // the expression aborts if the first of the two expressions aborts
-        return expr1.isAborting();
-        }
-
-    @Override
     public TypeConstant getImplicitType(Context ctx)
         {
         return pool().typeBoolean();
@@ -177,6 +168,15 @@ public class CondOpExpression
             }
 
         return finishValidation(typeRequired, typeBoolean, fit, constResult, errs);
+        }
+
+    @Override
+    public boolean isAborting()
+        {
+        // these can complete if the first expression can complete, because the result can
+        // be calculated from the first expression, depending on what its answer is; thus
+        // the expression aborts if the first of the two expressions aborts
+        return expr1.isAborting();
         }
 
     @Override

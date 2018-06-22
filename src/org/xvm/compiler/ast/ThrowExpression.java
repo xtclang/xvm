@@ -64,7 +64,6 @@ public class ThrowExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     protected boolean hasMultiValueImpl()
         {

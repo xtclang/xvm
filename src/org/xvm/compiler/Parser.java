@@ -2348,10 +2348,10 @@ public class Parser
                     break;
 
                 case AS:
-                case IS:
                     expr = new AsExpression(expr, current(), parseTypeExpression());
                     break;
 
+                case IS:
                 case INSTANCEOF:
                     expr = new IsExpression(expr, current(), parseTypeExpression());
                     break;
