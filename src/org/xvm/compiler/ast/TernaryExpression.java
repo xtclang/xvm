@@ -58,7 +58,7 @@ public class TernaryExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return CmpExpression.selectType(exprThen.getImplicitType(ctx),
+        return BiExpression.selectType(exprThen.getImplicitType(ctx),
                 exprElse.getImplicitType(ctx), ErrorListener.BLACKHOLE);
         }
 
@@ -95,7 +95,7 @@ public class TernaryExpression
 
             if (typeRequest == null)
                 {
-                typeRequest = CmpExpression.selectType(exprNewThen.getType(), null, errs);
+                typeRequest = BiExpression.selectType(exprNewThen.getType(), null, errs);
                 }
             }
 
@@ -119,7 +119,7 @@ public class TernaryExpression
                     : exprNewElse;
             }
 
-        TypeConstant typeResult = CmpExpression.selectType(typeThen, typeElse, errs);
+        TypeConstant typeResult = BiExpression.selectType(typeThen, typeElse, errs);
         return finishValidation(typeRequired, typeResult, fit, null, errs);
         }
 

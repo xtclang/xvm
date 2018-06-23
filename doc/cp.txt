@@ -1,5 +1,4 @@
 - expressions
-  - Ternary
   - NotNull (wip)
   - Else : ?:
   - Map
