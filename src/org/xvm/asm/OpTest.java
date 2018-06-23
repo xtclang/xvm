@@ -174,25 +174,24 @@ public abstract class OpTest
                 type2 = frame.getArgumentType(m_nValue2);
                 }
 
-            if (!type1.equals(type2) &&
-                    (type1.ensureTypeInfo().getFormat() != Component.Format.ENUMVALUE ||
-                     type2.ensureTypeInfo().getFormat() != Component.Format.ENUMVALUE))
+            TypeConstant typeCommon = selectCommonType(type1, type2);
+            if (typeCommon == null)
                 {
                 // this shouldn't have compiled
-                throw new IllegalStateException("type1=" + type1.getValueString()
-                    + ", type2=" + type2.getValueString());
+                throw new IllegalStateException("Incomparable types: " + type1.getValueString()
+                    + " and " + type2.getValueString());
                 }
 
             if (fAnyProp)
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue1, hValue2};
                 Frame.Continuation stepNext = frameCaller ->
-                    completeBinaryOp(frame, type1, ahValue[0], ahValue[1]);
+                    completeBinaryOp(frame, typeCommon, ahValue[0], ahValue[1]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return completeBinaryOp(frame, type1, hValue1, hValue2);
+            return completeBinaryOp(frame, typeCommon, hValue1, hValue2);
             }
         catch (ExceptionHandle.WrapperException e)
             {

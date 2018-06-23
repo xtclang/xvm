@@ -407,6 +407,17 @@ public class Frame
             }
         }
 
+    // return the type of the pre-defined argument
+    public TypeConstant getPredefinedArgumentType(int nArgId)
+        {
+        if (nArgId == Op.A_STACK)
+            {
+            // the compile type of the stack arg is not necessarily the same as the run-time type
+            return null;
+            }
+        return getPredefinedArgument(nArgId).getType();
+        }
+
     // create a new "current" scope
     public int enterScope()
         {
@@ -888,9 +899,9 @@ public class Frame
         {
         return iArg >= 0
             ? getRegisterType(iArg)
-            : iArg == Op.A_THIS
-                ? f_hThis.getType()            // "this" is always resolved
-                : getConstant(iArg).getType(); // a constant cannot be generic
+            : iArg <= Op.CONSTANT_OFFSET
+                ? getConstant(iArg).getType()  // a constant cannot be generic
+                : getPredefinedArgumentType(iArg);
         }
 
     // same as getArgumentType, but treats the negative ids as "local-property" references
@@ -898,10 +909,10 @@ public class Frame
         {
         return iArg >= 0
             ? getRegisterType(iArg)
-            : iArg == Op.A_THIS
-                ? f_hThis.getType() // "this" is always resolved
+            : iArg <= Op.CONSTANT_OFFSET
                 // "local property" type needs to be resolved
-                : getConstant(iArg).getType().resolveGenerics(getGenericsResolver());
+                ? getConstant(iArg).getType().resolveGenerics(getGenericsResolver())
+                : getPredefinedArgumentType(iArg);
         }
 
     protected TypeConstant getRegisterType(int iArg)
