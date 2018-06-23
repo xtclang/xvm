@@ -31,8 +31,18 @@ public class ElseExpression
         }
 
 
-    // ----- compilation ---------------------------------------------------------------------------
+    // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff this is an Elvis expression
+     */
+    public boolean isElvis()
+        {
+        return operator.getId() == Id.COND_ELSE;
+        }
+
+
+    // ----- compilation ---------------------------------------------------------------------------
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
