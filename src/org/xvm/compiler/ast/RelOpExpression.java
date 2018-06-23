@@ -374,40 +374,51 @@ public class RelOpExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
+        TypeFit fit = TypeFit.Fit;
+
         // figure out the best types to use to validate the two sub-expressions
         TypeConstant typeRequired = atypeRequired != null && atypeRequired.length >= 1
                 ? atypeRequired[0]
                 : null;
-        TypeConstant type1 = null;
-        TypeConstant type2 = null;
-        if (typeRequired != null)
-            {
-            TypeConstant[] atypeValidate = determineValidationTypes(ctx, typeRequired);
-            type1 = atypeValidate[0];
-            type2 = atypeValidate[1];
-            }
 
         // using the inferred types (if any), validate the expressions
-        Expression expr1New = expr1.validate(ctx, type1, errs);
-        Expression expr2New = expr2.validate(ctx, type2, errs);
-        if (expr1New == null || expr2New == null)
+        TypeConstant type1Req = guessLeftType(ctx, typeRequired);
+        Expression   expr1New = expr1.validate(ctx, type1Req, errs);
+        TypeConstant type1Act = null;
+        if (expr1New == null)
             {
-            return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            expr1    = expr1New;
+            type1Act = expr1New.getType();
             }
 
-        // store the updates to the expressions (if any)
-        expr1 = expr1New;
-        expr2 = expr2New;
+        TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act);
+        Expression   expr2New = expr2.validate(ctx, type2Req, errs);
+        TypeConstant type2Act = null;
+        if (expr1New == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            expr2    = expr2New;
+            type2Act = expr2New.getType();
+            }
 
-        // get the exact types of the expressions
-        type1 = expr1New.getType();
-        type2 = expr2New.getType();
+        if (!fit.isFit())
+            {
+            // bail out
+            return finishValidations(atypeRequired, null, TypeFit.NoFit, null, errs);
+            }
 
         boolean        fMulti       = operator.getId() == Id.DIVMOD;
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        MethodConstant idOp         = findOpMethod(type1, type2, typeRequired, errs);
+        MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errs);
         if (idOp != null)
             {
             atypeResults = idOp.getRawReturns();
@@ -421,8 +432,8 @@ public class RelOpExpression
                 }
 
             TypeConstant[] atypeFake = fMulti
-                    ? new TypeConstant[] {type1, type1}
-                    : new TypeConstant[] {type1};
+                    ? new TypeConstant[] {type1Act, type1Act}
+                    : new TypeConstant[] {type1Act};
             return finishValidations(atypeRequired, atypeFake, TypeFit.NoFit, null, errs);
             }
         m_idOp = idOp;
@@ -443,18 +454,18 @@ public class RelOpExpression
             catch (RuntimeException e) {}
             }
 
-        return finishValidations(atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
+        return finishValidations(atypeRequired, atypeResults, fit, aconstResult, errs);
         }
 
     /**
-     * Calculate the types to use to validate the left and right expressions.
+     * Calculate the type to use to validate the left expressions.
      *
      * @param ctx           the compiler context
-     * @param typeRequired  the type (or first type if more than one) required
+     * @param typeRequired  the type (or first type if more than one) required, or null
      *
-     * @return an array of two types, the left and right types to use for validation
+     * @return the type to request from the left expression, or null
      */
-    private TypeConstant[] determineValidationTypes(Context ctx, TypeConstant typeRequired)
+    private TypeConstant guessLeftType(Context ctx, TypeConstant typeRequired)
         {
         // all of these operators work the same way, in terms of types and left associativity:
         //
@@ -490,50 +501,84 @@ public class RelOpExpression
         //
         // 2) if no op method and types were already determined, then the op method will have to be
         //    determined from the left hand type, which is validated "naturally" (no required type)
-        TypeConstant type1 = null;
-        TypeConstant type2 = null;
-        TypeInference: if (typeRequired != null)
+        if (typeRequired == null)
             {
-            if (expr1.testFit(ctx, typeRequired).isFit())
+            // no basis for a guess
+            return null;
+            }
+
+        if (expr1.testFit(ctx, typeRequired).isFit())
+            {
+            Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
+                    getDefaultMethodName(), getOperatorString(), 1);
+            for (MethodConstant idMethod : setOps)
                 {
-                Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
-                        getDefaultMethodName(), getOperatorString(), 1);
-                for (MethodConstant idMethod : setOps)
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
+                        && idMethod.getRawReturns()[0].isAssignableTo(typeRequired))
                     {
-                    if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
-                            && idMethod.getRawReturns()[0].isA(typeRequired))
-                        {
-                        type1 = typeRequired;
-                        type2 = idMethod.getRawParams()[0];
-                        break TypeInference; // TODO find the "best", not just the first
-                        }
+                    // TODO find best, not just the first
+                    return typeRequired;
                     }
                 }
+            }
 
-            if (typeRequired.isParamsSpecified())
+        if (typeRequired.isParamsSpecified())
+            {
+            for (TypeConstant typeParam : typeRequired.getParamTypesArray())
                 {
-                for (TypeConstant typeParam : typeRequired.getParamTypesArray())
+                if (expr1.testFit(ctx, typeParam).isFit())
                     {
-                    if (expr1.testFit(ctx, typeParam).isFit())
+                    Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
+                            getDefaultMethodName(), getOperatorString(), 1);
+                    for (MethodConstant idMethod : setOps)
                         {
-                        Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
-                                getDefaultMethodName(), getOperatorString(), 1);
-                        for (MethodConstant idMethod : setOps)
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
+                                && idMethod.getRawReturns()[0].isAssignableTo(typeRequired))
                             {
-                            if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
-                                    && idMethod.getRawReturns()[0].isA(typeRequired))
-                                {
-                                type1 = typeParam;
-                                type2 = idMethod.getRawParams()[0];
-                                break TypeInference; // TODO find the "best", not just the first
-                                }
+                            // TODO find best, not just the first
+                            return typeParam;
                             }
                         }
                     }
                 }
             }
 
-        return new TypeConstant[] {type1, type2};
+        return null;
+        }
+
+    /**
+     * Calculate the type to use to validate the right expressions. This is a continuation of the
+     * logic described in {@link #guessLeftType(Context, TypeConstant)}.
+     *
+     * @param ctx           the compiler context
+     * @param typeRequired  the type (or first type if more than one) required, or null
+     * @param typeLeft      the type of the left expression, or null
+     *
+     * @return the type to request from the right expression, or null
+     */
+    private TypeConstant selectRightType(Context ctx, TypeConstant typeRequired, TypeConstant typeLeft)
+        {
+        if (typeLeft == null)
+            {
+            // we're already screwed
+            return null;
+            }
+
+        Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
+                getDefaultMethodName(), getOperatorString(), 1);
+        for (MethodConstant idMethod : setOps)
+            {
+            if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
+                    && (typeRequired == null || idMethod.getRawReturns()[0].isAssignableTo(typeRequired)))
+                {
+                // TODO find best, not just the first
+                return idMethod.getRawParams()[0];
+                }
+            }
+
+        // no op that we could find will work, so just let the expression validate naturally and
+        // check for the predictable errors then
+        return null;
         }
 
     /**

@@ -47,7 +47,7 @@ public class Label
         StringBuilder sb = new StringBuilder();
 
         sb.append(m_sName)
-          .append(':');
+          .append(": ");
 
         Op op = getSuffix();
         if (op != null)

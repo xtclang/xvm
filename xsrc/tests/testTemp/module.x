@@ -10,6 +10,7 @@ module TestTemp.xqiz.it
         testInts();
         testIsA();
         testCast();
+        testTernary();
 
         // testInterval();
         }
@@ -96,7 +97,7 @@ module TestTemp.xqiz.it
         console.println("o.is(Object)=" + o.is(Object));
         console.println("o.is(String)=" + o.is(String));
         console.println("o.is(Int)   =" + o.is(Int));
-        
+
         console.println("\n(testing an int in a variable of type int)");
         Int i = 5;
         if (i.is(Object))
@@ -144,5 +145,17 @@ module TestTemp.xqiz.it
         console.println("o=" + o);
         Int    n = o.as(Int);
         console.println("n=" + n);
+        }
+
+    void testTernary()
+        {
+        console.println("\n** testTernary()");
+
+        Int i = 42;
+        console.println("i=" + i);
+        console.println("i%2=" + (i % 2));
+
+        console.println("i>40?greater:not -> " + (i > 40 ? "greater" : "not greater"));
+        console.println("i%2==0?even:odd  -> " + (i % 2 == 0 ? "even" : "odd"));
         }
     }
