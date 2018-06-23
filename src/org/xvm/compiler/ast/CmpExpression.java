@@ -239,27 +239,39 @@ public class CmpExpression
             switch (operator.getId())
                 {
                 case COMP_EQ:
-                    code.add(new JumpEq(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpEq(arg1, arg2, label)
+                            : new JumpNotEq(arg1, arg2, label));
                     return;
 
                 case COMP_NEQ:
-                    code.add(new JumpNotEq(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpNotEq(arg1, arg2, label)
+                            : new JumpEq(arg1, arg2, label));
                     return;
 
                 case COMP_LT:
-                    code.add(new JumpLt(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpLt(arg1, arg2, label)
+                            : new JumpGte(arg1, arg2, label));
                     return;
 
                 case COMP_GT:
-                    code.add(new JumpGt(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpGt(arg1, arg2, label)
+                            : new JumpLte(arg1, arg2, label));
                     return;
 
                 case COMP_LTEQ:
-                    code.add(new JumpLte(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpLte(arg1, arg2, label)
+                            : new JumpGt(arg1, arg2, label));
                     return;
 
                 case COMP_GTEQ:
-                    code.add(new JumpGte(arg1, arg2, label));
+                    code.add(fWhenTrue
+                            ? new JumpGte(arg1, arg2, label)
+                            : new JumpLt(arg1, arg2, label));
                     return;
 
                 default:
