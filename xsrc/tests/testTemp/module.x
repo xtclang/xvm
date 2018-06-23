@@ -10,7 +10,7 @@ module TestTemp.xqiz.it
         testInts();
         testIsA();
         testCast();
-        // testTernary();
+        testTernary();
         // testInterval();
         testSpaceship();
         }
