@@ -348,16 +348,17 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Create an object handle for the specified constant.
+     * Create an object handle for the specified constant and push it on the frame's local stack.
      *
      * @param frame     the current frame
      * @param constant  the constant
      *
-     * @return the corresponding {@link ObjectHandle} or null if the operation failed
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
-        return null;
+        frame.raiseException(xException.makeHandle("Unknown constant:" + constant));
+        return Op.R_EXCEPTION;
         }
 
     /**
@@ -386,11 +387,11 @@ public abstract class ClassTemplate
         {
         ObjectHandle hStruct = createStruct(frame, clazz);
 
-        // assume that we have C1 with a default constructor (DC), a regular constructor (RC1),
-        // and a finalizer (F1) that extends C0 with a constructor (RC0) and a finalizer (F0)
+        // assume that we have class D with an auto-generated initializer (ID), a constructor (CD),
+        // and a finalizer (FD) that extends B with a constructor (CB) and a finalizer (FB)
         // the call sequence should be:
         //
-        //  ("new" op-code) => DC -> RC1 => RC0 -> F0 -> F1 -> "assign" (continuation)
+        //  ("new" op-code) => ID -> CD => CB -> FB -> FD -> "assign" (continuation)
         //
         // -> indicates a call via continuation
         // => indicates a call via Construct op-code
@@ -398,26 +399,26 @@ public abstract class ClassTemplate
         // we need to create the call chain in the revers order;
         // the very last frame should also assign the resulting new object
 
-        Frame.Continuation contAssign =
-            frameCaller -> frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
+        Frame.Continuation contAssign = frameCaller ->
+            frameCaller.assignValue(iReturn, hStruct.ensureAccess(Access.PUBLIC));
 
-        Frame frameRC1 = frame.ensureInitialized(constructor,
+        Frame frameCD = frame.ensureInitialized(constructor,
             frame.createFrame1(constructor, hStruct, ahVar, Op.A_IGNORE));
 
         // we need a non-null anchor (see Frame#chainFinalizer)
-        frameRC1.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
+        frameCD.m_hfnFinally = Utils.makeFinalizer(constructor, hStruct, ahVar); // hF1
 
-        frameRC1.setContinuation(frameCaller ->
+        frameCD.setContinuation(frameCaller ->
             {
             if (isConstructImmutable())
                 {
                 hStruct.makeImmutable();
                 }
 
-            FullyBoundHandle hF = frameRC1.m_hfnFinally;
+            FullyBoundHandle hFD = frameCD.m_hfnFinally;
 
             // this:struct -> this:public
-            return hF.callChain(frameCaller, Access.PUBLIC, contAssign);
+            return hFD.callChain(frameCaller, Access.PUBLIC, contAssign);
             });
 
         Map<TypeConstant, MethodStructure> mapConstructors = m_mapConstructors;
@@ -426,19 +427,19 @@ public abstract class ClassTemplate
             mapConstructors = m_mapConstructors = new ConcurrentHashMap<>();
             }
 
-        MethodStructure methodDC = mapConstructors.computeIfAbsent(
-            hStruct.getType(), f_struct::getDefaultConstructor);
+        MethodStructure methodID = mapConstructors.computeIfAbsent(
+            hStruct.getType(), f_struct::getDefaultInitializer);
 
-        if (methodDC.isAbstract())
+        if (methodID.isAbstract())
             {
-            return frame.call(frameRC1);
+            return frame.call(frameCD);
             }
 
-        Frame frameDC = frame.createFrame1(methodDC, hStruct, ahVar, Op.A_IGNORE);
+        Frame frameID = frame.createFrame1(methodID, hStruct, ahVar, Op.A_IGNORE);
 
-        frameDC.setContinuation(frameCaller -> frameCaller.call(frameRC1));
+        frameID.setContinuation(frameCaller -> frameCaller.call(frameCD));
 
-        return frame.call(frame.ensureInitialized(methodDC, frameDC));
+        return frame.call(frame.ensureInitialized(methodID, frameID));
         }
 
     /**

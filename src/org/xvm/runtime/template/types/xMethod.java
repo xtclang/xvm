@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -61,7 +62,7 @@ public class xMethod
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant)
             {
@@ -69,9 +70,11 @@ public class xMethod
 
             // TODO: assert if a function
 
-            return makeHandle(method, frame.getThis().getType());
+            frame.pushStack(makeHandle(method, frame.getThis().getType()));
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

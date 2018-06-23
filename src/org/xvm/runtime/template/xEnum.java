@@ -9,6 +9,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SingletonConstant;
 
@@ -95,7 +96,7 @@ public class xEnum
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof SingletonConstant)
             {
@@ -125,9 +126,11 @@ public class xEnum
                         }
                     }
                 }
-            return hValue;
+            frame.pushStack(hValue);
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

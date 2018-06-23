@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
@@ -74,7 +75,7 @@ public class xTuple
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constTuple = (ArrayConstant) constant;
 
@@ -87,7 +88,8 @@ public class xTuple
 
         if (c == 0)
             {
-            return H_VOID;
+            frame.pushStack(H_VOID);
+            return Op.R_NEXT;
             }
 
         TypeConstant typeTuple = constTuple.getType().resolveGenerics(frame.getGenericsResolver());
@@ -96,11 +98,18 @@ public class xTuple
         for (int i = 0; i < c; i++)
             {
             ahValue[i] = heap.ensureConstHandle(frame, aconst[i]);
+
+            if (ahValue[i] instanceof DeferredCallHandle)
+                {
+                throw new UnsupportedOperationException("not implemented"); // TODO
+                }
             }
 
         TupleHandle hTuple = makeHandle(typeTuple, ahValue);
         hTuple.makeImmutable();
-        return hTuple;
+
+        frame.pushStack(hTuple);
+        return Op.R_NEXT;
         }
 
     @Override

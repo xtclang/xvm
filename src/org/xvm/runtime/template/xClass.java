@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -47,7 +48,7 @@ public class xClass
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ClassConstant)
             {
@@ -57,11 +58,13 @@ public class xClass
             {
             TypeConstant typeTarget = (TypeConstant) constant;
 
-            return m_mapHandles.computeIfAbsent(typeTarget, type ->
+            frame.pushStack(m_mapHandles.computeIfAbsent(typeTarget, type ->
                 new ClassHandle(frame.ensureClass(
-                    type.resolveGenerics(frame.getGenericsResolver()))));
+                    type.resolveGenerics(frame.getGenericsResolver())))));
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

@@ -3,6 +3,7 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IntConstant;
 
@@ -36,10 +37,15 @@ public class xBit
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof IntConstant ? new JavaLong(getCanonicalClass(),
-                ((IntConstant) constant).getValue().getLong()) : null;
+        if (constant instanceof IntConstant)
+            {
+            frame.pushStack(new JavaLong(getCanonicalClass(),
+                ((IntConstant) constant).getValue().getLong()));
+            return Op.R_NEXT;
+            }
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

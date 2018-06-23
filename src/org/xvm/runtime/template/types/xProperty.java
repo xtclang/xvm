@@ -3,12 +3,12 @@ package org.xvm.runtime.template.types;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 
@@ -36,13 +36,15 @@ public class xProperty
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof PropertyConstant)
             {
-            return new DeferredPropertyHandle((PropertyConstant) constant);
+            frame.pushStack(new DeferredPropertyHandle((PropertyConstant) constant));
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
         }
 
     public static class DeferredPropertyHandle

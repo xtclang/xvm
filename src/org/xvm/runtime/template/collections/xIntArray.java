@@ -55,7 +55,7 @@ public class xIntArray
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constArray = (ArrayConstant) constant;
 
@@ -72,7 +72,9 @@ public class xIntArray
 
         ArrayHandle hArray = makeIntArrayInstance(alValue);
         hArray.makeImmutable();
-        return hArray;
+
+        frame.pushStack(hArray);
+        return Op.R_NEXT;
         }
 
     @Override

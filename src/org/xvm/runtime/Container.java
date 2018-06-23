@@ -19,6 +19,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.template.xModule;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xFunction;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
@@ -96,7 +97,7 @@ public class Container
         else
             {
             m_app = f_templates.getTemplate(f_constModule);
-            m_hModule = (ModuleHandle) m_app.createConstHandle(null, f_constModule);
+            m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
             }
 
         m_contextMain = createServiceContext(f_sAppName, structModule);

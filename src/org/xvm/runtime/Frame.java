@@ -489,7 +489,7 @@ public class Frame
      *
      * @param hValue  a value to push
      */
-    protected void pushStack(ObjectHandle hValue)
+    public void pushStack(ObjectHandle hValue)
         {
         if (m_hStackTop == null)
             {
@@ -830,20 +830,27 @@ public class Frame
         return Op.R_EXCEPTION;
         }
 
+    /**
+     * @return the ConstantPool to be used for this frame
+     */
+    public ConstantPool pool()
+        {
+        MethodStructure function = f_function;
+        return function == null ? f_context.f_pool : function.getConstantPool();
+        }
+
+    /**
+     * @return an ObjectHandle for the constant (could be a DeferredCallHandle)
+     */
     public ObjectHandle getConstHandle(int iArg)
         {
-        ObjectHandle hValue = f_context.f_heapGlobal.ensureConstHandle(this, getConstant(iArg));
-        if (hValue == null)
-            {
-            throw new IllegalStateException("Unsupported constant " + getConstant(iArg));
-            }
-        return hValue;
+        return f_context.f_heapGlobal.ensureConstHandle(this, getConstant(iArg));
         }
 
     public Constant getConstant(int iArg)
         {
         assert iArg <= Op.CONSTANT_OFFSET;
-        return f_context.f_pool.getConstant(Op.CONSTANT_OFFSET - iArg);
+        return pool().getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
     public int checkWaitingRegisters()
@@ -962,8 +969,11 @@ public class Frame
         return type.resolveGenerics(getGenericsResolver());
         }
 
-    // return the ObjectHandle, or null if the value is "pending future", or
-    // throw if the async assignment has failed
+    /**
+     * @return an ObjectHandle (could be DeferredCallHandle), or null if the value is "pending future"
+     *
+     * @throw ExceptionHandle.WrapperException if the async assignment has failed
+     */
     public ObjectHandle getArgument(int iArg)
                 throws ExceptionHandle.WrapperException
         {
@@ -1022,8 +1032,11 @@ public class Frame
                 : getPredefinedArgument(iArg);
         }
 
-    // unlike getArgument(), this could return a non-completed FutureVar
-    // and it never throws
+    /**
+     * Unlike getArgument(), this could return a non-completed FutureVar and it never throws
+     *
+     * @return an ObjectHandle (could be DeferredCallHandle)
+     */
     public ObjectHandle getReturnValue(int iArg)
         {
         return iArg >= 0
@@ -1592,7 +1605,7 @@ public class Frame
                 {
                 if (m_resolver == null)
                     {
-                    type = (TypeConstant) f_context.f_pool.getConstant(m_nTypeId);
+                    type = (TypeConstant) pool().getConstant(m_nTypeId);
                     }
                 else
                     {
@@ -1723,7 +1736,7 @@ public class Frame
                     ? typeArray.getParamTypesArray()[iAuxId]
                     : typeArray.getParamTypesArray()[0];
                 }
-            return frame.f_context.f_pool.typeObject();
+            return frame.pool().typeObject();
             }
         };
 
@@ -1733,7 +1746,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, iAuxId);
-            ConstantPool pool = frame.f_context.f_pool;
+            ConstantPool pool = frame.pool();
             return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeEl);
             }
         };
@@ -1745,7 +1758,7 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            ConstantPool pool = frame.f_context.f_pool;
+            ConstantPool pool = frame.pool();
 
             PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
             TypeConstant typeTarget = frame.getLocalType(nTargetReg);

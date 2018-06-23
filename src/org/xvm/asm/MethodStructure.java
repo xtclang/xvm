@@ -911,8 +911,7 @@ public class MethodStructure
 
                         // create a pseudo frame to deal with the wait
                         Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_STACK);
-                        frameWait.setContinuation(
-                            frameCaller -> frameCaller.call(frameNext));
+                        frameWait.setContinuation(frameCaller -> frameCaller.call(frameNext));
 
                         return frame.call(frameWait);
                         }
@@ -934,11 +933,17 @@ public class MethodStructure
                 switch (constValue.getFormat())
                     {
                     case Module:
-                        hValue = xModule.INSTANCE.createConstHandle(frame, constValue);
-                        if (hValue == null)
+                        switch (xModule.INSTANCE.createConstHandle(frame, constValue))
                             {
-                            return frame.raiseException(
-                                xException.makeHandle("unknown module: " + constValue.getValueString()));
+                            case Op.R_NEXT:
+                                constSingleton.setHandle(frame.popStack());
+                                break;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            default:
+                                throw new IllegalStateException();
                             }
                         break;
 
@@ -960,26 +965,20 @@ public class MethodStructure
 
                         ClassTemplate template = heap.f_templates.getTemplate(constClz);
 
-                        // the class must have a no-params constructor to call
-                        // or have a native constant initializer
-                        MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
-                        if (constructor == null)
-                            {
-                            hValue = template.createConstHandle(frame, constSingleton);
-                            if (hValue == null)
-                                {
-                                return frame.raiseException(
-                                    xException.makeHandle("Failed to create a constant: " + constSingleton));
-                                }
-                            constSingleton.setHandle(hValue);
-                            break;
-                            }
-
                         if (template.f_struct.getFormat() == Format.ENUMVALUE ||
                             template.f_struct.getFormat() == Format.ENUM)
                             {
                             // TODO: rework this when enum values constructors are generated
                             return Op.R_NEXT;
+                            }
+
+                        // the class must have a no-params constructor to call
+                        MethodStructure constructor = clz.findMethod(getConstantPool().sigConstruct());
+                        if (constructor == null)
+                            {
+                            frame.raiseException(xException.makeHandle(
+                                "Missing default constructor at " + clz.getSimpleName()));
+                            return Op.R_EXCEPTION;
                             }
 
                         template.construct(frame, constructor,

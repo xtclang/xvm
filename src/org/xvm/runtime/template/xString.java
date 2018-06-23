@@ -47,10 +47,16 @@ public class xString
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
-        return constant instanceof StringConstant ? new StringHandle(getCanonicalClass(),
-                ((StringConstant) constant).getValue()) : null;
+        if (constant instanceof StringConstant)
+            {
+            frame.pushStack(new StringHandle(getCanonicalClass(),
+                ((StringConstant) constant).getValue()));
+            return Op.R_NEXT;
+            }
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

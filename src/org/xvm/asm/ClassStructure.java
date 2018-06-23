@@ -1318,15 +1318,15 @@ public class ClassStructure
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
-     * Create a synthetic MethodStructure for a default constructor for a given type.
-     * Note: the resulting method could be marked as abstract if there is are no properties
-     *       to in initialize.
+     * Create a synthetic MethodStructure for a default initializer for a given type.
+     * Note: the resulting method will be marked as abstract if there are no properties
+     *       to initialize.
      *
      * @param typeStruct  the type, for which a default constructor is to be created
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure getDefaultConstructor(TypeConstant typeStruct)
+    public MethodStructure getDefaultInitializer(TypeConstant typeStruct)
         {
         MultiMethodStructure mms = (MultiMethodStructure) getChild("default");
         if (mms == null)
@@ -1353,8 +1353,9 @@ public class ClassStructure
         MethodStructure method = mms.createMethod(true, Access.PUBLIC, null,
             Parameter.NO_PARAMS, aParam, true, false);
 
-        // TODO: use the TypeInfo when implemented
         MethodStructure.Code code = method.createCode();
+
+        // TODO: use the TypeInfo to enumerate the fields
         for (Component child : children())
             {
             if (child instanceof PropertyStructure)
@@ -1364,12 +1365,7 @@ public class ClassStructure
                 Constant constValue = prop.getInitialValue();
                 if (constValue != null)
                     {
-                    // TODO: temporary; replace with
-                    // code.add(new L_Set(prop.getIdentityConstant(), constValue));
-
-                    code.add(new L_Set(
-                        Op.CONSTANT_OFFSET - prop.getIdentityConstant().getPosition(),
-                        Op.CONSTANT_OFFSET - constValue.getPosition()));
+                    code.add(new L_Set(prop.getIdentityConstant(), constValue));
                     }
                 }
             }

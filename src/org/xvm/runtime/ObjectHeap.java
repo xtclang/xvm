@@ -9,9 +9,13 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 
 /**
@@ -30,7 +34,13 @@ public class ObjectHeap
         f_templates = templates;
         }
 
-    // nValueConstId -- "literal" (Int/String/etc.) Constant known by the ConstantPool
+    /**
+     * Return a handle for the specified constant (could be DeferredCallHandle).
+     *
+     * @param constValue "literal" (Int/String/etc.) constant known by the ConstantPool
+     *
+     * @return R_NEXT or R_CALL
+     */
     public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {
         // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,
@@ -42,21 +52,12 @@ public class ObjectHeap
             return hValue;
             }
 
-        hValue = createConstHandle(frame, constValue);
-
-        ObjectHandle hValue0 = mapConstants.putIfAbsent(constValue, hValue);
-
-        return hValue0 == null ? hValue : hValue0;
-        }
-
-    private ObjectHandle createConstHandle(Frame frame, Constant constValue)
-        {
         if (constValue instanceof SingletonConstant)
             {
-            ObjectHandle hValue = ((SingletonConstant) constValue).getHandle();
+            hValue = ((SingletonConstant) constValue).getHandle();
             if (hValue != null)
                 {
-                return hValue;
+                return saveConstHandle(constValue, hValue);
                 }
             }
 
@@ -64,12 +65,32 @@ public class ObjectHeap
 
         ClassTemplate template = f_templates.getTemplate(type); // must exist
 
-        ObjectHandle hValue = template.createConstHandle(frame, constValue);
-        if (hValue == null)
+        switch (template.createConstHandle(frame, constValue))
             {
-            throw new IllegalStateException("Invalid constant " + constValue);
+            case Op.R_NEXT:
+                return saveConstHandle(constValue, frame.popStack());
+
+            case Op.R_CALL:
+                Frame frameNext = frame.m_frameNext;
+                frameNext.setContinuation(frameCaller ->
+                    {
+                    frame.pushStack(
+                        saveConstHandle(constValue, frameCaller.popStack()));
+                    return Op.R_NEXT;
+                    });
+                return new DeferredCallHandle(frameNext);
+
+            case Op.R_EXCEPTION:
+                // TODO: generate a DeferredCallHandle() to a frame that immediately throws
+            default:
+                throw new IllegalStateException();
             }
-        return hValue;
+        }
+
+    private ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
+        {
+        ObjectHandle hValue0 = m_mapConstants.putIfAbsent(constValue, hValue);
+        return hValue0 == null ? hValue : hValue0;
         }
 
     /**
@@ -86,6 +107,8 @@ public class ObjectHeap
                 return f_poolRoot.typeInt();
 
             case IntLiteral:
+                return f_poolRoot.clzIntLiteral().getType();
+
             case Int8:
             case Int16:
             case Int32:

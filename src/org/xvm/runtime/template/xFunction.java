@@ -53,7 +53,7 @@ public class xFunction
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant)
             {
@@ -62,9 +62,11 @@ public class xFunction
 
             // TODO: assert if a method
             // TODO: construct the correct TypeComposition
-            return new FunctionHandle(getCanonicalClass(), function);
+            frame.pushStack(new FunctionHandle(getCanonicalClass(), function));
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
         }
 
     @Override

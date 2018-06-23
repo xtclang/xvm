@@ -173,6 +173,11 @@ public class JumpVal
                 {
                 ObjectHandle hCase = frame.getConstHandle(anArgCase[i]);
 
+                if (hCase instanceof ObjectHandle.DeferredCallHandle)
+                    {
+                    throw new UnsupportedOperationException("not implemented"); // TODO
+                    }
+
                 assert !hCase.isMutable();
 
                 mapJump.put(hCase, Integer.valueOf(aofCase[i]));

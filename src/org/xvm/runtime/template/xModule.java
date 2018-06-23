@@ -6,13 +6,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -49,18 +49,27 @@ public class xModule
         }
 
     @Override
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof ModuleConstant)
             {
-            ModuleConstant constModule = (ModuleConstant) constant;
-            TypeConstant typeModule = constModule.getType();
-            TypeComposition clazz = ensureClass(typeModule, typeModule);
-
-            return f_mapModules.computeIfAbsent(constModule.getName(),
-                    sName -> new ModuleHandle(clazz, sName));
+            frame.pushStack(ensureModuleHandle((ModuleConstant) constant));
+            return Op.R_NEXT;
             }
-        return null;
+
+        return super.createConstHandle(frame, constant);
+        }
+
+    /**
+     * @return a ModuleHandle for the specified ModuleConstant
+     */
+    public ModuleHandle ensureModuleHandle(ModuleConstant constModule)
+        {
+        TypeConstant    typeModule = constModule.getType();
+        TypeComposition clazz      = ensureClass(typeModule, typeModule);
+
+        return f_mapModules.computeIfAbsent(constModule.getName(),
+            sName -> new ModuleHandle(clazz, sName));
         }
 
     public static class ModuleHandle extends GenericHandle

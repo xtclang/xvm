@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHeap;
 import org.xvm.runtime.TypeComposition;
@@ -68,7 +69,7 @@ public class xArray
         return false;
         }
 
-    public ObjectHandle createConstHandle(Frame frame, Constant constant)
+    public int createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constArray = (ArrayConstant) constant;
 
@@ -95,19 +96,22 @@ public class xArray
 
         for (int i = 0; i < cSize; i++)
             {
-            Constant constValue = aconst[i];
+            ObjectHandle hValue = heap.ensureConstHandle(frame, aconst[i]);
 
-            ObjectHandle hValue = heap.ensureConstHandle(frame, constValue);
+            if (hValue instanceof DeferredCallHandle)
+                {
+                throw new UnsupportedOperationException("not implemented"); // TODO
+                }
 
             if (templateArray.assignArrayValue(frame, hArray, i, hValue) == Op.R_EXCEPTION)
                 {
-                throw new IllegalStateException("Failed to initialize an array " +
-                    frame.m_hException);
+                return Op.R_EXCEPTION;
                 }
             }
 
         hArray.makeImmutable();
-        return hArray;
+        frame.pushStack(hArray);
+        return Op.R_NEXT;
         }
 
     @Override
