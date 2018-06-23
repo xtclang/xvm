@@ -177,22 +177,24 @@ public abstract class OpCondJump
                 type2 = frame.getArgumentType(m_nArg2);
                 }
 
-            if (type1 != type2)
+            TypeConstant typeCommon = selectCommonType(type1, type2);
+            if (typeCommon == null)
                 {
                 // this shouldn't have compiled
-                throw new IllegalStateException();
+                throw new IllegalStateException("Incomparable types: " + type1.getValueString()
+                    + " and " + type2.getValueString());
                 }
 
             if (fAnyProp)
                 {
                 ObjectHandle[] ahValue = new ObjectHandle[] {hValue1, hValue2};
                 Frame.Continuation stepNext = frameCaller ->
-                    completeBinaryOp(frame, iPC, type1, ahValue[0], ahValue[1]);
+                    completeBinaryOp(frame, iPC, typeCommon, ahValue[0], ahValue[1]);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return completeBinaryOp(frame, iPC, type1, hValue1, hValue2);
+            return completeBinaryOp(frame, iPC, typeCommon, hValue1, hValue2);
             }
         catch (ExceptionHandle.WrapperException e)
             {

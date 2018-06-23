@@ -10,7 +10,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.*;
 
@@ -332,11 +336,61 @@ public abstract class Op
         return CONSTANT_OFFSET - id;
         }
 
+    /**
+     * Given two types that should have some point of immediate commonality, select a target type.
+     *
+     * @param type1  the first type
+     * @param type2  the second type
+     *
+     * @return a target type or null
+     */
+    public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2)
+        {
+        if (type1 == null && type2 == null)
+            {
+            return null;
+            }
+
+        if (type1 != null && type2 != null)
+            {
+            if (type2.isAssignableTo(type1))
+                {
+                return type1;
+                }
+
+            if (type1.isAssignableTo(type2))
+                {
+                return type2;
+                }
+
+            TypeInfo info1 = type1.ensureTypeInfo();
+            if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
+                {
+                return info1.getExtends();
+                }
+
+            TypeInfo info2 = type2.ensureTypeInfo();
+            if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends()))
+                {
+                return info2.getExtends();
+                }
+
+            return null;
+            }
+
+        TypeConstant typeResult = type1 == null ? type2 : type1;
+        TypeInfo     typeinfo   = typeResult.ensureTypeInfo();
+        return typeinfo.getFormat() == Format.ENUMVALUE
+                ? typeinfo.getExtends()
+                : typeResult;
+        }
+
     @Override
     public String toString()
         {
         return toName(getOpCode());
         }
+
 
     // ----- inner class: Prefix Op ----------------------------------------------------------------
 
