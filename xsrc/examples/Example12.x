@@ -926,14 +926,38 @@ f3() ? {f7(4);} : {f8("hello");};
 class C
     {
     void foo(Int n, Int n2, String s) {...}
+    void foo1(Int n, function Int () fn2, String s) {...}
+    void foo2(Int i) {...}
+    Int foo3() {...}
     }
+
+C c = ...;
+
+function void (String) f1 = c.foo(5, bar(), ?);
+function void (String) f1 = c.&foo3();
+function void (String) f6 = s -> c.foo(5, bar(), s);
+
+function Int () f7 = c.&foo3(); Int j = f7();
+function Int () f8 = c.&foo2(5); Int j = f8();
+
+var f2 = c.foo(5, 5, ?);
+Function f3 = c.foo(5, 5, ?);
+Function<<String>, <>> f4 = c.foo(5, 5, ?);
+f1("hello");
+f3("hello"); // error
+
+function Point (Int) pg = y -> new Point(bar(), y);
+function Point (Int) pg = new Point(bar(), ?);
+
+function Util (void) pu = &new Util();
+
 
 Method<C, <Int, Int, String>, <>> m  = C.foo(?, ?, ?);
 Method<C, <Int, Int, String>, <>> m2 = C.foo(<Int>?, <Int>?, <String>?);
 
 Method m3 = C.foo(3, ?, ?);     // error (foo is not bound to a target; no partial or full binding of methods)
 
-Function f = new C().&foo(?, ?, ?);
+function f = new C().&foo(?, ?, ?);
 f(1, 2, "hello");                   // error - type is Function, not!!! Function<<Int, Int, String>, <>>
                     // note: using type inference, this WILL work, i.e. NOT an error
 
