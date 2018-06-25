@@ -21,6 +21,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
@@ -253,6 +254,28 @@ public abstract class AstNode
         }
 
     /**
+     * Test if the specified child is allowed to short-circuit.
+     *
+     * @param exprChild  an expression that is a child of this node
+     *
+     * @return true iff the child is allowed to short-circuit
+     */
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        return false;
+        }
+
+    /**
+     * This must be overridden by any AST node that supports short circuiting children.
+     *
+     * @return the label to jump to when the expression short-circuits.
+     */
+    protected Label getShortCircuitLabel()
+        {
+        throw new IllegalStateException(this.getClass().getName());
+        }
+
+    /**
      * @return the constant pool
      */
     protected ConstantPool pool()
@@ -296,8 +319,8 @@ public abstract class AstNode
         return errs == null
                 ? severity.ordinal() >= Severity.ERROR.ordinal()
                 : errs.log(severity, sCode, aoParam, source,
-                        source == null ? 0L : getStartPosition(),
-                        source == null ? 0L : getEndPosition());
+                source == null ? 0L : getStartPosition(),
+                source == null ? 0L : getEndPosition());
         }
 
 

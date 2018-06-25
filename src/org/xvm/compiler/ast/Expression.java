@@ -21,11 +21,6 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.asm.op.IIP_Dec;
-import org.xvm.asm.op.IIP_Inc;
-import org.xvm.asm.op.IP_Dec;
-import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.IP_PreInc;
 import org.xvm.asm.op.I_Set;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
@@ -33,8 +28,6 @@ import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
-import org.xvm.asm.op.PIP_Dec;
-import org.xvm.asm.op.PIP_Inc;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
 
@@ -521,6 +514,8 @@ public abstract class Expression
         {
         assert fit != null;
 
+        checkShortCircuit(errs);
+
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (typeActual == null)
             {
@@ -644,6 +639,8 @@ public abstract class Expression
         assert atypeRequired == null || checkElementsNonNull(atypeRequired);
         assert atypeActual == null || checkElementsNonNull(atypeActual);
         assert aconstVal     == null || checkElementsNonNull(aconstVal) && aconstVal.length == atypeActual.length;
+
+        checkShortCircuit(errs);
 
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null)
@@ -999,6 +996,20 @@ public abstract class Expression
         }
 
     /**
+     * @return true iff this expression is allowed to short-circuit
+     */
+    public boolean isShortCircuitingLegal()
+        {
+        return getParent().allowsShortCircuit(this);
+        }
+
+    @Override
+    protected Label getShortCircuitLabel()
+        {
+        return getParent().getShortCircuitLabel();
+        }
+
+    /**
      * @return true iff the expression represents a non-value ('?') used to explicitly indicate an
      *         unbound parameter
      */
@@ -1288,22 +1299,22 @@ public abstract class Expression
             cLVals = cRVals;
             }
 
-        if (!m_fInAssignment)
+        if (!isInAssignment())
             {
             switch (cLVals)
                 {
                 case 0:
-                    m_fInAssignment = true;
+                    markInAssignment();
                     generateVoid(code, errs);
-                    m_fInAssignment = false;
+                    clearInAssignment();
                     return;
 
                 case 1:
                     if (hasSingleValueImpl())
                         {
-                        m_fInAssignment = true;
+                        markInAssignment();
                         generateAssignment(code, aLVal[0], errs);
-                        m_fInAssignment = false;
+                        clearInAssignment();
                         return;
                         }
                 }
@@ -1803,9 +1814,62 @@ public abstract class Expression
      */
     protected void checkDepth()
         {
-        if (++m_cDepth > 40)
+        int cDepth = m_nFlags & DEPTH_MASK;
+        if (cDepth > 40)
             {
             throw notImplemented();
+            }
+        m_nFlags = ((cDepth + 1) & DEPTH_MASK) | (m_nFlags & ~DEPTH_MASK);
+        }
+
+    /**
+     * @return true iff the current recursion is coming from assignment processing
+     */
+    protected boolean isInAssignment()
+        {
+        return (m_nFlags & IN_ASSIGNMENT) != 0;
+        }
+
+    /**
+     * Mark the expression as being "in assignment".
+     */
+    protected void markInAssignment()
+        {
+        assert !isInAssignment();
+        m_nFlags |= IN_ASSIGNMENT;
+        }
+
+    /**
+     * Mark the expression as no longer being "in assignment".
+     */
+    protected void clearInAssignment()
+        {
+        assert isInAssignment();
+        m_nFlags &= ~IN_ASSIGNMENT;
+        }
+
+    /**
+     * @return true iff the "illegal short-circuiting" error has already been logged for this
+     *        expression
+     */
+    protected boolean isSuppressShortCircuit()
+        {
+        return (m_nFlags & ILLEGAL_SHORT) != 0;
+        }
+
+    /**
+     * If the expression is short-circuiting in a context that does NOT allow short-circuiting
+     * expressions, then log an error (and subsequently return {@code true} from
+     * {@link #isSuppressShortCircuit()}.)
+     *
+     * @param errs  the error list to log any errors to
+     */
+    protected void checkShortCircuit(ErrorListener errs)
+        {
+        if (!isSuppressShortCircuit() && isShortCircuiting() && !isShortCircuitingLegal())
+            {
+            log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
+            m_nFlags |= ILLEGAL_SHORT;  // only log the error once
             }
         }
 
@@ -2425,32 +2489,14 @@ public abstract class Expression
         }
 
 
-    // ----- TuplePref enumeration -----------------------------------------------------------------
-
-
-    /**
-     * Represents the form that the Expression can or does yield a tuple:
-     * <ul>
-     * <li>{@code Rejected} - the expression must <b>not</b> yield the requested type(s) in a tuple
-     *                        form</li>
-     * <li>{@code Accepted} - the expression should yield a tuple if not yielding a tuple would
-     *                        involve additional cost</li>
-     * <li>{@code Desired}  - the expression should yield a tuple if it can do with no cost</li>
-     * <li>{@code Required} - the expression must <b>always</b> yields a tuple of the requested
-     *                        type(s)</li>
-     * </ul>
-     */
-    // REVIEW could it simplify to: Never, Either, Always?
-    public enum TuplePref
-        {
-            Rejected, Accepted, Desired, Required
-        }
-
-
     // ----- fields --------------------------------------------------------------------------------
 
     public static final Assignable[] NO_LVALUES = new Assignable[0];
     public static final Argument[]   NO_RVALUES = new Argument[0];
+
+    private static final int IN_ASSIGNMENT = 1 << 30;
+    private static final int ILLEGAL_SHORT = 1 << 29;
+    private static final int DEPTH_MASK    = 0xFF;
 
     /**
      * After validation, contains the TypeFit determined during the validation.
@@ -2470,14 +2516,7 @@ public abstract class Expression
     private Object m_oConst;
 
     /**
-     * This allows a sub-class to not override either generateAssignment() method, by having a
-     * relatively inefficient and/or non-effective implementation being provided by default (without
-     * infinite recursion), or alternatively implementing one and/or the other of the two methods.
+     * Various temporary flags.
      */
-    private transient boolean m_fInAssignment;
-
-    /**
-     * (Temporary) Infinite recursion prevention.
-     */
-    private transient byte m_cDepth;
+    private transient int m_nFlags;
     }

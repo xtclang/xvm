@@ -314,10 +314,8 @@ Statement
     TypeCompositionStatement
     PropertyDeclarationStatement
     MethodDeclarationStatement
-    StatementBlock
 	VariableDeclaration ";"
 	Assignment ";"
-	Expression ";" // REVIEW reduce this to ExpressionStatement with explicitly supported expressions?
     LabeledStatement
     AssertStatement
     "break" Name-opt ";"
@@ -333,6 +331,8 @@ Statement
     "using" ResourceDeclaration StatementBlock
     "while" "(" WhileCondition ")" StatementBlock
     WithStatement
+    StatementBlock
+	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
 
 PropertyDeclarationStatement
     "static" TypeExpression Name PropertyDeclarationFinish-opt

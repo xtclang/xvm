@@ -6,18 +6,19 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Token;
+import org.xvm.compiler.*;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.util.Severity;
 
 
 /**
- * One of the "else" expression types:
+ * The trailing "else" expression for any short-circuited expressions that precede it:
  *
  * <ul>
  * <li><tt>COLON:      ":"</tt> - an "else" for nullability checks</li>
- * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
  * </ul>
  */
 public class ElseExpression
@@ -33,14 +34,6 @@ public class ElseExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
-    /**
-     * @return true iff this is an Elvis expression
-     */
-    public boolean isElvis()
-        {
-        return operator.getId() == Id.COND_ELSE;
-        }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -49,21 +42,33 @@ public class ElseExpression
         {
         TypeConstant type1 = expr1.getImplicitType(ctx);
         TypeConstant type2 = expr2.getImplicitType(ctx);
-
-        if (type1 != null)
+        if (type1 == null || type2 == null)
             {
-            type1 = type1.removeNullable();
+            return null;
             }
 
-        return selectType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeResult = selectType(type1, type2, ErrorListener.BLACKHOLE);
+        return typeResult == null
+                ? pool().ensureIntersectionTypeConstant(type1, type2)
+                : typeResult;
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        TypeFit fit = expr1.testFit(ctx, typeRequired);
+        if (fit.isFit())
+            {
+            fit.combineWith(expr2.testFit(ctx, typeRequired));
+            }
+        return fit;
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
-        ConstantPool pool     = pool();
-        Expression   expr1New = expr1.validate(ctx, null, errs);
+        Expression   expr1New = expr1.validate(ctx, typeRequired, errs);
         TypeConstant type1    = null;
         if (expr1New == null)
             {
@@ -75,8 +80,12 @@ public class ElseExpression
             type1 = expr1New.getType();
             }
 
-        TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(), null, errs);
-        Expression   expr2New = expr2.validate(ctx, type2Req, errs);
+        TypeConstant type2Req = type1 == null ? null : selectType(type1, null, errs);
+        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
+            {
+            type2Req = typeRequired;
+            }
+        Expression expr2New = expr2.validate(ctx, type2Req, errs);
         if (expr2New == null)
             {
             fit = TypeFit.NoFit;
@@ -91,25 +100,23 @@ public class ElseExpression
             return finishValidation(typeRequired, null, fit, null, errs);
             }
 
-        if (type1.isOnlyNullable())
+        if (!expr1New.isShortCircuiting())
             {
-            // TODO log error only nullable
-            return expr2New;
-            }
-
-        if (!type1.isNullable() && !pool.typeNull().isA(type1))
-            {
-            // TODO log error not nullable
+            expr1New.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_REQUIRED);
             return expr1New;
             }
 
-
         TypeConstant type2      = expr2New.getType();
-        TypeConstant typeResult = selectType(type1.removeNullable(), type2, errs);
-        Constant     constVal   = null;
-        if (expr1.hasConstantValue())
+        TypeConstant typeResult = selectType(type1, type2, errs);
+        if (typeResult == null)
             {
-            // TODO calculate the constant value
+            typeResult = pool().ensureIntersectionTypeConstant(type1, type2);
+            }
+
+        Constant constVal = null;
+        if (expr1New.hasConstantValue())
+            {
+            constVal = expr1New.toConstant();
             }
 
         return finishValidation(typeRequired, typeResult, fit, constVal, errs);
@@ -118,12 +125,8 @@ public class ElseExpression
     @Override
     public boolean isShortCircuiting()
         {
-        // with the colon operator, we know that expr1 has to be short-circuiting (or it's a
-        // compiler error); all other operators are considered to be short circuiting if either
-        // sub-expression is short-circuiting
-        return operator.getId() == Id.COLON
-                ? expr2.isShortCircuiting()
-                : expr1.isShortCircuiting() || expr2.isShortCircuiting();
+        // this expression "gounds" any short circuit that happens on the left side of the ":"
+        return expr2.isShortCircuiting();
         }
 
     @Override
