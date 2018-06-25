@@ -343,6 +343,8 @@ public abstract class Op
      * @param type2  the second type
      *
      * @return a target type or null
+     *
+     * @see {@link org.xvm.compiler.ast.BiExpression#selectType}
      */
     public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2)
         {

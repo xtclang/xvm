@@ -938,6 +938,7 @@ public class ConstantPool
             case "Ordered":
             case "Object":
             case "Package":
+            case "Range":
             case "Ref":
             case "Service":
             case "String":
