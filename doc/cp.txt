@@ -5,6 +5,7 @@
   - Version
   - merge Throw and Todo?
   - Switch expression
+  - Statement expression
   - Lambda
 
 
@@ -21,13 +22,10 @@
   - class in a property
 
 - auto conversion
-  x IntLiteral - > Int, ok
   - IntLiteral[] -> Int[] ???
   - Tuple(String, IntLiteral) -> Tuple(String, Int) ???
 
 - tests
-  x return 40 + 2
-  x "void" was messing up test (so was "int" for gene)
   - props: should NOT be able to combine constants, type params, and props
   - props: should NOT be able to re-introduce setter if super is unreachable
   - props: "delegates" should default Ref / Var -

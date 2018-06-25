@@ -11,8 +11,12 @@ module TestTemp.xqiz.it
         testIsA();
         testCast();
         testTernary();
-        // testInterval();
         testSpaceship();
+        testElvis();
+
+        // REVIEW GG
+        // testInterval();
+        // testTupleConv();
         }
 
     void testInts()
@@ -72,8 +76,8 @@ module TestTemp.xqiz.it
 
         Int a = 2;
         Int b = 5;
-        Object c = a..b;
-        // Range<Int> c = a..b;
+        // Object c = a..b;
+        Range<Int> c = a..b;
         console.println("range=" + c);
         }
 
@@ -167,4 +171,35 @@ module TestTemp.xqiz.it
         Int b = 45;
         console.println("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
         }
+
+    void testTupleConv()
+        {
+        console.println("\n** testTupleConv()");
+
+        Tuple<String, IntLiteral> t1 = getTupleSI();
+        console.println("t1 = " + t1);
+
+        Tuple<String, Int> t2 = getTupleSI();
+        }
+
+    Tuple<String, IntLiteral> getTupleSI()
+        {
+        return ("Hello", 4);
+        }
+
+    void testElvis()
+        {
+        console.println("\n** testElvis()");
+
+        Int a = 42;
+        Int b = 45;
+        console.println("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
+
+        Int? c = a;
+        console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+
+        c = null;
+        console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
+        }
+
     }

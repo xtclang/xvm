@@ -2183,7 +2183,7 @@ public class Parser
         Expression expr = parseOrExpression();
         if (peek().getId() == Id.COND_ELSE)
             {
-            expr = new ElseExpression(expr, current(), parseElvisExpression());
+            expr = new ElvisExpression(expr, current(), parseElvisExpression());
             }
         return expr;
         }
