@@ -65,7 +65,6 @@ public class ElvisExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
-
         ConstantPool pool     = pool();
         TypeConstant type1Req = typeRequired == null ? null : pool.ensureNullableTypeConstant(typeRequired);
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
