@@ -19,7 +19,6 @@ module TestSimple.xqiz.it
         {
         @Inject X.io.Console console;
 
-        DEBUG;
         String s = "Hello";
         console.println(s + " again!!!");
         }

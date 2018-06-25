@@ -24,6 +24,7 @@ const IntLiteral(String text)
     {
     construct(String text)
         {
+/*  TODO: uncomment when the compiler is sufficiently complete
         assert:always text.length > 0;
 
         // optional leading sign
@@ -102,6 +103,7 @@ const IntLiteral(String text)
 
         assert:always digits > 0;
         this.magnitude = magnitude;
+*/
         this.text = text;
         }
 

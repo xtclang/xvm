@@ -88,7 +88,7 @@ class TestApp
 
     class TestClass(String prop1)
         {
-        String prop1;
+        String prop1 = "";
 
         construct(String s)
             {
@@ -121,7 +121,7 @@ class TestApp
     class TestClass2
             extends TestClass
         {
-        Int prop2;
+        Int prop2 = 0;
         Int temp;
 
         @Inject io.Console console;
@@ -275,6 +275,8 @@ class TestApp
     static service TestService(Int counter = 48)
         {
         @Inject io.Console console;
+
+        Point point = TestPackage.Origin;
 
         Int counter
             {

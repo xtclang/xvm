@@ -986,7 +986,7 @@ public class MethodStructure
                         frame.m_frameNext.setContinuation(frameCaller ->
                             {
                             constSingleton.setHandle(frameCaller.popStack());
-                            return ensureInitialized(frameCaller, null);
+                            return ensureInitialized(frameCaller, frameNext);
                             });
                         return Op.R_CALL;
                         }
@@ -1003,7 +1003,7 @@ public class MethodStructure
         // (since it's not volatile) they will simply repeat the "do nothing" loop
         m_FInitialized = Boolean.TRUE;
         return frameNext == null
-            ? frame.assignValue(0, xNullable.NULL)
+            ? frame.assignValue(0, xNullable.NULL) // the result is ignored, but has to be assigned
             : frame.call(frameNext);
         }
 
