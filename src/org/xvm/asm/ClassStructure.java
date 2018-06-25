@@ -19,10 +19,12 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TupleElementsTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Return_0;
@@ -1355,17 +1357,15 @@ public class ClassStructure
 
         MethodStructure.Code code = method.createCode();
 
-        // TODO: use the TypeInfo to enumerate the fields
-        for (Component child : children())
+        TypeInfo infoType = typeStruct.ensureTypeInfo();
+        for (PropertyInfo infoProp : infoType.getProperties().values())
             {
-            if (child instanceof PropertyStructure)
+            if (infoProp.hasField())
                 {
-                PropertyStructure prop = (PropertyStructure) child;
-
-                Constant constValue = prop.getInitialValue();
+                Constant constValue = infoProp.getInitialValue();
                 if (constValue != null)
                     {
-                    code.add(new L_Set(prop.getIdentityConstant(), constValue));
+                    code.add(new L_Set(infoProp.getIdentity(), constValue));
                     }
                 }
             }
