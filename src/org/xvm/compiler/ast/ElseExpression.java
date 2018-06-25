@@ -4,8 +4,11 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.Label;
 import org.xvm.compiler.*;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
@@ -138,7 +141,44 @@ public class ElseExpression
         return expr1.isAborting();
         }
 
+    @Override
+    public boolean isShortCircuitingLegal()
+        {
+        return true;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel()
+        {
+        Label label = m_labelElse;
+        if (label == null)
+            {
+            m_labelElse = label = new Label(":else");
+            }
+        return label;
+        }
+
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (hasConstantValue() || !LVal.isNormalVariable())
+            {
+            super.generateAssignment(code, LVal, errs);
+            return;
+            }
+
+        Label labelElse = getShortCircuitLabel();
+        Label labelEnd  = new Label(":end");
+
+        expr1.generateAssignment(code, LVal, errs);
+        code.add(new Jump(labelEnd));
+        code.add(labelElse);
+        expr2.generateAssignment(code, LVal, errs);
+        code.add(labelEnd);
+        }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private transient Label m_labelElse;
     }

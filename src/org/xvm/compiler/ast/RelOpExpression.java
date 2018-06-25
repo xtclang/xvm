@@ -398,7 +398,7 @@ public class RelOpExpression
         TypeConstant type2Req = selectRightType(ctx, typeRequired, type1Act);
         Expression   expr2New = expr2.validate(ctx, type2Req, errs);
         TypeConstant type2Act = null;
-        if (expr1New == null)
+        if (expr2New == null)
             {
             fit = TypeFit.NoFit;
             }
