@@ -205,7 +205,7 @@ public class ListExpression
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    protected TypeConstant inferCommonType(TypeConstant[] aTypes)
+    static TypeConstant inferCommonType(TypeConstant[] aTypes)
         {
         if (aTypes == null || aTypes.length == 0)
             {

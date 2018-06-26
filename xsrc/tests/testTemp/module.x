@@ -13,11 +13,12 @@ module TestTemp.xqiz.it
         testTernary();
         testSpaceship();
         testElvis();
-        testElseExpr();
 
         // REVIEW GG
         // testInterval();
         // testTupleConv();
+        // testElseExpr();
+        // testMap();
         }
 
     void testInts()
@@ -208,5 +209,12 @@ module TestTemp.xqiz.it
 
         a = 4;
         console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
+        }
+
+    void testMap()
+        {
+        console.println("\n** testMap()");
+
+        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
         }
     }

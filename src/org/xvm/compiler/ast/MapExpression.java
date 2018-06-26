@@ -1,10 +1,22 @@
 package org.xvm.compiler.ast;
 
 
-import com.sun.xml.internal.bind.v2.TODO;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Map;
+
+import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.ListMap;
 
 
 /**
@@ -48,7 +60,224 @@ public class MapExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-    // TODO - implicit type, validation, code generation, etc.
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant();
+        TypeConstant typeKey      = null;
+        TypeConstant typeVal      = null;
+        if (typeExplicit != null)
+            {
+            typeKey = typeExplicit.getGenericParamType("KeyType");
+            typeVal = typeExplicit.getGenericParamType("ValueType");
+            if (typeKey != null && typeVal != null)
+                {
+                return typeExplicit;
+                }
+            }
+
+        TypeConstant typeMap = typeExplicit == null
+                ? pool().typeMap()
+                : typeExplicit;
+
+        // see if there is an implicit key and value type
+        int cEntries = keys.size();
+        assert cEntries == values.size();
+        if (cEntries > 0 && (typeKey == null || typeVal == null))
+            {
+            TypeConstant[] aTypes = new TypeConstant[cEntries];
+
+            if (typeKey == null)
+                {
+                for (int i = 0; i < cEntries; ++i)
+                    {
+                    aTypes[i] = keys.get(i).getImplicitType(ctx);
+                    }
+                typeKey = ListExpression.inferCommonType(aTypes);
+                }
+
+            if (typeVal == null)
+                {
+                for (int i = 0; i < cEntries; ++i)
+                    {
+                    aTypes[i] = values.get(i).getImplicitType(ctx);
+                    }
+                typeVal = ListExpression.inferCommonType(aTypes);
+                }
+
+            if (typeKey != null)
+                {
+                typeMap = typeMap.adoptParameters(typeVal == null
+                        ? new TypeConstant[] {typeKey}
+                        : new TypeConstant[] {typeKey, typeVal});
+                }
+            }
+
+        return typeMap;
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        ConstantPool     pool        = pool();
+        TypeFit          fit         = TypeFit.Fit;
+        List<Expression> listKeys    = keys;
+        List<Expression> listVals    = values;
+        boolean          fConstant   = true;
+        TypeConstant     typeActual  = pool.typeMap();
+        TypeConstant     typeKey     = null;
+        TypeConstant     typeVal     = null;
+        int              cExprs      = listKeys.size();
+        assert cExprs == listVals.size();
+
+        // default key and value type from the required type
+        if (typeRequired != null && typeRequired.isA(pool.typeMap()))
+            {
+            // if there are required key/value types, then we'll use them to force the expressions
+            // to convert to those types if necessary
+            typeKey = typeRequired.getGenericParamType("KeyType");
+            typeVal = typeRequired.getGenericParamType("ValueType");
+            }
+
+        // determine type from the explicitly stated type
+        TypeExpression exprOldType = type;
+        if (exprOldType != null)
+            {
+            TypeConstant   typeMapType = pool.ensureParameterizedTypeConstant(pool.typeType(), pool.typeMap());
+            TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeMapType, errs);
+            if (exprNewType == null)
+                {
+                fit       = TypeFit.NoFit;
+                fConstant = false;
+                }
+            else
+                {
+                if (exprNewType != exprOldType)
+                    {
+                    type = exprNewType;
+                    }
+                typeActual = exprNewType.ensureTypeConstant();
+
+                TypeConstant typeKeyTemp = typeActual.getGenericParamType("KeyType");
+                if (typeKeyTemp != null)
+                    {
+                    typeKey = typeKeyTemp;
+                    }
+
+                TypeConstant typeValTemp = typeActual.getGenericParamType("ValueType");
+                if (typeValTemp != null)
+                    {
+                    typeVal = typeValTemp;
+                    }
+                }
+            }
+
+        // infer key type
+        TypeConstant[] aTypes = null;
+        if (typeKey == null && cExprs > 0)
+            {
+            aTypes = new TypeConstant[cExprs];
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aTypes[i] = listKeys.get(i).getImplicitType(ctx);
+                }
+            typeKey = ListExpression.inferCommonType(aTypes);
+            }
+
+        // infer value type
+        if (typeVal == null && cExprs > 0)
+            {
+            if (aTypes == null)
+                {
+                aTypes = new TypeConstant[cExprs];
+                }
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aTypes[i] = listVals.get(i).getImplicitType(ctx);
+                }
+            typeVal = ListExpression.inferCommonType(aTypes);
+            }
+
+        // build actual type from map type, key type, value type
+        if (typeKey != null && (!typeKey.equals(typeActual.getGenericParamType("KeyType")) ||
+                typeVal != null && !typeVal.equals(typeActual.getGenericParamType("ValueType"))))
+            {
+            typeActual = typeActual.adoptParameters(typeVal == null
+                    ? new TypeConstant[] {typeKey}
+                    : new TypeConstant[] {typeKey, typeVal});
+            }
+
+        for (int i = 0; i < cExprs; ++i)
+            {
+            // validate key
+            Expression exprOld = listKeys.get(i);
+            Expression exprNew = exprOld.validate(ctx, typeKey, errs);
+            if (exprNew == null)
+                {
+                fit       = TypeFit.NoFit;
+                fConstant = false;
+                }
+            else
+                {
+                if (exprNew != exprOld)
+                    {
+                    listKeys.set(i, exprNew);
+                    }
+                fConstant &= exprNew.hasConstantValue();
+                }
+
+            // validate value
+            exprOld = listVals.get(i);
+            exprNew = exprOld.validate(ctx, typeVal, errs);
+            if (exprNew == null)
+                {
+                fit       = TypeFit.NoFit;
+                fConstant = false;
+                }
+            else
+                {
+                if (exprNew != exprOld)
+                    {
+                    listVals.set(i, exprNew);
+                    }
+                fConstant &= exprNew.hasConstantValue();
+                }
+            }
+
+        // the type must either be Map (in which case a system-selected type will be used), or a
+        // type that is a Map and takes the contents in its constructor, or has a no-parameter
+        // constructor (so the map can be created empty and the items added to it)
+        if (!typeActual.isSingleUnderlyingClass(true) || !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
+            {
+            // REVIEW how to handle another type besides "Map"? same problem will exist for List, Array, etc.
+            notImplemented();
+
+            fConstant = false;
+            }
+
+        // build a constant if it's a known container type and all of the elements are constants
+        Constant constVal = null;
+        if (fConstant)
+            {
+            Map map = new ListMap<>(cExprs);
+            for (int i = 0; i < cExprs; ++i)
+                {
+                map.put(listKeys.get(i).toConstant(), listVals.get(i).toConstant());
+                }
+
+            if (map.size() == cExprs)
+                {
+                constVal = pool.ensureMapConstant(typeActual, map);
+                }
+            else
+                {
+                // TODO WARNING or ERROR that the map contains non-unique keys
+                System.out.println("MapExpression: constant contains key collision(s): " + this);
+                }
+            }
+
+        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        }
 
     @Override
     public boolean isAborting()
@@ -88,6 +317,29 @@ public class MapExpression
                 }
             }
         return false;
+        }
+
+    @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        if (hasConstantValue())
+            {
+            return toConstant();
+            }
+
+        List<Expression> listKeys = keys;
+        List<Expression> listVals = values;
+        int              cEntries = listKeys.size();
+        Argument[]       aKeys    = new Argument[cEntries];
+        Argument[]       aVals    = new Argument[cEntries];
+        for (int i = 0; i < cEntries; ++i)
+            {
+            aKeys[i] = listKeys.get(i).generateArgument(code, false, true, errs);
+            aVals[i] = listVals.get(i).generateArgument(code, false, true, errs);
+            }
+        notImplemented();
+        // TODO code.add(new Var_M(getType(), aKeys, aVals));
+        return code.lastRegister();
         }
 
 

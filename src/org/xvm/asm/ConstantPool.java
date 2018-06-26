@@ -1790,6 +1790,7 @@ public class ConstantPool
     public ClassConstant     clzIndexed()       {ClassConstant     c = m_clzIndexed;      if (c == null) {m_clzIndexed      = c = (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed");} return c;}
     public ClassConstant     clzArray()         {ClassConstant     c = m_clzArray;        if (c == null) {m_clzArray        = c = (ClassConstant) getImplicitlyImportedIdentity("Array"      );} return c;}
     public ClassConstant     clzList()          {ClassConstant     c = m_clzList;         if (c == null) {m_clzList         = c = (ClassConstant) getImplicitlyImportedIdentity("List"       );} return c;}
+    public ClassConstant     clzMap()           {ClassConstant     c = m_clzMap;          if (c == null) {m_clzMap          = c = (ClassConstant) getImplicitlyImportedIdentity("Map"        );} return c;}
     public ClassConstant     clzSequence()      {ClassConstant     c = m_clzSequence;     if (c == null) {m_clzSequence     = c = (ClassConstant) getImplicitlyImportedIdentity("Sequence"   );} return c;}
     public ClassConstant     clzOrderable()     {ClassConstant     c = m_clzOrderable;    if (c == null) {m_clzOrderable    = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"  );} return c;}
     public ClassConstant     clzSequential()    {ClassConstant     c = m_clzSequential;   if (c == null) {m_clzSequential   = c = (ClassConstant) getImplicitlyImportedIdentity("Sequential" );} return c;}
@@ -1850,6 +1851,7 @@ public class ConstantPool
     public TypeConstant      typeIndexed()      {TypeConstant      c = m_typeIndexed;     if (c == null) {m_typeIndexed     = c = ensureTerminalTypeConstant(clzIndexed()                    );} return c;}
     public TypeConstant      typeArray()        {TypeConstant      c = m_typeArray;       if (c == null) {m_typeArray       = c = ensureTerminalTypeConstant(clzArray()                      );} return c;}
     public TypeConstant      typeList()         {TypeConstant      c = m_typeList;        if (c == null) {m_typeList        = c = ensureTerminalTypeConstant(clzList()                       );} return c;}
+    public TypeConstant      typeMap()          {TypeConstant      c = m_typeMap;         if (c == null) {m_typeMap         = c = ensureTerminalTypeConstant(clzMap()                        );} return c;}
     public TypeConstant      typeSequence()     {TypeConstant      c = m_typeSequence;    if (c == null) {m_typeSequence    = c = ensureTerminalTypeConstant(clzSequence()                   );} return c;}
     public TypeConstant      typeOrderable()    {TypeConstant      c = m_typeOrderable;   if (c == null) {m_typeOrderable   = c = ensureTerminalTypeConstant(clzOrderable()                  );} return c;}
     public TypeConstant      typeSequential()   {TypeConstant      c = m_typeSequential;  if (c == null) {m_typeSequential  = c = ensureTerminalTypeConstant(clzSequential()                 );} return c;}
@@ -2485,6 +2487,8 @@ public class ConstantPool
         m_clzInt          = null;
         m_clzIndexed      = null;
         m_clzArray        = null;
+        m_clzList         = null;
+        m_clzMap          = null;
         m_clzSequence     = null;
         m_clzOrderable    = null;
         m_clzSequential   = null;
@@ -2547,6 +2551,8 @@ public class ConstantPool
         m_typeInt         = null;
         m_typeIndexed     = null;
         m_typeArray       = null;
+        m_typeList        = null;
+        m_typeMap         = null;
         m_typeSequence    = null;
         m_typeOrderable   = null;
         m_typeSequential  = null;
@@ -2808,6 +2814,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzIndexed;
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzList;
+    private transient ClassConstant     m_clzMap;
     private transient ClassConstant     m_clzSequence;
     private transient ClassConstant     m_clzOrderable;
     private transient ClassConstant     m_clzSequential;
@@ -2871,6 +2878,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
     private transient TypeConstant      m_typeList;
+    private transient TypeConstant      m_typeMap;
     private transient TypeConstant      m_typeSequence;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;
