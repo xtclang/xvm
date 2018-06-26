@@ -84,8 +84,10 @@ class Array<ElementType>
         return element;
         }
 
+    @Override
     @Op Array!<ElementType> slice(Range<Int> range);
 
+    @Override
     Array!<ElementType> reify();
 
     @Op Array!<ElementType> add(Array!<ElementType> that);

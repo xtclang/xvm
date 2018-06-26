@@ -65,6 +65,7 @@ const Int64
      * In addition to the implicit "add(Int64 n)" method, this method allows any
      * integer to be added to this value.
      */
+    @Override
     Int64 add(IntNumber n);
 
 // TODO

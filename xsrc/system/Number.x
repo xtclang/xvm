@@ -115,6 +115,7 @@ interface Number
     /**
      * Obtain an interval beginning with this number and proceeding to the specified number.
      */
+    @Override
     @Op Interval<Number> through(Number n)
         {
         return new Interval<Number>(this, n);
