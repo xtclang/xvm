@@ -600,6 +600,32 @@ public class InvocationExpression
         }
 
     @Override
+    public boolean isAborting()
+        {
+        for (Expression arg : args)
+            {
+            if (arg.isAborting())
+                {
+                return true;
+                }
+            }
+        return expr.isAborting();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        for (Expression arg : args)
+            {
+            if (arg.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        return expr.isShortCircuiting();
+        }
+
+    @Override
     public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
             ErrorListener errs)
         {

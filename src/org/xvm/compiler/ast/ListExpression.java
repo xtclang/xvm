@@ -264,6 +264,32 @@ public class ListExpression
         }
 
     @Override
+    public boolean isAborting()
+        {
+        for (Expression expr : exprs)
+            {
+            if (expr.isAborting())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        for (Expression expr : exprs)
+            {
+            if (expr.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (hasConstantValue())

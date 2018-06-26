@@ -2,18 +2,19 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
-import org.xvm.compiler.*;
+
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.Severity;
 
 
@@ -128,7 +129,7 @@ public class ElseExpression
     @Override
     public boolean isShortCircuiting()
         {
-        // this expression "gounds" any short circuit that happens on the left side of the ":"
+        // this expression "grounds" any short circuit that happens on the left side of the ":"
         return expr2.isShortCircuiting();
         }
 
@@ -142,9 +143,9 @@ public class ElseExpression
         }
 
     @Override
-    public boolean isShortCircuitingLegal()
+    protected boolean allowsShortCircuit(Expression exprChild)
         {
-        return true;
+        return exprChild == expr1 || super.allowsShortCircuit(exprChild);
         }
 
     @Override

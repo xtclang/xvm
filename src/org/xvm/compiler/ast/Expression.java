@@ -995,10 +995,8 @@ public abstract class Expression
         return false;
         }
 
-    /**
-     * @return true iff this expression is allowed to short-circuit
-     */
-    public boolean isShortCircuitingLegal()
+    @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
         {
         return getParent().allowsShortCircuit(this);
         }
@@ -1866,7 +1864,7 @@ public abstract class Expression
      */
     protected void checkShortCircuit(ErrorListener errs)
         {
-        if (!isSuppressShortCircuit() && isShortCircuiting() && !isShortCircuitingLegal())
+        if (!isSuppressShortCircuit() && isShortCircuiting() && !allowsShortCircuit(this))
             {
             log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ILLEGAL);
             m_nFlags |= ILLEGAL_SHORT;  // only log the error once

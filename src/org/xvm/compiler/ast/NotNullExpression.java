@@ -9,7 +9,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpNull;
-import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -88,7 +88,7 @@ public class NotNullExpression
 
         ConstantPool pool        = pool();
         TypeConstant typeRequest = typeRequired == null
-                ? pool.typeNullable()
+                ? null
                 : pool.ensureNullableTypeConstant(typeRequired);
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)

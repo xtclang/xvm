@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import com.sun.xml.internal.bind.v2.TODO;
 import java.lang.reflect.Field;
 
 import java.util.List;
@@ -46,6 +47,48 @@ public class MapExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    // TODO - implicit type, validation, code generation, etc.
+
+    @Override
+    public boolean isAborting()
+        {
+        for (Expression key : keys)
+            {
+            if (key.isAborting())
+                {
+                return true;
+                }
+            }
+        for (Expression val : values)
+            {
+            if (val.isAborting())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        for (Expression key : keys)
+            {
+            if (key.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        for (Expression val : values)
+            {
+            if (val.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

@@ -103,6 +103,30 @@ public class MultiValueExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
+    protected boolean hasMultiValueImpl()
+        {
+        return true;
+        }
+
+    @Override
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return getTypes();
+        }
+
+    @Override
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+        {
+        return this;
+        }
+
+    @Override
     public boolean isAborting()
         {
         for (Expression expr : exprs)
@@ -126,33 +150,6 @@ public class MultiValueExpression
                 }
             }
         return false;
-        }
-
-
-    // ----- Expression compilation ----------------------------------------------------------------
-
-    @Override
-    protected boolean hasSingleValueImpl()
-        {
-        return false;
-        }
-
-    @Override
-    protected boolean hasMultiValueImpl()
-        {
-        return true;
-        }
-
-    @Override
-    public TypeConstant[] getImplicitTypes(Context ctx)
-        {
-        return getTypes();
-        }
-
-    @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
-        return this;
         }
 
     @Override

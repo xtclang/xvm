@@ -132,14 +132,13 @@ public class TernaryExpression
     @Override
     public boolean isAborting()
         {
-        return cond.isAborting() || exprThen.isAborting() || exprElse.isAborting();
+        return cond.isAborting() || (exprThen.isAborting() && exprElse.isAborting());
         }
 
     @Override
     public boolean isShortCircuiting()
         {
-        // REVIEW cond.isShortCircuiting() || exprThen.isShortCircuiting() || exprElse.isShortCircuiting();
-        return false;
+        return cond.isShortCircuiting() || exprThen.isShortCircuiting() || exprElse.isShortCircuiting();
         }
 
     @Override

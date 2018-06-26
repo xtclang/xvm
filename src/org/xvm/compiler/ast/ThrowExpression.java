@@ -142,26 +142,34 @@ public class ThrowExpression
         }
 
     @Override
+    public boolean isShortCircuiting()
+        {
+        return expr.isShortCircuiting();
+        }
+
+    @Override
     public void generateVoid(Code code, ErrorListener errs)
         {
         generateThrow(code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         generateThrow(code, errs);
         return generateBlackHole(getValueCount() == 0 ? pool().typeObject() : getType());
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
+            ErrorListener errs)
         {
         generateThrow(code, errs);
 
         TypeConstant[] aTypes = getTypes();
-        int            cArgs  = aTypes.length;
-        Register[]     aArgs  = new Register[cArgs];
+        int cArgs = aTypes.length;
+        Register[] aArgs = new Register[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
             aArgs[i] = generateBlackHole(aTypes[i]);
@@ -170,7 +178,8 @@ public class ThrowExpression
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
+            ErrorListener errs)
         {
         generateThrow(code, errs);
         }
