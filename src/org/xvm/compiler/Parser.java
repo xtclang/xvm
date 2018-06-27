@@ -1748,7 +1748,7 @@ public class Parser
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
 
-        Statement cond = null;
+        ConditionalStatement cond = null;
         if (match(Id.R_PAREN) == null)
             {
             // while the switch does not allow a conditional declaration, it does allow all of the
@@ -3135,7 +3135,7 @@ public class Parser
         Token keyword = expect(Id.SWITCH);
         expect(Id.L_PAREN);
 
-        Statement cond = null;
+        ConditionalStatement cond = null;
         if (match(Id.R_PAREN) == null)
             {
             // while the switch does not allow a conditional declaration, it does allow all of the

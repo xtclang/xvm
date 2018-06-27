@@ -35,6 +35,14 @@ public class ExpressionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the underlying expression
+     */
+    public Expression getExpression()
+        {
+        return expr;
+        }
+
     @Override
     public long getStartPosition()
         {
