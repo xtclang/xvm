@@ -1,7 +1,4 @@
 - expressions
-  - NotNull (wip)
-  - Else : ?:
-  - Map
   - Version
   - merge Throw and Todo?
   - Switch expression

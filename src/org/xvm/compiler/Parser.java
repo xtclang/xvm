@@ -1757,15 +1757,16 @@ public class Parser
             if (cond instanceof VariableDeclarationStatement &&
                     ((VariableDeclarationStatement) cond).isConditional())
                 {
-                log(Severity.ERROR, NO_CONDITIONAL, keyword.getStartPosition(),
-                        peek().getEndPosition());
+                log(Severity.ERROR, NO_CONDITIONAL,
+                        keyword.getStartPosition(), peek().getEndPosition());
                 throw new CompilerException("conditional is not allowed");
                 }
             expect(Id.R_PAREN);
             }
 
-        Token tokLCurly = expect(Id.L_CURLY);
-        List<Statement> stmts = new ArrayList<>();
+        Token           tokLCurly = expect(Id.L_CURLY);
+        List<Statement> stmts     = new ArrayList<>();
+        boolean         fDefault  = false;
         while (true)
             {
             switch (peek().getId())
@@ -1775,7 +1776,16 @@ public class Parser
                     break;
 
                 case DEFAULT:
-                    stmts.add(new CaseStatement(current(), null, expect(Id.COLON)));
+                    {
+                    Token tokDefault = current();
+                    if (fDefault)
+                        {
+                        log(Severity.ERROR, REPEAT_DEFAULT,
+                                tokDefault.getStartPosition(), tokDefault.getEndPosition());
+                        }
+                    stmts.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
+                    fDefault = true;
+                    }
                     break;
 
                 default:
@@ -3001,10 +3011,10 @@ public class Parser
                 }
 
             case L_CURLY:
-                throw new IllegalStateException("TODO statement expression"); // TODO
+                return new StatementExpression(parseStatementBlock());
 
             case SWITCH:
-                throw new IllegalStateException("TODO switch expression"); // TODO
+                return parseSwitchExpression();
 
             case L_SQUARE:
                 return parseCustomLiteral(null);
@@ -3089,6 +3099,96 @@ public class Parser
             }
 
         return new TodoExpression(keyword, message);
+        }
+
+    /**
+     * Parses a "switch" expression.
+     *
+     * <p/><code><pre>
+     * SwitchExpression
+     *     switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
+     *
+     * SwitchCondition
+     *     VariableInitializer
+     *     Expression
+     *
+     * SwitchExpressionBlocks
+     *     SwitchExpressionBlock
+     *     SwitchExpressionBlocks SwitchExpressionBlock
+     *
+     * SwitchExpressionBlock
+     *     SwitchLabels Expression ;
+     *
+     * SwitchLabels
+     *     SwitchLabel
+     *     SwitchLabels SwitchLabel
+     *
+     * SwitchLabel
+     *     "case" Expression ":"
+     *     "default" ":"
+     * </pre></code>
+     *
+     * @return a SwitchExpression
+     */
+    SwitchExpression parseSwitchExpression()
+        {
+        Token keyword = expect(Id.SWITCH);
+        expect(Id.L_PAREN);
+
+        Statement cond = null;
+        if (match(Id.R_PAREN) == null)
+            {
+            // while the switch does not allow a conditional declaration, it does allow all of the
+            // other capabilities expressed in a conditional declaration
+            cond = parseConditionalDeclaration(true);
+            if (cond instanceof VariableDeclarationStatement &&
+                    ((VariableDeclarationStatement) cond).isConditional())
+                {
+                log(Severity.ERROR, NO_CONDITIONAL,
+                        keyword.getStartPosition(), peek().getEndPosition());
+                throw new CompilerException("conditional is not allowed");
+                }
+            expect(Id.R_PAREN);
+            }
+
+        List<AstNode> contents = new ArrayList<>();
+        boolean       fDefault = false;
+        expect(Id.L_CURLY);
+        while (true)
+            {
+            switch (peek().getId())
+                {
+                case CASE:
+                    contents.add(new CaseStatement(current(), parseTernaryExpressionList(), expect(Id.COLON)));
+                    break;
+
+                case DEFAULT:
+                    {
+                    Token tokDefault = current();
+                    if (fDefault)
+                        {
+                        log(Severity.ERROR, REPEAT_DEFAULT,
+                                tokDefault.getStartPosition(), tokDefault.getEndPosition());
+                        }
+                    contents.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
+                    fDefault = true;
+                    }
+                    break;
+
+                default:
+                    if (contents.isEmpty())
+                        {
+                        log(Severity.ERROR, MISSING_CASE, peek().getStartPosition(), peek().getEndPosition());
+                        throw new CompilerException("switch must start with a case");
+                        }
+                    contents.add(parseExpression());
+                    expect(Id.SEMICOLON);
+                    break;
+
+                case R_CURLY:
+                    return new SwitchExpression(keyword, cond, contents, expect(Id.R_CURLY).getEndPosition());
+                }
+            }
         }
 
     /**
@@ -4840,6 +4940,10 @@ public class Parser
      * Modifiers conflict (like "private" and "public").
      */
     public static final String MODIFIER_CONFLICT = "PARSER-20";
+    /**
+     * Default switch branch is repeated.
+     */
+    public static final String REPEAT_DEFAULT    = "PARSER-21";
 
 
     // ----- data members ------------------------------------------------------
