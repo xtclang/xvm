@@ -154,7 +154,7 @@ public class ElseExpression
         Label label = m_labelElse;
         if (label == null)
             {
-            m_labelElse = label = new Label(":else");
+            m_labelElse = label = new Label(":else");  // TODO add counter for GG
             }
         return label;
         }
@@ -169,7 +169,7 @@ public class ElseExpression
             }
 
         Label labelElse = getShortCircuitLabel();
-        Label labelEnd  = new Label(":end");
+        Label labelEnd  = new Label(":end");        // TODO use same counter as above
 
         expr1.generateAssignment(code, LVal, errs);
         code.add(new Jump(labelEnd));

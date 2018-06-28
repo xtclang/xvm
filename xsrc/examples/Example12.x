@@ -1209,3 +1209,88 @@ Class.Constructor f = &construct c(5)
 // -- .is()
 
 if (x.is(String)) {...}
+
+// short-circuit
+
+a? : b
+a?:b        // same as above
+a ?: b      // completely different operator, but same result
+
+//   a op= b
+// translates to:
+//   a = a op b, where any sub-expressions of a are only executed once
+
+a ?:= b
+
+// where to allow trailing "?" short-circuiting expressions?
+// rule #1: anywhere that it grounds using ElseExpression
+bar(a?.b?.c : d);
+
+// rule #2: right side of assignment:
+a = b?;     // as if: "a = b ?: a;"
+
+// GG ugly example
+a[foo()] = foo()?;
+
+// rule #2 exception: right side of declaration is NOT allowed:
+Int a = b?; // compiler error!
+
+// left side of invocation (very UNcontroversial BECAUSE ALL SIDE EFFECTS ARE LEFT TO RIGHT)
+a?.foo();
+
+// what about left side of assignment?
+a?.b = c;           // desirable
+a?[3] = b;          // this is not as easy to give a thumbs-up to .. but WHY?
+
+a?[b?] += c?;
+
+bar()[foo()] += c?;
+// compiles as
+t0 = bar();
+t1 = foo();
+t2 = t0[t1]
+if (c != null)
+    {
+    t0[t1] = t2 + c;
+    }
+
+// handy example
+list? += err;
+
+// only slightly more confusing
+list? += err?;  // i might not be tracking errors, and it might not have been an error, but if it was
+                // an error and if i'm tracking errors, then log the error
+// alternative:
+if (list != null && err != null)
+    {
+    list += err;
+    }
+
+// 100% certain that we want to disallow inside invocation
+foo(a?);
+
+// 100% certain that we want to disallow inside construction
+X x = new X(a?);
+
+// .. including tuples
+Tuple t = (a, b, c?.d);
+
+// actual example
+if (lvalueNew != null)
+    {
+    lvalue = lvalueNew;
+    }
+// would be ..
+lvalue = lvalueNew?;
+
+// GG asks: "why not .."
+lvalue ?= lvalueNew;
+lvalue =? lvalueNew;
+
+// java
+a[foo()] += foo() ? 1 : 2;
+// compiles as
+t0 = foo()
+t1 = a[t0]
+t2 = foo()
+a[t0] = t2 ? 1 : 2

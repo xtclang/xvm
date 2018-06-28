@@ -4,7 +4,9 @@
   - Switch expression
   - Statement expression
   - Lambda
-
+  - isConstant / hasConstantValue
+  - getShortCircuitLabel - needs to take child ref
+  - standardize "adopt" handling
 
 - test static property with value (both constant and init function)
 

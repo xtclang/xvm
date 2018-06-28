@@ -98,6 +98,7 @@ public class NotNullExpression
         else
             {
             expr = exprNew;
+            // TODO test expression type to verify that it IS nullable, otherwise error (see Elvis)
             type = exprNew.getType().removeNullable();
             }
 
