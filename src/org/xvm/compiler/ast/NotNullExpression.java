@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -144,7 +143,7 @@ public class NotNullExpression
             }
 
         expr.generateAssignment(code, LVal, errs);
-        code.add(new JumpNull(LVal.getRegister(), getShortCircuitLabel()));
+        code.add(new JumpNull(LVal.getRegister(), getParent().getShortCircuitLabel(this)));
         }
 
 

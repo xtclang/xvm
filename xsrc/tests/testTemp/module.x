@@ -18,6 +18,7 @@ module TestTemp.xqiz.it
 
         // REVIEW GG
         // testInterval();
+        // testArrays();
         // testTupleConv();
         // testMap();
         }
@@ -71,27 +72,6 @@ module TestTemp.xqiz.it
         console.println("!b=" + !b);
         console.println("~a=" + ~a);
         console.println("~b=" + ~b);
-        }
-
-    void testInterval()
-        {
-        console.println("\n** testInterval()");
-
-        Int a = 2;
-        Int b = 5;
-        // Object c = a..b;
-        Range<Int> c = a..b;
-        console.println("range=" + c);
-        }
-
-    void testArrays()
-        {
-        console.println("\n** testArrays()");
-
-        // ArrayList
-        Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
-
-        Int[] array = new Int[10]; // just like Java
         }
 
     void testIsA()
@@ -170,21 +150,6 @@ module TestTemp.xqiz.it
         console.println("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
         }
 
-    void testTupleConv()
-        {
-        console.println("\n** testTupleConv()");
-
-        Tuple<String, IntLiteral> t1 = getTupleSI();
-        console.println("t1 = " + t1);
-
-        Tuple<String, Int> t2 = getTupleSI();
-        }
-
-    Tuple<String, IntLiteral> getTupleSI()
-        {
-        return ("Hello", 4);
-        }
-
     void testElvis()
         {
         console.println("\n** testElvis()");
@@ -234,13 +199,6 @@ module TestTemp.xqiz.it
         //      Suspicious assignment from: Ecstasy:Int64 to: Ecstasy:Nullable | Ecstasy:IntLiteral
         }
 
-    void testMap()
-        {
-        console.println("\n** testMap()");
-
-        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
-        }
-
     void testLoop()
         {
         console.println("\n** testLoop()");
@@ -251,5 +209,51 @@ module TestTemp.xqiz.it
             console.println(i--);
             }
         console.println("We Have Lift-Off!!!");
+        }
+
+    // TODO
+    void testInterval()
+        {
+        console.println("\n** testInterval()");
+
+        Int a = 2;
+        Int b = 5;
+        Object c = a..b;
+        // Range<Int> c = a..b;
+        console.println("range=" + c);
+        }
+
+    // TODO
+    void testArrays()
+        {
+        console.println("\n** testArrays()");
+
+        // ArrayList
+        Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
+
+        Int[] array = new Int[10]; // just like Java
+        }
+
+    // TODO
+    void testTupleConv()
+        {
+        console.println("\n** testTupleConv()");
+
+        Tuple<String, IntLiteral> t1 = getTupleSI();
+        console.println("t1 = " + t1);
+
+        Tuple<String, Int> t2 = getTupleSI();
+        }
+    Tuple<String, IntLiteral> getTupleSI()
+        {
+        return ("Hello", 4);
+        }
+
+    // TODO
+    void testMap()
+        {
+        console.println("\n** testMap()");
+
+        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
         }
     }
