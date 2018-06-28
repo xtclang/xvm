@@ -77,7 +77,7 @@ public abstract class AstNode
      *
      * @param children  an Iterable of AstNode, or null
      */
-    protected void introduceParentage(Iterable<? extends AstNode> children)
+    protected void adopt(Iterable<? extends AstNode> children)
         {
         if (children != null)
             {
@@ -92,13 +92,17 @@ public abstract class AstNode
      * Helper: Given an optional AstNode object, set its parent to this node.
      *
      * @param child  an AstNode, or null
+     *
+     * @return the same child as passed, which may be null
      */
-    protected void introduceParentage(AstNode child)
+    protected <T extends AstNode> T adopt(T child)
         {
         if (child != null)
             {
             child.setParent(this);
             }
+
+        return child;
         }
 
     /**
@@ -125,7 +129,7 @@ public abstract class AstNode
             {
             if (node == nodeOld)
                 {
-                children.replaceWith(nodeNew);
+                children.replaceWith(adopt(nodeNew));
                 return;
                 }
             }

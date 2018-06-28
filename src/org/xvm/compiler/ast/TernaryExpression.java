@@ -115,8 +115,8 @@ public class TernaryExpression
         if (fit.isFit() && exprNewCond.isConstant())
             {
             return exprNewCond.toConstant().equals(pool.valTrue())
-                    ? exprNewThen
-                    : exprNewElse;
+                    ? replaceThisWith(exprNewThen)
+                    : replaceThisWith(exprNewElse);
             }
 
         TypeConstant typeResult = BiExpression.selectType(typeThen, typeElse, errs);

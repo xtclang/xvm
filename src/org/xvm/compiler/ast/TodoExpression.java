@@ -116,7 +116,8 @@ public class TodoExpression
             atypeRequired = new TypeConstant[] {pool().typeBoolean()};
             }
 
-        return finishValidations(atypeRequired, atypeRequired, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        TypeFit fit = fValid ? TypeFit.Fit : TypeFit.NoFit;
+        return finishValidations(atypeRequired, atypeRequired, fit, null, errs);
         }
 
     @Override

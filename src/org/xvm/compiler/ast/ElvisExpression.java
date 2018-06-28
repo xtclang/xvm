@@ -115,14 +115,14 @@ public class ElvisExpression
         if (type1.isOnlyNullable())
             {
             expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_ONLY_NULLABLE);
-            return expr2New;
+            return replaceThisWith(expr2New);
             }
 
         ConstantPool pool = pool();
         if (!type1.isNullable() && !pool.typeNull().isA(type1))
             {
             expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-            return expr1New;
+            return replaceThisWith(expr1New);
             }
 
         TypeConstant type1Non   = type1.removeNullable();

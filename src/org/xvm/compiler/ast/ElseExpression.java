@@ -107,7 +107,7 @@ public class ElseExpression
         if (!expr1New.isShortCircuiting())
             {
             expr1New.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_REQUIRED);
-            return expr1New;
+            return replaceThisWith(expr1New);
             }
 
         TypeConstant type2      = expr2New.getType();

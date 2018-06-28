@@ -19,8 +19,8 @@ public abstract class SyntheticExpression
         {
         this.expr = expr;
 
-        expr.getParent().introduceParentage(this);
-        this.introduceParentage(expr);
+        expr.getParent().adopt(this);
+        this.adopt(expr);
         }
 
 

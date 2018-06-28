@@ -282,9 +282,7 @@ public class NewExpression
                 }
             }
 
-        Expression exprNew = finishValidation(typeRequired, typeTarget,
-                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
-        return fValid ? exprNew : null;
+        return finishValidation(typeRequired, typeTarget, fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
         }
 
     @Override

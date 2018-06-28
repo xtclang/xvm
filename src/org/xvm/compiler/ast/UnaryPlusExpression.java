@@ -63,6 +63,6 @@ public class UnaryPlusExpression
                 }
             }
 
-        return exprRight;
+        return replaceThisWith(exprRight);
         }
     }

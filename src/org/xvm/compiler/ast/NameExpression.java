@@ -526,8 +526,7 @@ public class NameExpression
         if (!fValid)
             {
             // something failed previously, so we can't complete the validation
-            finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
-            return null;
+            return finishValidation(typeRequired, typeRequired, TypeFit.NoFit, null, errs);
             }
 
         // translate the raw argument into the appropriate contextual meaning

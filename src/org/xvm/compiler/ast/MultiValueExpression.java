@@ -26,7 +26,7 @@ public class MultiValueExpression
     public MultiValueExpression(Expression[] aExprs, ErrorListener errs)
         {
         exprs = aExprs;
-        aExprs[0].getParent().introduceParentage(this);
+        aExprs[0].getParent().adopt(this);
 
         ConstantPool   pool   = pool();
         int            cExprs = aExprs.length;
@@ -36,7 +36,7 @@ public class MultiValueExpression
         for (int i = 0; i < cExprs; ++i)
             {
             Expression expr = aExprs[i];
-            introduceParentage(expr);
+            adopt(expr);
 
             aTypes[i] = expr.getType();
             if (i == 0 || aVals != null)
