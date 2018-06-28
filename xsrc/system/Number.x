@@ -198,6 +198,15 @@ interface Number
     VarInt to<VarInt>();
 
     /**
+     * Convert the number to a Nibble (4-bit) integer.
+     * Any additional magnitude is discarded; any fractional value is discarded.
+     */
+    Nibble to<Nibble>()
+        {
+        return to<VarInt>().to<Nibble>();
+        }
+
+    /**
      * Convert the number to a signed 8-bit integer.
      * Any additional magnitude is discarded; any fractional value is discarded.
      */

@@ -219,15 +219,19 @@ const IntLiteral(String text)
         return 1;
         }
 
-    @Auto Nibble to<Nibble>()
-        {
-        TODO
-        }
-
     /**
      * Convert the number to a variable-length signed integer.
      */
     @Auto VarInt to<VarInt>();
+
+    /**
+     * Convert the number to a 4-bit integer.
+     * Any additional magnitude is discarded; any fractional value is discarded.
+     */
+    @Auto Nibble to<Nibble>()
+        {
+        return to<VarInt>().to<Nibble>();
+        }
 
     /**
      * Convert the number to a signed 8-bit integer.
