@@ -88,10 +88,9 @@ public class NotNullExpression
         TypeFit      fit  = TypeFit.Fit;
         TypeConstant type = null;
 
-        ConstantPool pool        = pool();
         TypeConstant typeRequest = typeRequired == null
                 ? null
-                : pool.ensureNullableTypeConstant(typeRequired);
+                : typeRequired.ensureNullable();
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
             {
@@ -101,7 +100,7 @@ public class NotNullExpression
             {
             expr = exprNew;
             type = exprNew.getType();
-            if (type.isNullable() || pool.typeNull().isA(type))
+            if (pool().typeNull().isA(type))
                 {
                 type = type.removeNullable();
                 }
@@ -124,13 +123,13 @@ public class NotNullExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (isConstant() || getType().isNullable())
+        if (isConstant() || pool().typeNull().isA(getType()))
             {
             return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = pool().ensureNullableTypeConstant(getType());
-        Assignable var = createTempVar(code, typeTemp, false, errs);
+        TypeConstant typeTemp = getType().ensureNullable();
+        Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(code, var, errs);
         return var.getRegister();
         }
@@ -138,7 +137,7 @@ public class NotNullExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
+        if (isConstant() || !LVal.isNormalVariable() || !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(code, LVal, errs);
             return;

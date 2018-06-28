@@ -1629,10 +1629,10 @@ public class Frame
                     }
                 else
                     {
-                    type = m_type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
+                    type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
                     }
 
-                type = type.resolveGenerics(getGenericsResolver());
+                m_type = type = type.resolveGenerics(getGenericsResolver());
                 }
             return type;
             }

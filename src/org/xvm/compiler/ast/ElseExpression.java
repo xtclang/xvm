@@ -155,7 +155,7 @@ public class ElseExpression
         if (label == null)
             {
             m_nLabel    = ++m_nCounter;
-            m_labelElse = label = new Label(":else" + m_nLabel);
+            m_labelElse = label = new Label("else_:_" + m_nLabel);
             }
         return label;
         }
@@ -170,7 +170,7 @@ public class ElseExpression
             }
 
         Label labelElse = getShortCircuitLabel();
-        Label labelEnd  = new Label(":end" + m_nLabel);
+        Label labelEnd  = new Label("end_:_" + m_nLabel);
 
         expr1.generateAssignment(code, LVal, errs);
         code.add(new Jump(labelEnd));
