@@ -435,9 +435,10 @@ public abstract class TypeConstant
         }
 
     /**
-     * If this type is not a nullable type, calculate the type with the nullability.
+     * If null cannot be assigned to this type, then create a new type that minimally encompasses
+     * this type and the Null value.
      *
-     * @return this TypeConstant with Nullable
+     * @return the type, modified if necessary to allow it to support Null values
      */
     public TypeConstant ensureNullable()
         {

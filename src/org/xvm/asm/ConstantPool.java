@@ -1693,9 +1693,9 @@ public class ConstantPool
         }
 
     /**
-     * Given a type, obtain a TypeConstant that represents the intersection of that type with the
-     * Nullable type.
-     * This corresponds to the "?" operator when applied to types.
+     * Given a TypeConstant for a type to which Null may or may not be assignable, obtain a
+     * TypeConstant to which Null is assignable. This corresponds to the "?" operator when applied
+     * to types.
      *
      * @param constType  the type being made Nullable
      *
@@ -1703,7 +1703,9 @@ public class ConstantPool
      */
     public TypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
-        return constType.isNullable()
+        // note: this is a much looser definition than the "Nullable" definition used by the
+        //       TypeConstant, such that "Object" would NOT be made into "Nullable|Object"
+        return typeNull().isA(constType)
                 ? constType
                 : ensureIntersectionTypeConstant(typeNullable(), constType);
         }

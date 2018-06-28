@@ -3,11 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ErrorListener;
-
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Compiler.Stage;
 
 
 /**
@@ -57,7 +54,8 @@ public class NullableTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        return pool().ensureNullableTypeConstant(type.ensureTypeConstant());
+        ConstantPool pool = pool();
+        return pool.ensureIntersectionTypeConstant(pool.typeNullable(), type.ensureTypeConstant());
         }
 
 

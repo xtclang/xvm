@@ -119,7 +119,7 @@ public class ElvisExpression
             }
 
         ConstantPool pool = pool();
-        if (!type1.isNullable() && !pool.typeNull().isA(type1))
+        if (!pool.typeNull().isA(type1))
             {
             expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return replaceThisWith(expr1New);
@@ -167,13 +167,13 @@ public class ElvisExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (isConstant() || getType().isNullable())
+        if (isConstant() || pool().typeNull().isA(getType()))
             {
             return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = pool().ensureNullableTypeConstant(getType());
-        Assignable var = createTempVar(code, typeTemp, false, errs);
+        TypeConstant typeTemp = getType().ensureNullable();
+        Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(code, var, errs);
         return var.getRegister();
         }
@@ -181,13 +181,13 @@ public class ElvisExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
+        if (isConstant() || !LVal.isNormalVariable() || !pool().typeNull().isA(LVal.getType()))
             {
             super.generateAssignment(code, LVal, errs);
             return;
             }
 
-        Label labelEnd = new Label("end?:");
+        Label labelEnd = new Label("end_?:_" + m_nLabel);
 
         expr1.generateAssignment(code, LVal, errs);
         code.add(new JumpNotNull(LVal.getRegister(), labelEnd));
@@ -198,4 +198,6 @@ public class ElvisExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private static    int m_nCounter;
+    private transient int m_nLabel;
     }
