@@ -615,7 +615,8 @@ public class Frame
 
                     default:
                         // the compiler/verifier shouldn't have allowed this
-                        throw new IllegalStateException();
+                        System.out.println("(Unprovably correct conversion from "
+                                + typeFrom.getValueString() + " to " + typeTo.getValueString() + ")");
                     }
                 }
 
