@@ -6,14 +6,18 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-
 import java.util.Set;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Token;
+
 import org.xvm.compiler.ast.ConditionalStatement.Usage;
 import org.xvm.compiler.ast.Statement.Context;
 
@@ -105,6 +109,7 @@ public class SwitchExpression
                 }
             else
                 {
+// REVIEW we should NOT be using "instanceof" here; it should be part of ConditionalStatement API
                 if (condNew instanceof VariableDeclarationStatement)
                     {
                     notImplemented(); // TODO
@@ -126,10 +131,13 @@ public class SwitchExpression
                 }
             }
 
+        // determine the type to request from each "result expression"
         TypeConstant typeRequest = typeRequired == null
                 ? getImplicitType(ctx)
                 : typeRequired;
+
         List<TypeConstant> listTypes = new ArrayList<>();
+
 
         Constant constVal  = null; // TODO - cond has to be not-null w/ constant and a matching case
 
@@ -235,6 +243,8 @@ public class SwitchExpression
     protected ConditionalStatement cond;
     protected List<AstNode>        contents;
     protected long                 lEndPos;
+
+    private transient
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }
