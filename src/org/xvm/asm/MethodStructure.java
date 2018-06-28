@@ -853,17 +853,6 @@ public class MethodStructure
         }
 
     /**
-     * Check if this method could be called via the specified signature.
-     *
-     * @param sigThat   the signature of the matching method (resolved)
-     * @param resolver  the generic type resolver
-     */
-    public boolean isSubstitutableFor(SignatureConstant sigThat, GenericTypeResolver resolver)
-        {
-        return getIdentityConstant().getSignature().isSubstitutableFor(sigThat, resolver);
-        }
-
-    /**
      * Ensure that all the SingletonConstants are initialized.
      *
      * @param frame      the caller's frame

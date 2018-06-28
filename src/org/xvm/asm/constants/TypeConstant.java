@@ -529,8 +529,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * If this type is auto-narrowing (or has any references to auto-narrowing types), replace the
-     * any auto-narrowing portion with an explicit class identity in the context of the target type.
+     * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
+     * auto-narrowing portion with an explicit class identity in the context of the target identity.
      *
      * Note that the target identity must be a sub-type of this type.
      *
@@ -2519,7 +2519,7 @@ public abstract class TypeConstant
             MethodInfo methodResult = methodContrib;
             if (methodBase == null)
                 {
-                if (methodContrib.isOverride())
+                if (methodContrib.getTail().isOverride())
                     {
                     // the @Override tag gives us permission to look for a method with a
                     // different signature that can be narrowed to the signature of the
@@ -2545,6 +2545,10 @@ public abstract class TypeConstant
                             }
                         setNarrowing.add(nidContrib);
                         }
+                    }
+                else if (fSelf)
+                    {
+                    // TODO: report existing overridden methods
                     }
                 }
 
@@ -2637,7 +2641,7 @@ public abstract class TypeConstant
             Object nidCandidate = entry.getKey();
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
-                SignatureConstant sigCandidate = entry.getValue().getSignature();
+                SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
                 if (sigSub.isSubstitutableFor(sigCandidate, this))
                     {
                     if (listMatch == null)
@@ -3383,18 +3387,11 @@ public abstract class TypeConstant
 
         if (relation == null)
             {
-            // there's a special case of the conditional return, where
-            // "False" _isA_ "ConditionalTuple"
-            // TODO: replace with the ConditionalTuple when added
-            ConstantPool pool = getConstantPool();
-            if (this.equals(pool.typeFalse())
-                    && typeLeft.isTuple()
-                    && typeLeft.isParamsSpecified()
-                    && typeLeft.getParamsCount() > 0
-                    && typeLeft.getParamTypesArray()[0].equals(pool.typeBoolean()))
+            relation = checkReservedCompatibility(typeLeft, this);
+            if (relation != null)
                 {
-                mapRelations.put(typeLeft, Relation.IS_A);
-                return Relation.IS_A;
+                mapRelations.put(typeLeft, relation);
+                return relation;
                 }
 
             mapRelations.put(typeLeft, Relation.IN_PROGRESS);
@@ -3429,6 +3426,49 @@ public abstract class TypeConstant
             mapRelations.put(typeLeft, relation = Relation.IS_A);
             }
         return relation;
+        }
+
+    /**
+     * Check for any reserved types relations.
+     *
+     * @return the calculated relation or null if no judgement can be made
+     */
+    protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
+        {
+        // there's a special case of the conditional return, where
+        // "False" _isA_ "ConditionalTuple"
+        // TODO: replace with the ConditionalTuple when added
+        ConstantPool pool = typeLeft.getConstantPool();
+        if (typeRight.equals(pool.typeFalse())
+                && typeLeft.isTuple()
+                && typeLeft.isParamsSpecified()
+                && typeLeft.getParamsCount() > 0
+                && typeLeft.getParamTypesArray()[0].equals(pool.typeBoolean()))
+            {
+            return Relation.IS_A;
+            }
+
+        if (!typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true))
+            {
+            return null;
+            }
+
+        IdentityConstant idLeft  = typeLeft.getSingleUnderlyingClass(true);
+        IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+
+        if (idLeft.equals(pool.clzTuple()) && !idRight.equals(pool.clzTuple()))
+            {
+            // nothing is assignable to a Tuple
+            return Relation.INCOMPATIBLE;
+            }
+
+        if (idLeft.equals(pool.clzFunction()) && !idRight.equals(pool.clzFunction()))
+            {
+            // nothing is assignable to a Function
+            return Relation.INCOMPATIBLE;
+            }
+
+        return null;
         }
 
     /**

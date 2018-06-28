@@ -13,11 +13,11 @@ module TestTemp.xqiz.it
         testTernary();
         testSpaceship();
         testElvis();
+        testElseExpr();
 
         // REVIEW GG
         // testInterval();
         // testTupleConv();
-        // testElseExpr();
         // testMap();
         }
 

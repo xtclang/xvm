@@ -132,6 +132,7 @@ const CriticalSection
      * Close the CriticalSection. This method is invoked automatically by the {@code using} or
      * {@code try} with-resources keywords.
      */
+    @Override
     void close()
         {
         if (registered)
