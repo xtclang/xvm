@@ -577,6 +577,11 @@ public abstract class Expression
         m_oType  = typeActual;
         m_oConst = constVal;
 
+        if (!fit.isFit())
+            {
+            return null;
+            }
+
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this

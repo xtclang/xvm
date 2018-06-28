@@ -388,7 +388,7 @@ public class NewExpression
     // ----- debugging assistance ------------------------------------------------------------------
 
     /**
-     * @return the signature of the contructor invocation
+     * @return the signature of the constructor invocation
      */
     public String toSignatureString()
         {
