@@ -468,8 +468,7 @@ public class NamedTypeExpression
             }
         TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), type);
 
-        return finishValidation(typeRequired, typeType, fValid ? TypeFit.Fit : TypeFit.NoFit, type,
-                errs);
+        return finishValidation(typeRequired, typeType, fValid ? TypeFit.Fit : TypeFit.NoFit, type, errs);
         }
 
 

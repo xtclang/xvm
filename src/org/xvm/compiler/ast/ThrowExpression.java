@@ -98,20 +98,16 @@ public class ThrowExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = validateThrow(ctx, errs);
-
-        Expression exprNew = finishValidation(typeRequired, typeRequired,
-                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
-        return fValid ? exprNew : null;
+        TypeFit fit    = fValid ? TypeFit.Fit : TypeFit.NoFit;
+        return finishValidation(typeRequired, typeRequired, fit, null, errs);
         }
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         boolean fValid = validateThrow(ctx, errs);
-
-        Expression exprNew = finishValidations(atypeRequired, atypeRequired,
-                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
-        return fValid ? exprNew : null;
+        TypeFit fit    = fValid ? TypeFit.Fit : TypeFit.NoFit;
+        return finishValidations(atypeRequired, atypeRequired, fit, null, errs);
         }
 
     protected boolean validateThrow(Context ctx, ErrorListener errs)

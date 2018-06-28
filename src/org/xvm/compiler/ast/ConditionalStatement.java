@@ -131,8 +131,8 @@ public abstract class ConditionalStatement
         assert m_stmtDeclOnly == null && m_stmtNonDecl == null;
 
         Statement stmtParent = (Statement) getParent();
-        stmtParent.introduceParentage(stmtDeclOnly);
-        stmtParent.introduceParentage(stmtNonDecl);
+        stmtParent.adopt(stmtDeclOnly);
+        stmtParent.adopt(stmtNonDecl);
 
         m_stmtDeclOnly = stmtDeclOnly;
         m_stmtNonDecl  = stmtNonDecl;

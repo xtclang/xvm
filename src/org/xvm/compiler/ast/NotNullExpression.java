@@ -108,7 +108,7 @@ public class NotNullExpression
             else
                 {
                 exprNew.log(errs, Severity.ERROR, org.xvm.compiler.Compiler.ELVIS_NOT_NULLABLE);
-                return exprNew;
+                return replaceThisWith(exprNew);
                 }
             }
 

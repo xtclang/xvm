@@ -55,7 +55,7 @@ public class UnaryMinusExpression
             assert !exprRight.isValidated();
 
             exprRight = ((LiteralExpression) exprRight).adoptUnaryPrefix(operator, errs);
-            return exprRight.validate(ctx, typeRequired, errs);
+            return replaceThisWith(exprRight.validate(ctx, typeRequired, errs));
             }
 
         // otherwise, this expression must apply the unary minus as an op

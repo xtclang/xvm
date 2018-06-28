@@ -580,7 +580,7 @@ public abstract class Expression
         // if we found an @Auto conversion, then create an expression that does the conversion work
         return idConv == null
                 ? this
-                : new ConvertExpression(this, 0, idConv, errs);
+                : replaceThisWith(new ConvertExpression(this, 0, idConv, errs));
         }
 
     /**
@@ -764,16 +764,23 @@ public abstract class Expression
                 MethodConstant idConv = aIdConv[i];
                 if (idConv != null)
                     {
-                    exprResult = new ConvertExpression(exprResult, i, idConv, errs);
+                    exprResult = replaceThisWith(new ConvertExpression(exprResult, i, idConv, errs));
                     }
                 }
             }
         return exprResult;
         }
 
+    /**
+     * Called by a child Expression that wants to replace itself with a different Expression.
+     *
+     * @param that  an expression to use in lieu of this expression as a child of an AstNode
+     *
+     * @return the expression to use in place of this
+     */
     protected Expression replaceThisWith(Expression that)
         {
-        getParent().introduceParentage(that);
+        getParent().adopt(that);
         that.setStage(getStage());
         return that;
         }

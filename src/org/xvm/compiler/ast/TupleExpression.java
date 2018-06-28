@@ -59,7 +59,7 @@ public class TupleExpression
         this.m_lStartPos = expr0.getStartPosition();
         this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
 
-        expr0.getParent().introduceParentage(this);
+        expr0.getParent().adopt(this);
 
         Stage          stage      = expr0.getStage();
         boolean        fValidated = expr0.isValidated();
@@ -72,7 +72,7 @@ public class TupleExpression
             assert exprChild.getStage() == stage;
             assert exprChild.isValidated() == fValidated;
 
-            this.introduceParentage(exprChild);
+            this.adopt(exprChild);
 
             if (fValidated)
                 {

@@ -175,8 +175,7 @@ public class CmpExpression
             catch (RuntimeException e) {}
             }
 
-        return finishValidation(typeRequired, typeResult, fValid ? TypeFit.Fit : TypeFit.NoFit,
-                constVal, errs);
+        return finishValidation(typeRequired, typeResult, TypeFit.Fit, constVal, errs);
         }
 
     @Override
