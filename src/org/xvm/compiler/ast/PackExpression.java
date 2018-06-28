@@ -64,7 +64,7 @@ public class PackExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstant();
             }

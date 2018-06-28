@@ -140,7 +140,7 @@ public  class ConvertExpression
             return;
             }
 
-        if (hasConstantValue())
+        if (isConstant())
             {
             super.generateAssignment(code, LVal, errs);
             return;
@@ -178,7 +178,7 @@ public  class ConvertExpression
             return;
             }
 
-        if (hasConstantValue())
+        if (isConstant())
             {
             super.generateAssignments(code, aLVal, errs);
             return;

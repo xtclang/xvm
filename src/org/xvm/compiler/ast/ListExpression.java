@@ -173,7 +173,7 @@ public class ListExpression
                     {
                     listExprs.set(i, exprNew);
                     }
-                fConstant &= exprNew.hasConstantValue();
+                fConstant &= exprNew.isConstant();
                 }
             }
 
@@ -292,7 +292,7 @@ public class ListExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstant();
             }

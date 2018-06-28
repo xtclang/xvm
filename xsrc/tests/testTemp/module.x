@@ -13,6 +13,7 @@ module TestTemp.xqiz.it
         testTernary();
         testSpaceship();
         testElvis();
+        testLoop();
         testElseExpr();
 
         // REVIEW GG
@@ -216,5 +217,17 @@ module TestTemp.xqiz.it
         console.println("\n** testMap()");
 
         console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
+        }
+
+    void testLoop()
+        {
+        console.println("\n** testLoop()");
+
+        Int i = 10;
+        while (i > 0)
+            {
+            console.println(i--);
+            }
+        console.println("We Have Lift-Off!!!");
         }
     }

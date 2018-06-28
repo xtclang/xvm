@@ -155,8 +155,8 @@ public class CmpExpression
             expr2 = expr2New;
             type2 = expr2New.getType();
             fValid &= expr2New.getTypeFit().isFit() & usesEquals()
-                    ? typeRequest.supportsEquals (type2, expr2New.hasConstantValue(), errs)
-                    : typeRequest.supportsCompare(type2, expr2New.hasConstantValue(), errs);
+                    ? typeRequest.supportsEquals (type2, expr2New.isConstant(), errs)
+                    : typeRequest.supportsCompare(type2, expr2New.isConstant(), errs);
             }
 
         if (!fValid)
@@ -166,7 +166,7 @@ public class CmpExpression
 
         TypeConstant typeResult = getImplicitType(ctx);
         Constant     constVal   = null;
-        if (expr1New.hasConstantValue() && expr2.hasConstantValue())
+        if (expr1New.isConstant() && expr2.isConstant())
             {
             try
                 {
@@ -229,7 +229,7 @@ public class CmpExpression
     @Override
     public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        if (!hasConstantValue() && producesBoolean())
+        if (!isConstant() && producesBoolean())
             {
             // evaluate the sub-expressions
             Argument arg1 = expr1.generateArgument(code, true, true, errs);

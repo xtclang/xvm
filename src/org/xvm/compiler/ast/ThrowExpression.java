@@ -130,7 +130,7 @@ public class ThrowExpression
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isRuntimeConstant()
         {
         return true;
         }

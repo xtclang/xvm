@@ -231,7 +231,7 @@ public class Annotation
                         args.set(iArg, exprNew);
                         }
 
-                    if (exprNew == null || !exprNew.isConstant())
+                    if (exprNew == null || !exprNew.isRuntimeConstant())
                         {
                         exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                         }

@@ -789,7 +789,7 @@ public class NameExpression
             case TypeOfTypedef:
             case TypeOfClass:
             case Singleton:
-                assert hasConstantValue();
+                assert isConstant();
                 return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
 
             default:

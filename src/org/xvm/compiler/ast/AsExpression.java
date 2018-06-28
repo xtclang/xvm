@@ -77,7 +77,7 @@ public class AsExpression
             }
 
         Constant constVal = null;
-        if (expr1.hasConstantValue())
+        if (expr1.isConstant())
             {
             // TODO calculate constant if possible
             }

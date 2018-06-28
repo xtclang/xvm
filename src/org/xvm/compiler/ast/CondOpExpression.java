@@ -182,7 +182,7 @@ public class CondOpExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstant();
             }
@@ -227,7 +227,7 @@ public class CondOpExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             LVal.assign(toConstant(), code, errs);
             }

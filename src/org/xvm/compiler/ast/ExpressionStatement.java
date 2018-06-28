@@ -35,6 +35,14 @@ public class ExpressionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the underlying expression
+     */
+    public Expression getExpression()
+        {
+        return expr;
+        }
+
     @Override
     public long getStartPosition()
         {
@@ -111,7 +119,7 @@ public class ExpressionStatement
             exprNew = expr.validate(ctx, pool().typeBoolean(), errs);
 
             // handle situations in which the expression is always true or always false
-            if (exprNew != null && exprNew.hasConstantValue())
+            if (exprNew != null && exprNew.isConstant())
                 {
                 // there are only two values that we're interested in; assume anything else
                 // indicates a compiler error, and that's someone else's problem to deal with

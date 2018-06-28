@@ -111,7 +111,7 @@ public class LabeledExpression
 
         expr = exprNew;
         return finishValidation(typeRequired, exprNew.getType(), exprNew.getTypeFit(),
-                exprNew.hasConstantValue() ? exprNew.toConstant() : null, errs);
+                exprNew.isConstant() ? exprNew.toConstant() : null, errs);
         }
 
     @Override
@@ -125,7 +125,7 @@ public class LabeledExpression
 
         expr = exprNew;
         return finishValidations(atypeRequired, exprNew.getTypes(), exprNew.getTypeFit(),
-                exprNew.hasConstantValue() ? exprNew.toConstants() : null, errs);
+                exprNew.isConstant() ? exprNew.toConstants() : null, errs);
         }
 
     @Override
@@ -153,9 +153,9 @@ public class LabeledExpression
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isRuntimeConstant()
         {
-        return expr.isConstant();
+        return expr.isRuntimeConstant();
         }
 
     @Override
