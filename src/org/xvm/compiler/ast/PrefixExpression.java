@@ -62,6 +62,21 @@ public class PrefixExpression
         }
 
 
+    // ----- Expression compilation ----------------------------------------------------------------
+
+    @Override
+    public boolean isAborting()
+        {
+        return expr.isAborting();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        return expr.isShortCircuiting();
+        }
+
+
     // ----- debugging assistance ------------------------------------------------------------------
 
     @Override

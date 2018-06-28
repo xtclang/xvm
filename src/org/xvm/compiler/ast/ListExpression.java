@@ -205,7 +205,7 @@ public class ListExpression
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    protected TypeConstant inferCommonType(TypeConstant[] aTypes)
+    static TypeConstant inferCommonType(TypeConstant[] aTypes)
         {
         if (aTypes == null || aTypes.length == 0)
             {
@@ -261,6 +261,32 @@ public class ListExpression
             }
 
         return fImmutable ? typeCommon.ensureImmutable() : typeCommon;
+        }
+
+    @Override
+    public boolean isAborting()
+        {
+        for (Expression expr : exprs)
+            {
+            if (expr.isAborting())
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        for (Expression expr : exprs)
+            {
+            if (expr.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     @Override

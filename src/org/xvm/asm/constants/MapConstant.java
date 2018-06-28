@@ -299,44 +299,26 @@ public class MapConstant
     @Override
     public String getValueString()
         {
-        Constant[] aconst  = m_aconstVal;
-        int        cConsts = aconst.length;
-
-        String sStart;
-        String sEnd;
-        switch (m_fmt)
-            {
-            case Array:
-                sStart = "{";
-                sEnd   = "}";
-                break;
-            case Tuple:
-                sStart = cConsts < 2 ? "Tuple:(" : "(";
-                sEnd   = ")";
-                break;
-            case Set:
-                sStart = "Set:{";
-                sEnd   = "}";
-                break;
-
-            default:
-                throw new IllegalArgumentException("illegal format: " + m_fmt);
-            }
+        Constant[] aKeys = m_aconstKey;
+        Constant[] aVals = m_aconstVal;
+        int        cKeys = aKeys.length;
 
         StringBuilder sb = new StringBuilder();
-        sb.append(sStart);
+        sb.append("Map:{");                     // TODO also implement MapEntry
 
-        for (int i = 0; i < cConsts; ++i)
+        for (int i = 0; i < cKeys; ++i)
             {
             if (i > 0)
                 {
                 sb.append(", ");
                 }
 
-            sb.append(aconst[i]);
+            sb.append(aKeys[i])
+              .append('=')
+              .append(aVals[i]);
             }
 
-        sb.append(sEnd);
+        sb.append("}");
         return sb.toString();
         }
 

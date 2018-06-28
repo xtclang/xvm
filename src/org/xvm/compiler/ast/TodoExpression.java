@@ -134,6 +134,12 @@ public class TodoExpression
         }
 
     @Override
+    public boolean isShortCircuiting()
+        {
+        return message.isShortCircuiting();
+        }
+
+    @Override
     public boolean isConstant()
         {
         // sure, you can use this where a constant is required, although it does NOT have a compile

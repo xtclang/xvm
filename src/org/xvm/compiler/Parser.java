@@ -2095,6 +2095,16 @@ public class Parser
     /**
      * Parse any expression.
      *
+     * @return an expression
+     */
+    Expression parseExpression()
+        {
+        return parseElseExpression();
+        }
+
+    /**
+     * Parse a "else" expression (the "grounding" expression for any short-circuit expressions).
+     *
      * <p/><code><pre>
      * Expression
      *     TernaryExpression
@@ -2103,7 +2113,7 @@ public class Parser
      *
      * @return an expression
      */
-    Expression parseExpression()
+    Expression parseElseExpression()
         {
         Expression expr = parseTernaryExpression();
         if (peek().getId() == Id.COLON)

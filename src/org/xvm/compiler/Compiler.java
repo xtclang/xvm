@@ -830,4 +830,20 @@ public class Compiler
      * The expression cannot be assigned to.
      */
     public static final String ASSIGNABLE_REQUIRED                = "COMPILER-70";
+    /**
+     * The left-hand-side of the Elvis expression is not nullable.
+     */
+    public static final String ELVIS_NOT_NULLABLE                 = "COMPILER-71";
+    /**
+     * The left-hand-side of the Elvis expression is only nullable.
+     */
+    public static final String ELVIS_ONLY_NULLABLE                = "COMPILER-72";
+    /**
+     * Short-circuiting expressions are not allowed in this context.
+     */
+    public static final String SHORT_CIRCUIT_ILLEGAL              = "COMPILER-73";
+    /**
+     * The expression on the left-hand-side of the colon does not have the potential to use the expression on the right-hand-side.
+     */
+    public static final String SHORT_CIRCUIT_REQUIRED             = "COMPILER-74";
     }

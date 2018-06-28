@@ -1,11 +1,14 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.JumpNull;
 
 import org.xvm.compiler.Token;
 
@@ -85,7 +88,7 @@ public class NotNullExpression
 
         ConstantPool pool        = pool();
         TypeConstant typeRequest = typeRequired == null
-                ? pool.typeNullable()
+                ? null
                 : pool.ensureNullableTypeConstant(typeRequired);
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
@@ -108,11 +111,30 @@ public class NotNullExpression
         }
 
     @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        if (hasConstantValue() || getType().isNullable())
+            {
+            return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+            }
+
+        TypeConstant typeTemp = pool().ensureNullableTypeConstant(getType());
+        Assignable var = createTempVar(code, typeTemp, false, errs);
+        generateAssignment(code, var, errs);
+        return var.getRegister();
+        }
+
+    @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        // TODO
-        notImplemented();
-        super.generateAssignment(code, LVal, errs);
+        if (hasConstantValue() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
+            {
+            super.generateAssignment(code, LVal, errs);
+            return;
+            }
+
+        expr.generateAssignment(code, LVal, errs);
+        code.add(new JumpNull(LVal.getRegister(), getShortCircuitLabel()));
         }
 
 

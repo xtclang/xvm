@@ -435,9 +435,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * If this type is not a nullable type, calculate the type with the nullability.
+     *
+     * @return this TypeConstant with Nullable
+     */
+    public TypeConstant ensureNullable()
+        {
+        return getConstantPool().ensureNullableTypeConstant(this);
+        }
+
+    /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
-     * @return a TypeConstant without Nullable
+     * @return this TypeConstant without Nullable
      */
     public TypeConstant removeNullable()
         {

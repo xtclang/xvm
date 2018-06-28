@@ -600,6 +600,18 @@ public class NameExpression
         }
 
     @Override
+    public boolean isAborting()
+        {
+        return left != null && left.isAborting();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        return left != null && left.isShortCircuiting();
+        }
+
+    @Override
     public boolean isAssignable()
         {
         if (m_fAssignable)

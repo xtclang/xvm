@@ -12,9 +12,12 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.JumpNotNull;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -62,11 +65,21 @@ public class ElvisExpression
         }
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable());
+        if (fit.isFit())
+            {
+            fit.combineWith(expr2.testFit(ctx, typeRequired));
+            }
+        return fit;
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
-        ConstantPool pool     = pool();
-        TypeConstant type1Req = typeRequired == null ? null : pool.ensureNullableTypeConstant(typeRequired);
+        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable();
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
         TypeConstant type1    = null;
         if (expr1New == null)
@@ -80,11 +93,11 @@ public class ElvisExpression
             }
 
         TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(), null, errs);
-        if (typeRequired != null && !expr2.testFit(ctx, type2Req).isFit())
+        if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
             {
             type2Req = typeRequired;
             }
-        Expression   expr2New = expr2.validate(ctx, type2Req, errs);
+        Expression expr2New = expr2.validate(ctx, type2Req, errs);
         if (expr2New == null)
             {
             fit = TypeFit.NoFit;
@@ -101,15 +114,14 @@ public class ElvisExpression
 
         if (type1.isOnlyNullable())
             {
-            // TODO log error only nullable
-            System.out.println("TODO Elvis expr only nullable: " + expr1New);
+            expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_ONLY_NULLABLE);
             return expr2New;
             }
 
+        ConstantPool pool = pool();
         if (!type1.isNullable() && !pool.typeNull().isA(type1))
             {
-            // TODO log error not nullable
-            System.out.println("TODO Elvis expr1 NOT nullable: " + expr1New);
+            expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return expr1New;
             }
 
@@ -121,11 +133,23 @@ public class ElvisExpression
             typeResult = pool.ensureIntersectionTypeConstant(type1Non, type2);
             }
 
+        // in the unlikely event that one or both of the sub expressions are constant, it may be
+        // possible to calculate the constant value of this elvis expression
         Constant constVal = null;
-        if (expr1.hasConstantValue())
+        if (expr1New.hasConstantValue())
             {
-            // TODO calculate the constant value
-            System.out.println("TODO Elvis expr1 is constant");
+            Constant const1 = expr1New.toConstant();
+            if (const1.equals(pool.valNull()))
+                {
+                if (expr2New.hasConstantValue())
+                    {
+                    constVal = expr2New.toConstant();
+                    }
+                }
+            else
+                {
+                constVal = const1;
+                }
             }
 
         return finishValidation(typeRequired, typeResult, fit, constVal, errs);

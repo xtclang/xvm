@@ -17,6 +17,8 @@ module TestTemp.xqiz.it
         // REVIEW GG
         // testInterval();
         // testTupleConv();
+        // testElseExpr();
+        // testMap();
         }
 
     void testInts()
@@ -188,7 +190,7 @@ module TestTemp.xqiz.it
 
         Int a = 42;
         Int b = 45;
-        console.println("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
+        // this is an error: console.println("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
 
         Int? c = a;
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
@@ -197,4 +199,22 @@ module TestTemp.xqiz.it
         console.println("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
         }
 
+    void testElseExpr()
+        {
+        console.println("\n** testElseExpr()");
+
+        IntLiteral? a = null;
+        Int b = 7;
+        console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
+
+        a = 4;
+        console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
+        }
+
+    void testMap()
+        {
+        console.println("\n** testMap()");
+
+        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
+        }
     }

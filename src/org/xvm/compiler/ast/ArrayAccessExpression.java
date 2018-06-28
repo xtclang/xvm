@@ -198,6 +198,32 @@ public class ArrayAccessExpression
         }
 
     @Override
+    public boolean isAborting()
+        {
+        for (Expression index : indexes)
+            {
+            if (index.isAborting())
+                {
+                return true;
+                }
+            }
+        return expr.isAborting();
+        }
+
+    @Override
+    public boolean isShortCircuiting()
+        {
+        for (Expression index : indexes)
+            {
+            if (index.isShortCircuiting())
+                {
+                return true;
+                }
+            }
+        return expr.isShortCircuiting();
+        }
+
+    @Override
     public boolean isAssignable()
         {
         assert isValidated();
