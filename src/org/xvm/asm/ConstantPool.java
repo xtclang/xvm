@@ -292,7 +292,7 @@ public class ConstantPool
                 UInt8Constant constant = (UInt8Constant) ensureLocatorLookup(format).get(n);
                 if (constant == null)
                     {
-                    constant = (UInt8Constant) register(new UInt8Constant(this, n));
+                    constant = (UInt8Constant) register(new UInt8Constant(this, format, n));
                     }
                 return constant;
 
