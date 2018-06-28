@@ -37,5 +37,6 @@ public class CatchStart
     public void simulate(Scope scope)
         {
         scope.enter();
+        scope.allocVar(); // the exception
         }
     }
