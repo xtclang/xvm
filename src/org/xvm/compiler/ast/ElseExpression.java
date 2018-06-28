@@ -118,7 +118,7 @@ public class ElseExpression
             }
 
         Constant constVal = null;
-        if (expr1New.hasConstantValue())
+        if (expr1New.isConstant())
             {
             constVal = expr1New.toConstant();
             }
@@ -154,7 +154,8 @@ public class ElseExpression
         Label label = m_labelElse;
         if (label == null)
             {
-            m_labelElse = label = new Label(":else");  // TODO add counter for GG
+            m_nLabel    = ++m_nCounter;
+            m_labelElse = label = new Label(":else" + m_nLabel);
             }
         return label;
         }
@@ -162,14 +163,14 @@ public class ElseExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue() || !LVal.isNormalVariable())
+        if (isConstant() || !LVal.isNormalVariable())
             {
             super.generateAssignment(code, LVal, errs);
             return;
             }
 
         Label labelElse = getShortCircuitLabel();
-        Label labelEnd  = new Label(":end");        // TODO use same counter as above
+        Label labelEnd  = new Label(":end" + m_nLabel);
 
         expr1.generateAssignment(code, LVal, errs);
         code.add(new Jump(labelEnd));
@@ -181,5 +182,7 @@ public class ElseExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    private static    int   m_nCounter;
+    private transient int   m_nLabel;
     private transient Label m_labelElse;
     }

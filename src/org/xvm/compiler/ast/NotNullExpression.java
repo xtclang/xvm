@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -12,9 +14,9 @@ import org.xvm.asm.op.JumpNull;
 
 import org.xvm.compiler.Token;
 
-import java.lang.reflect.Field;
-
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -98,8 +100,16 @@ public class NotNullExpression
         else
             {
             expr = exprNew;
-            // TODO test expression type to verify that it IS nullable, otherwise error (see Elvis)
-            type = exprNew.getType().removeNullable();
+            type = exprNew.getType();
+            if (type.isNullable() || pool.typeNull().isA(type))
+                {
+                type = type.removeNullable();
+                }
+            else
+                {
+                exprNew.log(errs, Severity.ERROR, org.xvm.compiler.Compiler.ELVIS_NOT_NULLABLE);
+                return exprNew;
+                }
             }
 
         return finishValidation(typeRequired, type, fit, null, errs);
@@ -114,7 +124,7 @@ public class NotNullExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue() || getType().isNullable())
+        if (isConstant() || getType().isNullable())
             {
             return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
             }
@@ -128,7 +138,7 @@ public class NotNullExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
+        if (isConstant() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
             {
             super.generateAssignment(code, LVal, errs);
             return;

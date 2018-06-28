@@ -168,7 +168,7 @@ public class ArrayAccessExpression
         // the type of a tuple access expression is determinable iff the type is a tuple, it has
         // a known number of field types, and the index is a constant that specifies a field within
         // that domain of known field types
-        if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].hasConstantValue())
+        if (typeArray.isTuple() && typeArray.isParamsSpecified() && aexprIndexes[0].isConstant())
             {
             try
                 {
@@ -184,7 +184,7 @@ public class ArrayAccessExpression
         // the expression yields a constant value iff the sub-expressions are all constants and the
         // evaluation of the element access is legal
         Constant constVal = null;
-        if (exprArray.hasConstantValue() && cIndexes == 1 && aexprIndexes[0].hasConstantValue())
+        if (exprArray.isConstant() && cIndexes == 1 && aexprIndexes[0].isConstant())
             {
             // similar to above, lots of things can fail here, causing an exception, so if anything
             // goes wrong, we can correctly assume that we can't determine the compile-time constant
@@ -233,7 +233,7 @@ public class ArrayAccessExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             LVal.assign(toConstant(), code, errs);
             }

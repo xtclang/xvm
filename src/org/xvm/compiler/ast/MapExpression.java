@@ -223,7 +223,7 @@ public class MapExpression
                     {
                     listKeys.set(i, exprNew);
                     }
-                fConstant &= exprNew.hasConstantValue();
+                fConstant &= exprNew.isConstant();
                 }
 
             // validate value
@@ -240,7 +240,7 @@ public class MapExpression
                     {
                     listVals.set(i, exprNew);
                     }
-                fConstant &= exprNew.hasConstantValue();
+                fConstant &= exprNew.isConstant();
                 }
             }
 
@@ -322,7 +322,7 @@ public class MapExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstant();
             }

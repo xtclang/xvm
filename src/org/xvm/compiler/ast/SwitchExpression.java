@@ -113,7 +113,7 @@ public class SwitchExpression
                     {
                     Expression expr = ((ExpressionStatement) condNew).getExpression();
                     typeCase = expr.getType();
-                    if (expr.hasConstantValue())
+                    if (expr.isConstant())
                         {
                         constCond = expr.toConstant();
                         }
@@ -161,7 +161,7 @@ public class SwitchExpression
                         }
 
                     // TODO verify has constant / is constant
-                    if (exprNew.hasConstantValue())
+                    if (exprNew.isConstant())
                         {
                         Constant constCase = exprNew.toConstant();
                         if (setCase.add(constCase))

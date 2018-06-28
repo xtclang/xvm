@@ -68,7 +68,7 @@ public class IsExpression
             }
 
         Constant constVal = null;
-        if (expr1.hasConstantValue())
+        if (expr1.isConstant())
             {
             // TODO calculate constant isA -> true or false
             }
@@ -77,9 +77,9 @@ public class IsExpression
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isRuntimeConstant()
         {
-        return expr1.isConstant();
+        return expr1.isRuntimeConstant();
         }
 
     @Override

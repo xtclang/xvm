@@ -366,7 +366,7 @@ public class VariableDeclarationStatement
         if (m_listRefAnnotations == null && value != null)
             {
             // constant value: declare and initialize named var
-            if (value.hasConstantValue())
+            if (value.isConstant())
                 {
                 Constant constVal = null;
                 switch (m_scenario)

@@ -180,7 +180,7 @@ public class ReturnStatement
                 else if (fConditional && exprOld.testFit(ctx, pool.typeFalse()).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
-                    if (exprNew != null && (!exprNew.hasConstantValue() || !exprNew.toConstant().equals(pool.valFalse())))
+                    if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
                         {
                         // it's not clear how this could happen; it's more like an assertion
                         log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);

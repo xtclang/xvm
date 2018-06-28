@@ -41,7 +41,7 @@ public class MultiValueExpression
             aTypes[i] = expr.getType();
             if (i == 0 || aVals != null)
                 {
-                if (expr.hasConstantValue())
+                if (expr.isConstant())
                     {
                     if (i == 0)
                         {
@@ -164,7 +164,7 @@ public class MultiValueExpression
     @Override
     public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstants();
             }

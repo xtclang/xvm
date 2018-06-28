@@ -440,7 +440,7 @@ public class RelOpExpression
 
         // determine if the result of this expression is itself constant
         Constant[] aconstResult = null;
-        if (expr1New.hasConstantValue() && expr2New.hasConstantValue())
+        if (expr1New.isConstant() && expr2New.isConstant())
             {
             // delegate the operation to the constants
             TypeConstant typeResult  = atypeResults[0];

@@ -100,7 +100,7 @@ public class UnaryMinusExpression
                     }
                 m_idOp     = setOps.iterator().next();
                 typeResult = m_idOp.getSignature().getRawReturns()[0];
-                if (fit.isFit() && exprRight.hasConstantValue())
+                if (fit.isFit() && exprRight.isConstant())
                     {
                     try
                         {

@@ -35,7 +35,7 @@ public  class UnpackExpression
         assert typeTuple.isTuple() && typeTuple.isParamsSpecified();
         TypeConstant typeField = typeTuple.getParamTypesArray()[iField];
         Constant     constVal  = null;
-        if (exprTuple.hasConstantValue())
+        if (exprTuple.isConstant())
             {
             Constant constTuple = exprTuple.toConstant();
             assert constTuple.getFormat() == Format.Tuple;
@@ -103,7 +103,7 @@ public  class UnpackExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             return toConstant();
             }
@@ -117,7 +117,7 @@ public  class UnpackExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue())
+        if (isConstant())
             {
             super.generateAssignment(code, LVal, errs);
             }

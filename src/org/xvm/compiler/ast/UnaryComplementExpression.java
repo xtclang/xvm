@@ -91,7 +91,7 @@ public class UnaryComplementExpression
                     }
                 m_idOp    = setOps.iterator().next();
                 typeRight = m_idOp.getSignature().getRawReturns()[0];
-                if (fit.isFit() && exprRight.hasConstantValue())
+                if (fit.isFit() && exprRight.isConstant())
                     {
                     try
                         {

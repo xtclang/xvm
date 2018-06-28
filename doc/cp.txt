@@ -1,12 +1,11 @@
 - expressions
-  - Version
-  - merge Throw and Todo?
+  - getShortCircuitLabel - needs to take child ref
+  - standardize "adopt" handling
   - Switch expression
   - Statement expression
   - Lambda
-  - isConstant / hasConstantValue
-  - getShortCircuitLabel - needs to take child ref
-  - standardize "adopt" handling
+  - merge Throw and T0D0 expressions; test
+  - Version
 
 - test static property with value (both constant and init function)
 

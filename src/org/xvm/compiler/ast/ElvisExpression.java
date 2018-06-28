@@ -136,12 +136,12 @@ public class ElvisExpression
         // in the unlikely event that one or both of the sub expressions are constant, it may be
         // possible to calculate the constant value of this elvis expression
         Constant constVal = null;
-        if (expr1New.hasConstantValue())
+        if (expr1New.isConstant())
             {
             Constant const1 = expr1New.toConstant();
             if (const1.equals(pool.valNull()))
                 {
-                if (expr2New.hasConstantValue())
+                if (expr2New.isConstant())
                     {
                     constVal = expr2New.toConstant();
                     }
@@ -167,7 +167,7 @@ public class ElvisExpression
     @Override
     public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (hasConstantValue() || getType().isNullable())
+        if (isConstant() || getType().isNullable())
             {
             return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
             }
@@ -181,7 +181,7 @@ public class ElvisExpression
     @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (hasConstantValue() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
+        if (isConstant() || !LVal.isNormalVariable() || !LVal.getType().isNullable())
             {
             super.generateAssignment(code, LVal, errs);
             return;

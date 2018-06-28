@@ -112,7 +112,7 @@ public class TernaryExpression
             // TODO check if it is short circuiting
             }
 
-        if (fit.isFit() && exprNewCond.hasConstantValue())
+        if (fit.isFit() && exprNewCond.isConstant())
             {
             return exprNewCond.toConstant().equals(pool.valTrue())
                     ? exprNewThen

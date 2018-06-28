@@ -140,7 +140,7 @@ public class TodoExpression
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isRuntimeConstant()
         {
         // sure, you can use this where a constant is required, although it does NOT have a compile
         // time constant available (i.e. the expression still requires code generation)

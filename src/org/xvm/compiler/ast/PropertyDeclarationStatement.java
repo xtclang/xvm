@@ -321,7 +321,7 @@ public class PropertyDeclarationStatement
                 // was a constant value, then just take that constant value and discard the
                 // initializer
                 Expression valueNew = stmtInit.getInitializerExpression();
-                if (valueNew != null && !value.isAborting() && value.isConstant())
+                if (valueNew != null && !value.isAborting() && value.isRuntimeConstant())
                     {
                     value = valueNew;
 
