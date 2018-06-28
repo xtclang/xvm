@@ -88,6 +88,13 @@ public class xIntLiteral
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
+    @Override
+    public int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        GenericHandle hLiteral = (GenericHandle) hTarget;
+        return frame.assignValue(iReturn, (StringHandle) hLiteral.getField("text"));
+        }
+
     // cached constructor
     private MethodStructure m_constructor;
     }

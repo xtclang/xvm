@@ -142,7 +142,7 @@ public abstract class Utils
         }
 
 
-    // ----- "local property as an argument" support -----
+    // ----- "local property or DeferredCallHandle as an argument" support -----
 
     static public class GetArguments
                 implements Frame.Continuation

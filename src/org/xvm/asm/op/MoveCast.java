@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xException;
 
@@ -64,16 +65,29 @@ public class MoveCast
                 return R_REPEAT;
                 }
 
-            TypeConstant typeFrom = hValue.getType();
-            TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
+            if (isDeferred(hValue))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller -> complete(frameCaller, ahValue[0]);
 
-            return typeFrom.isA(typeTo)
-                ? frame.assignValue(m_nToValue, hValue)
-                : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
+                }
+
+            return complete(frame, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }
+        }
+
+    protected int complete(Frame frame, ObjectHandle hValue)
+        {
+        TypeConstant typeFrom = hValue.getType();
+        TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
+
+        return typeFrom.isA(typeTo)
+            ? frame.assignValue(m_nToValue, hValue)
+            : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
         }
     }

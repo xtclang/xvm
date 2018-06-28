@@ -12,6 +12,7 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.Utils;
 
 
 /**
@@ -82,6 +83,15 @@ public class Move
             if (frame.isNextRegister(nTo))
                 {
                 frame.introduceVarCopy(nFrom);
+                }
+
+            if (isDeferred(hValue))
+                {
+                ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
+                Frame.Continuation stepNext = frameCaller ->
+                    frame.assignValue(nTo, ahValue[0]);
+
+                return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
             return frame.assignValue(nTo, hValue);
             }
