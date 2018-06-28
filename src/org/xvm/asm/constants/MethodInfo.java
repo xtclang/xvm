@@ -116,7 +116,6 @@ public class MethodInfo
         int          cBase = aBase.length;
         int          cAdd  = aAdd.length;
 
-        // check @Override
         if (fSelf)
             {
             // should only have one layer (or zero layers, in which case we wouldn't have been
@@ -170,11 +169,15 @@ public class MethodInfo
         if (!isOverridable())
             {
             // it is not possible to override the base method
-            MethodConstant id = getIdentity();
-            id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
-                    that.getIdentity().getNamespace().getValueString(),
-                    id.getSignature().getValueString(),
-                    id.getNamespace().getValueString());
+            if (fSelf)
+                {
+                // each type is responsible for reporting the errors only at the "self" level
+                MethodConstant id = getIdentity();
+                id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                        that.getIdentity().getNamespace().getValueString(),
+                        id.getSignature().getValueString(),
+                        id.getNamespace().getValueString());
+                }
             return this;
             }
 
@@ -469,14 +472,6 @@ public class MethodInfo
     public boolean isOverridable()
         {
         return isVirtual() && !isCapped();
-        }
-
-    /**
-     * @return true iff the last method body in the chain is an override
-     */
-    public boolean isOverride()
-        {
-        return getTail().isOverride();
         }
 
     /**

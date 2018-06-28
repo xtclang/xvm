@@ -60,12 +60,12 @@ const Int64
     @Override
     @Op Int64 add(Int64 n);
 
-// TODO / REVIEW
+// TODO
     /**
      * In addition to the implicit "add(Int64 n)" method, this method allows any
      * integer to be added to this value.
      */
-    Int64 add(IntNumber n);
+    @Op Int64 add(IntNumber n);
 
 // TODO
     @Override

@@ -1418,20 +1418,19 @@ public class TypeInfo
         }
 
     /**
-     * Helper method that finds the first abstract method.
-     *
-     * @return a first abstract method or null if all methods are not abstract
+     * Helper method that return all methods with a given name. Used for debugging.
      */
-    public MethodConstant firstAbstractMethod()
+    public Map<MethodConstant, MethodInfo> filterMethods(String sName)
         {
+        Map<MethodConstant, MethodInfo> map = new HashMap<>();
         for (Map.Entry<MethodConstant, MethodInfo> entry : getMethods().entrySet())
             {
-            if (entry.getValue().isAbstract())
+            if (entry.getValue().getIdentity().getSignature().getName().equals(sName))
                 {
-                return entry.getKey();
+                map.put(entry.getKey(), entry.getValue());
                 }
             }
-        return null;
+        return map;
         }
 
     private ConstantPool pool()

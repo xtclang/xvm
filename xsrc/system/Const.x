@@ -21,9 +21,15 @@ interface Const
         }
 
     /**
-     * TODO
+     * TODO:
+     *
+     * Note: this method does NOT have a super; it does NOT narrow to<Object[]>()
      */
     Byte[] to<Byte[]>();
+
+    // this declaration is necessary so that the non-override to<Byte[]>() method is allowed
+    @Override
+    Const[] to<Const[]>();
 
     @Override
     @RO Int hash;

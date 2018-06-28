@@ -1218,6 +1218,9 @@ public class TerminalTypeConstant
         Constant constIdLeft = getDefiningConstant();
         switch (constIdLeft.getFormat())
             {
+            case NativeClass:
+                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
+                // fall through
             case Class:
                 {
                 IdentityConstant idLeft = (IdentityConstant) constIdLeft;

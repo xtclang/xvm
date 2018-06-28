@@ -31,6 +31,7 @@ interface Enum
     /**
      * Obtain the Enum value that follows this Enum in the Enumeration.
      */
+    @Override
     conditional Enum next()
         {
         if (ordinal + 1 < enumeration.count)
@@ -44,6 +45,7 @@ interface Enum
     /**
      * Obtain the Enum value that precedes this Enum in the Enumeration.
      */
+    @Override
     conditional Enum prev()
         {
         if (ordinal > 0)

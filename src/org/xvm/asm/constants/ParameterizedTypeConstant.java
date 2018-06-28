@@ -446,17 +446,16 @@ public class ParameterizedTypeConstant
         int cParamsRight = listRight.size();
         boolean fTuple   = clz.getIdentityConstant().equals(pool.clzTuple());
 
-        if (!fTuple)
-            {
-            assert Math.max(cParamsRight, cParamsLeft) <= clz.getTypeParams().size();
-            }
-
         // we only have to check all the parameters on the left side,
         // since if an assignment C<L1> = C<R1> is allowed, then
         // an assignment C<L1> = C<R1, R2> is allowed for any R2
 
-        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries =
-            clz.getTypeParamsAsList();
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = clz.getTypeParamsAsList();
+
+        if (!fTuple)
+            {
+            assert Math.max(cParamsRight, cParamsLeft) <= listFormalEntries.size();
+            }
 
         for (int i = 0; i < cParamsLeft; i++)
             {

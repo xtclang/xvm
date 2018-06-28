@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -187,10 +188,31 @@ public class ClassStructure
      */
     public Map<StringConstant, TypeConstant> getTypeParams()
         {
-        Map<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null)
+        Map<StringConstant, TypeConstant> mapParent = Collections.EMPTY_MAP;
+        if (!isStatic())
             {
-            return Collections.EMPTY_MAP;
+            Component parent = getParent();
+            if (parent instanceof ClassStructure)
+                {
+                mapParent = ((ClassStructure) parent).getTypeParams();
+                }
+            }
+
+        Map<StringConstant, TypeConstant> mapThis = m_mapParams;
+        if (mapThis == null)
+            {
+            return mapParent;
+            }
+
+        Map<StringConstant, TypeConstant> map;
+        if (mapParent.isEmpty())
+            {
+            map = mapThis;
+            }
+        else
+            {
+            map = new HashMap<>(mapParent);
+            map.putAll(mapThis);
             }
         assert (map = Collections.unmodifiableMap(map)) != null;
         return map;
@@ -203,13 +225,32 @@ public class ClassStructure
      */
     public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList()
         {
-        final ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null || map.isEmpty())
+        List<Map.Entry<StringConstant, TypeConstant>> listParent = Collections.EMPTY_LIST;
+        if (!isStatic())
             {
-            return Collections.EMPTY_LIST;
+            Component parent = getParent();
+            if (parent instanceof ClassStructure)
+                {
+                listParent = ((ClassStructure) parent).getTypeParamsAsList();
+                }
             }
 
-        List<Map.Entry<StringConstant, TypeConstant>> list = map.asList();
+        ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
+        if (mapThis == null)
+            {
+            return listParent;
+            }
+
+        List<Map.Entry<StringConstant, TypeConstant>> list;
+        if (listParent.isEmpty())
+            {
+            list = mapThis.asList();
+            }
+        else
+            {
+            list = new ArrayList<>(listParent);
+            list.addAll(mapThis.asList());
+            }
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
         }
@@ -743,6 +784,29 @@ public class ClassStructure
             return chains;
             }
 
+        boolean fRebase = false;
+        switch (getFormat())
+            {
+            case CONST:
+                fRebase = idClzLeft.equals(getConstantPool().clzConst());
+                break;
+
+            case ENUMVALUE:
+                fRebase = idClzLeft.equals(getConstantPool().clzEnum());
+                break;
+
+            case SERVICE:
+                fRebase = idClzLeft.equals(getConstantPool().clzService());
+                break;
+            }
+
+        if (fRebase)
+            {
+            chains.add(new ContributionChain(
+                new Contribution(Composition.Equal, (TypeConstant) null)));
+            return chains;
+            }
+
     nextContribution:
         for (Contribution contrib : getContributionsAsList())
             {
@@ -1215,11 +1279,12 @@ public class ClassStructure
     public boolean containsSubstitutableMethod(SignatureConstant signature, Access access,
                                                List<TypeConstant> listParams)
         {
-        return containsSubstitutableMethodImpl(signature, access, listParams, true);
+        return containsSubstitutableMethodImpl(signature, access, listParams, getIdentityConstant(), true);
         }
 
     protected boolean containsSubstitutableMethodImpl(SignatureConstant signature, Access access,
-                                                   List<TypeConstant> listParams, boolean fAllowInto)
+                                                      List<TypeConstant> listParams,
+                                                      IdentityConstant idClass, boolean fAllowInto)
         {
         Component child = getChild(signature.getName());
 
@@ -1246,12 +1311,18 @@ public class ClassStructure
                 GenericTypeResolver resolver = listParams.isEmpty() ? null :
                     new SimpleTypeResolver(listParams);
 
+                signature = signature.resolveGenericTypes(resolver);
+
                 for (MethodStructure method : mms.methods())
                     {
-                    if (!method.isStatic() && method.isAccessible(access) &&
-                            method.isSubstitutableFor(signature, resolver))
+                    if (!method.isStatic() && method.isAccessible(access))
                         {
-                        return true;
+                        SignatureConstant sigMethod = method.getIdentityConstant().
+                            getSignature().resolveGenericTypes(resolver);
+                        if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
+                            {
+                            return true;
+                            }
                         }
                     }
                 }
@@ -1297,7 +1368,7 @@ public class ClassStructure
                         contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(signature,
-                            access, listContribActual, false))
+                            access, listContribActual, idClass, false))
                         {
                         return true;
                         }
@@ -1604,8 +1675,7 @@ public class ClassStructure
             int ix = indexOfGenericParameter(constProperty.getName());
             if (ix < 0)
                 {
-                throw new IllegalStateException(
-                    "Failed to find " + constProperty.getName() + " in " + this);
+                return null;
                 }
 
             return m_fTuple

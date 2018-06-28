@@ -59,6 +59,7 @@ mixin SoftVar<RefType>(function void ()? notify)
      */
     public/private Duration? lastCalcDuration;
 
+    @Override
     RefType get()
         {
         // soft+lazy references are unassigned after being cleared by the garbage collector

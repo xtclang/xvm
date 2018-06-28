@@ -38,6 +38,7 @@ const String
         TODO -- native
         }
 
+    @Override
     String! reify()
         {
         if (this instanceof StringSub)

@@ -20,17 +20,17 @@ interface Set<ElementType>
      * The "union" operator.
      */
     @Override
-    @Op("|") conditional Set<ElementType> addAll(Set!<ElementType> values);
+    @Op("|") conditional Set<ElementType> addAll(Collection<ElementType> values);
 
     /**
      * The "symmetric difference" operator.
      */
     @Override
-    @Op("^") conditional Set<ElementType> removeAll(Set!<ElementType> values);
+    @Op("^") conditional Set<ElementType> removeAll(Collection<ElementType> values);
 
     /**
      * The "union" operator.
      */
     @Override
-    @Op("&") conditional Set<ElementType> retainAll(Set!<ElementType> values);
+    @Op("&") conditional Set<ElementType> retainAll(Collection<ElementType> values);
     }

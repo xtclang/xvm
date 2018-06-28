@@ -185,6 +185,11 @@ public class SignatureConstant
      */
     public SignatureConstant resolveGenericTypes(GenericTypeResolver resolver)
         {
+        if (resolver == null)
+            {
+            return this;
+            }
+
         TypeConstant[] aconstParamOriginal = m_aconstParams;
         TypeConstant[] aconstParamResolved = null;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
@@ -326,10 +331,12 @@ public class SignatureConstant
     /**
      * Check if this signature could be called via the specified signature.
      *
-     * @param that      the signature of the matching method (resolved)
-     * @param resolver  the generic type resolver
+     * Note: both "this" and "that" signatures must be resolved.
+     *
+     * @param that     the signature of the matching method
+     * @param typeCtx  the type within which this signature is used
      */
-    public boolean isSubstitutableFor(SignatureConstant that, GenericTypeResolver resolver)
+    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx)
         {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
@@ -361,7 +368,7 @@ public class SignatureConstant
             }
 
         SignatureConstant sigM1 = that;
-        SignatureConstant sigM2 = resolver == null ? this : this.resolveGenericTypes(resolver);
+        SignatureConstant sigM2 = this;
 
         TypeConstant[] aR1 = sigM1.getRawReturns();
         TypeConstant[] aR2 = sigM2.getRawReturns();
@@ -391,13 +398,13 @@ public class SignatureConstant
      * specified SignatureConstant when compared to another potential "super" SignatureConstant.
      *
      * @param that     the other potential "super" SignatureConstant
-     *
      * @param sigSub   the SignatureConstant of the method that is calling super
      * @param typeSub  the type within which the potential super call would occur
+     *
      * @return true iff this signature is an unambiguously better "super" than that signature
      */
     public boolean isUnambiguouslyBetterSuperThan(SignatureConstant that, SignatureConstant sigSub,
-            TypeConstant typeSub)
+                                                  TypeConstant typeSub)
         {
         // these assertions can eventually be removed
         assert this.isSubstitutableFor(sigSub, typeSub);

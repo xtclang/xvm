@@ -53,13 +53,17 @@ const VarUInt
      * for the sign property, so it is declaring it at this level as a read/write property (which,
      * due to the constness of this class, is read-only in reality.)
      */
+
+    @Override
     Signum sign;
 
+    @Override
     Int bitLength.get()
         {
         return bits.size;
         }
 
+    @Override
     Bit[] to<Bit[]>()
         {
         return bits;

@@ -220,7 +220,7 @@ class ExtHashMap<KeyType, ValueType>
     class HashEntrySet
             // extends KeyBasedEntriesSet<HashEntry> // TODO
         {
-        @Override
+        // @Override
         Iterator<HashEntry> iterator()
             {
             return new Iterator<HashEntry>()
@@ -260,7 +260,7 @@ class ExtHashMap<KeyType, ValueType>
                 };
             }
 
-        @Override
+        // @Override
         HashEntrySet remove(HashEntry entry)
             {
             HashEntry?[] buckets   = ExtHashMap.this.buckets;
@@ -301,7 +301,7 @@ class ExtHashMap<KeyType, ValueType>
             return this;
             }
 
-        @Override
+        // @Override
         conditional HashEntrySet removeIf(function Boolean (HashEntry) shouldRemove)
             {
             Boolean      modified    = false;

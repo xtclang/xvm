@@ -614,8 +614,9 @@ public class Frame
                         throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
 
                     default:
-                        // the compiler/verifier shouldn't have allowed this
-                        throw new IllegalStateException();
+                        // why did the compiler/verifier shouldn't have allowed this
+                        System.out.println("Suspicious assignment from: " + typeFrom.getValueString()
+                            + " to: " + typeTo.getValueString());
                     }
                 }
 
