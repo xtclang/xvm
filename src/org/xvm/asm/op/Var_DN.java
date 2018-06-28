@@ -130,7 +130,7 @@ public class Var_DN
                 }
             }
 
-        frame.introduceResolvedVar(hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceResolvedVar(m_nVar, hRef.getType(), sName, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

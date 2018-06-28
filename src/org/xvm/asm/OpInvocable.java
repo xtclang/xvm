@@ -159,7 +159,7 @@ public abstract class OpInvocable extends Op
                     resolveGenerics(frame.getLocalType(m_nTarget));
                 }
 
-            frame.introduceResolvedVar(typeRet);
+            frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
@@ -180,7 +180,7 @@ public abstract class OpInvocable extends Op
                         resolveGenerics(frame.getLocalType(m_nTarget));
                 }
 
-            frame.introduceResolvedVar(typeRet);
+            frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
@@ -204,7 +204,7 @@ public abstract class OpInvocable extends Op
                         }
                     }
 
-                frame.introduceResolvedVar(atypeRet[i]);
+                frame.introduceResolvedVar(m_nRetValue, atypeRet[i]);
                 }
             }
         }

@@ -104,7 +104,7 @@ public class NewG_0
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(clzTarget.getType());
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];

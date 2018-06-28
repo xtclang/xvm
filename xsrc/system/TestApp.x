@@ -15,7 +15,6 @@ class TestApp
     // entry point
     void run()
         {
-        test1();
         test2();
         testService();
         testRef("hi");
@@ -41,25 +40,6 @@ class TestApp
         {
         return "Hello " + "world!";
         }
-
-    static void test1()
-        {
-        @Inject io.Console console;
-
-        String s = getStringValue();
-        console.print("\n*** ");
-        console.println(s);
-
-        Int i = getIntValue();
-        print(i);
-
-        if (Int of : s.indexOf("world"))
-            {
-            assert(of + s.size == 6 + 12);
-            print(of.toString());
-            }
-        }
-
     static void test2()
         {
         TestClass t = new TestClass("Hello World!");

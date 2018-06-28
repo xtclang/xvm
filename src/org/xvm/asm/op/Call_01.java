@@ -109,7 +109,7 @@ public class Call_01
                 // the return type must be identical to the property type
                 if (frame.isNextRegister(m_nRetValue))
                     {
-                    frame.introduceVar(chain.getProperty().getType());
+                    frame.introduceVar(m_nRetValue, chain.getProperty().getType());
                     }
                 }
             else

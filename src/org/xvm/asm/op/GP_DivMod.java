@@ -91,12 +91,12 @@ public class GP_DivMod
 
             if (frame.isNextRegister(m_anRetValue[0]))
                 {
-                frame.introduceVarCopy(m_nTarget); // TODO GG review this (type comes from op method)
+                frame.introduceVarCopy(m_anRetValue[0], m_nTarget); // TODO GG review this (type comes from op method)
                 }
 
             if (frame.isNextRegister(m_anRetValue[1]))
                 {
-                frame.introduceVarCopy(m_nTarget);
+                frame.introduceVarCopy(m_anRetValue[1], m_nTarget);
                 }
 
             if (isDeferred(hTarget) || isDeferred(hArg))

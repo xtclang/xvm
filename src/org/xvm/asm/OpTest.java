@@ -107,7 +107,7 @@ public abstract class OpTest
         {
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(frame.f_context.f_pool.typeBoolean());
+            frame.introduceResolvedVar(m_nRetValue, frame.f_context.f_pool.typeBoolean());
             }
         return isBinaryOp() ? processBinaryOp(frame) : processUnaryOp(frame);
         }

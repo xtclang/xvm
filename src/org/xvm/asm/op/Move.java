@@ -82,7 +82,7 @@ public class Move
 
             if (frame.isNextRegister(nTo))
                 {
-                frame.introduceVarCopy(nFrom);
+                frame.introduceVarCopy(nTo, nFrom);
                 }
 
             if (isDeferred(hValue))

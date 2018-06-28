@@ -82,7 +82,7 @@ public class Var_D
 
         RefHandle hRef = ((VarSupport) clz.getSupport()).createRefHandle(clz, null);
 
-        frame.introduceResolvedVar(clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
+        frame.introduceResolvedVar(m_nVar, clz.getType(), null, Frame.VAR_DYNAMIC_REF, hRef);
 
         return iPC + 1;
         }

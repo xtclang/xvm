@@ -134,7 +134,7 @@ public class P_Var
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(hRef.getType());
+            frame.introduceResolvedVar(m_nRetValue, hRef.getType());
             }
 
         return frame.assignValue(m_nRetValue, hRef);

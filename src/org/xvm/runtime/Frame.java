@@ -1072,29 +1072,26 @@ public class Frame
         return ahArg;
         }
 
-    // check if the specified index points to a next available register
+    // check if the specified index points to an unused register
     public boolean isNextRegister(int nVar)
         {
-        int nNext = f_anNextVar[m_iScope];
-        if (nVar < nNext)
-            {
-            return false;
-            }
-        if (nVar == nNext)
-            {
-            return true;
-            }
-        throw new IllegalStateException("Invalid register index");
+        return nVar >= f_anNextVar[m_iScope];
         }
 
     /**
      * Introduce a new variable for the specified type, style and an optional value.
-     *
-     * Note: this method increments up the "nextVar" index
      */
-    public void introduceResolvedVar(TypeConstant type, String sName, int nStyle, ObjectHandle hValue)
+    public void introduceResolvedVar(int nVar, TypeConstant type, String sName, int nStyle, ObjectHandle hValue)
         {
-        int nVar = f_anNextVar[m_iScope]++;
+        // TODO: remove along with the manually compiled code
+        if (nVar == -1)
+            {
+            nVar = f_anNextVar[m_iScope]++;
+            }
+        else
+            {
+            f_anNextVar[m_iScope] = nVar + 1;
+            }
 
         VarInfo info = new VarInfo(type, nStyle);
         info.setName(sName);
@@ -1110,12 +1107,12 @@ public class Frame
      * Introduce a new unnamed standard variable for the specified type.
      *
      * Note: this method increments up the "nextVar" index
-     *
+     *  @param nVar       the variable to introduce
      * @param constType  the type constant
      */
-    public void introduceResolvedVar(TypeConstant constType)
+    public void introduceResolvedVar(int nVar, TypeConstant constType)
         {
-        introduceResolvedVar(constType, null, VAR_STANDARD, null);
+        introduceResolvedVar(nVar, constType, null, VAR_STANDARD, null);
         }
 
     /**
@@ -1123,11 +1120,20 @@ public class Frame
      *
      * Note: this method increments up the "nextVar" index
      *
+     * @param nVar     the variable to introduce
      * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
      */
-    public void introduceVar(int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
+    public void introduceVar(int nVar, int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
-        int nVar = f_anNextVar[m_iScope]++;
+        // TODO: remove along with the manually compiled code
+        if (nVar == -1)
+            {
+            nVar = f_anNextVar[m_iScope]++;
+            }
+        else
+            {
+            f_anNextVar[m_iScope] = nVar + 1;
+            }
 
         f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
 
@@ -1142,11 +1148,12 @@ public class Frame
      *
      * Note: this method increments up the "nextVar" index
      *
+     * @param nVar       the variable to introduce
      * @param constType  the type constant
      */
-    public void introduceVar(TypeConstant constType)
+    public void introduceVar(int nVar, TypeConstant constType)
         {
-        introduceVar(constType.getPosition(), 0, VAR_STANDARD, null);
+        introduceVar(nVar, constType.getPosition(), 0, VAR_STANDARD, null);
         }
 
     /**
@@ -1154,11 +1161,12 @@ public class Frame
      *
      * Note: this method increments up the "nextVar" index
      *
+     * @param nVar     the variable to introduce
      * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
      */
-    public void introduceVar(int nTypeId)
+    public void introduceVar(int nVar, int nTypeId)
         {
-        introduceVar(nTypeId, 0, VAR_STANDARD, null);
+        introduceVar(nVar, nTypeId, 0, VAR_STANDARD, null);
         }
 
     /**
@@ -1166,11 +1174,20 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
+     * @param nVar      the variable to introduce
      * @param nVarFrom  if positive, the register number; otherwise a constant id
      */
-    public void introduceVarCopy(int nVarFrom)
+    public void introduceVarCopy(int nVar, int nVarFrom)
         {
-        int nVar = f_anNextVar[m_iScope]++;
+        // TODO: remove along with the manually compiled code
+        if (nVar == -1)
+            {
+            nVar = f_anNextVar[m_iScope]++;
+            }
+        else
+            {
+            f_anNextVar[m_iScope] = nVar + 1;
+            }
 
         if (nVarFrom >= 0)
             {
@@ -1475,7 +1492,9 @@ public class Frame
 
             frame.f_anNextVar[nScope] = frame.f_anNextVar[nScope - 1];
 
-            frame.introduceResolvedVar(hException.getType(), sVarName, VAR_STANDARD, hException);
+            int nVar = frame.f_anNextVar[nScope]++;
+
+            frame.introduceResolvedVar(nVar, hException.getType(), sVarName, VAR_STANDARD, hException);
 
             frame.m_hException = null;
             }

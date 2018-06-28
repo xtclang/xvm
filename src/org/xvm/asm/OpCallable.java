@@ -144,7 +144,7 @@ public abstract class OpCallable extends Op
                     resolveGenerics(frame.getGenericsResolver());
                 }
 
-            frame.introduceResolvedVar(typeRet);
+            frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
@@ -165,7 +165,7 @@ public abstract class OpCallable extends Op
                         resolveGenerics(frame.getGenericsResolver());
                 }
 
-            frame.introduceResolvedVar(typeRet);
+            frame.introduceResolvedVar(m_nRetValue, typeRet);
             }
         }
 
@@ -189,7 +189,7 @@ public abstract class OpCallable extends Op
                         }
                     }
 
-                frame.introduceResolvedVar(atypeRet[i]);
+                frame.introduceResolvedVar(anRet[i], atypeRet[i]);
                 }
             }
         }

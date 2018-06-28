@@ -38,51 +38,6 @@ public class xTestApp extends xModule
         {
         // --- getIntValue - compiled!
         // --- getStringValue - compiled!
-
-        // --- test1()
-        MethodStructure ftTest1 = getMethodStructure("test1", VOID, VOID);
-        ftTest1.createCode()
-            .add(new Var_DN(
-                adapter.getClassTypeConstId("@annotations.InjectedRef Ref<io.Console>"),
-                adapter.ensureValueConstantId("console"))) // #0 (console)
-            .add(new X_Print(adapter.ensureValueConstantId("\n# in TestApp.test1() #")))
-            .add(new Var_N(adapter.getClassTypeConstId("String"),
-                adapter.ensureValueConstantId("s"))) // #1 (s)
-            .add(new Call_01(adapter.getMethodConstId("TestApp", "getStringValue"), 1))
-            .add(new Invoke_10(0, adapter.getMethodConstId("io.Console", "print"),
-                adapter.ensureValueConstantId("\n***** ")))
-            .add(new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"), 1))
-            .add(new Invoke_10(0, adapter.getMethodConstId("io.Console", "println"),
-                adapter.ensureValueConstantId("")))
-
-            .add(new Var_N(adapter.getClassTypeConstId("Int64"),
-                adapter.ensureValueConstantId("i"))) // #2 (i)
-            .add(new Call_01(adapter.getMethodConstId("TestApp", "getIntValue"), 2))
-            .add(new X_Print(2))
-
-            .add(new Enter())
-            .add(new Var_N(adapter.getClassTypeConstId("Int64"),
-                adapter.ensureValueConstantId("of"))) // #3 (of)
-            .add(new Invoke_NN(1, adapter.getMethodConstId("String", "indexOf"),
-                new int[]{
-                    adapter.ensureValueConstantId("world"),
-                    adapter.ensureValueConstantId(null)
-                },
-                new int[]{4, 3})) // next register #4
-            .add(new JumpFalse(4, 7)) // -> Exit
-
-            .add(new P_Get(adapter.getPropertyConstId("String", "size"), 1, 5)) // next register #5
-            .add(new GP_Add(5, 3, 5))
-            .add(new IsEq(5, adapter.ensureValueConstantId(18), 6)) // next register #6
-            .add(new Assert(6))
-
-            .add(new Invoke_01(3, adapter.getMethodConstId("Object", "to", VOID, STRING),
-                7))  // next register #7
-            .add(new X_Print(7))
-            .add(new Exit())
-
-            .add(new Return_0());
-
         // --- test2()
 
         MethodStructure ftTest2 = getMethodStructure("test2", VOID);
@@ -534,18 +489,16 @@ public class xTestApp extends xModule
             .add(new IsEq(4, adapter.ensureValueConstantId(4), 5)) // next register #5
             .add(new AssertV(5, adapter.ensureValueConstantId("of == 4"), new int[]{4}))
 
-            .add(new Enter())
             .add(new Var_N(adapter.getClassTypeConstId("String"),
                 adapter.ensureValueConstantId("s"))) // #6
             .add(new Call_1N(adapter.getMethodConstId("TestApp", "testConditional"),
                 adapter.ensureValueConstantId(1), new int[]{7, 6})) // next register #7
-            .add(new JumpFalse(7, 2))
+            .add(new JumpFalse(7, 1))
             .add(new X_Print(6))
-            .add(new Exit())
 
             .add(new Call_1T(adapter.getMethodConstId("TestApp", "testConditional"),
-                adapter.ensureValueConstantId(-1), 6)) // next register #6
-            .add(new X_Print(6))
+                adapter.ensureValueConstantId(-1), 8)) // next register #8
+            .add(new X_Print(8))
 
             .add(new Return_0());
 
@@ -708,7 +661,6 @@ public class xTestApp extends xModule
         // --- run()
         MethodStructure mtRun = getMethodStructure("run", VOID, VOID);
         mtRun.createCode()
-            .add(new Call_00(adapter.getMethodConstId("TestApp", "test1")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "test2")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testService")))
             .add(new Call_00(adapter.getMethodConstId("TestApp", "testService2")))

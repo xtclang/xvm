@@ -120,7 +120,7 @@ public class New_1
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clzTarget.getType());
+                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
                 }
 
             if (isDeferred(ahVar[0]))

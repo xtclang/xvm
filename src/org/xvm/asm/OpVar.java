@@ -94,9 +94,10 @@ public abstract class OpVar
     public void simulate(Scope scope)
         {
         int iReg = scope.allocVar();
+        // TODO: remove the null check when manually compiled code is gone
         if (m_reg != null)
             {
-            m_reg.assignIndex(iReg);
+            m_nVar = m_reg.assignIndex(iReg);
             }
         }
 
@@ -126,4 +127,9 @@ public abstract class OpVar
      * The type constant id.
      */
     protected int m_nType;
+
+    /**
+     * The var index.
+     */
+    protected int m_nVar = -1;
     }

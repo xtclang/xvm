@@ -140,7 +140,7 @@ public class Var_TN
 
             TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
 
-            frame.introduceVar(convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hTuple);
+            frame.introduceVar(m_nVar, convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }

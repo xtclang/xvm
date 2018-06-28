@@ -129,7 +129,7 @@ public class Var_S
             ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
             hArray.makeImmutable();
 
-            frame.introduceResolvedVar(typeSequence, null, Frame.VAR_STANDARD, hArray);
+            frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }

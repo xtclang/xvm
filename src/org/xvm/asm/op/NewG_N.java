@@ -124,7 +124,7 @@ public class NewG_N
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceResolvedVar(clzTarget.getType());
+                frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
                 }
 
             if (anyDeferred(ahVar))

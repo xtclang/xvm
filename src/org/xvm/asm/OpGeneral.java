@@ -120,7 +120,7 @@ public abstract class OpGeneral
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVarCopy(m_nTarget);
+                frame.introduceVarCopy(m_nRetValue, m_nTarget);
                 }
 
             if (isDeferred(hTarget))
@@ -158,7 +158,7 @@ public abstract class OpGeneral
 
             if (frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVarCopy(m_nTarget);  // TODO GG type *must* come from the op method
+                frame.introduceVarCopy(m_nRetValue, m_nTarget);  // TODO GG type *must* come from the op method
                 }
 
             if (isDeferred(hTarget) || isDeferred(hArg))

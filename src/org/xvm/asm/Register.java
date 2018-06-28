@@ -136,7 +136,7 @@ public class Register
      *
      * @param iArg a valid argument index
      */
-    public void assignIndex(int iArg)
+    public int assignIndex(int iArg)
         {
         if (m_iArg != UNKNOWN)
             {
@@ -144,7 +144,7 @@ public class Register
             }
 
         validateIndex(iArg);
-        m_iArg = iArg;
+        return m_iArg = iArg;
         }
 
     /**

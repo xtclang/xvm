@@ -121,7 +121,7 @@ public class NewG_T
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(clzTarget.getType());
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
         return clzTarget.getTemplate().construct(frame, constructor, clzTarget,

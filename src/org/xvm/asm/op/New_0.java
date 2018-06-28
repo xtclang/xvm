@@ -88,7 +88,7 @@ public class New_0
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceResolvedVar(clzTarget.getType());
+            frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
             }
 
         return template.construct(frame, constructor, clzTarget, ahVar, m_nRetValue);

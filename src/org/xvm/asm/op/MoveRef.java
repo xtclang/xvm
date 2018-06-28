@@ -78,7 +78,7 @@ public class MoveRef
 
             if (frame.isNextRegister(m_nToValue))
                 {
-                frame.introduceResolvedVar(infoSrc.getType());
+                frame.introduceResolvedVar(m_nToValue, infoSrc.getType());
                 }
 
             // the destination type must be the same as the source
@@ -92,7 +92,7 @@ public class MoveRef
 
             if (frame.isNextRegister(m_nToValue))
                 {
-                frame.introduceResolvedVar(clzRef.getType());
+                frame.introduceResolvedVar(m_nToValue, clzRef.getType());
                 }
 
             // the destination type must be the same as the source

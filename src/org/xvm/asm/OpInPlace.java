@@ -135,7 +135,7 @@ public abstract class OpInPlace
 
                     if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                         {
-                        frame.introduceVarCopy(nTarget);
+                        frame.introduceVarCopy(m_nRetValue, nTarget);
                         }
 
                     return completeWithRegister(frame, hTarget);
@@ -146,7 +146,7 @@ public abstract class OpInPlace
                 // operation on a local property
                 if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                     {
-                    frame.introduceVarCopy(nTarget);
+                    frame.introduceVarCopy(m_nRetValue, nTarget);
                     }
 
                 PropertyConstant constProperty = (PropertyConstant)

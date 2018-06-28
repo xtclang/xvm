@@ -120,7 +120,7 @@ public abstract class OpPropInPlace
 
             if (isAssignOp() && frame.isNextRegister(m_nRetValue))
                 {
-                frame.introduceVarCopy(m_nPropId);
+                frame.introduceVarCopy(m_nRetValue, m_nPropId);
                 }
 
             if (isDeferred(hTarget))

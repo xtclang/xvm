@@ -127,7 +127,7 @@ public class Var_T
 
             TupleHandle hTuple = xTuple.makeHandle(clzTuple, ahArg);
 
-            frame.introduceResolvedVar(clzTuple.getType(), null, Frame.VAR_STANDARD, hTuple);
+            frame.introduceResolvedVar(m_nVar, clzTuple.getType(), null, Frame.VAR_STANDARD, hTuple);
 
             return iPC + 1;
             }

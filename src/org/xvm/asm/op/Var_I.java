@@ -120,7 +120,7 @@ public class Var_I
                 return R_REPEAT;
                 }
 
-            frame.introduceVar(convertId(m_nType), 0, Frame.VAR_STANDARD, hArg);
+            frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, hArg);
 
             return iPC + 1;
             }

@@ -142,7 +142,7 @@ public class Var_SN
             ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hArray);
+            frame.introduceVar(m_nVar, convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
