@@ -377,6 +377,12 @@ public class IntConstant
         }
 
     @Override
+    public PackedInteger getIntValue()
+        {
+        return m_pint;
+        }
+
+    @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (that == null

@@ -11,6 +11,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.util.PackedInteger;
+
 import static org.xvm.util.Handy.appendIntAsHex;
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.readUtf8Char;
@@ -73,6 +75,19 @@ public class CharConstant
     public Format getFormat()
         {
         return Format.Char;
+        }
+
+    @Override
+    public PackedInteger getIntValue()
+        {
+        return PackedInteger.valueOf(m_chVal);
+        }
+
+    @Override
+    public int getIntCardinality()
+        {
+        // unicode goes from 0 to 10FFFF
+        return 0x10FFFF + 1;
         }
 
     @Override

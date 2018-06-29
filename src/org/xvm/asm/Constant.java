@@ -248,6 +248,17 @@ public abstract class Constant
             // TODO arrays and lists and maps and tuples and so on
             }
         }
+
+    public PackedInteger getIntValue()
+        {
+        throw new IllegalStateException(getClass().getSimpleName());
+        }
+
+    public int getIntCardinality()
+        {
+        throw new IllegalStateException(getClass().getSimpleName());
+        }
+
     /**
      * Apply the specified operation to this Constant.
      *

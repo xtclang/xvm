@@ -142,6 +142,12 @@ public class UInt8Constant
         }
 
     @Override
+    public PackedInteger getIntValue()
+        {
+        return PackedInteger.valueOf(m_nVal);
+        }
+
+    @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (that == null

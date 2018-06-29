@@ -3873,6 +3873,42 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is considered to be convertible to an Int for purposes of the
+     *         compiler and runtime
+     */
+    public boolean isIntConvertible()
+        {
+        if (!isExplicitClassIdentity(false))
+            {
+            return false;
+            }
+
+        switch (getEcstasyClassName())
+            {
+            case "Bit":
+            case "Nibble":
+            case "Int8":
+            case "Int16":
+            case "Int32":
+            case "Int64":
+            case "Int128":
+            case "VarInt":
+            case "UInt8":
+            case "UInt16":
+            case "UInt32":
+            case "UInt64":
+            case "UInt128":
+            case "VarUInt":
+            case "Char":
+                return true;
+
+            default:
+                // enums only
+                return getExplicitClassFormat() == Component.Format.ENUM;
+            }
+        }
+
+    /**
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null

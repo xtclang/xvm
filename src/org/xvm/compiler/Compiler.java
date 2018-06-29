@@ -846,4 +846,28 @@ public class Compiler
      * The expression on the left-hand-side of the colon does not have the potential to use the expression on the right-hand-side.
      */
     public static final String SHORT_CIRCUIT_REQUIRED             = "COMPILER-74";
+    /**
+     * A "switch" can only contain one "default" statement.
+     */
+    public static final String SWITCH_DEFAULT_DUPLICATE           = "COMPILER-75";
+    /**
+     * A "switch" expression must contain a "default" statement.
+     */
+    public static final String SWITCH_DEFAULT_REQUIRED            = "COMPILER-76";
+    /**
+     * The "switch" contains more than one "case" statement for the value: {0}.
+     */
+    public static final String SWITCH_CASE_DUPLICATE              = "COMPILER-77";
+    /**
+     * A "switch" requires a constant value for the "case" statement.
+     */
+    public static final String SWITCH_CASE_CONSTANT_REQUIRED      = "COMPILER-78";
+    /**
+     * A "switch" must begin with a "case" statement.
+     */
+    public static final String SWITCH_CASE_EXPECTED               = "COMPILER-79";
+    /**
+     * A "switch" expression cannot end with a "case" statement.
+     */
+    public static final String SWITCH_CASE_DANGLING               = "COMPILER-80";
     }

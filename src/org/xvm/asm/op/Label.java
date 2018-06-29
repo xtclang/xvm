@@ -49,7 +49,7 @@ public class Label
         sb.append(m_sName)
           .append(": ");
 
-        Op op = getSuffix();
+        Op op = getNextOp();
         if (op != null)
             {
             sb.append(op.toString());

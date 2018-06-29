@@ -41,9 +41,9 @@ public class JumpVal
         {
         assert aOpCase != null;
 
-        m_argVal = arg;
-        m_aArgCase = aArgCase;
-        m_aOpCase = aOpCase;
+        m_argVal    = arg;
+        m_aArgCase  = aArgCase;
+        m_aOpCase   = aOpCase;
         m_opDefault = opDefault;
         }
 
@@ -58,17 +58,16 @@ public class JumpVal
         {
         m_nArg = readPackedInt(in);
 
-        int cCases = readMagnitude(in);
-
+        int   cCases    = readMagnitude(in);
         int[] anArgCase = new int[cCases];
-        int[] aofCase = new int[cCases];
+        int[] aofCase   = new int[cCases];
         for (int i = 0; i < cCases; ++i)
             {
             anArgCase[i] = readPackedInt(in);
-            aofCase[i] = readPackedInt(in);
+            aofCase  [i] = readPackedInt(in);
             }
         m_anArgCase = anArgCase;
-        m_aofCase = aofCase;
+        m_aofCase   = aofCase;
 
         m_ofDefault = readPackedInt(in);
         }
@@ -79,7 +78,8 @@ public class JumpVal
         {
         if (m_argVal != null)
             {
-            m_nArg = encodeArgument(m_argVal, registry);
+            m_nArg      = encodeArgument(m_argVal, registry);
+            m_anArgCase = encodeArguments(m_aArgCase, registry);
             }
 
         out.writeByte(getOpCode());
@@ -87,14 +87,14 @@ public class JumpVal
         writePackedLong(out, m_nArg);
 
         int[] anArgCase = m_anArgCase;
-        int[] aofCase = m_aofCase;
-        int c = anArgCase.length;
+        int[] aofCase   = m_aofCase;
+        int   c         = anArgCase.length;
 
         writePackedLong(out, c);
         for (int i = 0; i < c; ++i)
             {
             writePackedLong(out, anArgCase[i]);
-            writePackedLong(out, aofCase[i]);
+            writePackedLong(out, aofCase  [i]);
             }
 
         writePackedLong(out, m_ofDefault);
@@ -155,7 +155,7 @@ public class JumpVal
 
         return Index == null
             ? iPC + m_ofDefault
-            : iPC + m_aofCase[Index.intValue()];
+            : iPC + Index.intValue();
         }
 
     private Map<ObjectHandle, Integer> ensureJumpMap(Frame frame)
@@ -204,10 +204,10 @@ public class JumpVal
     protected int[] m_aofCase;
     protected int   m_ofDefault;
 
-    private Argument m_argVal;
+    private Argument   m_argVal;
     private Argument[] m_aArgCase;
-    private Op[] m_aOpCase;
-    private Op m_opDefault;
+    private Op[]       m_aOpCase;
+    private Op         m_opDefault;
 
     // cached jump map
     private Map<ObjectHandle, Integer> m_mapJump;
