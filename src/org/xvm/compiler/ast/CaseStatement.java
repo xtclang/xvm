@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.List;
 
+import org.xvm.asm.op.Label;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -26,6 +27,39 @@ public class CaseStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return true iff this is the "default:" case
+     */
+    public boolean isDefault()
+        {
+        return exprs == null;
+        }
+
+    /**
+     * @return the expressions of the values of the case, or null if this is the "default:" case
+     */
+    public List<Expression> getExpressions()
+        {
+        return exprs;
+        }
+
+    /**
+     * @return the label assigned to this case statement, or null if none has been assigned
+     */
+    public Label getLabel()
+        {
+        return m_label;
+        }
+
+    /**
+     * @param label  the label for this case statement
+     */
+    void setLabel(Label label)
+        {
+        assert m_label == null;
+        m_label = label;
+        }
 
     @Override
     public long getStartPosition()
@@ -84,6 +118,8 @@ public class CaseStatement
     protected Token            keyword;
     protected List<Expression> exprs;
     protected long             lEndPos;
+
+    private transient Label m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
     }

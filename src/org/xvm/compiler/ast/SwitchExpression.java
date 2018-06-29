@@ -4,16 +4,20 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -112,7 +116,7 @@ public class SwitchExpression
 // REVIEW we should NOT be using "instanceof" here; it should be part of ConditionalStatement API
                 if (condNew instanceof VariableDeclarationStatement)
                     {
-                    notImplemented(); // TODO
+                    typeCase = ((VariableDeclarationStatement) condNew).getType();
                     }
                 else if (condNew instanceof ExpressionStatement)
                     {
@@ -136,20 +140,88 @@ public class SwitchExpression
                 ? getImplicitType(ctx)
                 : typeRequired;
 
-        List<TypeConstant> listTypes = new ArrayList<>();
-
-
-        Constant constVal  = null; // TODO - cond has to be not-null w/ constant and a matching case
-
-        Set<Constant> setCase = new HashSet<>();
-        for (AstNode node : contents)
+        Constant           constVal     = null;
+        List<TypeConstant> listTypes    = new ArrayList<>();
+        Set<Constant>      setCase      = new HashSet<>();
+        Label              labelDefault = null;
+        Label              labelCurrent = null;
+        int                nLabels      = 0;
+        List<AstNode>      listNodes    = contents;
+        for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
+            AstNode node = listNodes.get(iNode);
             if (node instanceof CaseStatement)
                 {
-                // validate the expression
+                if (labelCurrent == null)
+                    {
+                    labelCurrent = new Label("case_" + (++nLabels));
+                    }
+
+                CaseStatement    stmtCase  = (CaseStatement) node;
+                List<Expression> listExprs = stmtCase.exprs;
+                if (listExprs == null)
+                    {
+                    if (labelDefault == null)
+                        {
+                        labelDefault = labelCurrent;
+                        }
+                    else
+                        {
+                        // TODO log error
+                        throw new IllegalStateException("multiple default labels");
+                        }
+                    }
+                else
+                    {
+                    // validate the expressions in the case label
+                    for (int iExpr = 0, cExprs = listExprs.size(); iExpr < cExprs; ++iExpr)
+                        {
+                        Expression exprCase = listExprs.get(iExpr);
+                        Expression exprNew  = exprCase.validate(ctx, typeCase, errs);
+                        if (exprNew == null)
+                            {
+                            fValid = false;
+                            }
+                        else
+                            {
+                            if (exprNew != exprCase)
+                                {
+                                listExprs.set(iExpr, exprCase = exprNew);
+                                }
+                            if (exprCase.isConstant())
+                                {
+                                Constant constCase = exprCase.toConstant();
+                                if (mapCase.containsKey(constCase))
+                                    {
+                                    // collision
+                                    // TODO log error
+                                    throw new IllegalStateException("duplicate case: " + constCase);
+                                    }
+                                else
+                                    {
+                                    mapCase.put(constCase, labelCurrent);
+
+                                    // TODO check if this is the one we're looking for to find the constant value of the switch
+                                    // TODO - cond has to be not-null w/ constant and a matching case
+                                    }
+                                }
+                            else
+                                {
+                                // TODO log error
+                                throw new IllegalStateException("expr not constant: " + exprCase);
+                                }
+                            }
+                        }
+                    }
                 }
             else
                 {
+                if (labelCurrent == null)
+                    {
+                    // TODO log error
+                    throw new IllegalStateException("value precedes the first case");
+                    }
+
                 Expression exprOld = (Expression) node;
                 Expression exprNew = exprOld.validate(ctx, typeRequest, errs);
                 if (exprNew == null)
@@ -160,7 +232,7 @@ public class SwitchExpression
                     {
                     if (exprNew != exprOld)
                         {
-                        // TODO keep new expression
+                        listNodes.set(iNode, exprNew);
                         }
 
                     if (listTypes != null)
@@ -168,30 +240,30 @@ public class SwitchExpression
                         listTypes.add(exprNew.getType());
                         }
 
-                    // TODO verify has constant / is constant
-                    if (exprNew.isConstant())
-                        {
-                        Constant constCase = exprNew.toConstant();
-                        if (setCase.add(constCase))
-                            {
-                            if (constCond != null && constCond.equals(constCase))
-                                {
-                                // TODO this is the one specifying the constant value!!! set a flag and grab the next expression
-                                }
-                            }
-                        else
-                            {
-                            // collision
-                            // TODO log error
-                            }
-                        }
+                    labelCurrent = null;
+
+                    // TODO if this is the one that we're looking for for the constant value of the switch ...
+                    // if (... && exprNew.isConstant())
+                    //     {
+                    //     constVal = exprNew.toConstant();
+                    //     }
                     }
                 }
             }
 
+        if (labelCurrent != null)
+            {
+            // TODO log error
+            throw new IllegalStateException("missing value for the last case");
+            }
+
+        if (labelDefault == null)
+            {
+            // TODO this means that the switch "short circuits"
+            }
+
         TypeConstant typeActual = ListExpression.inferCommonType(
                 listTypes.toArray(new TypeConstant[listTypes.size()]));
-        // TODO handle null, handle error cases
 
         if (fScope)
             {
@@ -201,6 +273,19 @@ public class SwitchExpression
         return finishValidation(typeRequired, typeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
+    @Override
+    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+        {
+        if (isConstant())
+            {
+            super.generateAssignment(code, LVal, errs);
+            }
+
+        // TODO need cases to labels
+        // TODO need labels to expressions
+        code.add(new JumpVal(argVal, aArgCase, aLabels, labelDefault));
+        for (Expression expr : )
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
