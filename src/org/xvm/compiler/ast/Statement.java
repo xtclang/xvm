@@ -131,7 +131,7 @@ public abstract class Statement
         {
         if (fReachable)
             {
-            code.updateLineNumber(Source.calculateLine(getStartPosition()));
+            updateLineNumber(code);
             }
         else
             {
