@@ -35,6 +35,12 @@ public class ExpressionStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public boolean hasExpression()
+        {
+        return true;
+        }
+
     /**
      * @return the underlying expression
      */
@@ -109,26 +115,32 @@ public class ExpressionStatement
         {
         boolean    fValid = true;
         Expression exprNew;
-        if (getUsage() == Usage.Standalone)
+        switch (getUsage())
             {
-            exprNew = expr.validateMulti(ctx, TypeConstant.NO_TYPES, errs);
-            }
-        else
-            {
-            m_rte = RuntimeEval.RequiresEval;
-            exprNew = expr.validate(ctx, pool().typeBoolean(), errs);
+            case Standalone:
+            case Switch:
+                exprNew = expr.validate(ctx, null, errs);
+                break;
 
-            // handle situations in which the expression is always true or always false
-            if (exprNew != null && exprNew.isConstant())
+            default:
                 {
-                // there are only two values that we're interested in; assume anything else
-                // indicates a compiler error, and that's someone else's problem to deal with
-                Constant constVal = exprNew.toConstant();
-                m_rte = constVal.equals(pool().valTrue())
-                            ? RuntimeEval.AlwaysTrue
-                            : RuntimeEval.AlwaysFalse;
+                m_rte = RuntimeEval.RequiresEval;
+                exprNew = expr.validate(ctx, pool().typeBoolean(), errs);
+
+                // handle situations in which the expression is always true or always false
+                if (exprNew != null && exprNew.isConstant())
+                    {
+                    // there are only two values that we're interested in; assume anything else
+                    // indicates a compiler error, and that's someone else's problem to deal with
+                    Constant constVal = exprNew.toConstant();
+                    m_rte = constVal.equals(pool().valTrue())
+                                ? RuntimeEval.AlwaysTrue
+                                : RuntimeEval.AlwaysFalse;
+                    }
                 }
+                break;
             }
+
         if (exprNew != expr)
             {
             fValid &= exprNew != null;
@@ -181,6 +193,24 @@ public class ExpressionStatement
             }
 
         return fCompletes;
+        }
+
+    @Override
+    protected Label getShortCircuitLabel(Expression exprChild)
+        {
+        assert exprChild == expr;
+        switch (getUsage())
+            {
+            case Switch:
+                return getLabel();
+
+            case If:
+            case While:
+            case For:
+                // TODO?
+            default:
+                return super.getShortCircuitLabel(exprChild);
+            }
         }
 
 

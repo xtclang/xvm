@@ -85,6 +85,14 @@ public class VariableDeclarationStatement
         return name == null ? "null" : name.getValueText();
         }
 
+    /**
+     * @return the type being assigned to
+     */
+    public TypeConstant getType()
+        {
+        return type.getType();
+        }
+
     @Override
     public long getStartPosition()
         {

@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.op.Label;
+import org.xvm.compiler.ast.Expression.Assignable;
 
 
 /**
@@ -111,6 +112,22 @@ public abstract class ConditionalStatement
             assert m_stmtNonDecl != null;
             }
         return m_stmtNonDecl;
+        }
+
+    /**
+     * @return true iff this form of ConditionalStatement has a conditional expression
+     */
+    public boolean hasExpression()
+        {
+        return false;
+        }
+
+    /**
+     * @return the conditional expression, if applicable
+     */
+    public Expression getExpression()
+        {
+        throw new IllegalStateException(this.getClass().getName());
         }
 
     /**

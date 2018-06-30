@@ -1014,9 +1014,9 @@ public abstract class Expression
         }
 
     @Override
-    protected Label getShortCircuitLabel()
+    protected Label getShortCircuitLabel(Expression exprChild)
         {
-        return getParent().getShortCircuitLabel();
+        return getParent().getShortCircuitLabel(this);
         }
 
     /**

@@ -248,6 +248,16 @@ public abstract class Constant
             // TODO arrays and lists and maps and tuples and so on
             }
         }
+
+    /**
+     * @return the int representation of this constant, iff {@link TypeConstant#isIntConvertible()}
+     *         returns {@code true} for the type of the constant
+     */
+    public PackedInteger getIntValue()
+        {
+        throw new IllegalStateException(getClass().getSimpleName());
+        }
+
     /**
      * Apply the specified operation to this Constant.
      *

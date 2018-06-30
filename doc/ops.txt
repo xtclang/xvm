@@ -56,7 +56,7 @@
 +JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT “instanceof" specified type
  JMP_COND   COND, addr
  JMP_NCOND  COND, addr
-+JMP_INT    rvalue, #:(addr), addr-default          ; if value equals (0,1,2,...), jump to address, otherwise default
++JMP_INT    rvalue, offset, #:(addr), addr-default  ; if (value - offset) equals (0,1,2,...), jump to corresponding address, otherwise default
 +JMP_VAL    rvalue, #:(CONST, addr), addr-default   ; if value equals a constant, jump to address, otherwise default
 
 // Value comparisons (mostly Boolean checks)

@@ -272,9 +272,11 @@ public abstract class AstNode
     /**
      * This must be overridden by any AST node that supports short circuiting children.
      *
+     * @param exprChild  the child that is requesting the label
+     *
      * @return the label to jump to when the expression short-circuits.
      */
-    protected Label getShortCircuitLabel()
+    protected Label getShortCircuitLabel(Expression exprChild)
         {
         throw new IllegalStateException(this.getClass().getName());
         }

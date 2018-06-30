@@ -3873,6 +3873,100 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type is considered to be convertible to an Int for purposes of the
+     *         compiler and runtime
+     */
+    public boolean isIntConvertible()
+        {
+        if (!isExplicitClassIdentity(false))
+            {
+            return false;
+            }
+
+        switch (getEcstasyClassName())
+            {
+            case "Bit":
+            case "Nibble":
+            case "Int8":
+            case "Int16":
+            case "Int32":
+            case "Int64":
+            case "Int128":
+            case "VarInt":
+            case "UInt8":
+            case "UInt16":
+            case "UInt32":
+            case "UInt64":
+            case "UInt128":
+            case "VarUInt":
+            case "Char":
+                return true;
+
+            default:
+                // enums only
+                return getExplicitClassFormat() == Component.Format.ENUM;
+            }
+        }
+
+    /**
+     * @return the cardinality of the integer representation for this set of constants, or
+     *         {@link Integer#MAX_VALUE} if the range is too large to express with an int
+     */
+    public int getIntCardinality()
+        {
+        assert isIntConvertible();
+
+        switch (getEcstasyClassName())
+            {
+            case "Bit":
+                return 2;
+
+            case "Nibble":
+                return 0x10;
+
+            case "Int8":
+            case "UInt8":
+                return 0x100;
+
+            case "Int16":
+            case "UInt16":
+                return 0x10000;
+
+            case "Char":
+                // unicode goes from 0 to 10FFFF
+                return 0x10FFFF + 1;
+
+            case "Int32":
+            case "UInt32":
+            case "Int64":
+            case "UInt64":
+            case "Int128":
+            case "UInt128":
+            case "VarInt":
+            case "VarUInt":
+                return Integer.MAX_VALUE;
+
+            default:
+                // REVIEW GG
+                // count the enum values (each ordinal value)
+                ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+                int c = 0;
+                for (Component child : clzEnum.children())
+                    {
+                    if (child.getFormat() == Component.Format.ENUMVALUE)
+                        {
+                        ++c;
+                        }
+                    else
+                        {
+                        break;
+                        }
+                    }
+                return c;
+            }
+        }
+
+    /**
      * Find an underlying TypeConstant of the specified class.
      *
      * @return the matching TypeConstant or null

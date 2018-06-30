@@ -7,10 +7,14 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -115,6 +119,28 @@ public class SingletonConstant
     public Format getFormat()
         {
         return m_fmt;
+        }
+
+    @Override
+    public PackedInteger getIntValue()
+        {
+        if (m_constClass.getType().isIntConvertible())
+            {
+            // REVIEW GG
+            // need an ordinal value for the enum that this represents
+            ClassStructure clzThis   = (ClassStructure) m_constClass.getComponent();
+            ClassStructure clzParent = (ClassStructure) clzThis.getParent();
+            int i = 0;
+            for (Component child : clzParent.children())
+                {
+                if (child == clzThis)
+                    {
+                    return PackedInteger.valueOf(i);
+                    }
+                ++i;
+                }
+            }
+        return super.getIntValue();
         }
 
     @Override

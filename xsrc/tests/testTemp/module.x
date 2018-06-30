@@ -15,9 +15,12 @@ module TestTemp.xqiz.it
         testElvis();
         testLoop();
         testElseExpr();
+        testSwitchExpr();
+        testSwitchExpr2();
 
         // REVIEW GG
         // testInterval();
+        // testArrays();
         // testTupleConv();
         // testMap();
         }
@@ -71,27 +74,6 @@ module TestTemp.xqiz.it
         console.println("!b=" + !b);
         console.println("~a=" + ~a);
         console.println("~b=" + ~b);
-        }
-
-    void testInterval()
-        {
-        console.println("\n** testInterval()");
-
-        Int a = 2;
-        Int b = 5;
-        // Object c = a..b;
-        Range<Int> c = a..b;
-        console.println("range=" + c);
-        }
-
-    void testArrays()
-        {
-        console.println("\n** testArrays()");
-
-        // ArrayList
-        Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
-
-        Int[] array = new Int[10]; // just like Java
         }
 
     void testIsA()
@@ -170,21 +152,6 @@ module TestTemp.xqiz.it
         console.println("a=" + a + ", b=" + b + ", a<=>b=" + (a <=> b));
         }
 
-    void testTupleConv()
-        {
-        console.println("\n** testTupleConv()");
-
-        Tuple<String, IntLiteral> t1 = getTupleSI();
-        console.println("t1 = " + t1);
-
-        Tuple<String, Int> t2 = getTupleSI();
-        }
-
-    Tuple<String, IntLiteral> getTupleSI()
-        {
-        return ("Hello", 4);
-        }
-
     void testElvis()
         {
         console.println("\n** testElvis()");
@@ -206,10 +173,9 @@ module TestTemp.xqiz.it
 
         IntLiteral? a = null;
         Int b = 7;
-        DEBUG;
         console.println("a=" + a + ", b=" + b + ", a?.to<Int>():b=" + (a?.to<Int>():b));
         // [11] VAR #-238, Ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
-        // [12] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)
+        // [12] VAR #-256, Ecstasy:Nullable | Ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
         // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
         // [14] JMP_NULL #3 :else1                                      // here is the '?' operator (ok!)
         // [15] NVOK_01 #3.to() -> #4                                   // here is the to<Int>() (ok!)
@@ -234,13 +200,6 @@ module TestTemp.xqiz.it
         //      Suspicious assignment from: Ecstasy:Int64 to: Ecstasy:Nullable | Ecstasy:IntLiteral
         }
 
-    void testMap()
-        {
-        console.println("\n** testMap()");
-
-        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
-        }
-
     void testLoop()
         {
         console.println("\n** testLoop()");
@@ -251,5 +210,89 @@ module TestTemp.xqiz.it
             console.println(i--);
             }
         console.println("We Have Lift-Off!!!");
+        }
+
+    void testSwitchExpr()
+        {
+        console.println("\n** testSwitchExpr()");
+
+        Int i = 0;
+        while (i++ < 10)
+            {
+            console.println("result for " + i + "=" + switch(i)
+                {
+                // default: "other";
+                case 2, 3:
+                case 4: "between 2 and 4";
+
+                case 7: "sieben";
+
+                default: "other";
+                });
+            }
+        }
+
+    void testSwitchExpr2()
+        {
+        console.println("\n** testSwitchExpr2()");
+
+        Int i = 0;
+        while (i++ < 10)
+            {
+            console.println("result for " + i + "=" + switch()
+                {
+                case i >= 2 && i <= 4: "between 2 and 4";
+
+                case i == 7: "sieben";
+
+                default: "other";
+                });
+            }
+        }
+
+    // TODO
+    void testInterval()
+        {
+        console.println("\n** testInterval()");
+
+        Int a = 2;
+        Int b = 5;
+        Object c = a..b;
+        // Range<Int> c = a..b;
+        console.println("range=" + c);
+        }
+
+    // TODO
+    void testArrays()
+        {
+        console.println("\n** testArrays()");
+
+        // ArrayList
+        Int[] list = new Int[]; // Array<Int> list = new Array<Int>();
+
+        Int[] array = new Int[10]; // just like Java
+        }
+
+    // TODO
+    void testTupleConv()
+        {
+        console.println("\n** testTupleConv()");
+
+        Tuple<String, IntLiteral> t1 = getTupleSI();
+        console.println("t1 = " + t1);
+
+        Tuple<String, Int> t2 = getTupleSI();
+        }
+    Tuple<String, IntLiteral> getTupleSI()
+        {
+        return ("Hello", 4);
+        }
+
+    // TODO
+    void testMap()
+        {
+        console.println("\n** testMap()");
+
+        console.println("Map:{1=one, 2=two}=" + Map:{1="one", 2="two"});
         }
     }
