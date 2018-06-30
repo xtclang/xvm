@@ -20,8 +20,10 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
@@ -403,6 +405,16 @@ public abstract class AstNode
      */
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
+        }
+
+    /**
+     * Helper to update the line number in the code to the line number on which this AstNode began.
+     *
+     * @param code  the Code being emitted
+     */
+    protected void updateLineNumber(Code code)
+        {
+        code.updateLineNumber(Source.calculateLine(getStartPosition()));
         }
 
 

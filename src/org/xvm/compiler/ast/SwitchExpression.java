@@ -446,7 +446,7 @@ public class SwitchExpression
                 CaseStatement stmt = ((CaseStatement) node);
                 if (!stmt.isDefault())
                     {
-                    // TODO line number stuff
+                    stmt.updateLineNumber(code);
                     Label labelCur = stmt.getLabel();
                     for (Expression expr : stmt.getExpressions())
                         {
@@ -470,7 +470,7 @@ public class SwitchExpression
                 {
                 Expression expr = (Expression) node;
 
-                // TODO line number stuff
+                expr.updateLineNumber(code);
                 code.add(labelCur);
                 expr.generateAssignment(code, LVal, errs);
                 code.add(new Jump(labelExit));
@@ -523,7 +523,7 @@ public class SwitchExpression
                 }
             else
                 {
-                // TODO line number stuff
+                node.updateLineNumber(code);
                 ((Expression) node).generateAssignment(code, LVal, errs);
                 if (i < c-1)
                     {
