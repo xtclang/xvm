@@ -69,17 +69,22 @@ public abstract class OpJump
      */
     protected String getLabelDesc()
         {
-        if (m_opDest instanceof Label)
+        return getLabelDesc(m_opDest, m_ofJmp);
+        }
+
+    public static String getLabelDesc(Op opDest, int ofJmp)
+        {
+        if (opDest instanceof Label)
             {
-            return ((Label) m_opDest).getName();
+            return ((Label) opDest).getName();
             }
-        else if (m_ofJmp != 0)
+        else if (ofJmp != 0)
             {
-            return (m_ofJmp > 0 ? "+" : "") + m_ofJmp;
+            return (ofJmp > 0 ? "+" : "") + ofJmp;
             }
-        else if (m_opDest != null)
+        else if (opDest != null)
             {
-            return "-> " + m_opDest;
+            return "-> " + opDest;
             }
         else
             {

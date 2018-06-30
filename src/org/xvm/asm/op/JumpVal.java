@@ -12,6 +12,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.OpJump;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -197,6 +199,49 @@ public class JumpVal
             {
             m_aArgCase[i] = registerArgument(m_aArgCase[i], registry);
             }
+        }
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
+        int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
+        int cLabels  = Math.max(cOps, cOffsets);
+
+        int cArgs    = m_aArgCase  == null ? 0 : m_aArgCase .length;
+        int cNArgs   = m_anArgCase == null ? 0 : m_anArgCase.length;
+        assert Math.max(cArgs, cNArgs) == cLabels;
+
+        sb.append(super.toString())
+          .append(' ')
+          .append(Argument.toIdString(m_argVal, m_nArg))
+          .append(", ")
+          .append(cLabels)
+          .append(":[");
+
+        for (int i = 0; i < cLabels; ++i)
+            {
+            Argument arg  = i < cArgs    ? m_aArgCase [i] : null;
+            int      nArg = i < cNArgs   ? m_anArgCase[i] : Register.UNKNOWN;
+            Op       op   = i < cOps     ? m_aOpCase  [i] : null;
+            int      of   = i < cOffsets ? m_aofCase  [i] : 0;
+
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+
+            sb.append(Argument.toIdString(arg, nArg))
+              .append(":")
+              .append(OpJump.getLabelDesc(op, of));
+            }
+
+        sb.append("], ")
+          .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
+
+        return sb.toString();
         }
 
     protected int   m_nArg;

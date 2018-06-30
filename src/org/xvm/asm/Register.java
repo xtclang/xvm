@@ -378,7 +378,7 @@ public class Register
     /**
      * A reserved argument index that represents an unknown or otherwise unassigned index.
      */
-    static final int UNKNOWN = Integer.MIN_VALUE;
+    public static final int UNKNOWN = Integer.MIN_VALUE;
 
     /**
      * The type of the value that will be held in the register.

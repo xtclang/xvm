@@ -16,9 +16,11 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.JumpInt;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.Label;
 
@@ -316,15 +318,15 @@ public class SwitchExpression
             listNodes.get(listNodes.size()-1).log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
             fValid = false;
             }
-        else if (labelDefault == null)
+        else if (constCond != null && constVal == null && fAllConsts)
+            {
+            constVal = constDefault;
+            }
+        else if (labelDefault == null && (!fIntConsts || listVals.size() < typeCase.getIntCardinality()))
             {
             // this means that the switch would "short circuit", which is not allowed
             log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
             fValid = false;
-            }
-        else if (constCond != null && constVal == null && fAllConsts)
-            {
-            constVal = constDefault;
             }
 
         TypeConstant typeActual = ListExpression.inferCommonType(
@@ -332,7 +334,7 @@ public class SwitchExpression
         if (typeActual == null)
             {
             typeActual = typeRequest == null
-                    ? pool.typeObject()
+                    ? pool.typeObject()  // REVIEW
                     : typeRequest;
             }
 
@@ -344,40 +346,62 @@ public class SwitchExpression
         // store the resulting information
         if (!fIfSwitch)
             {
-            assert listVals.size() == listLabels.size();
-            m_aconstCase = listVals  .toArray(new Constant[listVals  .size()]);
-            m_alabelCase = listLabels.toArray(new Label   [listLabels.size()]);
+            int cVals = listVals.size();
+            assert listLabels.size() == cVals;
+
+            // check if the JumpInt optimization can be used
+            boolean fUseJumpInt = false;
+            int     cRange      = 0;
+            if (pintMin != null)
+                {
+                PackedInteger pintRange = pintMax.sub(pintMin);
+                if (!pintRange.isBig())
+                    {
+                    // the idea is that if we have ints from 100,000 to 100,100, and there are roughly
+                    // 25+ of them, then we should go ahead and use the jump table optimization
+                    if (listVals.size() >= (pintRange.getLong() >>> 2))
+                        {
+                        cRange      = pintRange.getInt() + 1;
+                        fUseJumpInt = true;
+                        }
+                    }
+                }
+
+            if (fUseJumpInt)
+                {
+                Label[] aLabels = new Label[cRange];
+                for (int i = 0; i < cVals; ++i)
+                    {
+                    Label    label     = listLabels.get(i);
+                    Constant constCase = listVals.get(i);
+                    int      nIndex    = constCase.getIntValue().sub(pintMin).getInt();
+
+                    aLabels[nIndex] = label;
+                    }
+
+                // fill in any gaps
+                for (int i = 0; i < cRange; ++i)
+                    {
+                    if (aLabels[i] == null)
+                        {
+                        assert labelDefault != null;
+                        aLabels[i] = labelDefault;
+                        }
+                    }
+
+                m_alabelCase = aLabels;
+                m_pintOffset = pintMin;
+                }
+            else
+                {
+                m_aconstCase = listVals  .toArray(new Constant[cVals]);
+                m_alabelCase = listLabels.toArray(new Label   [cVals]);
+                }
             }
+
         m_labelDefault = labelDefault;
 
         return finishValidation(typeRequired, typeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
-        }
-
-    static PackedInteger getIntValue(Constant constVal)
-        {
-        switch (constVal.getFormat())
-            {
-            case IntLiteral:
-            case Bit:
-            case Nibble:
-            case Int8:
-            case Int16:
-            case Int32:
-            case Int64:
-            case Int128:
-            case VarInt:
-            case UInt8:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            case VarUInt:
-
-            case Char:
-
-            case Class:
-                // enum
-            }
         }
 
     @Override
@@ -459,8 +483,21 @@ public class SwitchExpression
         {
         Expression exprCond  = cond.getExpression();
         Argument   argVal    = exprCond.generateArgument(code, true, true, errs);
-        // TODO optimizations for ints, enums, etc. using JumpInt op
-        code.add(new JumpVal(argVal, m_aconstCase, m_alabelCase, m_labelDefault));
+
+        Label labelDefault = m_labelDefault;
+        if (labelDefault == null)
+            {
+            labelDefault = new Label("default_assert");
+            }
+
+        if (m_pintOffset != null)
+            {
+            code.add(new JumpInt(argVal, m_pintOffset, m_alabelCase, labelDefault));
+            }
+        else
+            {
+            code.add(new JumpVal(argVal, m_aconstCase, m_alabelCase, labelDefault));
+            }
 
         Label         labelCur  = null;
         Label         labelExit = new Label("switch_end");
@@ -475,7 +512,7 @@ public class SwitchExpression
                     {
                     code.add(labelNew);
 
-                    if (labelNew == m_labelDefault)
+                    if (labelNew == labelDefault)
                         {
                         // short-circuit also goes to the default label
                         code.add(cond.getLabel());
@@ -493,6 +530,13 @@ public class SwitchExpression
                     code.add(new Jump(labelExit));
                     }
                 }
+            }
+
+        if (labelDefault != m_labelDefault)
+            {
+            // default is an assertion
+            code.add(labelDefault);
+            code.add(new Assert(pool().valFalse()));
             }
 
         code.add(labelExit);
@@ -541,9 +585,10 @@ public class SwitchExpression
     protected List<AstNode>        contents;
     protected long                 lEndPos;
 
-    private transient Constant[] m_aconstCase;
-    private transient Label[]    m_alabelCase;
-    private transient Label      m_labelDefault;
+    private transient Constant[]    m_aconstCase;
+    private transient Label[]       m_alabelCase;
+    private transient Label         m_labelDefault;
+    private transient PackedInteger m_pintOffset;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
     }

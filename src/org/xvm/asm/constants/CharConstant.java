@@ -84,13 +84,6 @@ public class CharConstant
         }
 
     @Override
-    public int getIntCardinality()
-        {
-        // unicode goes from 0 to 10FFFF
-        return 0x10FFFF + 1;
-        }
-
-    @Override
     public TypeConstant resultType(Id op, Constant that)
         {
         ConstantPool pool = getConstantPool();

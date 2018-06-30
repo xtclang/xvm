@@ -249,12 +249,11 @@ public abstract class Constant
             }
         }
 
+    /**
+     * @return the int representation of this constant, iff {@link TypeConstant#isIntConvertible()}
+     *         returns {@code true} for the type of the constant
+     */
     public PackedInteger getIntValue()
-        {
-        throw new IllegalStateException(getClass().getSimpleName());
-        }
-
-    public int getIntCardinality()
         {
         throw new IllegalStateException(getClass().getSimpleName());
         }
