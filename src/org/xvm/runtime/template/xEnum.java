@@ -187,7 +187,7 @@ public class xEnum
         EnumHandle hEnum = (EnumHandle) hTarget;
 
         return frame.assignValue(iReturn,
-                xString.makeHandle(m_listNames.get((int) hEnum.getValue())));
+                xString.makeHandle(m_listNames.get(hEnum.getValue())));
         }
 
 
@@ -221,6 +221,13 @@ public class xEnum
         public int getValue()
             {
             return m_index;
+            }
+
+        @Override
+        public String toString()
+            {
+            xEnum template = (xEnum) getTemplate();
+            return template.m_listNames.get(m_index);
             }
         }
     }

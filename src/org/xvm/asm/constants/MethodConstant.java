@@ -286,6 +286,12 @@ public class MethodConstant
                 getParentConstant().ensureNestedIdentity(that), getSignature());
         }
 
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return getSignature().isAutoNarrowing();
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

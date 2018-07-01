@@ -89,13 +89,14 @@ const Int64
 
 // TODO
     @Override
-    @Op("-#") Int64 neg();
+    @Op Int64 neg();
 
 // TODO
     @Override
     Int64 pow(Int64 n);
 
-    @Op Int64 shl(Int64 count)
+    @Override
+    @Op Int64 shiftLeft(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0x3F; i > 0; --i)
@@ -106,7 +107,8 @@ const Int64
         return new Int(bits);
         }
 
-    @Op Int64 shr(Int64 count)
+    @Override
+    @Op Int64 shiftRight(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0; i < 0x3F; ++i)
@@ -116,7 +118,8 @@ const Int64
         return new Int(bits);
         }
 
-    @Op Int64 ushr(Int64 count)
+    @Override
+    @Op Int64 shiftAllRight(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         for (Int64 i = 0; i < 0x3F; ++i)
@@ -127,7 +130,8 @@ const Int64
         return new Int(bits);
         }
 
-    Int64 rol(Int64 count)
+    @Override
+    Int64 rotateLeft(Int64 count)
         {
         Bit[] bits  = to<Bit[]>();
         Int64   rolls = count & 0x3F;
@@ -143,7 +147,8 @@ const Int64
         return new Int(bits);
         }
 
-    Int64 ror(Int64 count)
+    @Override
+    Int64 rotateRight(Int64 count)
         {
         Bit[] bits = to<Bit[]>();
         Int64   rolls = count & 0x3F;

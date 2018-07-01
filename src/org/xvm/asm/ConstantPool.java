@@ -2761,7 +2761,7 @@ public class ConstantPool
         {
         String names = "Module,Package,Class,"
                 + "Boolean,Boolean.True,Boolean.False,Nullable,Nullable.Null,"
-                + "Orderable,Orderable.Lesser,Orderable.Equal,Orderable.Greater,"
+                + "Ordered,Ordered.Lesser,Ordered.Equal,Ordered.Greater,"
                 + "IntLiteral,Bit,Nibble,Int8,Int16,Int32,Int64,Int128,VarInt,"
                 + "UInt8,UInt16,UInt32,UInt64,UInt128,VarUInt,"
                 + "FPLiteral,Dec32,Dec64,Dec128,VarDec,"
