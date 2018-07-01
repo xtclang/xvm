@@ -1199,8 +1199,17 @@ public class NameExpression
                     return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
+                ClassStructure    clz  = ctx.getThisClass();
                 PropertyConstant  id   = (PropertyConstant) argRaw;
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
+                TypeConstant      type = prop.getType();
+
+                if (clz != prop.getParent())
+                    {
+                    // the property comes from a contribution; need to resolve its formal type
+                    type = type.resolveGenerics(clz.getFormalType());
+                    }
+
                 if (!prop.isConstant() && isIdentityMode(ctx, false))
                     {
                     m_plan = Plan.None;
@@ -1212,12 +1221,12 @@ public class NameExpression
                     {
                     m_plan = Plan.PropertyRef;
                     return pool.ensureParameterizedTypeConstant(
-                            m_fAssignable ? pool.typeVar() : pool.typeRef(), prop.getType());
+                            m_fAssignable ? pool.typeVar() : pool.typeRef(), type);
                     }
                 else
                     {
                     m_plan = Plan.PropertyDeref;
-                    return prop.getType();
+                    return type;
                     }
                 }
             case Typedef:
