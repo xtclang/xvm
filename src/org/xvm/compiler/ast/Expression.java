@@ -1650,7 +1650,9 @@ public abstract class Expression
                 Expression exprParam = aexprParams[i];
                 if (exprParam != null)
                     {
-                    atypeParams[i] = exprParam.isValidated() ? getType() : getImplicitType(ctx);
+                    atypeParams[i] = exprParam.isValidated()
+                        ? exprParam.getType()
+                        : exprParam.getImplicitType(ctx);
                     }
                 }
             }
@@ -1670,7 +1672,7 @@ public abstract class Expression
 
                 for (int i = 0; i < cParams; ++i)
                     {
-                    if (atypeParams[i] != null && atypeParams[i].isAssignableTo(atypeOpParams[i]))
+                    if (atypeParams[i] != null && !atypeParams[i].isAssignableTo(atypeOpParams[i]))
                         {
                         continue NextOp;
                         }
@@ -1686,7 +1688,11 @@ public abstract class Expression
                     }
                 }
 
-            if (idBest != null)
+            if (idBest == null)
+                {
+                idBest = idOp;
+                }
+            else
                 {
                 boolean fOldBetter = idOp.getSignature().isSubstitutableFor(idBest.getSignature(), typeTarget);
                 boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idOp.getSignature(), typeTarget);
