@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
 
 
