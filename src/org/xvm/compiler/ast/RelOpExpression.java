@@ -605,7 +605,9 @@ public class RelOpExpression
         MethodConstant      idConv   = null;
         Set<MethodConstant> setConvs = null;
         TypeInfo            info1    = type1.ensureTypeInfo(errs);
-        for (MethodConstant method : info1.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
+        String              sMethod  = getDefaultMethodName();
+        String              sOp      = getOperatorString();
+        for (MethodConstant method : info1.findOpMethods(sMethod, sOp, 1))
             {
             // determine if this method satisfies the types (param and return)
             TypeConstant typeParam = method.getRawParams()[0];
@@ -631,7 +633,7 @@ public class RelOpExpression
                         }
                     }
                 // check if @Auto conversion of the return value would satisfy the required type
-                else if (typeParam.ensureTypeInfo().findConversion(typeRequired) != null)
+                else if (typeParam.getConverterTo(typeRequired) != null)
                     {
                     if (setConvs != null)
                         {
