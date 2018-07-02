@@ -3903,7 +3903,6 @@ public abstract class TypeConstant
                 return true;
 
             default:
-                // enums only
                 return getExplicitClassFormat() == Component.Format.ENUM;
             }
         }
@@ -3947,8 +3946,8 @@ public abstract class TypeConstant
                 return Integer.MAX_VALUE;
 
             default:
-                // REVIEW GG
                 // count the enum values (each ordinal value)
+                // (note: enum-to-int conversion is no longer used for compiling to JumpInt)
                 ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
                 int c = 0;
                 for (Component child : clzEnum.children())

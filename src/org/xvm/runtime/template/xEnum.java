@@ -105,26 +105,12 @@ public class xEnum
 
             if (hValue == null)
                 {
-                // it's possible that the value comes from a different constant pool;
-                // find a match
-                ConstantPool pool = f_struct.getConstantPool();
-                int iOrdinal = 0;
-                for (Component child : f_struct.children())
-                    {
-                    if (child.getFormat() == Component.Format.ENUMVALUE)
-                        {
-                        SingletonConstant constEnum =
-                            pool.ensureSingletonConstConstant(child.getIdentityConstant());
-
-                        if (constEnum.equals(constValue))
-                            {
-                            hValue = m_listHandles.get(iOrdinal);
-                            constEnum.setHandle(hValue);
-                            break;
-                            }
-                        iOrdinal++;
-                        }
-                    }
+                int iOrdinal = constValue.getIntValue().getInt();
+                xEnum templateEnum = f_struct.getFormat() == Component.Format.ENUMVALUE
+                        ? (xEnum) getSuper()
+                        : this;
+                hValue = templateEnum.m_listHandles.get(iOrdinal);
+                constValue.setHandle(hValue);
                 }
             frame.pushStack(hValue);
             return Op.R_NEXT;
@@ -215,12 +201,19 @@ public class xEnum
             {
             super(clz);
 
-            m_index = index;
+            m_index    = index;
+            m_fMutable = false;
             }
 
         public int getValue()
             {
             return m_index;
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return this == obj;
             }
 
         @Override

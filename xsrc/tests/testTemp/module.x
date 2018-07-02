@@ -17,6 +17,7 @@ module TestTemp.xqiz.it
         testElseExpr();
         testSwitchExpr();
         testSwitchExpr2();
+        testSwitchExpr3();
 
         // REVIEW GG
         // testInterval();
@@ -246,6 +247,23 @@ module TestTemp.xqiz.it
                 case i == 7: "sieben";
 
                 default: "other";
+                });
+            }
+        }
+
+    void testSwitchExpr3()
+        {
+        console.println("\n** testSwitchExpr3()");
+
+        Int i = 0;
+        while (++i < 6)
+            {
+            DEBUG;
+            console.println("result for (" + i + "<=>3)=" + switch(i <=> 3)
+                {
+                case Lesser:  "less";
+                case Equal:   "same";
+                case Greater: "more";
                 });
             }
         }

@@ -244,6 +244,18 @@ public abstract class OpTest
             }
         }
 
+    @Override
+    public String toString()
+        {
+        return super.toString()
+                + ' '
+                + Argument.toIdString(m_argVal1, m_nValue1)
+                + ", "
+                + Argument.toIdString(m_argVal2, m_nValue2)
+                + ", "
+                + Argument.toIdString(m_argReturn, m_nRetValue);
+        }
+
     protected int m_nValue1;
     protected int m_nValue2;
     protected int m_nRetValue;

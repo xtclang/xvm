@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -309,6 +310,13 @@ public class SwitchExpression
 
                 // reset the "this is the expression that might provide a constant value for the
                 // if-switch" flag
+                if (fIfSwitch && fGrabNext && constVal == null)
+                    {
+                    // this would have been the expression value to provide the constant value, but
+                    // the expression value itself is not constant, so the switch expression cannot
+                    // resolve to a compile-time constant value
+                    fAllConsts = false;
+                    }
                 fGrabNext = false;
                 }
             }
@@ -318,7 +326,7 @@ public class SwitchExpression
             listNodes.get(listNodes.size()-1).log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
             fValid = false;
             }
-        else if (constCond != null && constVal == null && fAllConsts)
+        else if (constCond != null && constVal == null && fAllConsts && constDefault != null)
             {
             constVal = constDefault;
             }
@@ -334,7 +342,7 @@ public class SwitchExpression
         if (typeActual == null)
             {
             typeActual = typeRequest == null
-                    ? pool.typeObject()  // REVIEW
+                    ? pool.typeObject()
                     : typeRequest;
             }
 
@@ -350,9 +358,12 @@ public class SwitchExpression
             assert listLabels.size() == cVals;
 
             // check if the JumpInt optimization can be used
+            // (enums are no longer supported, since cross-module dependencies without
+            // re-compilation would cause the values to fail to "line up", so it's better to
+            // use the JumpVal option instead of the JumpInt option)
             boolean fUseJumpInt = false;
             int     cRange      = 0;
-            if (pintMin != null)
+            if (pintMin != null && typeCase.getExplicitClassFormat() != Component.Format.ENUM)
                 {
                 PackedInteger pintRange = pintMax.sub(pintMin);
                 if (!pintRange.isBig())
@@ -481,8 +492,12 @@ public class SwitchExpression
 
     private void generateJumpSwitch(Code code, Assignable LVal, ErrorListener errs)
         {
-        Expression exprCond  = cond.getExpression();
-        Argument   argVal    = exprCond.generateArgument(code, true, true, errs);
+        Expression exprCond = cond.getExpression();
+        if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
+            {
+            exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
+            }
+        Argument argVal = exprCond.generateArgument(code, true, true, errs);
 
         Label labelDefault = m_labelDefault;
         if (labelDefault == null)
@@ -490,9 +505,9 @@ public class SwitchExpression
             labelDefault = new Label("default_assert");
             }
 
-        if (m_pintOffset != null)
+        if (m_aconstCase == null)
             {
-            code.add(new JumpInt(argVal, m_pintOffset, m_alabelCase, labelDefault));
+            code.add(new JumpInt(argVal, m_alabelCase, labelDefault));
             }
         else
             {
@@ -525,10 +540,7 @@ public class SwitchExpression
                 {
                 node.updateLineNumber(code);
                 ((Expression) node).generateAssignment(code, LVal, errs);
-                if (i < c-1)
-                    {
-                    code.add(new Jump(labelExit));
-                    }
+                code.add(new Jump(labelExit));
                 }
             }
 
@@ -568,7 +580,7 @@ public class SwitchExpression
             else
                 {
                 sb.append(' ')
-                  .append((Expression) node)
+                  .append(node)
                   .append(';');
                 }
             }
