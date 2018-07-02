@@ -206,12 +206,12 @@ public class WhileStatement
             //   Break:
             //   EXIT
             code.add(new Enter());
-            fCompletes &= cond.onlyDeclarations().completes(ctx, fReachable, code, errs);
+            fCompletes &= cond.onlyDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
             code.add(new Jump(labelContinue));
             code.add(labelRepeat);
             fCompletes &= block.completes(ctx, fReachable, code, errs);
             code.add(labelContinue);
-            fCompletes &= cond.nonDeclarations().completes(ctx, fReachable, code, errs);
+            fCompletes &= cond.nonDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
             code.add(labelBreak);
             code.add(new Exit());
             }

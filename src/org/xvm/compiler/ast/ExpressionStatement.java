@@ -9,7 +9,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
 
 
@@ -99,12 +98,12 @@ public class ExpressionStatement
         }
 
     @Override
-    protected void split()
+    protected void split(Context ctx, ErrorListener errs)
         {
         // there's no declaration portion, so just use a "no-op" for that statement
         long      lPos    = getStartPosition();
         Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
-        configureSplit(stmtNOP, this);
+        configureSplit(stmtNOP, this, errs);
         }
 
 

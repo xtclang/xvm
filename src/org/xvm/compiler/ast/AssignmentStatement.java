@@ -71,12 +71,12 @@ public class AssignmentStatement
     // ----- ConditionalStatement methods ----------------------------------------------------------
 
     @Override
-    protected void split()
+    protected void split(Context ctx, ErrorListener errs)
         {
         // there's no declaration portion, so just use a "no-op" for that statement
         long      lPos    = getStartPosition();
         Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
-        configureSplit(stmtNOP, this);
+        configureSplit(stmtNOP, this, errs);
         }
 
 

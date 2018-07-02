@@ -1,8 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.op.Label;
-import org.xvm.compiler.ast.Expression.Assignable;
 
 
 /**
@@ -90,11 +91,11 @@ public abstract class ConditionalStatement
     /**
      * @return the declaration portion of the statement
      */
-    public Statement onlyDeclarations()
+    public Statement onlyDeclarations(Context ctx, ErrorListener errs)
         {
         if (m_stmtDeclOnly == null)
             {
-            split();
+            split(ctx, errs);
             assert m_stmtDeclOnly != null;
             }
         return m_stmtDeclOnly;
@@ -104,11 +105,11 @@ public abstract class ConditionalStatement
      * @return everything but the declaration portion of the statement, which includes any
      *         assignment and the condition itself
      */
-    public Statement nonDeclarations()
+    public Statement nonDeclarations(Context ctx, ErrorListener errs)
         {
         if (m_stmtNonDecl == null)
             {
-            split();
+            split(ctx, errs);
             assert m_stmtNonDecl != null;
             }
         return m_stmtNonDecl;
@@ -133,16 +134,19 @@ public abstract class ConditionalStatement
     /**
      * Sub-classes implement this method and configure the declarations-only and non-declarations
      * statements.
+     *
+     * @param ctx   the context
+     * @param errs  the error listener
      */
-    protected abstract void split();
+    protected abstract void split(Context ctx, ErrorListener errs);
 
     /**
-     * Called by the {@link #split()} method to store the result of the split.
+     * Called by the {@link #split(Context, ErrorListener)} method to store the result of the split.
      *
      * @param stmtDeclOnly  the "declaration only" statement
      * @param stmtNonDecl   the "everything but the declaration" statement
      */
-    protected void configureSplit(Statement stmtDeclOnly, Statement stmtNonDecl)
+    protected void configureSplit(Statement stmtDeclOnly, Statement stmtNonDecl, ErrorListener errs)
         {
         assert stmtDeclOnly != null && stmtNonDecl != null;
         assert m_stmtDeclOnly == null && m_stmtNonDecl == null;
@@ -153,6 +157,13 @@ public abstract class ConditionalStatement
 
         m_stmtDeclOnly = stmtDeclOnly;
         m_stmtNonDecl  = stmtNonDecl;
+
+        if (!new StageMgr(stmtDeclOnly, getStage(), errs).fastForward(10) ||
+            !new StageMgr(stmtNonDecl , getStage(), errs).fastForward(10))
+            {
+            // TODO log error?
+            throw new IllegalStateException(getClass().getSimpleName() + ": problem in configureSplit()");
+            }
         }
 
 

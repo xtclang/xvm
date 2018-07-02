@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
+import org.xvm.asm.ErrorListener;
+
 
 /**
  * This is a complicated form of the variable declaration statement that allows for multiple
@@ -48,12 +50,12 @@ public class MultipleDeclarationStatement
     // ----- ConditionalStatement methods ----------------------------------------------------------
 
     @Override
-    protected void split()
+    protected void split(Context ctx, ErrorListener errs)
         {
         // TODO for now pretend that this only declares but does not assign
         long      lPos    = getEndPosition();
         Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
-        configureSplit(this, stmtNOP);
+        configureSplit(this, stmtNOP, errs);
         }
 
 
