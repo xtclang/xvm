@@ -217,25 +217,26 @@ public class ToIntExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(code, errs);
+        expr.generateVoid(ctx, code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         return !isConstant() && getExtractor() == null && getOffsetConstant() == null && getConvertMethod() == null
-                ? expr.generateArgument(code, fLocalPropOk, fUsedOnce, errs)
-                : super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+                ? expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs)
+                : super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
 
         IdentityConstant idExtract   = getExtractor();
@@ -243,7 +244,7 @@ public class ToIntExpression
         MethodConstant   idConvert   = getConvertMethod();
 
         // step 1: extract the value from the underlying expression
-        Argument argExtracted = expr.generateArgument(code, false, true, errs);
+        Argument argExtracted = expr.generateArgument(ctx, code, false, true, errs);
         if (idExtract != null)
             {
             // extract always results in an Int64, which is the type of this expression

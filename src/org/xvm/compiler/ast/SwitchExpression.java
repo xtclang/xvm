@@ -416,17 +416,17 @@ public class SwitchExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         else
             {
             if (cond == null)
                 {
-                generateIfSwitch(code, LVal, errs);
+                generateIfSwitch(ctx, code, LVal, errs);
                 }
             else
                 {
@@ -435,7 +435,7 @@ public class SwitchExpression
                     code.add(new Enter());
                     }
 
-                generateJumpSwitch(code, LVal, errs);
+                generateJumpSwitch(ctx, code, LVal, errs);
 
                 if (cond.isScopeRequired())
                     {
@@ -445,7 +445,7 @@ public class SwitchExpression
             }
         }
 
-    private void generateIfSwitch(Code code, Assignable LVal, ErrorListener errs)
+    private void generateIfSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         List<AstNode> aNodes = contents;
         int           cNodes = aNodes.size();
@@ -461,7 +461,7 @@ public class SwitchExpression
                     Label labelCur = stmt.getLabel();
                     for (Expression expr : stmt.getExpressions())
                         {
-                        expr.generateConditionalJump(code, labelCur, true, errs);
+                        expr.generateConditionalJump(ctx, code, labelCur, true, errs);
                         }
                     }
                 }
@@ -483,21 +483,21 @@ public class SwitchExpression
 
                 expr.updateLineNumber(code);
                 code.add(labelCur);
-                expr.generateAssignment(code, LVal, errs);
+                expr.generateAssignment(ctx, code, LVal, errs);
                 code.add(new Jump(labelExit));
                 }
             }
         code.add(labelExit);
         }
 
-    private void generateJumpSwitch(Code code, Assignable LVal, ErrorListener errs)
+    private void generateJumpSwitch(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         Expression exprCond = cond.getExpression();
         if (m_aconstCase == null && (m_pintOffset != null || !exprCond.getType().isA(pool().typeInt())))
             {
             exprCond = new ToIntExpression(exprCond, m_pintOffset, errs);
             }
-        Argument argVal = exprCond.generateArgument(code, true, true, errs);
+        Argument argVal = exprCond.generateArgument(ctx, code, true, true, errs);
 
         Label labelDefault = m_labelDefault;
         if (labelDefault == null)
@@ -539,7 +539,7 @@ public class SwitchExpression
             else
                 {
                 node.updateLineNumber(code);
-                ((Expression) node).generateAssignment(code, LVal, errs);
+                ((Expression) node).generateAssignment(ctx, code, LVal, errs);
                 code.add(new Jump(labelExit));
                 }
             }

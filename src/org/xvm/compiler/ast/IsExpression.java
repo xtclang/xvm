@@ -83,24 +83,25 @@ public class IsExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (LVal.isLocalArgument())
             {
-            Argument argTarget = expr1.generateArgument(code, true, true, errs);
+            Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             Argument argType   = ((TypeExpression) expr2).ensureTypeConstant();
             code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
             }
         else
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        Argument argTarget = expr1.generateArgument(code, true, true, errs);
+        Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
         Argument argType   = ((TypeExpression) expr2).ensureTypeConstant();
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)

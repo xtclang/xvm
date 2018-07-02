@@ -142,16 +142,16 @@ public class TernaryExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         Label labelElse = new Label("else");
         Label labelEnd  = new Label("end");
 
-        cond.generateConditionalJump(code, labelElse, false, errs);
-        exprThen.generateAssignment(code, LVal, errs);
+        cond.generateConditionalJump(ctx, code, labelElse, false, errs);
+        exprThen.generateAssignment(ctx, code, LVal, errs);
         code.add(new Jump(labelEnd));
         code.add(labelElse);
-        exprElse.generateAssignment(code, LVal, errs);
+        exprElse.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }
 

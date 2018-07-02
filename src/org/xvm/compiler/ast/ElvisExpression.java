@@ -165,33 +165,34 @@ public class ElvisExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant() || pool().typeNull().isA(getType()))
             {
-            return super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+            return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
         TypeConstant typeTemp = getType().ensureNullable();
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
-        generateAssignment(code, var, errs);
+        generateAssignment(ctx, code, var, errs);
         return var.getRegister();
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant() || !LVal.isNormalVariable() || !pool().typeNull().isA(LVal.getType()))
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         Label labelEnd = new Label("end_?:_" + m_nLabel);
 
-        expr1.generateAssignment(code, LVal, errs);
+        expr1.generateAssignment(ctx, code, LVal, errs);
         code.add(new JumpNotNull(LVal.getRegister(), labelEnd));
-        expr2.generateAssignment(code, LVal, errs);
+        expr2.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }
 

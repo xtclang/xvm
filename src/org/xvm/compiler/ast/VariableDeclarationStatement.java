@@ -359,7 +359,7 @@ public class VariableDeclarationStatement
                     // next, declare the named variable
                     code.add(new Var_N(m_reg, pool.ensureStringConstant((String) name.getValue())));
                     // next, assign the r-value to the two variables
-                    value.generateAssignments(code, new Assignable[]
+                    value.generateAssignments(ctx, code, new Assignable[]
                             {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
                     code.add(getUsage() == Usage.If
                             ? new JumpFalse(regCond, getLabel())
@@ -431,7 +431,7 @@ public class VariableDeclarationStatement
                 Argument[] aArgs = new Argument[cVals];
                 for (int i = 0; i < cVals; ++i)
                     {
-                    aArgs[i] = listVals.get(i).generateArgument(code, false, false, errs);
+                    aArgs[i] = listVals.get(i).generateArgument(ctx, code, false, false, errs);
                     }
                 code.add(new Var_SN(m_reg, constName, aArgs));
                 return fCompletes;
@@ -451,7 +451,7 @@ public class VariableDeclarationStatement
         switch (m_scenario)
             {
             case DeclareAssign:
-                value.generateAssignment(code, value.new Assignable(m_reg), errs);
+                value.generateAssignment(ctx, code, value.new Assignable(m_reg), errs);
                 break;
 
             case FromCondValue:

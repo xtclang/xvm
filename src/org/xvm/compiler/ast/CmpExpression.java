@@ -179,13 +179,13 @@ public class CmpExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (LVal.isLocalArgument())
             {
             // evaluate the sub-expressions
-            Argument arg1      = expr1.generateArgument(code, true, true, errs);
-            Argument arg2      = expr2.generateArgument(code, true, true, errs);
+            Argument arg1      = expr1.generateArgument(ctx, code, true, true, errs);
+            Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
             Argument argResult = LVal.getLocalArgument();
 
             // generate the op that combines the two sub-expressions
@@ -222,17 +222,18 @@ public class CmpExpression
             return;
             }
 
-        super.generateAssignment(code, LVal, errs);
+        super.generateAssignment(ctx, code, LVal, errs);
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         if (!isConstant() && producesBoolean())
             {
             // evaluate the sub-expressions
-            Argument arg1 = expr1.generateArgument(code, true, true, errs);
-            Argument arg2 = expr2.generateArgument(code, true, true, errs);
+            Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
+            Argument arg2 = expr2.generateArgument(ctx, code, true, true, errs);
 
             // generate the op that combines the two sub-expressions
             switch (operator.getId())
@@ -279,7 +280,7 @@ public class CmpExpression
                 }
             }
 
-        super.generateConditionalJump(code, label, fWhenTrue, errs);
+        super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
         }
 
     // ----- fields --------------------------------------------------------------------------------

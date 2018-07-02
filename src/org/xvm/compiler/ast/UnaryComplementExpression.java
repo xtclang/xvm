@@ -106,16 +106,16 @@ public class UnaryComplementExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (LVal.isLocalArgument())
             {
-            Argument arg = expr.generateArgument(code, true, true, errs);
+            Argument arg = expr.generateArgument(ctx, code, true, true, errs);
             code.add(new GP_Compl(arg, LVal.getLocalArgument()));
             }
         else
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         }
 

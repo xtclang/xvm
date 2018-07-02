@@ -320,7 +320,8 @@ public class MapExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -334,8 +335,8 @@ public class MapExpression
         Argument[]       aVals    = new Argument[cEntries];
         for (int i = 0; i < cEntries; ++i)
             {
-            aKeys[i] = listKeys.get(i).generateArgument(code, false, true, errs);
-            aVals[i] = listVals.get(i).generateArgument(code, false, true, errs);
+            aKeys[i] = listKeys.get(i).generateArgument(ctx, code, false, true, errs);
+            aVals[i] = listVals.get(i).generateArgument(ctx, code, false, true, errs);
             }
         notImplemented();
         // TODO code.add(new Var_M(getType(), aKeys, aVals));

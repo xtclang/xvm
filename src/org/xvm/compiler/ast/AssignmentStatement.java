@@ -153,10 +153,10 @@ public class AssignmentStatement
         if (lvalue.isSingle() && op.getId() == Token.Id.ASN)
             {
             boolean    fCompletes = fReachable;
-            Assignable asnL       = lvalue.generateAssignable(code, errs);
+            Assignable asnL       = lvalue.generateAssignable(ctx, code, errs);
             if (fCompletes &= !lvalue.isAborting())
                 {
-                rvalue.generateAssignment(code, asnL, errs);
+                rvalue.generateAssignment(ctx, code, asnL, errs);
                 fCompletes &= !rvalue.isAborting();
                 }
 

@@ -50,13 +50,13 @@ public  class UnpackExpression
     /**
      * @return an argument holding the tuple value
      */
-    Argument ensureTuple(Code code, ErrorListener errs)
+    Argument ensureTuple(Context ctx, Code code, ErrorListener errs)
         {
         Argument arg = m_argTuple;
         if (arg == null)
             {
             // generate the reference to the Tuple
-            arg = expr.generateArgument(code, false, false, errs);
+            arg = expr.generateArgument(ctx, code, false, false, errs);
 
             // stamp the tuple onto all of the UnpackExpressions
             UnpackExpression[] aUnpackExprs = m_aUnpackExprs;
@@ -95,41 +95,42 @@ public  class UnpackExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(code, errs);
+        expr.generateVoid(ctx, code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
             return toConstant();
             }
 
-        Argument argTuple = ensureTuple(code, errs);
+        Argument argTuple = ensureTuple(ctx, code, errs);
         Register regField = new Register(getType());
         code.add(new I_Get(argTuple, pool().ensureIntConstant(m_iField), regField));
         return regField;
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
 
-        Argument argTuple = ensureTuple(code, errs);
+        Argument argTuple = ensureTuple(ctx, code, errs);
         if (LVal.isLocalArgument())
             {
             code.add(new I_Get(argTuple, pool().ensureIntConstant(m_iField), LVal.getLocalArgument()));
             }
         else
             {
-            Argument argField = generateArgument(code, LVal.supportsLocalPropMode(), true, errs);
+            Argument argField = generateArgument(ctx, code, LVal.supportsLocalPropMode(), true, errs);
             LVal.assign(argField, code, errs);
             }
         }

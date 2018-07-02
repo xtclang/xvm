@@ -312,7 +312,8 @@ public class NewExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         assert m_idConstructor != null;
         assert left == null; // TODO construct child class
@@ -323,7 +324,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
             }
 
         Argument argResult = new Register(getType());
@@ -345,7 +346,7 @@ public class NewExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         assert m_idConstructor != null;
         assert left == null; // TODO construct child class
@@ -356,7 +357,7 @@ public class NewExpression
         Argument[]       aArgs    = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listArgs.get(i).generateArgument(code, true, true, errs);
+            aArgs[i] = listArgs.get(i).generateArgument(ctx, code, true, true, errs);
             }
 
         Argument argResult = LVal.isLocalArgument()

@@ -362,16 +362,17 @@ public class TupleExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
         for (Expression expr : exprs)
             {
-            expr.generateVoid(code, errs);
+            expr.generateVoid(ctx, code, errs);
             }
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -382,7 +383,7 @@ public class TupleExpression
         Argument[] aArgs  = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
-            aArgs[i] = exprs.get(i).generateArgument(code, false, false, errs);
+            aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
             }
 
         // generate the tuple itself, and return it as an argument

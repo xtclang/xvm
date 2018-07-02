@@ -167,21 +167,21 @@ public class ElseExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant() || !LVal.isNormalVariable())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         Label labelElse = getShortCircuitLabel(expr1);
         Label labelEnd  = new Label("end_:_" + m_nLabel);
 
-        expr1.generateAssignment(code, LVal, errs);
+        expr1.generateAssignment(ctx, code, LVal, errs);
         code.add(new Jump(labelEnd));
         code.add(labelElse);
-        expr2.generateAssignment(code, LVal, errs);
+        expr2.generateAssignment(ctx, code, LVal, errs);
         code.add(labelEnd);
         }
 

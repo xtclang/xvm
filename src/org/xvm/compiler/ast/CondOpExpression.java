@@ -180,7 +180,8 @@ public class CondOpExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -192,12 +193,12 @@ public class CondOpExpression
             case UorF:
             case UandT:
                 // result is the same as the result of the first expression
-                return expr1.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+                return expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
 
             case ForU:
             case TandU:
                 // result is the same as the result of the second expression
-                return expr2.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+                return expr2.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
 
             case UorU:
             case UandU:
@@ -206,7 +207,7 @@ public class CondOpExpression
                 Assignable LValAccum = new Assignable(regAccum);
 
                 code.add(new Var(regAccum));
-                expr1.generateAssignment(code, LValAccum, errs);
+                expr1.generateAssignment(ctx, code, LValAccum, errs);
                 if (isAnd())
                     {
                     code.add(new JumpFalse(regAccum, labelEnd));
@@ -215,7 +216,7 @@ public class CondOpExpression
                     {
                     code.add(new JumpTrue(regAccum, labelEnd));
                     }
-                expr2.generateAssignment(code, LValAccum, errs);
+                expr2.generateAssignment(ctx, code, LValAccum, errs);
                 code.add(labelEnd);
                 return regAccum;
 
@@ -225,7 +226,7 @@ public class CondOpExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -238,20 +239,20 @@ public class CondOpExpression
                 case UorF:
                 case UandT:
                     // result is the same as the result of the first expression
-                    expr1.generateAssignment(code, LVal, errs);
+                    expr1.generateAssignment(ctx, code, LVal, errs);
                     break;
 
                 case ForU:
                 case TandU:
                     // result is the same as the result of the second expression
-                    expr2.generateAssignment(code, LVal, errs);
+                    expr2.generateAssignment(ctx, code, LVal, errs);
                     break;
 
                 case UorU:
                 case UandU:
                     Label    labelEnd = new Label();
                     Register regAccum = LVal.getRegister();
-                    expr1.generateAssignment(code, LVal, errs);
+                    expr1.generateAssignment(ctx, code, LVal, errs);
                     if (isAnd())
                         {
                         code.add(new JumpFalse(regAccum, labelEnd));
@@ -260,7 +261,7 @@ public class CondOpExpression
                         {
                         code.add(new JumpTrue(regAccum, labelEnd));
                         }
-                    expr2.generateAssignment(code, LVal, errs);
+                    expr2.generateAssignment(ctx, code, LVal, errs);
                     code.add(labelEnd);
                     break;
 
@@ -270,7 +271,7 @@ public class CondOpExpression
             }
         else
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         }
 

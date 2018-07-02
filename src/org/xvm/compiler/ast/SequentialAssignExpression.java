@@ -110,21 +110,21 @@ public class SequentialAssignExpression
         return finishValidation(typeRequired, type, fit, null, errs);
         }
 
-    private Assignable ensureTarget(Code code, ErrorListener errs)
+    private Assignable ensureTarget(Context ctx, Code code, ErrorListener errs)
         {
         Assignable LVal = m_LValTarget;
         if (LVal == null)
             {
-            m_LValTarget = LVal = expr.generateAssignable(code, errs);
+            m_LValTarget = LVal = expr.generateAssignable(ctx, code, errs);
             assert LVal.getForm() != Assignable.BlackHole;
             }
         return LVal;
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        Assignable LVal = ensureTarget(code, errs);
+        Assignable LVal = ensureTarget(ctx, code, errs);
         switch (LVal.getForm())
             {
             case Assignable.LocalVar:
@@ -172,18 +172,18 @@ public class SequentialAssignExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         switch (LVal.getForm())
             {
             case Assignable.BlackHole:
-                generateVoid(code, errs);
+                generateVoid(ctx, code, errs);
                 break;
 
             case Assignable.LocalVar:
             case Assignable.LocalProp:
                 Argument   argReturn  = LVal.getLocalArgument();
-                Assignable LValTarget = ensureTarget(code, errs);
+                Assignable LValTarget = ensureTarget(ctx, code, errs);
                 switch (LValTarget.getForm())
                     {
                     case Assignable.LocalVar:
@@ -248,7 +248,7 @@ public class SequentialAssignExpression
             case Assignable.IndexedN:
             case Assignable.IndexedProp:
             case Assignable.IndexedNProp:
-                super.generateAssignment(code, LVal, errs);
+                super.generateAssignment(ctx, code, LVal, errs);
                 break;
 
             default:

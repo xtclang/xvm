@@ -697,16 +697,16 @@ public class RelOpExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (!LVal.isLocalArgument())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
 
         // evaluate the sub-expressions
-        Argument arg1 = expr1.generateArgument(code, true, true, errs);
-        Argument arg2 = expr2.generateArgument(code, true, !arg1.isStack(), errs);
+        Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
+        Argument arg2 = expr2.generateArgument(ctx, code, true, !arg1.isStack(), errs);
 
         // generate the op that combines the two sub-expressions
         switch (operator.getId())
@@ -753,7 +753,7 @@ public class RelOpExpression
 
             case DIVMOD:
                 // "/%" needs one real register and one black hole
-                generateAssignments(code, new Assignable[] {LVal, new Assignable()}, errs);
+                generateAssignments(ctx, code, new Assignable[] {LVal, new Assignable()}, errs);
                 return;
 
             case DIV:
@@ -770,7 +770,7 @@ public class RelOpExpression
         }
 
     @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         switch (aLVal.length)
             {
@@ -785,23 +785,23 @@ public class RelOpExpression
 
                 if (aLVal[0].isLocalArgument() && aLVal[1].isLocalArgument())
                     {
-                    Argument arg1 = expr1.generateArgument(code, true, true, errs);
-                    Argument arg2 = expr2.generateArgument(code, true, !arg1.isStack(), errs);
+                    Argument arg1 = expr1.generateArgument(ctx, code, true, true, errs);
+                    Argument arg2 = expr2.generateArgument(ctx, code, true, !arg1.isStack(), errs);
                     code.add(new GP_DivMod(arg1, arg2, new Argument[]
                             {aLVal[0].getLocalArgument(), aLVal[1].getLocalArgument()}));
                     }
                 else
                     {
-                    super.generateAssignments(code, aLVal, errs);
+                    super.generateAssignments(ctx, code, aLVal, errs);
                     }
                 return;
 
             case 1:
-                generateAssignment(code, aLVal[0], errs);
+                generateAssignment(ctx, code, aLVal[0], errs);
                 return;
 
             case 0:
-                generateAssignment(code, new Assignable(), errs);
+                generateAssignment(ctx, code, new Assignable(), errs);
                 return;
             }
         }

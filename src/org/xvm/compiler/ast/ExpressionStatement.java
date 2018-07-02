@@ -162,7 +162,7 @@ public class ExpressionStatement
         if (getUsage() == Usage.Standalone)
             {
             // so an expression is being used as a statement; blackhole the results
-            expr.generateAssignments(code, Expression.NO_LVALUES, errs);
+            expr.generateAssignments(ctx, code, Expression.NO_LVALUES, errs);
             }
         else if (m_rte == RuntimeEval.RequiresEval)
             {
@@ -188,7 +188,7 @@ public class ExpressionStatement
                     throw new IllegalStateException();
                 }
 
-            expr.generateConditionalJump(code, getLabel(), fJumpIfTrue, errs);
+            expr.generateConditionalJump(ctx, code, getLabel(), fJumpIfTrue, errs);
             }
 
         return fCompletes;
