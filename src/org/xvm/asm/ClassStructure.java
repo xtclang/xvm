@@ -1637,7 +1637,7 @@ public class ClassStructure
                 }
             else
                 {
-                int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+                int cFormal = getTypeParams().size();
                 int cActual = listActual.size();
                 if (cFormal < cActual)
                     {
@@ -1648,7 +1648,7 @@ public class ClassStructure
                 else if (cFormal > cActual)
                     {
                     m_listActual = listActual = new ArrayList<>(listActual); // clone
-                    List<Map.Entry<StringConstant, TypeConstant>> entries = m_mapParams.asList();
+                    List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
                     // fill the missing actual parameters with the canonical types
                     // Note: since there is a possibility of Tuple self-reference

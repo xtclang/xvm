@@ -783,6 +783,7 @@ public class NameExpression
                     }
 
             case PropertyRef:
+            case RegisterRef:
                 throw new UnsupportedOperationException("&" + getName());
 
             case TypeOfTypedef:
@@ -1049,7 +1050,7 @@ public class NameExpression
                 if (typeLeft != null)
                     {
                     // TODO support or properties nested under something other than a class (need nested type infos?)
-                    if ((left instanceof NameExpression))
+                    if (left instanceof NameExpression)
                         {
                         // "this:target" has private access in this context
                         Argument arg = ((NameExpression) left).m_arg;
@@ -1065,7 +1066,7 @@ public class NameExpression
                         // TODO typedefs
 
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                                sName, ((NameExpression) left).getName());
+                            sName, ctx.getThisClass().getName());
                         }
                     else
                         {
@@ -1430,8 +1431,15 @@ public class NameExpression
 
         if (left != null)
             {
-            sb.append(left)
-              .append('.');
+            if (left instanceof NameExpression)
+                {
+                sb.append(left);
+                }
+            else
+                {
+                sb.append('(').append(left).append(')');
+                }
+            sb.append('.');
             }
 
         if (amp != null)

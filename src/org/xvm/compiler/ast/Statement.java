@@ -562,11 +562,17 @@ public abstract class Statement
                 @Override
                 public Argument resolveRegularName(Token name, ErrorListener errs)
                     {
+                    Argument arg = super.resolveRegularName(name, errs);
+                    if (arg != null)
+                        {
+                        return arg;
+                        }
+
                     Component.SimpleCollector collector = new Component.SimpleCollector();
                     return typeLeft.resolveContributedName(name.getValueText(), collector) ==
                             Component.ResolutionResult.RESOLVED
                         ? collector.getResolvedConstant()
-                        : super.resolveRegularName(name, errs);
+                        : null;
                     }
 
                 @Override

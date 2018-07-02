@@ -155,7 +155,10 @@ public class ListExpression
                 aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
             typeElement = inferCommonType(aElementTypes);
-            typeActual  = typeActual.adoptParameters(new TypeConstant[] {typeElement});
+            if (typeElement != null)
+                {
+                typeActual  = typeActual.adoptParameters(new TypeConstant[] {typeElement});
+                }
             }
 
         for (int i = 0; i < cExprs; ++i)

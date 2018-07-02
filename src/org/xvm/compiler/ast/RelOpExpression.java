@@ -211,7 +211,7 @@ public class RelOpExpression
         Map<SignatureConstant, MethodConstant> mapBest = null;
         for (MethodConstant idMethod : setOps)
             {
-            TypeConstant typeParam = idMethod.getRawReturns()[1];
+            TypeConstant typeParam = idMethod.getRawReturns()[0];
             if (typeRight.isA(typeParam))
                 {
                 if (mapBest != null)
@@ -270,7 +270,9 @@ public class RelOpExpression
 
         TypeFit             fitVia   = TypeFit.NoFit;
         TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
-        Set<MethodConstant> setOps   = infoLeft.findOpMethods(getDefaultMethodName(), getOperatorString(), 1);
+        String              sMethod  = getDefaultMethodName();
+        String              sOp      = getOperatorString();
+        Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
         for (MethodConstant idMethod : setOps)
             {
             TypeConstant[] aRets = idMethod.getRawReturns();
@@ -298,7 +300,7 @@ public class RelOpExpression
             {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
             TypeInfo     infoConv = typeConv.ensureTypeInfo();
-            for (MethodConstant idMethod : infoConv.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
+            for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1))
                 {
                 TypeConstant[] aRets = idMethod.getRawReturns();
                 if (aRets.length >= 1 && aRets[0].isAssignableTo(typeRequired))
@@ -328,7 +330,9 @@ public class RelOpExpression
 
         TypeFit             fitVia   = TypeFit.NoFit;
         TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
-        Set<MethodConstant> setOps   = infoLeft.findOpMethods(getDefaultMethodName(), getOperatorString(), 1);
+        String              sMethod  = getDefaultMethodName();
+        String              sOp      = getOperatorString();
+        Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
         for (MethodConstant idMethod : setOps)
             {
             TypeConstant[] aRets = idMethod.getRawReturns();
@@ -356,7 +360,7 @@ public class RelOpExpression
             {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
             TypeInfo     infoConv = typeConv.ensureTypeInfo();
-            for (MethodConstant idMethod : infoConv.findOpMethods(getDefaultMethodName(), getOperatorString(), 1))
+            for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1))
                 {
                 TypeConstant[] aRets = idMethod.getRawReturns();
                 if (aRets.length >= 2 && aRets[0].isAssignableTo(atypeRequired[0])
@@ -507,10 +511,11 @@ public class RelOpExpression
             return null;
             }
 
+        String sMethod = getDefaultMethodName();
+        String sOp     = getOperatorString();
         if (expr1.testFit(ctx, typeRequired).isFit())
             {
-            Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(
-                    getDefaultMethodName(), getOperatorString(), 1);
+            Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps)
                 {
                 if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
@@ -528,8 +533,7 @@ public class RelOpExpression
                 {
                 if (expr1.testFit(ctx, typeParam).isFit())
                     {
-                    Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(
-                            getDefaultMethodName(), getOperatorString(), 1);
+                    Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps)
                         {
                         if (expr2.testFit(ctx, idMethod.getRawParams()[0]).isFit()
