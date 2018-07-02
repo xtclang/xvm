@@ -11,15 +11,11 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
-
-import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -34,18 +30,15 @@ public class JumpInt
     /**
      * Construct a JMP_INT op.
      *
-     * @param arg         a value Argument, which can be of any type that returns true for
-     *                    {@link TypeConstant#isIntConvertible()}
-     * @param pintOffset  an an integer offset value to subtract from the argument
+     * @param arg         a value Argument of type Int64
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpInt(Argument arg, PackedInteger pintOffset, Op[] aOpCase, Op opDefault)
+    public JumpInt(Argument arg, Op[] aOpCase, Op opDefault)
         {
         assert aOpCase != null;
 
         m_argVal    = arg;
-        m_nAdjust   = pintOffset.getInt();  // note: can throw if it's too big
         m_aOpCase   = aOpCase;
         m_opDefault = opDefault;
         }
@@ -60,7 +53,6 @@ public class JumpInt
             throws IOException
         {
         m_nArg      = readPackedInt(in);
-        m_nAdjust   = readPackedInt(in);
         m_aofCase   = readIntArray(in);
         m_ofDefault = readPackedInt(in);
         }
@@ -77,7 +69,6 @@ public class JumpInt
         out.writeByte(getOpCode());
 
         writePackedLong(out, m_nArg);
-        writePackedLong(out, m_nAdjust);
         writeIntArray(out, m_aofCase);
         writePackedLong(out, m_ofDefault);
         }
@@ -133,7 +124,7 @@ public class JumpInt
 
     protected int complete(Frame frame, int iPC, ObjectHandle hValue)
         {
-        long lValue = ((JavaLong) hValue).getValue() - m_nAdjust;
+        long lValue = ((JavaLong) hValue).getValue();
         return lValue >= 0 && lValue < m_aofCase.length
             ? iPC + m_aofCase[(int) lValue]
             : iPC + m_ofDefault;
@@ -158,8 +149,6 @@ public class JumpInt
           .append(' ')
           .append(Argument.toIdString(m_argVal, m_nArg))
           .append(", ")
-          .append(m_nAdjust)
-          .append(", ")
           .append(cLabels)
           .append(":[");
 
@@ -182,7 +171,6 @@ public class JumpInt
         }
 
     protected int   m_nArg;
-    protected int   m_nAdjust;
     protected int[] m_aofCase;
     protected int   m_ofDefault;
 

@@ -124,11 +124,11 @@ public class SingletonConstant
     @Override
     public PackedInteger getIntValue()
         {
-        if (m_constClass.getType().isIntConvertible())
+        // (note: this enum-to-int conversion is no longer used for compiling to JumpInt)
+        ClassStructure clzThis = (ClassStructure) m_constClass.getComponent();
+        if (clzThis.getFormat() == Component.Format.ENUMVALUE)
             {
-            // REVIEW GG
             // need an ordinal value for the enum that this represents
-            ClassStructure clzThis   = (ClassStructure) m_constClass.getComponent();
             ClassStructure clzParent = (ClassStructure) clzThis.getParent();
             int i = 0;
             for (Component child : clzParent.children())

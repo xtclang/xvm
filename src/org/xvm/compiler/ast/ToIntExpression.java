@@ -7,16 +7,15 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
-import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.GP_Sub;
 import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Var;
+import org.xvm.asm.op.P_Get;
 
 import org.xvm.compiler.ast.Statement.Context;
 
@@ -101,8 +100,8 @@ public class ToIntExpression
             case "Bit":
             case "Nibble":
             case "Char":
-                // at least one of these does NOT have an @Auto method that converts to<Int>()
                 {
+                // at least one of these does NOT have an @Auto method that converts to<Int>()
                 MethodConstant id = expr.getType().ensureTypeInfo().findCallable(
                         "to", true, false, getTypes(), TypeConstant.NO_TYPES, null);
                 assert id != null;
@@ -224,39 +223,65 @@ public class ToIntExpression
         }
 
     @Override
+    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        return !isConstant() && getExtractor() == null && getOffsetConstant() == null && getConvertMethod() == null
+                ? expr.generateArgument(code, fLocalPropOk, fUsedOnce, errs)
+                : super.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+        }
+
+    @Override
     public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
         {
-        if (isConstant() || !LVal.isNormalVariable())
-            {
-            super.generateAssignment(code, LVal, errs);
-            }
-
-
-        if (m_iVal != 0)
-            {
-            getUnderlyingExpression().generateAssignment(code, LVal, errs);
-            return;
-            }
-
         if (isConstant())
             {
             super.generateAssignment(code, LVal, errs);
-            return;
             }
 
-        // get the value to be converted
-        Argument argIn = getUnderlyingExpression().generateArgument(code, true, true, errs);
+        IdentityConstant idExtract   = getExtractor();
+        Constant         constOffset = getOffsetConstant();
+        MethodConstant   idConvert   = getConvertMethod();
 
-        // determine the destination of the conversion
-        if (LVal.isLocalArgument())
+        // step 1: extract the value from the underlying expression
+        Argument argExtracted = expr.generateArgument(code, false, true, errs);
+        if (idExtract != null)
             {
-            code.add(new Invoke_01(argIn, m_idConv, LVal.getLocalArgument()));
+            // extract always results in an Int64, which is the type of this expression
+            Argument   argExtractFrom = argExtracted;
+            Assignable LValExtractTo  = createTempVar(code, getType(), true, errs);
+            argExtracted = LValExtractTo.getLocalArgument();
+            code.add(idExtract instanceof PropertyConstant
+                    ? new P_Get((PropertyConstant) idExtract, argExtractFrom, argExtracted)
+                    : new Invoke_01(argExtractFrom, (MethodConstant) idExtract, argExtracted));
+            }
+
+        // step 2: apply the offset
+        Argument argAdjusted = argExtracted;
+        if (constOffset != null)
+            {
+            Argument   argAdjustFrom = argAdjusted;
+            Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType(), true, errs);
+            argAdjusted = LValAdjustTo.getLocalArgument();
+            code.add(new GP_Sub(argAdjustFrom, constOffset, argAdjusted));
+            }
+
+        // step 3: apply the conversion
+        if (idConvert == null)
+            {
+            LVal.assign(argAdjusted, code, errs);
             }
         else
             {
-            Register regResult = new Register(getType(), Op.A_STACK);
-            code.add(new Invoke_01(argIn, m_idConv, regResult));
-            LVal.assign(regResult, code, errs);
+            Assignable LValConverted = LVal.isLocalArgument()
+                    ? LVal
+                    : createTempVar(code, getType(), true, errs);
+
+            code.add(new Invoke_01(argAdjusted, idConvert, LValConverted.getLocalArgument()));
+
+            if (LVal != LValConverted)
+                {
+                LVal.assign(LValConverted.getLocalArgument(), code, errs);
+                }
             }
         }
 
@@ -266,9 +291,50 @@ public class ToIntExpression
     @Override
     public String toString()
         {
-        return getUnderlyingExpression().toString()
-                + '.' + m_idConv.getName()
-                + '<' + getType().getValueString() + ">()";
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(expr);
+
+        IdentityConstant idExtract = getExtractor();
+        if (idExtract != null)
+            {
+            sb.append('.')
+              .append(idExtract.getName());
+            if (idExtract instanceof MethodConstant)
+                {
+                sb.append("()");
+                }
+            }
+
+        PackedInteger pintOffset = getOffset();
+        if (pintOffset != null)
+            {
+            if (pintOffset.equals(PackedInteger.ZERO))
+                {
+                pintOffset = null;
+                }
+            else
+                {
+                sb.append(" - ")
+                  .append(pintOffset);
+                }
+            }
+
+        MethodConstant idConvert = getConvertMethod();
+        if (idConvert != null)
+            {
+            if (pintOffset != null)
+                {
+                sb.insert(0, '(')
+                        .append(')');
+                }
+
+            sb.append('.')
+              .append(idConvert.getName())
+              .append("()");
+            }
+
+        return sb.toString();
         }
 
 
