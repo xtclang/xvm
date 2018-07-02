@@ -491,19 +491,16 @@ public class Frame
      */
     public void pushStack(ObjectHandle hValue)
         {
-        if (m_hStackTop == null)
-            {
-            m_hStackTop = hValue;
-            }
-        else
+        if (m_hStackTop != null)
             {
             Deque<ObjectHandle> stack = m_stack;
             if (stack == null)
                 {
                 stack = m_stack = new ArrayDeque<>();
                 }
-            stack.push(hValue);
+            stack.push(m_hStackTop);
             }
+        m_hStackTop = hValue;
         }
 
     /**
@@ -513,20 +510,15 @@ public class Frame
      */
     public ObjectHandle popStack()
         {
+        ObjectHandle hValue = m_hStackTop;
+        assert hValue != null;
+
         Deque<ObjectHandle> stack = m_stack;
-        if (stack == null || stack.isEmpty())
-            {
-            ObjectHandle hValue = m_hStackTop;
+        m_hStackTop = stack == null || stack.isEmpty()
+                ? null
+                : stack.pop();
 
-            assert hValue != null;
-
-            m_hStackTop = null;
-            return hValue;
-            }
-        else
-            {
-            return stack.pop();
-            }
+        return hValue;
         }
 
     // assign a specified register on this frame
