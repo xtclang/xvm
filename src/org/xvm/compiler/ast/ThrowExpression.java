@@ -99,7 +99,10 @@ public class ThrowExpression
         {
         boolean fValid = validateThrow(ctx, errs);
         TypeFit fit    = fValid ? TypeFit.Fit : TypeFit.NoFit;
-        return finishValidation(typeRequired, typeRequired, fit, null, errs);
+
+        // it doesn't really matter what type we choose here, but finishValidation() requires one
+        TypeConstant typeActual = typeRequired == null ? pool().typeException() : typeRequired;
+        return finishValidation(typeRequired, typeActual, fit, null, errs);
         }
 
     @Override

@@ -55,6 +55,16 @@ public abstract class OpMove
         writePackedLong(out, m_nToValue);
         }
 
+    /**
+     * Note: Used only during compilation.
+     *
+     * @return the Register that holds the destination value
+     */
+    public Register getRegister()
+        {
+        return m_regTo;
+        }
+
     @Override
     public void simulate(Scope scope)
         {

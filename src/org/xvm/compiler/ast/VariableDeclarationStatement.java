@@ -115,21 +115,27 @@ public class VariableDeclarationStatement
     // ----- ConditionalStatement methods ----------------------------------------------------------
 
     @Override
-    protected void split()
+    protected void split(Context ctx, ErrorListener errs)
         {
         if (value == null)
             {
             // this already declares and does not assign, so the split is already effectively done
             long      lPos    = getEndPosition();
             Statement stmtNOP = new StatementBlock(Collections.EMPTY_LIST, lPos, lPos);
-            configureSplit(this, stmtNOP);
+            configureSplit(this, stmtNOP, errs);
             }
         else
             {
             // actually split this declaration statement into separate declaration and assignment
-            Statement stmtDecl = new VariableDeclarationStatement(type, name, null, null, false);
-            Statement stmtAsn  = new AssignmentStatement(new NameExpression(name), op, value, false);
-            configureSplit(stmtDecl, stmtAsn);
+            AssignmentStatement stmtAsn = new AssignmentStatement(new NameExpression(name), op, value, false);
+
+            this.op    = null;
+            this.value = null;
+            m_scenario = Scenario.DeclareOnly;
+            configureSplit(this, stmtAsn, errs);
+
+            notImplemented(); // TODO: it's too late to validate the assign statement;
+                              // consider moving the split() call to the validate phase on the parent
             }
         }
 
@@ -340,34 +346,37 @@ public class VariableDeclarationStatement
         boolean      fCompletes = fReachable && (value == null || !value.isAborting());
         ConstantPool pool       = pool();
 
-        switch (getUsage())
+        if (m_scenario != Scenario.DeclareOnly)
             {
-            case While:
-            case If:
-                // in the form "Type var : conditional"
-                // first, declare an unnamed Boolean variable that will hold the conditional result
-                code.add(new Var(pool.typeBoolean()));
-                Register regCond = code.lastRegister();
-                // next, declare the named variable
-                code.add(new Var_N(m_reg, pool.ensureStringConstant((String) name.getValue())));
-                // next, assign the r-value to the two variables
-                value.generateAssignments(code, new Assignable[]
-                        {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
-                code.add(getUsage() == Usage.If
-                        ? new JumpFalse(regCond, getLabel())
-                        : new JumpTrue (regCond, getLabel()));
-                return fCompletes;
+            switch (getUsage())
+                {
+                case While:
+                case If:
+                    // in the form "Type var : conditional"
+                    // first, declare an unnamed Boolean variable that will hold the conditional result
+                    code.add(new Var(pool.typeBoolean()));
+                    Register regCond = code.lastRegister();
+                    // next, declare the named variable
+                    code.add(new Var_N(m_reg, pool.ensureStringConstant((String) name.getValue())));
+                    // next, assign the r-value to the two variables
+                    value.generateAssignments(code, new Assignable[]
+                            {value.new Assignable(regCond), value.new Assignable(m_reg)}, errs);
+                    code.add(getUsage() == Usage.If
+                            ? new JumpFalse(regCond, getLabel())
+                            : new JumpTrue (regCond, getLabel()));
+                    return fCompletes;
 
-            case For:
-                // in the form "Type var : Iterable"
-                // TODO
-                throw new UnsupportedOperationException();
+                case For:
+                    // in the form "Type var : Iterable"
+                    // TODO
+                    throw new UnsupportedOperationException();
 
-            case Switch:
-                // TODO - this one might just be the same as non-conditional usage
-                // fall through
-            default:
-                break;
+                case Switch:
+                    // TODO - this one might just be the same as non-conditional usage
+                    // fall through
+                default:
+                    break;
+                }
             }
 
         StringConstant constName = pool.ensureStringConstant((String) name.getValue());

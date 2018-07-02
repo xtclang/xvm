@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.Constant;
@@ -37,7 +38,7 @@ public class TupleExpression
     public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos)
         {
         this.type        = type;
-        this.exprs       = exprs;
+        this.exprs       = exprs == null ? Collections.EMPTY_LIST : exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
         }
@@ -167,8 +168,13 @@ public class TupleExpression
             }
 
         List<Expression> listFieldExprs = exprs;
-        int              cFields        = listFieldExprs.size();
-        TypeConstant[]   atypeFields    = new TypeConstant[cFields];
+        if (listFieldExprs.isEmpty())
+            {
+            return pool.typeTuple();
+            }
+
+        int            cFields     = listFieldExprs.size();
+        TypeConstant[] atypeFields = new TypeConstant[cFields];
         if (typeTuple.isParamsSpecified())
             {
             TypeConstant[] atypeSpecified = typeTuple.getParamTypesArray();
@@ -372,9 +378,8 @@ public class TupleExpression
             return toConstant();
             }
 
-        List<Expression> listExprs = exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        Argument[]       aArgs     = new Argument[cExprs];
+        int        cExprs = exprs.size();
+        Argument[] aArgs  = new Argument[cExprs];
         for (int i = 0; i < cExprs; ++i)
             {
             aArgs[i] = exprs.get(i).generateArgument(code, false, false, errs);
@@ -395,7 +400,7 @@ public class TupleExpression
 
         sb.append('(');
 
-        if (exprs != null)
+        if (!exprs.isEmpty())
             {
             boolean first = true;
             for (Expression expr : exprs)
