@@ -1,10 +1,14 @@
 - expressions
-  - getShortCircuitLabel - needs to take child ref
-  - Switch expression
   - Statement expression
-  - Lambda
+  - Lambda (needs captures)
+  - anonymous inner classes ("new" expression) (needs captures)
   - merge Throw and T0D0 expressions; test
   - Version
+
+- statements
+  - for
+  - for v2
+  - multi variable declaration
 
 - test static property with value (both constant and init function)
 
