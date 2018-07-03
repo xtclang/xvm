@@ -10,6 +10,7 @@ import java.util.Map;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Nop;
@@ -23,7 +24,21 @@ import org.xvm.util.Severity;
 
 
 /**
- * An block statement specifies a series of statements.
+ * A block statement specifies a series of statements.
+ * <p/>
+ * A block statement holds a special role in compilation, in that the four forms of "compilation
+ * container" all rely on the block statement as the representation of the code being compiled:
+ * <ol>
+ * <li>MethodDeclarationStatement - represents a method or function, with a body defined by a
+ *     StatementBlock.</li>
+ * <li>NewExpression - (optionally) represents an anonymous inner class, defined within a
+ *     StatementBlock.</li>
+ * <li>LambdaExpression - represents a lambda function, whose body is represented by a
+ *     StatementBlock.</li>
+ * <li>StatementExpression - represents an "inlined" lambda, represented by a StatementBlock, with
+ *     the resulting value of the expression being "returned" from one or more return statements
+ *     inside of the StatementBlock.</li>
+ * </ol>
  */
 public class StatementBlock
         extends Statement
@@ -143,6 +158,21 @@ public class StatementBlock
         }
 
     @Override
+    protected AstNode getContainer()
+        {
+        AstNode parent = getParent();
+        if (       parent instanceof MethodDeclarationStatement
+                || parent instanceof NewExpression
+                || parent instanceof LambdaExpression
+                || parent instanceof StatementExpression)
+            {
+            return parent;
+            }
+
+        return super.getContainer();
+        }
+
+    @Override
     public Source getSource()
         {
         return source == null
@@ -207,6 +237,13 @@ public class StatementBlock
                 code.add(new Nop());
                 }
             }
+        }
+
+    public TypeConstant determineLambdaResultType(Context ctx)
+        {
+        ctx = ctx.createInferringContext()
+        // TODO
+        return null;
         }
 
     @Override

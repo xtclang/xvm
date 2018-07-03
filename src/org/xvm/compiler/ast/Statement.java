@@ -557,32 +557,7 @@ public abstract class Statement
          */
         public Context createInferringContext(TypeConstant typeLeft)
             {
-            return new Context(this)
-                {
-                @Override
-                public Argument resolveRegularName(Token name, ErrorListener errs)
-                    {
-                    Argument arg = super.resolveRegularName(name, errs);
-                    if (arg != null)
-                        {
-                        return arg;
-                        }
-
-                    Component.SimpleCollector collector = new Component.SimpleCollector();
-                    return typeLeft.resolveContributedName(name.getValueText(), collector) ==
-                            Component.ResolutionResult.RESOLVED
-                        ? collector.getResolvedConstant()
-                        : null;
-                    }
-
-                @Override
-                public void registerVar(Token tokName, Register reg, ErrorListener errs)
-                    {
-                    m_ctxOuter.registerVar(tokName, reg, errs);
-                    }
-                };
-
-            // REVIEW: what else do we need to delegate?
+            return new InferringContext(this, typeLeft);
             }
 
         Context m_ctxOuter;
@@ -969,8 +944,74 @@ public abstract class Statement
             {
             super(ctxOuter);
             }
+        }
 
-        // TODO whatever info needs to be accumulated for a nested or forked context, i.e. definite assignment info
+    /**
+     * A delegating context that allows an expression to resolve names based on the specified type's
+     * contributions.
+     */
+    public static class InferringContext
+            extends NestedContext
+        {
+        /**
+         * Construct an InferringContext.
+         *
+         * @param ctxOuter  the context within which this context is nested
+         * @param typeLeft  the type from which this context can draw additional names for purposes
+         *                  of resolution
+         */
+        public InferringContext(Context ctxOuter, TypeConstant typeLeft)
+            {
+            super(ctxOuter);
+
+            m_typeLeft = typeLeft;
+            }
+
+        @Override
+        public Argument resolveRegularName(Token name, ErrorListener errs)
+            {
+            Argument arg = super.resolveRegularName(name, errs);
+            if (arg != null)
+                {
+                return arg;
+                }
+
+            Component.SimpleCollector collector = new Component.SimpleCollector();
+            return m_typeLeft.resolveContributedName(name.getValueText(), collector)
+                    == Component.ResolutionResult.RESOLVED
+                    ? collector.getResolvedConstant()
+                    : null;
+            }
+
+        @Override
+        public void registerVar(Token tokName, Register reg, ErrorListener errs)
+            {
+            m_ctxOuter.registerVar(tokName, reg, errs);
+            }
+
+        TypeConstant m_typeLeft;
+        }
+
+
+    /**
+     * A context for compiling lamba expressions, anonymous inner classes, and
+     */
+    public static class CaptureContext
+            extends Context
+        {
+        /**
+         * Construct a CaptureContext.
+         *
+         * @param ctxOuter  the context within which this context is nested
+         * @param body      the StatementBlock of the lambda / inner class, whose parent is one of:
+         *                  NewExpression, LambdaExpression, or StatementExpression
+         */
+        public LambdaContext(Context ctxOuter, StatementBlock body)
+            {
+            super(ctxOuter);
+            }
+
+        // TODO
         }
 
 
