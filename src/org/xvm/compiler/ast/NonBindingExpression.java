@@ -109,9 +109,8 @@ public class NonBindingExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk,
-            boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         throw new IllegalStateException("NonBindingExpression cannot generate an argument;"
                 + ": that's why they're called non-binding! (" + this + ')');

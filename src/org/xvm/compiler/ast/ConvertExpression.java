@@ -126,28 +126,28 @@ public  class ConvertExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(code, errs);
+        expr.generateVoid(ctx, code, errs);
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (m_iVal != 0)
             {
-            getUnderlyingExpression().generateAssignment(code, LVal, errs);
+            getUnderlyingExpression().generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         if (isConstant())
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             return;
             }
 
         // get the value to be converted
-        Argument argIn = getUnderlyingExpression().generateArgument(code, true, true, errs);
+        Argument argIn = getUnderlyingExpression().generateArgument(ctx, code, true, true, errs);
 
         // determine the destination of the conversion
         if (LVal.isLocalArgument())
@@ -163,24 +163,24 @@ public  class ConvertExpression
         }
 
     @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         int cVals = aLVal.length;
         if (cVals == 1)
             {
-            generateAssignment(code, aLVal[0], errs);
+            generateAssignment(ctx, code, aLVal[0], errs);
             return;
             }
 
         if (m_iVal >= cVals)
             {
-            getUnderlyingExpression().generateAssignments(code, aLVal, errs);
+            getUnderlyingExpression().generateAssignments(ctx, code, aLVal, errs);
             return;
             }
 
         if (isConstant())
             {
-            super.generateAssignments(code, aLVal, errs);
+            super.generateAssignments(ctx, code, aLVal, errs);
             return;
             }
 
@@ -190,7 +190,7 @@ public  class ConvertExpression
         code.add(new Var(getUnderlyingExpression().getTypes()[m_iVal]));
         Register regTemp = code.lastRegister();
         aLValTemp[m_iVal] = new Assignable(regTemp);
-        getUnderlyingExpression().generateAssignments(code, aLValTemp, errs);
+        getUnderlyingExpression().generateAssignments(ctx, code, aLValTemp, errs);
 
         // determine the destination of the conversion
         Assignable LVal = aLVal[m_iVal];

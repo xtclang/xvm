@@ -626,8 +626,8 @@ public class InvocationExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         // NameExpression cannot (must not!) attempt to resolve method / function names; it is an
         // assertion or error if it tries; that is the responsibility of InvocationExpression
@@ -658,7 +658,7 @@ public class InvocationExpression
                             }
                         else
                             {
-                            argTarget = exprLeft.generateArgument(code, true, true, errs);
+                            argTarget = exprLeft.generateArgument(ctx, code, true, true, errs);
                             }
 
                         if (m_fCall)
@@ -675,7 +675,7 @@ public class InvocationExpression
                             if (cArgs == 1)
                                 {
                                 chArgs = '1';
-                                arg    = args.get(0).generateArgument(code, false, true, errs);
+                                arg    = args.get(0).generateArgument(ctx, code, false, true, errs);
                                 }
                             else if (cArgs > 1)
                                 {
@@ -683,7 +683,7 @@ public class InvocationExpression
                                 aArgs  = new Argument[cArgs];
                                 for (int i = 0; i < cArgs; ++i)
                                     {
-                                    aArgs[i] = args.get(i).generateArgument(code, false, true, errs);
+                                    aArgs[i] = args.get(i).generateArgument(ctx, code, false, true, errs);
                                     }
                                 }
 
@@ -787,7 +787,7 @@ public class InvocationExpression
             {
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
-            argFn = expr.generateArgument(code, true, true, errs);
+            argFn = expr.generateArgument(ctx, code, true, true, errs);
             }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -825,7 +825,7 @@ public class InvocationExpression
             if (cArgs == 1)
                 {
                 chArgs = '1';
-                arg    = args.get(0).generateArgument(code, false, true, errs);
+                arg    = args.get(0).generateArgument(ctx, code, false, true, errs);
                 }
             else if (cArgs > 1)
                 {
@@ -833,7 +833,7 @@ public class InvocationExpression
                 aArgs  = new Argument[cArgs];
                 for (int i = 0; i < cArgs; ++i)
                     {
-                    aArgs[i] = args.get(i).generateArgument(code, false, true, errs);
+                    aArgs[i] = args.get(i).generateArgument(ctx, code, false, true, errs);
                     }
                 }
 
@@ -946,7 +946,7 @@ public class InvocationExpression
             if (!args.get(i).isNonBinding())
                 {
                 aiArg[iNext] = i;
-                aArg [iNext] = args.get(i).generateArgument(code, false, true, errs);
+                aArg [iNext] = args.get(i).generateArgument(ctx, code, false, true, errs);
                 }
             }
 

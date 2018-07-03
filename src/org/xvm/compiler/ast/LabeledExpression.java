@@ -165,51 +165,54 @@ public class LabeledExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(code, errs);
+        expr.generateVoid(ctx, code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return expr.generateArgument(code, fLocalPropOk, fUsedOnce, errs);
+        return expr.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        return expr.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
+        return expr.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        expr.generateAssignment(code, LVal, errs);
+        expr.generateAssignment(ctx, code, LVal, errs);
         }
 
     @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        expr.generateAssignments(code, aLVal, errs);
+        expr.generateAssignments(ctx, code, aLVal, errs);
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        expr.generateConditionalJump(code, label, fWhenTrue, errs);
+        expr.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
         }
 
     @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
         {
-        return expr.generateAssignable(code, errs);
+        return expr.generateAssignable(ctx, code, errs);
         }
 
     @Override
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
         {
-        return expr.generateAssignables(code, errs);
+        return expr.generateAssignables(ctx, code, errs);
         }
 
 

@@ -153,16 +153,17 @@ public class MultiValueExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
         for (Expression expr : exprs)
             {
-            expr.generateVoid(code, errs);
+            expr.generateVoid(ctx, code, errs);
             }
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -175,24 +176,24 @@ public class MultiValueExpression
         for (int i = 0; i < cExprs; ++i)
             {
             // REVIEW is it ok to pass through the "used once" flag?
-            aArgs[i] = aExprs[i].generateArgument(code, fLocalPropOk, fUsedOnce && i == 0, errs);
+            aArgs[i] = aExprs[i].generateArgument(ctx, code, fLocalPropOk, fUsedOnce && i == 0, errs);
             }
         return aArgs;
         }
 
     @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         Expression[] aExprs = exprs;
         int          cExprs = aExprs.length;
         int          cLVals = aLVal.length;
         for (int i = 0; i < cLVals; ++i)
             {
-            aExprs[i].generateAssignment(code, aLVal[i], errs);
+            aExprs[i].generateAssignment(ctx, code, aLVal[i], errs);
             }
         for (int i = cLVals; i < cExprs; ++i)
             {
-            aExprs[i].generateVoid(code, errs);
+            aExprs[i].generateVoid(ctx, code, errs);
             }
         }
 

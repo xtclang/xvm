@@ -149,10 +149,10 @@ public class TodoExpression
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        generateTodo(code, errs);
+        generateTodo(ctx, code, errs);
 
         TypeConstant[] aTypes = getTypes();
         int            cArgs  = aTypes.length;
@@ -165,9 +165,9 @@ public class TodoExpression
         }
 
     @Override
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
         {
-        generateTodo(code, errs);
+        generateTodo(ctx, code, errs);
 
         int          cAsns = getValueCount();
         Assignable[] aAsns = new Assignable[cAsns];
@@ -179,24 +179,26 @@ public class TodoExpression
         }
 
     @Override
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        generateTodo(code, errs);
+        generateTodo(ctx, code, errs);
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        generateTodo(code, errs);
+        generateTodo(ctx, code, errs);
         }
 
     /**
      * Generate the actual code that a T0D0 expression evaluates to.
      *
+     * @param ctx   the statement context
      * @param code  the code block
      * @param errs  the error list to log any errors to
      */
-    protected void generateTodo(Code code, ErrorListener errs)
+    protected void generateTodo(Context ctx, Code code, ErrorListener errs)
         {
         // throw new UnsupportedOperationException(message, null)
         ConstantPool   pool     = pool();
@@ -205,7 +207,7 @@ public class TodoExpression
         Argument       argEx    = new Register(constEx.getType());
         Argument       argMsg   = message == null
                 ? pool.valNull()
-                : message.generateArgument(code, false, false, errs);
+                : message.generateArgument(ctx, code, false, false, errs);
 
         code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         code.add(new Throw(argEx));

@@ -293,7 +293,8 @@ public class ListExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -305,7 +306,7 @@ public class ListExpression
         Argument[]       aArgs     = new Argument[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listExprs.get(i).generateArgument(code, false, true, errs);
+            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, false, true, errs);
             }
         code.add(new Var_S(getType(), aArgs));
         return code.lastRegister();

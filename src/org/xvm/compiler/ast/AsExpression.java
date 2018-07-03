@@ -86,9 +86,10 @@ public class AsExpression
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        Argument argBefore = expr1.generateArgument(code, true, true, errs);
+        Argument argBefore = expr1.generateArgument(ctx, code, true, true, errs);
         Register regAfter  = fUsedOnce
                 ? new Register(getType(), Op.A_STACK)
                 : new Register(getType());
@@ -97,16 +98,16 @@ public class AsExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (LVal.isNormalVariable())
             {
-            Argument argTarget = expr1.generateArgument(code, true, true, errs);
+            Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             code.add(new MoveCast(argTarget, LVal.getRegister()));
             }
         else
             {
-            super.generateAssignment(code, LVal, errs);
+            super.generateAssignment(ctx, code, LVal, errs);
             }
         }
 

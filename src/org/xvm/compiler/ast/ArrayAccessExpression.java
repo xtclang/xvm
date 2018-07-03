@@ -231,7 +231,7 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -244,12 +244,12 @@ public class ArrayAccessExpression
             Register         regResult      = LVal.isLocalArgument()
                                             ? LVal.getRegister()
                                             : createTempVar(code, getType(), true, errs).getRegister();
-            Argument         argArray       = expr.generateArgument(code, true, true, errs);
+            Argument         argArray       = expr.generateArgument(ctx, code, true, true, errs);
             List<Expression> listIndexExprs = indexes;
             int              cIndexes       = listIndexExprs.size();
             if (cIndexes == 1)
                 {
-                Argument argIndex = listIndexExprs.get(0).generateArgument(code, true, true, errs);
+                Argument argIndex = listIndexExprs.get(0).generateArgument(ctx, code, true, true, errs);
                 code.add(new I_Get(argArray, argIndex, regResult));
                 }
             else
@@ -257,7 +257,7 @@ public class ArrayAccessExpression
                 Argument[] aIndexArgs = new Argument[cIndexes];
                 for (int i = 0; i < cIndexes; ++i)
                     {
-                    aIndexArgs[i] = listIndexExprs.get(i).generateArgument(code, true, true, errs);
+                    aIndexArgs[i] = listIndexExprs.get(i).generateArgument(ctx, code, true, true, errs);
                     }
                 throw notImplemented();
                 // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
@@ -273,14 +273,14 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public Assignable generateAssignable(Code code, ErrorListener errs)
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
         {
-        Argument         argArray  = expr.generateArgument(code, true, true, errs);
+        Argument         argArray  = expr.generateArgument(ctx, code, true, true, errs);
         List<Expression> listIndex = indexes;
         int              cIndexes  = listIndex.size();
         if (cIndexes == 1)
             {
-            Argument argIndex = listIndex.get(0).generateArgument(code, true, true, errs);
+            Argument argIndex = listIndex.get(0).generateArgument(ctx, code, true, true, errs);
             return new Assignable(argArray, argIndex);
             }
         else
@@ -288,7 +288,7 @@ public class ArrayAccessExpression
             Argument[] aArgIndexes = new Argument[cIndexes];
             for (int i = 0; i < cIndexes; ++i)
                 {
-                aArgIndexes[i] = listIndex.get(i).generateArgument(code, true, true, errs);
+                aArgIndexes[i] = listIndex.get(i).generateArgument(ctx, code, true, true, errs);
                 }
             return new Assignable(argArray, aArgIndexes);
             }

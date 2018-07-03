@@ -1130,10 +1130,11 @@ public abstract class Expression
      * This method should be overridden by any expression that can produce better code than the
      * default discarded-assignment code.
      *
+     * @param ctx   the compilation context for the statement
      * @param code  the code block
      * @param errs  the error list to log any errors to
      */
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
         checkDepth();
 
@@ -1142,13 +1143,13 @@ public abstract class Expression
             {
             if (isSingle() && hasSingleValueImpl())
                 {
-                generateAssignment(code, new Assignable(), errs);
+                generateAssignment(ctx, code, new Assignable(), errs);
                 }
             else
                 {
                 Assignable[] asnVoid = new Assignable[getValueCount()];
                 Arrays.fill(asnVoid, new Assignable());
-                generateAssignments(code, asnVoid, errs);
+                generateAssignments(ctx, code, asnVoid, errs);
                 }
             }
         }
@@ -1159,6 +1160,7 @@ public abstract class Expression
      * If the expression {@link #hasSingleValueImpl()} is {@code true}, then this method or
      * {@link #generateAssignment} must be overridden.
      *
+     * @param ctx           the compilation context for the statement
      * @param code          the code block
      * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
      *                      if the argument values are local properties
@@ -1167,7 +1169,8 @@ public abstract class Expression
      *
      * @return a resulting argument of the validated type
      */
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         checkDepth();
         assert !isVoid();
@@ -1179,13 +1182,13 @@ public abstract class Expression
 
         if (hasMultiValueImpl() && (!hasSingleValueImpl() || !isSingle()))
             {
-            return generateArguments(code, fLocalPropOk, fUsedOnce, errs)[0];
+            return generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs)[0];
             }
 
         if (hasSingleValueImpl() && !isVoid())
             {
             Assignable var = createTempVar(code, getType(), fUsedOnce, errs);
-            generateAssignment(code, var, errs);
+            generateAssignment(ctx, code, var, errs);
             return var.getRegister();
             }
 
@@ -1198,6 +1201,7 @@ public abstract class Expression
      * <p/>
      * This method must be overridden by any expression that is multi-value-aware.
      *
+     * @param ctx           the compilation context for the statement
      * @param code          the code block
      * @param fLocalPropOk  true if the resulting arguments can be expressed as property constants
      *                      if the argument values are local properties
@@ -1208,7 +1212,8 @@ public abstract class Expression
      * @return an array of resulting arguments, which will either be the same length as the value
      *         count of the expression, or length 1 for a tuple result iff fPack is true
      */
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         checkDepth();
 
@@ -1220,14 +1225,14 @@ public abstract class Expression
         if (isVoid())
             {
             // void means that the results of the expression are black-holed
-            generateAssignments(code, NO_LVALUES, errs);
+            generateAssignments(ctx, code, NO_LVALUES, errs);
             return NO_RVALUES;
             }
 
         if (hasSingleValueImpl() && isSingle())
             {
             // optimize for single argument case
-            return new Argument[] { generateArgument(code, fLocalPropOk, fUsedOnce, errs) };
+            return new Argument[] { generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs) };
             }
 
         TypeConstant[] aTypes = getTypes();
@@ -1238,7 +1243,7 @@ public abstract class Expression
             {
             aLVals[i] = createTempVar(code, aTypes[i], false, errs);
             }
-        generateAssignments(code, aLVals, errs);
+        generateAssignments(ctx, code, aLVals, errs);
 
         // the temporaries are each represented by a register; return those registers as the
         // generated arguments
@@ -1257,25 +1262,26 @@ public abstract class Expression
      * This method should be overridden by any expression that can produce better code than the
      * default assignment code.
      *
+     * @param ctx   the compilation context for the statement
      * @param code  the code block
      * @param LVal  the Assignable object representing the L-Value
      * @param errs  the error list to log any errors to
      */
-    public void generateAssignment(Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         checkDepth();
 
         if (hasSingleValueImpl())
             {
             // this will be overridden by classes that can push down the work
-            Argument arg = generateArgument(code, LVal.supportsLocalPropMode(), true, errs);
+            Argument arg = generateArgument(ctx, code, LVal.supportsLocalPropMode(), true, errs);
             LVal.assign(arg, code, errs);
             return;
             }
 
         if (hasMultiValueImpl())
             {
-            generateAssignments(code, new Assignable[] {LVal}, errs);
+            generateAssignments(ctx, code, new Assignable[] {LVal}, errs);
             return;
             }
 
@@ -1289,11 +1295,12 @@ public abstract class Expression
      * This method should be overridden by any expression that must support multi-values and can
      * produce better code than the default assignment code.
      *
+     * @param ctx    the compilation context for the statement
      * @param code   the code block
      * @param aLVal  an array of Assignable objects representing the L-Values
      * @param errs   the error list to log any errors to
      */
-    public void generateAssignments(Code code, Assignable[] aLVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         checkDepth();
 
@@ -1316,7 +1323,7 @@ public abstract class Expression
                 {
                 case 0:
                     markInAssignment();
-                    generateVoid(code, errs);
+                    generateVoid(ctx, code, errs);
                     clearInAssignment();
                     return;
 
@@ -1324,7 +1331,7 @@ public abstract class Expression
                     if (hasSingleValueImpl())
                         {
                         markInAssignment();
-                        generateAssignment(code, aLVal[0], errs);
+                        generateAssignment(ctx, code, aLVal[0], errs);
                         clearInAssignment();
                         return;
                         }
@@ -1338,7 +1345,7 @@ public abstract class Expression
                 {
                 fLocalPropOk &= aLVal[i].supportsLocalPropMode();
                 }
-            Argument[] aArg = generateArguments(code, fLocalPropOk, true, errs);
+            Argument[] aArg = generateArguments(ctx, code, fLocalPropOk, true, errs);
             for (int i = 0; i < cLVals; ++i)
                 {
                 aLVal[i].assign(aArg[i], code, errs);
@@ -1353,13 +1360,15 @@ public abstract class Expression
      * Generate the necessary code that jumps to the specified label if this expression evaluates
      * to the boolean value indicated in <tt>fWhenTrue</tt>.
      *
+     * @param ctx        the compilation context for the statement
      * @param code       the code block
      * @param label      the label to conditionally jump to
      * @param fWhenTrue  indicates whether to jump when this expression evaluates to true, or
      *                   whether to jump when this expression evaluates to false
      * @param errs       the error list to log any errors to
      */
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue, ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
         checkDepth();
 
@@ -1376,7 +1385,7 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(code, true, true, errs);
+        Argument arg = generateArgument(ctx, code, true, true, errs);
         code.add(fWhenTrue
                 ? new JumpTrue(arg, label)
                 : new JumpFalse(arg, label));
@@ -1417,12 +1426,13 @@ public abstract class Expression
      * This method must be overridden by any expression that is assignable, unless the multi-value
      * version of this method is overridden instead.
      *
+     * @param ctx   the compilation context for the statement
      * @param code  the code block
      * @param errs  the error list to log any errors to
      *
      * @return an Assignable object
      */
-    public Assignable generateAssignable(Code code, ErrorListener errs)
+    public Assignable generateAssignable(Context ctx, Code code, ErrorListener errs)
         {
         checkDepth();
 
@@ -1433,7 +1443,7 @@ public abstract class Expression
 
         if (hasMultiValueImpl())
             {
-            return generateAssignables(code, errs)[0];
+            return generateAssignables(ctx, code, errs)[0];
             }
 
         throw notImplemented();
@@ -1446,24 +1456,25 @@ public abstract class Expression
      * <p/>
      * This method must be overridden by any expression that is assignable and multi-value-aware.
      *
+     * @param ctx   the compilation context for the statement
      * @param code  the code block
      * @param errs  the error list to log any errors to
      *
      * @return an array of {@link #getValueCount()} Assignable objects
      */
-    public Assignable[] generateAssignables(Code code, ErrorListener errs)
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
         {
         checkDepth();
 
         if (isVoid())
             {
-            generateVoid(code, errs);
+            generateVoid(ctx, code, errs);
             return NO_LVALUES;
             }
 
         if (hasSingleValueImpl() && isSingle())
             {
-            return new Assignable[] { generateAssignable(code, errs) };
+            return new Assignable[] { generateAssignable(ctx, code, errs) };
             }
 
         // a sub-class should have overridden this method

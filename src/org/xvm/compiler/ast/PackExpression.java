@@ -56,13 +56,14 @@ public class PackExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        expr.generateVoid(code, errs);
+        expr.generateVoid(ctx, code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         if (isConstant())
             {
@@ -70,7 +71,7 @@ public class PackExpression
             }
 
         // generate the tuple fields
-        Argument[] args = expr.generateArguments(code, fLocalPropOk, fUsedOnce, errs);
+        Argument[] args = expr.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
         assert args != null && args.length == 1;
 
         // generate the tuple value

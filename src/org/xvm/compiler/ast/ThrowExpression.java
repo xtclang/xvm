@@ -147,24 +147,24 @@ public class ThrowExpression
         }
 
     @Override
-    public void generateVoid(Code code, ErrorListener errs)
+    public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        generateThrow(code, errs);
+        generateThrow(ctx, code, errs);
         }
 
     @Override
-    public Argument generateArgument(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument generateArgument(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        generateThrow(code, errs);
+        generateThrow(ctx, code, errs);
         return generateBlackHole(getValueCount() == 0 ? pool().typeObject() : getType());
         }
 
     @Override
-    public Argument[] generateArguments(Code code, boolean fLocalPropOk, boolean fUsedOnce,
-            ErrorListener errs)
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        generateThrow(code, errs);
+        generateThrow(ctx, code, errs);
 
         TypeConstant[] aTypes = getTypes();
         int cArgs = aTypes.length;
@@ -177,18 +177,18 @@ public class ThrowExpression
         }
 
     @Override
-    public void generateConditionalJump(Code code, Label label, boolean fWhenTrue,
-            ErrorListener errs)
+    public void generateConditionalJump(
+            Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs)
         {
-        generateThrow(code, errs);
+        generateThrow(ctx, code, errs);
         }
 
     /**
      * Generate the actual code for the throw.
      */
-    protected void generateThrow(Code code, ErrorListener errs)
+    protected void generateThrow(Context ctx, Code code, ErrorListener errs)
         {
-        code.add(new Throw(expr.generateArgument(code, true, true, errs)));
+        code.add(new Throw(expr.generateArgument(ctx, code, true, true, errs)));
         }
 
 
