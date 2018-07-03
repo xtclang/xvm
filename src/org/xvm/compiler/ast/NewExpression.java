@@ -178,7 +178,8 @@ public class NewExpression
             }
 
         TypeExpression exprTypeOld = this.type;
-        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx, typeRequired.getType(), errs);
+        TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
+                                        typeRequired == null ? null : typeRequired.getType(), errs);
         TypeConstant   typeTarget  = null;
         TypeInfo       infoTarget  = null;
         if (exprTypeNew == null)
@@ -191,11 +192,15 @@ public class NewExpression
 
             typeTarget = exprTypeNew.ensureTypeConstant();
 
-            TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
-            if (typeInferred != null)
+            if (typeRequired != null)
                 {
-                typeTarget = typeInferred;
+                TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
+                if (typeInferred != null)
+                    {
+                    typeTarget = typeInferred;
+                    }
                 }
+
             infoTarget = typeTarget.ensureTypeInfo(errs);
 
             // if the type is not new-able, then it must be an anonymous inner class with a body
