@@ -393,7 +393,7 @@ public class InvocationExpression
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
             assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-            TypeConstant typeArg = argMethod.getType();
+            TypeConstant typeArg = argMethod.getType().resolveTypedefs();
             assert typeArg.isA(pool().typeFunction());
 
             return m_fCall
@@ -566,7 +566,7 @@ public class InvocationExpression
                     // already handled above); the function has two tuple sub-types, the second of which is
                     // the "return types" of the function
                     assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-                    TypeConstant typeArg = argMethod.getType();
+                    TypeConstant typeArg = argMethod.getType().resolveTypedefs();
                     assert typeArg.isA(pool().typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()

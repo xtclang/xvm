@@ -502,15 +502,13 @@ public class MethodDeclarationStatement
 
                 String sMsg = e.getMessage();
                 log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                        + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
+                    + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
                 method.setNative(true);
-                if (sPath.contains("Test"))
+
+                if (!(e instanceof UnsupportedOperationException))
                     {
-                    System.err.println("Test compilation error: " + sPath + " " + e);
-                    if (e instanceof AssertionError || e instanceof NullPointerException)
-                        {
-                        e.printStackTrace(System.err);
-                        }
+                    System.err.println("Compilation error: " + sPath + " " + e);
+                    e.printStackTrace(System.err);
                     }
                 }
             }

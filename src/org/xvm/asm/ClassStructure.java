@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -211,7 +210,8 @@ public class ClassStructure
             }
         else
             {
-            map = new HashMap<>(mapParent);
+            map = new ListMap<>(mapParent.size() + mapThis.size());
+            map.putAll(mapParent);
             map.putAll(mapThis);
             }
         assert (map = Collections.unmodifiableMap(map)) != null;

@@ -865,7 +865,7 @@ public class NameExpression
                     case Property:
                         {
                         PropertyConstant idProp = (PropertyConstant) arg;
-                        ClassStructure   clzTop = ctx.getMethod().getContainingClass();
+                        ClassStructure   clzTop = (ClassStructure) idProp.getNamespace().getComponent();
 
                         // we will use the private access info here since the access restrictions
                         // must have been already checked by the "resolveName"
@@ -874,7 +874,16 @@ public class NameExpression
                             Access.PRIVATE).ensureTypeInfo(errs);
 
                         PropertyInfo infoProp = infoClz.findProperty(idProp);
-                        assert infoProp != null;
+
+                        // there is a possibility that the name was found by the resolver
+                        // (which is using the class structure contributions), but missing in the
+                        // info, which must have already reported the contribution problem
+                        if (infoProp == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.NAME_MISSING,
+                                    sName, ctx.getMethod().getIdentityConstant().getSignature());
+                            break;
+                            }
 
                         m_arg         = infoProp.getIdentity();
                         m_fAssignable = infoProp.isVar() && !infoProp.isInjected();

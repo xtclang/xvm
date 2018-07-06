@@ -769,7 +769,7 @@ public abstract class Statement
                     MethodConstant  idMethod   = method.getIdentityConstant();
                     MethodInfo      infoMethod = info.getMethodById(idMethod);
 
-                    if (!infoMethod.hasSuper(info))
+                    if (infoMethod == null || !infoMethod.hasSuper(info))
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }

@@ -154,9 +154,13 @@ public class CmpExpression
             {
             expr2 = expr2New;
             type2 = expr2New.getType();
-            fValid &= expr2New.getTypeFit().isFit() & usesEquals()
-                    ? typeRequest.supportsEquals (type2, expr2New.isConstant(), errs)
-                    : typeRequest.supportsCompare(type2, expr2New.isConstant(), errs);
+
+            if (typeRequest != null)
+                {
+                fValid &= expr2New.getTypeFit().isFit() & usesEquals()
+                        ? typeRequest.supportsEquals (type2, expr2New.isConstant(), errs)
+                        : typeRequest.supportsCompare(type2, expr2New.isConstant(), errs);
+                }
             }
 
         if (!fValid)
