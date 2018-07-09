@@ -328,7 +328,8 @@ public class TypeInfo
         ParamInfo.TypeResolver resolver = m_resolver;
         if (resolver == null || resolver.errs != errs)
             {
-            m_resolver = resolver = new ParamInfo.TypeResolver(m_mapTypeParams, errs);
+            m_resolver = resolver = new ParamInfo.TypeResolver(
+                    m_struct.getIdentityConstant(), m_mapTypeParams, errs);
             }
         return resolver;
         }
@@ -777,7 +778,7 @@ public class TypeInfo
      * @return all of the methods for this type that can be identified by just a signature, indexed
      *         by that signature
      */
-    public Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
+    protected Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
         {
         Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
 
@@ -1303,6 +1304,7 @@ public class TypeInfo
             }
         else
             {
+            ConstantPool pool = m_type.getConstantPool();
             for (MethodInfo info : getOpMethodInfos())
                 {
                 if (info.isOp(sName, sOp, cParams))
@@ -1311,7 +1313,16 @@ public class TypeInfo
                         {
                         setOps = new HashSet<>(7);
                         }
-                    setOps.add(info.getIdentity());
+                    MethodConstant    idMethod    = info.getIdentity();
+                    SignatureConstant sigOrig     = idMethod.getSignature();
+                    SignatureConstant sigResolved = sigOrig.resolveGenericTypes(m_type)
+                                                           .resolveAutoNarrowing(m_type);
+                    if (!sigResolved.equals(sigOrig))
+                        {
+                        idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
+                        m_cacheById.putIfAbsent(idMethod, info);
+                        }
+                    setOps.add(idMethod);
                     }
                 }
 

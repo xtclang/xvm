@@ -218,12 +218,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
+    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(idTarget);
-        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(idTarget);
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(typeTarget);
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(typeTarget);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this

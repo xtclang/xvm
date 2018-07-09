@@ -531,19 +531,19 @@ public abstract class TypeConstant
 
     /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
-     * auto-narrowing portion with an explicit class identity in the context of the target identity.
+     * auto-narrowing portion with an explicit class identity in the context of the specified target.
      *
      * Note that the target identity must be a sub-type of this type.
      *
-     * @param idTarget  the id of a target class (null for this type's underlying class)
+     * @param typeTarget  the context target type
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
+    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
 
         return constResolved == constOriginal
             ? this
@@ -1198,7 +1198,7 @@ public abstract class TypeConstant
             Map<Object, ParamInfo> mapTypeParams,
             ErrorListener          errs)
         {
-        TypeResolver resolver = new TypeResolver(mapTypeParams, errs);
+        TypeResolver resolver = new TypeResolver(constId, mapTypeParams, errs);
 
         // obtain the type parameters encoded in this type constant
         TypeConstant[] atypeParams = getParamTypesArray();
@@ -2494,6 +2494,23 @@ public abstract class TypeConstant
         // been collected. additionally, if any method signatures are narrowed, the un-narrowed
         // signatures are recorded in a separate set, so that it is possible to determine if
         // they should be capped (and to identify any errors).
+
+        // take a snapshot of all auto-narrowing methods "below" this layer
+        Set<MethodConstant> setAutoNarrow = null;
+        if (fSelf)
+            {
+            setAutoNarrow = new HashSet<>();
+            for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+                {
+                MethodConstant id   = entry.getKey();
+                MethodInfo     info = entry.getValue();
+                if (info.getIdentity().isAutoNarrowing())
+                    {
+                    setAutoNarrow.add(id);
+                    }
+                }
+            }
+
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
@@ -2607,6 +2624,26 @@ public abstract class TypeConstant
 
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
+            }
+
+        if (fSelf)
+            {
+            ConstantPool pool = getConstantPool();
+            for (MethodConstant id : setAutoNarrow)
+                {
+                MethodInfo info = mapMethods.get(id);
+
+                // add the resolved signature unless this layer already capped this chain
+                if (!info.getIdentity().getNamespace().equals(constId))
+                    {
+                    SignatureConstant sigNarrow = id.getSignature().resolveAutoNarrowing(this);
+                    MethodConstant    idNarrow  = pool.ensureMethodConstant(constId, sigNarrow);
+
+                    // REVIEW: consider updating m_cacheById instead
+                    mapMethods.putIfAbsent(idNarrow, info);
+                    mapVirtMethods.put(idNarrow.getNestedIdentity(), info);
+                    }
+                }
             }
         }
 

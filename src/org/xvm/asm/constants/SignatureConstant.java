@@ -245,21 +245,21 @@ public class SignatureConstant
     /**
      * If any of the signature components are auto-narrowing (or have any references to
      * auto-narrowing types), replace the any auto-narrowing portion with an explicit class identity
-     * in the context of the specified class.
+     * in the context of the specified type.
      *
-     * @param idClass  the target class
+     * @param typeTarget  the target type
      *
      * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public SignatureConstant resolveAutoNarrowing(IdentityConstant idClass)
+    public SignatureConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant[] aconstParamOriginal = m_aconstParams;
         TypeConstant[] aconstParamResolved = null;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idClass);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
             if (constOriginal != constResolved)
                 {
                 if (aconstParamResolved == null)
@@ -276,7 +276,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(idClass);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
             if (constOriginal != constResolved)
                 {
                 if (aconstReturnResolved == null)
