@@ -1006,7 +1006,7 @@ public abstract class Statement
          * @param body      the StatementBlock of the lambda / inner class, whose parent is one of:
          *                  NewExpression, LambdaExpression, or StatementExpression
          */
-        public LambdaContext(Context ctxOuter, StatementBlock body)
+        public CaptureContext(Context ctxOuter, StatementBlock body)
             {
             super(ctxOuter);
             }
