@@ -2495,22 +2495,6 @@ public abstract class TypeConstant
         // signatures are recorded in a separate set, so that it is possible to determine if
         // they should be capped (and to identify any errors).
 
-        // take a snapshot of all auto-narrowing methods "below" this layer
-        Set<MethodConstant> setAutoNarrow = null;
-        if (fSelf)
-            {
-            setAutoNarrow = new HashSet<>();
-            for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
-                {
-                MethodConstant id   = entry.getKey();
-                MethodInfo     info = entry.getValue();
-                if (info.getIdentity().isAutoNarrowing())
-                    {
-                    setAutoNarrow.add(id);
-                    }
-                }
-            }
-
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
@@ -2624,26 +2608,6 @@ public abstract class TypeConstant
 
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
-            }
-
-        if (fSelf)
-            {
-            ConstantPool pool = getConstantPool();
-            for (MethodConstant id : setAutoNarrow)
-                {
-                MethodInfo info = mapMethods.get(id);
-
-                // add the resolved signature unless this layer already capped this chain
-                if (!info.getIdentity().getNamespace().equals(constId))
-                    {
-                    SignatureConstant sigNarrow = id.getSignature().resolveAutoNarrowing(this);
-                    MethodConstant    idNarrow  = pool.ensureMethodConstant(constId, sigNarrow);
-
-                    // REVIEW: consider updating m_cacheById instead
-                    mapMethods.putIfAbsent(idNarrow, info);
-                    mapVirtMethods.put(idNarrow.getNestedIdentity(), info);
-                    }
-                }
             }
         }
 
