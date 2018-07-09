@@ -1,14 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.Set;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.GP_Compl;
@@ -17,8 +14,6 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Statement.Context;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -40,6 +35,8 @@ public class UnaryComplementExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        // REVIEW the assumption is that a "not" of T results in a value of T; do we need to check the @Op?
+        // REVIEW (if that change is made, then move that functionality up to PrefixExpression for UnaryMinus)
         return operator.getId() == Id.NOT
                 ? pool().typeBoolean()
                 : expr.getImplicitType(ctx);
@@ -52,6 +49,7 @@ public class UnaryComplementExpression
         Constant     constVal  = null;
         Expression   exprRight = expr;
         TypeConstant typeRight = null;
+
         if (operator.getId() == Id.NOT)
             {
             // the "!" operator only applies to a boolean
@@ -63,45 +61,21 @@ public class UnaryComplementExpression
             typeRight = typeRequired;
             }
 
-        exprRight = exprRight.validate(ctx, typeRight, errs);
-        if (exprRight == null)
+        typeRight = findBestOp(ctx, typeRequired, typeRight, "not", "~", errs);
+
+        if (typeRight == null)
             {
             fit = TypeFit.NoFit;
             }
-        else
+        else if (exprRight.isConstant())
             {
-            expr      = exprRight;
-            typeRight = exprRight.getType();
-
-            Set<MethodConstant> setOps = typeRight.ensureTypeInfo(errs).findOpMethods("not", "~", 0);
-            if (setOps.isEmpty())
+            try
                 {
-                fit = TypeFit.NoFit;
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.MISSING_OPERATOR,
-                        operator.getValueText(), typeRight.getValueString());
+                constVal = exprRight.toConstant().apply(operator.getId(), null);
                 }
-            else
-                {
-                if (setOps.size() > 1)
-                    {
-                    // TODO pick the best one, otherwise log an error (current naive implementation just grabs the first one)
-                    fit = TypeFit.NoFit;
-                    log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                            operator.getValueText(), typeRight.getValueString());
-                    }
-                m_idOp    = setOps.iterator().next();
-                typeRight = m_idOp.getSignature().getRawReturns()[0];
-                if (fit.isFit() && exprRight.isConstant())
-                    {
-                    try
-                        {
-                        constVal = exprRight.toConstant().apply(operator.getId(), null);
-                        }
-                    catch (RuntimeException e) {}
-                    }
-                }
-
+            catch (RuntimeException e) {}
             }
+
         return finishValidation(typeRequired, typeRight, fit, constVal, errs);
         }
 
@@ -118,9 +92,4 @@ public class UnaryComplementExpression
             super.generateAssignment(ctx, code, LVal, errs);
             }
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    private transient MethodConstant m_idOp;
     }

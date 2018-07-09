@@ -120,9 +120,13 @@
 +GP_OR      rvalue1, rvalue2, lvalue                ; T | T -> T
 +GP_XOR     rvalue1, rvalue2, lvalue                ; T ^ T -> T
 +GP_DIVMOD  rvalue1, rvalue2, lvalue-div, lvalue-mod; T /% T -> T, T
- GP_DOTDOT  rvalue1, rvalue2, lvalue                ; T .. T -> Interval<T>
++GP_DOTDOT  rvalue1, rvalue2, lvalue                ; T .. T -> Interval<T>
 +GP_NEG     rvalue, lvalue                          ; -T -> T
 +GP_COMPL   rvalue, lvalue                          ; ~T -> T
+
+// consider generic ops (GP_ as well as IP_, PIP_, IIP_ and MIP_)
+ GP_UNI     OP, rvalue, lvalue                      ; OP is a StringConstant
+ GP_REL     OP, rvalue1, rvalue2, lvalue            ; OP is a StringConstant
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate

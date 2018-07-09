@@ -1002,7 +1002,7 @@ public class TypeInfo
                     TypeConstant typeParam = aParams[i];
                     TypeConstant typeArg   = aArgs  [i];
                     if (typeArg != null &&                // null means unbound
-                            !(typeArg.isA(typeParam) || typeArg.getConverterTo(typeParam) != null))
+                            !typeArg.isAssignableTo(typeParam))
                         {
                         continue NextMethod;
                         }

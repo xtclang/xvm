@@ -319,4 +319,10 @@ interface Service()
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
     void registerUnhandledExceptionNotification(function void notify(Exception));
+
+    @Override
+    immutable Service makeImmutable()
+        {
+        throw new UnsupportedOperationException();
+        }
     }
