@@ -849,11 +849,10 @@ public class NameExpression
         String sName = name.getValueText();
         if (left == null)
             {
-            // resolve the initial name
-            Argument arg = ctx.resolveName(name, errs);
+            // resolve the initial name; avoid double-reporting by passing the BLACKHOLE errors
+            Argument arg = ctx.resolveName(name, ErrorListener.BLACKHOLE);
             if (arg == null)
                 {
-                // TODO: in many instances we double-report NAME_MISSING
                 log(errs, Severity.ERROR, Compiler.NAME_MISSING,
                         sName, ctx.getMethod().getIdentityConstant().getSignature());
                 }
