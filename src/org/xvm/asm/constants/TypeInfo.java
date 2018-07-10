@@ -89,7 +89,7 @@ public class TypeInfo
         m_type                  = type;
         m_struct                = struct;
         m_cDepth                = cDepth;
-        m_fAbstract             = fAbstract;
+        m_fExplicitAbstract     = fAbstract;
         m_mapTypeParams         = mapTypeParams;
         m_aannoClass            = validateAnnotations(aannoClass);
         m_typeExtends           = typeExtends;
@@ -105,12 +105,24 @@ public class TypeInfo
         m_progress              = progress;
 
         // pre-populate the method lookup caches
+        // and determine if this type is implicitly abstract
         m_cacheById  = new HashMap<>(m_mapMethods);
         m_cacheByNid = new HashMap<>(m_mapVirtMethods);
+
+        boolean fImplicitAbstract = false;
         for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
             {
-            entry.getValue().populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
+            MethodInfo info = entry.getValue();
+
+            info.populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
+            fImplicitAbstract |= info.isAbstract();
             }
+
+        if (!fImplicitAbstract)
+            {
+            fImplicitAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract);
+            }
+        m_fImplicitAbstract = fImplicitAbstract;
         }
 
     /**
@@ -180,7 +192,7 @@ public class TypeInfo
                 }
             }
 
-        return new TypeInfo(typeNew, m_struct, m_cDepth, m_fAbstract,
+        return new TypeInfo(typeNew, m_struct, m_cDepth, m_fExplicitAbstract,
                 m_mapTypeParams, m_aannoClass,
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
@@ -229,7 +241,7 @@ public class TypeInfo
                     }
                 }
 
-            info = new TypeInfo(m_type, m_struct, m_cDepth, m_fAbstract,
+            info = new TypeInfo(m_type, m_struct, m_cDepth, m_fExplicitAbstract,
                     m_mapTypeParams, m_aannoClass,
                     m_typeExtends, m_typeRebases, m_typeInto,
                     m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
@@ -426,12 +438,20 @@ public class TypeInfo
         }
 
     /**
+     * @return true iff this type is explicitly abstract
+     */
+    public boolean isExplicitlyAbstract()
+        {
+        return m_fExplicitAbstract;
+        }
+
+    /**
      * @return true iff this type is abstract, which is always true for an interface, and may be
      *         true for a class or mixin
      */
     public boolean isAbstract()
         {
-        return m_fAbstract;
+        return m_fImplicitAbstract || m_fExplicitAbstract;
         }
 
     /**
@@ -1728,10 +1748,14 @@ public class TypeInfo
     private final int m_cDepth;
 
     /**
-     * Whether this type is abstract, which is always true for an interface, and may be true for a
-     * class or mixin.
+     * Whether this type is explicitly abstract, which is always true for an interface.
      */
-    private final boolean m_fAbstract;
+    private final boolean m_fExplicitAbstract;
+
+    /**
+     * Whether this type is abstract due to a presence of abstract properties or methods.
+     */
+    private final boolean m_fImplicitAbstract;
 
     /**
      * The type parameters for this TypeInfo.

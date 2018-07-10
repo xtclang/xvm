@@ -11,6 +11,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -207,7 +209,37 @@ public class NewExpression
             // that makes the type new-able
             if (body == null && !infoTarget.isNewable())
                 {
-                log(errs, Severity.ERROR, Constants.VE_NEW_ILLEGAL_TYPE, typeTarget.getValueString());
+                String sType = typeTarget.getValueString();
+                if (infoTarget.isExplicitlyAbstract())
+                    {
+                    log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_TYPE, sType);
+                    }
+                else if (infoTarget.isSingleton())
+                    {
+                    log(errs, Severity.ERROR, Constants.VE_NEW_SINGLETON_TYPE, sType);
+                    }
+                else
+                    {
+                    final int[] aiCount = new int[]{5}; // limit reporting to 5 errors
+                    infoTarget.getProperties().values().stream().filter(PropertyInfo::isExplicitlyAbstract).
+                        forEach(info ->
+                            {
+                            if (--aiCount[0] >= 0)
+                                {
+                                log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_PROPERTY,
+                                            sType, info.getName());
+                                }
+                            });
+                    infoTarget.getMethods().values().stream().filter(MethodInfo::isAbstract).
+                        forEach(info ->
+                            {
+                            if (--aiCount[0] >= 0)
+                                {
+                                log(errs, Severity.ERROR, Constants.VE_NEW_ABSTRACT_METHOD,
+                                        sType, info.getSignature());
+                                }
+                            });
+                    }
                 fValid = false;
                 }
 

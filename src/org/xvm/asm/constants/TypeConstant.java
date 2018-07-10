@@ -1034,13 +1034,6 @@ public abstract class TypeConstant
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, errs);
 
-        // go through the members to determine if this is abstract
-        if (!fAbstract)
-            {
-            fAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract)
-                    || mapMethods.values().stream().anyMatch(MethodInfo::isAbstract);
-            }
-
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
@@ -1174,7 +1167,7 @@ public abstract class TypeConstant
             }
 
         return new TypeInfo(this, infoPri.getClassStructure(), 0,
-                infoPri.isAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
+                infoPri.isExplicitlyAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP,
