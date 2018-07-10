@@ -15,45 +15,50 @@ class Array<ElementType>
     /**
      * Construct a dynamically growing array with the specified initial capacity.
      */
-    construct(Int capacity = 0) // dynamic growth with an initial ca
+    construct(Int capacity = 0)
         {
         if (capacity < 0)
             {
             throw new IllegalArgumentException("capacity " + capacity + " must be >= 0");
             }
-        this.capacity = capacity;
+        this.capacity   = capacity;
+        this.mutability = Mutable;
         }
 
     /**
      * Construct a fixed size array with the specified size and initial value.
      */
-    construct(Int size, function ElementType(Int) supply) // fixed size
+    construct(Int size, function ElementType (Int) supply)
         {
         construct Array(size);
 
         Element<ElementType>? head = null;
         if (size > 0)
             {
-            head = new Element<ElementType>(supply(0));
+            head = new Element(supply(0));
 
             Element<ElementType> tail = head;
             for (Int i : 1..size)
                 {
-                Element<ElementType> node = new Element<>(supply(i));
+                Element<ElementType> node = new Element(supply(i));
                 tail.next = node;
                 tail      = node;
                 }
             }
 
-        this.head     = head;
-        this.capacity = size;
-        this.size     = size;
+        this.head       = head;
+        this.capacity   = size;
+        this.size       = size;
+        this.mutability = FixedSize;
         }
 
     public/private Int capacity = 0;
 
     @Override
     public/private Int size     = 0;
+
+    @Override
+    public/private MutabilityConstraint mutability;
 
     @Override
     @Op ElementType getElement(Int index)
@@ -64,7 +69,17 @@ class Array<ElementType>
     @Override
     @Op void setElement(Int index, ElementType value)
         {
-        elementAt(index).set();
+        switch (mutability)
+            {
+            case Constant:
+                throw new IllegalStateException("Array is constant");
+
+            case Persistent:
+                throw new IllegalStateException("Array is persistent; use the \"replace\" API instead");
+
+            default:
+                elementAt(index).set(value);
+            }
         }
 
     @Override
@@ -85,13 +100,65 @@ class Array<ElementType>
         }
 
     @Override
-    @Op Array!<ElementType> slice(Range<Int> range);
+    @Op Array!<ElementType> slice(Range<Int> range)
+        {
+        Int from = range.lowerBound;
+        Int to   = range.upperBound;
+
+        ElementType[] that = new ElementType[to - from + 1, (i) -> this[from + i]];
+        return that;
+        }
 
     @Override
-    Array!<ElementType> reify();
+    Array!<ElementType> reify()
+        {
+        return this;
+        }
 
-    @Op Array!<ElementType> add(Array!<ElementType> that);
-    @Op Array!<ElementType> replace(Int index, ElementType value);
+    @Op Array!<ElementType> add(Array!<ElementType> that)
+        {
+        switch (mutability)
+            {
+            case Constant:
+                throw new IllegalStateException("Array is constant");
+
+            case FixedSize:
+                throw new IllegalStateException("Array is fixed size");
+
+            case Persistent:
+                {
+                ElementType[] that = new ElementType[this.size + that.size,
+                    (i) -> i < this.size ? this[i] : that[i-this.size]];
+                that.mutability = Persistent;
+                return that;
+                }
+
+            default:
+                elementAt(index).set(value);
+                return this;
+            }
+        }
+
+    @Op Array!<ElementType> replace(Int index, ElementType value)
+        {
+        switch (mutability)
+            {
+            case Constant:
+                throw new IllegalStateException("Array is constant");
+
+            case Persistent:
+                {
+                ElementType[] that = new ElementType[size, (i) -> this[i]];
+                that[index] = value;
+                that.mutability = Persistent;
+                return that;
+                }
+
+            default:
+                elementAt(index).set(value);
+                return this;
+            }
+        }
 
     static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {
@@ -127,7 +194,20 @@ class Array<ElementType>
     @Override
     Array!<ElementType> ensureMutable()
         {
-        return TODO
+        switch (mutability)
+            {
+            case Constant:
+            case Persistent:
+            case FixedSize:
+                {
+                ElementType[] that = new ElementType[size, (i) -> this[i]];
+                that.mutability = Mutable;
+                return that;
+                }
+
+            default:
+                return this;
+            }
         }
 
     /**
@@ -135,7 +215,41 @@ class Array<ElementType>
      * contents as this array. If this array is already a fixed-size array, then _this_ is returned.
      */
     @Override
-    Array!<ElementType> ensureFixedSize(Boolean inPlace = false);
+    Array!<ElementType> ensureFixedSize(Boolean inPlace = false)
+        {
+        if (inPlace)
+            {
+            switch (mutability)
+                {
+                case Constant:
+                    throw new IllegalStateException("Array is constant");
+
+                case Persistent:
+                case Mutable:
+                    mutability = FixedSize;
+                    // fall through
+                case FixedSize:
+                    return this;
+                }
+            }
+        else
+            {
+            switch (mutability)
+                {
+                case Constant:
+                case Persistent:
+                case Mutable:
+                    {
+                    ElementType[] that = new ElementType[size, (i) -> this[i]];
+                    that.mutability = FixedSize;
+                    return that;
+                    }
+
+                case FixedSize:
+                    return this;
+                }
+            }
+        }
 
     /**
      * Return a persistent array of the same element types and values as are present in this array.
@@ -145,7 +259,43 @@ class Array<ElementType>
      * using the {@link replace} method; instead, calls to {@link replace} will return a new array.
      */
     @Override
-    Array!<ElementType> ensurePersistent(Boolean inPlace = false);
+    Array!<ElementType> ensurePersistent(Boolean inPlace = false)
+        {
+        if (inPlace)
+            {
+            switch (mutability)
+                {
+                case Constant:
+                    throw new IllegalStateException("Array is constant");
+
+                case FixedSize:
+                case Mutable:
+                    mutability = Persistent;
+                    // fall through
+                case Persistent:
+                    return this;
+                }
+            }
+        else
+            {
+            switch (mutability)
+                {
+                case Constant:
+                case FixedSize:
+                case Mutable:
+                    {
+                    ElementType[] that = new ElementType[size, (i) -> this[i]];
+                    that.mutability = Persistent;
+                    return that;
+                    }
+
+                case Persistent:
+                    return this;
+                }
+            }
+
+        }
+
 
     /**
      * Return a {@code const} array of the same type and contents as this array.
@@ -157,5 +307,54 @@ class Array<ElementType>
      *         {@link ConstAble}
      */
     @Override
-    immutable Array!<ElementType> ensureConst(Boolean inPlace = false);
+    immutable Array!<ElementType> ensureConst(Boolean inPlace = false)
+        {
+        if (mutability == Constant)
+            {
+            return this.as(immutable ElementType[]);
+            }
+
+        if (inPlace)
+            {
+            return makeImmutable();
+            }
+
+        // otherwise, create a constant copy of this
+        ElementType[] that = new ElementType[size];
+        for (Int i : 0..size-1)
+            {
+            ElementType el = this[i];
+            if (el instanceof ConstAble)
+                {
+                el = el == this ? that : el.ensureConst(false);
+                }
+            that[i] = el;
+            }
+        return that.ensureConst(true);
+        }
+
+    @Override
+    immutable Array<ElementType> makeImmutable()
+        {
+        // the "mutability" property has to be set before calling super, since no changes will be
+        // allowed afterwards
+        MutabilityConstraint prev = mutability;
+        if (!meta.immutable_)
+            {
+            mutability = Constant;
+            }
+
+        try
+            {
+            return super.makeImmutable();
+            }
+        catch (Exception e)
+            {
+            if (!meta.immutable_)
+                {
+                mutability = prev;
+                }
+            throw e;
+            }
+        }
     }
