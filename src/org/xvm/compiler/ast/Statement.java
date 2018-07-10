@@ -1,13 +1,17 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
+import java.util.Set;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -348,15 +352,119 @@ public abstract class Statement
             }
 
         /**
-         * Determine if the name refers to a writable variable.
+         * Determine if the name refers to a readable variable. A variable is only readable if it
+         * has been definitely assigned a value.
+         * <p/>
+         * <b>Note:</b> Calling this method indicates that a read is occurring from the specified
+         * variable.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
          *
-         * @param sName  the name to resolve
+         * @param tokName  the name to resolve
+         *
+         * @return true iff the name refers to a variable, and the variable can be read from
+         */
+        public boolean isVarReadable(Token tokName)
+            {
+            // Register.isReadable()
+            // on the capture context, "this" means capture "this" by being a method
+            // TODO
+            return isVarDeclaredInThisScope(tokName) || m_ctxOuter.isVarReadable(tokName);
+            }
+
+        /**
+         * Determine if the name refers to a writable variable.
+         * <p/>
+         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
+         * variable; <b>this method has a mutating side-effect!</b>
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+          *
+         * @param tokName  the name to resolve
          *
          * @return true iff the name refers to a variable, and the variable can be written to
          */
-        public boolean isVarWritable(String sName)
+        public boolean isVarWritable(Token tokName)
             {
-            return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarWritable(sName);
+            Set<String> setAssigned = ensureDefiniteAssignments();
+            if (setAssigned.contains(tokName))
+                {
+                return true;
+                }
+
+            boolean fWritable;
+            if (isVarDeclaredInThisScope(tokName.getValueText()))
+                {
+                // TODO
+                }
+            else
+                {
+                fWritable = m_ctxOuter.isVarWritable(tokName);
+                }
+
+            // Register.isReadable()
+            return fWritable;
+            }
+
+        /**
+         * Determine if the name refers to a writable variable.
+         * <p/>
+         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
+         * variable; <b>this method has a mutating side-effect!</b>
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+          *
+         * @param tokName  the name to resolve
+         *
+         * @return true iff the name refers to a variable, and the variable can be written to
+         */
+        public boolean ensureVarWritable(Token tokName, ErrorList errs)
+            {
+            String      sName       = tokName.getValueText();
+            Set<String> setAssigned = ensureDefiniteAssignments();
+            if (!setAssigned.add(sName))
+                {
+                // this variable was already checked
+                return true;
+                }
+
+            Argument arg = getVar(tokName, errs);
+            boolean fWritable;
+            if (isVarDeclaredInThisScope(tokName.getValueText()))
+                {
+                // TODO
+                }
+            else
+                {
+                fWritable = m_ctxOuter.isVarWritable(tokName);
+                }
+
+            // Register.isReadable()
+            return fWritable;
+            }
+
+        /**
+         * @return a readable and writable set of definitely assigned variable names; never null
+         */
+        protected Set<String> ensureDefiniteAssignments()
+            {
+            Set<String> set = m_setAssigned;
+            if (set == null)
+                {
+                m_setAssigned = set = new HashSet<>();
+                }
+            return set;
+            }
+
+        /**
+         * @return a read-only set of definitely assigned variable names; never null
+         */
+        public Set<String> getDefiniteAssignments()
+            {
+            Set<String> set = m_setAssigned;
+            return set == null
+                    ? set
+                    : Collections.EMPTY_SET;
             }
 
         /**
@@ -555,15 +663,31 @@ public abstract class Statement
          *
          * @return a new context
          */
-        public Context createInferringContext(TypeConstant typeLeft)
+        public InferringContext createInferringContext(TypeConstant typeLeft)
             {
             return new InferringContext(this, typeLeft);
+            }
+
+        /**
+         * Create a context that bridges from the current context into a special compilation mode in
+         * which the values (or references / variables) of the outer context can be <i>captured</i>.
+         *
+         * @param body  the StatementBlock of the lambda, anonymous inner class, or statement
+         *              expression
+         *
+         * @return a capturing context
+         */
+        public CaptureContext createCaptureContext(StatementBlock body)
+            {
+            return new CaptureContext(this, body);
             }
 
         Context m_ctxOuter;
         Context m_ctxInner;
 
         private Map<String, Argument> m_mapByName;
+
+        private Set<String> m_setAssigned;
         }
 
     /**
@@ -648,9 +772,9 @@ public abstract class Statement
             }
 
         @Override
-        public boolean isVarWritable(String sName)
+        public boolean isVarWritable(Token tokName)
             {
-            Argument arg = ensureNameMap().get(sName);
+            Argument arg = ensureNameMap().get(tokName);
             if (arg instanceof Register)
                 {
                 return ((Register) arg).isWritable();
@@ -949,6 +1073,23 @@ public abstract class Statement
     /**
      * A delegating context that allows an expression to resolve names based on the specified type's
      * contributions.
+     *
+     * As a result, it allows us to write:
+     * <pre><code>
+     *    Color color = Red;
+     * </code></pre>
+     *  instead of
+     * <pre><code>
+     *    Color color = Color.Red;
+     * </code></pre>
+     * or
+     * <pre><code>
+     *    if (color == Red)
+     * </code></pre>
+     *  instead of
+     * <pre><code>
+     *    if (color == Color.Red)
+     * </code></pre>
      */
     public static class InferringContext
             extends NestedContext

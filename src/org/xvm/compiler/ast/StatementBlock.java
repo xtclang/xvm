@@ -158,7 +158,7 @@ public class StatementBlock
         }
 
     @Override
-    protected AstNode getContainer()
+    protected AstNode getCodeContainer()
         {
         AstNode parent = getParent();
         if (       parent instanceof MethodDeclarationStatement
@@ -169,7 +169,7 @@ public class StatementBlock
             return parent;
             }
 
-        return super.getContainer();
+        return super.getCodeContainer();
         }
 
     @Override
@@ -241,7 +241,7 @@ public class StatementBlock
 
     public TypeConstant determineLambdaResultType(Context ctx)
         {
-        ctx = ctx.createInferringContext()
+        ctx = ctx.createCaptureContext(this);
         // TODO
         return null;
         }
