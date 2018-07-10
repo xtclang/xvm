@@ -160,18 +160,9 @@ public class MethodConstant
     public SignatureConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         assert !isFunction();
+        assert typeTarget == null || typeTarget.isA(getClassIdentity().getType());
 
-        IdentityConstant idClass = getClassIdentity();
-
-        // 1. a relational type should not be able to influence the resolution
-        // 2. the target must be a subtype of the containing class
-        if (typeTarget != null && typeTarget.isSingleUnderlyingClass(true)
-                && typeTarget.isA(idClass.getType()))
-            {
-            idClass = typeTarget.getSingleUnderlyingClass(true);
-            }
-
-        return getSignature().resolveAutoNarrowing(idClass);
+        return getSignature().resolveAutoNarrowing(typeTarget);
         }
 
 

@@ -139,14 +139,18 @@ public class ParamInfo
          * Construct a GenericTypeResolver that will use the passed map as its source of type
          * resolution information, reporting any errors to the passed error list.
          *
+         * @param idTarget    the identity of the component in which context the resolver operates
          * @param parameters  a map from nested identity (parameter name) to ParamInfo
          * @param errs        the error listener to log any errors to
          */
-        public TypeResolver(Map<Object, ParamInfo> parameters, ErrorListener errs)
+        public TypeResolver(IdentityConstant idTarget, Map<Object, ParamInfo> parameters, ErrorListener errs)
             {
             assert parameters != null;
             assert errs != null;
 
+            this.idTarget   = idTarget instanceof NativeRebaseConstant
+                                ? ((NativeRebaseConstant) idTarget).getClassConstant()
+                                : idTarget;
             this.parameters = parameters;
             this.errs       = errs;
             }
@@ -154,10 +158,16 @@ public class ParamInfo
         @Override
         public TypeConstant resolveGenericType(PropertyConstant constProperty)
             {
-            ParamInfo info = parameters.get(constProperty.getName());
-            return info != null && info.isActualTypeSpecified()
-                    ? info.getActualType()
-                    : null;
+            // substitute only if "in the same context"
+            if (constProperty.getParentConstant().equals(idTarget))
+                {
+                ParamInfo info = parameters.get(constProperty.getName());
+                if (info != null && info.isActualTypeSpecified())
+                    {
+                    return info.getActualType();
+                    }
+                }
+            return null;
             }
 
         @Override
@@ -171,6 +181,8 @@ public class ParamInfo
             {
             parameters.put(nid, param);
             }
+
+        public final IdentityConstant idTarget;
 
         /*
          * The map from parameter name to ParamInfo to use to resolve generic types.

@@ -394,6 +394,43 @@ const IntLiteral(String text)
         return to<VarDec>().to<Dec128>();
         }
 
+    // ----- IntNumber support ---------------------------------------------------------------------
+
+    /**
+     * Bitwise AND.
+     */
+    @Op IntLiteral and(IntLiteral that);
+
+    /**
+     * Bitwise OR.
+     */
+    @Op IntLiteral or(IntLiteral that);
+
+    /**
+     * Bitwise XOR.
+     */
+    @Op IntLiteral xor(IntLiteral that);
+
+    /**
+     * Bitwise NOT.
+     */
+    @Op IntLiteral not();
+
+    /**
+     * Shift bits left. Works like an arithmetic left shift.
+     */
+    @Op IntLiteral shiftLeft(Int count);
+
+    /**
+     * Shift bits right. Works like an arithmetic right shift.
+     */
+    @Op IntLiteral shiftRight(Int count);
+
+    /**
+     * Works identically to the `shiftRight`.
+     */
+    @Op IntLiteral shiftAllRight(Int count);
+
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.
      */

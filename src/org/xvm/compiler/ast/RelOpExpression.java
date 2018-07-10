@@ -211,18 +211,18 @@ public class RelOpExpression
         Map<SignatureConstant, MethodConstant> mapBest = null;
         for (MethodConstant idMethod : setOps)
             {
-            TypeConstant typeParam = idMethod.getRawReturns()[0];
-            if (typeRight.isA(typeParam))
+            TypeConstant typeParam = idMethod.getRawParams()[0];
+            if (typeRight.isAssignableTo(typeParam))
                 {
                 if (mapBest != null)
                     {
                     mapBest.put(idMethod.getSignature(), idMethod);
                     }
-                else if (idBest == null || typeParam.isA(idBest.getRawReturns()[0]))
+                else if (idBest == null || typeParam.isAssignableTo(idBest.getRawParams()[0]))
                     {
                     idBest = idMethod;
                     }
-                else if (!idBest.getRawReturns()[0].isA(typeParam))
+                else if (!idBest.getRawParams()[0].isA(typeParam))
                     {
                     // ambiguous at this point
                     mapBest = new HashMap<>();
@@ -614,11 +614,14 @@ public class RelOpExpression
         for (MethodConstant method : info1.findOpMethods(sMethod, sOp, 1))
             {
             // determine if this method satisfies the types (param and return)
-            TypeConstant typeParam = method.getRawParams()[0];
-            if (type2.isA(typeParam))
+            TypeConstant typeParam  = method.getRawParams()[0];
+            TypeConstant typeReturn = method.getRawReturns()[0];
+            if (type2.isAssignableTo(typeParam) &&
+                    (typeRequired == null || typeReturn.isAssignableTo(typeRequired)))
                 {
                 // check for a perfect match
-                if (typeRequired == null || method.getRawReturns()[0].isA(typeRequired))
+                if (type2.isA(typeParam) &&
+                        (typeRequired == null || typeReturn.isA(typeRequired)))
                     {
                     if (setOps != null)
                         {
@@ -630,14 +633,27 @@ public class RelOpExpression
                         }
                     else
                         {
-                        setOps = new HashSet<>();
-                        setOps.add(idOp);
-                        setOps.add(method);
-                        idOp = null;
+                        SignatureConstant sigOp     = idOp.getSignature();
+                        SignatureConstant sigMethod = method.getSignature();
+                        if (!sigOp.equals(sigMethod))
+                            {
+                            if (sigMethod.isSubstitutableFor(sigOp, type1))
+                                {
+                                continue;
+                                }
+                            if (sigOp.isSubstitutableFor(sigMethod, type1))
+                                {
+                                idOp = method;
+                                continue;
+                                }
+                            setOps = new HashSet<>();
+                            setOps.add(idOp);
+                            setOps.add(method);
+                            idOp = null;
+                            }
                         }
                     }
-                // check if @Auto conversion of the return value would satisfy the required type
-                else if (typeParam.getConverterTo(typeRequired) != null)
+                else
                     {
                     if (setConvs != null)
                         {
@@ -647,7 +663,7 @@ public class RelOpExpression
                         {
                         idConv = method;
                         }
-                    else
+                    else if (!idConv.getSignature().equals(method.getSignature()))
                         {
                         setConvs = new HashSet<>();
                         setConvs.add(idConv);

@@ -35,7 +35,7 @@ const Path
      */
     construct(Path dir, String pathName)
         {
-        this.pathName = dir + normalize(pathName);
+        this.pathName = dir.pathName + normalize(pathName);
         }
 
     // ----- properties ----------------------------------------------------------------------------
