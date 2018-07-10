@@ -1294,3 +1294,17 @@ t0 = foo()
 t1 = a[t0]
 t2 = foo()
 a[t0] = t2 ? 1 : 2
+
+// ----- mutating lambdas
+
+// ugly and bad, but completely supported
+Int i = 0;
+Int j = 0;
+function void() f1 = () -> {j *= i;};
+function void() f2 = () -> {++j;};
+for (i : 0..5)
+    {
+    f1();
+    f2();
+    }
+// at this point, j==326

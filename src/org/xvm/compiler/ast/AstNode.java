@@ -257,12 +257,12 @@ public abstract class AstNode
      *         lambda function ({@link LambdaExpression}), or "inlined" lambda
      *         ({@link StatementExpression})
      */
-    protected AstNode getContainer()
+    protected AstNode getCodeContainer()
         {
         AstNode parent = getParent();
         return parent == null
                 ? null
-                : parent.getContainer();
+                : parent.getCodeContainer();
         }
 
     /**
