@@ -15,7 +15,7 @@ interface IntNumber
     @Override
     IntNumber nextValue()
         {
-        return this + 1;
+        return add(1);
         }
 
     /**
@@ -26,7 +26,7 @@ interface IntNumber
     @Override
     IntNumber prevValue()
         {
-        return this - 1;
+        return sub(1);
         }
 
     /**
@@ -37,7 +37,7 @@ interface IntNumber
         {
         try
             {
-            IntNumber n = this + 1;
+            IntNumber n = add(1);
             if (n > this)
                 {
                 return true, n;
@@ -56,7 +56,7 @@ interface IntNumber
         {
         try
             {
-            IntNumber n = this - 1;
+            IntNumber n = sub(1);
             if (n < this)
                 {
                 return true, n;

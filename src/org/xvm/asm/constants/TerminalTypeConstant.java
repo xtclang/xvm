@@ -445,13 +445,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(IdentityConstant idTarget)
+    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefTypeConstant(constId).resolveAutoNarrowing(idTarget);
+            return getTypedefTypeConstant(constId).resolveAutoNarrowing(typeTarget);
             }
 
         Constant constant = getDefiningConstant();
@@ -460,8 +460,15 @@ public class TerminalTypeConstant
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                return ((PseudoConstant) constant).resolveClass(idTarget).getType();
+                {
+                IdentityConstant idClass = null;
+                if (typeTarget != null && typeTarget.isSingleUnderlyingClass(true))
+                    {
+                    idClass = typeTarget.getSingleUnderlyingClass(true);
+                    }
 
+                return ((PseudoConstant) constant).resolveClass(idClass).getType();
+                }
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
 
@@ -1269,6 +1276,10 @@ public class TerminalTypeConstant
 
                 return clzThis.containsSubstitutableMethod(signature, access, listParams);
                 }
+
+            case Property:
+                return getPropertyTypeConstant((PropertyConstant) constIdThis).
+                    containsSubstitutableMethod(signature, access, listParams);
 
             case Register:
                 return getRegisterTypeConstant((RegisterConstant) constIdThis).

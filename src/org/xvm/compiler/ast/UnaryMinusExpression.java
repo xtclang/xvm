@@ -1,14 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.Set;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.GP_Neg;
@@ -16,8 +13,6 @@ import org.xvm.asm.op.GP_Neg;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Statement.Context;
-
-import org.xvm.util.Severity;
 
 
 /**
@@ -59,9 +54,8 @@ public class UnaryMinusExpression
             }
 
         // otherwise, this expression must apply the unary minus as an op
-        TypeFit      fit        = TypeFit.Fit;
-        TypeConstant typeResult = null;
-        Constant     constVal   = null;
+        TypeFit  fit      = TypeFit.Fit;
+        Constant constVal = null;
 
         // if there is a type that is being requested that we can convert to and satisfy this
         // operation, then do so (just like with binary ops, convert as "deep" in the AST tree as
@@ -72,46 +66,23 @@ public class UnaryMinusExpression
             {
             typeRight = typeRequired;
             }
-        exprRight = exprRight.validate(ctx, typeRight, errs);
-        if (exprRight == null)
+
+        typeRight = findBestOp(ctx, typeRequired, typeRight, "neg", "-#", errs);
+
+        if (typeRight == null)
             {
             fit = TypeFit.NoFit;
             }
-        else
+        else if (exprRight.isConstant())
             {
-            expr      = exprRight;
-            typeRight = exprRight.getType();
-
-            Set<MethodConstant> setOps = typeRight.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0);
-            if (setOps.isEmpty())
+            try
                 {
-                fit = TypeFit.NoFit;
-                log(errs, Severity.ERROR, org.xvm.compiler.Compiler.MISSING_OPERATOR,
-                        operator.getValueText(), typeRight.getValueString());
+                constVal = exprRight.toConstant().apply(operator.getId(), null);
                 }
-            else
-                {
-                if (setOps.size() > 1)
-                    {
-                    // TODO pick the best one, otherwise log an error (current naive implementation just grabs the first one)
-                    fit = TypeFit.NoFit;
-                    log(errs, Severity.ERROR, org.xvm.compiler.Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                            operator.getValueText(), typeRight.getValueString());
-                    }
-                m_idOp     = setOps.iterator().next();
-                typeResult = m_idOp.getSignature().getRawReturns()[0];
-                if (fit.isFit() && exprRight.isConstant())
-                    {
-                    try
-                        {
-                        constVal = exprRight.toConstant().apply(operator.getId(), null);
-                        }
-                    catch (RuntimeException e) {}
-                    }
-                }
+            catch (RuntimeException e) {}
             }
 
-        return finishValidation(typeRequired, typeResult, fit, constVal, errs);
+        return finishValidation(typeRequired, typeRight, fit, constVal, errs);
         }
 
     @Override
@@ -127,9 +98,4 @@ public class UnaryMinusExpression
             super.generateAssignment(ctx, code, LVal, errs);
             }
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    private transient MethodConstant m_idOp;
     }

@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.MoveCast;
@@ -37,7 +38,25 @@ public class AsExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return ((TypeExpression) expr2).ensureTypeConstant();
+        return rebaseThisClass(ctx, ((TypeExpression) expr2).ensureTypeConstant());
+        }
+
+    /**
+     * Check if the left expression represents a "this" class constant and update the resulting
+     * type accordingly.
+     */
+    private TypeConstant rebaseThisClass(Context ctx, TypeConstant typeAs)
+        {
+        if (expr1 instanceof NameExpression
+                && ((NameExpression) expr1).getName().equals("this"))
+            {
+            TypeConstant typeThis = typeAs.getConstantPool().
+                ensureThisTypeConstant(ctx.getThisClass().getIdentityConstant(), null);
+
+            return typeAs.replaceUnderlying(typeUnder ->
+                typeUnder instanceof TerminalTypeConstant ? typeThis : typeUnder);
+            }
+        return typeAs;
         }
 
     @Override
@@ -56,7 +75,7 @@ public class AsExpression
         else
             {
             expr2 = exprType;
-            type  = exprType.ensureTypeConstant();
+            type  = rebaseThisClass(ctx, exprType.ensureTypeConstant());
 
             // it would be nice if the expression could provide us the type without any additional
             // work!
