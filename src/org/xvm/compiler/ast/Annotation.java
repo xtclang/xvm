@@ -357,7 +357,7 @@ public class Annotation
             }
 
         @Override
-        public boolean isVarWritable(Token tokName)
+        public boolean isVarWritable(String sName)
             {
             return false;
             }

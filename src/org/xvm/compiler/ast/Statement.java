@@ -183,8 +183,6 @@ public abstract class Statement
 
     /**
      * Compiler context for compiling a method body.
-     *
-     * <p/>TODO need a "lambda context" that captures "this" (makes itself a method), params and vars (adds auto-bound params)
      */
     public abstract static class Context
         {
@@ -319,16 +317,16 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param tokName
-         * @param reg
-         * @param errs
+         * @param tokName  the token from the source code for the variable
+         * @param reg      the register representing the variable
+         * @param errs     the error list to log to
          */
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
             checkInnermost();
 
             String sName = tokName.getValueText();
-            if (isVarDeclaredInThisScope(sName))
+            if (isVarDeclaredInThisScope(sName)) // TODO allow explicit shadowing?
                 {
                 tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
                 }
@@ -355,51 +353,78 @@ public abstract class Statement
          * Determine if the name refers to a readable variable. A variable is only readable if it
          * has been definitely assigned a value.
          * <p/>
-         * <b>Note:</b> Calling this method indicates that a read is occurring from the specified
-         * variable.
-         * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param tokName  the name to resolve
+         * @param sName  the variable name
          *
          * @return true iff the name refers to a variable, and the variable can be read from
          */
-        public boolean isVarReadable(Token tokName)
+        public boolean isVarReadable(String sName)
             {
             // Register.isReadable()
             // on the capture context, "this" means capture "this" by being a method
             // TODO
-            return isVarDeclaredInThisScope(tokName) || m_ctxOuter.isVarReadable(tokName);
+            return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarReadable(sName);
+            }
+
+        /**
+         * Mark the specified variable as being written to within this context.
+         * <p/>
+         * <b>Note:</b> Calling this method indicates that a read is occurring from the specified
+         * variable.
+         *                                     * <p/>
+         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
+         * variable; <b>this method has a mutating side-effect!</b>
+
+         * @param tokName  the token specifying the variable name
+         * @param errs     the error list to log to (optional)
+         *
+         * @return true iff the name refers to a variable, and the variable can be written to
+         */
+        public boolean ensureVarWritable(Token tokName, ErrorListener errs)
+            {
+            String sName = tokName.getValueText();
+
+            // check if we've already ensured that this var is writable
+            // TODO
+
+            if (isVarWritable(sName))
+                {
+                return true;
+                }
+
+            if (errs != null)
+                {
+                // TODO log error
+                }
+            return false;
             }
 
         /**
          * Determine if the name refers to a writable variable.
          * <p/>
-         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
-         * variable; <b>this method has a mutating side-effect!</b>
-         * <p/>
          * Note: This can only be used during the validate() stage.
-          *
-         * @param tokName  the name to resolve
+         *
+         * @param sName  the variable name
          *
          * @return true iff the name refers to a variable, and the variable can be written to
          */
-        public boolean isVarWritable(Token tokName)
+        public boolean isVarWritable(String sName)
             {
             Set<String> setAssigned = ensureDefiniteAssignments();
-            if (setAssigned.contains(tokName))
+            if (setAssigned.contains(sName))
                 {
                 return true;
                 }
 
             boolean fWritable;
-            if (isVarDeclaredInThisScope(tokName.getValueText()))
+            if (isVarDeclaredInThisScope(sName))
                 {
                 // TODO
                 }
             else
                 {
-                fWritable = m_ctxOuter.isVarWritable(tokName);
+                fWritable = m_ctxOuter.isVarWritable(sName);
                 }
 
             // Register.isReadable()
@@ -772,9 +797,9 @@ public abstract class Statement
             }
 
         @Override
-        public boolean isVarWritable(Token tokName)
+        public boolean isVarWritable(String sName)
             {
-            Argument arg = ensureNameMap().get(tokName);
+            Argument arg = ensureNameMap().get(sName);
             if (arg instanceof Register)
                 {
                 return ((Register) arg).isWritable();
@@ -1135,7 +1160,9 @@ public abstract class Statement
 
 
     /**
-     * A context for compiling lamba expressions, anonymous inner classes, and
+     * A context for compiling lamba expressions, anonymous inner classes, and any other construct
+     * that "captures" variables from an outer context.
+     * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
      */
     public static class CaptureContext
             extends Context
