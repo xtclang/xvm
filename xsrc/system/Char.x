@@ -29,6 +29,28 @@ const Char
         return codepoint.to<Byte>();
         }
 
+    // ----- Sequential ----------------------------------------------------------------------------
+
+    @Override
+    conditional Sequential prev()
+        {
+        if (codepoint > 0)
+            {
+            return true, new Char(codepoint - 1);
+            }
+        return false;
+        }
+
+    @Override
+    conditional Sequential next()
+        {
+        if (codepoint < UInt32.maxvalue)
+            {
+            return true, new Char(codepoint + 1);
+            }
+        return false;
+        }
+
     /**
      * A conversion to Byte[] results in a byte array with between 1-6 bytes containing
      * a UTF-8 formatted codepoint.

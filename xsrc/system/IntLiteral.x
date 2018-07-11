@@ -413,7 +413,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral and(IntLiteral that)
         {
-        TODO
+        return this & that;
         }
 
     /**
@@ -421,7 +421,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral or(IntLiteral that)
         {
-        TODO
+        return this | that;
         }
 
     /**
@@ -429,7 +429,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral xor(IntLiteral that)
         {
-        TODO
+        return this ^ that;
         }
 
     /**
@@ -437,7 +437,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral not()
         {
-        TODO
+        return ~this;
         }
 
     /**
@@ -445,7 +445,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral shiftLeft(Int count)
         {
-        TODO
+        return this << count;
         }
 
     /**
@@ -453,7 +453,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral shiftRight(Int count)
         {
-        TODO
+        return this >> count;
         }
 
     /**
@@ -461,7 +461,7 @@ const IntLiteral(String text)
      */
     @Op IntLiteral shiftAllRight(Int count)
         {
-        TODO
+        return this >>> count;
         }
 
     // ----- Sequential ----------------------------------------------------------------------------
@@ -469,13 +469,13 @@ const IntLiteral(String text)
     @Override
     conditional Sequential prev()
         {
-        TODO
+        return this - 1;
         }
 
     @Override
     conditional Sequential next()
         {
-        TODO
+        return this + 1;
         }
 
     // ----- conversions ---------------------------------------------------------------------------

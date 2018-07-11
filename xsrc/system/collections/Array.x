@@ -160,6 +160,33 @@ class Array<ElementType>
             }
         }
 
+    // ----- Collection API ------------------------------------------------------------------------
+
+    @Override
+    Iterator<ElementType> iterator()
+        {
+        return this;
+        }
+
+    @Override
+    ElementType[] to<ElementType[]>()
+        {
+        return this;
+        }
+
+    @Override
+    Stream<ElementType> stream()
+        {
+        TODO;
+        }
+
+    @Override
+    Collection<ElementType> clone()
+        {
+        TODO;
+        }
+
+
     static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {
         if (a1.size != a2.size)
