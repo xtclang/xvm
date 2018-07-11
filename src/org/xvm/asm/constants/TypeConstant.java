@@ -267,7 +267,7 @@ public abstract class TypeConstant
     /**
      * @return true iff this type has a formal type parameter with the specified name
      */
-    public boolean isGenericType(String sName)
+    public boolean containsGenericParam(String sName)
         {
         TypeInfo info = getTypeInfo();
         if (info != null)
@@ -315,6 +315,16 @@ public abstract class TypeConstant
             }
 
         return null;
+        }
+
+    /**
+     * TODO: we need to introduce a dedicated FormalType (or GenericType) type constant.
+     *
+     * @return true iff this type represents a formal type parameter
+     */
+    public boolean isGenericType()
+        {
+        return false;
         }
 
     /**
@@ -1016,12 +1026,7 @@ public abstract class TypeConstant
         ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
 
         boolean fComplete = createCallChains(constId, struct, mapTypeParams,
-                listProcess, listmapClassChain, listmapDefaultChain, errs);
-
-        // determine if the type is explicitly abstract
-        Annotation[] aannoClass = listAnnos.toArray(new Annotation[listAnnos.size()]);
-        boolean      fAbstract  = isInterface(constId, struct)
-                || TypeInfo.containsAnnotation(aannoClass, "Abstract");
+            listProcess, listmapClassChain, listmapDefaultChain, errs);
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
@@ -1037,7 +1042,9 @@ public abstract class TypeConstant
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps, errs);
 
-        return new TypeInfo(this, struct, 0, fAbstract, mapTypeParams, aannoClass,
+        Annotation[] aannoClass = listAnnos.toArray(new Annotation[listAnnos.size()]);
+
+        return new TypeInfo(this, struct, 0, false, mapTypeParams, aannoClass,
                 typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods,
@@ -1167,7 +1174,7 @@ public abstract class TypeConstant
             }
 
         return new TypeInfo(this, infoPri.getClassStructure(), 0,
-                infoPri.isExplicitlyAbstract(), infoPri.getTypeParams(), infoPri.getClassAnnotations(),
+                false, infoPri.getTypeParams(), infoPri.getClassAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP,
@@ -2089,7 +2096,15 @@ public abstract class TypeConstant
                         Map<PropertyConstant, PropertyInfo> mapReducedProps = new HashMap<>();
                         for (Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
                             {
-                            PropertyInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            // REVIEW: consider removing the "retainOnly" call with a simple check:
+                            //
+                            // IdentityConstant idProp = entry.getKey().getClassIdentity();
+                            // if (!setClass.contains(idProp) && !setDefault.contains(idProp))
+                            //    {
+                            //    iter.remove();
+                            //    }
+                            PropertyInfo infoReduced = entry.getValue().
+                                    retainOnly(entry.getKey(), setClass, setDefault);
                             if (infoReduced != null)
                                 {
                                 mapReducedProps.put(entry.getKey(), infoReduced);
@@ -2100,7 +2115,9 @@ public abstract class TypeConstant
                         Map<MethodConstant, MethodInfo> mapReducedMethods = new HashMap<>();
                         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
                             {
-                            MethodInfo infoReduced = entry.getValue().retainOnly(setClass, setDefault);
+                            // REVIEW: ditto
+                            MethodInfo infoReduced = entry.getValue()
+                                    .retainOnly(entry.getKey(), setClass, setDefault);
                             if (infoReduced != null)
                                 {
                                 mapReducedMethods.put(entry.getKey(), infoReduced);
@@ -3185,7 +3202,11 @@ public abstract class TypeConstant
                 if (cCustomMethods == 1 && methodGet != null)
                     {
                     // the @RO annotation is required in this case
-                    if (!fHasRO)
+                    if (fHasRO)
+                        {
+                        effectGet = Effect.BlocksSuper;
+                        }
+                    else
                         {
                         log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_GET_REQUIRES_RO,
                                 getValueString(), sName);

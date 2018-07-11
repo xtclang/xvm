@@ -94,6 +94,16 @@ public class ReturnStatement
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
+        // resolve auto-narrowing
+        for (int i = 0; i < cRets; i++)
+            {
+            TypeConstant typeRet = aRetTypes[i];
+            if (typeRet.isAutoNarrowing())
+                {
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(ctx.getThisClass().getFormalType());
+                }
+            }
+
         // void methods are the simplest
         if (cExprs == 0 || cRets == 0)
             {

@@ -1193,7 +1193,7 @@ public class ClassStructure
 
                 if (prop.isTypeParameter())
                     {
-                    if (!typeRight.isGenericType(prop.getName()))
+                    if (!typeRight.containsGenericParam(prop.getName()))
                         {
                         setMiss.add(prop.getIdentityConstant().getSignature());
                         }

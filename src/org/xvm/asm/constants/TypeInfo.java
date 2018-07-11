@@ -42,7 +42,7 @@ public class TypeInfo
      * @param struct               the structure that underlies the type, or null if there is none
      * @param cDepth               the nested depth of the TypeInfo; {@code 0} for a class TypeInfo,
      *                             or {@code >0} for a TypeInfo that represents a property
-     * @param fAbstract            true if the type is abstract
+     * @param fSynthetic           true if this type info is synthetic (e.g. "as into")
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
      * @param typeExtends          the type that is extended
@@ -61,7 +61,7 @@ public class TypeInfo
             TypeConstant                        type,
             ClassStructure                      struct,
             int                                 cDepth,
-            boolean                             fAbstract,
+            boolean                             fSynthetic,
             Map<Object, ParamInfo>              mapTypeParams,
             Annotation[]                        aannoClass,
             TypeConstant                        typeExtends,
@@ -89,7 +89,6 @@ public class TypeInfo
         m_type                  = type;
         m_struct                = struct;
         m_cDepth                = cDepth;
-        m_fExplicitAbstract     = fAbstract;
         m_mapTypeParams         = mapTypeParams;
         m_aannoClass            = validateAnnotations(aannoClass);
         m_typeExtends           = typeExtends;
@@ -109,19 +108,21 @@ public class TypeInfo
         m_cacheById  = new HashMap<>(m_mapMethods);
         m_cacheByNid = new HashMap<>(m_mapVirtMethods);
 
-        boolean fImplicitAbstract = false;
         for (Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
             {
             MethodInfo info = entry.getValue();
 
             info.populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
-            fImplicitAbstract |= info.isAbstract();
             }
 
-        if (!fImplicitAbstract)
-            {
-            fImplicitAbstract = mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract);
-            }
+        boolean fExplicitAbstract = fSynthetic || !isClass() ||
+                TypeInfo.containsAnnotation(aannoClass, "Abstract");
+
+        boolean fImplicitAbstract = fExplicitAbstract ||
+                mapProps.values().stream().anyMatch(PropertyInfo::isExplicitlyAbstract) ||
+                mapMethods.values().stream().anyMatch(MethodInfo::isAbstract);
+
+        m_fExplicitAbstract = fExplicitAbstract;
         m_fImplicitAbstract = fImplicitAbstract;
         }
 
@@ -192,7 +193,7 @@ public class TypeInfo
                 }
             }
 
-        return new TypeInfo(typeNew, m_struct, m_cDepth, m_fExplicitAbstract,
+        return new TypeInfo(typeNew, m_struct, m_cDepth, false,
                 m_mapTypeParams, m_aannoClass,
                 m_typeExtends, m_typeRebases, m_typeInto,
                 m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
@@ -241,7 +242,7 @@ public class TypeInfo
                     }
                 }
 
-            info = new TypeInfo(m_type, m_struct, m_cDepth, m_fExplicitAbstract,
+            info = new TypeInfo(m_type, m_struct, m_cDepth, true,
                     m_mapTypeParams, m_aannoClass,
                     m_typeExtends, m_typeRebases, m_typeInto,
                     m_listProcess, m_listmapClassChain, m_listmapDefaultChain,
@@ -452,6 +453,14 @@ public class TypeInfo
     public boolean isAbstract()
         {
         return m_fImplicitAbstract || m_fExplicitAbstract;
+        }
+
+    /**
+     * @return true iff this type is a native rebase
+     */
+    public boolean isNativeRebase()
+        {
+        return m_type.getDefiningConstant() instanceof NativeRebaseConstant;
         }
 
     /**

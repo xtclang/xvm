@@ -281,9 +281,9 @@ public class TypeComposition
     /**
      * @return true iff the revealed type has a formal type parameter with the specified name
      */
-    public boolean isGenericType(String sName)
+    public boolean containsGenericParam(String sName)
         {
-        return f_typeRevealed.isGenericType(sName);
+        return f_typeRevealed.containsGenericParam(sName);
         }
 
     /**
