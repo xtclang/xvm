@@ -105,6 +105,22 @@ interface Collection<ElementType>
     Iterator<ElementType> iterator();
 
     /**
+     * Obtain an array of elements from this collection.
+     *
+     * @return an array of elements from this collection
+     */
+    ElementType[] to<ElementType[]>()
+        {
+        ElementType[] array = new ElementType[size];
+        Int i = 0;
+        for (ElementType el : this)
+            {
+            array[i++] = el;
+            }
+        return array;
+        }
+
+    /**
      * Obtain a Stream over the contents of this Collection.
      *
      * @return a Stream over the contents of this Collection
