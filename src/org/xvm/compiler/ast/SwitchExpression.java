@@ -40,6 +40,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * A "switch" expression.
  *
+ * <p/>REVIEW does switch handle multiple values? (and could they be easily treated as tuples?)
  * <p/>REVIEW consider adding support for case expressions of Range&lt;T&gt; for switch(T)
  */
 public class SwitchExpression

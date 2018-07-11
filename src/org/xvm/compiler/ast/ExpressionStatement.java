@@ -14,6 +14,8 @@ import org.xvm.asm.op.Label;
 
 /**
  * An expression statement is just an expression that someone stuck a semicolon on the end of.
+ *
+ * <p/>REVIEW what expression types are allowed? is that the parser's job? or validate()'s job?
  */
 public class ExpressionStatement
         extends ConditionalStatement
