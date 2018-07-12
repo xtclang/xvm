@@ -1326,5 +1326,7 @@ void foo(Dict.Entry entry)
     entry.KT k = entry.key;         // compile error
     Dict.entry.KT k = entry.key;    // ok
 
-
+    // decision
+    entry.Dict.KT k = entry.key;
+    // i.e. deprecate "ClassName.this" and replace with "expr.ClassName" synthetic property
     }

@@ -810,10 +810,13 @@ public class Parser
                     Token start = expect(Id.L_PAREN);
                     ParseList: while (true)
                         {
-                        Expression expr = parseExpression();
+                        boolean    fVarDecl = peek().getId() == Id.VAR || peek().getId() == Id.VAL;
+                        Expression expr     = fVarDecl
+                                ? new VariableTypeExpression(current())
+                                : parseExpression();
                         exprs.add(expr);
 
-                        if (peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
+                        if (fVarDecl || peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
                             {
                             // so there appears to be a second expression to parse, which indicates
                             // that the first one had to be a type
@@ -999,6 +1002,21 @@ public class Parser
                         modifiers, annotations, null, null, null, keyword);
                 }
 
+            case VAL:
+            case VAR:
+                if (fInMethod)
+                    {
+                    // TODO TODO TODO - work in progress
+//                ? new VariableTypeExpression(current())
+//                stmts.add(new VariableDeclarationStatement(expr.toTypeExpression(),
+//                        expect(Id.IDENTIFIER), null, null));
+//
+//                expect(Id.ASN);
+//                Expression value = parseExpression();
+//                expect(Id.SEMICOLON);
+//                return new MultipleDeclarationStatement(stmts, value, start.getStartPosition());
+                    }
+
             case CONDITIONAL:
             case VOID:
             default:
@@ -1105,7 +1123,7 @@ public class Parser
      *
      * @return a VariableDeclarationStatement
      */
-    Statement parseVariableDeclarationAfterName(List<Annotation> annotations, TypeExpression type, Token name)
+    Statement parseVariableDeclarationAfterName(List<Annotation> annotations, TypeExpression type, Token name) // TODO check who calls this for var/val support
         {
         Expression value = null;
         if (match(Id.ASN) != null)
@@ -1989,7 +2007,7 @@ public class Parser
      */
     Statement parseVariableInitializer()
         {
-        Expression expr = parseExpression();
+        Expression expr = parseExpression(); // TODO or "var" or "val"
         if (peek().getId() == Id.ASN)
             {
             return new AssignmentStatement(expr, current(), parseExpression(), false);
@@ -2019,7 +2037,7 @@ public class Parser
      */
     ConditionalStatement parseConditionalDeclaration(boolean fAllowAsn)
         {
-        Expression expr = parseExpression();
+        Expression expr = parseExpression();  // TODO or "var" or "val"
         switch (peek().getId())
             {
             case ASN:
