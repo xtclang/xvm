@@ -8,7 +8,7 @@ interface Const
      */
     static <CompileType extends Const> Ordered compare(CompileType value1, CompileType value2)
         {
-        TODO -- native
+        return value1 <=> value2;
         }
 
     /**
@@ -17,7 +17,7 @@ interface Const
      */
     static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2)
         {
-        TODO -- native
+        return value1 == value2;
         }
 
     /**

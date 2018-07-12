@@ -115,6 +115,7 @@ public class TypeInfo
             info.populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
             }
 
+        // REVIEW: consider calculating the "abstract" flags lazily
         boolean fExplicitAbstract = fSynthetic || !isClass() ||
                 TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
