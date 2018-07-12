@@ -38,8 +38,7 @@ interface Number
     // ----- operations
 
     /**
-     * Addition: Add another number to this number, and retu
-     rn the result.
+     * Addition: Add another number to this number, and return the result.
      */
     @Op Number add(Number n);
 

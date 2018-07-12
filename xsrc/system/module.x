@@ -98,6 +98,15 @@ module Ecstasy.xtclang.org
         }
 
     /**
+     * An IllegalStateException is raised when a data structure is not in a consistent state
+     * to perform a requested operation.
+     */
+    const IllegalStateException(String? text, Exception? cause)
+            extends Exception(text, cause)
+        {
+        }
+
+    /**
      * An UnsupportedOperationException is raised when an attempt is made to invoke functionality
      * that is not present or has not yet been implemented.
      */

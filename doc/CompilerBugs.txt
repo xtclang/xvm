@@ -18,5 +18,9 @@ caused by a failure to correctly init a parameter with "markInitialValue"
 (see "T0D0" in MethodDeclarationStatement.buildParameters)
 
 
+-- infinite loop in resolver caused by a missing ">"
+ ElementType[] to<ElementType[]() {}
 
 
+-- generates a "wrong number of arguments" error
+  return codepoint < UInt32.maxvalue ? (true, new Char(codepoint + 1)) : false;

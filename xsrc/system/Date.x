@@ -8,13 +8,35 @@ const Date(Int year, Int month, Int day)
     enum DayOfWeek {Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday}
 
     // ops
-    Time add(Duration duration);
-    Duration sub(Time time);
-    Time sub(Duration duration);
+    @Op Date add(Duration duration)
+        {
+        TODO
+        }
 
-    // Sequential
-    conditional Date prev();
-    conditional Date next();
+    @Op Duration sub(Date date)
+        {
+        TODO
+        }
+
+
+    @Op Date sub(Duration duration)
+        {
+        TODO
+        }
+
+    // ----- Sequential ----------------------------------------------------------------------------
+
+    conditional Date prev()
+        {
+        TODO
+        }
+
+    conditional Date next()
+        {
+        TODO
+        }
+
+    // ----- conversions ---------------------------------------------------------------------------
 
     DateTime to<DateTime>()
         {

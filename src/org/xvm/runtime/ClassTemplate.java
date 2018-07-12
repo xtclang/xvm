@@ -866,7 +866,7 @@ public abstract class ClassTemplate
      */
     protected int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        if (hTarget.getComposition().isGenericType(sPropName))
+        if (hTarget.getComposition().containsGenericParam(sPropName))
             {
             TypeConstant type = hTarget.getComposition().getActualParamType(sPropName);
 

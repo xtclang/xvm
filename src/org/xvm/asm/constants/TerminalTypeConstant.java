@@ -254,6 +254,13 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isGenericType()
+        {
+        return isSingleDefiningConstant()
+            && getDefiningConstant().getFormat() == Format.Property;
+        }
+
+    @Override
     public boolean isAnnotated()
         {
         TypeConstant type = resolveTypedefs();
@@ -458,6 +465,13 @@ public class TerminalTypeConstant
         switch (constant.getFormat())
             {
             case ThisClass:
+                if (typeTarget != null && typeTarget.isGenericType())
+                    {
+                    assert typeTarget.isA(
+                        ((ThisClassConstant) constant).getDeclarationLevelClass().getType());
+                    return typeTarget;
+                    }
+                // fall through
             case ParentClass:
             case ChildClass:
                 {

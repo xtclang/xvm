@@ -169,6 +169,14 @@ interface IntNumber
     IntNumber reverseBytes();
 
     /**
+     * Convert the number to a Char. Any additional magnitude is discarded.
+     */
+    Char to<Char>()
+        {
+        TODO
+        }
+
+    /**
      * Obtain the number as an array of boolean values.
      */
     @Override

@@ -222,7 +222,10 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length signed integer.
      */
-    @Auto VarInt to<VarInt>();
+    @Auto VarInt to<VarInt>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a 4-bit integer.
@@ -281,7 +284,10 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length unsigned integer.
      */
-    @Auto VarUInt to<VarUInt>();
+    @Auto VarUInt to<VarUInt>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a unsigned 8-bit integer.
@@ -331,7 +337,10 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat to<VarFloat>();
+    @Auto VarFloat to<VarFloat>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
@@ -368,7 +377,10 @@ const IntLiteral(String text)
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec to<VarDec>();
+    @Auto VarDec to<VarDec>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.
@@ -399,37 +411,74 @@ const IntLiteral(String text)
     /**
      * Bitwise AND.
      */
-    @Op IntLiteral and(IntLiteral that);
+    @Op IntLiteral and(IntLiteral that)
+        {
+        return this & that;
+        }
 
     /**
      * Bitwise OR.
      */
-    @Op IntLiteral or(IntLiteral that);
+    @Op IntLiteral or(IntLiteral that)
+        {
+        return this | that;
+        }
 
     /**
      * Bitwise XOR.
      */
-    @Op IntLiteral xor(IntLiteral that);
+    @Op IntLiteral xor(IntLiteral that)
+        {
+        return this ^ that;
+        }
 
     /**
      * Bitwise NOT.
      */
-    @Op IntLiteral not();
+    @Op IntLiteral not()
+        {
+        return ~this;
+        }
 
     /**
      * Shift bits left. Works like an arithmetic left shift.
      */
-    @Op IntLiteral shiftLeft(Int count);
+    @Op IntLiteral shiftLeft(Int count)
+        {
+        return this << count;
+        }
 
     /**
      * Shift bits right. Works like an arithmetic right shift.
      */
-    @Op IntLiteral shiftRight(Int count);
+    @Op IntLiteral shiftRight(Int count)
+        {
+        return this >> count;
+        }
 
     /**
      * Works identically to the `shiftRight`.
      */
-    @Op IntLiteral shiftAllRight(Int count);
+    @Op IntLiteral shiftAllRight(Int count)
+        {
+        return this >>> count;
+        }
+
+    // ----- Sequential ----------------------------------------------------------------------------
+
+    @Override
+    conditional Sequential prev()
+        {
+        return this - 1;
+        }
+
+    @Override
+    conditional Sequential next()
+        {
+        return this + 1;
+        }
+
+    // ----- conversions ---------------------------------------------------------------------------
 
     /**
      * Convert the number to a 128-bit radix-10 (decimal) floating point number.

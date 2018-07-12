@@ -510,21 +510,33 @@ public interface Constants
      */
     public static final String VE_METHOD_OVERRIDE_REQUIRED            = "VERIFY-81";
     /**
-     * "{0}" is not an instantiable type.
+     * "{0}" is not an instantiable abstract type.
      */
-    public static final String VE_NEW_ILLEGAL_TYPE                    = "VERIFY-82";
+    public static final String VE_NEW_ABSTRACT_TYPE                   = "VERIFY-82";
+    /**
+     * "{0}" is not an instantiable abstract type.
+     */
+    public static final String VE_NEW_SINGLETON_TYPE                  = "VERIFY-83";
+    /**
+     * "{0}" is not an instantiable type because it contains an abstract property "{1}".
+     */
+    public static final String VE_NEW_ABSTRACT_PROPERTY               = "VERIFY-84";
+    /**
+     * "{0}" is not an instantiable type because it contains an abstract method "{1}".
+     */
+    public static final String VE_NEW_ABSTRACT_METHOD                 = "VERIFY-85";
     /**
      "{0}" requires a parent instance in order to be instantiated.
      */
-    public static final String VE_NEW_REQUIRES_PARENT                 = "VERIFY-83";
+    public static final String VE_NEW_REQUIRES_PARENT                 = "VERIFY-90";
     /**
      "{0}" cannot be instantiated using a parent instance.
      */
-    public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-84";
+    public static final String VE_NEW_DISALLOWS_PARENT                = "VERIFY-91";
     /**
      "{0}" is not related to the provided parent instance type "{1}".
      */
-    public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-85";
+    public static final String VE_NEW_UNRELATED_PARENT                = "VERIFY-92";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

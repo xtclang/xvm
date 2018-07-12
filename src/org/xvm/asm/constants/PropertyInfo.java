@@ -338,8 +338,7 @@ public class PropertyInfo
         // properties; all others become field-based properties
         PropertyBody[]    aBody  = m_aBody;
         PropertyStructure struct = null;
-        boolean           fRO    = true;
-        MethodConstant    idGet  = null;
+        boolean           fRO    = false;
         for (int i = 0, c = m_aBody.length; i < c; ++i)
             {
             PropertyBody body = aBody[i];
@@ -352,12 +351,10 @@ public class PropertyInfo
                     struct = body.getStructure();
                     }
 
+                // can only be read-only if at least one interface property body has a default get()
                 if (body.isExplicitReadOnly())
                     {
-                    if (idGet == null && body.hasGetter())
-                        {
-                        idGet = body.getGetterId();
-                        }
+                    fRO |= body.hasGetter();
                     }
                 else
                     {
@@ -366,9 +363,6 @@ public class PropertyInfo
                     }
                 }
             }
-
-        // can only be read-only if at least one interface property body has a default get()
-        fRO &= idGet != null;
 
         PropertyBody bodyNew = fNative
                 ? new PropertyBody(struct, Implementation.Native, null, getType(), fRO, false, true,
@@ -381,19 +375,23 @@ public class PropertyInfo
     /**
      * Retain only property bodies that originate from the identities specified in the passed sets.
      *
+     * @param constId     the identity of the property for this operation
+     * @param setClass    the set of identities that call chain bodies can come from
      * @param setClass    the set of identities that call chain bodies can come from
      * @param setDefault  the set of identities that default bodies can come from
      *
      * @return the resulting PropertyInfo, or null if nothing has been retained
      */
-    public PropertyInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
+    public PropertyInfo retainOnly(PropertyConstant      constId,
+                                   Set<IdentityConstant> setClass,
+                                   Set<IdentityConstant> setDefault)
         {
         ArrayList<PropertyBody> list  = null;
         PropertyBody[]          aBody = m_aBody;
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             PropertyBody     body     = aBody[i];
-            IdentityConstant constClz = body.getIdentity().getClassIdentity();
+            IdentityConstant constClz = constId.getClassIdentity();
             boolean fRetain;
             switch (body.getImplementation())
                 {

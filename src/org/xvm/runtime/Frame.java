@@ -1775,7 +1775,7 @@ public class Frame
             PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
             TypeConstant typeTarget = frame.getLocalType(nTargetReg);
 
-            return typeTarget.isGenericType(constProperty.getName())
+            return typeTarget.containsGenericParam(constProperty.getName())
                 ? pool.ensureParameterizedTypeConstant(pool.typeType(),
                     constProperty.getFormalType().resolveGenerics(typeTarget))
                 : constProperty.getType().resolveGenerics(typeTarget);

@@ -188,12 +188,15 @@ public class MethodInfo
     /**
      * Retain only method bodies that originate from the identities specified in the passed sets.
      *
+     * @param constId     the identity of the method for this operation
      * @param setClass    the set of identities that call chain bodies can come from
      * @param setDefault  the set of identities that default bodies can come from
      *
      * @return the resulting MethodInfo, or null if nothing has been retained
      */
-    public MethodInfo retainOnly(Set<IdentityConstant> setClass, Set<IdentityConstant> setDefault)
+    public MethodInfo retainOnly(MethodConstant        constId,
+                                 Set<IdentityConstant> setClass,
+                                 Set<IdentityConstant> setDefault)
         {
         // functions are, by definition, non-virtual, so they are not affected by yanking,
         // de-duping (they naturally de-dup by having a fixed identity), etc.
@@ -207,7 +210,7 @@ public class MethodInfo
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             MethodBody       body     = aBody[i];
-            IdentityConstant constClz = body.getIdentity().getClassIdentity();
+            IdentityConstant constClz = constId.getClassIdentity();
             boolean fRetain;
 
             switch (body.getImplementation())
@@ -220,7 +223,7 @@ public class MethodInfo
                     break;
 
                 default:
-                    fRetain = setClass.contains(constClz);
+                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
                     break;
                 }
             if (fRetain)
