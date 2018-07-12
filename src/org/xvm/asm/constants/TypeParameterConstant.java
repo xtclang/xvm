@@ -16,9 +16,9 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a register constant, which specifies a particular virtual machine register.
+ * Represent a type parameter constant, which specifies a particular virtual machine register.
  */
-public class RegisterConstant
+public class TypeParameterConstant
         extends PseudoConstant
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -32,7 +32,7 @@ public class RegisterConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public RegisterConstant(ConstantPool pool, Format format, DataInput in)
+    public TypeParameterConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -46,7 +46,7 @@ public class RegisterConstant
      * @param pool  the ConstantPool that will contain this Constant
      * @param iReg  the register number
      */
-    public RegisterConstant(ConstantPool pool, MethodConstant constMethod, int iReg)
+    public TypeParameterConstant(ConstantPool pool, MethodConstant constMethod, int iReg)
         {
         super(pool);
 
@@ -89,7 +89,7 @@ public class RegisterConstant
     @Override
     public Format getFormat()
         {
-        return Format.Register;
+        return Format.TypeParameter;
         }
 
     @Override
@@ -139,7 +139,7 @@ public class RegisterConstant
         }
 
     @Override
-    public RegisterConstant resolveTypedefs()
+    public TypeParameterConstant resolveTypedefs()
         {
         MethodConstant constOld = m_constMethod;
         MethodConstant constNew = constOld.resolveTypedefs();
@@ -159,7 +159,7 @@ public class RegisterConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        RegisterConstant regThat = (RegisterConstant) that;
+        TypeParameterConstant regThat = (TypeParameterConstant) that;
         if (!fReEntry)
             {
             fReEntry = true;
@@ -245,7 +245,7 @@ public class RegisterConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The index of the MethodConstant while the RegisterConstant is being deserialized.
+     * The index of the MethodConstant while the TypeParameterConstant is being deserialized.
      */
     private transient int m_iMethod;
 

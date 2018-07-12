@@ -747,7 +747,7 @@ public abstract class Constant
         ThisClass,
         ParentClass,
         ChildClass,
-        Register,
+        TypeParameter,
         Signature,
         NativeClass,
 

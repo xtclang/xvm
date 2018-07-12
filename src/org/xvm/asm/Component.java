@@ -3148,7 +3148,7 @@ public abstract class Component
          * Invoked when a name resolves to something that is a constant, such as a property
          * constant of a parameterized type or of a method.
          *
-         * @param constant  either a PropertyConstant or a RegisterConstant
+         * @param constant  either a PropertyConstant or a TypeParameterConstant
          */
         ResolutionResult resolvedConstant(Constant constant);
         }
