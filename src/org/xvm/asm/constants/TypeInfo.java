@@ -115,6 +115,7 @@ public class TypeInfo
             info.populateCache(entry.getKey(), m_cacheById, m_cacheByNid);
             }
 
+        // REVIEW: consider calculating the "abstract" flags lazily
         boolean fExplicitAbstract = fSynthetic || !isClass() ||
                 TypeInfo.containsAnnotation(aannoClass, "Abstract");
 
@@ -1251,8 +1252,8 @@ public class TypeInfo
         if (typeParam instanceof TerminalTypeConstant)
             {
             Constant constParam = typeParam.getDefiningConstant();
-            if (constParam.getFormat() == Constant.Format.Register &&
-                ((RegisterConstant) constParam).getRegister() == 0)
+            if (constParam.getFormat() == Constant.Format.TypeParameter &&
+                ((TypeParameterConstant) constParam).getRegister() == 0)
                 {
                 return true;
                 }

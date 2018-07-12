@@ -13,7 +13,10 @@ const FPLiteral(String text)
     /**
      * Convert the number to a variable-length binary radix floating point number.
      */
-    @Auto VarFloat to<VarFloat>();
+    @Auto VarFloat to<VarFloat>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a 16-bit radix-2 (binary) floating point number.
@@ -50,7 +53,10 @@ const FPLiteral(String text)
     /**
      * Convert the number to a variable-length decimal radix floating point number.
      */
-    @Auto VarDec to<VarDec>();
+    @Auto VarDec to<VarDec>()
+        {
+        TODO
+        }
 
     /**
      * Convert the number to a 32-bit radix-10 (decimal) floating point number.

@@ -17,9 +17,9 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypedefConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler;
 
@@ -368,10 +368,11 @@ public class NameResolver
                             }
                         else
                             {
-                            throw new IllegalStateException("property id=" + constProp + ", property struct=" + structProp);
+                            throw new IllegalStateException("property id=" + constProp
+                                    + ", property struct=" + structProp);
                             }
-                        }
                         break;
+                        }
 
                     case Typedef:
                         {
@@ -400,16 +401,19 @@ public class NameResolver
                             }
                         else
                             {
-                            throw new IllegalStateException("Typedef id=" + constTypedef + ", Typedef struct=" + structTypedef);
+                            throw new IllegalStateException("Typedef id=" + constTypedef
+                                    + ", Typedef struct=" + structTypedef);
                             }
+                        break;
                         }
-                        break;
 
-
-                    case Register:
-                        RegisterConstant constReg = (RegisterConstant) constParam;
-                        constType = constReg.getMethod().getSignature().getRawParams()[constReg.getRegister()];
+                    case TypeParameter:
+                        {
+                        TypeParameterConstant constTypeParam = (TypeParameterConstant) constParam;
+                        constType = constTypeParam.getMethod().getSignature().
+                                getRawParams()[constTypeParam.getRegister()];
                         break;
+                        }
 
                     default:
                         throw new IllegalStateException("illegal type param constant id: " + constParam);
