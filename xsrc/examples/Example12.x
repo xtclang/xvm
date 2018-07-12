@@ -1308,3 +1308,23 @@ for (i : 0..5)
     f2();
     }
 // at this point, j==326
+
+// ----- inner class child
+
+class Dict<KT,VT>
+    {
+    class Entry
+        {
+        KT key;
+        VT val;
+        }
+    }
+
+// can you get KT from an Entry?
+void foo(Dict.Entry entry)
+    {
+    entry.KT k = entry.key;         // compile error
+    Dict.entry.KT k = entry.key;    // ok
+
+
+    }

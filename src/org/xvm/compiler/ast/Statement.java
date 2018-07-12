@@ -361,43 +361,38 @@ public abstract class Statement
          */
         public boolean isVarReadable(String sName)
             {
-            // Register.isReadable()
-            // on the capture context, "this" means capture "this" by being a method
-            // TODO
-            return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarReadable(sName);
+            return getDefiniteAssignments().contains(sName) || m_ctxOuter.isVarReadable(sName);
             }
 
         /**
-         * Mark the specified variable as being written to within this context.
-         * <p/>
-         * <b>Note:</b> Calling this method indicates that a read is occurring from the specified
-         * variable.
-         *                                     * <p/>
-         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
-         * variable; <b>this method has a mutating side-effect!</b>
-
-         * @param tokName  the token specifying the variable name
-         * @param errs     the error list to log to (optional)
+         * Mark the specified variable as being read from within this context.
          *
-         * @return true iff the name refers to a variable, and the variable can be written to
+         * @param tokName  the variable name as a token from the source code
+         * @param errs     the error list to log to (optional)
          */
-        public boolean ensureVarWritable(Token tokName, ErrorListener errs)
+        public void markVarRead(Token tokName, ErrorListener errs)
             {
-            String sName = tokName.getValueText();
-
-            // check if we've already ensured that this var is writable
-            // TODO
-
-            if (isVarWritable(sName))
+            Set<String> setAssigned = ensureDefiniteAssignments();
+            String      sName       = tokName.getValueText();
+            if (!setAssigned.contains(sName))
                 {
-                return true;
-                }
+                if (isVarReadable(sName))
+                    {
+                    if (!isVarPresent(sName))
+                        {
+                        makeVarPresent(tokName, errs);
+                        }
+                    // TODO
+                    }
+                else if (errs != null)
+                    {
+                    tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
-            if (errs != null)
-                {
-                // TODO log error
+                    // record that the variable is definitely assigned so that the error will not be
+                    // repeated unnecessarily within this context
+                    setAssigned.add(sName);
+                    }
                 }
-            return false;
             }
 
         /**
@@ -420,6 +415,7 @@ public abstract class Statement
             boolean fWritable;
             if (isVarDeclaredInThisScope(sName))
                 {
+                fWritable = getVar()
                 // TODO
                 }
             else
@@ -432,40 +428,28 @@ public abstract class Statement
             }
 
         /**
-         * Determine if the name refers to a writable variable.
-         * <p/>
-         * <b>Note:</b> Calling this method indicates that a write is occuring to the specified
-         * variable; <b>this method has a mutating side-effect!</b>
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-          *
-         * @param tokName  the name to resolve
+         * Mark the specified variable as being written to within this context.
          *
-         * @return true iff the name refers to a variable, and the variable can be written to
+         * @param tokName  the variable name as a token from the source code
+         * @param errs     the error list to log to (optional)
          */
-        public boolean ensureVarWritable(Token tokName, ErrorList errs)
+        public void markVarWrite(Token tokName, ErrorList errs)
             {
             String      sName       = tokName.getValueText();
             Set<String> setAssigned = ensureDefiniteAssignments();
-            if (!setAssigned.add(sName))
+            if (!setAssigned.contains(sName))
                 {
-                // this variable was already checked
-                return true;
+                Argument arg = getVar(tokName, errs);
+                boolean fWritable;
+                if (isVarDeclaredInThisScope(tokName.getValueText()))
+                    {
+                    // TODO
+                    }
+                else
+                    {
+                    fWritable = m_ctxOuter.isVarWritable(tokName);
+                    }
                 }
-
-            Argument arg = getVar(tokName, errs);
-            boolean fWritable;
-            if (isVarDeclaredInThisScope(tokName.getValueText()))
-                {
-                // TODO
-                }
-            else
-                {
-                fWritable = m_ctxOuter.isVarWritable(tokName);
-                }
-
-            // Register.isReadable()
-            return fWritable;
             }
 
         /**
@@ -573,6 +557,18 @@ public abstract class Statement
         /**
          * See if the specified name declares an argument within this context.
          *
+         * @param sName  the variable name
+         *
+         * @return a Register iff the name is registered to a register; otherwise null
+         */
+        public Argument getVar(String sName)
+            {
+            return getVar(sName, null, null);
+            }
+
+        /**
+         * See if the specified name declares an argument within this context.
+         *
          * @param name  the name token
          * @param errs  the error list to log errors to
          *
@@ -580,7 +576,21 @@ public abstract class Statement
          */
         public Argument getVar(Token name, ErrorListener errs)
             {
-            String sName = name.getValueText();
+            return getVar(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Internal implementation of getVar() that allows the lookup to be done with or without a
+         * token.
+         *
+         * @param sName  the name to look up
+         * @param name   the token to use for error reporting (optional)
+         * @param errs   the error list to use for error reporting (optional)
+         *
+         * @return the argument for the variable, or null
+         */
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
+            {
             Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
@@ -599,6 +609,18 @@ public abstract class Statement
         /**
          * Resolve a reserved name to an argument.
          *
+         * @param sName  TODO
+         *
+         * @return an Argument iff the name resolves to a reserved name; otherwise null
+         */
+        public Argument resolveReservedName(String sName)
+            {
+            return resolveReservedName(sName, null, null);
+            }
+
+        /**
+         * Resolve a reserved name to an argument.
+         *
          * @param name  the potentially reserved name token
          * @param errs  the error list to log errors to
          *
@@ -606,7 +628,23 @@ public abstract class Statement
          */
         public Argument resolveReservedName(Token name, ErrorListener errs)
             {
-            return m_ctxOuter.resolveReservedName(name, errs);
+            return resolveReservedName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Internal implementation of resolveReservedName that allows the resolution to be done with
+         * or without a token.
+         *
+         * @param sName  the name to look up
+         * @param name   the token to use for error reporting (optional)
+         * @param errs   the error list to use for error reporting (optional)
+         *
+         * @return the argument for the reserved name, or null if no such reserved name can be
+         *         resolved within this context
+         */
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
+            {
+            return m_ctxOuter.resolveReservedName(sName, name, errs);
             }
 
         /**
@@ -852,9 +890,13 @@ public abstract class Statement
         public Argument resolveReservedName(Token name, ErrorListener errs)
             {
             checkValidating();
+            return resolveReservedName(name.getValueText(), name, errs);
+            }
 
+        @Override
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
+            {
             Map<String, Argument> mapByName = ensureNameMap();
-            String                sName     = name.getValueText();
             Argument              arg       = mapByName.get(sName);
             if (arg instanceof Register && ((Register) arg).isPredefined())
                 {
@@ -913,12 +955,14 @@ public abstract class Statement
 
                 case "super":
                     {
-                    TypeInfo        info       = getThisType().ensureTypeInfo(errs);
+                    TypeInfo        info       = getThisType().ensureTypeInfo(
+                                                     errs == null ? ErrorListener.BLACKHOLE : errs);
                     MethodStructure method     = getMethod();
                     MethodConstant  idMethod   = method.getIdentityConstant();
                     MethodInfo      infoMethod = info.getMethodById(idMethod);
 
-                    if (infoMethod == null || !infoMethod.hasSuper(info))
+                    if (name != null && errs != null
+                            && (infoMethod == null || !infoMethod.hasSuper(info)))
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }
@@ -936,7 +980,8 @@ public abstract class Statement
                     return null;
                 }
 
-            if ((fNoFunction && isFunction() || fNoConstruct && isConstructor()) && !m_fLoggedNoThis)
+            if (name != null && errs != null && !m_fLoggedNoThis
+                    && ((fNoFunction && isFunction() || fNoConstruct && isConstructor())))
                 {
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 m_fLoggedNoThis = true;
