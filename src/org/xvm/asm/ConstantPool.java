@@ -1591,8 +1591,8 @@ public class ConstantPool
         }
 
     /**
-     * Given the specified property or register constant, obtain a TypeConstant that represents a
-     * type parameter.
+     * Given the specified property or type parameter constant, obtain a TypeConstant that
+     * represents a type parameter.
      *
      * @param constId  a constant specifying a property or register of a method
      *
@@ -1600,7 +1600,7 @@ public class ConstantPool
      */
     public TerminalTypeConstant ensureTypeParameterConstant(Constant constId)
         {
-        if (!(constId instanceof RegisterConstant || constId instanceof PropertyConstant))
+        if (!(constId instanceof TypeParameterConstant || constId instanceof PropertyConstant))
             {
             throw new IllegalArgumentException("invalid parameter identifier: " + constId);
             }
@@ -1621,16 +1621,16 @@ public class ConstantPool
      *
      * @return the RegisterTypeConstant for the specified register number
      */
-    public RegisterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg)
+    public TypeParameterConstant ensureRegisterConstant(MethodConstant constMethod, int iReg)
         {
-        RegisterConstant constReg = null;
+        TypeParameterConstant constReg = null;
         if (iReg == 0)
             {
-            constReg = (RegisterConstant) ensureLocatorLookup(Format.Register).get(constMethod);
+            constReg = (TypeParameterConstant) ensureLocatorLookup(Format.TypeParameter).get(constMethod);
             }
         if (constReg == null)
             {
-            constReg = (RegisterConstant) register(new RegisterConstant(this, constMethod, iReg));
+            constReg = (TypeParameterConstant) register(new TypeParameterConstant(this, constMethod, iReg));
             }
         return constReg;
         }
@@ -2159,8 +2159,8 @@ public class ConstantPool
                     constant = new ChildClassConstant(this, format, in);
                     break;
 
-                case Register:
-                    constant = new RegisterConstant(this, format, in);
+                case TypeParameter:
+                    constant = new TypeParameterConstant(this, format, in);
                     break;
 
                 case Signature:

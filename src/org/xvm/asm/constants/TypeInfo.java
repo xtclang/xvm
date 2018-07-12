@@ -1252,8 +1252,8 @@ public class TypeInfo
         if (typeParam instanceof TerminalTypeConstant)
             {
             Constant constParam = typeParam.getDefiningConstant();
-            if (constParam.getFormat() == Constant.Format.Register &&
-                ((RegisterConstant) constParam).getRegister() == 0)
+            if (constParam.getFormat() == Constant.Format.TypeParameter &&
+                ((TypeParameterConstant) constParam).getRegister() == 0)
                 {
                 return true;
                 }

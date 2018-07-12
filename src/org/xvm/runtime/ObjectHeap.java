@@ -194,9 +194,9 @@ public class ObjectHeap
                 return f_poolRoot.typeType();
 
             case MultiMethod:
-            case Register:
             case Signature:
             case Typedef:
+            case TypeParameter:
             case ThisClass:
             case ParentClass:
             case ChildClass:

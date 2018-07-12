@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.util.Handy;
 
@@ -128,9 +128,9 @@ public class Parameter
         }
 
     /**
-     * @return the RegisterConstant that corresponds to this register being used as a type param
+     * @return the TypeParameterConstant that corresponds to this register being used as a type param
      */
-    public RegisterConstant asTypeParameterConstant(MethodConstant constMethod)
+    public TypeParameterConstant asTypeParameterConstant(MethodConstant constMethod)
         {
         assert isTypeParameter();
         return getConstantPool().ensureRegisterConstant(constMethod, m_iParam);
