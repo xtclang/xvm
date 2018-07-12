@@ -277,6 +277,12 @@ public class Register
         return !m_fRO;
         }
 
+    public boolean isConstant()
+        {
+        // TODO for "val" types, this returns true
+        return false;
+        }
+
     /**
      * @return true iff this is a normal (not D_VAR), readable and writable, local variable
      */

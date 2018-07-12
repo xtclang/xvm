@@ -367,32 +367,50 @@ public abstract class Statement
         /**
          * Mark the specified variable as being read from within this context.
          *
-         * @param tokName  the variable name as a token from the source code
-         * @param errs     the error list to log to (optional)
+         * @param sName     the variable name
          */
-        public void markVarRead(Token tokName, ErrorListener errs)
+        public final void markVarRead(String sName)
             {
-            Set<String> setAssigned = ensureDefiniteAssignments();
-            String      sName       = tokName.getValueText();
-            if (!setAssigned.contains(sName))
+            markVarRead(sName, true, null, null);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param tokName     the variable name as a token from the source code
+         * @param errs        the error list to log to
+         */
+        public final void markVarRead(Token tokName, ErrorListener errs)
+            {
+            markVarRead(tokName.getValueText(), true, tokName, errs);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param sName       the variable name
+         * @param fThisScope  true if the read is within this context, or false if nested under
+         * @param tokName     the variable name as a token from the source code (optional)
+         * @param errs        the error list to log to (optional)
+         */
+        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            if (fThisScope && !isVarReadable(sName))
                 {
-                if (isVarReadable(sName))
-                    {
-                    if (!isVarPresent(sName))
-                        {
-                        makeVarPresent(tokName, errs);
-                        }
-                    // TODO
-                    }
-                else if (errs != null)
+                // this method isn't supposed to be called for variable names that don't exist
+                assert getVar(sName) != null;
+
+                if (tokName != null && errs != null)
                     {
                     tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
                     // record that the variable is definitely assigned so that the error will not be
                     // repeated unnecessarily within this context
-                    setAssigned.add(sName);
+                    ensureDefiniteAssignments().add(sName);
                     }
                 }
+
+            m_ctxOuter.markVarRead(sName, false, tokName, errs);
             }
 
         /**
@@ -406,25 +424,15 @@ public abstract class Statement
          */
         public boolean isVarWritable(String sName)
             {
-            Set<String> setAssigned = ensureDefiniteAssignments();
-            if (setAssigned.contains(sName))
+            if (isVarDeclaredInThisScope(sName))
                 {
+                // TODO a "val" cannot be written to once it is definitely assigned
+                // getVar(sName)
+                // getDefiniteAssignments().contains(sName)
                 return true;
                 }
 
-            boolean fWritable;
-            if (isVarDeclaredInThisScope(sName))
-                {
-                fWritable = getVar()
-                // TODO
-                }
-            else
-                {
-                fWritable = m_ctxOuter.isVarWritable(sName);
-                }
-
-            // Register.isReadable()
-            return fWritable;
+            return m_ctxOuter.isVarWritable(sName);
             }
 
         /**
