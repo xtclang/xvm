@@ -219,8 +219,9 @@ class ExtHashMap<KeyType, ValueType>
      */
     class HashEntrySet
             // extends KeyBasedEntriesSet<HashEntry> // TODO
+            implements Iterable<HashEntry>
         {
-        // @Override
+        @Override
         Iterator<HashEntry> iterator()
             {
             return new Iterator<HashEntry>()
@@ -268,6 +269,8 @@ class ExtHashMap<KeyType, ValueType>
             Int          bucketId  = keyhash % buckets.size;
             HashEntry?   currEntry = buckets[bucketId];
             HashEntry?   prevEntry = null;
+
+          loop:
             while (currEntry?)
                 {
                 // check if we found the entry that we're looking for
@@ -283,7 +286,7 @@ class ExtHashMap<KeyType, ValueType>
                             }
                         else
                             {
-                            buckets[i] = currEntry.next;
+                            buckets[loop.counter] = currEntry.next;
                             }
 
                         ++ExtHashMap.this.removeCount;

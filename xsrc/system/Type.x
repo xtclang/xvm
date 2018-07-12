@@ -239,7 +239,7 @@ const Type<DataType>
      */
     Boolean isInstance(Object o)
         {
-        return &o.ActualType.isA(this);
+        return &o.actualType.isA(this);
         }
 
     /**
