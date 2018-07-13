@@ -37,7 +37,9 @@ import org.xvm.util.Severity;
  * A variable declaration statement specifies a type and a simply name for a variable, with an
  * optional initial value.
  *
- * Additionally, this can represent the combination of a variable "conditional declaration".
+ * <p/>Additionally, this can represent the combination of a variable "conditional declaration".
+ *
+ * <p/>TODO add explicit support for VariableTypeExpression
  */
 public class VariableDeclarationStatement
         extends ConditionalStatement

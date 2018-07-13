@@ -438,26 +438,74 @@ public abstract class Statement
         /**
          * Mark the specified variable as being written to within this context.
          *
+         * @param sName  the variable name
+         */
+        public final void markVarWrite(String sName)
+            {
+            markVarWrite(sName, true, null, null);
+            }
+
+        /**
+         * Mark the specified variable as being written to within this context.
+         *
          * @param tokName  the variable name as a token from the source code
          * @param errs     the error list to log to (optional)
          */
         public void markVarWrite(Token tokName, ErrorList errs)
             {
-            String      sName       = tokName.getValueText();
-            Set<String> setAssigned = ensureDefiniteAssignments();
-            if (!setAssigned.contains(sName))
+            markVarWrite(tokName.getValueText(), true, tokName, errs);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param sName       the variable name
+         * @param fThisScope  true if the read is within this context, or false if nested under
+         * @param tokName     the variable name as a token from the source code (optional)
+         * @param errs        the error list to log to (optional)
+         */
+        protected void markVarWrite(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            if (getDefiniteAssignments().contains(sName))
                 {
-                Argument arg = getVar(tokName, errs);
-                boolean fWritable;
-                if (isVarDeclaredInThisScope(tokName.getValueText()))
-                    {
-                    // TODO
-                    }
-                else
-                    {
-                    fWritable = m_ctxOuter.isVarWritable(tokName);
-                    }
+                // already recorded as written
+                return;
                 }
+
+            boolean fValid = true;
+            if (fThisScope)
+                {
+                // this method isn't supposed to be called for variable names that don't exist
+                assert getVar(sName) != null;
+
+                if (!isVarWritable(sName))
+                    {
+                    fValid = false;
+                    if (tokName != null && errs != null)
+                        {
+                        tokName.log(errs, getSource(), Severity.ERROR,
+                                Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
+                        }
+                    }
+
+                ensureDefiniteAssignments().add(sName);
+                }
+
+            if (fValid)
+                {
+                m_ctxOuter.markVarWrite(sName, false, tokName, errs);
+                }
+            }
+
+        /**
+         * @return a read-only set of definitely assigned variable names; never null
+         */
+        public Set<String> getDefiniteAssignments()
+            {
+            Set<String> set = m_setAssigned;
+            return set == null
+                    ? set
+                    : Collections.EMPTY_SET;
             }
 
         /**
@@ -474,14 +522,17 @@ public abstract class Statement
             }
 
         /**
-         * @return a read-only set of definitely assigned variable names; never null
+         * Resolve the name of a variable, structure, etc.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return the Argument representing the meaning of the name, or null
          */
-        public Set<String> getDefiniteAssignments()
+        public final Argument resolveName(String sName)
             {
-            Set<String> set = m_setAssigned;
-            return set == null
-                    ? set
-                    : Collections.EMPTY_SET;
+            return resolveName(sName, null, null);
             }
 
         /**
@@ -493,12 +544,28 @@ public abstract class Statement
          *
          * @return the Argument representing the meaning of the name, or null
          */
-        public Argument resolveName(Token name, ErrorListener errs)
+        public final Argument resolveName(Token name, ErrorListener errs)
             {
-            Argument arg = resolveReservedName(name, errs);
+            return resolveName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Resolve the name of a variable, structure, etc.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the name to resolve
+         * @param name   the token from the source for the name to resolve (optional)
+         * @param errs   the error list to log to (optional)
+         *
+         * @return the Argument representing the meaning of the name, or null
+         */
+        protected Argument resolveName(String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = resolveReservedName(sName, name, errs);
             if (arg == null)
                 {
-                arg = resolveRegularName(name, errs);
+                arg = resolveRegularName(sName, name, errs);
                 }
             return arg;
             }
@@ -546,9 +613,34 @@ public abstract class Statement
          *
          * @return an Argument iff the name is registered to an argument; otherwise null
          */
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        public final Argument resolveRegularName(Token name, ErrorListener errs)
             {
-            String                sName     = name.getValueText();
+            return resolveRegularName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Resolve a name (other than a reserved name) to an argument.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return an Argument iff the name is registered to an argument; otherwise null
+         */
+        public final Argument resolveRegularName(String sName)
+            {
+            return resolveRegularName(sName, null, null);
+            }
+
+        /**
+         * Resolve a name (other than a reserved name) to an argument.
+         *
+         * @param sName  the name to resolve
+         * @param name   the name token for error reporting (optional)
+         * @param errs   the error list to log errors to (optional)
+         *
+         * @return an Argument iff the name is registered to an argument; otherwise null
+         */
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+            {
             Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
@@ -569,7 +661,7 @@ public abstract class Statement
          *
          * @return a Register iff the name is registered to a register; otherwise null
          */
-        public Argument getVar(String sName)
+        public final Argument getVar(String sName)
             {
             return getVar(sName, null, null);
             }
@@ -582,7 +674,7 @@ public abstract class Statement
          *
          * @return a Register iff the name is registered to a register; otherwise null
          */
-        public Argument getVar(Token name, ErrorListener errs)
+        public final Argument getVar(Token name, ErrorListener errs)
             {
             return getVar(name.getValueText(), name, errs);
             }
@@ -617,11 +709,11 @@ public abstract class Statement
         /**
          * Resolve a reserved name to an argument.
          *
-         * @param sName  TODO
+         * @param sName  the name to resolve
          *
          * @return an Argument iff the name resolves to a reserved name; otherwise null
          */
-        public Argument resolveReservedName(String sName)
+        public final Argument resolveReservedName(String sName)
             {
             return resolveReservedName(sName, null, null);
             }
@@ -634,7 +726,7 @@ public abstract class Statement
          *
          * @return an Argument iff the name resolves to a reserved name; otherwise null
          */
-        public Argument resolveReservedName(Token name, ErrorListener errs)
+        public final Argument resolveReservedName(Token name, ErrorListener errs)
             {
             return resolveReservedName(name.getValueText(), name, errs);
             }
@@ -866,19 +958,19 @@ public abstract class Statement
             }
 
         @Override
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
             checkValidating();
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
-            String                sName     = name.getValueText();
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
                 // resolve the name from outside of this statement
-                arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
+                arg = new NameResolver(m_stmtBody, sName)
+                        .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
                 if (arg != null)
                     {
                     mapByName.put(sName, arg);
@@ -889,21 +981,16 @@ public abstract class Statement
             }
 
         @Override
-        public Argument getVar(Token name, ErrorListener errs)
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
             {
-            return resolveReservedName(name, errs);
-            }
-
-        @Override
-        public Argument resolveReservedName(Token name, ErrorListener errs)
-            {
-            checkValidating();
-            return resolveReservedName(name.getValueText(), name, errs);
+            return resolveReservedName(sName, name, errs);
             }
 
         @Override
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
+            checkValidating();
+
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg instanceof Register && ((Register) arg).isPredefined())
@@ -1187,17 +1274,16 @@ public abstract class Statement
             }
 
         @Override
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
-            Argument arg = super.resolveRegularName(name, errs);
+            Argument arg = super.resolveRegularName(sName, name, errs);
             if (arg != null)
                 {
                 return arg;
                 }
 
             Component.SimpleCollector collector = new Component.SimpleCollector();
-            return m_typeLeft.resolveContributedName(name.getValueText(), collector)
-                    == Component.ResolutionResult.RESOLVED
+            return m_typeLeft.resolveContributedName(sName, collector) == Component.ResolutionResult.RESOLVED
                     ? collector.getResolvedConstant()
                     : null;
             }
