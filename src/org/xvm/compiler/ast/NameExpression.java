@@ -1219,15 +1219,23 @@ public class NameExpression
                     return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
-                ClassStructure    clz  = ctx.getThisClass();
                 PropertyConstant  id   = (PropertyConstant) argRaw;
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
                 TypeConstant      type = prop.getType();
 
-                if (clz != prop.getParent())
+                // resolve the property type
+                if (left == null)
                     {
-                    // the property comes from a contribution; need to resolve its formal type
-                    type = type.resolveGenerics(clz.getFormalType());
+                    ClassStructure clz = ctx.getThisClass();
+                    if (clz != prop.getParent())
+                        {
+                        // the property comes from a contribution; need to resolve its formal type
+                        type = type.resolveGenerics(clz.getFormalType());
+                        }
+                    }
+                else
+                    {
+                    type = type.resolveGenerics(left.getImplicitType(ctx));
                     }
 
                 if (!prop.isConstant() && isIdentityMode(ctx, false))
