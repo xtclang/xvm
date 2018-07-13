@@ -582,10 +582,12 @@ public class TerminalTypeConstant
                 return super.buildTypeInfo(errs);
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constant).buildTypeInfo(errs);
+                return new TypeInfo(this,
+                        getPropertyTypeType(((PropertyConstant) constant)).buildTypeInfo(errs));
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constant).buildTypeInfo(errs);
+                return new TypeInfo(this,
+                        getTypeParameterType((TypeParameterConstant) constant).buildTypeInfo(errs));
 
             case ThisClass:
             case ParentClass:
@@ -1006,6 +1008,9 @@ public class TerminalTypeConstant
         {
         return clz == getClass() ? (T) this : null;
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * Dereference a typedef constant to find the type to which it refers.

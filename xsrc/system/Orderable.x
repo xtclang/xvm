@@ -26,6 +26,15 @@ interface Orderable
      */
     Orderable maxOf(Orderable that)
         {
-        return this > that ? this : that;
+        return this >= that ? this : that;
+        }
+
+    /**
+     * The existence of a real implementation of comparison for Orderable instances will be checked
+     * by the run-time.
+     */
+    static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2)
+        {
+        return value1 <=> value2;
         }
     }

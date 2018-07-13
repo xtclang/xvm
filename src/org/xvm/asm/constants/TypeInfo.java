@@ -128,6 +128,42 @@ public class TypeInfo
         }
 
     /**
+     * Construct a TypeInfo for a generic type parameter.
+     *
+     * @param typeGeneric     the TypeConstant of the generic type
+     * @param infoConstraint  the TypeInfo for the constraining type
+     */
+    public TypeInfo(TypeConstant typeGeneric, TypeInfo infoConstraint)
+        {
+        assert infoConstraint != null;
+        assert infoConstraint.m_progress == Progress.Complete;
+        assert typeGeneric != null && typeGeneric.isGenericType();
+
+        m_type                = typeGeneric;
+        m_struct              = infoConstraint.m_struct;
+        m_cDepth              = infoConstraint.m_cDepth;
+        m_mapTypeParams       = Collections.EMPTY_MAP;
+        m_aannoClass          = null;
+        m_typeExtends         = infoConstraint.m_type;
+        m_typeRebases         = null;
+        m_typeInto            = null;
+        m_listProcess         = infoConstraint.m_listProcess;
+        m_listmapClassChain   = infoConstraint.m_listmapClassChain;
+        m_listmapDefaultChain = infoConstraint.m_listmapDefaultChain;
+        m_mapProps            = infoConstraint.m_mapProps;
+        m_mapVirtProps        = infoConstraint.m_mapVirtProps;
+        m_mapMethods          = infoConstraint.m_mapMethods;
+        m_mapVirtMethods      = infoConstraint.m_mapVirtMethods;
+        m_progress            = Progress.Complete;
+
+        m_cacheById  = infoConstraint.m_cacheById;
+        m_cacheByNid = infoConstraint.m_cacheByNid;
+
+        m_fExplicitAbstract = true;
+        m_fImplicitAbstract = infoConstraint.m_fImplicitAbstract;
+        }
+
+    /**
      * Create a new TypeInfo that represents a more limited (public or protected) access to the
      * members of this private type.
      *
