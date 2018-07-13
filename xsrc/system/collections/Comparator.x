@@ -6,6 +6,11 @@
  */
 const Comparator<DataType>
     {
+    construct(function Ordered (DataType, DataType) compareForOrder)
+        {
+        this.compareForOrder = compareForOrder;
+        }
+
     /**
      * Obtain the function that can compare two instances of the _Resolved Declarative Type_ for
      * the purpose of determining equality.
@@ -25,5 +30,5 @@ const Comparator<DataType>
      * @throws UnsupportedOperationException if the Comparator does not support comparison of the
      *         {@code DataType} for the purpose of determining order
      */
-    @RO function Ordered (DataType, DataType) compareForOrder;
+    public/private function Ordered (DataType, DataType) compareForOrder;
     }
