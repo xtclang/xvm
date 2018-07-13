@@ -1065,6 +1065,7 @@ public class NameExpression
                         // "this:target" has private access in this context
                         // as well as a target of the same class as the context
                         if (arg instanceof Register && ((Register) arg).isTarget() ||
+                                !typeLeft.isGenericType() &&
                                 typeLeft.isSingleUnderlyingClass(false) &&
                                 typeLeft.getSingleUnderlyingClass(false).equals(
                                         ctx.getThisClass().getIdentityConstant()))
