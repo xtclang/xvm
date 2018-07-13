@@ -363,15 +363,15 @@ public class Annotation
             }
 
         @Override
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
-            return new NameResolver(Annotation.this, name.getValueText()).forceResolve(errs);
+            return new NameResolver(Annotation.this, sName).forceResolve(errs);
             }
 
         @Override
-        public Argument resolveReservedName(Token name, ErrorListener errs)
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
-            return name.getValueText().equals("this:module")
+            return sName.equals("this:module")
                     ? Annotation.this.getComponent().getIdentityConstant().getModuleConstant()
                     : null;
             }

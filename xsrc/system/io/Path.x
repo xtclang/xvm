@@ -124,7 +124,7 @@ const Path
             return path;
             }
 
-        return root
+        return isRoot
             ? new Path(separator + path.pathName)
             : new Path(separator + separatorChar + path.pathName);
         }
