@@ -40,6 +40,6 @@ const Date(Int year, Int month, Int day)
 
     DateTime to<DateTime>()
         {
-        return new DateTime(this, Time:"00:00");
+        return new DateTime(this, Time.MIDNIGHT);
         }
     }
