@@ -1060,12 +1060,22 @@ public class NameExpression
                     // TODO support or properties nested under something other than a class (need nested type infos?)
                     if (left instanceof NameExpression)
                         {
-                        // "this:target" has private access in this context
                         Argument arg = ((NameExpression) left).m_arg;
-                        if (arg instanceof Register && ((Register) arg).isTarget())
+
+                        // "this:target" has private access in this context
+                        // as well as a target of the same class as the context
+                        if (arg instanceof Register && ((Register) arg).isTarget() ||
+                                typeLeft.isSingleUnderlyingClass(false) &&
+                                typeLeft.getSingleUnderlyingClass(false).equals(
+                                        ctx.getThisClass().getIdentityConstant()))
                             {
-                            typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                            Access access = typeLeft.getAccess();
+                            if (access != Access.PRIVATE && access != Access.STRUCT)
+                                {
+                                typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                }
                             }
+
                         }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);

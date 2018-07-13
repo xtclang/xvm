@@ -257,8 +257,12 @@ public class TerminalTypeConstant
     @Override
     public boolean isGenericType()
         {
-        return isSingleDefiningConstant()
-            && getDefiningConstant().getFormat() == Format.Property;
+        if (isSingleDefiningConstant())
+            {
+            Format format = getDefiningConstant().getFormat();
+            return format == Format.Property || format == Format.TypeParameter;
+            }
+        return false;
         }
 
     @Override
