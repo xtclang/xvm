@@ -48,6 +48,6 @@ const VarInt
             {
             TODO not sure what the code was planning to do here
             }
-        return new VarUInt(sign == Negative ? this.twosComplement : this.to<Bit[]>());
+        return new VarUInt(this.to<Bit[]>());
         }
     }

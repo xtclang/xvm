@@ -128,12 +128,12 @@ mixin Range<ElementType extends Sequential>
         if (this.upperBound < that.lowerBound)
             {
             // this range precedes that range
-            return this.upperBound.nextValue == that.lowerBound;
+            return this.upperBound.nextValue() == that.lowerBound;
             }
         else if (this.lowerBound > that.upperBound)
             {
             // this range follows that range
-            return this.lowerBound.prevValue == that.upperBound;
+            return this.lowerBound.prevValue() == that.upperBound;
             }
         else
             {

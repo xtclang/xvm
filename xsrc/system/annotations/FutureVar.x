@@ -80,7 +80,7 @@ mixin FutureVar<RefType>
     /**
      * The future that is chained to this future, that this future sends its completion result to.
      */
-    private NotifyDependent? notify = null;
+    protected NotifyDependent? notify = null;
 
     // ----- Ref interface -------------------------------------------------------------------------
 
