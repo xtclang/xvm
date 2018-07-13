@@ -810,10 +810,13 @@ public class Parser
                     Token start = expect(Id.L_PAREN);
                     ParseList: while (true)
                         {
-                        Expression expr = parseExpression();
+                        boolean    fVarDecl = peek().getId() == Id.VAR || peek().getId() == Id.VAL;
+                        Expression expr     = fVarDecl
+                                ? new VariableTypeExpression(current())
+                                : parseExpression();
                         exprs.add(expr);
 
-                        if (peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
+                        if (fVarDecl || peek().getId() != Id.COMMA && peek().getId() != Id.R_PAREN)
                             {
                             // so there appears to be a second expression to parse, which indicates
                             // that the first one had to be a type
@@ -998,6 +1001,16 @@ public class Parser
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
                         modifiers, annotations, null, null, null, keyword);
                 }
+
+            case VAL:
+            case VAR:
+                if (fInMethod)
+                    {
+                    Statement stmt = new VariableDeclarationStatement(new VariableTypeExpression(current()),
+                            expect(Id.IDENTIFIER), match(Id.ASN), parseExpression());
+                    expect(Id.SEMICOLON);
+                    return stmt;
+                    }
 
             case CONDITIONAL:
             case VOID:
@@ -1989,13 +2002,22 @@ public class Parser
      */
     Statement parseVariableInitializer()
         {
-        Expression expr = parseExpression();
-        if (peek().getId() == Id.ASN)
+        TypeExpression type;
+        if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
             {
-            return new AssignmentStatement(expr, current(), parseExpression(), false);
+            type = new VariableTypeExpression(current());
+            }
+        else
+            {
+            Expression expr = parseExpression();
+            if (peek().getId() == Id.ASN)
+                {
+                return new AssignmentStatement(expr, current(), parseExpression(), false);
+                }
+
+            type = expr.toTypeExpression();
             }
 
-        TypeExpression type = expr.toTypeExpression();
         Token name = expect(Id.IDENTIFIER);
         return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
         }
@@ -2007,6 +2029,7 @@ public class Parser
      * If it turns out that there isn't a ConditionalDeclaration, then parse what is found as a
      * VariableDeclarationStatement, an AssignmentStatement, or an ExpressionStatement, based on
      * what is found.
+     * <p/> TODO (?) add support for multiple declaration
      *
      * <p/><code><pre>
      * ConditionalDeclaration
@@ -2019,32 +2042,42 @@ public class Parser
      */
     ConditionalStatement parseConditionalDeclaration(boolean fAllowAsn)
         {
-        Expression expr = parseExpression();
-        switch (peek().getId())
+        TypeExpression type;
+        if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
             {
-            case ASN:
-                if (!fAllowAsn)
-                    {
-                    log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(), peek().getEndPosition());
-                    throw new CompilerException("assignment disallowed");
-                    }
-                // fall through
-            case COLON:
-                // it's an assignment or conditional expression, but it doesn't declare a new var
-                return new AssignmentStatement(expr, current(), parseExpression(), false);
-
-            case COMMA:     // TODO could indicate multiple declaration/assignment
-            case SEMICOLON:
-            case R_PAREN:
-                // definitely stop if there is ',', ';', or ')'
-                // it's not a conditional declaration; it's just an expression
-                return new ExpressionStatement(expr, false);
-
-            default:
-                break;
+            type = new VariableTypeExpression(current());
             }
+        else
+            {
+            Expression expr = parseExpression();
+            switch (peek().getId())
+                {
+                case ASN:
+                    if (!fAllowAsn)
+                        {
+                        log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(),
+                                peek().getEndPosition());
+                        throw new CompilerException("assignment disallowed");
+                        }
+                    // fall through
+                case COLON:
+                    // it's an assignment or conditional expression, but it doesn't declare a new
+                    // var
+                    return new AssignmentStatement(expr, current(), parseExpression(), false);
 
-        TypeExpression type = expr.toTypeExpression();
+                case COMMA:     // TODO could indicate multiple declaration/assignment
+                case SEMICOLON:
+                case R_PAREN:
+                    // definitely stop if there is ',', ';', or ')'
+                    // it's not a conditional declaration; it's just an expression
+                    return new ExpressionStatement(expr, false);
+
+                default:
+                    break;
+                }
+
+            type = expr.toTypeExpression();
+            }
         Token name = expect(Id.IDENTIFIER);
 
         // could be either ':' or '='

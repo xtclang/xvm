@@ -3,6 +3,12 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ErrorListener;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ast.Statement.Context;
+
 
 /**
  * Statement expression is conceptually similar to a lambda, except that it does not require an
@@ -16,6 +22,12 @@ import java.lang.reflect.Field;
  * <code><pre>
  *   x = {return 2 + 2;}
  * </pre></code>
+ * <p/>
+ * To determine the type of the StatementExpression, the one or more required "return" statements
+ * need to be analyzed to determine their types.
+ *
+ * <p/>REVIEW this expression could theoretically support a multi value
+ * <p/>REVIEW this expression could theoretically support a conditional return
  */
 public class StatementExpression
         extends Expression
@@ -54,6 +66,18 @@ public class StatementExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return super.getImplicitType(ctx);
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        return super.validate(ctx, typeRequired, errs);
+        }
 
     // TODO
 

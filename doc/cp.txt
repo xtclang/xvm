@@ -9,6 +9,7 @@
   - for
   - for v2
   - multi variable declaration
+  - ExpressionStatement - need to lock down what is allowed there
 
 - test static property with value (both constant and init function)
 
@@ -89,22 +90,3 @@ Contributions and call chains:
   ( ) delegates (from the containing type);
   ( ) "rebase onto" or "mixes into" Ref/Var.
   ( ) default implementation of get() from an interface
-
---
-
-Exception in thread "main" java.lang.IllegalStateException: constant collision:
-old=Signature{name=chain, params=(Ecstasy:Function<Ecstasy:collections.Tuple, Ecstasy:collections.Tuple<Ecstasy:annotations.FutureVar.Completion, Ecstasy:Nullable | Ecstasy:annotations.FutureVar.RefType, Ecstasy:Nullable | Ecstasy:Exception>>), returns=()},
-new=Signature{name=chain, params=(Ecstasy:Function<Ecstasy:collections.Tuple, Ecstasy:collections.Tuple<Ecstasy:annotations.FutureVar.Completion, Ecstasy:Nullable | Ecstasy:annotations.FutureVar.RefType, Ecstasy:Nullable | Ecstasy:Exception>>), returns=()}
-
-typeParam=ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Property.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}
-typeProp =ParameterizedType{type=Ecstasy:types.Method<Ecstasy:types.Method.TargetType, Ecstasy:collections.Tuple<>, Ecstasy:collections.Tuple<Ecstasy:Ref<Ecstasy:types.Property.PropertyType>>>}
-
---
-
-genVoid  -> genAsn/genAsns
-genArg   -> genArgs/genAsn
-genArgs  -> genArg/genAsns
-genLVal  -> genLVals
-genLVals -> genVoid/genLVal
-genAsn   -> genVoid/genArg/genAsns
-genAsns  -> genVoid/genArgs/genAsn

@@ -870,4 +870,12 @@ public class Compiler
      * A "switch" expression cannot end with a "case" statement.
      */
     public static final String SWITCH_CASE_DANGLING               = "COMPILER-80";
+    /**
+     * The variable {0} is not definitely assigned.
+     */
+    public static final String VAR_UNASSIGNED                     = "COMPILER-81";
+    /**
+     * The variable {1} cannot be assigned to.
+     */
+    public static final String VAR_ASSIGNMENT_ILLEGAL             = "COMPILER-82";
     }

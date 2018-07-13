@@ -258,7 +258,6 @@ module TestTemp.xqiz.it
         Int i = 0;
         while (++i < 6)
             {
-            DEBUG;
             console.println("result for (" + i + "<=>3)=" + switch(i <=> 3)
                 {
                 case Lesser:  "less";

@@ -1,13 +1,17 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
+import java.util.Set;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -179,8 +183,6 @@ public abstract class Statement
 
     /**
      * Compiler context for compiling a method body.
-     *
-     * <p/>TODO need a "lambda context" that captures "this" (makes itself a method), params and vars (adds auto-bound params)
      */
     public abstract static class Context
         {
@@ -315,16 +317,16 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          *
-         * @param tokName
-         * @param reg
-         * @param errs
+         * @param tokName  the token from the source code for the variable
+         * @param reg      the register representing the variable
+         * @param errs     the error list to log to
          */
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
             checkInnermost();
 
             String sName = tokName.getValueText();
-            if (isVarDeclaredInThisScope(sName))
+            if (isVarDeclaredInThisScope(sName)) // TODO allow explicit shadowing?
                 {
                 tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
                 }
@@ -348,15 +350,189 @@ public abstract class Statement
             }
 
         /**
-         * Determine if the name refers to a writable variable.
+         * Determine if the name refers to a readable variable. A variable is only readable if it
+         * has been definitely assigned a value.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
          *
-         * @param sName  the name to resolve
+         * @param sName  the variable name
+         *
+         * @return true iff the name refers to a variable, and the variable can be read from
+         */
+        public boolean isVarReadable(String sName)
+            {
+            return getDefiniteAssignments().contains(sName) || m_ctxOuter.isVarReadable(sName);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param sName     the variable name
+         */
+        public final void markVarRead(String sName)
+            {
+            markVarRead(sName, true, null, null);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param tokName     the variable name as a token from the source code
+         * @param errs        the error list to log to
+         */
+        public final void markVarRead(Token tokName, ErrorListener errs)
+            {
+            markVarRead(tokName.getValueText(), true, tokName, errs);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param sName       the variable name
+         * @param fThisScope  true if the read is within this context, or false if nested under
+         * @param tokName     the variable name as a token from the source code (optional)
+         * @param errs        the error list to log to (optional)
+         */
+        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            if (fThisScope && !isVarReadable(sName))
+                {
+                // this method isn't supposed to be called for variable names that don't exist
+                assert getVar(sName) != null;
+
+                if (tokName != null && errs != null)
+                    {
+                    tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
+
+                    // record that the variable is definitely assigned so that the error will not be
+                    // repeated unnecessarily within this context
+                    ensureDefiniteAssignments().add(sName);
+                    }
+                }
+
+            m_ctxOuter.markVarRead(sName, false, tokName, errs);
+            }
+
+        /**
+         * Determine if the name refers to a writable variable.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the variable name
          *
          * @return true iff the name refers to a variable, and the variable can be written to
          */
         public boolean isVarWritable(String sName)
             {
-            return isVarDeclaredInThisScope(sName) || m_ctxOuter.isVarWritable(sName);
+            if (isVarDeclaredInThisScope(sName))
+                {
+                // TODO a "val" cannot be written to once it is definitely assigned
+                // getVar(sName)
+                // getDefiniteAssignments().contains(sName)
+                return true;
+                }
+
+            return m_ctxOuter.isVarWritable(sName);
+            }
+
+        /**
+         * Mark the specified variable as being written to within this context.
+         *
+         * @param sName  the variable name
+         */
+        public final void markVarWrite(String sName)
+            {
+            markVarWrite(sName, true, null, null);
+            }
+
+        /**
+         * Mark the specified variable as being written to within this context.
+         *
+         * @param tokName  the variable name as a token from the source code
+         * @param errs     the error list to log to (optional)
+         */
+        public void markVarWrite(Token tokName, ErrorList errs)
+            {
+            markVarWrite(tokName.getValueText(), true, tokName, errs);
+            }
+
+        /**
+         * Mark the specified variable as being read from within this context.
+         *
+         * @param sName       the variable name
+         * @param fThisScope  true if the read is within this context, or false if nested under
+         * @param tokName     the variable name as a token from the source code (optional)
+         * @param errs        the error list to log to (optional)
+         */
+        protected void markVarWrite(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            if (getDefiniteAssignments().contains(sName))
+                {
+                // already recorded as written
+                return;
+                }
+
+            boolean fValid = true;
+            if (fThisScope)
+                {
+                // this method isn't supposed to be called for variable names that don't exist
+                assert getVar(sName) != null;
+
+                if (!isVarWritable(sName))
+                    {
+                    fValid = false;
+                    if (tokName != null && errs != null)
+                        {
+                        tokName.log(errs, getSource(), Severity.ERROR,
+                                Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
+                        }
+                    }
+
+                ensureDefiniteAssignments().add(sName);
+                }
+
+            if (fValid)
+                {
+                m_ctxOuter.markVarWrite(sName, false, tokName, errs);
+                }
+            }
+
+        /**
+         * @return a read-only set of definitely assigned variable names; never null
+         */
+        public Set<String> getDefiniteAssignments()
+            {
+            Set<String> set = m_setAssigned;
+            return set == null
+                    ? set
+                    : Collections.EMPTY_SET;
+            }
+
+        /**
+         * @return a readable and writable set of definitely assigned variable names; never null
+         */
+        protected Set<String> ensureDefiniteAssignments()
+            {
+            Set<String> set = m_setAssigned;
+            if (set == null)
+                {
+                m_setAssigned = set = new HashSet<>();
+                }
+            return set;
+            }
+
+        /**
+         * Resolve the name of a variable, structure, etc.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return the Argument representing the meaning of the name, or null
+         */
+        public final Argument resolveName(String sName)
+            {
+            return resolveName(sName, null, null);
             }
 
         /**
@@ -368,12 +544,28 @@ public abstract class Statement
          *
          * @return the Argument representing the meaning of the name, or null
          */
-        public Argument resolveName(Token name, ErrorListener errs)
+        public final Argument resolveName(Token name, ErrorListener errs)
             {
-            Argument arg = resolveReservedName(name, errs);
+            return resolveName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Resolve the name of a variable, structure, etc.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the name to resolve
+         * @param name   the token from the source for the name to resolve (optional)
+         * @param errs   the error list to log to (optional)
+         *
+         * @return the Argument representing the meaning of the name, or null
+         */
+        protected Argument resolveName(String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = resolveReservedName(sName, name, errs);
             if (arg == null)
                 {
-                arg = resolveRegularName(name, errs);
+                arg = resolveRegularName(sName, name, errs);
                 }
             return arg;
             }
@@ -421,9 +613,34 @@ public abstract class Statement
          *
          * @return an Argument iff the name is registered to an argument; otherwise null
          */
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        public final Argument resolveRegularName(Token name, ErrorListener errs)
             {
-            String                sName     = name.getValueText();
+            return resolveRegularName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Resolve a name (other than a reserved name) to an argument.
+         *
+         * @param sName  the name to resolve
+         *
+         * @return an Argument iff the name is registered to an argument; otherwise null
+         */
+        public final Argument resolveRegularName(String sName)
+            {
+            return resolveRegularName(sName, null, null);
+            }
+
+        /**
+         * Resolve a name (other than a reserved name) to an argument.
+         *
+         * @param sName  the name to resolve
+         * @param name   the name token for error reporting (optional)
+         * @param errs   the error list to log errors to (optional)
+         *
+         * @return an Argument iff the name is registered to an argument; otherwise null
+         */
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+            {
             Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
@@ -440,14 +657,40 @@ public abstract class Statement
         /**
          * See if the specified name declares an argument within this context.
          *
+         * @param sName  the variable name
+         *
+         * @return a Register iff the name is registered to a register; otherwise null
+         */
+        public final Argument getVar(String sName)
+            {
+            return getVar(sName, null, null);
+            }
+
+        /**
+         * See if the specified name declares an argument within this context.
+         *
          * @param name  the name token
          * @param errs  the error list to log errors to
          *
          * @return a Register iff the name is registered to a register; otherwise null
          */
-        public Argument getVar(Token name, ErrorListener errs)
+        public final Argument getVar(Token name, ErrorListener errs)
             {
-            String sName = name.getValueText();
+            return getVar(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Internal implementation of getVar() that allows the lookup to be done with or without a
+         * token.
+         *
+         * @param sName  the name to look up
+         * @param name   the token to use for error reporting (optional)
+         * @param errs   the error list to use for error reporting (optional)
+         *
+         * @return the argument for the variable, or null
+         */
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
+            {
             Map<String, Argument> mapByName = getNameMap();
             if (mapByName != null)
                 {
@@ -466,14 +709,42 @@ public abstract class Statement
         /**
          * Resolve a reserved name to an argument.
          *
+         * @param sName  the name to resolve
+         *
+         * @return an Argument iff the name resolves to a reserved name; otherwise null
+         */
+        public final Argument resolveReservedName(String sName)
+            {
+            return resolveReservedName(sName, null, null);
+            }
+
+        /**
+         * Resolve a reserved name to an argument.
+         *
          * @param name  the potentially reserved name token
          * @param errs  the error list to log errors to
          *
          * @return an Argument iff the name resolves to a reserved name; otherwise null
          */
-        public Argument resolveReservedName(Token name, ErrorListener errs)
+        public final Argument resolveReservedName(Token name, ErrorListener errs)
             {
-            return m_ctxOuter.resolveReservedName(name, errs);
+            return resolveReservedName(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Internal implementation of resolveReservedName that allows the resolution to be done with
+         * or without a token.
+         *
+         * @param sName  the name to look up
+         * @param name   the token to use for error reporting (optional)
+         * @param errs   the error list to use for error reporting (optional)
+         *
+         * @return the argument for the reserved name, or null if no such reserved name can be
+         *         resolved within this context
+         */
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
+            {
+            return m_ctxOuter.resolveReservedName(sName, name, errs);
             }
 
         /**
@@ -555,40 +826,31 @@ public abstract class Statement
          *
          * @return a new context
          */
-        public Context createInferringContext(TypeConstant typeLeft)
+        public InferringContext createInferringContext(TypeConstant typeLeft)
             {
-            return new Context(this)
-                {
-                @Override
-                public Argument resolveRegularName(Token name, ErrorListener errs)
-                    {
-                    Argument arg = super.resolveRegularName(name, errs);
-                    if (arg != null)
-                        {
-                        return arg;
-                        }
+            return new InferringContext(this, typeLeft);
+            }
 
-                    Component.SimpleCollector collector = new Component.SimpleCollector();
-                    return typeLeft.resolveContributedName(name.getValueText(), collector) ==
-                            Component.ResolutionResult.RESOLVED
-                        ? collector.getResolvedConstant()
-                        : null;
-                    }
-
-                @Override
-                public void registerVar(Token tokName, Register reg, ErrorListener errs)
-                    {
-                    m_ctxOuter.registerVar(tokName, reg, errs);
-                    }
-                };
-
-            // REVIEW: what else do we need to delegate?
+        /**
+         * Create a context that bridges from the current context into a special compilation mode in
+         * which the values (or references / variables) of the outer context can be <i>captured</i>.
+         *
+         * @param body  the StatementBlock of the lambda, anonymous inner class, or statement
+         *              expression
+         *
+         * @return a capturing context
+         */
+        public CaptureContext createCaptureContext(StatementBlock body)
+            {
+            return new CaptureContext(this, body);
             }
 
         Context m_ctxOuter;
         Context m_ctxInner;
 
         private Map<String, Argument> m_mapByName;
+
+        private Set<String> m_setAssigned;
         }
 
     /**
@@ -696,19 +958,19 @@ public abstract class Statement
             }
 
         @Override
-        public Argument resolveRegularName(Token name, ErrorListener errs)
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
             checkValidating();
 
             // check if the name is a parameter name, or a global name that has already been looked
             // up and cached
-            String                sName     = name.getValueText();
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg == null)
                 {
                 // resolve the name from outside of this statement
-                arg = new NameResolver(m_stmtBody, sName).forceResolve(errs);
+                arg = new NameResolver(m_stmtBody, sName)
+                        .forceResolve(errs == null ? ErrorListener.BLACKHOLE : errs);
                 if (arg != null)
                     {
                     mapByName.put(sName, arg);
@@ -719,18 +981,17 @@ public abstract class Statement
             }
 
         @Override
-        public Argument getVar(Token name, ErrorListener errs)
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
             {
-            return resolveReservedName(name, errs);
+            return resolveReservedName(sName, name, errs);
             }
 
         @Override
-        public Argument resolveReservedName(Token name, ErrorListener errs)
+        protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
             checkValidating();
 
             Map<String, Argument> mapByName = ensureNameMap();
-            String                sName     = name.getValueText();
             Argument              arg       = mapByName.get(sName);
             if (arg instanceof Register && ((Register) arg).isPredefined())
                 {
@@ -789,12 +1050,14 @@ public abstract class Statement
 
                 case "super":
                     {
-                    TypeInfo        info       = getThisType().ensureTypeInfo(errs);
+                    TypeInfo        info       = getThisType().ensureTypeInfo(
+                                                     errs == null ? ErrorListener.BLACKHOLE : errs);
                     MethodStructure method     = getMethod();
                     MethodConstant  idMethod   = method.getIdentityConstant();
                     MethodInfo      infoMethod = info.getMethodById(idMethod);
 
-                    if (infoMethod == null || !infoMethod.hasSuper(info))
+                    if (name != null && errs != null
+                            && (infoMethod == null || !infoMethod.hasSuper(info)))
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }
@@ -812,7 +1075,8 @@ public abstract class Statement
                     return null;
                 }
 
-            if ((fNoFunction && isFunction() || fNoConstruct && isConstructor()) && !m_fLoggedNoThis)
+            if (name != null && errs != null && !m_fLoggedNoThis
+                    && ((fNoFunction && isFunction() || fNoConstruct && isConstructor())))
                 {
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
                 m_fLoggedNoThis = true;
@@ -969,8 +1233,92 @@ public abstract class Statement
             {
             super(ctxOuter);
             }
+        }
 
-        // TODO whatever info needs to be accumulated for a nested or forked context, i.e. definite assignment info
+    /**
+     * A delegating context that allows an expression to resolve names based on the specified type's
+     * contributions.
+     *
+     * As a result, it allows us to write:
+     * <pre><code>
+     *    Color color = Red;
+     * </code></pre>
+     *  instead of
+     * <pre><code>
+     *    Color color = Color.Red;
+     * </code></pre>
+     * or
+     * <pre><code>
+     *    if (color == Red)
+     * </code></pre>
+     *  instead of
+     * <pre><code>
+     *    if (color == Color.Red)
+     * </code></pre>
+     */
+    public static class InferringContext
+            extends NestedContext
+        {
+        /**
+         * Construct an InferringContext.
+         *
+         * @param ctxOuter  the context within which this context is nested
+         * @param typeLeft  the type from which this context can draw additional names for purposes
+         *                  of resolution
+         */
+        public InferringContext(Context ctxOuter, TypeConstant typeLeft)
+            {
+            super(ctxOuter);
+
+            m_typeLeft = typeLeft;
+            }
+
+        @Override
+        protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = super.resolveRegularName(sName, name, errs);
+            if (arg != null)
+                {
+                return arg;
+                }
+
+            Component.SimpleCollector collector = new Component.SimpleCollector();
+            return m_typeLeft.resolveContributedName(sName, collector) == Component.ResolutionResult.RESOLVED
+                    ? collector.getResolvedConstant()
+                    : null;
+            }
+
+        @Override
+        public void registerVar(Token tokName, Register reg, ErrorListener errs)
+            {
+            m_ctxOuter.registerVar(tokName, reg, errs);
+            }
+
+        TypeConstant m_typeLeft;
+        }
+
+
+    /**
+     * A context for compiling lamba expressions, anonymous inner classes, and any other construct
+     * that "captures" variables from an outer context.
+     * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
+     */
+    public static class CaptureContext
+            extends Context
+        {
+        /**
+         * Construct a CaptureContext.
+         *
+         * @param ctxOuter  the context within which this context is nested
+         * @param body      the StatementBlock of the lambda / inner class, whose parent is one of:
+         *                  NewExpression, LambdaExpression, or StatementExpression
+         */
+        public CaptureContext(Context ctxOuter, StatementBlock body)
+            {
+            super(ctxOuter);
+            }
+
+        // TODO
         }
 
 

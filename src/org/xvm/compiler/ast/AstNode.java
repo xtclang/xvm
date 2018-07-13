@@ -252,6 +252,20 @@ public abstract class AstNode
         }
 
     /**
+     * @return the "compilation container" for a statement or expression, which is the method
+     *         ({@link MethodDeclarationStatement}), anonymous inner class ({@link NewExpression}),
+     *         lambda function ({@link LambdaExpression}), or "inlined" lambda
+     *         ({@link StatementExpression})
+     */
+    protected AstNode getCodeContainer()
+        {
+        AstNode parent = getParent();
+        return parent == null
+                ? null
+                : parent.getCodeContainer();
+        }
+
+    /**
      * @return true iff this AstNode (or an AstNode that it contains) references "super"
      */
     protected boolean usesSuper()
