@@ -90,7 +90,7 @@ public class Connector
             throw new IllegalStateException("Connector is already activated");
             }
 
-        m_runtime = new Runtime();
+        m_runtime   = new Runtime();
         m_container = new Container(m_runtime, sAppName, m_repository);
         }
 

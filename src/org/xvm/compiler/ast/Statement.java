@@ -271,7 +271,7 @@ public abstract class Statement
             checkForkable();
 
             m_ctxInner = this;
-            return new NestedContext(this); // TODO could have a special "ForkedContext" impl if necessary
+            return new NestedContext(this);
             }
 
         /**
@@ -361,6 +361,7 @@ public abstract class Statement
          */
         public boolean isVarReadable(String sName)
             {
+            // TODO check for write-only variable
             return getDefiniteAssignments().contains(sName) || m_ctxOuter.isVarReadable(sName);
             }
 
@@ -393,7 +394,7 @@ public abstract class Statement
          * @param tokName     the variable name as a token from the source code (optional)
          * @param errs        the error list to log to (optional)
          */
-        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs) // TODO capture context to override
             {
             if (fThisScope && !isVarReadable(sName))
                 {
@@ -410,7 +411,8 @@ public abstract class Statement
                     }
                 }
 
-            m_ctxOuter.markVarRead(sName, false, tokName, errs);
+            // TODO check "is defined in this scope" and if true then don't call outer
+            m_ctxOuter.markVarRead(sName, false, tokName, errs); // TODO override and terminate
             }
 
         /**
@@ -451,7 +453,7 @@ public abstract class Statement
          * @param tokName  the variable name as a token from the source code
          * @param errs     the error list to log to (optional)
          */
-        public void markVarWrite(Token tokName, ErrorList errs)
+        public final void markVarWrite(Token tokName, ErrorList errs)
             {
             markVarWrite(tokName.getValueText(), true, tokName, errs);
             }
@@ -1319,6 +1321,25 @@ public abstract class Statement
             }
 
         // TODO
+
+        @Override
+        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            // TODO make sure that sName is in our list of "must be captured as value (or Ref<T>)"
+            // TODO "this" means that the lambda must be a method
+            // TODO make sure that the variable is marked in the ***containing*** context as being read
+
+            super.markVarRead(sName, true, tokName, errs);
+            }
+
+        @Override
+        protected void markVarWrite(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+            {
+            // TODO make sure that sName is in our list of "must be captured as Var<T>"
+            // TODO make sure that the variable is marked in the ***containing*** context as being written
+
+            super.markVarWrite(sName, true, tokName, errs);
+            }
         }
 
 

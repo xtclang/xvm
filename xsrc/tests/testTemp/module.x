@@ -18,6 +18,7 @@ module TestTemp.xqiz.it
         testSwitchExpr();
         testSwitchExpr2();
         testSwitchExpr3();
+        testStmtExpr();
 
         // REVIEW GG
         // testInterval();
@@ -265,6 +266,12 @@ module TestTemp.xqiz.it
                 case Greater: "more";
                 });
             }
+        }
+
+    void testStmtExpr()
+        {
+        console.println("\n** testStmtExpr()");
+        console.println("5+3=" + {return 5.to<Int>() + 3;});
         }
 
     // TODO
