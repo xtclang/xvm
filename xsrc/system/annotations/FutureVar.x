@@ -654,7 +654,7 @@ mixin FutureVar<RefType>
      * If the parent completed exceptionally, or if the parent completed successfully but the
      * {@link notify} function throws an exception, then this future completes exceptionally.
      */
-    static class WhenCompleteStep<RefType>(function void (RefType?, Exception?) notify)
+    static class WhenCompleteStep<RefType>(function void (RefType?, Exception?) notifyComplete)
             extends DependentFuture<RefType, RefType>
         {
         @Override
@@ -664,7 +664,7 @@ mixin FutureVar<RefType>
                 {
                 try
                     {
-                    notify(input, e);
+                    notifyComplete(input, e);
                     }
                 catch (Exception e2)
                     {

@@ -193,7 +193,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Set<KeyType> keys.calc()
         {
-        return new EntryBasedKeysSet<KeyType, ValueType>();
+        return new EntryBasedKeysSet();
         }
 
     @Override
@@ -202,7 +202,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection<KeyType, ValueType>();
+        return new EntryBasedValuesCollection();
         }
 
     @Override
