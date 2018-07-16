@@ -266,11 +266,11 @@ interface Stream<ElementType>
         Iterator<ElementType> iter = iterator();
         if (ElementType minValue : iter)
             {
-            if (comparator?)
+            if (comparator != null)
                 {
                 while (ElementType el : iter)
                     {
-                    if (comparator.compareForOrder(el, minValue) == Lesser)
+                    if (el < minValue)
                         {
                         minValue = el;
                         }
@@ -280,7 +280,7 @@ interface Stream<ElementType>
                 {
                 while (ElementType el : iter)
                     {
-                    if (el < minValue)
+                    if (comparator.compareForOrder(el, minValue) == Lesser)
                         {
                         minValue = el;
                         }
@@ -306,11 +306,11 @@ interface Stream<ElementType>
         Iterator<ElementType> iter = iterator();
         if (ElementType maxValue : iter)
             {
-            if (comparator?)
+            if (comparator == null)
                 {
                 while (ElementType el : iter)
                     {
-                    if (comparator.compareForOrder(el, maxValue) == Greater)
+                    if (el > maxValue)
                         {
                         maxValue = el;
                         }
@@ -320,7 +320,7 @@ interface Stream<ElementType>
                 {
                 while (ElementType el : iter)
                     {
-                    if (el > maxValue)
+                    if (comparator.compareForOrder(el, maxValue) == Greater)
                         {
                         maxValue = el;
                         }

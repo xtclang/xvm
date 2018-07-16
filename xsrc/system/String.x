@@ -1,7 +1,10 @@
 const String
         implements Sequence<Char>
     {
-    private construct() {}
+    private construct(Char[] chars)
+        {
+        this.chars = chars;
+        }
 
     private Char[] chars;
 
@@ -17,10 +20,31 @@ const String
 
     String substring(Int position)
         {
-        TODO -- native
+        TODO
         }
 
-    Char get(Int index);
+    String substring(Interval<Int> range)
+        {
+        TODO
+        }
+
+    Int count(Char char)
+        {
+        Int count = 0;
+        for (Char ch : chars)
+            {
+            if (ch == char)
+                {
+                count++;
+                }
+            }
+        return count;
+        }
+
+    Char get(Int index)
+        {
+        return chars[index];
+        }
 
     String[] split(Char separator)
         {

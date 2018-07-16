@@ -77,7 +77,7 @@ const Timeout
 
         // calculate the duration of this Timeout
         duration = remainingTime;
-        if (!independent && previousTimeout?)
+        if (!independent && previousTimeout != null)
             {
             // because the timeout is not independent, it must respect the current outgoing timeout
             // that it is replacing
@@ -156,7 +156,7 @@ const Timeout
     Boolean registered.get()
         {
         Timeout? registered = this:service.timeout;
-        while (registered?)
+        while (registered != null)
             {
             if (this == registered)
                 {

@@ -1060,12 +1060,23 @@ public class NameExpression
                     // TODO support or properties nested under something other than a class (need nested type infos?)
                     if (left instanceof NameExpression)
                         {
-                        // "this:target" has private access in this context
                         Argument arg = ((NameExpression) left).m_arg;
-                        if (arg instanceof Register && ((Register) arg).isTarget())
+
+                        // "this:target" has private access in this context
+                        // as well as a target of the same class as the context
+                        if (arg instanceof Register && ((Register) arg).isTarget() ||
+                                !typeLeft.isGenericType() &&
+                                typeLeft.isSingleUnderlyingClass(false) &&
+                                typeLeft.getSingleUnderlyingClass(false).equals(
+                                        ctx.getThisClass().getIdentityConstant()))
                             {
-                            typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                            Access access = typeLeft.getAccess();
+                            if (access != Access.PRIVATE && access != Access.STRUCT)
+                                {
+                                typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                }
                             }
+
                         }
                     TypeInfo     infoType = typeLeft.ensureTypeInfo(errs);
                     PropertyInfo infoProp = infoType.findProperty(sName);
@@ -1208,15 +1219,23 @@ public class NameExpression
                     return ((PropertyConstant) constant).getRefType(left.getType());
                     }
 
-                ClassStructure    clz  = ctx.getThisClass();
                 PropertyConstant  id   = (PropertyConstant) argRaw;
                 PropertyStructure prop = (PropertyStructure) id.getComponent();
                 TypeConstant      type = prop.getType();
 
-                if (clz != prop.getParent())
+                // resolve the property type
+                if (left == null)
                     {
-                    // the property comes from a contribution; need to resolve its formal type
-                    type = type.resolveGenerics(clz.getFormalType());
+                    ClassStructure clz = ctx.getThisClass();
+                    if (clz != prop.getParent())
+                        {
+                        // the property comes from a contribution; need to resolve its formal type
+                        type = type.resolveGenerics(clz.getFormalType());
+                        }
+                    }
+                else
+                    {
+                    type = type.resolveGenerics(left.getImplicitType(ctx));
                     }
 
                 if (!prop.isConstant() && isIdentityMode(ctx, false))

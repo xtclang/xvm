@@ -406,7 +406,7 @@ const IntLiteral(String text)
         return to<VarDec>().to<Dec128>();
         }
 
-    // ----- IntNumber support ---------------------------------------------------------------------
+    // ----- IntNumber API -------------------------------------------------------------------------
 
     /**
      * Bitwise AND.
@@ -464,18 +464,68 @@ const IntLiteral(String text)
         return this >>> count;
         }
 
+    /**
+     * Obtain an interval beginning with this number and proceeding to the specified number.
+     */
+    @Op Interval<Int> through(Int n)
+        {
+        return new Interval<Int>(this.to<Int>(), n);
+        }
+
+    // ----- Number API ----------------------------------------------------------------------------
+
+    /**
+     * Addition: Add another number to this number, and return the result.
+     */
+    @Op IntLiteral add(IntLiteral n)
+        {
+        return this + n;
+        }
+
+    /**
+     * Subtraction: Subtract another number from this number, and return the result.
+     */
+    @Op IntLiteral sub(IntLiteral n)
+        {
+        return this - n;
+        }
+
+    /**
+     * Multiplication: Multiply this number by another number, and return the result.
+     */
+    @Op IntLiteral mul(IntLiteral n)
+        {
+        return this * n;
+        }
+
+    /**
+     * Division: Divide this number by another number, and return the result.
+     */
+    @Op IntLiteral div(IntLiteral n)
+        {
+        return this / n;
+        }
+
+    /**
+     * Modulo: Return the modulo that would result from dividing this number by another number.
+     */
+    @Op IntLiteral mod(IntLiteral n)
+        {
+        return this % n;
+        }
+
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
-    conditional Sequential prev()
+    conditional IntLiteral prev()
         {
-        return this - 1;
+        return true, this - 1;
         }
 
     @Override
-    conditional Sequential next()
+    conditional IntLiteral next()
         {
-        return this + 1;
+        return true, this + 1;
         }
 
     // ----- conversions ---------------------------------------------------------------------------

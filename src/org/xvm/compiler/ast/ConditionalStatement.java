@@ -11,7 +11,7 @@ import org.xvm.asm.op.Label;
  * declaration and/or variable assignment in the parenthesized conditional expression location of an
  * "if", "for", "while", "do-while", or "switch" statement.
  * <p/>
- * If the expression condition in the ConditionalStatement short-ciruits, the result must be
+ * If the expression condition in the ConditionalStatement short-circuits, the result must be
  * identical to the expression resulting in the value of {@code Boolean.False}.
  */
 public abstract class ConditionalStatement
@@ -173,7 +173,7 @@ public abstract class ConditionalStatement
      * The manner in which the ConditionalStatement is used. When it is not being used as a
      * conditional, the usage is Standalone.
      */
-    public static enum Usage {Standalone, If, While, For, Switch}
+    public enum Usage {Standalone, If, While, For, Switch}
 
     /**
      * Specifies the usage of this statement.

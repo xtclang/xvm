@@ -615,14 +615,14 @@ public class InvocationExpression
     @Override
     public boolean isShortCircuiting()
         {
-        for (Expression arg : args)
-            {
-            if (arg.isShortCircuiting())
-                {
-                return true;
-                }
-            }
         return expr.isShortCircuiting();
+        }
+
+    @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        // invocation does not allow the arguments to short circuit
+        return exprChild == expr;
         }
 
     @Override

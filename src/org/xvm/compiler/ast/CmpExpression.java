@@ -112,12 +112,18 @@ public class CmpExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        ConstantPool pool = pool();
         boolean fValid = true;
 
         // attempt to guess the types that are being compared
-        TypeConstant type1       = expr1.getImplicitType(ctx);
-        TypeConstant type2       = expr2.getImplicitType(ctx);
+        TypeConstant type1 = expr1.getImplicitType(ctx);
+
+        // allow the second expression to resolve names based on the first value type's
+        // contributions
+        Context ctx2 = type1 == null
+                ? ctx
+                : ctx.createInferringContext(type1);
+
+        TypeConstant type2       = expr2.getImplicitType(ctx2);
         TypeConstant typeRequest = selectType(type1, type2, errs);
 
         Expression expr1New = expr1.validate(ctx, typeRequest, errs);
@@ -138,12 +144,6 @@ public class CmpExpression
                 typeRequest = selectType(type1, type2, errs);
                 }
             }
-
-        // allow the second expression to resolve names based on the first value type's
-        // contributions
-        Context ctx2 = type1 == null
-                ? ctx
-                : ctx.createInferringContext(type1);
 
         Expression expr2New = expr2.validate(ctx2, typeRequest, errs);
         if (expr2New == null)

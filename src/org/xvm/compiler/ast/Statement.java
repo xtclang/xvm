@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-
 import java.util.Set;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -25,8 +25,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
-
 import org.xvm.asm.constants.TypeInfo;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;

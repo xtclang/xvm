@@ -39,7 +39,7 @@ const Exception
         strbuf += s;
 
         // caused by ...
-        if (cause?)
+        if (cause != null)
             {
             TODO; // + cause.formatExceptionString(firstFrame);
             }
@@ -73,7 +73,7 @@ const Exception
             // TODO path-to-code
 
             Int? lineNumber = frame.lineNumber;
-            if (lineNumber?)
+            if (lineNumber != null)
                 {
                 TODO("[" + line + "]");
                 }
