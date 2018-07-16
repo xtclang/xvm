@@ -48,7 +48,7 @@ const ContextToken<TokenType extends immutable Object>
     Boolean registered.get()
         {
         ContextToken? registered = this:service.findContextToken(name);
-        while (registered?)
+        while (registered != null)
             {
             if (this == registered)
                 {

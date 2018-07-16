@@ -77,7 +77,7 @@ class ExtHashMap<KeyType, ValueType>
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
         HashEntry? entry    = buckets[bucketId];
-        while (entry?)
+        while (entry != null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
@@ -94,7 +94,7 @@ class ExtHashMap<KeyType, ValueType>
         Int        keyhash  = hasher.hashOf(key);
         Int        bucketId = keyhash % buckets.size;
         HashEntry? entry    = buckets[bucketId];
-        while (entry?)
+        while (entry != null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
@@ -125,7 +125,7 @@ class ExtHashMap<KeyType, ValueType>
             Int        keyhash   = hasher.hashOf(key);
             Int        bucketId  = keyhash % bucketCount;
             HashEntry? currEntry = buckets[bucketId];
-            while (currEntry?)
+            while (currEntry != null)
                 {
                 if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, key))
                     {
@@ -150,12 +150,12 @@ class ExtHashMap<KeyType, ValueType>
         Int        bucketId  = keyhash % buckets.size;
         HashEntry? entry     = buckets[bucketId];
         HashEntry? prevEntry = null;
-        while (entry?)
+        while (entry != null)
             {
             if (entry.keyhash == keyhash && hasher.areEqual(entry.key, key))
                 {
                 // unlink the entry
-                if (prevEntry?)
+                if (prevEntry != null)
                     {
                     prevEntry.next = entry.next;
                     }
@@ -244,7 +244,7 @@ class ExtHashMap<KeyType, ValueType>
                         nextEntry = buckets[nextBucket++];
                         }
 
-                    if (nextEntry?)
+                    if (nextEntry != null)
                         {
                         // this is the entry to return
                         HashEntry entry = nextEntry;
@@ -271,7 +271,7 @@ class ExtHashMap<KeyType, ValueType>
             HashEntry?   prevEntry = null;
 
           loop:
-            while (currEntry?)
+            while (currEntry != null)
                 {
                 // check if we found the entry that we're looking for
                 if (currEntry.keyhash == keyhash && hasher.areEqual(currEntry.key, entry.key))
@@ -280,7 +280,7 @@ class ExtHashMap<KeyType, ValueType>
                     if (&currEntry == &entry || currEntry.value == entry.value)
                         {
                         // unlink the entry that is being removed
-                        if (prevEntry?)
+                        if (prevEntry != null)
                             {
                             prevEntry.next = currEntry.next;
                             }
@@ -314,7 +314,7 @@ class ExtHashMap<KeyType, ValueType>
                 {
                 HashEntry? entry     = buckets[i];
                 HashEntry? prevEntry = null;
-                while (entry?)
+                while (entry != null)
                     {
                     if (shouldRemove(entry))
                         {
@@ -322,7 +322,7 @@ class ExtHashMap<KeyType, ValueType>
                         entry = entry.next;
 
                         // unlink the entry that is being removed
-                        if (prevEntry?)
+                        if (prevEntry != null)
                             {
                             prevEntry.next = entry;
                             }
@@ -446,7 +446,7 @@ class ExtHashMap<KeyType, ValueType>
 
         for (HashEntry? entry : oldBuckets)
             {
-            while (entry?)
+            while (entry != null)
                 {
                 // before we change the "next reference", remember which one is next in the old
                 // bucket

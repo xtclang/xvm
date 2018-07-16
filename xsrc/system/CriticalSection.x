@@ -115,7 +115,7 @@ const CriticalSection
     Boolean registered.get()
         {
         CriticalSection? cs = this:service.criticalSection;
-        while (cs?)
+        while (cs != null)
             {
             if (this == cs)
                 {

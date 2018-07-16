@@ -100,7 +100,17 @@ interface Sequence<ElementType>
         Int first;
         Int last;
         Int increment = 1;
-        if (range?)
+        if (range == null)
+            {
+            if (size == 0)
+                {
+                return false;
+                }
+
+            first = 0;
+            last  = size - 1;
+            }
+        else
             {
             first = range.lowerBound;
             last  = range.upperBound;
@@ -116,16 +126,6 @@ interface Sequence<ElementType>
                 last      = temp;
                 increment = -1;
                 }
-            }
-        else
-            {
-            if (size == 0)
-                {
-                return false;
-                }
-
-            first = 0;
-            last  = size - 1;
             }
 
         Int i = first;

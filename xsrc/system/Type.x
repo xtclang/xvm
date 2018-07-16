@@ -89,7 +89,7 @@ const Type<DataType>
         for (Method method : allMethods)
             {
             Property? property = method.property;
-            if (property?)
+            if (property != null)
                 {
                 list += property;
                 }
