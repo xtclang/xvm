@@ -22,6 +22,7 @@ import org.xvm.asm.op.Return_T;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.util.Severity;
 
 
@@ -87,9 +88,40 @@ public class ReturnStatement
         {
         boolean fValid = true;
 
-        MethodStructure  structMethod = ctx.getMethod();
-        boolean          fConditional = structMethod.isConditionalReturn();
-        TypeConstant[]   aRetTypes    = structMethod.getReturnTypes();
+        boolean          fConditional;
+        TypeConstant[]   aRetTypes;
+        AstNode container = getCodeContainer();
+        if (container instanceof MethodDeclarationStatement)
+            {
+            MethodStructure structMethod = ctx.getMethod();
+            fConditional = structMethod.isConditionalReturn();
+            aRetTypes    = structMethod.getReturnTypes();
+            }
+        else if (container instanceof LambdaExpression)
+            {
+            // TODO
+            throw new UnsupportedOperationException("TODO:Lambda");
+            }
+        else if (container instanceof StatementExpression)
+            {
+            StatementExpression expr         = (StatementExpression) container;
+            TypeConstant        typeRequired = expr.getRequiredType();
+            if (typeRequired == null)
+                {
+                // part of the purpose of validating this statement is to determine the return type
+                // of the enclosing StatementExpression, so assume a single value of any type
+                typeRequired = pool().typeObject();
+                }
+
+            aRetTypes    = new TypeConstant[] {typeRequired};
+            fConditional = false;
+            aRetTypes    = null;
+            }
+        else
+            {
+            throw new IllegalStateException("container=" + container);
+            }
+
         int              cRets        = aRetTypes.length;
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
@@ -215,6 +247,19 @@ public class ReturnStatement
                 }
             }
 
+        if (fValid)
+            {
+            if (container instanceof LambdaExpression)
+                {
+                // TODO
+                throw new UnsupportedOperationException("TODO:Lambda");
+                }
+            else if (container instanceof StatementExpression)
+                {
+                ((StatementExpression) container).addReturnType(listExprs.get(0).getType());
+                }
+            }
+
         return fValid
                 ? this
                 : null;
@@ -223,6 +268,18 @@ public class ReturnStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        AstNode container = getCodeContainer();
+        if (container instanceof StatementExpression)
+            {
+            // emit() for a return inside a StatementExpression produces an assignment from the
+            // expression REVIEW tuple return, #exprs > 1
+            Assignable LVal = ((StatementExpression) container).getAssignable();
+            exprs.get(0).generateAssignment(ctx, code, LVal, errs);
+
+            // "return" does not complete
+            return false;
+            }
+
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
         MethodStructure  structMethod = ctx.getMethod();

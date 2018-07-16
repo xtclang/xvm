@@ -3,11 +3,16 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.*;
 import org.xvm.compiler.ast.Statement.Context;
+import org.xvm.util.Severity;
 
 
 /**
@@ -28,6 +33,7 @@ import org.xvm.compiler.ast.Statement.Context;
  *
  * <p/>REVIEW this expression could theoretically support a multi value
  * <p/>REVIEW this expression could theoretically support a conditional return
+ * <p/>REVIEW this expression could theoretically calculate to a constant value
  */
 public class StatementExpression
         extends Expression
@@ -70,17 +76,132 @@ public class StatementExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return super.getImplicitType(ctx);
+        assert m_typeRequired == null && m_listRetTypes == null;
+        if (isValidated())
+            {
+            return getType();
+            }
+
+        // clone the body (to avoid damaging the original) and validate it to calculate its type
+        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body), ErrorListener.BLACKHOLE);
+
+        // the resulting returned types come back in m_listRetTypes
+        if (m_listRetTypes == null)
+            {
+            return null;
+            }
+        else
+            {
+            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+            m_listRetTypes = null;
+            return ListExpression.inferCommonType(aTypes);
+            }
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        assert m_typeRequired == null && m_listRetTypes == null;
+        if (isValidated())
+            {
+            return getType().isA(typeRequired)
+                    ? TypeFit.Fit
+                    : TypeFit.NoFit;
+            }
+
+        // clone the body and validate it using the requested type to test if that type will work
+        m_typeRequired = typeRequired;
+        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body), ErrorListener.BLACKHOLE);
+        m_typeRequired = null;
+
+        // the resulting returned types come back in m_listRetTypes
+        if (m_listRetTypes == null)
+            {
+            return TypeFit.NoFit;
+            }
+        else
+            {
+            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+            m_listRetTypes = null;
+
+            // calculate the resulting type
+            TypeConstant typeResult = ListExpression.inferCommonType(aTypes);
+            return typeResult != null && typeResult.isA(typeRequired)
+                    ? TypeFit.Fit
+                    : TypeFit.NoFit;
+            }
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        return super.validate(ctx, typeRequired, errs);
+        assert m_typeRequired == null && m_listRetTypes == null;
+        m_typeRequired = typeRequired;
+
+        TypeFit        fit     = TypeFit.Fit;
+        StatementBlock bodyOld = body;
+        StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctx, errs);
+        if (bodyNew == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            body = bodyNew;
+            }
+
+        TypeConstant typeActual = null;
+        if (m_listRetTypes != null)
+            {
+            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+            m_listRetTypes = null;
+            typeActual = ListExpression.inferCommonType(aTypes);
+            }
+        if (typeActual == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+
+        return finishValidation(typeRequired, typeActual, fit, null, errs);
         }
 
-    // TODO
+    @Override
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+        {
+        m_LVal = LVal;
+        if (body.completes(ctx, true, code, errs))
+            {
+            errs.log(Severity.ERROR, org.xvm.compiler.Compiler.RETURN_REQUIRED, null, getSource(),
+                    getEndPosition(), getEndPosition());
+            }
+        }
 
+
+    // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * @return the required type, which is the specified required type during validation, or the
+     *         actual type once the expression is validatd
+     */
+    TypeConstant getRequiredType()
+        {
+        return isValidated() ? getType() : m_typeRequired;
+        }
+
+    void addReturnType(TypeConstant typeRet)
+        {
+        List<TypeConstant> list = m_listRetTypes;
+        if (list == null)
+            {
+            m_listRetTypes = list = new ArrayList<>();
+            }
+        list.add(typeRet);
+        }
+
+    Assignable getAssignable()
+        {
+        return m_LVal;
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -100,6 +221,10 @@ public class StatementExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected StatementBlock body;
+
+    private transient TypeConstant       m_typeRequired;
+    private transient List<TypeConstant> m_listRetTypes;
+    private transient Assignable         m_LVal;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
     }

@@ -146,6 +146,76 @@ public abstract class AstNode
         return NO_FIELDS;
         }
 
+    @Override
+    public AstNode clone()
+        {
+        AstNode that;
+        try
+            {
+            that = (AstNode) super.clone();
+            }
+        catch (CloneNotSupportedException e)
+            {
+            throw new IllegalStateException(e);
+            }
+
+        for (Field field : getChildFields())
+            {
+            Object oVal;
+            try
+                {
+                oVal = field.get(this);
+                }
+            catch (NullPointerException e)
+                {
+                throw new IllegalStateException("class=" + this.getClass().getSimpleName(), e);
+                }
+            catch (IllegalAccessException e)
+                {
+                throw new IllegalStateException(e);
+                }
+
+            if (oVal != null)
+                {
+                if (oVal instanceof AstNode)
+                    {
+                    AstNode nodeNew = ((AstNode) oVal).clone();
+
+                    that.adopt(nodeNew);
+                    oVal = nodeNew;
+                    }
+                else if (oVal instanceof List)
+                    {
+                    List<AstNode>      listOld = (List<AstNode>) oVal;
+                    ArrayList<AstNode> listNew = new ArrayList<>();
+                    for (AstNode node : listOld)
+                        {
+                        listNew.add(node.clone());
+                        }
+
+                    that.adopt(listNew);
+                    oVal = listNew;
+                    }
+                else
+                    {
+                    throw new IllegalStateException(
+                            "unsupported container type: " + oVal.getClass().getSimpleName());
+                    }
+
+                try
+                    {
+                    field.set(this, oVal);
+                    }
+                catch (IllegalAccessException e)
+                    {
+                    throw new IllegalStateException(e);
+                    }
+                }
+            }
+
+        return that;
+        }
+
     /**
      * @return the current compilation stage for this node
      */
