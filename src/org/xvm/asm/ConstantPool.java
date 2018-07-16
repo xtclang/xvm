@@ -1299,14 +1299,14 @@ public class ConstantPool
             constType = (TypeConstant) register(new TerminalTypeConstant(this, constClass));
             }
 
+        if (constTypes != null)
+            {
+            constType = ensureParameterizedTypeConstant(constType, constTypes);
+            }
+
         if (access != null && !access.equals(Access.PUBLIC))
             {
             constType = ensureAccessTypeConstant(constType, access);
-            }
-
-        if (constTypes != null && constTypes.length > 0)
-            {
-            constType = ensureParameterizedTypeConstant(constType, constTypes);
             }
 
         return constType;

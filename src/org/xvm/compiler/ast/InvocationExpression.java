@@ -1292,6 +1292,8 @@ public class InvocationExpression
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
         // conversion to a function. (Done.)
+        typeFn = typeFn.resolveTypedefs();
+
         ConstantPool   pool      = pool();
         boolean        fFunction = typeFn.isA(pool.typeFunction());
         MethodConstant idConvert = null;
@@ -1311,11 +1313,9 @@ public class InvocationExpression
 
         // function must be parameterized by 2 fields: param types and return types
         // each is a parameterized "tuple" type constant with an array of types
-        // REVIEW move this to a helper on TypeConstant?
         TypeConstant[] aSubTypes = typeFn.getParamTypesArray();
         if (!typeFn.isParamsSpecified() || aSubTypes.length < 2
-                || !aSubTypes[F_ARGS].isA(pool.typeTuple()) || !aSubTypes[F_ARGS].isParamsSpecified()
-                || !aSubTypes[F_RETS].isA(pool.typeTuple()) || !aSubTypes[F_RETS].isParamsSpecified())
+                || !aSubTypes[F_ARGS].isTuple() || !aSubTypes[F_RETS].isTuple())
             {
             log(errs, Severity.ERROR, Compiler.MISSING_PARAM_INFORMATION);
             return null;
