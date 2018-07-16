@@ -83,19 +83,18 @@ public class StatementExpression
             }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
-        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body), ErrorListener.BLACKHOLE);
+        StatementBlock blockTemp = (StatementBlock) body.clone();
 
         // the resulting returned types come back in m_listRetTypes
-        if (m_listRetTypes == null)
+        if (blockTemp.validate(ctx.createCaptureContext(blockTemp), ErrorListener.BLACKHOLE) == null
+                || m_listRetTypes == null)
             {
             return null;
             }
-        else
-            {
-            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
-            m_listRetTypes = null;
-            return ListExpression.inferCommonType(aTypes);
-            }
+
+        TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+        m_listRetTypes = null;
+        return ListExpression.inferCommonType(aTypes);
         }
 
     @Override

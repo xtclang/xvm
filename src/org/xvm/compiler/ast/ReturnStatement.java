@@ -88,9 +88,9 @@ public class ReturnStatement
         {
         boolean fValid = true;
 
-        boolean          fConditional;
-        TypeConstant[]   aRetTypes;
-        AstNode container = getCodeContainer();
+        AstNode        container = getCodeContainer();
+        boolean        fConditional;
+        TypeConstant[] aRetTypes;
         if (container instanceof MethodDeclarationStatement)
             {
             MethodStructure structMethod = ctx.getMethod();
@@ -115,7 +115,6 @@ public class ReturnStatement
 
             aRetTypes    = new TypeConstant[] {typeRequired};
             fConditional = false;
-            aRetTypes    = null;
             }
         else
             {

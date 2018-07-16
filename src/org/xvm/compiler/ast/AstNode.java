@@ -37,6 +37,7 @@ import static org.xvm.util.Handy.indentLines;
  * Common base class for all statements and expressions.
  */
 public abstract class AstNode
+        implements Cloneable
     {
     // ----- accessors -----------------------------------------------------------------------------
 

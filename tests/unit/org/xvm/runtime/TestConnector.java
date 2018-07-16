@@ -75,12 +75,17 @@ public class TestConnector
                 {
                 out("no code for " + id);
                 }
-
             }
 
-        for (Component child : component.children())
+        if (component != null)
             {
-            dump(child);
+            for (Component child : component.children())
+                {
+                if (child != null)
+                    {
+                    dump(child);
+                    }
+                }
             }
         }
 
