@@ -123,8 +123,9 @@ public class ExpressionStatement
                 exprNew = expr.validate(ctx, null, errs);
                 break;
 
-            default:
-                {
+            case If:
+            case While:
+            case For:
                 m_rte = RuntimeEval.RequiresEval;
                 exprNew = expr.validate(ctx, pool().typeBoolean(), errs);
 
@@ -138,8 +139,10 @@ public class ExpressionStatement
                                 ? RuntimeEval.AlwaysTrue
                                 : RuntimeEval.AlwaysFalse;
                     }
-                }
                 break;
+
+            default:
+                throw new IllegalStateException();
             }
 
         if (exprNew != expr)
@@ -197,20 +200,47 @@ public class ExpressionStatement
         }
 
     @Override
+    protected boolean allowsShortCircuit(Expression exprChild)
+        {
+        if (exprChild == expr)
+            {
+            switch (getUsage())
+                {
+                case Switch:
+                    // TODO
+                    return false;
+
+                case If:
+                case While:
+                case For:
+                case Standalone:
+                    return true;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        return false;
+        }
+
+    @Override
     protected Label getShortCircuitLabel(Expression exprChild)
         {
         assert exprChild == expr;
         switch (getUsage())
             {
             case Switch:
+            case Standalone:
                 return getLabel();
 
             case If:
             case While:
             case For:
-                // TODO?
+                // TODO
+                throw notImplemented();
+
             default:
-                return super.getShortCircuitLabel(exprChild);
+                throw new IllegalStateException();
             }
         }
 
@@ -244,7 +274,7 @@ public class ExpressionStatement
      * The manner in which the ConditionalStatement is used. When it is not being used as a
      * conditional, the usage is Standalone.
      */
-    public static enum RuntimeEval {Initial, AlwaysTrue, AlwaysFalse, RequiresEval}
+    public enum RuntimeEval {Initial, AlwaysTrue, AlwaysFalse, RequiresEval}
 
     protected Expression expr;
     protected boolean    term;
