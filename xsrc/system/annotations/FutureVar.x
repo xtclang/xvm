@@ -472,9 +472,9 @@ mixin FutureVar<RefType>
      * the chain.
      */
     static class DependentFuture<RefType, InputType>
-            implements Ref<RefType>
+            implements Var<RefType>
             incorporates FutureVar<RefType>
-            delegates Ref<RefType>(resultRef)
+            delegates Var<RefType>(resultVar)
         {
         void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
@@ -496,7 +496,7 @@ mixin FutureVar<RefType>
             }
 // TODO: CP
 //        private @Unassigned RefType result;
-        private Ref<RefType> resultRef.get()
+        private Var<RefType> resultVar.get()
             {
             return &result;
             }
