@@ -691,7 +691,7 @@ public class Compiler
      */
     public static final String ANNOTATION_UNEXPECTED              = "COMPILER-35";
     /**
-     * Cannot find name within context.
+     * Could not find name \"{0}\" within \"{1}\".
      */
     public static final String NAME_MISSING                       = "COMPILER-36";
     /**

@@ -130,7 +130,7 @@ const Timeout
      */
     Duration remainingTime.get()
         {
-        return (deadline - runtimeClock.time).maxOf(Duration:"0s");
+        return (deadline - runtimeClock.time).maxOf(Duration.INSTANT);
         }
 
     /**
@@ -155,15 +155,15 @@ const Timeout
      */
     Boolean registered.get()
         {
-        Timeout? registered = this:service.timeout;
-        while (registered != null)
+        Timeout? timeout = this:service.timeout;
+        while (timeout != null)
             {
-            if (this == registered)
+            if (this == timeout)
                 {
                 return true;
                 }
 
-            registered = registered.previousTimeout;
+            timeout = timeout.previousTimeout;
             }
 
         return false;
