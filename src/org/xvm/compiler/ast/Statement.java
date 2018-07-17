@@ -94,14 +94,38 @@ public abstract class Statement
         m_fShortCircuited = true;
         }
 
-    public interface Breakable
+    /**
+     * @return true iff a "break" statement can apply to this statement
+     */
+    public boolean canBreak()
         {
-        Label getBreakLabel();
+        return false;
         }
 
-    public interface Continuable
+    /**
+     * @return the label to jump to when a "break" occurs within (or for) this statement
+     */
+    public Label getBreakLabel()
         {
-        Label getContinueLabel();
+        assert canBreak();
+        throw notImplemented();
+        }
+
+    /**
+     * @return true iff a "continue" statement can apply to this statement
+     */
+    public boolean canContinue()
+        {
+        return false;
+        }
+
+    /**
+     * @return the label to jump to when a "continue" occurs within (or for) this statement
+     */
+    public Label getContinueLabel()
+        {
+        assert canContinue();
+        throw notImplemented();
         }
 
 
@@ -394,25 +418,32 @@ public abstract class Statement
          * @param tokName     the variable name as a token from the source code (optional)
          * @param errs        the error list to log to (optional)
          */
-        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs) // TODO capture context to override
+        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
             {
-            if (fThisScope && !isVarReadable(sName))
+            boolean fValid = true;
+            if (fThisScope)
                 {
                 // this method isn't supposed to be called for variable names that don't exist
                 assert getVar(sName) != null;
 
-                if (tokName != null && errs != null)
+                if (!isVarReadable(sName))
                     {
-                    tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
+                    fValid = false;
+                    if (tokName != null && errs != null)
+                        {
+                        tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
-                    // record that the variable is definitely assigned so that the error will not be
-                    // repeated unnecessarily within this context
-                    ensureDefiniteAssignments().add(sName);
+                        // record that the variable is definitely assigned so that the error will
+                        // not be repeated unnecessarily within this context
+                        ensureDefiniteAssignments().add(sName);
+                        }
                     }
                 }
 
-            // TODO check "is defined in this scope" and if true then don't call outer
-            m_ctxOuter.markVarRead(sName, false, tokName, errs); // TODO override and terminate
+            if (fValid && !isVarDeclaredInThisScope(sName))
+                {
+                m_ctxOuter.markVarRead(sName, false, tokName, errs);
+                }
             }
 
         /**
@@ -429,8 +460,6 @@ public abstract class Statement
             if (isVarDeclaredInThisScope(sName))
                 {
                 // TODO a "val" cannot be written to once it is definitely assigned
-                // getVar(sName)
-                // getDefiniteAssignments().contains(sName)
                 return true;
                 }
 
@@ -485,16 +514,18 @@ public abstract class Statement
                     fValid = false;
                     if (tokName != null && errs != null)
                         {
-                        tokName.log(errs, getSource(), Severity.ERROR,
-                                Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
+                        tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
                         }
                     }
 
                 ensureDefiniteAssignments().add(sName);
                 }
 
-            if (fValid)
+            if (fValid && !isVarDeclaredInThisScope(sName))
                 {
+                // getVar(sName)
+                // getDefiniteAssignments().contains(sName)
+
                 m_ctxOuter.markVarWrite(sName, false, tokName, errs);
                 }
             }

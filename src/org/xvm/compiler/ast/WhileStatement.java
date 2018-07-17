@@ -23,7 +23,6 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class WhileStatement
         extends Statement
-        implements Statement.Breakable, Statement.Continuable
     {
     // ----- constructors --------------------------------------------------------------------------
 

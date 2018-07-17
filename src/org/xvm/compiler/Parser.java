@@ -22,6 +22,7 @@ import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
@@ -2049,23 +2050,37 @@ public class Parser
             }
         else
             {
+            // identifier followed by ':' is a conditional assignment; if we don't check for this
+            // up front, the ':' would get gobbled up by parseExpression(), since it will be looking
+            // for a trailing ": expr" (an ElseExpression)
+            Token tokName = match(Id.IDENTIFIER);
+            if (tokName != null)
+                {
+                switch (peek().getId())
+                    {
+                    case ASN:
+                        if (!fAllowAsn)
+                            {
+                            log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(),
+                                    peek().getEndPosition());
+                            throw new CompilerException("assignment disallowed");
+                            }
+                        // fall through
+                    case COLON:
+                        // it's an assignment or conditional expression, but it doesn't declare a
+                        // new var
+                        return new AssignmentStatement(new NameExpression(tokName), current(), parseExpression(), false);
+
+                    default:
+                        putBack(tokName);
+                        break;
+                    }
+                }
+
             Expression expr = parseExpression();
             switch (peek().getId())
                 {
-                case ASN:
-                    if (!fAllowAsn)
-                        {
-                        log(Severity.ERROR, NO_ASSIGNMENT, peek().getStartPosition(),
-                                peek().getEndPosition());
-                        throw new CompilerException("assignment disallowed");
-                        }
-                    // fall through
-                case COLON:
-                    // it's an assignment or conditional expression, but it doesn't declare a new
-                    // var
-                    return new AssignmentStatement(expr, current(), parseExpression(), false);
-
-                case COMMA:     // TODO could indicate multiple declaration/assignment
+                case COMMA:
                 case SEMICOLON:
                 case R_PAREN:
                     // definitely stop if there is ',', ';', or ')'
@@ -2078,10 +2093,12 @@ public class Parser
 
             type = expr.toTypeExpression();
             }
+
+        // everything up to this point is just the type; now parse for the identifier and the
+        // assignment
         Token name = expect(Id.IDENTIFIER);
 
         // could be either ':' or '='
-        // TODO an Id.COMMA would indicate multiple declaration/assignment
         Token op = fAllowAsn ? match(Id.ASN) : null;
         if (op == null)
             {
