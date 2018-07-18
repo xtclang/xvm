@@ -1,4 +1,4 @@
-module TestTemp.xqiz.it
+module TestMisc.xqiz.it
     {
     @Inject X.io.Console console;
 

@@ -28,12 +28,6 @@ public abstract class ComponentStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    public ComponentStatement getComponentStatement()
-        {
-        return this;
-        }
-
-    @Override
     public Component getComponent()
         {
         return component;

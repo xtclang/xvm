@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Component;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -47,6 +51,15 @@ public class LambdaExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public Component getComponent()
+        {
+        MethodStructure method = m_lambda;
+        return method == null
+                ? super.getComponent()
+                : method;
+        }
+
+    @Override
     public long getStartPosition()
         {
         return lStartPos;
@@ -66,6 +79,31 @@ public class LambdaExpression
 
 
     // ----- compilation ---------------------------------------------------------------------------
+
+
+    @Override
+    protected void registerStructures(StageMgr mgr, ErrorListener errs)
+        {
+        if (m_lambda == null)
+            {
+            Component            parent   = getComponent();
+            MultiMethodStructure structMM = parent.ensureMultiMethodStructure(METHOD_NAME);
+            MethodStructure      lambda   = new MethodStructure(structMM, );
+            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
+                    ConditionalConstant condition, Annotation[] annotations,
+                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
+            structMM.addC
+            m_lambda = new MethodStructure()
+            }
+
+        super.registerStructures(mgr, errs);
+        }
+
+    @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        super.resolveNames(mgr, errs);
+        }
 
     // TODO
 
@@ -129,11 +167,15 @@ public class LambdaExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    public static final String METHOD_NAME = "->";
+
     protected List<Parameter>  params;
     protected List<Expression> paramNames;
     protected Token            operator;
     protected StatementBlock   body;
     protected long             lStartPos;
+
+    private MethodStructure m_lambda;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
     }
