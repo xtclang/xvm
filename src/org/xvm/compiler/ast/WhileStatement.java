@@ -51,6 +51,29 @@ public class WhileStatement
         }
 
     @Override
+    public boolean canBreak()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean canContinue()
+        {
+        return true;
+        }
+
+    @Override
+    public Label getContinueLabel()
+        {
+        Label label = m_labelContinue;
+        if (label == null)
+            {
+            m_labelContinue = label = new Label("continue_while_" + (++s_nLabelCounter));
+            }
+        return label;
+        }
+
+    @Override
     public long getStartPosition()
         {
         return keyword.getStartPosition();
@@ -66,34 +89,6 @@ public class WhileStatement
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
-        }
-
-
-    // ----- Breakable interface -------------------------------------------------------------------
-
-    @Override
-    public Label getBreakLabel()
-        {
-        Label label = m_labelBreak;
-        if (label == null)
-            {
-            m_labelBreak = label = new Label();
-            }
-        return label;
-        }
-
-
-    // ----- Continuable interface -----------------------------------------------------------------
-
-    @Override
-    public Label getContinueLabel()
-        {
-        Label label = m_labelContinue;
-        if (label == null)
-            {
-            m_labelContinue = label = new Label();
-            }
-        return label;
         }
 
 
@@ -156,7 +151,6 @@ public class WhileStatement
         boolean    fAlwaysFalse  = cond.isAlwaysFalse();
         Label      labelRepeat   = cond.getLabel();
         Label      labelContinue = m_labelContinue == null ? new Label() : m_labelContinue;
-        Label      labelBreak    = m_labelBreak    == null ? new Label() : m_labelBreak;
 
         boolean fCompletes = fReachable;
         if (fAlwaysFalse)
@@ -171,7 +165,6 @@ public class WhileStatement
             if (fDoWhile)
                 {
                 code.add(labelContinue);
-                code.add(labelBreak);
                 }
             }
         else if (fAlwaysTrue)
@@ -187,7 +180,6 @@ public class WhileStatement
             code.add(labelContinue);
             block.completes(ctx, fReachable, code, errs);
             code.add(new Jump(labelRepeat));
-            code.add(labelBreak);
             fCompletes = false;     // while true never completes naturally
             }
         else if (!fDoWhile && fOwnScope)
@@ -211,7 +203,6 @@ public class WhileStatement
             fCompletes &= block.completes(ctx, fReachable, code, errs);
             code.add(labelContinue);
             fCompletes &= cond.nonDeclarations(ctx, errs).completes(ctx, fReachable, code, errs);
-            code.add(labelBreak);
             code.add(new Exit());
             }
         else
@@ -239,7 +230,6 @@ public class WhileStatement
                 code.add(new Enter());
                 }
             fCompletes &= cond.completes(ctx, fReachable, code, errs);
-            code.add(labelBreak);
             if (fOwnScope)
                 {
                 code.add(new Exit());
@@ -297,7 +287,7 @@ public class WhileStatement
     protected StatementBlock            block;
     protected long                      lEndPos;
 
-    private Label m_labelBreak;
+    private static int s_nLabelCounter;
     private Label m_labelContinue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "cond", "block");

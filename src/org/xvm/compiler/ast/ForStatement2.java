@@ -37,12 +37,6 @@ public class ForStatement2
         }
 
     @Override
-    public Label getBreakLabel()
-        {
-        return getEndLabel();
-        }
-
-    @Override
     public boolean canContinue()
         {
         return true;
@@ -51,8 +45,12 @@ public class ForStatement2
     @Override
     public Label getContinueLabel()
         {
-        // TODO
-        throw notImplemented();
+        Label label = m_labelContinue;
+        if (label == null)
+            {
+            m_labelContinue = label = new Label("continue_for2_" + (++s_nLabelCounter));
+            }
+        return label;
         }
 
     @Override
@@ -112,7 +110,8 @@ public class ForStatement2
     protected List<Statement> conds;
     protected StatementBlock  block;
 
-    private Label m_labelContinue; = new Label("for_" + );
+    private static int s_nLabelCounter;
+    private Label m_labelContinue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement2.class, "conds", "block");
     }

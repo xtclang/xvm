@@ -89,7 +89,7 @@ public abstract class Statement
     /**
      * Mark the statement as completing by short-circuiting.
      */
-    public void shortCircuit()
+    public void shortCircuit() // TODO re-evaluate (currently not used - why not?)
         {
         m_fShortCircuited = true;
         }
@@ -108,7 +108,7 @@ public abstract class Statement
     public Label getBreakLabel()
         {
         assert canBreak();
-        throw notImplemented();
+        return getEndLabel();
         }
 
     /**
