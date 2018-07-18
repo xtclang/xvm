@@ -5,68 +5,6 @@ interface IntNumber
         extends Number
         extends Sequential
     {
-    // ----- Sequential interface ------------------------------------------------------------------
-
-    /**
-     * Integer increment.
-     *
-     * @throws BoundsException if _this_ is the maximum value
-     */
-    @Override
-    IntNumber nextValue()
-        {
-        return add(1);
-        }
-
-    /**
-     * Integer decrement.
-     *
-     * @throws BoundsException if _this_ is the minimum value
-     */
-    @Override
-    IntNumber prevValue()
-        {
-        return sub(1);
-        }
-
-    /**
-     * Checked integer increment.
-     */
-    @Override
-    conditional IntNumber next()
-        {
-        try
-            {
-            IntNumber n = add(1);
-            if (n > this)
-                {
-                return true, n;
-                }
-            }
-        catch (Exception e) {}
-
-        return false;
-        }
-
-    /**
-     * Checked integer decrement.
-     */
-    @Override
-    conditional IntNumber prev()
-        {
-        try
-            {
-            IntNumber n = sub(1);
-            if (n < this)
-                {
-                return true, n;
-                }
-            }
-        catch (Exception e) {}
-
-        return false;
-        }
-
     // ----- additional IntNumber capabilities -----------------------------------------------------
 
     /**
