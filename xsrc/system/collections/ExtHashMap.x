@@ -218,8 +218,8 @@ class ExtHashMap<KeyType, ValueType>
      * A representation of all of the HashEntry objects in the Map.
      */
     class HashEntrySet
-            // extends KeyBasedEntriesSet<HashEntry> // TODO
-            implements Iterable<HashEntry>
+            extends KeyBasedEntriesSet<KeyType, ValueType>
+            implements Set<HashEntry>
         {
         @Override
         Iterator<HashEntry> iterator()
@@ -353,7 +353,7 @@ class ExtHashMap<KeyType, ValueType>
     protected static class ExtEntry<KeyType, ValueType>
             implements Entry<KeyType, ValueType>
         {
-        construct(KeyType key, Int keyhash, ValueType value, HashEntry next = null)
+        construct(KeyType key, Int keyhash, ValueType value, ExtEntry<KeyType, ValueType> next = null)
             {
             this.key     = key;
             this.keyhash = keyhash;
@@ -375,7 +375,7 @@ class ExtHashMap<KeyType, ValueType>
         /**
          * HashedEntry objects form a linked list within a hash bucket.
          */
-        private HashEntry? next;
+        private ExtEntry<KeyType, ValueType>? next;
         }
 
     /**

@@ -541,7 +541,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.keys} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedKeysSet
+    class EntryBasedKeysSet<KeyType>
             implements Set<KeyType>
         {
         @Override
@@ -700,7 +700,7 @@ interface Map<KeyType, ValueType>
     /**
      * An implementation of ProcessableEntry that delegates back to the map for a specified key.
      */
-    class KeyBasedEntry(KeyType key)
+    class KeyBasedEntry<KeyType, ValueType>(KeyType key)
             implements ProcessableEntry<KeyType, ValueType>
         {
         @Override
@@ -744,8 +744,8 @@ interface Map<KeyType, ValueType>
      * An implementation of ProcessableEntry that can be used as a cursor over any number of keys,
      * and delegates back to the map for its functionality.
      */
-    class KeyBasedCursorEntry
-            extends KeyBasedEntry
+    class KeyBasedCursorEntry<KeyType, ValueType>
+            extends KeyBasedEntry<KeyType, ValueType>
         {
         /**
          * Specify the new "cursor key" for this Entry.
@@ -775,7 +775,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedValuesCollection
+    class EntryBasedValuesCollection<ValueType>
             implements Collection<ValueType>
         {
         @Override
@@ -847,7 +847,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Collection for the {@link Map.values} property that delegates back
      * to the map and to the map's {@link Map.keys keys}.
      */
-    class KeyBasedValuesCollection
+    class KeyBasedValuesCollection<ValueType>
             implements Collection<ValueType>
         {
         @Override

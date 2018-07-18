@@ -17,7 +17,7 @@ class HashSet<ElementType>
 
     private class Entry<ElementType>(ElementType value, Entry? next);
 
-    private Array<Entry<ElementType>?> buckets; // TODO
+    private Entry<ElementType>?[] buckets; // TODO
 
     @Override
     public/private Int size;
@@ -26,7 +26,7 @@ class HashSet<ElementType>
     Boolean contains(ElementType value)
         {
         Int nHash   = hasher.hashOf(value);
-        Int nBucket = nHash % buckets.length;
+        Int nBucket = nHash % buckets.size;
 
         Entry<ElementType>? entry = buckets[nBucket];
         while (entry != null)
