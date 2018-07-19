@@ -15,7 +15,7 @@ class HashSet<ElementType>
 
     public/private Hasher<ElementType> hasher;
 
-    private class Entry<ElementType>(ElementType value, Entry? next);
+    private class Entry(ElementType value, Entry? next);
 
     private Entry<ElementType>?[] buckets; // TODO
 
