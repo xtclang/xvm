@@ -368,7 +368,7 @@ public class NamedTypeExpression
             constType = pool.ensureParameterizedTypeConstant(constType, aconstParams);
             }
 
-        if (access != null)
+        if (access != null && access != Access.PUBLIC)
             {
             constType = pool.ensureAccessTypeConstant(constType, access);
             }

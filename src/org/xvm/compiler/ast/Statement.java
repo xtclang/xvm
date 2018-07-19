@@ -1023,7 +1023,8 @@ public abstract class Statement
                     break;
 
                 case "this:public":
-                    type = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    type = getThisType();
+                    assert type.getAccess() == Access.PUBLIC;
                     nReg = Op.A_PUBLIC;
                     break;
 
