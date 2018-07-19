@@ -598,6 +598,18 @@ interface Map<KeyType, ValueType>
                 }
             return false;
             }
+
+        @Override
+        Stream<KeyType> stream()
+            {
+            TODO
+            }
+
+        @Override
+        EntryBasedKeysSet<KeyType> clone()
+            {
+            return this;
+            }
         }
 
     // ----- entries set implementations -----------------------------------------------------------
@@ -679,6 +691,18 @@ interface Map<KeyType, ValueType>
                 return true, this;
                 }
             return false;
+            }
+
+        @Override
+        Stream<Entry<KeyType, ValueType>> stream()
+            {
+            TODO
+            }
+
+        @Override
+        KeyBasedEntriesSet<Entry<KeyType, ValueType>> clone()
+            {
+            return this;
             }
         }
 
@@ -840,6 +864,18 @@ interface Map<KeyType, ValueType>
                 return true, this;
                 }
             return false;
+            }
+
+        @Override
+        Stream<ValueType> stream()
+            {
+            TODO
+            }
+
+        @Override
+        EntryBasedValuesCollection<ValueType> clone()
+            {
+            TODO
             }
         }
 
