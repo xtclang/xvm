@@ -80,7 +80,6 @@ public class LambdaExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
-
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
@@ -88,12 +87,12 @@ public class LambdaExpression
             {
             Component            parent   = getComponent();
             MultiMethodStructure structMM = parent.ensureMultiMethodStructure(METHOD_NAME);
-            MethodStructure      lambda   = new MethodStructure(structMM, );
-            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
-                    ConditionalConstant condition, Annotation[] annotations,
-                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
-            structMM.addC
-            m_lambda = new MethodStructure()
+//            MethodStructure      lambda   = new MethodStructure(structMM, );
+//            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
+//                    ConditionalConstant condition, Annotation[] annotations,
+//                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
+//            structMM.addC
+//            m_lambda = new MethodStructure()
             }
 
         super.registerStructures(mgr, errs);
