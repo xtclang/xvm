@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -867,6 +866,45 @@ public class TypeInfo
         }
 
     /**
+     * Find the MethodInfo for the specified SignatureConstant.
+     *
+     * @param sig  a SignatureConstant
+     *
+     * @return the MethodInfo corresponding to the specified identity
+     */
+    public MethodInfo getMethodBySignature(SignatureConstant sig)
+        {
+        Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
+        if (map != null)
+            {
+            MethodInfo method = map.get(sig);
+            if (method != null)
+                {
+                return method;
+                }
+            }
+
+        MethodInfo method = m_mapVirtMethods.get(sig);
+        if (method != null)
+            {
+            return method;
+            }
+
+        TypeConstant typeThis = getType();
+
+        for (MethodInfo methodTest : m_mapMethods.values())
+            {
+            if (methodTest.getIdentity().getSignature().isSubstitutableFor(sig, typeThis))
+                {
+                ensureMethodsBySignature().putIfAbsent(sig, methodTest);
+                return methodTest;
+                }
+            }
+
+        return null;
+        }
+
+    /**
      * Find the MethodInfo for the specified MethodConstant identity.
      *
      * @param id  a MethodConstant identity
@@ -901,22 +939,20 @@ public class TypeInfo
         // TODO this might no longer be necessary because the cache is now pre-populated
         String sName  = id.getName();
         int    cDepth = id.getNestedDepth();
-        for (Iterator<MethodInfo> iter = m_mapVirtMethods.values().iterator(); iter.hasNext(); )
+        for (MethodInfo methodTest : m_mapVirtMethods.values())
             {
-            method = iter.next();
-
             // this "if" does not prove that this is the method that we're looking for; it just
             // eliminates 99% of the potential garbage from our brute force search
-            if (method.getSignature().getName().equals(sName)
-                    && method.getIdentity().getNestedDepth() == cDepth)
+            if (methodTest.getSignature().getName().equals(sName)
+                    && methodTest.getIdentity().getNestedDepth() == cDepth)
                 {
-                for (MethodBody body : method.getChain())
+                for (MethodBody body : methodTest.getChain())
                     {
                     if (body.getIdentity().equals(id))
                         {
-                        m_cacheById.put(id, method);
-                        m_cacheByNid.put(id.getNestedIdentity(), method);
-                        return method;
+                        m_cacheById.put(id, methodTest);
+                        m_cacheByNid.put(id.getNestedIdentity(), methodTest);
+                        return methodTest;
                         }
                     }
                 }
@@ -954,6 +990,21 @@ public class TypeInfo
     public MethodBody[] getOptimizedMethodChain(MethodConstant id)
         {
         MethodInfo info = getMethodById(id);
+        return info == null
+                ? null
+                : info.ensureOptimizedMethodChain(this);
+        }
+
+    /**
+     * Obtain the method chain for the specified method signature.
+     *
+     * @param sig  the SignatureConstant for the method
+     *
+     * @return the method chain iff the method exists; otherwise null
+     */
+    public MethodBody[] getOptimizedMethodChain(SignatureConstant sig)
+        {
+        MethodInfo info = getMethodBySignature(sig);
         return info == null
                 ? null
                 : info.ensureOptimizedMethodChain(this);
