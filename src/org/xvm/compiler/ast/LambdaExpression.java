@@ -5,11 +5,13 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
 
 import java.util.List;
+import org.xvm.compiler.ast.Statement.Context;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -87,13 +89,14 @@ public class LambdaExpression
         if (m_lambda == null)
             {
             Component            parent   = getComponent();
-            MultiMethodStructure structMM = parent.ensureMultiMethodStructure(METHOD_NAME);
-            MethodStructure      lambda   = new MethodStructure(structMM, );
-            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
-                    ConditionalConstant condition, Annotation[] annotations,
-                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
-            structMM.addC
-            m_lambda = new MethodStructure()
+// TODO
+//            MultiMethodStructure structMM = parent.ensureMultiMethodStructure(METHOD_NAME);
+//            MethodStructure      lambda   = new MethodStructure(structMM, );
+//            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
+//                    ConditionalConstant condition, Annotation[] annotations,
+//                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
+//            structMM.addC
+//            m_lambda = new MethodStructure()
             }
 
         super.registerStructures(mgr, errs);
@@ -106,6 +109,27 @@ public class LambdaExpression
         }
 
     // TODO
+
+    @Override
+    public TypeConstant getImplicitType(Context ctx)
+        {
+        return super.getImplicitType(ctx);
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        return super.testFit(ctx, typeRequired);
+        }
+
+    @Override
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
+            ErrorListener errs)
+        {
+        // TODO at the end of validate, we build the lambda signature, and set it on the MethodConstant
+
+        return super.validateMulti(ctx, atypeRequired, errs);
+        }
 
 
     // ----- debugging assistance ------------------------------------------------------------------

@@ -44,6 +44,7 @@ public class MethodConstant
         super(pool);
         m_iParent = readMagnitude(in);
         m_iSig    = readMagnitude(in);
+        m_iLambda = readMagnitude(in);
         }
 
     /**
@@ -85,14 +86,61 @@ public class MethodConstant
         this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns));
         }
 
+    /**
+     * Construct a constant whose value is a method identifier.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  specifies the MultiMethodConstant that contains this method
+     * @param iLambda      the separate lambda identity
+     */
+    public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, int iLambda)
+        {
+        super(pool);
+
+        if (constParent == null)
+            {
+            throw new IllegalArgumentException("parent required");
+            }
+
+        if (iLambda <= 0)
+            {
+            throw new IllegalArgumentException("lambda identity required");
+            }
+
+        m_constParent = constParent;
+        m_iLambda     = iLambda;
+        }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
+
+    /**
+     * @return true iff the method is a lambda
+     */
+    public boolean isLambda()
+        {
+        // a missing signature can only occur for a lambda
+        // a lambda identity always occurs for a lambda
+        boolean fLambda = m_iLambda > 0;
+        assert fLambda | m_constSig != null;
+        assert fLambda == getName().equals("->");
+        return fLambda;
+        }
+
+    /**
+     * @return true iff the method is a nascent lambda (still in the process of being defined)
+     */
+    public boolean isNascent()
+        {
+        return m_constSig == null;
+        }
 
     /**
      * @return the method's signature constant
      */
     public SignatureConstant getSignature()
         {
+        assert !isNascent();
         return m_constSig;
         }
 
@@ -137,6 +185,7 @@ public class MethodConstant
      */
     boolean isFunction()
         {
+        assert !isNascent();
         MethodStructure method = (MethodStructure) getComponent();
 
         // we treat an absence of a component as a sign that the method is virtual
@@ -196,7 +245,9 @@ public class MethodConstant
     @Override
     public Object getPathElement()
         {
-        return m_constSig;
+        return isLambda()
+                ? Integer.valueOf(m_iLambda)
+                : m_constSig;
         }
 
     @Override
@@ -204,25 +255,37 @@ public class MethodConstant
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append('(');
-        TypeConstant[] aParamType = getRawParams();
-        for (int i = 0, c = aParamType.length; i < c; i++)
+        if (isNascent())
             {
-            TypeConstant typeParam = aParamType[i];
-            if (i > 0)
-                {
-                sb.append(", ");
-                }
-            sb.append(typeParam.getValueString());
+            sb.append('[')
+              .append(m_iLambda)
+              .append(']');
             }
-        sb.append(')');
+        else
+            {
+            sb.append('(');
+            TypeConstant[] aParamType = getRawParams();
+            for (int i = 0, c = aParamType.length; i < c; i++)
+                {
+                TypeConstant typeParam = aParamType[i];
+                if (i > 0)
+                    {
+                    sb.append(", ");
+                    }
+                sb.append(typeParam.getValueString());
+                }
+            sb.append(')');
+            }
+
         return sb.toString();
         }
 
     @Override
     public boolean trailingSegmentEquals(IdentityConstant that)
         {
-        return that instanceof MethodConstant && this.m_constSig.equals(((MethodConstant) that).m_constSig);
+        return that instanceof MethodConstant && (isLambda()
+                ? this.m_iLambda == ((MethodConstant) that).m_iLambda
+                : this.m_constSig.equals(((MethodConstant) that).m_constSig));
         }
 
     @Override
@@ -249,7 +312,7 @@ public class MethodConstant
         // method can be identified with only a signature, assuming it is not recursively nested
         return getNamespace().isNested()
                 ? new NestedIdentity()
-                : getSignature();
+                : getPathElement();
         }
 
     @Override
@@ -264,6 +327,7 @@ public class MethodConstant
     @Override
     public MethodStructure relocateNestedIdentity(ClassStructure clz)
         {
+        assert !isLambda();
         Component parent = getNamespace().relocateNestedIdentity(clz);
         return parent == null
                 ? null
@@ -273,6 +337,7 @@ public class MethodConstant
     @Override
     public IdentityConstant ensureNestedIdentity(IdentityConstant that)
         {
+        assert !isLambda();
         return that.getConstantPool().ensureMethodConstant(
                 getParentConstant().ensureNestedIdentity(that), getSignature());
         }
@@ -308,18 +373,23 @@ public class MethodConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constParent);
-        visitor.accept(m_constSig);
+        if (m_constSig != null)
+            {
+            visitor.accept(m_constSig);
+            }
         }
 
     @Override
     public boolean containsUnresolved()
         {
-        return super.containsUnresolved() || m_constSig.containsUnresolved();
+        // the constant is considered to be unresolved until the signature is available and resolved
+        return super.containsUnresolved() || isNascent() || getSignature().containsUnresolved();
         }
 
     @Override
     public MethodConstant resolveTypedefs()
         {
+        assert !isNascent();
         SignatureConstant sigOld = m_constSig;
         SignatureConstant sigNew = sigOld.resolveTypedefs();
         return sigNew == sigOld
@@ -334,7 +404,9 @@ public class MethodConstant
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
-            n = this.m_constSig.compareTo(that.m_constSig);
+            n = isLambda()
+                    ? this.m_iLambda - that.m_iLambda              // REVIEW
+                    : this.m_constSig.compareTo(that.m_constSig);
             }
         return n;
         }
@@ -342,7 +414,9 @@ public class MethodConstant
     @Override
     public String getValueString()
         {
-        return m_constSig.getValueString();
+        return isNascent()
+                ? getPathElementString()
+                : m_constSig.getValueString();
         }
 
 
@@ -361,6 +435,8 @@ public class MethodConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
+        assert !isNascent();
+
         m_constParent = (MultiMethodConstant) pool.register(m_constParent);
         m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
         }
@@ -369,15 +445,19 @@ public class MethodConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
+        assert !isNascent();
+
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
         writePackedLong(out, m_constSig.getPosition());
+        writePackedLong(out, m_iLambda);
         }
 
     @Override
     public String getDescription()
         {
         StringBuilder sb = new StringBuilder();
+
         sb.append(getName());
         IdentityConstant idParent = getNamespace();
         while (idParent != null)
@@ -394,9 +474,21 @@ public class MethodConstant
                     idParent = null;
                 }
             }
+        sb.insert(0, "name=");
 
-        return "name=" + sb.toString()
-                + ", signature=" + getSignature().getValueString();
+        if (!isNascent())
+            {
+            sb.append(", signature=")
+              .append(getSignature().getValueString());
+            }
+
+        if (isLambda())
+            {
+            sb.append(", lambda=")
+              .append(m_iLambda);
+            }
+
+        return sb.toString();
         }
 
 
@@ -405,7 +497,8 @@ public class MethodConstant
     @Override
     public int hashCode()
         {
-        return m_constParent.hashCode() * 17 + m_constSig.hashCode();
+        return m_constParent.hashCode() * 17
+                + (isLambda() ? m_iLambda : m_constSig.hashCode());
         }
 
 
@@ -432,6 +525,11 @@ public class MethodConstant
      * The constant that represents the signature of this method.
      */
     private SignatureConstant m_constSig;
+
+    /**
+     * The lambda synthetic identity, separate from the signature.
+     */
+    private int m_iLambda;
 
     /**
      * Cached type.

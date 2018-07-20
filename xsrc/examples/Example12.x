@@ -1457,3 +1457,20 @@ switch (var x = a?.b?.c) // as if trailed by some "impossible other" value " : -
 // switch expression - same
 
 while () // .. same (as if trailed by " : false")
+
+// ----- resolved types
+
+mixin SimpleSorter<SortType>
+        into Object
+    {
+    }
+
+// GG thinks this should be illegal:
+mixin Sorter
+        into List
+        extends SimpleSorter<ElementType>
+
+// GG thinks this (or some other specificity) should be required:
+mixin Sorter<ElementType>
+        into List<ElementType>
+        extends SimpleSorter<ElementType>
