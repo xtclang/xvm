@@ -66,6 +66,8 @@ public class IfStatement
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
+        boolean fValid = true;
+
         // let the conditional statement know that it is indeed being used as a condition
         cond.markConditional(Usage.If, new Label());
 
@@ -75,40 +77,49 @@ public class IfStatement
             ctx = ctx.enterScope();
             }
 
-        Context              ctxThen     = ctx.fork();
-        ConditionalStatement condNew     = (ConditionalStatement) cond.validate(ctxThen, errs);
-        Statement            stmtThenNew = stmtThen.validate(ctxThen, errs);
-        Statement            stmtElseNew = null;
-        boolean              fValid      = condNew != null && stmtThenNew != null;
-
-        if (stmtElse == null)
+        Context              ctxThen = ctx.fork();
+        ConditionalStatement condNew = (ConditionalStatement) cond.validate(ctxThen, errs);
+        if (condNew == null)
             {
-            ctx.join(ctxThen);
+            fValid = false;
             }
         else
             {
-            Context ctxElse = ctx.fork();
-            stmtElseNew = stmtElse.validate(ctxElse, errs);
-            fValid &= stmtElseNew != null;
-            ctx.join(ctxThen, ctxElse);
-            }
-
-        if (fScope)
-            {
-            ctx = ctx.exitScope();
-            }
-
-        if (condNew != null & condNew != cond)
-            {
             cond = condNew;
             }
-        if (stmtThenNew != null & stmtThenNew != stmtThen)
+
+        Statement stmtThenNew = stmtThen.validate(ctxThen, errs);
+        if (stmtThenNew == null)
+            {
+            fValid = false;
+            }
+        else
             {
             stmtThen = stmtThenNew;
             }
-        if (stmtElseNew != null & stmtElseNew != stmtElse)
+
+        Context ctxElse = ctx.fork();
+        if (stmtElse != null)
             {
-            stmtElse = stmtElseNew;
+            Statement stmtElseNew = stmtElse.validate(ctxElse, errs);
+            if (stmtElseNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                stmtElse = stmtElseNew;
+                }
+            }
+
+        // merge the contexts through the "then" and through the "else" (and note that the "else"
+        // context always exists, even if we don't use it)
+        ctx.join(ctxThen, ctxElse);
+
+        // if the condition itself required a scope, then complete that scope
+        if (fScope)
+            {
+            ctx = ctx.exitScope();
             }
 
         return fValid

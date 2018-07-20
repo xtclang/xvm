@@ -23,7 +23,6 @@ public class LabeledStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
-
     @Override
     public long getStartPosition()
         {

@@ -1,11 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
 
 import java.util.List;
+
+import org.xvm.asm.op.Label;
+
+import org.xvm.compiler.Token;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -28,6 +30,28 @@ public class ForStatement2
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public boolean canBreak()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean canContinue()
+        {
+        return true;
+        }
+
+    @Override
+    public Label getContinueLabel()
+        {
+        Label label = m_labelContinue;
+        if (label == null)
+            {
+            m_labelContinue = label = new Label("continue_for2_" + (++s_nLabelCounter));
+            }
+        return label;
+        }
 
     @Override
     public long getStartPosition()
@@ -85,6 +109,9 @@ public class ForStatement2
     protected Token           keyword;
     protected List<Statement> conds;
     protected StatementBlock  block;
+
+    private static int s_nLabelCounter;
+    private Label m_labelContinue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement2.class, "conds", "block");
     }

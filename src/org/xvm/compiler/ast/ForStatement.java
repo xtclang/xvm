@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.op.Label;
+
 import org.xvm.compiler.Token;
 
 import java.lang.reflect.Field;
@@ -30,6 +32,29 @@ public class ForStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public boolean canBreak()
+        {
+        return true;
+        }
+
+    @Override
+    public boolean canContinue()
+        {
+        return true;
+        }
+
+    @Override
+    public Label getContinueLabel()
+        {
+        Label label = m_labelContinue;
+        if (label == null)
+            {
+            m_labelContinue = label = new Label("continue_for_" + (++s_nLabelCounter));
+            }
+        return label;
+        }
 
     @Override
     public long getStartPosition()
@@ -116,6 +141,9 @@ public class ForStatement
     protected Expression      expr;
     protected List<Statement> update;
     protected StatementBlock  block;
+
+    private static int s_nLabelCounter;
+    private Label m_labelContinue;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "expr", "update", "block");
     }

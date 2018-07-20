@@ -5,13 +5,14 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.xvm.asm.ErrorListener;
 
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.*;
 import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.util.Severity;
 
 

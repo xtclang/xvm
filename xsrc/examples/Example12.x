@@ -1330,3 +1330,130 @@ void foo(Dict.Entry entry)
     entry.Dict.KT k = entry.key;
     // i.e. deprecate "ClassName.this" and replace with "expr.ClassName" synthetic property
     }
+
+// ---- short circuiting decisions: in conditionals
+
+if (a?.b?.c) // short-circuit DEFINITELY doesn't go to the "then"
+    {
+    // ...
+    }
+
+if (var x : a?.b?.c()) // ... but does it go to the else?     (as if trailed by " : false")
+    {
+    // ...
+    }
+else
+    {
+    // does it come here? (GG: yes, CP: yes)
+    // NOTE: x is not definitely assigned
+    }
+
+if (var x : a?.b?.c())
+    {
+    // x is definitely assigned
+    // ...
+    }
+else
+    {
+    // short circuit comes here (this is potentially confusing, since it's not the inverse of the previous example)
+    // NOTE: x is not definitely assigned
+    }
+
+if (a != null)
+    {
+    if (a.b != null)
+        {
+        if (var x : a.b.c())
+            {
+            // then code
+            }
+        }
+
+
+if (a != null && a.b != null && a.b.c == "hello") // could be re-written: if (a?.b?.c == "hello")
+    {
+    // do something
+    }
+else
+    {
+    // do something else
+    }
+
+if (X) {} else {}
+
+if (a != null)
+    {
+    if (a.b != null)
+        {
+        if (a.b.c == "hello") // could be re-written: if (a?.b?.c == "hello")
+            {
+            }
+        else
+            {
+            // do something
+            }
+        }
+    else
+        {
+        // do something else
+        }
+    }
+else
+    {
+    // do something else
+    }
+
+if (a && b && c)
+    {
+    // then code
+    }
+else
+    {
+    // else code
+    }
+
+// compiles the EXACT same way as
+if (a)
+    {
+    if (b)
+        {
+        if (c)
+            {
+            // then code
+            }
+        else
+            {
+            // else code
+            }
+        }
+    else
+        {
+        // else code
+        }
+    }
+else
+    {
+    // else code
+    }
+
+// switch statement - similar idea, in that the short-circuit is grounded by the "expression portion"
+// of the statement, not the statement level itself (i.e. it doesn't skip the statement)
+switch (var x = a?.b?.c) // as if trailed by some "impossible other" value " : -99999999999999999999999.."
+    {
+    case 0:
+        // ...
+        break;
+    case 1,2:
+        // ...
+        break;
+    default:
+        // does it go here? (CP: yes, GG: yes)
+        // NOTE: x is not definitely assigned in the default branch
+        foo();
+        break;
+    }
+// or does it go here?
+
+// switch expression - same
+
+while () // .. same (as if trailed by " : false")
