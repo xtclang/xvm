@@ -199,93 +199,18 @@ public class NamedTypeExpression
                 {
                 throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
                 }
-            else if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
+
+            if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
                 {
                 // what is the "this:class"?
-                Component component = getComponent();
-                while (!(component instanceof ClassStructure))
-                    {
-                    component = component.getParent();
-                    }
-                ClassConstant constThisClass = (ClassConstant) component.getIdentityConstant();
-                ClassConstant constThatClass = (ClassConstant) constId;
+                ClassConstant constThisClass = (ClassConstant)
+                        getComponent().getContainingClass().getIdentityConstant();
 
-                // if "this:class" is the same as constId, then use ThisClassConstant(constId)
-                if (constThisClass.equals(constThatClass))
-                    {
-                    return new ThisClassConstant(pool(), constThisClass);
-                    }
-
-                // get the "outermost class" for both "this:class" and constId
-                ClassConstant constThisOutermost = constThisClass.getOutermost();
-                ClassConstant constThatOutermost = constThatClass.getOutermost();
-                if (constThisOutermost.equals(constThatOutermost))
-                    {
-                    // the two classes are related, so figure out how to describe "that" in relation
-                    // to "this"
-                    ConstantPool     pool       = pool();
-                    PseudoConstant   constPath  = new ThisClassConstant(pool, constThisClass);
-                    IdentityConstant constThis  = constThisClass;
-                    IdentityConstant constThat  = constThatClass;
-                    int              cThisDepth = constThisClass.getDepthFromOutermost();
-                    int              cThatDepth = constThatClass.getDepthFromOutermost();
-                    int              cReDescend = 0;
-                    while (cThisDepth > cThatDepth)
-                        {
-                        constPath = new ParentClassConstant(pool, constPath);
-                        constThis = constThis.getParentConstant();
-                        --cThisDepth;
-                        }
-                    while (cThatDepth > cThisDepth)
-                        {
-                        ++cReDescend;
-                        constThat = constThat.getParentConstant();
-                        --cThatDepth;
-                        }
-                    while (!constThis.equals(constThat))
-                        {
-                        assert cThisDepth == cThatDepth && cThisDepth >= 0;
-
-                        ++cReDescend;
-                        constPath = new ParentClassConstant(pool, constPath);
-
-                        constThis = constThis.getParentConstant();
-                        constThat = constThat.getParentConstant();
-                        --cThisDepth;
-                        --cThatDepth;
-                        }
-
-                    constId = redescend(constPath, constThatClass, cReDescend);
-                    }
+                return constThisClass.calculateAutoNarrowingConstant((ClassConstant) constId);
                 }
             }
 
         return constId;
-        }
-
-    /**
-     * Recursively build onto the passed path to navigate the specified number of levels down to the
-     * specified child.
-     *
-     * @param constPath   the path, thus far
-     * @param constChild  the child to navigate to
-     * @param cLevels     the number of levels down that the child is
-     *
-     * @return a PseudoConstant that represents the navigation down to the child
-     */
-    private PseudoConstant redescend(PseudoConstant constPath, IdentityConstant constChild, int cLevels)
-        {
-        if (cLevels == 0)
-            {
-            return constPath;
-            }
-
-        if (cLevels > 1)
-            {
-            constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
-            }
-
-        return new ChildClassConstant(pool(), constPath, constChild.getName());
         }
 
     /**
@@ -368,7 +293,7 @@ public class NamedTypeExpression
             constType = pool.ensureParameterizedTypeConstant(constType, aconstParams);
             }
 
-        if (access != null)
+        if (access != null && access != Access.PUBLIC)
             {
             constType = pool.ensureAccessTypeConstant(constType, access);
             }

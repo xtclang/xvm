@@ -70,7 +70,7 @@ public class AnnotationSupport
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("add", 2);
+        CallChain chain = getOpChain("add", 1);
         return chain == null
             ? f_support.invokeAdd(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -79,7 +79,7 @@ public class AnnotationSupport
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("sub", 2);
+        CallChain chain = getOpChain("sub", 1);
         return chain == null
             ? f_support.invokeSub(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -88,7 +88,7 @@ public class AnnotationSupport
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("mul", 2);
+        CallChain chain = getOpChain("mul", 1);
         return chain == null
             ? f_support.invokeMul(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -97,7 +97,7 @@ public class AnnotationSupport
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("div", 2);
+        CallChain chain = getOpChain("div", 1);
         return chain == null
             ? f_support.invokeDiv(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -106,7 +106,7 @@ public class AnnotationSupport
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("mod", 2);
+        CallChain chain = getOpChain("mod", 1);
         return chain == null
             ? f_support.invokeMod(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -115,7 +115,7 @@ public class AnnotationSupport
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("shiftLeft", 2);
+        CallChain chain = getOpChain("shiftLeft", 1);
         return chain == null
             ? f_support.invokeShl(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -124,7 +124,7 @@ public class AnnotationSupport
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("shiftRight", 2);
+        CallChain chain = getOpChain("shiftRight", 1);
         return chain == null
             ? f_support.invokeShr(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -133,7 +133,7 @@ public class AnnotationSupport
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("shiftAllRight", 2);
+        CallChain chain = getOpChain("shiftAllRight", 1);
         return chain == null
             ? f_support.invokeShrAll(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -142,7 +142,7 @@ public class AnnotationSupport
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("and", 2);
+        CallChain chain = getOpChain("and", 1);
         return chain == null
             ? f_support.invokeAnd(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -151,7 +151,7 @@ public class AnnotationSupport
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("or", 2);
+        CallChain chain = getOpChain("or", 1);
         return chain == null
             ? f_support.invokeOr(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -160,7 +160,7 @@ public class AnnotationSupport
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("xor", 2);
+        CallChain chain = getOpChain("xor", 1);
         return chain == null
             ? f_support.invokeXor(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -169,7 +169,7 @@ public class AnnotationSupport
     @Override
     public int invokeDivMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        CallChain chain = getOpChain("divmod", 2);
+        CallChain chain = getOpChain("divmod", 1);
         return chain == null
             ? f_support.invokeDivMod(frame, hTarget, hArg, aiReturn)
             : chain.invoke(frame, hTarget, hArg, aiReturn);
@@ -178,7 +178,7 @@ public class AnnotationSupport
     @Override
     public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        CallChain chain = getOpChain("through", 2);
+        CallChain chain = getOpChain("through", 1);
         return chain == null
             ? f_support.invokeDotDot(frame, hTarget, hArg, iReturn)
             : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -187,7 +187,7 @@ public class AnnotationSupport
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("neg", 1);
+        CallChain chain = getOpChain("neg", 0);
         return chain == null
             ? f_support.invokeNeg(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -196,7 +196,7 @@ public class AnnotationSupport
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("not", 1);
+        CallChain chain = getOpChain("not", 0);
         return chain == null
             ? f_support.invokeCompl(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -205,7 +205,7 @@ public class AnnotationSupport
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("next", 1);
+        CallChain chain = getOpChain("next", 0);
         return chain == null
             ? f_support.invokeNext(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -214,7 +214,7 @@ public class AnnotationSupport
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("prev", 1);
+        CallChain chain = getOpChain("prev", 0);
         return chain == null
             ? f_support.invokePrev(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -241,7 +241,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPreInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preInc", 1);
+        CallChain chain = getOpChain("preInc", 0);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -250,7 +250,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPostInc(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postInc", 1);
+        CallChain chain = getOpChain("postInc", 0);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -259,7 +259,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPreDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("preDec", 1);
+        CallChain chain = getOpChain("preDec", 0);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);
@@ -268,7 +268,7 @@ public class AnnotationSupport
     @Override
     public int invokeVarPostDec(Frame frame, RefHandle hTarget, int iReturn)
         {
-        CallChain chain = getOpChain("postDec", 1);
+        CallChain chain = getOpChain("postDec", 0);
         return chain == null
             ? ensureVarSupport().invokeVarPreInc(frame, hTarget, iReturn)
             : chain.invoke(frame, hTarget, iReturn);

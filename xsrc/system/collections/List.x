@@ -264,7 +264,7 @@ interface List<ElementType>
     /**
      * A SimpleCursor delegates all operations back to the List that created it.
      */
-    class SimpleCursor
+    class SimpleCursor<ElementType>
             implements Cursor<ElementType>
         {
         /**

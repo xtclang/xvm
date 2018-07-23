@@ -109,6 +109,96 @@ public class ClassConstant
             }
         }
 
+    /**
+     * Calculate an auto-narrowing constant that describes a "relative path" from this
+     * class constant to the specified one.
+     *
+     * @param constThatClass  the class constant to calculate the "path" for
+     *
+     * @return a PseudoConstant representing the path or the specified constant itself if no path
+     *         can be found
+     */
+    public Constant calculateAutoNarrowingConstant(ClassConstant constThatClass)
+        {
+        ClassConstant constThisClass = this;
+
+        // if "this:class" is the same as constId, then use ThisClassConstant(constId)
+        if (constThisClass.equals(constThatClass))
+            {
+            return new ThisClassConstant(getConstantPool(), constThisClass);
+            }
+
+        // get the "outermost class" for both "this:class" and constId
+        ClassConstant constThisOutermost = constThisClass.getOutermost();
+        ClassConstant constThatOutermost = constThatClass.getOutermost();
+        if (constThisOutermost.equals(constThatOutermost))
+            {
+            // the two classes are related, so figure out how to describe "that" in relation
+            // to "this"
+            ConstantPool     pool       = getConstantPool();
+            PseudoConstant   constPath  = new ThisClassConstant(pool, constThisClass);
+            IdentityConstant constThis  = constThisClass;
+            IdentityConstant constThat  = constThatClass;
+            int              cThisDepth = constThisClass.getDepthFromOutermost();
+            int              cThatDepth = constThatClass.getDepthFromOutermost();
+            int              cReDescend = 0;
+            while (cThisDepth > cThatDepth)
+                {
+                constPath = new ParentClassConstant(pool, constPath);
+                constThis = constThis.getParentConstant();
+                --cThisDepth;
+                }
+            while (cThatDepth > cThisDepth)
+                {
+                ++cReDescend;
+                constThat = constThat.getParentConstant();
+                --cThatDepth;
+                }
+            while (!constThis.equals(constThat))
+                {
+                assert cThisDepth == cThatDepth && cThisDepth >= 0;
+
+                ++cReDescend;
+                constPath = new ParentClassConstant(pool, constPath);
+
+                constThis = constThis.getParentConstant();
+                constThat = constThat.getParentConstant();
+                --cThisDepth;
+                --cThatDepth;
+                }
+
+            return redescend(constPath, constThatClass, cReDescend);
+            }
+
+        return constThatClass;
+        }
+
+
+    /**
+     * Recursively build onto the passed path to navigate the specified number of levels down to the
+     * specified child.
+     *
+     * @param constPath   the path, thus far
+     * @param constChild  the child to navigate to
+     * @param cLevels     the number of levels down that the child is
+     *
+     * @return a PseudoConstant that represents the navigation down to the child
+     */
+    private PseudoConstant redescend(PseudoConstant constPath, IdentityConstant constChild, int cLevels)
+        {
+        if (cLevels == 0)
+            {
+            return constPath;
+            }
+
+        if (cLevels > 1)
+            {
+            constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
+            }
+
+        return new ChildClassConstant(getConstantPool(), constPath, constChild.getName());
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

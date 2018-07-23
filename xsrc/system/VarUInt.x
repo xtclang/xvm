@@ -245,4 +245,42 @@ const VarUInt
         {
         TODO
         }
+
+    // ----- Sequential interface ------------------------------------------------------------------
+
+    /**
+     * Value increment. Never throws.
+     */
+    @Override
+    IntNumber nextValue()
+        {
+        return this + 1;
+        }
+
+    /**
+     * Value decrement. Never throws.
+     */
+    @Override
+    IntNumber prevValue()
+        {
+        return this - 1;
+        }
+
+    /**
+     * Checked value increment.
+     */
+    @Override
+    conditional IntNumber next()
+        {
+        return true, this + 1;
+        }
+
+    /**
+     * Checked value decrement.
+     */
+    @Override
+    conditional IntNumber prev()
+        {
+        return true, this - 1;
+        }
     }
