@@ -1558,7 +1558,7 @@ public class ConstantPool
         }
 
     /**
-     * Obtain an auto-narrowing class type that represents a non-static inner class child of the
+     * Obtain an auto-narrowing class type that represents an inner class child of the
      * specified auto-narrowing type.
      *
      * @param constParent  an auto-narrowing type constant
