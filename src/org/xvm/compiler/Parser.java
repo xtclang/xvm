@@ -2798,7 +2798,13 @@ public class Parser
         switch (peek().getId())
             {
             case IGNORED:
-                return new IgnoredNameExpression(current());
+                {
+                IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
+                return peek().getId() == Id.LAMBDA
+                        ? new LambdaExpression(Collections.singletonList(exprIgnore),
+                            expect(Id.LAMBDA), parseLambdaBody(), getLastMatch().getStartPosition())
+                        : exprIgnore;
+                }
 
             case NEW:
                 {
@@ -2986,7 +2992,7 @@ public class Parser
 
             case L_PAREN:
                 {
-                /// this could be a tuple literal, a parenthesized expression, or a lambda
+                // this could be a tuple literal, a parenthesized expression, or a lambda
                 // expression's parameter list
                 Token tokLParen = expect(Id.L_PAREN);
                 if (match(Id.R_PAREN) != null)

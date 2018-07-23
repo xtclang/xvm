@@ -878,4 +878,8 @@ public class Compiler
      * The variable {1} cannot be assigned to.
      */
     public static final String VAR_ASSIGNMENT_ILLEGAL             = "COMPILER-82";
+    /**
+     * Name required.
+     */
+    public static final String NAME_REQUIRED                      = "COMPILER-83";
     }

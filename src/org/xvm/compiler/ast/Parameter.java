@@ -36,7 +36,7 @@ public class Parameter
 
     public String getName()
         {
-        return (String) name.getValue();
+        return name.getValueText();
         }
 
     public Token getNameToken()

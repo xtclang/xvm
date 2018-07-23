@@ -127,6 +127,11 @@ public class MethodConstant
         return fLambda;
         }
 
+    public int getLambdaIndex()
+        {
+        return m_iLambda;
+        }
+
     /**
      * @return true iff the method is a nascent lambda (still in the process of being defined)
      */
@@ -389,7 +394,11 @@ public class MethodConstant
     @Override
     public MethodConstant resolveTypedefs()
         {
-        assert !isNascent();
+        if (isNascent())
+            {
+            return this;
+            }
+
         SignatureConstant sigOld = m_constSig;
         SignatureConstant sigNew = sigOld.resolveTypedefs();
         return sigNew == sigOld

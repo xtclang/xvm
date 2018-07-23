@@ -45,6 +45,15 @@ public class MultiMethodStructure
         }
 
 
+    // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    public MultiMethodConstant getIdentityConstant()
+        {
+        return (MultiMethodConstant) super.getIdentityConstant();
+        }
+
+
     // ----- Component methods ---------------------------------------------------------------------
 
     @Override
@@ -260,6 +269,49 @@ public class MultiMethodStructure
                 getIdentityConstant(), getName(), aconstParams, aconstReturns);
         MethodStructure struct = new MethodStructure(this, nFlags, constId, null, annotations,
                 aReturns, aParams, fHasCode, fUsesSuper);
+        addChild(struct);
+        return struct;
+        }
+
+    /**
+     * Create the MethodStructure for a lambda.
+     *
+     * @param atypeParams the type of each declared parameter (optional)
+     * @param asParams    the name of each declared parameter (null is permitted if none)
+     *
+     * @return a MethodStructure for the lambda
+     */
+    public MethodStructure createLambda(TypeConstant[] atypeParams, String[] asParams)
+        {
+        assert getName().equals("->");
+
+        int nMax = 0;
+        for (MethodConstant id : ensureMethodByConstantMap().keySet())
+            {
+            nMax = Math.max(nMax, id.getLambdaIndex());
+            }
+
+        ConstantPool pool    = getConstantPool();
+        int          cParams = asParams == null ? 0 : asParams.length;
+        Parameter[]  aParams = Parameter.NO_PARAMS;
+        if (cParams > 0)
+            {
+            aParams = new Parameter[cParams];
+
+            int cTypes = atypeParams == null ? 0 : atypeParams.length;
+            assert cTypes == 0 || cTypes == cParams;
+
+            for (int i = 0; i < cParams; ++i)
+                {
+                TypeConstant type = i < cTypes ? atypeParams[i] : pool.typeObject();
+                aParams[i] = new Parameter(pool, type, asParams[i], null, false, i, false);
+                }
+            }
+
+        MethodConstant id = new MethodConstant(pool, getIdentityConstant(), nMax + 1);
+        int nFlags = Format.METHOD.ordinal() | Component.ACCESS_PRIVATE | Component.STATIC_BIT;
+        MethodStructure struct = new MethodStructure(this, nFlags, id, null,
+                Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, aParams, true, false);
         addChild(struct);
         return struct;
         }

@@ -1293,7 +1293,7 @@ public class MethodStructure
           .append("\", id=\"")
           .append(getIdentityConstant().getValueString())
           .append("\", sig=")
-          .append(getIdentityConstant().getSignature());
+          .append(getIdentityConstant().isNascent() ? "n/a" : getIdentityConstant().getSignature());
 
         if (isNative())
             {

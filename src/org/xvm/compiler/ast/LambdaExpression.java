@@ -12,9 +12,13 @@ import org.xvm.asm.MultiMethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
+
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -90,15 +94,47 @@ public class LambdaExpression
         {
         if (m_lambda == null)
             {
-            Component            parent   = getComponent();
-// TODO
-//            MultiMethodStructure structMM = parent.ensureMultiMethodStructure(METHOD_NAME);
-//            MethodStructure      lambda   = new MethodStructure(structMM, );
-//            protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
-//                    ConditionalConstant condition, Annotation[] annotations,
-//                    Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper)
-//            structMM.addC
-//            m_lambda = new MethodStructure()
+            TypeConstant[] atypes   = null;
+            String[]       asParams = null;
+            if (paramNames == null)
+                {
+                // build an array of types and an array of names
+                int cParams = params == null ? 0 : params.size();
+                atypes   = new TypeConstant[cParams];
+                asParams = new String[cParams];
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    Parameter param = params.get(i);
+                    atypes  [i] = param.getType().ensureTypeConstant();
+                    asParams[i] = param.getName();
+                    }
+                }
+            else
+                {
+                // build an array of names
+                int cParams = paramNames.size();
+                asParams = new String[cParams];
+                for (int i = 0; i < cParams; ++i)
+                    {
+                    Expression expr = paramNames.get(i);
+                    if (expr instanceof NameExpression)
+                        {
+                        // note: could also be an IgnoredNameExpression
+                        asParams[i] = ((NameExpression) expr).getName();
+                        }
+                    else
+                        {
+                        expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
+                        asParams[i] = Id.IGNORED.TEXT;
+                        }
+                    }
+                }
+
+            Component            container = getParent().getComponent();
+            MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
+            MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
+            // TODO
+            m_lambda = lambda;
             }
 
         super.registerStructures(mgr, errs);
@@ -110,27 +146,25 @@ public class LambdaExpression
         super.resolveNames(mgr, errs);
         }
 
-    // TODO
-
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
+        // TODO
         return super.getImplicitType(ctx);
         }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
+        // TODO
         return super.testFit(ctx, typeRequired);
         }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired,
-            ErrorListener errs)
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         // TODO at the end of validate, we build the lambda signature, and set it on the MethodConstant
-
-        return super.validateMulti(ctx, atypeRequired, errs);
+        return super.validate(ctx, typeRequired, errs);
         }
 
 
