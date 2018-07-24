@@ -124,7 +124,7 @@ public class ImmutableTypeConstant
     protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft, ContributionChain chain)
         {
         // the l-value (this) is immutable; so should be the r-value (that)
-        return typeRight.isImmutabilitySpecified()
+        return typeRight.isImmutable()
             && super.validateContributionFrom(typeRight, accessLeft, chain);
         }
 

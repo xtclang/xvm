@@ -3416,12 +3416,15 @@ public abstract class TypeConstant
             mapRelations.put(typeLeft, Relation.IN_PROGRESS);
             try
                 {
-                List<ContributionChain> chains = this.collectContributions(typeLeft,
-                    new ArrayList<>(), new ArrayList<>());
+                TypeConstant typeLeftResolved  = typeLeft.resolveTypedefs();
+                TypeConstant typeRightResolved = this.resolveTypedefs();
+
+                List<ContributionChain> chains = typeRightResolved.collectContributions(
+                    typeLeftResolved, new ArrayList<>(), new ArrayList<>());
 
                 relation = chains.isEmpty()
                     ? Relation.INCOMPATIBLE
-                    : validateChains(chains, this, typeLeft);
+                    : validateChains(chains, typeRightResolved, typeLeftResolved);
 
                 mapRelations.put(typeLeft, relation);
                 }

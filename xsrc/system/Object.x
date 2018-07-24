@@ -12,7 +12,7 @@ class Object
     /**
      * The meta-data for each object is represented by the Meta interface.
      */
-    @Inject protected Meta<Object:public, Object:protected, Object:private> meta;
+    @Inject protected Meta<Object:public, Object:protected, Object:private, Object:struct> meta;
 
     /**
      * By default, comparing any two objects will only result in equality if they are the

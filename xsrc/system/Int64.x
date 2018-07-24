@@ -191,4 +191,56 @@ const Int64
     // TODO Byte[] to<Byte[]>()
 
     // TODO to...
+
+    // ----- Sequential interface ------------------------------------------------------------------
+
+    /**
+     * Integer increment.
+     *
+     * @throws BoundsException if _this_ is the maximum value
+     */
+    @Override
+    IntNumber nextValue()
+        {
+        return this + 1;
+        }
+
+    /**
+     * Integer decrement.
+     *
+     * @throws BoundsException if _this_ is the minimum value
+     */
+    @Override
+    IntNumber prevValue()
+        {
+        return this - 1;
+        }
+
+    /**
+     * Checked integer increment.
+     */
+    @Override
+    conditional IntNumber next()
+        {
+        if (this < maxvalue)
+            {
+            return true, this + 1;
+            }
+
+        return false;
+        }
+
+    /**
+     * Checked integer decrement.
+     */
+    @Override
+    conditional IntNumber prev()
+        {
+        if (this > minvalue)
+            {
+            return true, this - 1;
+            }
+
+        return false;
+        }
     }

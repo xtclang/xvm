@@ -188,10 +188,10 @@ public class ClassStructure
     public Map<StringConstant, TypeConstant> getTypeParams()
         {
         Map<StringConstant, TypeConstant> mapParent = Collections.EMPTY_MAP;
-        if (!isStatic())
+        if (!isStatic() && getFormat() != Format.INTERFACE)
             {
             Component parent = getParent();
-            if (parent instanceof ClassStructure)
+            if (parent instanceof ClassStructure && parent.getFormat() != Format.INTERFACE)
                 {
                 mapParent = ((ClassStructure) parent).getTypeParams();
                 }
@@ -1041,7 +1041,13 @@ public class ClassStructure
     protected boolean producesFormalTypeImpl(String sName, Access access,
                                              List<TypeConstant> listActual, boolean fAllowInto)
         {
-        assert indexOfGenericParameter(sName) >= 0;
+        if (indexOfGenericParameter(sName) < 0)
+            {
+            // soft assert; this should be reported by the parser
+            System.err.println("Invalid formal parameter: " + sName +
+                               " passed to " + ClassStructure.this);
+            return false;
+            }
 
         for (Component child : children())
             {
@@ -1641,9 +1647,9 @@ public class ClassStructure
                 int cActual = listActual.size();
                 if (cFormal < cActual)
                     {
-                    throw new IllegalArgumentException(
-                        "Too many parameters: " + listActual +
-                        " passed to " + ClassStructure.this);
+                    // soft assert; this should be reported by the parser
+                    System.err.println("Too many parameters: " + listActual +
+                                       " passed to " + ClassStructure.this);
                     }
                 else if (cFormal > cActual)
                     {

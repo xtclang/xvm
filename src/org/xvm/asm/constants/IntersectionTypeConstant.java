@@ -153,7 +153,7 @@ public class IntersectionTypeConstant
         TypeInfo info1 = getUnderlyingType().ensureTypeInfo(errs);
         TypeInfo info2 = getUnderlyingType2().ensureTypeInfo(errs);
         // TODO CP
-        return info1;
+        return getConstantPool().typeObject().ensureTypeInfo(errs);
         }
 
 

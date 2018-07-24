@@ -553,7 +553,7 @@ public class PackedInteger
     /**
      * Write a PackedInteger to a stream.
      *
-     * @param out  a DataOutut stream to write to
+     * @param out  a DataOutput stream to write to
      *
      * @throws IOException  if an I/O exception occurs while writing the data
      */

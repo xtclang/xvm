@@ -571,6 +571,8 @@ interface Stream<ElementType>
          */
         static const SimpleCollector<ElementType, AccumulationType, ResultType>
             (Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
-                implements Collector<ElementType, AccumulationType, ResultType>;
+                implements Collector<ElementType, AccumulationType, ResultType>
+            {
+            }
         }
     }
