@@ -296,17 +296,8 @@ public abstract class TypeConstant
      */
     public TypeConstant getGenericParamType(String sName)
         {
-        if (isSingleDefiningConstant())
+        if (isSingleUnderlyingClass(true))
             {
-            TypeInfo info = getTypeInfo();
-            if (info != null && info.getProgress() == Progress.Complete)
-                {
-                ParamInfo param = info.getTypeParams().get(sName);
-                return param != null && param.isActualTypeSpecified()
-                        ? param.getActualType()
-                        : null;
-                }
-
             // because isA() uses this method, there is a chicken-and-egg problem, so instead of
             // materializing the TypeInfo at this point, just answer the question without it
             ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
@@ -751,6 +742,24 @@ public abstract class TypeConstant
         if (info == null)
             {
             validate(errs);
+
+            // resolve the type to make sure that typedefs etc. are removed from the equation
+            TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
+            if (typeResolved != this)
+                {
+                info = typeResolved.ensureTypeInfo(errs);
+                setTypeInfo(info);
+                return info;
+                }
+
+            // normalize the type to make sure that all formal parameters are filled in
+            TypeConstant typeNormalized = normalizeParameters();
+            if (typeNormalized != this)
+                {
+                info = typeNormalized.ensureTypeInfo(errs);
+                setTypeInfo(info);
+                return info;
+                }
             }
 
         // this is where things get very, very complicated. this method is responsible for returning
@@ -955,13 +964,6 @@ public abstract class TypeConstant
      */
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        // resolve the type to make sure that typedefs etc. are removed from the equation
-        TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
-        if (typeResolved != this)
-            {
-            return typeResolved.buildTypeInfo(errs);
-            }
-
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
         switch (getAccess())
@@ -1014,7 +1016,7 @@ public abstract class TypeConstant
         List<Contribution> listProcess  = new ArrayList<>();
         List<Annotation>   listAnnos    = new ArrayList<>();
         TypeConstant[]     atypeSpecial = createContributionList(
-                constId, struct, listProcess, listAnnos, resolver, errs);
+                constId, struct, listProcess, listAnnos, errs);
         TypeConstant typeInto    = atypeSpecial[0];
         TypeConstant typeExtends = atypeSpecial[1];
         TypeConstant typeRebase  = atypeSpecial[2];
@@ -1198,7 +1200,7 @@ public abstract class TypeConstant
             Map<Object, ParamInfo> mapTypeParams,
             ErrorListener          errs)
         {
-        TypeResolver resolver = new TypeResolver(constId, mapTypeParams, errs);
+        TypeResolver resolver = new TypeResolver(this, constId, mapTypeParams, errs);
 
         // obtain the type parameters encoded in this type constant
         TypeConstant[] atypeParams = getParamTypesArray();
@@ -1235,6 +1237,9 @@ public abstract class TypeConstant
                     }
                 }
 
+            // normalization is equivalent to calling getFormalType().resolveGenerics(this);
+            TypeConstant typeNormalized = this.normalizeParameters();
+
             for (int i = 0; i < cClassParams; ++i)
                 {
                 Entry<StringConstant, TypeConstant> entryClassParam = listClassParams.get(i);
@@ -1242,17 +1247,14 @@ public abstract class TypeConstant
                 TypeConstant                        typeConstraint  = entryClassParam.getValue();
                 TypeConstant                        typeActual      = null;
 
-                // resolve any generics in the type constraint
-                typeConstraint = typeConstraint.resolveGenerics(resolver);
+                // resolve any generic dependencies in the type constraint
+                typeConstraint = typeConstraint.resolveGenerics(typeNormalized);
 
                 // validate the actual type, if there is one
                 if (i < cTypeParams)
                     {
                     typeActual = atypeParams[i];
                     assert typeActual != null;
-
-                    // the actual type of the type parameter may refer to other type parameters
-                    typeActual = typeActual.resolveGenerics(resolver);
 
                     if (!typeActual.isA(typeConstraint))
                         {
@@ -1282,7 +1284,6 @@ public abstract class TypeConstant
      * @param listProcess  a list of contributions, which will be filled by this method in the
      *                     order that they should be processed
      * @param listAnnos    a list of annotations, which will be filled by this method
-     * @param resolver     the GenericTypeResolver for the type
      * @param errs         the error list to log to
      *
      * @return an array containing the "into", "extends" and "rebase" types
@@ -1292,7 +1293,6 @@ public abstract class TypeConstant
             ClassStructure      struct,
             List<Contribution>  listProcess,
             List<Annotation>    listAnnos,
-            GenericTypeResolver resolver,
             ErrorListener       errs)
         {
         // glue any annotations from the type constant onto the front of the contribution list
@@ -1398,7 +1398,7 @@ public abstract class TypeConstant
                 }
 
             // has to be an explicit class identity
-            TypeConstant typeMixin = contrib.getTypeConstant();
+            TypeConstant typeMixin = contrib.resolveGenerics(this);
             if (!typeMixin.isExplicitClassIdentity(false))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
@@ -1507,7 +1507,7 @@ public abstract class TypeConstant
                     }
 
                 // the "extends" clause must specify a class identity
-                typeExtends = contrib.resolveGenerics(resolver);
+                typeExtends = contrib.resolveGenerics(this);
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1558,7 +1558,7 @@ public abstract class TypeConstant
                 if (fInto)
                     {
                     ++iContrib;
-                    typeInto = contrib.resolveGenerics(resolver);
+                    typeInto = contrib.resolveGenerics(this);
 
                     // load the next contribution
                     contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
@@ -1570,7 +1570,7 @@ public abstract class TypeConstant
                     {
                     ++iContrib;
 
-                    typeExtends = contrib.resolveGenerics(resolver);
+                    typeExtends = contrib.resolveGenerics(this);
                     if (!typeExtends.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1875,7 +1875,7 @@ public abstract class TypeConstant
                 case Into:
                     {
                     // append to the call chain
-                    TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved generics!
+                    TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
                     TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
 
                     if (infoContrib == null)
@@ -2867,10 +2867,6 @@ public abstract class TypeConstant
                 resolver.registerParamInfo(nidParam, param);
                 mapProps.put(idParam, propParam);
                 }
-
-            // we're about to go down inside of the property, so create a type resolver that knows
-            // how to resolve the property's type params (specifically, "RefType")
-            resolver = info.new TypeResolver(resolver);
             }
 
         // recurse through children

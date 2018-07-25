@@ -105,7 +105,7 @@ public class PropertyInfo
             }
 
         // types must match
-        if (!this.getType().isA(that.getType()))
+        if (!that.getType().isA(this.getType()))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                     constId.getValueString(),
@@ -1203,67 +1203,6 @@ public class PropertyInfo
             }
 
         return sb.toString();
-        }
-
-
-    // ----- inner class: TypeResolver -------------------------------------------------------------
-
-    /**
-     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
-     */
-    public class TypeResolver
-            implements TypeInfo.TypeResolver
-        {
-        /**
-         * Construct a GenericTypeResolver that will use the enclosing property as its source of
-         * type resolution information for the "RefType" type parameter, while delegating all other
-         * type resolution to the passed type resolver.
-         *
-         * @param resolver  a resolver to delegate most requests to
-         */
-        public TypeResolver(TypeInfo.TypeResolver resolver)
-            {
-            assert resolver != null;
-
-            this.resolver = resolver;
-            }
-
-        @Override
-        public TypeConstant resolveGenericType(PropertyConstant constProperty)
-            {
-            // TODO this may suffice for the time being, but is not necessarily correct, as there
-            //      may conceivably be other type parameters on the property, and there is a
-            //      possibility of the passed property identifying a _different_ RefType type param
-            //      than the one that we assume (need to check the full identity?)
-
-            return constProperty.getName().equals("RefType")
-                    ? PropertyInfo.this.getType()
-                    : resolver.resolveGenericType(constProperty);
-            }
-
-        @Override
-        public ParamInfo findParamInfo(Object nid)
-            {
-            // REVIEW: is this really necessary?
-            if (nid instanceof String && nid.equals("RefType"))
-                {
-                PropertyConstant id = PropertyInfo.this.getIdentity();
-                nid = id.getConstantPool().ensurePropertyConstant(id, "RefType").getNestedIdentity();
-                }
-
-            return resolver.findParamInfo(nid);
-            }
-
-        @Override
-        public void registerParamInfo(Object nid, ParamInfo param)
-            {
-            resolver.registerParamInfo(nid, param);
-            }
-
-        /*
-         * The resolver to delegate to.
-         */
-        public final TypeInfo.TypeResolver resolver;
         }
 
 

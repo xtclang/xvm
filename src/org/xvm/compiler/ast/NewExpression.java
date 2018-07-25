@@ -10,6 +10,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
@@ -154,8 +155,34 @@ public class NewExpression
             throw new UnsupportedOperationException("anonymous inner class type");
             }
 
-        // REVIEW: if (left != null)
-        return getTypeExpression().ensureTypeConstant();
+        TypeConstant typeTarget = getTypeExpression().ensureTypeConstant();
+        if (!typeTarget.isSingleUnderlyingClass(false))
+            {
+            // not a class; will report an error later
+            return null;
+            }
+
+        ClassConstant clzTarget = (ClassConstant) typeTarget.getSingleUnderlyingClass(false);
+        ClassConstant clzParent;
+        if (left == null)
+            {
+            clzParent = (ClassConstant) getComponent().getContainingClass().getIdentityConstant();
+            }
+        else
+            {
+            TypeConstant typeParent = left.getImplicitType(ctx);
+            if (!typeParent.isSingleUnderlyingClass(false))
+                {
+                // left must be a class; will report an error later
+                return null;
+                }
+
+            clzParent = (ClassConstant) typeParent.getSingleUnderlyingClass(false);
+            }
+
+        return clzParent.equals(clzTarget)
+            ? typeTarget
+            : clzParent.calculateAutoNarrowingConstant(clzTarget).getType();
         }
 
     @Override

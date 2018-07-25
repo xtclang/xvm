@@ -143,11 +143,12 @@ public class ParamInfo
          * @param parameters  a map from nested identity (parameter name) to ParamInfo
          * @param errs        the error listener to log any errors to
          */
-        public TypeResolver(IdentityConstant idTarget, Map<Object, ParamInfo> parameters, ErrorListener errs)
+        public TypeResolver(TypeConstant typeTarget, IdentityConstant idTarget, Map<Object, ParamInfo> parameters, ErrorListener errs)
             {
             assert parameters != null;
             assert errs != null;
 
+            this.typeTarget = typeTarget;
             this.idTarget   = idTarget instanceof NativeRebaseConstant
                                 ? ((NativeRebaseConstant) idTarget).getClassConstant()
                                 : idTarget;
@@ -161,11 +162,7 @@ public class ParamInfo
             // substitute only if "in the same context"
             if (constProperty.getParentConstant().equals(idTarget))
                 {
-                ParamInfo info = parameters.get(constProperty.getName());
-                if (info != null && info.isActualTypeSpecified())
-                    {
-                    return info.getActualType();
-                    }
+                return typeTarget.resolveGenericType(constProperty);
                 }
             return null;
             }
@@ -182,6 +179,7 @@ public class ParamInfo
             parameters.put(nid, param);
             }
 
+        public final TypeConstant typeTarget;
         public final IdentityConstant idTarget;
 
         /*

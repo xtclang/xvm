@@ -219,7 +219,6 @@ class ExtHashMap<KeyType, ValueType>
      */
     class HashEntrySet
             extends KeyBasedEntriesSet<KeyType, ValueType>
-            implements Set<HashEntry>
         {
         @Override
         Iterator<HashEntry> iterator()
@@ -383,7 +382,7 @@ class ExtHashMap<KeyType, ValueType>
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry
-            extends Map.KeyBasedEntry
+            extends Map.KeyBasedEntry<KeyType, ValueType>
         {
         @Override
         HashEntry reify()

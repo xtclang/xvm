@@ -378,7 +378,7 @@ public class TypeInfo
         if (resolver == null || resolver.errs != errs)
             {
             m_resolver = resolver = new ParamInfo.TypeResolver(
-                    m_struct.getIdentityConstant(), m_mapTypeParams, errs);
+                    m_type, m_struct.getIdentityConstant(), m_mapTypeParams, errs);
             }
         return resolver;
         }

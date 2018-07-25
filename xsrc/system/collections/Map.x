@@ -655,7 +655,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> remove(Entry<KeyType, ValueType> entry)
+        KeyBasedEntriesSet remove(Entry<KeyType, ValueType> entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
@@ -668,8 +668,8 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Set<Entry<KeyType, ValueType>>
-        removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
+        conditional KeyBasedEntriesSet removeIf(
+                function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
@@ -683,7 +683,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Set<Entry<KeyType, ValueType>> clear()
+        conditional KeyBasedEntriesSet clear()
             {
             if (Map newMap : Map.this.clear())
                 {
@@ -700,7 +700,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        KeyBasedEntriesSet<Entry<KeyType, ValueType>> clone()
+        KeyBasedEntriesSet clone()
             {
             return this;
             }
