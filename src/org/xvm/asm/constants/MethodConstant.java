@@ -256,6 +256,12 @@ public class MethodConstant
     public Object resolveNestedIdentity(GenericTypeResolver resolver)
         {
         // REVIEW: should we resolveAutoNarrowing()
+        if (getComponent() == null)
+            {
+            // absence of the Component means that this constant is synthetic (e.g. a "capped" method)
+            // and as such, already resolved
+            resolver = null;
+            }
         return getNamespace().isNested()
                 ? new NestedIdentity(resolver)
                 : getSignature().resolveGenericTypes(resolver);

@@ -1,10 +1,7 @@
 package org.xvm.asm.constants;
 
 
-import java.util.Map;
-
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ErrorListener;
 
 
 /**
@@ -124,73 +121,6 @@ public class ParamInfo
         sb.append(">");
 
         return sb.toString();
-        }
-
-
-    // ----- inner class: TypeResolver -------------------------------------------------------------
-
-    /**
-     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
-     */
-    public static class TypeResolver
-            implements TypeInfo.TypeResolver
-        {
-        /**
-         * Construct a GenericTypeResolver that will use the passed map as its source of type
-         * resolution information, reporting any errors to the passed error list.
-         *
-         * @param idTarget    the identity of the component in which context the resolver operates
-         * @param parameters  a map from nested identity (parameter name) to ParamInfo
-         * @param errs        the error listener to log any errors to
-         */
-        public TypeResolver(TypeConstant typeTarget, IdentityConstant idTarget, Map<Object, ParamInfo> parameters, ErrorListener errs)
-            {
-            assert parameters != null;
-            assert errs != null;
-
-            this.typeTarget = typeTarget;
-            this.idTarget   = idTarget instanceof NativeRebaseConstant
-                                ? ((NativeRebaseConstant) idTarget).getClassConstant()
-                                : idTarget;
-            this.parameters = parameters;
-            this.errs       = errs;
-            }
-
-        @Override
-        public TypeConstant resolveGenericType(PropertyConstant constProperty)
-            {
-            // substitute only if "in the same context"
-            if (constProperty.getParentConstant().equals(idTarget))
-                {
-                return typeTarget.resolveGenericType(constProperty);
-                }
-            return null;
-            }
-
-        @Override
-        public ParamInfo findParamInfo(Object nid)
-            {
-            return parameters.get(nid);
-            }
-
-        @Override
-        public void registerParamInfo(Object nid, ParamInfo param)
-            {
-            parameters.put(nid, param);
-            }
-
-        public final TypeConstant typeTarget;
-        public final IdentityConstant idTarget;
-
-        /*
-         * The map from parameter name to ParamInfo to use to resolve generic types.
-         */
-        public final Map<Object, ParamInfo> parameters;
-
-        /*
-         * The error listener to log any errors to.
-         */
-        public final ErrorListener errs;
         }
 
 

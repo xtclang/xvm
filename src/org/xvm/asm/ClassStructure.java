@@ -787,6 +787,7 @@ public class ClassStructure
                 // TODO: how do we process relational types?
                 continue;
                 }
+
             List<TypeConstant> listContribTypes =
                 contrib.transformActualTypes(this, listActual);
             if (listContribTypes == null)
