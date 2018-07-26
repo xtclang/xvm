@@ -44,12 +44,12 @@ const Int64
     /**
      * The minimum value for an Int64.
      */
-    static IntLiteral minvalue = 0; // TODO -0x8000000000000000;
+    static IntLiteral minvalue = -0x8000000000000000;
 
     /**
      * The maximum value for an Int64.
      */
-    static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
+    static IntLiteral maxvalue = 0x7FFFFFFFFFFFFFFF;
 
     @RO UInt64 magnitude.get()
         {
