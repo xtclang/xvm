@@ -265,10 +265,17 @@ public class Register
         }
 
     /**
+     * Force the register to be treated as effectively final from this point forward.
+     */
+    public void markEffectivelyFinal()
+        {
+        m_fRO               = true;
+        m_fEffectivelyFinal = true;
+        }
+
+    /**
      * Determine if this register is writable. This is equivalent to the Ref for the register
      * supporting the set() operation.
-     *
-     * TODO the registers for the parameters need to use the special constructor with readonly=true (currently no registers are created for parameters)
      *
      * @return true iff this register is writable
      */
@@ -277,10 +284,9 @@ public class Register
         return !m_fRO;
         }
 
-    public boolean isConstant()
+    public boolean isEffectivelyFinal()
         {
-        // TODO for "val" types, this returns true
-        return false;
+        return m_fEffectivelyFinal;
         }
 
     /**
@@ -302,12 +308,16 @@ public class Register
               .append(' ');
             }
 
-        sb.append(getIdString());
-
-        if (m_fRO)
+        if (m_fEffectivelyFinal)
             {
-            sb.append(" (Read-Only)");
+            sb.append("@Final ");
             }
+        else if (m_fRO)
+            {
+            sb.append("@RO ");
+            }
+
+        sb.append(getIdString());
 
         return sb.toString();
         }
@@ -369,6 +379,98 @@ public class Register
         }
 
 
+    // ----- inner class: Assignment ---------------------------------------------------------------
+
+    /**
+     * The Assignment enumeration represents the various possible states of a variable's assignment.
+     * <p/>
+     * Specifically:
+     * <ul>
+     * <li>If the variable is known to be definitely unassigned;</li>
+     * <li>If the variable is known to be definitely assigned;</li>
+     * <li>If the variable is known to be effectively final.</li>
+     * </ul>
+     */
+    public enum Assignment
+        {
+        //           def    def    eff
+        //           unasn  asn    final
+        //           -----  -----  -----
+        Unassigned  (true , false, false),      // definitely unassigned
+        UnknownOnce (false, false, true ),      // not definitely assigned; effectively final
+        UnknownMulti(false, false, false),      // not definitely assigned
+        Assigned    (false, true , false),      // definitely assigned
+        AssignedOnce(false, true , true );      // definitely assigned; effectively final
+
+        private Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce)
+            {
+            assert !(fAssigned & fUnassigned);
+
+            this.fUnassigned  = fUnassigned;
+            this.fAssigned    = fAssigned;
+            this.fExactlyOnce = fExactlyOnce;
+            }
+
+        public boolean isDefinitelyUnassigned()
+            {
+            return fUnassigned;
+            }
+
+        public boolean isDefinitelyAssigned()
+            {
+            return fAssigned;
+            }
+
+        public boolean isEffectivelyFinal()
+            {
+            return fExactlyOnce;
+            }
+
+        public Assignment applyAssignment()
+            {
+            switch (this)
+                {
+                case Unassigned:    return AssignedOnce;
+                case UnknownOnce:   return Assigned;
+                case UnknownMulti:  return Assigned;
+                case Assigned:      return Assigned;
+                case AssignedOnce:  return Assigned;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * Apply a potentially asynchronous assignment that occurs from a lambda or anonymous inner
+         * cass via a variable capture. Because the assignment is potentially asynchronous, its
+         * outcome may be indeterminate.
+         *
+         * @return the resulting Assignment state
+         */
+        public Assignment applyAssignmentFromCapture()
+            {
+            switch (this)
+                {
+                case Unassigned:    return UnknownMulti;
+                case UnknownOnce:   return UnknownMulti;
+                case UnknownMulti:  return UnknownMulti;
+                case Assigned:      return Assigned;
+                case AssignedOnce:  return Assigned;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        // TODO? public Assignment applyJoin(Assignment... )
+
+        private final boolean fUnassigned;
+        private final boolean fAssigned;
+        private final boolean fExactlyOnce;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -405,4 +507,9 @@ public class Register
      * Read-only flag.
      */
     private boolean m_fRO;
+
+    /**
+     * Effectively final flag.
+     */
+    private boolean m_fEffectivelyFinal;
     }

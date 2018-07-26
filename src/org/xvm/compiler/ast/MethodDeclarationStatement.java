@@ -446,22 +446,14 @@ public class MethodDeclarationStatement
                 {
                 body.compileMethod(code, errsTemp);
 
-                // TODO: temporary
-                if (errsTemp.getErrors().isEmpty()) // TODO GG use errsTemp.getSeverity()
+                // copy over errors
+                for (ErrorInfo info : errsTemp.getErrors())
                     {
-                    if (sPath.contains("Test"))
-                        {
-                        if (sPath.contains("ExpectedFailure"))
-                            {
-                            System.err.println("Compilation should have failed: " + sPath);
-                            }
-                        else
-                            {
-                            System.out.println("Successfully compiled: " + sPath);
-                            }
-                        }
+                    errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
                     }
-                else
+
+                // TODO: temporary
+                if (errsTemp.getSeriousErrorCount() > 0)
                     {
                     mgr.deferChildren();
                     if (System.getProperty("GG") != null)
@@ -482,11 +474,19 @@ public class MethodDeclarationStatement
                             }
                         errsTemp.clear();
                         }
-
-                    // copy over errors
-                    for (ErrorInfo info : errsTemp.getErrors())
+                    }
+                else
+                    {
+                    if (sPath.contains("Test"))
                         {
-                        errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
+                        if (sPath.contains("ExpectedFailure"))
+                            {
+                            System.err.println("Compilation should have failed: " + sPath);
+                            }
+                        else
+                            {
+                            System.out.println("Successfully compiled: " + sPath);
+                            }
                         }
                     }
                 }

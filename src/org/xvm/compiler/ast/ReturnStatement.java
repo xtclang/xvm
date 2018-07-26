@@ -100,8 +100,17 @@ public class ReturnStatement
             }
         else if (container instanceof LambdaExpression)
             {
-            // TODO
-            throw new UnsupportedOperationException("TODO:Lambda");
+            LambdaExpression expr         = (LambdaExpression) container;
+            TypeConstant     typeRequired = expr.getRequiredType();
+            if (typeRequired == null)
+                {
+                // part of the purpose of validating this statement is to determine the return type
+                // of the enclosing LambdaExpression, so assume a single value of any type
+                typeRequired = pool().typeObject();
+                }
+
+            aRetTypes    = new TypeConstant[] {typeRequired};
+            fConditional = false;
             }
         else if (container instanceof StatementExpression)
             {
@@ -251,8 +260,7 @@ public class ReturnStatement
             {
             if (container instanceof LambdaExpression)
                 {
-                // TODO
-                throw new UnsupportedOperationException("TODO:Lambda");
+                ((LambdaExpression) container).addReturnType(listExprs.get(0).getType());
                 }
             else if (container instanceof StatementExpression)
                 {
