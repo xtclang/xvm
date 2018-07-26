@@ -668,17 +668,11 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Set<Entry<KeyType, ValueType>>
-        removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
+        conditional Set<Entry<KeyType, ValueType>> removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
-            Set<KeyType> newKeys = oldKeys.removeIf(key ->
-                {
-                static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
-                return shouldRemove(entry.advance(key));
-                });
+            Set<KeyType> newKeys = oldKeys.removeIf(key -> shouldRemove(new KeyBasedCursorEntry(key)));
             assert &newKeys == &oldKeys;
-
             return this;
             }
 
@@ -771,6 +765,11 @@ interface Map<KeyType, ValueType>
     class KeyBasedCursorEntry<KeyType, ValueType>
             extends KeyBasedEntry<KeyType, ValueType>
         {
+        construct(KeyType key)
+            {
+            construct KeyBasedEntry(key);
+            }
+
         /**
          * Specify the new "cursor key" for this Entry.
          *

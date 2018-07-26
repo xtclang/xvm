@@ -3,11 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -16,6 +18,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.Statement.CaptureContext;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -92,6 +95,8 @@ public class LambdaExpression
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
+        checkDebug();
+
         if (m_lambda == null)
             {
             TypeConstant[] atypes   = null;
@@ -143,28 +148,174 @@ public class LambdaExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
+        checkDebug();
+
         super.resolveNames(mgr, errs);
+        }
+
+    @Override
+    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+        {
+        checkDebug();
+
+        super.validateExpressions(mgr, errs);
+        }
+
+    @Override
+    public void generateCode(StageMgr mgr, ErrorListener errs)
+        {
+        checkDebug();
+
+        super.generateCode(mgr, errs);
         }
 
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        // TODO
-        return super.getImplicitType(ctx);
+        checkDebug(); // TODO remove
+
+        assert m_typeRequired == null && m_listRetTypes == null;
+        if (isValidated())
+            {
+            return getType();
+            }
+
+        // clone the body (to avoid damaging the original) and validate it to calculate its type
+        StatementBlock blockTemp = (StatementBlock) body.clone();
+
+        // the resulting returned types come back in m_listRetTypes
+        if (blockTemp.validate(ctx.createCaptureContext(blockTemp), ErrorListener.BLACKHOLE) == null
+                || m_listRetTypes == null)
+            {
+            m_listRetTypes = null;
+            return null;
+            }
+
+        TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+        m_listRetTypes = null;
+        return ListExpression.inferCommonType(aTypes);
         }
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
-        // TODO
-        return super.testFit(ctx, typeRequired);
+        checkDebug(); // TODO remove
+
+        assert m_typeRequired == null && m_listRetTypes == null;
+        if (isValidated())
+            {
+            return getType().isA(typeRequired)
+                    ? TypeFit.Fit
+                    : TypeFit.NoFit;
+            }
+
+        // clone the body and validate it using the requested type to test if that type will work
+        m_typeRequired = typeRequired;
+        StatementBlock blockTemp = (StatementBlock) body.clone();
+        blockTemp.validate(ctx.createCaptureContext(blockTemp), ErrorListener.BLACKHOLE);
+        m_typeRequired = null;
+
+        // the resulting returned types come back in m_listRetTypes
+        if (m_listRetTypes == null)
+            {
+            return TypeFit.NoFit;
+            }
+        else
+            {
+            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+            m_listRetTypes = null;
+
+            // calculate the resulting type
+            TypeConstant typeResult = ListExpression.inferCommonType(aTypes);
+            return typeResult != null && typeResult.isA(typeRequired)
+                    ? TypeFit.Fit
+                    : TypeFit.NoFit;
+            }
         }
+
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        // TODO at the end of validate, we build the lambda signature, and set it on the MethodConstant
-        return super.validate(ctx, typeRequired, errs);
+        checkDebug(); // TODO remove
+
+        assert m_typeRequired == null && m_listRetTypes == null;
+        m_typeRequired = typeRequired;
+
+        TypeFit        fit     = TypeFit.Fit;
+        StatementBlock bodyOld = body;
+        CaptureContext ctxNew  = ctx.createCaptureContext(body);
+        StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctxNew, errs);
+        if (bodyNew == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+        else
+            {
+            body = bodyNew;
+            }
+
+        TypeConstant typeActual = null;
+        if (m_listRetTypes != null)
+            {
+            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
+            m_listRetTypes = null;
+            typeActual = ListExpression.inferCommonType(aTypes);
+            }
+        if (typeActual == null)
+            {
+            fit = TypeFit.NoFit;
+            }
+
+        return finishValidation(typeRequired, typeActual, fit, null, errs);
+        }
+
+    @Override
+    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+        {
+        checkDebug();
+
+        // TODO somehow, at the end of validate (after all the various things that could happen could happen, i.e. all assignments before & after this),
+        // TODO ... we build the lambda signature, and set it on the MethodConstant
+        // TODO
+        super.generateAssignment(ctx, code, LVal, errs);
+        }
+
+
+    // TODO temp
+    static LambdaExpression exprDebug;
+    void checkDebug()
+        {
+        if (exprDebug == null && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy"))
+            {
+            exprDebug = this;
+            }
+
+        if (this == exprDebug)
+            {
+            String s = toString();
+            }
+        }
+
+    // ----- compilation helpers -------------------------------------------------------------------
+
+    /**
+     * @return the required type, which is the specified required type during validation, or the
+     *         actual type once the expression is validatd
+     */
+    TypeConstant getRequiredType()
+        {
+        return isValidated() ? getType() : m_typeRequired;
+        }
+
+    void addReturnType(TypeConstant typeRet)
+        {
+        List<TypeConstant> list = m_listRetTypes;
+        if (list == null)
+            {
+            m_listRetTypes = list = new ArrayList<>();
+            }
+        list.add(typeRet);
         }
 
 
@@ -236,6 +387,9 @@ public class LambdaExpression
     protected long             lStartPos;
 
     private MethodStructure m_lambda;
+
+    private transient TypeConstant       m_typeRequired;
+    private transient List<TypeConstant> m_listRetTypes;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
     }

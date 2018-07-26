@@ -3,9 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -21,6 +20,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.Register.Assignment;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -284,6 +284,17 @@ public abstract class Statement
             }
 
         /**
+         * Verify that this is a forkable context.
+         */
+        void checkForkable()
+            {
+            if (m_ctxInner != null && m_ctxInner != this)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        /**
          * Create a nested fork of this context.
          * <p/>
          * Note: This can only be used during the validate() stage.
@@ -296,6 +307,17 @@ public abstract class Statement
 
             m_ctxInner = this;
             return new NestedContext(this);
+            }
+
+        /**
+         * Verify that this is a forked context.
+         */
+        void checkForked()
+            {
+            if (m_ctxInner != this)
+                {
+                throw new IllegalStateException();
+                }
             }
 
         /**
@@ -323,6 +345,17 @@ public abstract class Statement
             }
 
         /**
+         * Verify that this is the innermost context.
+         */
+        void checkInnermost()
+            {
+            if (m_ctxInner != null)
+                {
+                throw new IllegalStateException();
+                }
+            }
+
+        /**
          * Used in the validation phase to track scopes.
          * <p/>
          * Note: This can only be used during the validate() stage.
@@ -334,6 +367,51 @@ public abstract class Statement
             Context ctxInner = new NestedContext(this);
             m_ctxInner = ctxInner;
             return ctxInner;
+            }
+
+        /**
+         * Exit the scope that was created by calling {@link #enterScope()}. Used in the validation
+         * phase to track scopes.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         */
+        public Context exitScope()
+            {
+            checkInnermost();
+
+            Context ctxOuter = m_ctxOuter;
+            assert ctxOuter.m_ctxInner == this;
+
+            // copy variable assignment information from this scope to outer scope
+            Map<String, Assignment> mapInner = m_mapAssigned;
+            if (mapInner != null)
+                {
+                Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
+                for (Entry<String, Assignment> entry : mapInner.entrySet())
+                    {
+                    String     sName = entry.getKey();
+                    Assignment asn   = entry.getValue();
+                    if (isVarDeclaredInThisScope(sName))
+                        {
+                        // we have unwound all the way back to the declaration context for the
+                        // variable at this point, so if it is proven to be effectively final, that
+                        // information is stored off, for example so that captures can make use of
+                        // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                        if (asn.isEffectivelyFinal())
+                            {
+                            ((Register) getVar(sName)).markEffectivelyFinal();
+                            }
+                        }
+                    else
+                        {
+                        mapOuter.put(sName, entry.getValue());
+                        }
+                    }
+                }
+
+            m_ctxOuter = null;
+            ctxOuter.m_ctxInner = null;
+            return ctxOuter;
             }
 
         /**
@@ -359,6 +437,68 @@ public abstract class Statement
             }
 
         /**
+         * See if the specified name declares an argument within this context.
+         *
+         * @param sName  the variable name
+         *
+         * @return a Register iff the name is registered to a register; otherwise null
+         */
+        public final Argument getVar(String sName)
+            {
+            return getVar(sName, null, null);
+            }
+
+        /**
+         * See if the specified name declares an argument within this context.
+         *
+         * @param name  the name token
+         * @param errs  the error list to log errors to
+         *
+         * @return a Register iff the name is registered to a register; otherwise null
+         */
+        public final Argument getVar(Token name, ErrorListener errs)
+            {
+            return getVar(name.getValueText(), name, errs);
+            }
+
+        /**
+         * Internal implementation of getVar() that allows the lookup to be done with or without a
+         * token.
+         *
+         * @param sName  the name to look up
+         * @param name   the token to use for error reporting (optional)
+         * @param errs   the error list to use for error reporting (optional)
+         *
+         * @return the argument for the variable, or null
+         */
+        protected Argument getVar(String sName, Token name, ErrorListener errs)
+            {
+            Argument arg = getNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                return arg;
+                }
+
+            return m_ctxOuter == null
+                    ? null
+                    : m_ctxOuter.getVar(name, errs);
+            }
+
+        /**
+         * Determine if the specified variable name refers to a local variable (including
+         * parameters, but not including reserved names, for example).
+         *
+         * @param sName  the variable name
+         *
+         * @return true iff a variable of that name exists in this scope
+         */
+        public boolean isLocalVar(String sName)
+            {
+            return getNameMap().containsKey(sName)
+                    || (m_ctxOuter != null && m_ctxOuter.isLocalVar(sName));
+            }
+
+        /**
          * Determine if the specified variable name is already declared in the current scope.
          * <p/>
          * Note: This can only be used during the validate() stage.
@@ -369,8 +509,44 @@ public abstract class Statement
          */
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            Map<String, Argument> mapByName = getNameMap();
-            return mapByName != null && mapByName.containsKey(sName);
+            return getNameMap().containsKey(sName);
+            }
+
+        /**
+         * TODO
+         *
+         * @param sName
+         *
+         * @return
+         */
+        public Assignment getVarAssignment(String sName)
+            {
+            Assignment asn = getDefiniteAssignments().get(sName);
+            if (asn != null)
+                {
+                return asn;
+                }
+
+            // if the variable was declared in this scope, then we should have a variable assignment
+            // status in this scope
+            assert !getNameMap().containsKey(sName);
+
+            return m_ctxOuter == null
+                    ? null
+                    : m_ctxOuter.getVarAssignment(sName);
+            }
+
+        /**
+         * TODO
+         *
+         * @param sName
+         * @param asn
+         *
+         * @return
+         */
+        public void setVarAssignment(String sName, Assignment asn)
+            {
+            ensureDefiniteAssignments().put(sName, asn);
             }
 
         /**
@@ -385,8 +561,9 @@ public abstract class Statement
          */
         public boolean isVarReadable(String sName)
             {
-            // TODO check for write-only variable
-            return getDefiniteAssignments().contains(sName) || m_ctxOuter.isVarReadable(sName);
+            Assignment asn = getVarAssignment(sName);
+            assert asn != null;
+            return asn.isDefinitelyAssigned();
             }
 
         /**
@@ -396,7 +573,7 @@ public abstract class Statement
          */
         public final void markVarRead(String sName)
             {
-            markVarRead(sName, true, null, null);
+            markVarRead(sName, null, null);
             }
 
         /**
@@ -407,42 +584,36 @@ public abstract class Statement
          */
         public final void markVarRead(Token tokName, ErrorListener errs)
             {
-            markVarRead(tokName.getValueText(), true, tokName, errs);
+            markVarRead(tokName.getValueText(), tokName, errs);
             }
 
         /**
          * Mark the specified variable as being read from within this context.
          *
-         * @param sName       the variable name
-         * @param fThisScope  true if the read is within this context, or false if nested under
-         * @param tokName     the variable name as a token from the source code (optional)
-         * @param errs        the error list to log to (optional)
+         * @param sName    the variable name
+         * @param tokName  the variable name as a token from the source code (optional)
+         * @param errs     the error list to log to (optional)
          */
-        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+        protected void markVarRead(String sName, Token tokName, ErrorListener errs)
             {
-            boolean fValid = true;
-            if (fThisScope)
-                {
-                // this method isn't supposed to be called for variable names that don't exist
-                assert getVar(sName) != null;
+            // this method isn't supposed to be called for variable names that don't exist
+            assert getVar(sName) != null;
 
-                if (!isVarReadable(sName))
+            // a read of an unassigned value shouldn't occur
+            if (!isVarReadable(sName))
+                {
+                if (tokName != null && errs != null)
                     {
-                    fValid = false;
-                    if (tokName != null && errs != null)
-                        {
-                        tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
+                    tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
-                        // record that the variable is definitely assigned so that the error will
-                        // not be repeated unnecessarily within this context
-                        ensureDefiniteAssignments().add(sName);
-                        }
+                    // record that the variable is definitely assigned so that the error will
+                    // not be repeated unnecessarily within this context
+                    ensureDefiniteAssignments().putIfAbsent(sName, false);
                     }
-                }
-
-            if (fValid && !isVarDeclaredInThisScope(sName))
-                {
-                m_ctxOuter.markVarRead(sName, false, tokName, errs);
+                else
+                    {
+                    throw new IllegalStateException("illegal var read: name=" + sName);
+                    }
                 }
             }
 
@@ -460,10 +631,11 @@ public abstract class Statement
             if (isVarDeclaredInThisScope(sName))
                 {
                 // TODO a "val" cannot be written to once it is definitely assigned
+                // TODO add compiler option to disallow writes to parameters
                 return true;
                 }
 
-            return m_ctxOuter.isVarWritable(sName);
+            return m_ctxOuter != null && m_ctxOuter.isVarWritable(sName);
             }
 
         /**
@@ -473,7 +645,7 @@ public abstract class Statement
          */
         public final void markVarWrite(String sName)
             {
-            markVarWrite(sName, true, null, null);
+            markVarWrite(sName, null, null);
             }
 
         /**
@@ -484,74 +656,61 @@ public abstract class Statement
          */
         public final void markVarWrite(Token tokName, ErrorList errs)
             {
-            markVarWrite(tokName.getValueText(), true, tokName, errs);
+            markVarWrite(tokName.getValueText(), tokName, errs);
             }
 
         /**
-         * Mark the specified variable as being read from within this context.
+         * Mark the specified variable as being written to within this context.
          *
          * @param sName       the variable name
-         * @param fThisScope  true if the read is within this context, or false if nested under
          * @param tokName     the variable name as a token from the source code (optional)
          * @param errs        the error list to log to (optional)
          */
-        protected void markVarWrite(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+        protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
             {
-            if (getDefiniteAssignments().contains(sName))
+            // this method isn't supposed to be called for variable names that don't exist
+            assert getVar(sName) != null;
+
+            if (isVarWritable(sName))
                 {
-                // already recorded as written
-                return;
+                ensureDefiniteAssignments().compute(sName, (key, val) -> val != null);
                 }
-
-            boolean fValid = true;
-            if (fThisScope)
+            else if (tokName != null && errs != null)
                 {
-                // this method isn't supposed to be called for variable names that don't exist
-                assert getVar(sName) != null;
-
-                if (!isVarWritable(sName))
-                    {
-                    fValid = false;
-                    if (tokName != null && errs != null)
-                        {
-                        tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
-                        }
-                    }
-
-                ensureDefiniteAssignments().add(sName);
+                tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
                 }
-
-            if (fValid && !isVarDeclaredInThisScope(sName))
+            else
                 {
-                // getVar(sName)
-                // getDefiniteAssignments().contains(sName)
-
-                m_ctxOuter.markVarWrite(sName, false, tokName, errs);
+                throw new IllegalStateException("illegal var write: name=" + sName);
                 }
             }
 
         /**
-         * @return a read-only set of definitely assigned variable names; never null
+         * @return a read-only map containing definitely assigned variable names; never null
          */
-        public Set<String> getDefiniteAssignments()
+        protected Map<String, Assignment> getDefiniteAssignments()
             {
-            Set<String> set = m_setAssigned;
-            return set == null
-                    ? set
-                    : Collections.EMPTY_SET;
+            Map<String, Assignment> map = m_mapAssigned;
+            return map == null
+                    ? Collections.EMPTY_MAP
+                    : map;
             }
 
         /**
+         * Map from variable name to Boolean value or null, with null indicating "not assigned
+         * within this context", false indicating "assgined once within this context", and true
+         * indicating "assigned multiple times within this context".
+         *
          * @return a readable and writable set of definitely assigned variable names; never null
          */
-        protected Set<String> ensureDefiniteAssignments()
+        protected Map<String, Assignment> ensureDefiniteAssignments()
             {
-            Set<String> set = m_setAssigned;
-            if (set == null)
+            Map<String, Assignment> map = m_mapAssigned;
+            if (map == null)
                 {
-                m_setAssigned = set = new HashSet<>();
+                m_mapAssigned = map = new HashMap<>();
                 }
-            return set;
+            return map;
             }
 
         /**
@@ -604,12 +763,13 @@ public abstract class Statement
             }
 
         /**
-         * @return the map that provides a name-to-argument lookup, or null if it has not yet been
-         *         created
+         * @return the read-only map that provides a name-to-argument lookup
          */
         protected Map<String, Argument> getNameMap()
             {
-            return m_mapByName;
+            return m_mapByName == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapByName;
             }
 
         /**
@@ -674,69 +834,13 @@ public abstract class Statement
          */
         protected Argument resolveRegularName(String sName, Token name, ErrorListener errs)
             {
-            Map<String, Argument> mapByName = getNameMap();
-            if (mapByName != null)
+            Argument arg = getNameMap().get(sName);
+            if (arg != null)
                 {
-                Argument arg = mapByName.get(sName);
-                if (arg != null)
-                    {
-                    return arg;
-                    }
+                return arg;
                 }
 
             return m_ctxOuter.resolveRegularName(name, errs);
-            }
-
-        /**
-         * See if the specified name declares an argument within this context.
-         *
-         * @param sName  the variable name
-         *
-         * @return a Register iff the name is registered to a register; otherwise null
-         */
-        public final Argument getVar(String sName)
-            {
-            return getVar(sName, null, null);
-            }
-
-        /**
-         * See if the specified name declares an argument within this context.
-         *
-         * @param name  the name token
-         * @param errs  the error list to log errors to
-         *
-         * @return a Register iff the name is registered to a register; otherwise null
-         */
-        public final Argument getVar(Token name, ErrorListener errs)
-            {
-            return getVar(name.getValueText(), name, errs);
-            }
-
-        /**
-         * Internal implementation of getVar() that allows the lookup to be done with or without a
-         * token.
-         *
-         * @param sName  the name to look up
-         * @param name   the token to use for error reporting (optional)
-         * @param errs   the error list to use for error reporting (optional)
-         *
-         * @return the argument for the variable, or null
-         */
-        protected Argument getVar(String sName, Token name, ErrorListener errs)
-            {
-            Map<String, Argument> mapByName = getNameMap();
-            if (mapByName != null)
-                {
-                Argument arg = mapByName.get(sName);
-                if (arg instanceof Register)
-                    {
-                    return arg;
-                    }
-                }
-
-            return m_ctxOuter == null
-                    ? null
-                    : m_ctxOuter.getVar(name, errs);
             }
 
         /**
@@ -778,60 +882,6 @@ public abstract class Statement
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
             return m_ctxOuter.resolveReservedName(sName, name, errs);
-            }
-
-        /**
-         * Exit the scope that was created by calling {@link #enterScope()}. Used in the validation
-         * phase to track scopes.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         */
-        public Context exitScope()
-            {
-            checkInnermost();
-
-            Context ctxOuter = m_ctxOuter;
-            assert ctxOuter.m_ctxInner == this;
-
-            // TODO copy variable assignment information from this scope to outer scope
-
-            m_ctxOuter = null;
-            ctxOuter.m_ctxInner = null;
-            return ctxOuter;
-            }
-
-        /**
-         * Verify that this is the innermost context.
-         */
-        void checkInnermost()
-            {
-            if (m_ctxInner != null)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * Verify that this is a forkable context.
-         */
-        void checkForkable()
-            {
-            if (m_ctxInner != null && m_ctxInner != this)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * Verify that this is a forked context.
-         */
-        void checkForked()
-            {
-            if (m_ctxInner != this)
-                {
-                throw new IllegalStateException();
-
-                }
             }
 
         /**
@@ -881,9 +931,17 @@ public abstract class Statement
         Context m_ctxOuter;
         Context m_ctxInner;
 
+        /**
+         * Each variable declared within this hcontext is registered in this map, along with the
+         * Argument that represents it.
+         */
         private Map<String, Argument> m_mapByName;
 
-        private Set<String> m_setAssigned;
+        /**
+         * Each variable assigned within this context is registered in this map. The boolean value
+         * represents multiple assignments.
+         */
+        private Map<String, Assignment> m_mapAssigned;
         }
 
     /**
@@ -962,9 +1020,24 @@ public abstract class Statement
         @Override
         public boolean isVarDeclaredInThisScope(String sName)
             {
-            Argument arg = ensureNameMap().get(sName);
-            return arg instanceof Register &&
-                    (((Register) arg).getIndex() >= 0 || ((Register) arg).isUnknown());
+            Argument arg = getNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                Register reg = (Register) arg;
+                return reg.getIndex() >= 0 || reg.isUnknown();
+                }
+
+            return false;
+            }
+
+        @Override
+        public boolean isVarReadable(String sName)
+            {
+            // TODO
+            // parameters are readable
+            // reserved names are (mostly) readable
+            // assigned variables are readable
+            // return super.isVarReadable(sName);
             }
 
         @Override
@@ -975,8 +1048,7 @@ public abstract class Statement
                 {
                 return ((Register) arg).isWritable();
                 }
-
-            if (arg instanceof PropertyConstant)
+            else if (arg instanceof PropertyConstant)
                 {
                 // the context only answers the question of what the _first_ name is, so
                 // in the case of "a.b.c", this method is called only for "a", so if someone
@@ -987,6 +1059,7 @@ public abstract class Statement
                 // TODO: check for a calculated property
                 return true;
                 }
+
             return false;
             }
 
@@ -1016,7 +1089,10 @@ public abstract class Statement
         @Override
         protected Argument getVar(String sName, Token name, ErrorListener errs)
             {
-            return resolveReservedName(sName, name, errs);
+            Argument arg = super.getVar(sName, name, errs);
+            return arg == null
+                    ? resolveReservedName(sName, name, errs)
+                    : arg;
             }
 
         @Override
@@ -1124,11 +1200,17 @@ public abstract class Statement
         @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            MethodStructure method = m_method;
+            MethodStructure         method      = m_method;
+            Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
                 Parameter param = method.getParam(i);
-                mapByName.put(param.getName(), new Register(param.getType(), i));
+                String    sName = param.getName();
+                mapByName.put(sName, new Register(param.getType(), i));
+
+                // the "false" indicates that the variable has been definitely assigned, but not
+                // multiple times (i.e. still effectively final)
+                mapAssigned.put(sName, Assignment.AssignedOnce);
                 }
             }
 
@@ -1355,22 +1437,24 @@ public abstract class Statement
         // TODO
 
         @Override
-        protected void markVarRead(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+        protected void markVarRead(String sName, Token tokName,
+                ErrorListener errs)
             {
             // TODO make sure that sName is in our list of "must be captured as value (or Ref<T>)"
             // TODO "this" means that the lambda must be a method
             // TODO make sure that the variable is marked in the ***containing*** context as being read
 
-            super.markVarRead(sName, true, tokName, errs);
+            super.markVarRead(sName, tokName, errs);
             }
 
         @Override
-        protected void markVarWrite(String sName, boolean fThisScope, Token tokName, ErrorListener errs)
+        protected void markVarWrite(String sName, Token tokName,
+                ErrorListener errs)
             {
             // TODO make sure that sName is in our list of "must be captured as Var<T>"
             // TODO make sure that the variable is marked in the ***containing*** context as being written
 
-            super.markVarWrite(sName, true, tokName, errs);
+            super.markVarWrite(sName, tokName, errs);
             }
         }
 

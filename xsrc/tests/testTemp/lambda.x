@@ -64,4 +64,16 @@ module TestLambda.xqiz.it
             System.out.println("result=" + () -> ++i);
             }
         }
+
+    void testComplexCapture()
+        {
+        console.println("\n** testVarCapture()");
+
+        Int i = 0;
+        while (i < 5)
+            {
+            System.out.println("result=" + () -> i);    // initially would appear to be "Int", but must be "Ref<Int>"
+            System.out.println("result=" + () -> ++i);
+            }
+        }
     }
