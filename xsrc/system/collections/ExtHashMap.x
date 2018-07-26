@@ -193,7 +193,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Set<KeyType> keys.calc()
         {
-        return new EntryBasedKeysSet();
+        return new EntryBasedKeySet();
         }
 
     @Override
@@ -218,7 +218,7 @@ class ExtHashMap<KeyType, ValueType>
      * A representation of all of the HashEntry objects in the Map.
      */
     class HashEntrySet
-            extends KeyBasedEntriesSet<KeyType, ValueType>
+            extends KeyBasedEntrySet<KeyType, ValueType>
         {
         @Override
         Iterator<HashEntry> iterator()
