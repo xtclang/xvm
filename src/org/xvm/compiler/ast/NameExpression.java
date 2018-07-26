@@ -1085,7 +1085,7 @@ public class NameExpression
                         // TODO typedefs
 
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                            sName, ctx.getThisClass().getName());
+                            sName, typeLeft.getValueString());
                         }
                     else
                         {
