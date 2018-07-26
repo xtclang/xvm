@@ -61,13 +61,6 @@ const Int64
     @Op Int64 add(Int64 n);
 
 // TODO
-    /**
-     * In addition to the implicit "add(Int64 n)" method, this method allows any
-     * integer to be added to this value.
-     */
-    @Op Int64 add(IntNumber n);
-
-// TODO
     @Override
     @Op Int64 sub(Int64 n);
 
