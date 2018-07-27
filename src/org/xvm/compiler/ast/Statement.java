@@ -21,6 +21,7 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.Register.Assignment;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -33,6 +34,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
 
@@ -375,7 +377,7 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public Context exitScope()
+        public Context exitScope() // TODO override on capture context
             {
             checkInnermost();
 
@@ -608,7 +610,7 @@ public abstract class Statement
 
                     // record that the variable is definitely assigned so that the error will
                     // not be repeated unnecessarily within this context
-                    ensureDefiniteAssignments().putIfAbsent(sName, false);
+                    setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
                     }
                 else
                     {
@@ -673,7 +675,7 @@ public abstract class Statement
 
             if (isVarWritable(sName))
                 {
-                ensureDefiniteAssignments().compute(sName, (key, val) -> val != null);
+                setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
                 }
             else if (tokName != null && errs != null)
                 {
@@ -1033,11 +1035,19 @@ public abstract class Statement
         @Override
         public boolean isVarReadable(String sName)
             {
-            // TODO
-            // parameters are readable
-            // reserved names are (mostly) readable
-            // assigned variables are readable
-            // return super.isVarReadable(sName);
+            if (isVarDeclaredInThisScope(sName))
+                {
+                return super.isVarReadable(sName);
+                }
+
+            Argument arg = ensureNameMap().get(sName);
+            if (arg instanceof Register)
+                {
+                return ((Register) arg).isReadable();
+                }
+
+            // module constant (this:module) or property constant (local property access)
+            return arg instanceof IdentityConstant;
             }
 
         @Override
@@ -1206,11 +1216,14 @@ public abstract class Statement
                 {
                 Parameter param = method.getParam(i);
                 String    sName = param.getName();
-                mapByName.put(sName, new Register(param.getType(), i));
+                if (!sName.equals(Id.IGNORED))
+                    {
+                    mapByName.put(sName, new Register(param.getType(), i));
 
-                // the "false" indicates that the variable has been definitely assigned, but not
-                // multiple times (i.e. still effectively final)
-                mapAssigned.put(sName, Assignment.AssignedOnce);
+                    // the variable has been definitely assigned, but not multiple times (i.e. it's
+                    // still effectively final)
+                    mapAssigned.put(sName, Assignment.AssignedOnce);
+                    }
                 }
             }
 
