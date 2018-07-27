@@ -3497,23 +3497,38 @@ public abstract class TypeConstant
                 }
 
             Contribution contrib = chain.first();
-            if (contrib.getComposition() == Composition.MaybeDuckType)
+            switch (contrib.getComposition())
                 {
-                TypeConstant typeIface = contrib.getTypeConstant();
-                if (typeIface == null)
+                case MaybeDuckType:
                     {
-                    typeIface = typeLeft;
+                    TypeConstant typeIface = contrib.getTypeConstant();
+                    if (typeIface == null)
+                        {
+                        typeIface = typeLeft;
+                        }
+
+                    if (!typeIface.isInterfaceAssignableFrom(
+                            typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                        {
+                        iter.remove();
+                        }
+                    break;
                     }
 
-                if (!typeIface.isInterfaceAssignableFrom(
-                        typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                case AutoNarrowed:
                     {
-                    iter.remove();
+                    // without any additional context, it should be assignable in some direction
+                    typeRight = typeRight.resolveAutoNarrowing(null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(null);
+
+                    Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
+                    return relRightIsLeft == Relation.INCOMPATIBLE
+                        ? typeLeft.calculateRelation(typeRight)
+                        : relRightIsLeft;
                     }
-                }
-            else
-                {
-                return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
+
+                default:
+                    return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
                 }
             }
 

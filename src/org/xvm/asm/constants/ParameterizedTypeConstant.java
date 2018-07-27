@@ -325,6 +325,11 @@ public class ParameterizedTypeConstant
                     // will be resolved later via interface method matching
                     continue nextChain;
 
+                case AutoNarrowed:
+                    // will be resolved later explicitly
+                    assert chain.getLength() == 1;
+                    return chains;
+
                 case Equal:
                     assert chain.getLength() == 1;
                     break;
@@ -402,6 +407,11 @@ public class ParameterizedTypeConstant
                 // will be resolved later via interface method matching
                 return true;
 
+            case AutoNarrowed:
+                // will be resolved later explicitly
+                assert chain.getLength() == 1;
+                return true;
+
             case Equal:
                 assert chain.getLength() == 1;
                 break;
@@ -454,7 +464,14 @@ public class ParameterizedTypeConstant
 
         if (!fTuple)
             {
-            assert Math.max(cParamsRight, cParamsLeft) <= listFormalEntries.size();
+            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
+                {
+                // soft assert
+                System.err.println("Invalid number of arguments for " + clz.getName()
+                        + ": required=" + listFormalEntries.size()
+                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
+                return false;
+                }
             }
 
         for (int i = 0; i < cParamsLeft; i++)

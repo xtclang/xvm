@@ -2378,6 +2378,13 @@ public abstract class Component
          * The constant is a ClassConstant.
          */
         Equal,
+
+        /**
+         * Synthetic (transient) composition indicating an auto-narrowing.
+         * <p/>
+         * The constant is a ClassConstant.
+         */
+        AutoNarrowed,
         ;
 
         /**
@@ -2490,8 +2497,9 @@ public abstract class Component
                         throw new IllegalArgumentException("type is required");
                         }
 
-                case MaybeDuckType:
                 case Equal:
+                case AutoNarrowed:
+                case MaybeDuckType:
                     break;
 
                 case Delegates:
@@ -2872,6 +2880,7 @@ public abstract class Component
                     break;
 
                 case Equal:
+                case AutoNarrowed:
                 case MaybeDuckType:
                     sb.append(m_composition.toString())
                       .append(' ');

@@ -176,7 +176,7 @@ class ExtHashMap<KeyType, ValueType>
         }
 
     @Override
-    conditional ExtHashMap<KeyType, ValueType> clear()
+    ExtHashMap<KeyType, ValueType> clear()
         {
         Int entryCount = size;
         if (entryCount > 0)
@@ -185,9 +185,8 @@ class ExtHashMap<KeyType, ValueType>
             buckets = new HashEntry?[bucketCount];
             removeCount += entryCount;
             assert size == 0;
-            return true, this;
             }
-        return false;
+        return this;
         }
 
     @Override
