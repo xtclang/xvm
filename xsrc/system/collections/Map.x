@@ -658,11 +658,14 @@ interface Map<KeyType, ValueType>
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
-            if (ValueType value : Map.this.get(entry.key) && value == entry.value)
+            if (ValueType value : Map.this.get(entry.key))
                 {
-                Map newMap = Map.this.remove(entry.key);
-                assert Ref.equals(Map.this, newMap);
-                return true, this;
+                if (value == entry.value)
+                    {
+                    Map newMap = Map.this.remove(entry.key);
+                    assert Ref.equals(Map.this, newMap);
+                    return true, this;
+                    }
                 }
             return false;
             }
@@ -958,12 +961,10 @@ interface Map<KeyType, ValueType>
         @Override
         conditional Collection<ValueType> clear()
             {
-            if (Map newMap : Map.this.clear())
-                {
-                assert Ref.equals(Map.this, newMap);
-                return true, this;
-                }
-            return false;
+            Map newMap = Map.this.clear();
+
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
         }
     }
