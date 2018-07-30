@@ -234,6 +234,31 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant adoptParentTypeParameters()
+        {
+        TypeConstant constOriginal = m_constType;
+
+        assert constOriginal instanceof TerminalTypeConstant;
+
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+        if (constResolved == constOriginal)
+            {
+            return this;
+            }
+
+        // TODO: create ParameterizedTC(ChildTC(typeParent, clzChild))
+        //       see ClassStructure.getFormalType()
+        TypeConstant[] aconstParent   = constResolved.getParamTypesArray();
+        TypeConstant[] aconstThis     = m_atypeParams;
+        TypeConstant[] aconstResolved = new TypeConstant[aconstParent.length + aconstThis.length];
+
+        System.arraycopy(aconstParent, 0, aconstResolved, 0, aconstParent.length);
+        System.arraycopy(aconstThis,   0, aconstResolved, aconstParent.length, aconstThis.length);
+
+        return getConstantPool().ensureParameterizedTypeConstant(constOriginal, aconstResolved);
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant constOriginal = m_constType;

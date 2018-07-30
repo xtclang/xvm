@@ -401,36 +401,33 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).adoptParameters(atypeParams);
-            }
+        Constant constId = ensureResolvedConstant();
 
-        Constant         constant = getDefiningConstant();
         IdentityConstant idClz;
-        switch (constant.getFormat())
+        switch (constId.getFormat())
             {
             case Module:
             case Package:
             case Class:
             case NativeClass:
-                idClz = (IdentityConstant) constant;
+                idClz = (IdentityConstant) constId;
                 break;
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
+                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
                 break;
 
             case Property:
             case TypeParameter:
                 return this;
 
+            case Typedef:
+                return getTypedefType((TypedefConstant) constId).adoptParameters(atypeParams);
+
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
+                throw new IllegalStateException("unexpected defining constant: " + constId);
             }
 
         if (atypeParams == null)
@@ -454,6 +451,52 @@ public class TerminalTypeConstant
 
         // this type cannot adopt anything
         return this;
+        }
+
+    @Override
+    public TypeConstant adoptParentTypeParameters()
+        {
+        if (isTuple())
+            {
+            return this;
+            }
+
+        Constant constId = ensureResolvedConstant();
+
+        IdentityConstant idClz;
+        switch (constId.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case TypeParameter:
+            case NativeClass:
+                return this;
+
+            case Class:
+                idClz = (IdentityConstant) constId;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
+                break;
+
+            case Typedef:
+                return getTypedefType((TypedefConstant) constId).adoptParentTypeParameters();
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constId);
+            }
+
+        ClassStructure struct = (ClassStructure) idClz.getComponent();
+        ClassStructure parent = struct.getInstanceParent();
+
+        return parent != null && parent.isParameterized()
+            ? getConstantPool().ensureParameterizedTypeConstant(this,
+                    parent.getFormalType().getParamTypesArray())
+            : this;
         }
 
     @Override

@@ -502,7 +502,8 @@ public abstract class TypeConstant
 
     /**
      * @return this same type, but with the number of parameters equal to the number of
-     *         formal parameters for the the underlying terminal type
+     *         formal parameters for the the underlying terminal type, assigning missing
+     *         type parameters to the corresponding canonical types
      */
     public TypeConstant normalizeParameters()
         {
@@ -512,7 +513,8 @@ public abstract class TypeConstant
     /**
      * Create a semantically equivalent type that is parameterized by the specified type parameters,
      * and normalized (the total number of parameters equal to the number of formal parameters
-     * for the underlying terminal type)
+     * for the underlying terminal type, where missing parameters are assigned to the resolved
+     * canonical types).
      *
      * @param atypeParams the parameters to adopt or null if the parameters of this type are
      *                    simply to be normalized
@@ -527,6 +529,28 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(constResolved);
+        }
+
+    /**
+     * If this type represents a child class, create a semantically equivalent type that contains
+     * the parent's formal type parameters.
+     *
+     * Note: for child classes there are two particular effects related to this method:
+     * <ul>
+     *   <li>the resulting type may have different number of type parameters;
+     *   <li>it is not idempotent; calling it twice will cause an assertion or corrupted result type
+     * </ul>
+     *
+     * @return potentially new type that contains parent's formal type parameters
+     */
+    public TypeConstant adoptParentTypeParameters()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+
+        return constResolved == constOriginal
+            ? this
+            : cloneSingle(constResolved);
         }
 
     /**
@@ -742,20 +766,15 @@ public abstract class TypeConstant
             {
             validate(errs);
 
-            // resolve the type to make sure that typedefs etc. are removed from the equation
-            TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
+            // - resolve the type to make sure that typedefs etc. are removed from the equation;
+            // - resolve the auto-narrowing;
+            // - normalize the type to make sure that all formal parameters are filled in
+            TypeConstant typeResolved = resolveTypedefs().
+                                        resolveAutoNarrowing(null).
+                                        normalizeParameters();
             if (typeResolved != this)
                 {
                 info = typeResolved.ensureTypeInfo(errs);
-                setTypeInfo(info);
-                return info;
-                }
-
-            // normalize the type to make sure that all formal parameters are filled in
-            TypeConstant typeNormalized = normalizeParameters();
-            if (typeNormalized != this)
-                {
-                info = typeNormalized.ensureTypeInfo(errs);
                 setTypeInfo(info);
                 return info;
                 }
@@ -1232,7 +1251,6 @@ public abstract class TypeConstant
                     }
                 }
 
-            // normalization is equivalent to calling getFormalType().resolveGenerics(this);
             TypeConstant typeNormalized = this.normalizeParameters();
 
             for (int i = 0; i < cClassParams; ++i)
@@ -3285,8 +3303,10 @@ public abstract class TypeConstant
             fRO = false;
             }
 
+        TypeConstant typeProp = prop.getType().adoptParentTypeParameters().resolveGenerics(this);
+
         return new PropertyInfo(new PropertyBody(prop, impl, null,
-                prop.getType().resolveGenerics(this), fRO, fRW, cCustomMethods > 0,
+                typeProp, fRO, fRW, cCustomMethods > 0,
                 effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
                 methodInit == null ? null : methodInit.getIdentityConstant()));
         }
