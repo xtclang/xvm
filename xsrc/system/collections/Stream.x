@@ -539,8 +539,10 @@ interface Stream<ElementType>
          *         the ResultType is the same as the AccumulationType
          */
         static <ElementType, AccumulationType, ResultType>
-                Collector<ElementType, ResultType, ResultType> of(
-                        Supplier supply, Accumulator accumulate, Combiner combine)
+            Collector<ElementType, ResultType, ResultType> of(
+                function AccumulationType ()                                   supply,     // Supplier
+                function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
+                function AccumulationType (AccumulationType, AccumulationType) combine)    // Combiner
             {
             return new SimpleCollector<ElementType, AccumulationType, ResultType>(
                     supply, accumulate, combine, result -> result);
@@ -559,8 +561,11 @@ interface Stream<ElementType>
          *         {@code accumulate}, {@code combine} and {@code finish} functions
          */
         static <ElementType, AccumulationType, ResultType>
-                Collector<ElementType, AccumulationType, ResultType> of(
-                        Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
+            Collector<ElementType, AccumulationType, ResultType> ofTest(
+                function AccumulationType ()                                   supply,     // Supplier
+                function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
+                function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner
+                function ResultType (AccumulationType)                         finish)     // Finisher
             {
             return new SimpleCollector<ElementType, AccumulationType, ResultType>(
                     supply, accumulate, combine, finish);
@@ -569,9 +574,12 @@ interface Stream<ElementType>
         /**
          * Trivial Collector.
          */
-        static const SimpleCollector<ElementType, AccumulationType, ResultType>
-            (Supplier supply, Accumulator accumulate, Combiner combine, Finisher finish)
-                implements Collector<ElementType, AccumulationType, ResultType>
+        static const SimpleCollector<ElementType, AccumulationType, ResultType>(
+                function AccumulationType ()                                   supply,     // Supplier
+                function Boolean (AccumulationType, ElementType)               accumulate, // Accumulator
+                function AccumulationType (AccumulationType, AccumulationType) combine,    // Combiner
+                function ResultType (AccumulationType)                         finish)     // Finisher
+            implements Collector<ElementType, AccumulationType, ResultType>
             {
             }
         }
