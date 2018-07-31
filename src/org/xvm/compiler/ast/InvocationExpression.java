@@ -392,8 +392,18 @@ public class InvocationExpression
             // must be a property or a variable of type function (@Auto conversion possibility
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
-            assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-            TypeConstant typeArg = argMethod.getType().resolveTypedefs();
+            TypeConstant typeArg;
+            if (argMethod instanceof PropertyConstant)
+                {
+                PropertyConstant idProp = (PropertyConstant) argMethod;
+                typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                }
+            else
+                {
+                assert argMethod instanceof Register;
+                typeArg = argMethod.getType().resolveTypedefs();
+                }
+
             assert typeArg.isA(pool().typeFunction());
 
             return m_fCall
@@ -565,8 +575,18 @@ public class InvocationExpression
                     // must be a property or a variable of type function (@Auto conversion possibility
                     // already handled above); the function has two tuple sub-types, the second of which is
                     // the "return types" of the function
-                    assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-                    TypeConstant typeArg = argMethod.getType().resolveTypedefs();
+                    TypeConstant typeArg;
+                    if (argMethod instanceof PropertyConstant)
+                        {
+                        PropertyConstant idProp = (PropertyConstant) argMethod;
+                        typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                        }
+                    else
+                        {
+                        assert argMethod instanceof Register;
+                        typeArg = argMethod.getType().resolveTypedefs();
+                        }
+
                     assert typeArg.isA(pool().typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
