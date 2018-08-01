@@ -1117,8 +1117,21 @@ public class TypeInfo
                     }
                 else
                     {
+                    if (entry.getValue().isCapped())
+                        {
+                        // the current entry represents a "capped" method; ignore it
+                        continue;
+                        }
+
                     if (mapMatch == null)
                         {
+                        if (entryBest.getValue().isCapped())
+                            {
+                            // the best entry represents a "capped" method; replace it
+                            entryBest = entry;
+                            continue;
+                            }
+
                         // switch to "multi choice" mode
                         mapMatch = new HashMap<>();
                         mapMatch.put(entryBest.getKey(), entryBest.getValue());
