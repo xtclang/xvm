@@ -2842,13 +2842,13 @@ public abstract class TypeConstant
     /**
      * Generate the members of the "this" class of "this" type.
      *
-     * @param constId           the identity of the class (used for logging error information)
-     * @param fInterface        if the class is an interface type
-     * @param structContrib     the class structure, property structure, or method structure REVIEW or typedef?
-     * @param mapTypeParams     the map of type parameters
-     * @param mapProps          the properties of the class
-     * @param mapMethods        the methods of the class
-     * @param errs              the error list to log any errors to
+     * @param constId        the identity of the class (used for logging error information)
+     * @param fInterface     if the class is an interface type
+     * @param structContrib  the class structure, property structure, or method structure REVIEW or typedef?
+     * @param mapTypeParams  the map of type parameters
+     * @param mapProps       the properties of the class
+     * @param mapMethods     the methods of the class
+     * @param errs           the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
      */
