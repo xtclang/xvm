@@ -123,15 +123,16 @@ public class NotNullExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (isConstant() || pool().typeNull().isA(getType()))
+        TypeConstant typeExpr = getType();
+        if (isConstant() || pool().typeNull().isA(typeExpr))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = getType().ensureNullable();
+        TypeConstant typeTemp = typeExpr.ensureNullable();
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
-        return var.getRegister();
+        return var.getRegister().narrowType(typeExpr);
         }
 
     @Override

@@ -603,6 +603,10 @@ public class InvocationExpression
                 {
                 expr = exprNew;
 
+                m_fBindTarget = false;
+                m_fBindParams = isAnyArgBound();
+                m_fCall       = !isSuppressCall();
+
                 // it has to either be a function or convertible to a function
                 TypeConstant typeFn = validateFunction(ctx, exprNew.getType(), aArgs, errs);
                 if (typeFn != null)
@@ -616,7 +620,8 @@ public class InvocationExpression
                 }
             }
 
-        return finishValidations(atypeRequired, atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
+        return finishValidations(atypeRequired, atypeRequired == null ?
+                TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override
@@ -812,7 +817,7 @@ public class InvocationExpression
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
         // it to the desired function if necessary
-        TypeConstant typeFn = argFn.getType();
+        TypeConstant typeFn = argFn.getType().resolveTypedefs();
         if (m_idConvert != null)
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
