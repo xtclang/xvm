@@ -1203,9 +1203,9 @@ public abstract class TypeConstant
      * Populate the type parameter map with the type parameters of this type (not counting any
      * further contributions), and create a GenericTypeResolver based on that type parameter map.
      *
-     * @param constId        the identity constant of the class that the type is based on
-     * @param struct         the structure of the class that the type is based on
-     * @param errs           the error list to log to
+     * @param constId  the identity constant of the class that the type is based on
+     * @param struct   the structure of the class that the type is based on
+     * @param errs     the error list to log to
      *
      * @return the map of type parameters
      */
@@ -1233,7 +1233,7 @@ public abstract class TypeConstant
             }
         else
             {
-            // obtain the type parameters declared by the class
+            // obtain the type parameters declared by the class and its instance parent
             List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
             int                                       cClassParams    = listClassParams.size();
 
@@ -1281,7 +1281,15 @@ public abstract class TypeConstant
                         }
                     }
 
-                mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                if (mapTypeParams.containsKey(sName))
+                    {
+                    log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
+                            struct.getIdentityConstant().getValueString(), sName);
+                    }
+                else
+                    {
+                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                    }
                 }
             }
 
@@ -2023,6 +2031,9 @@ public abstract class TypeConstant
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
+
+                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps);
+
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 if (!createMemberInfo(constId, isInterface(constId, struct),
                         struct, mapTypeParams, mapContribProps, mapContribMethods, listExplode, errs))
@@ -2795,6 +2806,40 @@ public abstract class TypeConstant
         }
 
     /**
+     * Collect type parameters for the specified class and all its instance parents.
+     *
+     * @param struct         the class structure
+     * @param mapTypeParams  the map of type parameters
+     * @param mapProps       the properties of the class
+     */
+    private void collectSelfTypeParameters(
+            ClassStructure                      struct,
+            Map<Object, ParamInfo>              mapTypeParams,
+            Map<PropertyConstant, PropertyInfo> mapProps)
+        {
+        for (Component child : struct.children())
+            {
+            if (child instanceof PropertyStructure)
+                {
+                PropertyStructure prop = (PropertyStructure) child;
+                if (prop.isTypeParameter())
+                    {
+                    PropertyConstant id = prop.getIdentityConstant();
+
+                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
+                                        mapTypeParams.get(id.getName()))));
+                    }
+                }
+            }
+
+        ClassStructure parent = struct.getInstanceParent();
+        if (parent != null)
+            {
+            collectSelfTypeParameters(parent, mapTypeParams, mapProps);
+            }
+        }
+
+    /**
      * Generate the members of the "this" class of "this" type.
      *
      * @param constId           the identity of the class (used for logging error information)
@@ -2811,9 +2856,9 @@ public abstract class TypeConstant
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           structContrib,
-            Map<Object, ParamInfo>              mapTypeParams,
+            Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<MethodConstant  , MethodInfo  > mapMethods,
+            Map<MethodConstant  , MethodInfo>   mapMethods,
             List<PropertyConstant>              listExplode,
             ErrorListener                       errs)
         {
@@ -2840,20 +2885,16 @@ public abstract class TypeConstant
         else if (structContrib instanceof PropertyStructure)
             {
             PropertyStructure prop = (PropertyStructure) structContrib;
-            PropertyConstant  id   = prop.getIdentityConstant();
-            PropertyInfo      info;
             if (prop.isTypeParameter())
                 {
-                // this only knows how to create a type-param PropertyInfo for the type parameters
-                // of the class
-                assert id.getNestedDepth() == 1;
-                info = new PropertyInfo(new PropertyBody(prop, mapTypeParams.get(id.getName())));
+                // type parameters have been processed by collectSelfTypeParameters()
+                return true;
                 }
-            else
-                {
-                assert !(fNative && fInterface); // cannot be native and interface at the same time
-                info = createPropertyInfo(prop, constId, fNative, fInterface, errs);
-                }
+
+            assert !(fNative && fInterface); // cannot be native and interface at the same time
+
+            PropertyConstant  id   = prop.getIdentityConstant();
+            PropertyInfo      info = createPropertyInfo(prop, constId, fNative, fInterface, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
