@@ -162,6 +162,8 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         boolean      fDiff         = constOriginal != constResolved;
 
+        assert !constResolved.isParamsSpecified();
+
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
@@ -190,6 +192,8 @@ public class ParameterizedTypeConstant
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
         boolean      fDiff         = constOriginal != constResolved;
+
+        assert !constResolved.isParamsSpecified();
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
@@ -264,6 +268,8 @@ public class ParameterizedTypeConstant
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
         boolean      fDiff         = constOriginal != constResolved;
+
+        assert !constResolved.isParamsSpecified();
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;

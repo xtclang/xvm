@@ -507,7 +507,22 @@ public abstract class TypeConstant
      */
     public TypeConstant normalizeParameters()
         {
-        return adoptParameters(null);
+        return adoptParameters((TypeConstant[]) null);
+        }
+
+    /**
+     * Create a semantically equivalent type that is parameterized by the parameters of the
+     * specified type and normalized (the total number of parameters equal to the number of
+     * formal parameters for the underlying terminal type, where missing parameters are assigned
+     * to the resolved canonical types).
+     *
+     * @param typeFrom  the type to adopt type parameters from
+     *
+     * @return potentially new normalized type parameterized by the specified type parameters
+     */
+    public TypeConstant adoptParameters(TypeConstant typeFrom)
+        {
+        return adoptParameters(typeFrom.getParamTypesArray());
         }
 
     /**
