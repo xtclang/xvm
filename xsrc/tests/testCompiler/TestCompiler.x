@@ -16,55 +16,55 @@ class TestCompiler<TestType1 extends Number,
         Boolean containsValue(VC value);
         }
 
-    class MyClass1<K1, VC>
+    static class MyClass1<K1, VC>
         implements MyMap<K1, VC> {}
 
-    class MyClass2<K2, V2>
+    static class MyClass2<K2, V2>
             implements Consumer<V2>
         {
         Boolean containsValue(V2 value) {return false;}
         }
 
-    class MyConsumer<VMC>
+    static class MyConsumer<VMC>
             implements Consumer<VMC>
         {
         @Override
         Boolean containsValue(VMC value) {return true;}
         }
 
-    mixin MyConsumer2<VMC>
+    static mixin MyConsumer2<VMC>
             implements Consumer<VMC>
         {
         @Override
         Boolean containsValue(VMC value) {return true;}
         }
 
-    class MyClass3<K3, V3>
+    static class MyClass3<K3, V3>
         extends MyConsumer<V3> {}
 
-    class MyClass4<K4>
+    static class MyClass4<K4>
             implements Consumer<Number>
         {
         @Override
         Boolean containsValue(Int value) {return false;}
         }
 
-    class MyClass5<K5>
+    static class MyClass5<K5>
         extends MyConsumer<Int> {}
 
-    class MyClass6<K6, V6>
+    static class MyClass6<K6, V6>
         extends MyClass3<K6, V6> {}
 
-    class MyClass7
+    static class MyClass7
         extends MyClass3<String, String> {}
 
-    class MyClass8<K8, V8>
+    static class MyClass8<K8, V8>
         incorporates MyConsumer2<V8> {}
 
-    class MyClass9<K9, V9>
+    static class MyClass9<K9, V9>
         incorporates conditional MyConsumer2<V9 extends Number> {}
 
-    class MyClass10<V10>
+    static class MyClass10<V10>
         extends MyClass9<String, V10> {}
 
     static void test1(MyClass1<String, Number> c1,
