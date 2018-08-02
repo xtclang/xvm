@@ -373,7 +373,7 @@ public class InvocationExpression
                 MethodConstant constMethod = (MethodConstant) argMethod;
                 if (typeLeft == null)
                     {
-                    typeLeft = ctx.getThisClass().getFormalType();
+                    typeLeft = ctx.getThisType();
                     }
 
                 if (m_fCall)
@@ -554,7 +554,7 @@ public class InvocationExpression
                         MethodConstant constMethod = (MethodConstant) argMethod;
                         if (typeLeft == null)
                             {
-                            typeLeft = ctx.getThisClass().getFormalType();
+                            typeLeft = ctx.getThisType();
                             }
                         TypeConstant[] atypeResult;
                         if (m_fCall)
@@ -1317,7 +1317,7 @@ public class InvocationExpression
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
         // conversion to a function. (Done.)
-        typeFn = typeFn.resolveTypedefs();
+        typeFn = typeFn.resolveTypedefs().resolveGenerics(ctx.getThisType());
 
         ConstantPool   pool      = pool();
         boolean        fFunction = typeFn.isA(pool.typeFunction());

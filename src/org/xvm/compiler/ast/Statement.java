@@ -276,6 +276,14 @@ public abstract class Statement
             }
 
         /**
+         * @return the formal type of the containing class
+         */
+        public TypeConstant getThisType()
+            {
+            return getThisClass().getFormalType();
+            }
+
+        /**
          * @return the ConstantPool
          */
         public ConstantPool pool()
@@ -748,7 +756,7 @@ public abstract class Statement
          */
         public final Argument resolveReservedName(String sName)
             {
-            return resolveReservedName(sName, null, null);
+            return resolveReservedName(sName, null, ErrorListener.BLACKHOLE);
             }
 
         /**
@@ -1084,14 +1092,12 @@ public abstract class Statement
 
                 case "super":
                     {
-                    TypeInfo        info       = getThisType().ensureTypeInfo(
-                                                     errs == null ? ErrorListener.BLACKHOLE : errs);
-                    MethodStructure method     = getMethod();
-                    MethodConstant  idMethod   = method.getIdentityConstant();
+                    TypeConstant    typePro    = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    TypeInfo        info       = typePro.ensureTypeInfo(errs);
+                    MethodConstant  idMethod   = getMethod().getIdentityConstant();
                     MethodInfo      infoMethod = info.getMethodById(idMethod);
 
-                    if (name != null && errs != null
-                            && (infoMethod == null || !infoMethod.hasSuper(info)))
+                    if (name != null && (infoMethod == null || !infoMethod.hasSuper(info)))
                         {
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
                         }
@@ -1109,7 +1115,7 @@ public abstract class Statement
                     return null;
                 }
 
-            if (name != null && errs != null && !m_fLoggedNoThis
+            if (name != null && !m_fLoggedNoThis
                     && ((fNoFunction && isFunction() || fNoConstruct && isConstructor())))
                 {
                 name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
@@ -1187,11 +1193,6 @@ public abstract class Statement
             return m_method.isConstructor();
             }
 
-        TypeConstant getThisType()
-            {
-            return getThisClass().getFormalType();
-            }
-
         ModuleStructure getModule()
             {
             Component parent = m_method;
@@ -1200,11 +1201,6 @@ public abstract class Statement
                 parent = parent.getParent();
                 }
             return (ModuleStructure) parent;
-            }
-
-        TypeConstant getModuleType()
-            {
-            return getModule().getFormalType();
             }
 
         @Override
