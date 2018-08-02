@@ -165,7 +165,7 @@ class Array<ElementType>
     @Override
     Iterator<ElementType> iterator()
         {
-        return this;
+        TODO;
         }
 
     @Override
