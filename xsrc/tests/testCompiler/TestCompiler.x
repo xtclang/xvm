@@ -122,10 +122,10 @@ class TestCompiler<TestType1 extends Number,
         MyConsumer<Int> finder10a = c10a; // fail; "Extends-Incorporates"
         }
 
-//    static void test1ExpectedFailure5(MyClass10<Int> c10)
-//        {
-//        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
-//        }
+    static void test1ExpectedFailure5(MyClass10<Int> c10)
+        {
+        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
+        }
 
     static class P<T>
         {
