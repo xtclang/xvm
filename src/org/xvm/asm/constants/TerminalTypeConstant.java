@@ -401,36 +401,33 @@ public class TerminalTypeConstant
     @Override
     public TypeConstant adoptParameters(TypeConstant[] atypeParams)
         {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).adoptParameters(atypeParams);
-            }
+        Constant constId = ensureResolvedConstant();
 
-        Constant         constant = getDefiningConstant();
         IdentityConstant idClz;
-        switch (constant.getFormat())
+        switch (constId.getFormat())
             {
             case Module:
             case Package:
             case Class:
             case NativeClass:
-                idClz = (IdentityConstant) constant;
+                idClz = (IdentityConstant) constId;
                 break;
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                idClz = ((PseudoConstant) constant).getDeclarationLevelClass();
+                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
                 break;
 
             case Property:
             case TypeParameter:
                 return this;
 
+            case Typedef:
+                return getTypedefType((TypedefConstant) constId).adoptParameters(atypeParams);
+
             default:
-                throw new IllegalStateException("unexpected defining constant: " + constant);
+                throw new IllegalStateException("unexpected defining constant: " + constId);
             }
 
         if (atypeParams == null)
@@ -454,6 +451,52 @@ public class TerminalTypeConstant
 
         // this type cannot adopt anything
         return this;
+        }
+
+    @Override
+    public TypeConstant adoptParentTypeParameters()
+        {
+        if (isTuple())
+            {
+            return this;
+            }
+
+        Constant constId = ensureResolvedConstant();
+
+        IdentityConstant idClz;
+        switch (constId.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case TypeParameter:
+            case NativeClass:
+                return this;
+
+            case Class:
+                idClz = (IdentityConstant) constId;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClz = ((PseudoConstant) constId).getDeclarationLevelClass();
+                break;
+
+            case Typedef:
+                return getTypedefType((TypedefConstant) constId).adoptParentTypeParameters();
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constId);
+            }
+
+        ClassStructure struct = (ClassStructure) idClz.getComponent();
+        ClassStructure parent = struct.getInstanceParent();
+
+        return parent != null && parent.isParameterized()
+            ? getConstantPool().ensureParameterizedTypeConstant(this,
+                    parent.getFormalType().getParamTypesArray())
+            : this;
         }
 
     @Override
@@ -1109,6 +1152,7 @@ public class TerminalTypeConstant
                 }
 
             case Property:
+                {
                 // scenarios we can handle here are:
                 // 1. r-value (this) = T (formal parameter type)
                 //    l-value (that) = T (formal parameter type, equal by name only)
@@ -1118,37 +1162,58 @@ public class TerminalTypeConstant
                 //
                 // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
-                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property
-                    && (((PropertyConstant) constIdLeft).getName().equals(
-                            ((PropertyConstant) constIdRight).getName())))
+                PropertyConstant idRight = (PropertyConstant) constIdRight;
+                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property &&
+                    (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
                     {
                     chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
                     break;
                     }
 
-                return getPropertyTypeType((PropertyConstant) constIdRight).
+                return getPropertyTypeType(idRight).
                     collectContributions(typeLeft, listRight, chains);
+                }
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constIdRight).
+                {
+                // scenarios we can handle here are:
+                // 1. r-value (this) = T (type parameter type)
+                //    l-value (that) = T (type parameter type, equal by register only)
+
+                // 2. r-value (this) = T (type parameter type), constrained by U (other type parameter type)
+                //    l-value (that) = U (type parameter type)
+                //
+                // 3. r-value (this) = T (type parameter type), constrained by U (real type)
+                //    l-value (that) = V (real type), where U "is a" V
+                TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
+                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.TypeParameter &&
+                    (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
+                    {
+                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                    break;
+                    }
+
+                return getTypeParameterType(idRight).
                     collectContributions(typeLeft, listRight, chains);
+                }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 {
+                PseudoConstant idRight = (PseudoConstant) constIdRight;
                 if (constIdLeft != null && constIdLeft.getFormat() == format
-                        && ((PseudoConstant) constIdRight).isCongruentWith((PseudoConstant) constIdLeft))
+                        && idRight.isCongruentWith((PseudoConstant) constIdLeft))
                     {
-                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                    chains.add(new ContributionChain(
+                        new Contribution(Composition.AutoNarrowed, typeLeft)));
                     break;
                     }
 
                 ClassStructure clzRight = (ClassStructure)
-                    ((PseudoConstant) constIdRight).getDeclarationLevelClass().getComponent();
-
+                        idRight.getDeclarationLevelClass().getComponent();
                 chains.addAll(typeLeft.collectClassContributions(
-                    clzRight, listRight, new ArrayList<>()));
+                        clzRight, listRight, new ArrayList<>()));
                 break;
                 }
 

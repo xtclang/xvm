@@ -1067,13 +1067,18 @@ public class NameExpression
                         if (arg instanceof Register && ((Register) arg).isTarget() ||
                                 !typeLeft.isGenericType() &&
                                 typeLeft.isSingleUnderlyingClass(false) &&
-                                typeLeft.getSingleUnderlyingClass(false).equals(
+                                typeLeft.getSingleUnderlyingClass(false).isNestMate(
                                         ctx.getThisClass().getIdentityConstant()))
                             {
-                            Access access = typeLeft.getAccess();
-                            if (access != Access.PRIVATE && access != Access.STRUCT)
+                            switch (typeLeft.getAccess())
                                 {
-                                typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                case PROTECTED:
+                                    typeLeft = typeLeft.getUnderlyingType();
+                                    assert !typeLeft.isAccessSpecified();
+                                    // fall through
+                                case PUBLIC:
+                                    typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                    break;
                                 }
                             }
 
@@ -1154,14 +1159,18 @@ public class NameExpression
         Constant constant = (Constant) argRaw;
         switch (constant.getFormat())
             {
-            // relative ID
             case ThisClass:
+                m_plan = Plan.None;
+                return pool.ensureAccessTypeConstant(
+                    constant.getType().adoptParameters(ctx.getThisType()), Access.PRIVATE);
+
             case ParentClass:
                 if (name.getValueText().equals("this"))
                     {
                     assert left instanceof NameExpression;
                     m_plan = Plan.OuterThis;
-                    return constant.getType();
+                    return pool.ensureAccessTypeConstant(
+                        constant.getType().adoptParameters(ctx.getThisType()), Access.PRIVATE);
                     }
                 // fall through
             // class ID
@@ -1270,12 +1279,13 @@ public class NameExpression
                 if (aTypeParams != null)
                     {
                     // TODO have to incorporate type params
-                    throw new IllegalStateException("TODO: " + this);
+                    notImplemented();
                     }
 
                 m_plan = Plan.TypeOfTypedef;
+                TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
                 return pool.ensureParameterizedTypeConstant(
-                        pool.typeType(), ((TypedefConstant) constant).getReferredToType());
+                        pool.typeType(), typeRef.adoptParameters(ctx.getThisType()));
 
             default:
                 throw new IllegalStateException("constant=" + constant);

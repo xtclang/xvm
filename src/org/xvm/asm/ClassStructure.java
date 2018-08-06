@@ -350,7 +350,8 @@ public class ClassStructure
                         }
                     else
                         {
-                        // consider creating a ParameterizedTC(ChildTC(typeParent, clzChild))
+                        // TODO: create ParameterizedTC(ChildTC(typeParent, clzChild))
+                        //       see PTC.adoptParentTypeParameters()
                         TypeConstant[] aTypesNew = new TypeConstant[cTypesParent + cTypesThis];
                         System.arraycopy(aTypes, 0, aTypesNew, 0, cTypesParent);
                         aTypes = aTypesNew;
@@ -426,7 +427,7 @@ public class ClassStructure
      */
     public TypeConstant resolveType(List<TypeConstant> listActual)
         {
-        return listActual.isEmpty()
+        return listActual.isEmpty() && !isParameterized()
             ? getCanonicalType()
             : getFormalType().resolveGenerics(new SimpleTypeResolver(listActual));
         }

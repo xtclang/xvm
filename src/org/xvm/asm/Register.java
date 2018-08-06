@@ -119,6 +119,16 @@ public class Register
         }
 
     /**
+     * Create a register that is collocated with this register, but narrows its type.
+     */
+    public Register narrowType(TypeConstant typeNarrowed)
+        {
+        assert typeNarrowed.isA(m_type);
+
+        return new ShadowRegister(typeNarrowed);
+        }
+
+    /**
      * @return the argument index for the Register
      */
     public int getIndex()
@@ -378,6 +388,109 @@ public class Register
             }
         }
 
+
+    // ----- inner classes -------------------------------------------------------------------------
+
+    /**
+     * A register that represents the underlying (base) register, but overrides its type.
+     */
+    private class ShadowRegister
+            extends Register
+        {
+        /**
+         * Create a ShadowRegister of the specified type.
+         *
+         * @param typeNew  the overriding type
+         */
+        protected ShadowRegister(TypeConstant typeNew)
+            {
+            super(typeNew);
+            }
+
+        @Override
+        public boolean isStack()
+            {
+            return Register.this.isStack();
+            }
+
+        @Override
+        public boolean isDVar()
+            {
+            return Register.this.isDVar();
+            }
+
+        @Override
+        public TypeConstant ensureRegType(boolean fRO)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public void specifyRegType(TypeConstant typeReg)
+            {
+            throw new UnsupportedOperationException();
+            }
+
+        @Override
+        public int getIndex()
+            {
+            return Register.this.getIndex();
+            }
+
+        @Override
+        public int assignIndex(int iArg)
+            {
+            return Register.this.assignIndex(iArg);
+            }
+
+        @Override
+        public boolean isPredefined()
+            {
+            return Register.this.isPredefined();
+            }
+
+        @Override
+        public boolean isTarget()
+            {
+            return Register.this.isTarget();
+            }
+
+        @Override
+        public boolean isUnknown()
+            {
+            return Register.this.isUnknown();
+            }
+
+        @Override
+        public boolean isReadable()
+            {
+            return Register.this.isReadable();
+            }
+
+        @Override
+        public boolean isWritable()
+            {
+            return Register.this.isWritable();
+            }
+
+        @Override
+        public boolean isConstant()
+            {
+            return Register.this.isConstant();
+            }
+
+        @Override
+        public boolean isNormal()
+            {
+            return Register.this.isNormal();
+            }
+
+        @Override
+        public String getIdString()
+            {
+            return " shadow of " + Register.this.toString();
+            }
+        }
 
     // ----- inner class: Assignment ---------------------------------------------------------------
 

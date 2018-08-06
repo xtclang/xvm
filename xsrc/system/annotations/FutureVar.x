@@ -718,7 +718,7 @@ mixin FutureVar<RefType>
             }
 
 // TODO: CP
-//        public/private function FutureVar!<NewType> (RefType, other.RefType) combine;
+        public/private function RefType (InputType, Input2Type) combine;
 
         private /* TODO property cannot be conditional */ InputType  input1;      // REVIEW
         private /* TODO property cannot be conditional */ Input2Type input2;
@@ -729,7 +729,7 @@ mixin FutureVar<RefType>
         @Override
         void parentCompleted(Completion completion, InputType? input, Exception? e)
             {
-            if (!assigned && !input1)
+            if (!assigned && input != null)
                 {
                 assert completion != Pending;
 
@@ -753,7 +753,7 @@ mixin FutureVar<RefType>
          */
         void parent2Completed(Completion completion, Input2Type? input, Exception? e)
             {
-            if (!assigned && !input2)
+            if (!assigned && input != null)
                 {
                 assert completion != Pending;
 
@@ -777,10 +777,9 @@ mixin FutureVar<RefType>
          */
         private void bothParentsCompleted()
             {
-            assert input1 && input2;
             try
                 {
-                complete(combine(input1[1], input2[1]));
+                complete(combine(input1, input2));
                 }
             catch (Exception e)
                 {

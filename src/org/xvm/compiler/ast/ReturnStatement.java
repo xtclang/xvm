@@ -141,7 +141,7 @@ public class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.isAutoNarrowing())
                 {
-                aRetTypes[i] = typeRet.resolveAutoNarrowing(ctx.getThisClass().getFormalType());
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(ctx.getThisType());
                 }
             }
 

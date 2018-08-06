@@ -229,10 +229,10 @@ public class ExpressionStatement
         assert exprChild == expr;
         switch (getUsage())
             {
-            case Switch:
             case Standalone:
-                return getLabel();
+                return getEndLabel();
 
+            case Switch:
             case If:
             case While:
             case For:

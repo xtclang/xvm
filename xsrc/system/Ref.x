@@ -8,7 +8,7 @@
  * * A _type_;
  * * An _identity_.
  *
- * The type portion of an Ecstasy reference, represented by the ActualType property of the Ref, is
+ * The type portion of an Ecstasy reference, represented by the _actualType_ property of the Ref, is
  * simply the set of operations that can be invoked against the referent and the set of properties
  * that it contains. Regardless of the actual operations that the referent object implements, only
  * those present in the type of the reference can be invoked through the reference. This allows
@@ -18,7 +18,7 @@
  * The Ref also has a RefType property, which is its _type constraint_. For example, when a Ref
  * represents a compile time concept such as a _variable_ or a _property_, the RefType is the
  * _compile time type_ of the reference. The reference may contain additional operations at runtime;
- * the ActualType is always a super-set (⊇) of the RefType.
+ * the actualType is always a super-set (⊇) of the RefType.
  *
  * The identity portion of an Ecstasy reference is itself unrepresentable in Ecstasy. In fact, it is
  * this very unrepresentability that necessitates the Ref abstraction in the first place. For
@@ -87,11 +87,11 @@ interface Ref<RefType>
     RefType get();
 
     /**
-     * Obtain the actual runtime type of the reference that this Ref currently holds. The ActualType
+     * Obtain the actual runtime type of the reference that this Ref currently holds. The actualType
      * represents the full set of methods that can be invoked against the referent, and is always a
      * super-set of the RefType:
      *
-     *   ActualType ⊇ RefType
+     *   actualType ⊇ RefType
      *
      * (The RefType denotes the constraint of the reference, i.e. the reference must "be of" the
      * RefType, but is not limited to only having the methods of the RefType; the RefType is often

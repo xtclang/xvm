@@ -353,9 +353,11 @@ interface List<ElementType>
                     }
                 else
                     {
-                    List<ElementType> newList = List.this.add(value);
-                    assert &newList == &List.this;
-                    internalIndex = size;
+                    if (List<ElementType> newList : List.this.add(value))
+                        {
+                        assert &newList == &List.this;
+                        internalIndex = size;
+                        }
                     }
                 }
             }
@@ -372,8 +374,10 @@ interface List<ElementType>
                 }
             else
                 {
-                newList = List.this.add(value);
-                internalIndex = size;
+                if (newList : List.this.add(value))
+                    {
+                    internalIndex = size;
+                    }
                 }
             assert &newList == &List.this;
             }

@@ -575,28 +575,27 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        EntryBasedKeySet remove(KeyType key)
+        conditional EntryBasedKeySet<KeyType> remove(KeyType key)
             {
             Map newMap = Map.this.remove(key);
             assert Ref.equals(Map.this, newMap);
-            return this;
+            return true, this;
             }
 
         @Override
         conditional EntryBasedKeySet<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
             {
-            return Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
+            Map newMap = Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
 
         @Override
         conditional EntryBasedKeySet<KeyType> clear()
             {
-            if (Map newMap : Map.this.clear())
-                {
-                assert Ref.equals(Map.this, newMap);
-                return true, this;
-                }
-            return false;
+            Map newMap = Map.this.clear();
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
 
         @Override
@@ -655,20 +654,24 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        KeyBasedEntrySet remove(Entry<KeyType, ValueType> entry)
+        conditional KeyBasedEntrySet<KeyType, ValueType> remove(Entry<KeyType, ValueType> entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
-            if (ValueType value : Map.this.get(entry.key) && value == entry.value)
+            if (ValueType value : Map.this.get(entry.key))
                 {
-                Map newMap = Map.this.remove(entry.key);
-                assert Ref.equals(Map.this, newMap);
+                if (value == entry.value)
+                    {
+                    Map newMap = Map.this.remove(entry.key);
+                    assert Ref.equals(Map.this, newMap);
+                    return true, this;
+                    }
                 }
-            return this;
+            return false;
             }
 
         @Override
-        conditional KeyBasedEntrySet removeIf(
+        conditional KeyBasedEntrySet<KeyType, ValueType> removeIf(
                 function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
@@ -679,18 +682,15 @@ interface Map<KeyType, ValueType>
                 });
             assert &newKeys == &oldKeys;
 
-            return this;
+            return true, this;
             }
 
         @Override
-        conditional KeyBasedEntrySet clear()
+        conditional KeyBasedEntrySet<KeyType, ValueType> clear()
             {
-            if (Map newMap : Map.this.clear())
-                {
-                assert Ref.equals(Map.this, newMap);
-                return true, this;
-                }
-            return false;
+            Map newMap = Map.this.clear();
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
 
         @Override
@@ -700,7 +700,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        KeyBasedEntrySet clone()
+        KeyBasedEntrySet<KeyType, ValueType> clone()
             {
             return this;
             }
@@ -838,37 +838,45 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<ValueType> remove(ValueType value)
+        conditional Collection<ValueType> remove(ValueType value)
             {
             Map.this.entries.iterator().untilAny(entry ->
                 {
                 if (entry.value == value)
                     {
-                    Map newmap = Map.this.remove(entry.key);
+                    Map newMap = Map.this.remove(entry.key);
                     assert Ref.equals(Map.this, newMap);
-                    return true;
+                    return true, this;
                     }
                 return false;
                 });
 
-            return this;
+            return false;
             }
 
         @Override
         conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
-            Map.this.entries.removeIf(entry -> shouldRemove(entry.value));
-            }
-
-        @Override
-        conditional Collection<ValueType> clear()
-            {
-            if (Map newMap : Map.this.clear())
+            if (Collection<ValueType> newEntries :
+                    Map.this.entries.removeIf(entry -> shouldRemove(entry.value)))
                 {
                 assert Ref.equals(Map.this, newMap);
                 return true, this;
                 }
             return false;
+            }
+
+        @Override
+        conditional Collection<ValueType> clear()
+            {
+            if (Map.this.empty)
+                {
+                return false;
+                }
+
+            Map newMap = Map.this.clear();
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
 
         @Override
@@ -880,7 +888,7 @@ interface Map<KeyType, ValueType>
         @Override
         EntryBasedValuesCollection<ValueType> clone()
             {
-            TODO
+            return this;
             }
         }
 
@@ -923,9 +931,9 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<ValueType> remove(ValueType value)
+        conditional Collection<ValueType> remove(ValueType value)
             {
-            Map.this.keys.iterator().untilAny(key ->
+            Boolean modified = Map.this.keys.iterator().untilAny(key ->
                 {
                 if (ValueType keyvalue : Map.this.get(key) && keyvalue == value)
                     {
@@ -936,28 +944,32 @@ interface Map<KeyType, ValueType>
                 return false;
                 });
 
-            return this;
+            return modified ? (true, this) : false;
             }
 
         @Override
         conditional Collection<ValueType> removeIf(function Boolean (ValueType) shouldRemove)
             {
-            Map.this.keys.removeIf(key ->
+            if (Collection<KeyType> newKeys : Map.this.keys.removeIf(key ->
+                    {
+                    assert ValueType value : Map.this.get(key);
+                    return shouldRemove(value);
+                    }))
                 {
-                assert ValueType keyvalue : Map.this.get(key);
-                return shouldRemove(keyvalue);
-                });
+                assert Ref.equals(Map.this.keys, newKeys);
+                return true, this;
+                }
+
+            return false;
             }
 
         @Override
         conditional Collection<ValueType> clear()
             {
-            if (Map newMap : Map.this.clear())
-                {
-                assert Ref.equals(Map.this, newMap);
-                return true, this;
-                }
-            return false;
+            Map newMap = Map.this.clear();
+
+            assert Ref.equals(Map.this, newMap);
+            return true, this;
             }
         }
     }

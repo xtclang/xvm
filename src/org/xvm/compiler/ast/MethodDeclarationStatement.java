@@ -466,13 +466,8 @@ public class MethodDeclarationStatement
                         if (sPath.contains("ExpectedFailure"))
                             {
                             System.out.println("Successfully failed test compilation: " + sPath);
+                            errsTemp.clear();
                             }
-                        else
-                            {
-                            System.err.println("Test compilation error: " + sPath);
-                            errsTemp.getErrors().forEach(System.err::println);
-                            }
-                        errsTemp.clear();
                         }
                     }
                 else
@@ -500,12 +495,17 @@ public class MethodDeclarationStatement
                     errs.log(info.getSeverity(), info.getCode(), info.getParams(), getSource(), info.getPos(), info.getEndPos());
                     }
 
-                String sMsg = e.getMessage();
-                log(errs, Severity.INFO, Compiler.FATAL_ERROR, "could not compile "
-                    + method.getIdentityConstant() + (sMsg == null ? "" : ": " + sMsg));
                 method.setNative(true);
 
-                if (!(e instanceof UnsupportedOperationException))
+                if (e instanceof UnsupportedOperationException)
+                    {
+                    // INFO, FATAL_ERROR serves as a "not yet supported" indicator;
+                    // see CommandLine.checkCompilerErrors()
+                    log(errs, Severity.INFO, Compiler.FATAL_ERROR,
+                        "Failed to compile " + method.getIdentityConstant() +
+                            (e.getMessage() == null ? "" : ": " + e.getMessage()));
+                    }
+                else
                     {
                     System.err.println("Compilation error: " + sPath + " " + e);
                     e.printStackTrace(System.err);

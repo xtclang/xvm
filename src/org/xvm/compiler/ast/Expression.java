@@ -601,7 +601,7 @@ public abstract class Expression
         {
         if (typeRequired.isParamsSpecified() && !typeActual.isParamsSpecified())
             {
-            TypeConstant typeInferred = typeActual.adoptParameters(typeRequired.getParamTypesArray());
+            TypeConstant typeInferred = typeActual.adoptParameters(typeRequired);
             if (typeInferred.isA(typeRequired))
                 {
                 return typeInferred;

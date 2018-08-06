@@ -6,9 +6,9 @@ interface Referent
     /**
      * The actual runtime type of the reference to the referent.
      * <p>
-     * From the referent's point of view, the ActualType is the type of <code>this:target</code>.
+     * From the referent's point of view, the _actualType_ is the type of <code>this:target</code>.
      * <p>
-     * From the referrer's point of view, the ActualType represents the full set of methods that can
+     * From the referrer's point of view, the _actualType_ represents the full set of methods that can
      * be invoked against the referent.
      */
     @RO Type actualType;
@@ -17,7 +17,7 @@ interface Referent
      * Obtain a new reference to the referent such that the reference contains only the methods and
      * properties in the specified {@link Type}. The members of the requested type must be satisfied
      * by the members defined by the object's class. The requested type must be a subset of the
-     * referent's {@link ActualType}.
+     * referent's {@link actualType}.
      * <p>
      * This method will result in a reference that only contains the members in the specified type,
      * stripping the runtime reference of any members that are not present in the specified type.
@@ -28,7 +28,7 @@ interface Referent
      * Obtain a new reference to the referent such that the reference contains the methods and
      * properties in the specified {@link Type}. The members of the requested type must be satisfied
      * by the members defined by the object's class. The requested type may be a superset of the
-     * referent's {@link ActualType}.
+     * referent's {@link actualType}.
      * <p>
      * For a reference to an object from the same module as the caller, this method will return a
      * reference that contains the members in the specified type. For a reference to an object from

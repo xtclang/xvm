@@ -46,7 +46,7 @@ public class AssignmentStatement
 
     public boolean isConditional()
         {
-        return op.getId() == Token.Id.COND;
+        return op.getId() == Token.Id.COLON;
         }
 
     @Override
@@ -108,7 +108,9 @@ public class AssignmentStatement
             ctx = ctx.createInferringContext(typeLeft);
             }
 
-        Expression rvalueNew = rvalue.validate(ctx, typeLeft, errs);
+        Expression rvalueNew = isConditional()
+            ? rvalue.validateMulti(ctx, new TypeConstant[] {pool().typeBoolean(), typeLeft}, errs)
+            : rvalue.validate(ctx, typeLeft, errs);
         if (rvalueNew != rvalue)
             {
             fValid &= rvalueNew != null;
@@ -124,11 +126,18 @@ public class AssignmentStatement
                     Math.max(1, rvalue.getValueCount()),
                     0);
             }
-        else if (lvalue.getValueCount() != rvalue.getValueCount())
+        else
             {
-            rvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                    lvalue.getValueCount(),
-                    rvalue.getValueCount());
+            int cValues = lvalue.getValueCount();
+            if (isConditional())
+                {
+                cValues++;
+                }
+            if (cValues != rvalue.getValueCount())
+                {
+                rvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
+                    cValues, rvalue.getValueCount());
+                }
             }
 
         return fValid ? this : null;

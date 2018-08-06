@@ -162,6 +162,8 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         boolean      fDiff         = constOriginal != constResolved;
 
+        assert !constResolved.isParamsSpecified();
+
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
@@ -190,6 +192,8 @@ public class ParameterizedTypeConstant
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
         boolean      fDiff         = constOriginal != constResolved;
+
+        assert !constResolved.isParamsSpecified();
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
@@ -234,11 +238,38 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public TypeConstant adoptParentTypeParameters()
+        {
+        TypeConstant constOriginal = m_constType;
+
+        assert constOriginal instanceof TerminalTypeConstant;
+
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+        if (constResolved == constOriginal)
+            {
+            return this;
+            }
+
+        // TODO: create ParameterizedTC(ChildTC(typeParent, clzChild))
+        //       see ClassStructure.getFormalType()
+        TypeConstant[] aconstParent   = constResolved.getParamTypesArray();
+        TypeConstant[] aconstThis     = m_atypeParams;
+        TypeConstant[] aconstResolved = new TypeConstant[aconstParent.length + aconstThis.length];
+
+        System.arraycopy(aconstParent, 0, aconstResolved, 0, aconstParent.length);
+        System.arraycopy(aconstThis,   0, aconstResolved, aconstParent.length, aconstThis.length);
+
+        return getConstantPool().ensureParameterizedTypeConstant(constOriginal, aconstResolved);
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
         boolean      fDiff         = constOriginal != constResolved;
+
+        assert !constResolved.isParamsSpecified();
 
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
@@ -325,6 +356,11 @@ public class ParameterizedTypeConstant
                     // will be resolved later via interface method matching
                     continue nextChain;
 
+                case AutoNarrowed:
+                    // will be resolved later explicitly
+                    assert chain.getLength() == 1;
+                    return chains;
+
                 case Equal:
                     assert chain.getLength() == 1;
                     break;
@@ -402,6 +438,11 @@ public class ParameterizedTypeConstant
                 // will be resolved later via interface method matching
                 return true;
 
+            case AutoNarrowed:
+                // will be resolved later explicitly
+                assert chain.getLength() == 1;
+                return true;
+
             case Equal:
                 assert chain.getLength() == 1;
                 break;
@@ -454,7 +495,14 @@ public class ParameterizedTypeConstant
 
         if (!fTuple)
             {
-            assert Math.max(cParamsRight, cParamsLeft) <= listFormalEntries.size();
+            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
+                {
+                // soft assert
+                System.err.println("Invalid number of arguments for " + clz.getName()
+                        + ": required=" + listFormalEntries.size()
+                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
+                return false;
+                }
             }
 
         for (int i = 0; i < cParamsLeft; i++)

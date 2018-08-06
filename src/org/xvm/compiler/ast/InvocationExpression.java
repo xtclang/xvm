@@ -373,7 +373,7 @@ public class InvocationExpression
                 MethodConstant constMethod = (MethodConstant) argMethod;
                 if (typeLeft == null)
                     {
-                    typeLeft = ctx.getThisClass().getFormalType();
+                    typeLeft = ctx.getThisType();
                     }
 
                 if (m_fCall)
@@ -392,8 +392,18 @@ public class InvocationExpression
             // must be a property or a variable of type function (@Auto conversion possibility
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
-            assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-            TypeConstant typeArg = argMethod.getType().resolveTypedefs();
+            TypeConstant typeArg;
+            if (argMethod instanceof PropertyConstant)
+                {
+                PropertyConstant idProp = (PropertyConstant) argMethod;
+                typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                }
+            else
+                {
+                assert argMethod instanceof Register;
+                typeArg = argMethod.getType().resolveTypedefs();
+                }
+
             assert typeArg.isA(pool().typeFunction());
 
             return m_fCall
@@ -544,7 +554,7 @@ public class InvocationExpression
                         MethodConstant constMethod = (MethodConstant) argMethod;
                         if (typeLeft == null)
                             {
-                            typeLeft = ctx.getThisClass().getFormalType();
+                            typeLeft = ctx.getThisType();
                             }
                         TypeConstant[] atypeResult;
                         if (m_fCall)
@@ -565,8 +575,18 @@ public class InvocationExpression
                     // must be a property or a variable of type function (@Auto conversion possibility
                     // already handled above); the function has two tuple sub-types, the second of which is
                     // the "return types" of the function
-                    assert argMethod instanceof Register || argMethod instanceof PropertyConstant;
-                    TypeConstant typeArg = argMethod.getType().resolveTypedefs();
+                    TypeConstant typeArg;
+                    if (argMethod instanceof PropertyConstant)
+                        {
+                        PropertyConstant idProp = (PropertyConstant) argMethod;
+                        typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+                        }
+                    else
+                        {
+                        assert argMethod instanceof Register;
+                        typeArg = argMethod.getType().resolveTypedefs();
+                        }
+
                     assert typeArg.isA(pool().typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
@@ -583,6 +603,10 @@ public class InvocationExpression
                 {
                 expr = exprNew;
 
+                m_fBindTarget = false;
+                m_fBindParams = isAnyArgBound();
+                m_fCall       = !isSuppressCall();
+
                 // it has to either be a function or convertible to a function
                 TypeConstant typeFn = validateFunction(ctx, exprNew.getType(), aArgs, errs);
                 if (typeFn != null)
@@ -596,7 +620,8 @@ public class InvocationExpression
                 }
             }
 
-        return finishValidations(atypeRequired, atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
+        return finishValidations(atypeRequired, atypeRequired == null ?
+                TypeConstant.NO_TYPES : atypeRequired, TypeFit.NoFit, null, errs);
         }
 
     @Override
@@ -792,7 +817,7 @@ public class InvocationExpression
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
         // it to the desired function if necessary
-        TypeConstant typeFn = argFn.getType();
+        TypeConstant typeFn = argFn.getType().resolveTypedefs();
         if (m_idConvert != null)
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
@@ -1292,7 +1317,7 @@ public class InvocationExpression
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
         // conversion to a function. (Done.)
-        typeFn = typeFn.resolveTypedefs();
+        typeFn = typeFn.resolveTypedefs().resolveGenerics(ctx.getThisType());
 
         ConstantPool   pool      = pool();
         boolean        fFunction = typeFn.isA(pool.typeFunction());

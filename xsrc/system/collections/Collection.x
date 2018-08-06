@@ -151,7 +151,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    @Op conditional Collection<ElementType> add(ElementType value)
+    conditional Collection<ElementType> add(ElementType value)
         {
         TODO element addition is not supported
         }
@@ -167,7 +167,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    @Op("+") conditional Collection<ElementType> addAll(Collection!<ElementType> values)
+    conditional Collection<ElementType> addAll(Collection!<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
@@ -195,7 +195,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    @Op("-") conditional Collection<ElementType> remove(ElementType value)
+    conditional Collection<ElementType> remove(ElementType value)
         {
         TODO element removal is not supported
         }
@@ -211,7 +211,7 @@ interface Collection<ElementType>
      * @return the resultant collection, which is the same as {@code this} for a mutable collection,
      *         and Boolean true iff the method resulted in a modification
      */
-    @Op("-") conditional Collection<ElementType> removeAll(Collection!<ElementType> values)
+    conditional Collection<ElementType> removeAll(Collection!<ElementType> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example

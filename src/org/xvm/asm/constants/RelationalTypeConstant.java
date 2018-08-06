@@ -218,6 +218,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant adoptParentTypeParameters()
+        {
+        // relational type cannot have a parent class
+        return this;
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
         {
         TypeConstant constOriginal1 = m_constType1;

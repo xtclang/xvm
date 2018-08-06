@@ -47,6 +47,7 @@ class Array<ElementType>
             }
 
         this.head       = head;
+        this.tail       = tail;
         this.capacity   = size;
         this.size       = size;
         this.mutability = FixedSize;
@@ -90,7 +91,7 @@ class Array<ElementType>
             throw new BoundsException("index=" + index + ", size=" + size);
             }
 
-        Element element = head as Element;
+        Element element = head.as(Element);
         while (index-- > 0)
             {
             element = element.next as Element;
@@ -115,7 +116,44 @@ class Array<ElementType>
         return this;
         }
 
-    @Op Array!<ElementType> add(Array!<ElementType> that)
+
+    @Op("+") Array!<ElementType> addElement(ElementType element)
+        {
+        switch (mutability)
+            {
+            case Constant:
+                throw new IllegalStateException("Array is constant");
+
+            case FixedSize:
+                throw new IllegalStateException("Array is fixed size");
+
+            case Persistent:
+                {
+                ElementType[] that = new ElementType[this.size + 1,
+                    (i) -> i < this.size ? this[i] : element];
+                that.mutability = Persistent;
+                return that;
+                }
+
+            default:
+                {
+                Element el = new Element(element);
+                if (head == null)
+                    {
+                    head = el;
+                    tail = el;
+                    }
+                else
+                    {
+                    tail.next = el;
+                    tail = el;
+                    }
+                return this;
+                }
+            }
+        }
+
+    @Op("+") Array!<ElementType> addElements(Array!<ElementType> that)
         {
         switch (mutability)
             {
@@ -134,7 +172,10 @@ class Array<ElementType>
                 }
 
             default:
-                elementAt(index).set(value);
+                for (Int i = 0; i < that.size; i++)
+                    {
+                    addElement(that[i]);
+                    }
                 return this;
             }
         }
@@ -165,7 +206,7 @@ class Array<ElementType>
     @Override
     Iterator<ElementType> iterator()
         {
-        return this;
+        TODO;
         }
 
     @Override
@@ -208,6 +249,7 @@ class Array<ElementType>
     // ----- internal implementation details -------------------------------------------------------
 
     private Element? head;
+    private Element? tail;
 
     private class Element(ElementType value, Element? next = null)
             delegates Ref<ElementType>(valueRef)

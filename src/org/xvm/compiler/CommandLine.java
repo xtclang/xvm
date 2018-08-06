@@ -141,8 +141,8 @@ public class CommandLine
 
         // expression resolution
         validateExpressions();
-        checkCompilerErrors();
-        checkTerminalFailure();
+        // checkCompilerErrors();
+        // checkTerminalFailure();
 
         // assembling the actual code
         generateCode();
@@ -879,21 +879,25 @@ public class CommandLine
                 {
                 err("xtc: Errors in " + compiler.getModuleStatement().getName());
 
-                int c = 0;
+                int cCompiler    = 0;
+                int cUnsupported = 0;
                 for (ErrorList.ErrorInfo err : errs.getErrors())
                     {
-                    c++;
-
                     // TODO: temporary until the compiler works
-                    String sErr = err.toString();
-                    if (sErr.contains("COMPILER-01"))
+                    if (err.getCode().equals(Compiler.FATAL_ERROR)
+                            && err.getSeverity() == Severity.INFO)
                         {
-                        continue;
+                        // this is a "not yet supported" indicator
+                        cUnsupported++;
                         }
-                    err(" [" + c + "] " + sErr);
+                    else
+                        {
+                        cCompiler++;
+                        err(" [" + cCompiler + "] " + err);
+                        }
                     }
 
-                err("Total " + c + " errors");
+                err("Compiler errors: " + cCompiler + "; not implemented: " + cUnsupported);
 
                 error |= errs.getSeverity().ordinal() >= opts.badEnoughToQuit().ordinal();
                 errs.clear();

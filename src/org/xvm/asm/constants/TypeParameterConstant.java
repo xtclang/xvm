@@ -95,7 +95,7 @@ public class TypeParameterConstant
     @Override
     public boolean containsUnresolved()
         {
-        if (fReEntry)
+        if (fResolved || fReEntry)
             {
             return false;
             }
@@ -103,7 +103,7 @@ public class TypeParameterConstant
         fReEntry = true;
         try
             {
-            return m_constMethod.containsUnresolved();
+            return fResolved = m_constMethod.containsUnresolved();
             }
         finally
             {
@@ -260,4 +260,5 @@ public class TypeParameterConstant
     private int m_iReg;
 
     private transient boolean fReEntry;
+    private transient boolean fResolved;
     }

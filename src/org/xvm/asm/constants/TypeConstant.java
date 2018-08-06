@@ -502,17 +502,34 @@ public abstract class TypeConstant
 
     /**
      * @return this same type, but with the number of parameters equal to the number of
-     *         formal parameters for the the underlying terminal type
+     *         formal parameters for the the underlying terminal type, assigning missing
+     *         type parameters to the corresponding canonical types
      */
     public TypeConstant normalizeParameters()
         {
-        return adoptParameters(null);
+        return adoptParameters((TypeConstant[]) null);
+        }
+
+    /**
+     * Create a semantically equivalent type that is parameterized by the parameters of the
+     * specified type and normalized (the total number of parameters equal to the number of
+     * formal parameters for the underlying terminal type, where missing parameters are assigned
+     * to the resolved canonical types).
+     *
+     * @param typeFrom  the type to adopt type parameters from
+     *
+     * @return potentially new normalized type parameterized by the specified type parameters
+     */
+    public TypeConstant adoptParameters(TypeConstant typeFrom)
+        {
+        return adoptParameters(typeFrom.getParamTypesArray());
         }
 
     /**
      * Create a semantically equivalent type that is parameterized by the specified type parameters,
      * and normalized (the total number of parameters equal to the number of formal parameters
-     * for the underlying terminal type)
+     * for the underlying terminal type, where missing parameters are assigned to the resolved
+     * canonical types).
      *
      * @param atypeParams the parameters to adopt or null if the parameters of this type are
      *                    simply to be normalized
@@ -527,6 +544,28 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(constResolved);
+        }
+
+    /**
+     * If this type represents a child class, create a semantically equivalent type that contains
+     * the parent's formal type parameters.
+     *
+     * Note: for child classes there are two particular effects related to this method:
+     * <ul>
+     *   <li>the resulting type may have different number of type parameters;
+     *   <li>it is not idempotent; calling it twice will cause an assertion or corrupted result type
+     * </ul>
+     *
+     * @return potentially new type that contains parent's formal type parameters
+     */
+    public TypeConstant adoptParentTypeParameters()
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+
+        return constResolved == constOriginal
+            ? this
+            : cloneSingle(constResolved);
         }
 
     /**
@@ -742,20 +781,15 @@ public abstract class TypeConstant
             {
             validate(errs);
 
-            // resolve the type to make sure that typedefs etc. are removed from the equation
-            TypeConstant typeResolved = resolveTypedefs().resolveAutoNarrowing(null);
+            // - resolve the type to make sure that typedefs etc. are removed from the equation;
+            // - resolve the auto-narrowing;
+            // - normalize the type to make sure that all formal parameters are filled in
+            TypeConstant typeResolved = resolveTypedefs().
+                                        resolveAutoNarrowing(null).
+                                        normalizeParameters();
             if (typeResolved != this)
                 {
                 info = typeResolved.ensureTypeInfo(errs);
-                setTypeInfo(info);
-                return info;
-                }
-
-            // normalize the type to make sure that all formal parameters are filled in
-            TypeConstant typeNormalized = normalizeParameters();
-            if (typeNormalized != this)
-                {
-                info = typeNormalized.ensureTypeInfo(errs);
                 setTypeInfo(info);
                 return info;
                 }
@@ -1184,9 +1218,9 @@ public abstract class TypeConstant
      * Populate the type parameter map with the type parameters of this type (not counting any
      * further contributions), and create a GenericTypeResolver based on that type parameter map.
      *
-     * @param constId        the identity constant of the class that the type is based on
-     * @param struct         the structure of the class that the type is based on
-     * @param errs           the error list to log to
+     * @param constId  the identity constant of the class that the type is based on
+     * @param struct   the structure of the class that the type is based on
+     * @param errs     the error list to log to
      *
      * @return the map of type parameters
      */
@@ -1214,7 +1248,7 @@ public abstract class TypeConstant
             }
         else
             {
-            // obtain the type parameters declared by the class
+            // obtain the type parameters declared by the class and its instance parent
             List<Entry<StringConstant, TypeConstant>> listClassParams = struct.getTypeParamsAsList();
             int                                       cClassParams    = listClassParams.size();
 
@@ -1232,7 +1266,6 @@ public abstract class TypeConstant
                     }
                 }
 
-            // normalization is equivalent to calling getFormalType().resolveGenerics(this);
             TypeConstant typeNormalized = this.normalizeParameters();
 
             for (int i = 0; i < cClassParams; ++i)
@@ -1263,7 +1296,15 @@ public abstract class TypeConstant
                         }
                     }
 
-                mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                if (mapTypeParams.containsKey(sName))
+                    {
+                    log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_COLLISION,
+                            struct.getIdentityConstant().getValueString(), sName);
+                    }
+                else
+                    {
+                    mapTypeParams.put(sName, new ParamInfo(sName, typeConstraint, typeActual));
+                    }
                 }
             }
 
@@ -2005,6 +2046,9 @@ public abstract class TypeConstant
                 {
                 mapContribProps   = new HashMap<>();
                 mapContribMethods = new HashMap<>();
+
+                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps);
+
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 if (!createMemberInfo(constId, isInterface(constId, struct),
                         struct, mapTypeParams, mapContribProps, mapContribMethods, listExplode, errs))
@@ -2777,15 +2821,49 @@ public abstract class TypeConstant
         }
 
     /**
+     * Collect type parameters for the specified class and all its instance parents.
+     *
+     * @param struct         the class structure
+     * @param mapTypeParams  the map of type parameters
+     * @param mapProps       the properties of the class
+     */
+    private void collectSelfTypeParameters(
+            ClassStructure                      struct,
+            Map<Object, ParamInfo>              mapTypeParams,
+            Map<PropertyConstant, PropertyInfo> mapProps)
+        {
+        for (Component child : struct.children())
+            {
+            if (child instanceof PropertyStructure)
+                {
+                PropertyStructure prop = (PropertyStructure) child;
+                if (prop.isTypeParameter())
+                    {
+                    PropertyConstant id = prop.getIdentityConstant();
+
+                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
+                                        mapTypeParams.get(id.getName()))));
+                    }
+                }
+            }
+
+        ClassStructure parent = struct.getInstanceParent();
+        if (parent != null)
+            {
+            collectSelfTypeParameters(parent, mapTypeParams, mapProps);
+            }
+        }
+
+    /**
      * Generate the members of the "this" class of "this" type.
      *
-     * @param constId           the identity of the class (used for logging error information)
-     * @param fInterface        if the class is an interface type
-     * @param structContrib     the class structure, property structure, or method structure REVIEW or typedef?
-     * @param mapTypeParams     the map of type parameters
-     * @param mapProps          the properties of the class
-     * @param mapMethods        the methods of the class
-     * @param errs              the error list to log any errors to
+     * @param constId        the identity of the class (used for logging error information)
+     * @param fInterface     if the class is an interface type
+     * @param structContrib  the class structure, property structure, or method structure REVIEW or typedef?
+     * @param mapTypeParams  the map of type parameters
+     * @param mapProps       the properties of the class
+     * @param mapMethods     the methods of the class
+     * @param errs           the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
      */
@@ -2793,9 +2871,9 @@ public abstract class TypeConstant
             IdentityConstant                    constId,
             boolean                             fInterface,
             Component                           structContrib,
-            Map<Object, ParamInfo>              mapTypeParams,
+            Map<Object          , ParamInfo>    mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
-            Map<MethodConstant  , MethodInfo  > mapMethods,
+            Map<MethodConstant  , MethodInfo>   mapMethods,
             List<PropertyConstant>              listExplode,
             ErrorListener                       errs)
         {
@@ -2822,20 +2900,16 @@ public abstract class TypeConstant
         else if (structContrib instanceof PropertyStructure)
             {
             PropertyStructure prop = (PropertyStructure) structContrib;
-            PropertyConstant  id   = prop.getIdentityConstant();
-            PropertyInfo      info;
             if (prop.isTypeParameter())
                 {
-                // this only knows how to create a type-param PropertyInfo for the type parameters
-                // of the class
-                assert id.getNestedDepth() == 1;
-                info = new PropertyInfo(new PropertyBody(prop, mapTypeParams.get(id.getName())));
+                // type parameters have been processed by collectSelfTypeParameters()
+                return true;
                 }
-            else
-                {
-                assert !(fNative && fInterface); // cannot be native and interface at the same time
-                info = createPropertyInfo(prop, constId, fNative, fInterface, errs);
-                }
+
+            assert !(fNative && fInterface); // cannot be native and interface at the same time
+
+            PropertyConstant  id   = prop.getIdentityConstant();
+            PropertyInfo      info = createPropertyInfo(prop, constId, fNative, fInterface, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
@@ -3285,8 +3359,10 @@ public abstract class TypeConstant
             fRO = false;
             }
 
+        TypeConstant typeProp = prop.getType().adoptParentTypeParameters().resolveGenerics(this);
+
         return new PropertyInfo(new PropertyBody(prop, impl, null,
-                prop.getType().resolveGenerics(this), fRO, fRW, cCustomMethods > 0,
+                typeProp, fRO, fRW, cCustomMethods > 0,
                 effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),
                 methodInit == null ? null : methodInit.getIdentityConstant()));
         }
@@ -3497,23 +3573,38 @@ public abstract class TypeConstant
                 }
 
             Contribution contrib = chain.first();
-            if (contrib.getComposition() == Composition.MaybeDuckType)
+            switch (contrib.getComposition())
                 {
-                TypeConstant typeIface = contrib.getTypeConstant();
-                if (typeIface == null)
+                case MaybeDuckType:
                     {
-                    typeIface = typeLeft;
+                    TypeConstant typeIface = contrib.getTypeConstant();
+                    if (typeIface == null)
+                        {
+                        typeIface = typeLeft;
+                        }
+
+                    if (!typeIface.isInterfaceAssignableFrom(
+                            typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                        {
+                        iter.remove();
+                        }
+                    break;
                     }
 
-                if (!typeIface.isInterfaceAssignableFrom(
-                        typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
+                case AutoNarrowed:
                     {
-                    iter.remove();
+                    // without any additional context, it should be assignable in some direction
+                    typeRight = typeRight.resolveAutoNarrowing(null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(null);
+
+                    Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
+                    return relRightIsLeft == Relation.INCOMPATIBLE
+                        ? typeLeft.calculateRelation(typeRight)
+                        : relRightIsLeft;
                     }
-                }
-            else
-                {
-                return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
+
+                default:
+                    return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
                 }
             }
 
