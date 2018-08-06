@@ -474,9 +474,9 @@ public class Register
             }
 
         @Override
-        public boolean isConstant()
+        public boolean isEffectivelyFinal()
             {
-            return Register.this.isConstant();
+            return Register.this.isEffectivelyFinal();
             }
 
         @Override
