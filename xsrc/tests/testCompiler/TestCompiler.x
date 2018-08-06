@@ -127,7 +127,7 @@ class TestCompiler<TestType1 extends Number,
 //        immutable MyConsumer<Int> finder10b = c10; // fail; "Extends-Incorporates"
 //        }
 
-    class P<T>
+    static class P<T>
         {
         T produce()
             {
@@ -140,7 +140,7 @@ class TestCompiler<TestType1 extends Number,
         P!<T> self2();
         }
 
-    class P2<T2>
+    static class P2<T2>
         {
         P<T2> produce()
             {

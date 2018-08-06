@@ -52,7 +52,7 @@ public class PropertyInfo
         }
 
     /**
-     * Combine the information in this PropertyInfo with the information from a super type's
+     * Combine the information in this PropertyInfo with the information from a sub type's
      * PropertyInfo.
      *
      * @param that   the "contribution" PropertyInfo to layer on top of this property
@@ -245,7 +245,7 @@ public class PropertyInfo
         // checking against), because transitivity.
         Annotation[] aAnnoBase = this.getRefAnnotations();
         int          cAnnoBase = aAnnoBase.length;
-        if (cAnnoBase > 0)
+        if (cAnnoBase > 0 && this.getExistence() != Existence.Implied)
             {
             for (int iBodyAdd = cAdd - 1; iBodyAdd >= 0; --iBodyAdd)
                 {

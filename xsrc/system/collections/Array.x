@@ -91,7 +91,7 @@ class Array<ElementType>
             throw new BoundsException("index=" + index + ", size=" + size);
             }
 
-        Element element = head as Element;
+        Element element = head.as(Element);
         while (index-- > 0)
             {
             element = element.next as Element;

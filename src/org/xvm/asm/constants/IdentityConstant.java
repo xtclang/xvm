@@ -120,6 +120,26 @@ public abstract class IdentityConstant
         }
 
     /**
+     * Test for sharing a parent. Two classes are said to be "nest mates" if they have the same
+     * outermost underlying class.
+     *
+     * @param constClass  the class to test nest sharing with
+     *
+     * @return true if this class has the same outermost parent class as the specified one
+     */
+    public boolean isNestMate(IdentityConstant constClass)
+        {
+        if (getFormat() == Format.Class && constClass.getFormat() == Format.Class)
+            {
+            ClassConstant idThis = (ClassConstant) this;
+            ClassConstant idThat = (ClassConstant) constClass;
+            return idThis.getOutermost().equals(idThat.getOutermost());
+            }
+
+        return this.equals(constClass);
+        }
+
+    /**
      * @return true iff this constant represents a component nested within a class, but not a class
      *         itself
      */

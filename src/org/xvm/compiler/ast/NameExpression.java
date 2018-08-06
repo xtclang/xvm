@@ -1067,13 +1067,18 @@ public class NameExpression
                         if (arg instanceof Register && ((Register) arg).isTarget() ||
                                 !typeLeft.isGenericType() &&
                                 typeLeft.isSingleUnderlyingClass(false) &&
-                                typeLeft.getSingleUnderlyingClass(false).equals(
+                                typeLeft.getSingleUnderlyingClass(false).isNestMate(
                                         ctx.getThisClass().getIdentityConstant()))
                             {
-                            Access access = typeLeft.getAccess();
-                            if (access != Access.PRIVATE && access != Access.STRUCT)
+                            switch (typeLeft.getAccess())
                                 {
-                                typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                case PROTECTED:
+                                    typeLeft = typeLeft.getUnderlyingType();
+                                    assert !typeLeft.isAccessSpecified();
+                                    // fall through
+                                case PUBLIC:
+                                    typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
+                                    break;
                                 }
                             }
 

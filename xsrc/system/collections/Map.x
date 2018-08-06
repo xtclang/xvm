@@ -577,7 +577,7 @@ interface Map<KeyType, ValueType>
         @Override
         conditional EntryBasedKeySet<KeyType> remove(KeyType key)
             {
-            Map<KeyType, ValueType> newMap = Map.this.remove(key);
+            Map newMap = Map.this.remove(key);
             assert Ref.equals(Map.this, newMap);
             return true, this;
             }
