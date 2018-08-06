@@ -1557,7 +1557,7 @@ public class TypeCompositionStatement
 
         // trim any trailing whitespace & line terminators
         int cch = sb.length();
-        while (isWhitespace(sb.charAt(--cch)))
+        while (cch > 0 && isWhitespace(sb.charAt(--cch)))
             {
             sb.setLength(cch);
             }
