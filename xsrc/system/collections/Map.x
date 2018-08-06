@@ -541,7 +541,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.keys} property that delegates back
      * to the map and to the map's {@link Map.entries entries}.
      */
-    class EntryBasedKeysSet<KeyType>
+    class EntryBasedKeySet<KeyType>
             implements Set<KeyType>
         {
         @Override
@@ -575,7 +575,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Collection<KeyType> remove(KeyType key)
+        EntryBasedKeySet remove(KeyType key)
             {
             Map newMap = Map.this.remove(key);
             assert Ref.equals(Map.this, newMap);
@@ -583,13 +583,13 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Collection<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
+        conditional EntryBasedKeySet<KeyType> removeIf(function Boolean (KeyType) shouldRemove)
             {
-            Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
+            return Map.this.entries.removeIf(entry -> shouldRemove(entry.key));
             }
 
         @Override
-        conditional Collection<KeyType> clear()
+        conditional EntryBasedKeySet<KeyType> clear()
             {
             if (Map newMap : Map.this.clear())
                 {
@@ -606,7 +606,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        EntryBasedKeysSet<KeyType> clone()
+        EntryBasedKeySet<KeyType> clone()
             {
             return this;
             }
@@ -618,7 +618,7 @@ interface Map<KeyType, ValueType>
      * An implementation of the Set for the {@link Map.entries} property that delegates back to the
      * map and to the map's {@link Map.keys keys}.
      */
-    class KeyBasedEntriesSet<KeyType, ValueType>
+    class KeyBasedEntrySet<KeyType, ValueType>
             implements Set<Entry<KeyType, ValueType>>
         {
         @Override
@@ -655,7 +655,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        Set<Entry<KeyType, ValueType>> remove(Entry<KeyType, ValueType> entry)
+        KeyBasedEntrySet remove(Entry<KeyType, ValueType> entry)
             {
             // value is an Entry; remove the requested entry from the map only if the specified
             // entry's key/value pair exists in the map
@@ -668,16 +668,22 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        conditional Set<Entry<KeyType, ValueType>> removeIf(function Boolean (Entry<KeyType, ValueType>) shouldRemove)
+        conditional KeyBasedEntrySet removeIf(
+                function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
-            Set<KeyType> newKeys = oldKeys.removeIf(key -> shouldRemove(new KeyBasedCursorEntry(key)));
+            Set<KeyType> newKeys = oldKeys.removeIf(key ->
+                {
+                static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
+                return shouldRemove(entry.advance(key));
+                });
             assert &newKeys == &oldKeys;
+
             return this;
             }
 
         @Override
-        conditional Set<Entry<KeyType, ValueType>> clear()
+        conditional KeyBasedEntrySet clear()
             {
             if (Map newMap : Map.this.clear())
                 {
@@ -694,7 +700,7 @@ interface Map<KeyType, ValueType>
             }
 
         @Override
-        KeyBasedEntriesSet<Entry<KeyType, ValueType>> clone()
+        KeyBasedEntrySet clone()
             {
             return this;
             }

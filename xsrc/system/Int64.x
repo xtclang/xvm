@@ -44,12 +44,12 @@ const Int64
     /**
      * The minimum value for an Int64.
      */
-    static IntLiteral minvalue = 0; // TODO -0x8000000000000000;
+    static IntLiteral minvalue = -0x8000000000000000;
 
     /**
      * The maximum value for an Int64.
      */
-    static IntLiteral maxvalue =  0x7FFFFFFFFFFFFFFF;
+    static IntLiteral maxvalue = 0x7FFFFFFFFFFFFFFF;
 
     @RO UInt64 magnitude.get()
         {
@@ -59,13 +59,6 @@ const Int64
 // TODO
     @Override
     @Op Int64 add(Int64 n);
-
-// TODO
-    /**
-     * In addition to the implicit "add(Int64 n)" method, this method allows any
-     * integer to be added to this value.
-     */
-    @Op Int64 add(IntNumber n);
 
 // TODO
     @Override

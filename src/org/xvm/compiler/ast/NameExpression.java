@@ -1085,7 +1085,7 @@ public class NameExpression
                         // TODO typedefs
 
                         name.log(errs, getSource(), Severity.ERROR, Compiler.NAME_MISSING,
-                            sName, ctx.getThisClass().getName());
+                            sName, typeLeft.getValueString());
                         }
                     else
                         {
@@ -1229,13 +1229,22 @@ public class NameExpression
                     ClassStructure clz = ctx.getThisClass();
                     if (clz != prop.getParent())
                         {
-                        // the property comes from a contribution; need to resolve its formal type
-                        type = type.resolveGenerics(clz.getFormalType());
+                        PropertyInfo infoProp = clz.getFormalType().
+                                ensureTypeInfo().findProperty(id);
+                        if (infoProp != null)
+                            {
+                            type = infoProp.getType();
+                            }
                         }
                     }
                 else
                     {
-                    type = type.resolveGenerics(left.getImplicitType(ctx));
+                    PropertyInfo infoProp = left.getImplicitType(ctx).
+                            ensureTypeInfo().findProperty(id);
+                    if (infoProp != null)
+                        {
+                        type = infoProp.getType();
+                        }
                     }
 
                 if (!prop.isConstant() && isIdentityMode(ctx, false))

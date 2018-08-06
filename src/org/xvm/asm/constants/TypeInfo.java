@@ -205,7 +205,7 @@ public class TypeInfo
 
                     if (fVirtual)
                         {
-                        mapVirtProps.put(id.resolveNestedIdentity(ensureTypeResolver()), prop);
+                        mapVirtProps.put(id.resolveNestedIdentity(m_type), prop);
                         }
                     }
                 }
@@ -224,7 +224,7 @@ public class TypeInfo
 
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.resolveNestedIdentity(ensureTypeResolver()), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(m_type), method);
                     }
                 }
             }
@@ -257,7 +257,7 @@ public class TypeInfo
                 mapProps.put(id, prop);
                 if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.resolveNestedIdentity(ensureTypeResolver()), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(m_type), prop);
                     }
                 }
 
@@ -274,7 +274,7 @@ public class TypeInfo
                 mapMethods.put(id, method);
                 if (method.isVirtual())
                     {
-                    mapVirtMethods.put(id.resolveNestedIdentity(ensureTypeResolver()), method);
+                    mapVirtMethods.put(id.resolveNestedIdentity(m_type), method);
                     }
                 }
 
@@ -316,14 +316,14 @@ public class TypeInfo
                 // substitute a sub-class property or method if one is available
                 if (idParent instanceof PropertyConstant)
                     {
-                    Object       idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    Object       idResolved = idParent.resolveNestedIdentity(m_type);
                     PropertyInfo info       = m_mapVirtProps.get(idResolved);
 
                     idParent = info.getIdentity();
                     }
                 else if (idParent instanceof MethodConstant)
                     {
-                    Object     idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    Object     idResolved = idParent.resolveNestedIdentity(m_type);
                     MethodInfo info       = m_mapVirtMethods.get(idResolved);
 
                     idParent = info.getIdentity();
@@ -336,7 +336,7 @@ public class TypeInfo
                 // a method cap will not have a real component because it is a fake identity
                 if (idParent instanceof MethodConstant)
                     {
-                    Object       idResolved = idParent.resolveNestedIdentity(ensureTypeResolver());
+                    Object       idResolved = idParent.resolveNestedIdentity(m_type);
                     MethodInfo method = m_mapVirtMethods.get(idResolved);
                     assert method != null;
                     assert method.getHead().getImplementation() == Implementation.Capped;
@@ -361,41 +361,6 @@ public class TypeInfo
             }
 
         return true;
-        }
-
-    /**
-     * Obtain a type resolver that uses the information from this type's type parameters.
-     *
-     * @param errs  the error list to log any errors to
-     *
-     * @return a GenericTypeResolver
-     */
-    public ParamInfo.TypeResolver ensureTypeResolver(ErrorListener errs)
-        {
-        assert errs != null;
-
-        ParamInfo.TypeResolver resolver = m_resolver;
-        if (resolver == null || resolver.errs != errs)
-            {
-            m_resolver = resolver = new ParamInfo.TypeResolver(
-                    m_struct.getIdentityConstant(), m_mapTypeParams, errs);
-            }
-        return resolver;
-        }
-
-    /**
-     * (Internal)
-     *
-     * @return a type resolver, creating one if necessary (using the TypeConstant's error list)
-     */
-    private ParamInfo.TypeResolver ensureTypeResolver()
-        {
-        ParamInfo.TypeResolver resolver = m_resolver;
-        if (resolver == null)
-            {
-            resolver = ensureTypeResolver(getType().getErrorListener());
-            }
-        return resolver;
         }
 
     /**
@@ -826,7 +791,7 @@ public class TypeInfo
             return prop;
             }
 
-        prop = m_mapVirtProps.get(constId.resolveNestedIdentity(ensureTypeResolver()));
+        prop = m_mapVirtProps.get(constId.resolveNestedIdentity(m_type));
         return prop != null && prop.isIdentityValid(constId) ? prop : null;
         }
 
@@ -920,7 +885,7 @@ public class TypeInfo
             }
 
         // try to find a method with the same signature
-        method = m_mapVirtMethods.get(id.resolveNestedIdentity(ensureTypeResolver()));
+        method = m_mapVirtMethods.get(id.resolveNestedIdentity(m_type));
         if (method != null)
             {
             for (MethodBody body : method.getChain())
@@ -1677,7 +1642,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (m_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(ensureTypeResolver())))
+                if (m_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(m_type)))
                     {
                     sb.append("(v) ");
                     }
@@ -1698,7 +1663,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (m_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(ensureTypeResolver())))
+                if (m_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(m_type)))
                     {
                     sb.append("(v) ");
                     }
@@ -1802,19 +1767,6 @@ public class TypeInfo
             }
 
         return false;
-        }
-
-
-    // ----- inner class: TypeResolver -------------------------------------------------------------
-
-    /**
-     * A GenericTypeResolver that works from a TypeInfo's map from property name to ParamInfo.
-     */
-    public interface TypeResolver
-            extends GenericTypeResolver
-        {
-        ParamInfo findParamInfo(Object nid);
-        void registerParamInfo(Object nid, ParamInfo param);
         }
 
 
@@ -1942,11 +1894,6 @@ public class TypeInfo
      * as those nested within a property or method. Lazily initialized
      */
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
-
-    /**
-     * A cached type resolver.
-     */
-    private transient ParamInfo.TypeResolver m_resolver;
 
     /**
      * Cached "equals" function.

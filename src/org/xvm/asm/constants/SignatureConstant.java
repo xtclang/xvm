@@ -519,41 +519,44 @@ public class SignatureConstant
         {
         // params
         TypeConstant[] atypeOldParams = m_aconstParams;
-        TypeConstant[] atypeNewParams = null;
+        TypeConstant[] atypeNewParams = atypeOldParams;
+        boolean        fDiff          = false;
         for (int i = 0, c = atypeOldParams.length; i < c; ++i)
             {
             TypeConstant constOld = atypeOldParams[i];
             TypeConstant constNew = constOld.resolveTypedefs();
             if (constNew != constOld)
                 {
-                if (atypeNewParams == null)
+                if (atypeNewParams == atypeOldParams)
                     {
                     atypeNewParams = atypeOldParams.clone();
                     }
                 atypeNewParams[i] = constNew;
+                fDiff = true;
                 }
             }
 
         // returns
         TypeConstant[] atypeOldReturns = m_aconstReturns;
-        TypeConstant[] atypeNewReturns = null;
+        TypeConstant[] atypeNewReturns = atypeOldReturns;
         for (int i = 0, c = atypeOldReturns.length; i < c; ++i)
             {
             TypeConstant constOld = atypeOldReturns[i];
             TypeConstant constNew = constOld.resolveTypedefs();
             if (constNew != constOld)
                 {
-                if (atypeNewReturns == null)
+                if (atypeNewReturns == atypeOldReturns)
                     {
                     atypeNewReturns = atypeOldReturns.clone();
                     }
                 atypeNewReturns[i] = constNew;
+                fDiff = true;
                 }
             }
 
-        return atypeNewParams == null && atypeNewReturns == null
-                ? this
-                : getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns);
+        return fDiff
+                ? getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns)
+                : this;
         }
 
     @Override

@@ -193,7 +193,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Set<KeyType> keys.calc()
         {
-        return new EntryBasedKeysSet();
+        return new EntryBasedKeySet();
         }
 
     @Override
@@ -218,8 +218,7 @@ class ExtHashMap<KeyType, ValueType>
      * A representation of all of the HashEntry objects in the Map.
      */
     class HashEntrySet
-            extends KeyBasedEntriesSet<KeyType, ValueType>
-            implements Set<HashEntry>
+            extends KeyBasedEntrySet<KeyType, ValueType>
         {
         @Override
         Iterator<HashEntry> iterator()
@@ -383,7 +382,7 @@ class ExtHashMap<KeyType, ValueType>
      * to the actual map (i.e. it is not a real HashEntry), but it reifies to a real HashEntry.
      */
     protected class ProcessableHashEntry
-            extends Map.KeyBasedEntry
+            extends Map.KeyBasedEntry<KeyType, ValueType>
         {
         @Override
         HashEntry reify()

@@ -180,6 +180,36 @@ public class ClassStructure
         }
 
     /**
+     * If this class is an instance child class of a class, return the parent's structure.
+     *
+     * @return the instance parent structure or null
+     */
+    public ClassStructure getInstanceParent()
+        {
+        if (isChild() && !isStatic() && getFormat() != Format.INTERFACE)
+            {
+            Component parent = getParent();
+            if (parent instanceof ClassStructure && parent.getFormat() != Format.INTERFACE)
+                {
+                return (ClassStructure) parent;
+                }
+            }
+        return null;
+        }
+
+    /**
+     * @return the number of type parameters for this class
+     */
+    public int getTypeParamCount()
+        {
+        ClassStructure                    parent  = getInstanceParent();
+        Map<StringConstant, TypeConstant> mapThis = m_mapParams;
+
+        return (parent == null  ? 0 : parent.getTypeParamCount()) +
+               (mapThis == null ? 0 : mapThis.size());
+        }
+
+    /**
      * Obtain the type parameters for the class as an ordered read-only map, keyed by name and with
      * a corresponding value of the type constraint for the parameter.
      *
@@ -187,15 +217,10 @@ public class ClassStructure
      */
     public Map<StringConstant, TypeConstant> getTypeParams()
         {
-        Map<StringConstant, TypeConstant> mapParent = Collections.EMPTY_MAP;
-        if (!isStatic() && getFormat() != Format.INTERFACE)
-            {
-            Component parent = getParent();
-            if (parent instanceof ClassStructure && parent.getFormat() != Format.INTERFACE)
-                {
-                mapParent = ((ClassStructure) parent).getTypeParams();
-                }
-            }
+        ClassStructure                    parent    = getInstanceParent();
+        Map<StringConstant, TypeConstant> mapParent = parent == null
+            ? Collections.EMPTY_MAP
+            : parent.getTypeParams();
 
         Map<StringConstant, TypeConstant> mapThis = m_mapParams;
         if (mapThis == null)
@@ -225,15 +250,10 @@ public class ClassStructure
      */
     public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList()
         {
-        List<Map.Entry<StringConstant, TypeConstant>> listParent = Collections.EMPTY_LIST;
-        if (!isStatic())
-            {
-            Component parent = getParent();
-            if (parent instanceof ClassStructure)
-                {
-                listParent = ((ClassStructure) parent).getTypeParamsAsList();
-                }
-            }
+        ClassStructure                                parent     = getInstanceParent();
+        List<Map.Entry<StringConstant, TypeConstant>> listParent = parent == null
+            ? Collections.EMPTY_LIST
+            : parent.getTypeParamsAsList();
 
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         if (mapThis == null)
@@ -289,7 +309,13 @@ public class ClassStructure
      */
     public boolean isParameterized()
         {
-        return m_mapParams != null;
+        if (m_mapParams != null)
+            {
+            return true;
+            }
+
+        ClassStructure parent = getInstanceParent();
+        return parent != null && parent.isParameterized();
         }
 
     /**
@@ -302,24 +328,49 @@ public class ClassStructure
             {
             IdentityConstant constantClz = getIdentityConstant();
 
-            ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
-            if (mapParams == null)
+            if (isParameterized())
                 {
-                typeFormal = constantClz.getType();
+                TypeConstant[] aTypes = null;
+                ClassStructure parent = getInstanceParent();
+                if (parent != null && parent.isParameterized())
+                    {
+                    // prepend the list of parent's generic params
+                    aTypes = parent.getFormalType().getParamTypesArray();
+                    }
+
+                ConstantPool                      pool    = getConstantPool();
+                Map<StringConstant, TypeConstant> mapThis = m_mapParams;
+                if (mapThis != null)
+                    {
+                    int cTypesParent = aTypes == null ? 0 : aTypes.length;
+                    int cTypesThis   = mapThis.size();
+                    if (aTypes == null)
+                        {
+                        aTypes = new TypeConstant[cTypesThis];
+                        }
+                    else
+                        {
+                        // consider creating a ParameterizedTC(ChildTC(typeParent, clzChild))
+                        TypeConstant[] aTypesNew = new TypeConstant[cTypesParent + cTypesThis];
+                        System.arraycopy(aTypes, 0, aTypesNew, 0, cTypesParent);
+                        aTypes = aTypesNew;
+                        }
+
+                    int i = cTypesParent;
+                    for (StringConstant constName : mapThis.keySet())
+                        {
+                        aTypes[i++] = pool.ensureTerminalTypeConstant(
+                            pool.ensurePropertyConstant(constantClz, constName.getValue()));
+                        }
+                    }
+
+                typeFormal = pool.ensureClassTypeConstant(constantClz, null, aTypes);
                 }
             else
                 {
-                ConstantPool   pool   = getConstantPool();
-                TypeConstant[] aParam = new TypeConstant[mapParams.size()];
-                int i = 0;
-                for (StringConstant constName : mapParams.keySet())
-                    {
-                    aParam[i++] = pool.ensureTerminalTypeConstant(
-                            pool.ensurePropertyConstant(constantClz, constName.getValue()));
-                    }
-
-                typeFormal = pool.ensureClassTypeConstant(constantClz, null, aParam);
+                typeFormal = constantClz.getType();
                 }
+
             m_typeFormal = typeFormal;
             }
         return typeFormal;
@@ -337,8 +388,8 @@ public class ClassStructure
 
             IdentityConstant constClz = getIdentityConstant();
 
-            ListMap<StringConstant, TypeConstant> mapParams = m_mapParams;
-            if (mapParams == null)
+            Map<StringConstant, TypeConstant> mapParams = getTypeParams();
+            if (mapParams.isEmpty())
                 {
                 typeCanonical = constClz.getType();
                 }
@@ -391,7 +442,7 @@ public class ClassStructure
     public List<TypeConstant> normalizeParameters(List<TypeConstant> listActual)
         {
         int cActual = listActual.size();
-        int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+        int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? listActual
@@ -409,7 +460,7 @@ public class ClassStructure
     public TypeConstant[] normalizeParameters(TypeConstant[] atypeActual)
         {
         int cActual = atypeActual.length;
-        int cFormal = m_mapParams == null ? 0 : m_mapParams.size();
+        int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? atypeActual
@@ -718,11 +769,33 @@ public class ClassStructure
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0)
             {
+            if (sName.equals("ElementTypes") && ix == 0 &&
+                    getIdentityConstant().equals(getConstantPool().clzTuple()))
+                {
+                return new TupleElementsTypeConstant(getConstantPool(),
+                    listActual.toArray(new TypeConstant[listActual.size()]));
+                }
             return ix < listActual.size() ? listActual.get(ix) : null;
             }
 
         for (Contribution contrib : getContributionsAsList())
             {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            if (!typeContrib.isSingleUnderlyingClass(true))
+                {
+                // TODO: how do we process relational types?
+                continue;
+                }
+
+            List<TypeConstant> listContribTypes =
+                contrib.transformActualTypes(this, listActual);
+            if (listContribTypes == null)
+                {
+                // conditional incorporation
+                continue;
+                }
+
             switch (contrib.getComposition())
                 {
                 case Into:
@@ -733,20 +806,15 @@ public class ClassStructure
                 case Annotation:
                 case Delegates:
                 case Implements:
-                    // TODO: what if the underlying type is relational
                 case Incorporates:
                 case Extends:
-                    TypeConstant typeContrib = contrib.getTypeConstant();
-                    if (typeContrib.isParamsSpecified())
-                        {
-                        ClassStructure clzContrib = (ClassStructure)
+                    ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
-                        TypeConstant type = clzContrib.getGenericParamTypeImpl(sName,
-                            typeContrib.getParamTypes(), false);
-                        if (type != null)
-                            {
-                            return type;
-                            }
+                    TypeConstant type = clzContrib.getGenericParamTypeImpl(
+                            sName, listContribTypes, false);
+                    if (type != null)
+                        {
+                        return type;
                         }
                     break;
 
@@ -784,27 +852,12 @@ public class ClassStructure
             return chains;
             }
 
-        boolean fRebase = false;
-        switch (getFormat())
+        TypeConstant typeRebase = getRebaseType();
+        if (typeRebase != null)
             {
-            case CONST:
-                fRebase = idClzLeft.equals(getConstantPool().clzConst());
-                break;
-
-            case ENUMVALUE:
-                fRebase = idClzLeft.equals(getConstantPool().clzEnum());
-                break;
-
-            case SERVICE:
-                fRebase = idClzLeft.equals(getConstantPool().clzService());
-                break;
-            }
-
-        if (fRebase)
-            {
-            chains.add(new ContributionChain(
-                new Contribution(Composition.Equal, (TypeConstant) null)));
-            return chains;
+            ClassStructure clzRebase = (ClassStructure)
+                typeRebase.getSingleUnderlyingClass(true).getComponent();
+            clzRebase.collectContributions(idClzLeft, listRight, chains, false);
             }
 
     nextContribution:
@@ -1643,7 +1696,7 @@ public class ClassStructure
                 }
             else
                 {
-                int cFormal = getTypeParams().size();
+                int cFormal = getTypeParamCount();
                 int cActual = listActual.size();
                 if (cFormal < cActual)
                     {

@@ -632,13 +632,13 @@ switch (y)
     case 1:
     case 2:     x=-1; break;
     case 3:     {
-                    x = 99;
-                    for (Int i : 5..10)
-                        {
-                        x += i;
-                        }
+                x = 99;
+                for (Int i : 5..10)
+                    {
+                    x += i;
                     }
-                 break;
+                }
+                break;
     case 4:     x=12;  break;
     default:    x=17;  break;
     }
@@ -1474,3 +1474,60 @@ mixin Sorter
 mixin Sorter<ElementType>
         into List<ElementType>
         extends SimpleSorter<ElementType>
+
+// ----- parameterized types
+
+class B<T>
+    {
+    C cFirst;           // B<T>.C<???>
+    C<Int> c2;
+    C<Int,String> c3;   // error (both compile time and verifier)
+
+
+    class C<T2>         // B<T>.C<T2>
+        {
+        void foo()
+            {
+            C c = ...   // B<T>.C<T2>
+            }
+        }
+    }
+
+// ----- injection
+
+interface Console
+    {
+    void println(Object o = "");
+    }
+
+const Int
+    {
+    // ...
+    }
+
+module MyApp
+    {
+    class MyClass
+        {
+        @Inject Console console;    // obviously an interface type; no way to learn the class identity behind it
+
+        @Inject Int pin_code;       //
+        }
+    }
+
+// -----
+
+const Point(Int x, Int y);
+
+const Rectangle(Point topLeft, Point bottomRight)
+    {
+    Point topRight.get()
+        {
+        return new Point(bottomRight.x, topLeft.y);
+        }
+
+    Point bottomLeft.get()
+        {
+        return new Point(topLeft.x, bottomRight.y);
+        }
+    }

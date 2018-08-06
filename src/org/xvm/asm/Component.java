@@ -2685,6 +2685,7 @@ public abstract class Component
             {
             TypeConstant typeContrib = getTypeConstant();
 
+            typeContrib = typeContrib.normalizeParameters();
             if (!typeContrib.isParamsSpecified() && !typeContrib.isRelationalType())
                 {
                 // non-parameterized contribution
@@ -2715,10 +2716,9 @@ public abstract class Component
 
             assert typeContrib.isSingleDefiningConstant();
 
+            typeContrib = typeContrib.normalizeParameters();
             if (!typeContrib.isParamsSpecified())
                 {
-                // non-parameterized contribution
-                // TODO: shouldn't we normalize and proceed below?
                 return Collections.emptyList();
                 }
 

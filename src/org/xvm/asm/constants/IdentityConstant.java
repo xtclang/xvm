@@ -503,10 +503,10 @@ public abstract class IdentityConstant
             //  Class<PublicType, ProtectedType, PrivateType, StructType>
             ConstantPool pool = getConstantPool();
             return pool.ensureParameterizedTypeConstant(pool.typeClass(),
-                    pool.ensureClassTypeConstant(this, Access.PUBLIC),
-                    pool.ensureClassTypeConstant(this, Access.PROTECTED),
-                    pool.ensureClassTypeConstant(this, Access.PRIVATE),
-                    pool.ensureClassTypeConstant(this, Access.STRUCT));
+                    pool.ensureClassTypeConstant(this, Access.PUBLIC,    (TypeConstant[]) null),
+                    pool.ensureClassTypeConstant(this, Access.PROTECTED, (TypeConstant[]) null),
+                    pool.ensureClassTypeConstant(this, Access.PRIVATE,   (TypeConstant[]) null),
+                    pool.ensureClassTypeConstant(this, Access.STRUCT,    (TypeConstant[]) null));
             }
 
         throw new UnsupportedOperationException("constant-class=" + getClass().getSimpleName());

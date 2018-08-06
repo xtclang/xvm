@@ -1069,12 +1069,6 @@ public class TerminalTypeConstant
     public List<ContributionChain> collectContributions(
             TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
         {
-        if (this.equals(getConstantPool().typeObject()))
-            {
-            // Object doesn't have any contributions
-            return chains;
-            }
-
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
@@ -1083,12 +1077,17 @@ public class TerminalTypeConstant
             }
 
         Constant constIdRight = getDefiningConstant();
+        Constant constIdLeft  = null;
 
-        if (typeLeft.isSingleDefiningConstant()
-                && constIdRight.equals(typeLeft.getDefiningConstant()))
+        if (typeLeft.isSingleDefiningConstant())
             {
-            chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
-            return chains;
+            constIdLeft = typeLeft.getDefiningConstant();
+
+            if (constIdRight.equals(constIdLeft))
+                {
+                chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                return chains;
+                }
             }
 
         Format format;
@@ -1111,11 +1110,22 @@ public class TerminalTypeConstant
 
             case Property:
                 // scenarios we can handle here are:
-                // 1. r-value (this) = T (formal parameter type), constrained by U (other formal type)
+                // 1. r-value (this) = T (formal parameter type)
+                //    l-value (that) = T (formal parameter type, equal by name only)
+
+                // 2. r-value (this) = T (formal parameter type), constrained by U (other formal type)
                 //    l-value (that) = U (formal parameter type)
                 //
-                // 2. r-value (this) = T (formal parameter type), constrained by U (real type)
+                // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
+                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property
+                    && (((PropertyConstant) constIdLeft).getName().equals(
+                            ((PropertyConstant) constIdRight).getName())))
+                    {
+                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                    break;
+                    }
+
                 return getPropertyTypeType((PropertyConstant) constIdRight).
                     collectContributions(typeLeft, listRight, chains);
 
@@ -1127,17 +1137,11 @@ public class TerminalTypeConstant
             case ParentClass:
             case ChildClass:
                 {
-                if (typeLeft.isSingleDefiningConstant())
+                if (constIdLeft != null && constIdLeft.getFormat() == format
+                        && ((PseudoConstant) constIdRight).isCongruentWith((PseudoConstant) constIdLeft))
                     {
-                    Constant constIdLeft = typeLeft.getDefiningConstant();
-
-                    if (constIdLeft.getFormat() == format
-                        && ((PseudoConstant) constIdRight).
-                                isCongruentWith((PseudoConstant) constIdLeft))
-                        {
-                        chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
-                        break;
-                        }
+                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
+                    break;
                     }
 
                 ClassStructure clzRight = (ClassStructure)
