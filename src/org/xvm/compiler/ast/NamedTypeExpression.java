@@ -6,19 +6,13 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.ParentClassConstant;
-import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
-import org.xvm.asm.constants.ThisClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
@@ -200,13 +194,14 @@ public class NamedTypeExpression
                 throw new IllegalStateException("log error: auto-narrowing override ('!') unexpected");
                 }
 
-            if (constId instanceof ClassConstant) // and isAutoNarrowingAllowed()==true
+            if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
                 {
-                // what is the "this:class"?
-                ClassConstant constThisClass = (ClassConstant)
-                        getComponent().getContainingClass().getIdentityConstant();
-
-                return constThisClass.calculateAutoNarrowingConstant((ClassConstant) constId);
+                ClassStructure struct = getComponent().getContainingClass();
+                if (struct != null)
+                    {
+                    ClassConstant constThisClass = (ClassConstant) struct.getIdentityConstant();
+                    return constThisClass.calculateAutoNarrowingConstant((ClassConstant) constId);
+                    }
                 }
             }
 
@@ -279,8 +274,9 @@ public class NamedTypeExpression
             return (TypeConstant) constId;
             }
 
+        // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant constType = pool.ensureTerminalTypeConstant(inferAutoNarrowing(constId));
+        TypeConstant type = pool.ensureTerminalTypeConstant(constId);
 
         if (paramTypes != null)
             {
@@ -290,20 +286,20 @@ public class NamedTypeExpression
                 {
                 aconstParams[i] = paramTypes.get(i).ensureTypeConstant();
                 }
-            constType = pool.ensureParameterizedTypeConstant(constType, aconstParams);
+            type = pool.ensureParameterizedTypeConstant(type, aconstParams);
             }
 
         if (access != null && access != Access.PUBLIC)
             {
-            constType = pool.ensureAccessTypeConstant(constType, access);
+            type = pool.ensureAccessTypeConstant(type, access);
             }
 
         if (immutable != null)
             {
-            constType = pool.ensureImmutableTypeConstant(constType);
+            type = pool.ensureImmutableTypeConstant(type);
             }
 
-        return constType;
+        return type;
         }
 
 
