@@ -22,7 +22,8 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * A TypeConstant that represents the type of a module, package, or class.
+ * A TypeConstant that represents an accessibility constraint for an underlying type that
+ * represents module, package, or class.
  */
 public class AccessTypeConstant
         extends TypeConstant
@@ -48,10 +49,10 @@ public class AccessTypeConstant
         }
 
     /**
-     * Construct a constant whose value is a data type.
+     * Construct a constant whose value is an access specified type.
      *
      * @param pool       the ConstantPool that will contain this Constant
-     * @param constType  a ModuleConstant, PackageConstant, or ClassConstant
+     * @param constType  a type constant that represents a module, package, or class
      * @param access     one of: Public, Protected, Private, or Struct
      */
     public AccessTypeConstant(ConstantPool pool, TypeConstant constType, Access access)
@@ -293,7 +294,7 @@ public class AccessTypeConstant
             throws IOException
         {
         out.writeByte(getFormat().ordinal());
-        writePackedLong(out, indexOf(m_constType));
+        writePackedLong(out, m_constType.getPosition());
         writePackedLong(out, m_access.ordinal());
         }
 

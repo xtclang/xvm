@@ -1028,12 +1028,26 @@ public class TerminalTypeConstant
         Constant constant = getDefiningConstant();
         switch (constant.getFormat())
             {
+            case Module:
+            case Package:
+                return true;
+
             case Property:
             case TypeParameter:
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+            case NativeClass:
                 return false;
 
+            case Class:
+                {
+                ClassConstant idClass = (ClassConstant) constant;
+                return ((ClassStructure) idClass.getComponent()).isConst();
+                }
+
             default:
-                return true;
+                throw new IllegalStateException("unexpected constant: " + constant);
             }
         }
 
