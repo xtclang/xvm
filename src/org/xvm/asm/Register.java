@@ -511,9 +511,9 @@ public class Register
         //           -----  -----  -----
         Unassigned  (true , false, false),      // definitely unassigned
         UnknownOnce (false, false, true ),      // not definitely assigned; effectively final
-        UnknownMulti(false, false, false),      // not definitely assigned
-        Assigned    (false, true , false),      // definitely assigned
-        AssignedOnce(false, true , true );      // definitely assigned; effectively final
+        Unknown     (false, false, false),      // not definitely assigned
+        AssignedOnce(false, true , true ),      // definitely assigned; effectively final
+        Assigned    (false, true , false);      // definitely assigned
 
         private Assignment(boolean fUnassigned, boolean fAssigned, boolean fExactlyOnce)
             {
@@ -545,9 +545,9 @@ public class Register
                 {
                 case Unassigned:    return AssignedOnce;
                 case UnknownOnce:   return Assigned;
-                case UnknownMulti:  return Assigned;
-                case Assigned:      return Assigned;
+                case Unknown:       return Assigned;
                 case AssignedOnce:  return Assigned;
+                case Assigned:      return Assigned;
 
                 default:
                     throw new IllegalStateException();
@@ -565,11 +565,11 @@ public class Register
             {
             switch (this)
                 {
-                case Unassigned:    return UnknownMulti;
-                case UnknownOnce:   return UnknownMulti;
-                case UnknownMulti:  return UnknownMulti;
-                case Assigned:      return Assigned;
+                case Unassigned:    return Unknown;
+                case UnknownOnce:   return Unknown;
+                case Unknown:       return Unknown;
                 case AssignedOnce:  return Assigned;
+                case Assigned:      return Assigned;
 
                 default:
                     throw new IllegalStateException();
