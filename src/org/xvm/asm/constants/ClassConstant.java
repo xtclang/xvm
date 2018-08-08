@@ -136,7 +136,7 @@ public class ClassConstant
             // the two classes are related, so figure out how to describe "that" in relation
             // to "this"
             ConstantPool     pool       = getConstantPool();
-            PseudoConstant   constPath  = new ThisClassConstant(pool, constThisClass);
+            PseudoConstant   constPath  = pool.ensureThisClassConstant(constThisClass);
             IdentityConstant constThis  = constThisClass;
             IdentityConstant constThat  = constThatClass;
             int              cThisDepth = constThisClass.getDepthFromOutermost();
@@ -144,7 +144,7 @@ public class ClassConstant
             int              cReDescend = 0;
             while (cThisDepth > cThatDepth)
                 {
-                constPath = new ParentClassConstant(pool, constPath);
+                constPath = pool.ensureParentClassConstant(constPath);
                 constThis = constThis.getParentConstant();
                 --cThisDepth;
                 }
@@ -159,7 +159,7 @@ public class ClassConstant
                 assert cThisDepth == cThatDepth && cThisDepth >= 0;
 
                 ++cReDescend;
-                constPath = new ParentClassConstant(pool, constPath);
+                constPath = pool.ensureParentClassConstant(constPath);
 
                 constThis = constThis.getParentConstant();
                 constThat = constThat.getParentConstant();
@@ -196,7 +196,7 @@ public class ClassConstant
             constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
             }
 
-        return new ChildClassConstant(getConstantPool(), constPath, constChild.getName());
+        return getConstantPool().ensureChildClassConstant(constPath, constChild.getName());
         }
 
 

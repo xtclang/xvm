@@ -875,9 +875,13 @@ public class Compiler
      */
     public static final String VAR_UNASSIGNED                     = "COMPILER-81";
     /**
-     * The variable {1} cannot be assigned to.
+     * The variable {0} cannot be assigned to.
      */
     public static final String VAR_ASSIGNMENT_ILLEGAL             = "COMPILER-82";
+    /**
+     * \"{0}\" is not yet implemented.
+     */
+    public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
     /**
      * Name required.
      */

@@ -269,7 +269,7 @@ public abstract class TypeConstant
     public boolean containsGenericParam(String sName)
         {
         TypeInfo info = getTypeInfo();
-        if (info != null)
+        if (isComplete(info))
             {
             return info.getTypeParams().containsKey(sName);
             }

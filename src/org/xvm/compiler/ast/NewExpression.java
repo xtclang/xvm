@@ -277,7 +277,8 @@ public class NewExpression
                 // type being instantiated must either be a static child class, the top level class,
                 // or an instance class directly nested under the class specified by the "left" type
                 // TODO detect & log errors: VE_NEW_REQUIRES_PARENT VE_NEW_DISALLOWS_PARENT VE_NEW_UNRELATED_PARENT
-                throw new UnsupportedOperationException("instantiating child class not yet supported");
+                log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of child classes");
+                return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
                 }
             }
 
@@ -328,7 +329,9 @@ public class NewExpression
 
         if (body != null)
             {
-            throw new UnsupportedOperationException("anonymous inner class not yet supported");
+            // TODO anonymous inner class
+            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of anonymous inner classes");
+            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
         if (fValid)

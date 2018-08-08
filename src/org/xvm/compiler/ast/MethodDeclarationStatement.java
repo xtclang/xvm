@@ -10,6 +10,7 @@ import java.util.List;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
@@ -328,17 +329,17 @@ public class MethodDeclarationStatement
                         org.xvm.asm.Parameter param = methodSuper.getReturn(i);
                         TypeConstant type = param.getType();
 
-                        if (type.getFormat() == Constant.Format.TerminalType)
+                        if (type.getFormat() == Format.TerminalType)
                             {
                             Constant constReturn = type.getDefiningConstant();
-                            if (constReturn.getFormat() == Constant.Format.UnresolvedName)
+                            if (constReturn.getFormat() == Format.UnresolvedName)
                                 {
                                 // not yet resolved; come back later
                                 mgr.requestRevisit();
                                 return;
                                 }
 
-                            if (constReturn.getFormat() == Constant.Format.Property
+                            if (constReturn.getFormat() == Format.Property
                                     && ((PropertyConstant) constReturn).getName().equals("RefType"))
                                 {
                                 // replace the RefType with the actual property type
@@ -375,7 +376,6 @@ public class MethodDeclarationStatement
             if (!method.resolveAnnotations() || !method.resolveTypedefs())
                 {
                 mgr.requestRevisit();
-                return;
                 }
             }
         }
