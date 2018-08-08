@@ -2547,14 +2547,12 @@ public class Parser
      * <p/><code><pre>
      * PrefixExpression
      *     PostfixExpression
-     *     "throw" PrefixExpression
      *     "++" PrefixExpression
      *     "--" PrefixExpression
      *     "+" PrefixExpression
      *     "-" PrefixExpression
      *     "!" PrefixExpression
      *     "~" PrefixExpression
-     *     "&" PrefixExpression
      * </pre></code>
      *
      * @return an expression
@@ -2787,6 +2785,7 @@ public class Parser
      *     SwitchExpression
      *     LambdaExpression
      *     "_"
+     *     "throw" Expression
      *     "T0D0" TodoFinish-opt
      *     Literal
      * </pre></code>

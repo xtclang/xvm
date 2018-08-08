@@ -633,7 +633,6 @@ RelationalExpression
     RelationalExpression "<=>" RangeExpression
     RelationalExpression "as" TypeExpression
     RelationalExpression "is" TypeExpression
-    RelationalExpression "instanceof" TypeExpression
 
 RangeExpression
     ShiftExpression
@@ -672,15 +671,14 @@ PostfixExpression
     PrimaryExpression
     PostfixExpression "++"
     PostfixExpression "--"
-    PostfixExpression ArgumentList
+    PostfixExpression "(" Arguments-opt ")"
     PostfixExpression ArrayDims                                 # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
-    PostfixExpression ".new" TypeExpression ArgumentList
+    PostfixExpression ".new" TypeExpression "(" Arguments-opt ")"
     PostfixExpression ".as" "(" TypeExpression ")"
     PostfixExpression ".is" "(" TypeExpression ")"
-    PostfixExpression ".instanceof" "(" TypeExpression ")"
 
 ArrayDims
     "[" DimIndicators-opt "]"
@@ -711,7 +709,7 @@ ExpressionList
 #       parametized type.
 PrimaryExpression
     "(" Expression ")"
-    "new" TypeExpression ArgumentList AnonClassBody-opt
+    "new" TypeExpression "(" Arguments-opt ")" AnonClassBody-opt
     "throw" TernaryExpression
     "T0D0" TodoFinish-opt
     "&"-opt "construct"-opt QualifiedName TypeParameterTypeList-opt
