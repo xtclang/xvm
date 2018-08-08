@@ -879,11 +879,11 @@ public class Compiler
      */
     public static final String VAR_ASSIGNMENT_ILLEGAL             = "COMPILER-82";
     /**
-     * \"{0}\" is not yet implemented.
-     */
-    public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
-    /**
      * Name required.
      */
     public static final String NAME_REQUIRED                      = "COMPILER-83";
+    /**
+     * {0} is not yet implemented.
+     */
+    public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";
     }
