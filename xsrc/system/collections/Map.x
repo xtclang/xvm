@@ -675,9 +675,28 @@ interface Map<KeyType, ValueType>
                 function Boolean (Entry<KeyType, ValueType>) shouldRemove)
             {
             Set<KeyType> oldKeys = Map.this.keys;
+
+            // temp fix, part 1 of 2:
+//            static @Unassigned KeyBasedCursorEntry<KeyType, ValueType> entry;
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
                 {
+                // REVIEW this line of code is possibly "so wrong" in so many ways:
+                // 1) what does it mean to have a "static" variable inside of a lamba?
+                //    a) does this mean that the state is owned by the lambda (making it stateFUL)
+                //    b) .. or that the lambda is a method (captures "this") and thus can put a
+                //       property onto the KeyBasedEntrySet itself?
+                // 2) the compiler currently barfs on this because the identity of the lambda is not
+                //    known during the validateExpressions() stage, so the property constant is
+                //    considered to be "unresolved" (so MethodDeclarationStatement.resolveNames()
+                //    requeues itself infinitely because method.resolveTypedefs() cannot succeed)
+                //
                 static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
+                // temp fix, part 2 of 2:
+//                if (&entry.assigned)
+//                    {
+//                    entry = new KeyBasedCursorEntry(key);
+//                    }
+
                 return shouldRemove(entry.advance(key));
                 });
             assert &newKeys == &oldKeys;

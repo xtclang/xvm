@@ -492,6 +492,57 @@ public abstract class AstNode
         code.updateLineNumber(Source.calculateLine(getStartPosition()));
         }
 
+    /**
+     * If any of the children of this node have been previously deferred, catch them up now.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return true if the children got caught up; false if the catch-up aborted
+     */
+    protected boolean catchUpChildren(ErrorListener errs)
+        {
+        // method children are all deferred up until this stage, so we have to "catch them up" at
+        // this point, recreating the various compiler stages here
+        Stage stageOldest = null;
+        for (AstNode node : children())
+            {
+            Stage stage = node.getStage();
+            if (stageOldest == null)
+                {
+                stageOldest = stage;
+                }
+            else if (stage.compareTo(stageOldest) < 0)
+                {
+                stageOldest = stage;
+                }
+            }
+        if (stageOldest == null)
+            {
+            return true;
+            }
+
+        for (Stage stageCurrent = stageOldest.nextTarget(), stageThis = getStage();
+                stageCurrent.compareTo(stageThis) < 0;
+                stageCurrent = stageCurrent.nextTarget())
+            {
+            StageMgr mgrKids = new StageMgr(this, stageCurrent, errs);
+            while (!mgrKids.processComplete())
+                {
+                if (errs.isAbortDesired() || mgrKids.getIterations() > 20)
+                    {
+                    for (AstNode node : mgrKids.takeRevisitList())
+                        {
+                        // TODO clean up / clarify error logging
+                        node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
+                                node.getComponent().getIdentityConstant().toString());
+                        return false;
+                        }
+                    }
+                }
+            }
+
+        return true;
+        }
 
     // ----- name resolution -----------------------------------------------------------------------
 

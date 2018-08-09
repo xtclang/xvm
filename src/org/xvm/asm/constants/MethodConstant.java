@@ -56,20 +56,7 @@ public class MethodConstant
      */
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, SignatureConstant constSig)
         {
-        super(pool);
-
-        if (constParent == null)
-            {
-            throw new IllegalArgumentException("parent required");
-            }
-
-        if (constSig == null)
-            {
-            throw new IllegalArgumentException("signature required");
-            }
-
-        m_constParent = constParent;
-        m_constSig    = constSig;
+        this(pool, constParent, constSig, 0);
         }
 
     /**
@@ -83,7 +70,7 @@ public class MethodConstant
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
             TypeConstant[] params, TypeConstant[] returns)
         {
-        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns));
+        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns), 0);
         }
 
     /**
@@ -95,6 +82,19 @@ public class MethodConstant
      */
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent, int iLambda)
         {
+        this(pool, constParent, null, iLambda);
+        }
+
+    /**
+     * (Internal) Construct a constant whose value is a method identifier.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  specifies the MultiMethodConstant that contains this method
+     * @param constSig     the method signature constant
+     * @param iLambda      the separate lambda identity
+     */
+    protected MethodConstant(ConstantPool pool, MultiMethodConstant constParent, SignatureConstant constSig, int iLambda)
+        {
         super(pool);
 
         if (constParent == null)
@@ -102,15 +102,20 @@ public class MethodConstant
             throw new IllegalArgumentException("parent required");
             }
 
-        if (iLambda <= 0)
+        if (constSig == null && iLambda == 0)
             {
-            throw new IllegalArgumentException("lambda identity required");
+            throw new IllegalArgumentException("signature or lambda identity required");
+            }
+
+        if (iLambda < 0)
+            {
+            throw new IllegalArgumentException("illegal lambda identity: " + iLambda);
             }
 
         m_constParent = constParent;
+        m_constSig    = constSig;
         m_iLambda     = iLambda;
         }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -147,6 +152,19 @@ public class MethodConstant
         {
         assert !isNascent();
         return m_constSig;
+        }
+
+    /**
+     * Provide a lambda with its signature, once the signature is known.
+     *
+     * @param sig  the lambda function or method signature
+     */
+    public void setSignature(SignatureConstant sig)
+        {
+        assert isLambda();
+        assert isNascent();
+        assert sig != null;
+        m_constSig = sig;
         }
 
     /**
@@ -393,23 +411,24 @@ public class MethodConstant
     @Override
     public boolean containsUnresolved()
         {
-        // the constant is considered to be unresolved until the signature is available and resolved
-        return super.containsUnresolved() || isNascent() || getSignature().containsUnresolved();
+        // the constant is considered to be unresolved until the signature is resolved; however, a
+        // nascent lambda identity is considered to be resolved because its identity is its lambda
+        // index (not the signature)
+        return super.containsUnresolved() || !isNascent() && getSignature().containsUnresolved();
         }
 
     @Override
     public MethodConstant resolveTypedefs()
         {
-        if (isNascent())
-            {
-            return this;
-            }
+        MultiMethodConstant idOldParent = getParentConstant();
+        MultiMethodConstant idNewParent = (MultiMethodConstant) idOldParent.resolveTypedefs();
 
         SignatureConstant sigOld = m_constSig;
-        SignatureConstant sigNew = sigOld.resolveTypedefs();
-        return sigNew == sigOld
+        SignatureConstant sigNew = sigOld == null ? null : sigOld.resolveTypedefs();
+        return idOldParent == idNewParent && sigNew == sigOld
                 ? this
-                : getConstantPool().ensureMethodConstant(m_constParent, sigNew);
+                : (MethodConstant) getConstantPool().register(new MethodConstant(
+                        getConstantPool(), idNewParent, sigNew, m_iLambda));
         }
 
     @Override
@@ -419,9 +438,33 @@ public class MethodConstant
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
-            n = isLambda()
-                    ? this.m_iLambda - that.m_iLambda              // REVIEW
-                    : this.m_constSig.compareTo(that.m_constSig);
+            n = this.m_iLambda - that.m_iLambda;
+            if (n == 0)
+                {
+                SignatureConstant sigThis = this.m_constSig;
+                SignatureConstant sigThat = that.m_constSig;
+                if (sigThis != null && sigThat != null)
+                    {
+                    return sigThis.compareTo(sigThat);
+                    }
+
+                // WARNING! this is very unorthodox behavior. what we're about to do is to mutate
+                // a constant deep inside of its "equals()" call chain. that should be illegal, bad,
+                // naughty, etc., but it *isn't* because this is a lambda, and the signature isn't
+                // really part of the identity, i.e. it's just "cached" information, so we need to
+                // make sure that once the signature is assigned, that all of the identities that
+                // point to the lambda use the same signature (in reality, there will only be one)
+                if (sigThis != null)
+                    {
+                    that.setSignature(sigThis);
+                    }
+                else if (sigThat != null)
+                    {
+                    this.setSignature(sigThat);
+                    }
+
+                return 0;
+                }
             }
         return n;
         }

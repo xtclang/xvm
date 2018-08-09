@@ -524,6 +524,32 @@ public class Compiler
             }
 
         /**
+         * @return the first "target-able" Stage that comes before this Stage
+         */
+        public Stage prevTarget()
+            {
+            Stage that = prev();
+            while (!that.isTargetable())
+                {
+                that = that.prev();
+                }
+            return that;
+            }
+
+        /**
+         * @return the first "target-able" Stage that comes after this Stage
+         */
+        public Stage nextTarget()
+            {
+            Stage that = next();
+            while (!that.isTargetable())
+                {
+                that = that.next();
+                }
+            return that;
+            }
+
+        /**
          * Look up a Stage enum by its ordinal.
          *
          * @param i  the ordinal

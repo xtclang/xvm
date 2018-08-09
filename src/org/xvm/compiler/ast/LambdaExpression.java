@@ -95,78 +95,78 @@ public class LambdaExpression
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        checkDebug();
-
+        // just like the MethodDeclarationStatement, lambda expressions are considered to be
+        // completely opaque, and so a lambda defers the processing of its children at this point,
+        // because it wants everything around its children to be set up by the time those children
+        // need to be able to answer all of the questions about names and types and so on
         if (m_lambda == null)
             {
-            TypeConstant[] atypes   = null;
-            String[]       asParams = null;
-            if (paramNames == null)
-                {
-                // build an array of types and an array of names
-                int cParams = params == null ? 0 : params.size();
-                atypes   = new TypeConstant[cParams];
-                asParams = new String[cParams];
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    Parameter param = params.get(i);
-                    atypes  [i] = param.getType().ensureTypeConstant();
-                    asParams[i] = param.getName();
-                    }
-                }
-            else
-                {
-                // build an array of names
-                int cParams = paramNames.size();
-                asParams = new String[cParams];
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    Expression expr = paramNames.get(i);
-                    if (expr instanceof NameExpression)
-                        {
-                        // note: could also be an IgnoredNameExpression
-                        asParams[i] = ((NameExpression) expr).getName();
-                        }
-                    else
-                        {
-                        expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
-                        asParams[i] = Id.IGNORED.TEXT;
-                        }
-                    }
-                }
-
-            Component            container = getParent().getComponent();
-            MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
-            MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
-            // TODO
-            m_lambda = lambda;
+            mgr.deferChildren();
             }
-
-        super.registerStructures(mgr, errs);
         }
 
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        checkDebug();
-
-        super.resolveNames(mgr, errs);
+        // see note above
+        if (m_lambda == null)
+            {
+            mgr.deferChildren();
+            }
         }
 
     @Override
     public void validateExpressions(StageMgr mgr, ErrorListener errs)
         {
-        checkDebug();
-
-        super.validateExpressions(mgr, errs);
+        // see note above
+        if (m_lambda == null)
+            {
+            mgr.deferChildren();
+            }
         }
 
     @Override
     public void generateCode(StageMgr mgr, ErrorListener errs)
         {
-        checkDebug();
+        MethodStructure method = m_lambda;
 
-        super.generateCode(mgr, errs);
+        // if the lambda was somehow determined to produce a constant value with no side-effects,
+        // then there shouldn't be a lambda body and we're already done here
+        if (isConstant())
+            {
+            assert method == null;
+            mgr.deferChildren();
+            return;
+            }
+
+        // the method body containing this must validate the lambda expression, which then will
+        // create the lambda body (the method structure), and that has to happen before we try to
+        // spit out any code
+        if (method == null)
+            {
+            mgr.requestRevisit();
+            return;
+            }
+
+        // this is where the magic happens:
+        // - by this point in time, the method body containing the lambda has already been validated
+        // - the validation included validating (a temp copy of) this expression in order to
+        //   determine definite assignment information (VAS data) which is used to itemize the
+        //   captures by the lambda, and whether the read-only captures should use values or
+        //   references
+        // - when the expression was validated, it started by creating the MethodStructure for the
+        //   lambda (m_lambda)
+        // - when the expression was subsequently asked to generate code that invokes the lambda
+        //   (via generateAssignment), it was then able to use that VAS information to build the
+        //   final signature for the lambda, including all of the parameters necessary to capture
+        //   the various variables in the lexical scope of the lambda declaration that needed to be
+        //   passed to the lambda (via fbind)
+        // - so now, at this point, we have the signature, we have the method structure, and we just
+        //   have to emit the code corresponding to the lambda
+        if (catchUpChildren(errs))
+            {
+            body.compileMethod(method.createCode(), errs);
+            }
         }
 
     @Override
@@ -316,6 +316,51 @@ public class LambdaExpression
             m_listRetTypes = list = new ArrayList<>();
             }
         list.add(typeRet);
+        }
+
+    MethodStructure instantiateLambda(ErrorListener errs)
+        {
+        TypeConstant[] atypes   = null;
+        String[]       asParams = null;
+        if (paramNames == null)
+            {
+            // build an array of types and an array of names
+            int cParams = params == null ? 0 : params.size();
+            atypes   = new TypeConstant[cParams];
+            asParams = new String[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Parameter param = params.get(i);
+                atypes  [i] = param.getType().ensureTypeConstant();
+                asParams[i] = param.getName();
+                }
+            }
+        else
+            {
+            // build an array of names
+            int cParams = paramNames.size();
+            asParams = new String[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Expression expr = paramNames.get(i);
+                if (expr instanceof NameExpression)
+                    {
+                    // note: could also be an IgnoredNameExpression
+                    asParams[i] = ((NameExpression) expr).getName();
+                    }
+                else
+                    {
+                    expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
+                    asParams[i] = Id.IGNORED.TEXT;
+                    }
+                }
+            }
+
+        Component            container = getParent().getComponent();
+        MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
+        MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
+
+        return lambda;
         }
 
 

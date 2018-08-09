@@ -385,49 +385,7 @@ public class MethodDeclarationStatement
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
-        Stage stageOldest = null;
-        for (AstNode node : children())
-            {
-            Stage stage = node.getStage();
-            if (stageOldest == null)
-                {
-                stageOldest = stage;
-                }
-            else if (stage.compareTo(stageOldest) < 0)
-                {
-                stageOldest = stage;
-                }
-            }
-
-        if (stageOldest != null && stageOldest.compareTo(Stage.Registered) < 0)
-            {
-            // compiler stage 1: generateInitialFileStructure()
-            StageMgr mgrKids = new StageMgr(this, Stage.Registered, errs);
-            if (!mgrKids.processComplete())
-                {
-                // registration is supposed to always complete in a single pass
-                log(errs, Severity.FATAL, Compiler.FATAL_ERROR);
-                return;
-                }
-            }
-
-        if (stageOldest != null && stageOldest.compareTo(Stage.Resolved) < 0)
-            {
-            // compiler stage 2: resolveNames()
-            StageMgr mgrKids = new StageMgr(this, Stage.Resolved, errs);
-            while (!mgrKids.processComplete())
-                {
-                if (mgrKids.getIterations() > 20)
-                    {
-                    for (AstNode node : mgrKids.takeRevisitList())
-                        {
-                        node.log(errs, Severity.FATAL, org.xvm.compiler.Compiler.INFINITE_RESOLVE_LOOP,
-                                node.getComponent().getIdentityConstant().toString());
-                        return;
-                        }
-                    }
-                }
-            }
+        catchUpChildren(errs);
         }
 
     @Override
