@@ -177,6 +177,7 @@ public class NamedTypeExpression
             parent = parent.getParent();
             }
 
+        // REVIEW GG - do you want this or parent.isComponentNode()
         return parent instanceof ComponentStatement
                 && ((ComponentStatement) parent).isAutoNarrowingAllowed(type);
         }

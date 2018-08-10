@@ -300,6 +300,14 @@ public abstract class AstNode
     public abstract long getEndPosition();
 
     /**
+     * @return true iff this node holds a component
+     */
+    public boolean isComponentNode()
+        {
+        return false;
+        }
+
+    /**
      * Obtain the Component for this AstNode, if any.
      *
      * @return the Component containing this AstNode

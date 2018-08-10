@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import java.util.Set;
+import java.util.TreeMap;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -1446,9 +1448,14 @@ public abstract class Statement
         // TODO
 
         @Override
-        protected void markVarRead(String sName, Token tokName,
-                ErrorListener errs)
+        protected void markVarRead(String sName, Token tokName, ErrorListener errs)
             {
+            Map<String, Boolean> map = ensureCaptureMap();
+            if (!m_mapCapture.containsKey(sName))
+                {
+                m_mapCapture.put(sName, false);
+                }
+
             // TODO make sure that sName is in our list of "must be captured as value (or Ref<T>)"
             // TODO "this" means that the lambda must be a method
             // TODO make sure that the variable is marked in the ***containing*** context as being read
@@ -1465,6 +1472,36 @@ public abstract class Statement
 
             super.markVarWrite(sName, tokName, errs);
             }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        public Map<String, Boolean> getCaptureMap()
+            {
+            return m_mapCapture == null
+                    ? Collections.EMPTY_MAP
+                    : m_mapCapture;
+            }
+
+        /**
+         * @return a map of variable name to a Boolean representing if the capture is read-only
+         *         (false) or read/write (true)
+         */
+        private Map<String, Boolean> ensureCaptureMap()
+            {
+            Map<String, Boolean> map = m_mapCapture;
+            if (map == null)
+                {
+                // use a tree map, as it will keep the captures in alphabetical order, which will
+                // help to produce the lambdas with a "predictable" signature
+                m_mapCapture = map = new TreeMap<>();
+                }
+
+            return map;
+            }
+
+        private Map<String, Boolean> m_mapCapture;
         }
 
 

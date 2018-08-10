@@ -172,14 +172,15 @@ public class LambdaExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        checkDebug(); // TODO remove
-
-        assert m_typeRequired == null && m_listRetTypes == null;
         if (isValidated())
             {
             return getType();
             }
 
+        checkDebug(); // TODO remove
+        assert m_typeRequired == null && m_listRetTypes == null;
+
+        if
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTemp = (StatementBlock) body.clone();
 
@@ -199,15 +200,26 @@ public class LambdaExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
-        checkDebug(); // TODO remove
-
-        assert m_typeRequired == null && m_listRetTypes == null;
         if (isValidated())
             {
             return getType().isA(typeRequired)
                     ? TypeFit.Fit
                     : TypeFit.NoFit;
             }
+
+        // short-circuit for simple cases
+        TypeConstant typeFunction = pool().typeFunction();
+        if (typeFunction.isA(typeRequired))
+            {
+            return TypeFit.Fit;
+            }
+        else if (typeFunction.isAssignableTo(typeRequired))
+            {
+            return TypeFit.Conv;
+            }
+
+        checkDebug(); // TODO remove
+        assert m_typeRequired == null && m_listRetTypes == null;
 
         // clone the body and validate it using the requested type to test if that type will work
         m_typeRequired = typeRequired;
@@ -239,20 +251,44 @@ public class LambdaExpression
         {
         checkDebug(); // TODO remove
 
-        assert m_typeRequired == null && m_listRetTypes == null;
-        m_typeRequired = typeRequired;
+        // validation only occurs once, but we'll put some extra checks in up front, because we do
+        // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
+        // expression validation, but use another copy of the body for the lambda method/function
+        // compilation itself
+        assert m_typeRequired == null && m_listRetTypes == null && m_lambda == null;
 
-        TypeFit        fit     = TypeFit.Fit;
-        StatementBlock bodyOld = body;
-        CaptureContext ctxNew  = ctx.createCaptureContext(body);
-        StatementBlock bodyNew = (StatementBlock) bodyOld.validate(ctxNew, errs);
-        if (bodyNew == null)
+        if (typeRequired != null)
+            {
+
+            }
+        if (paramNames != null)
+            {
+            for (Expression expr : paramNames)
+                {
+                if (!(expr instanceof NameExpression))
+                    {
+                    expr.log()
+                    }
+                }
+            // TODO check paramNames - if it isn't null, then each one must be a name expression or an ignore name or a
+            }
+
+        m_typeRequired = typeRequired;
+        m_lambda       = instantiateLambda(errs);
+
+        TypeFit        fit       = TypeFit.Fit;
+        StatementBlock blockTemp = (StatementBlock) body.clone();
+        CaptureContext ctxLambda = ctx.createCaptureContext(blockTemp);
+        StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
+        if (blockNew == null)
             {
             fit = TypeFit.NoFit;
             }
         else
             {
-            body = bodyNew;
+            // we do NOT store off the validated block; the block does NOT belong to the lambda
+            // expression; rather, it belongs to the function (m_lambda) that we created, and the
+            // real (not temp) block will get validated and compiled by generateCode() above
             }
 
         TypeConstant typeActual = null;
@@ -267,6 +303,13 @@ public class LambdaExpression
             fit = TypeFit.NoFit;
             }
 
+        // while we have enough info at this point to build a signature, what we lack is the
+        // effectively final data that will only get reported (via exitScope() on the context) as
+        // the variables go out of scope in the method body that contains this lambda, so we need
+        // to store off the data from the capture context, and defer the signature creation to the
+        // generateAssignment() method
+        ctxLambda.getCaptureMap();
+
         return finishValidation(typeRequired, typeActual, fit, null, errs);
         }
 
@@ -274,6 +317,9 @@ public class LambdaExpression
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         checkDebug();
+
+        // this is the first time that we have a chance to put together the signature, because
+        // this is the first time that we called after validate
 
         // TODO somehow, at the end of validate (after all the various things that could happen could happen, i.e. all assignments before & after this),
         // TODO ... we build the lambda signature, and set it on the MethodConstant
@@ -316,6 +362,20 @@ public class LambdaExpression
             m_listRetTypes = list = new ArrayList<>();
             }
         list.add(typeRet);
+        }
+
+    TypeConstant[] inferParamTypes(TypeConstant typeFunction)
+        {
+
+        }
+
+    TypeConstant inferReturnType(TypeConstant typeFunction)
+        {
+        if (typeFunction.isA(pool().typeFunction()) && typeFunction.isParamsSpecified()
+                && typeFunction.getParamsCount() > )
+            {
+            typeFunction.getParamTypesArray()
+            }
         }
 
     MethodStructure instantiateLambda(ErrorListener errs)

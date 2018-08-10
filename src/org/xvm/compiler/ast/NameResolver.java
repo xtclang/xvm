@@ -174,9 +174,9 @@ public class NameResolver
                         // otherwise, if the node has a component associated with it that is
                         // prepared to resolve names, then ask it to resolve the name, and if it
                         // isn't ready, we'll come back later
-                        if (node instanceof ComponentStatement)
+                        if (node.isComponentNode())
                             {
-                            Component componentResolver = getResolvingComponent((ComponentStatement) node);
+                            Component componentResolver = getResolvingComponent(node);
                             if (componentResolver == null)
                                 {
                                 // the component that can do the resolve isn't yet available; come
@@ -310,8 +310,9 @@ public class NameResolver
      *
      * @return the corresponding Component, iff the ComponentStatement is ready to resolve names
      */
-    private static Component getResolvingComponent(ComponentStatement node)
+    private static Component getResolvingComponent(AstNode node)
         {
+        assert node.isComponentNode();
         return node.canResolveNames()
                 ? node.getComponent()
                 : null;

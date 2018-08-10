@@ -28,6 +28,12 @@ public abstract class ComponentStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public boolean isComponentNode()
+        {
+        return true;
+        }
+
+    @Override
     public Component getComponent()
         {
         return component;
