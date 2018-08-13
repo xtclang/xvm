@@ -909,6 +909,18 @@ public class Compiler
      */
     public static final String NAME_REQUIRED                      = "COMPILER-83";
     /**
+     * Wrong number of arguments: {0} expected, {1} found.
+     */
+    public static final String ARGUMENT_WRONG_COUNT               = "COMPILER-84";
+    /**
+     * Parameter name is a duplicate: {0}.
+     */
+    public static final String DUPLICATE_PARAMETER                = "COMPILER-85";
+    /**
+     * Parameter types must be specified.
+     */
+    public static final String PARAMETER_TYPES_REQUIRED           = "COMPILER-86";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                    = "COMPILER-NI";

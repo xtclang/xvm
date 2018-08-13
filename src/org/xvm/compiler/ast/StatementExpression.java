@@ -87,7 +87,7 @@ public class StatementExpression
         StatementBlock blockTemp = (StatementBlock) body.clone();
 
         // the resulting returned types come back in m_listRetTypes
-        if (blockTemp.validate(ctx.createCaptureContext(blockTemp), ErrorListener.BLACKHOLE) == null
+        if (blockTemp.validate(ctx.createCaptureContext(blockTemp, null, null), ErrorListener.BLACKHOLE) == null
                 || m_listRetTypes == null)
             {
             return null;
@@ -111,7 +111,7 @@ public class StatementExpression
 
         // clone the body and validate it using the requested type to test if that type will work
         m_typeRequired = typeRequired;
-        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body), ErrorListener.BLACKHOLE);
+        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body, null, null), ErrorListener.BLACKHOLE);
         m_typeRequired = null;
 
         // the resulting returned types come back in m_listRetTypes

@@ -1531,3 +1531,17 @@ const Rectangle(Point topLeft, Point bottomRight)
         return new Point(topLeft.x, bottomRight.y);
         }
     }
+
+//
+
+Int j;              // ctx 0
+if (Int i : foo())  // ctx 1:0 -> decl i, split, 1.t[i]=assigned
+    {               // ctx 2a:1.t
+    j = ...         // 2a[j]=assigned
+    }               // commit 2a
+else
+    {               // ctx 2b:1.f
+    i = ...         // 2b[i]=assigned
+    }               // commit 2b
+                    // commit 1 (forces join of 1.t+1.f
+

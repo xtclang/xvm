@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -219,9 +220,41 @@ public abstract class Statement
          *
          * @param ctxOuter  the context that this Context is nested within
          */
-        Context(Context ctxOuter)
+        protected Context(Context ctxOuter)
             {
             m_ctxOuter = ctxOuter;
+            }
+
+        /**
+         * @return the outer context
+         */
+        protected Context getOuterContext()
+            {
+            return m_ctxOuter;
+            }
+
+        /**
+         * @param ctxOuter  the outer context to use
+         */
+        protected void setOuterContext(Context ctxOuter)
+            {
+            m_ctxOuter = ctxOuter;
+            }
+
+        /**
+         * @return the inner context (if any)
+         */
+        protected Context getInnerContext()
+            {
+            return m_ctxInner;
+            }
+
+        /**
+         * @param ctxInner  the Inner context to use
+         */
+        protected void setInnerContext(Context ctxInner)
+            {
+            m_ctxInner = ctxInner;
             }
 
         /**
@@ -231,7 +264,7 @@ public abstract class Statement
          */
         public MethodStructure getMethod()
             {
-            return m_ctxOuter.getMethod();
+            return getOuterContext().getMethod();
             }
 
         /**
@@ -240,7 +273,7 @@ public abstract class Statement
          */
         public boolean isMethod()
             {
-            return m_ctxOuter.isMethod();
+            return getOuterContext().isMethod();
             }
 
         /**
@@ -250,7 +283,7 @@ public abstract class Statement
          */
         public boolean isFunction()
             {
-            return m_ctxOuter.isFunction();
+            return getOuterContext().isFunction();
             }
 
         /**
@@ -260,7 +293,7 @@ public abstract class Statement
          */
         public boolean isConstructor()
             {
-            return m_ctxOuter.isConstructor();
+            return getOuterContext().isConstructor();
             }
 
         /**
@@ -268,7 +301,7 @@ public abstract class Statement
          */
         public Source getSource()
             {
-            return m_ctxOuter.getSource();
+            return getOuterContext().getSource();
             }
 
         /**
@@ -276,7 +309,7 @@ public abstract class Statement
          */
         public ClassStructure getThisClass()
             {
-            return m_ctxOuter.getThisClass();
+            return getOuterContext().getThisClass();
             }
 
         /**
@@ -292,15 +325,16 @@ public abstract class Statement
          */
         public ConstantPool pool()
             {
-            return m_ctxOuter.pool();
+            return getOuterContext().pool();
             }
 
         /**
          * Verify that this is a forkable context.
          */
-        void checkForkable()
+        protected void checkForkable()
             {
-            if (m_ctxInner != null && m_ctxInner != this)
+            Context ctxInner = getInnerContext();
+            if (ctxInner != null && ctxInner != this)
                 {
                 throw new IllegalStateException();
                 }
@@ -317,16 +351,16 @@ public abstract class Statement
             {
             checkForkable();
 
-            m_ctxInner = this;
+            setInnerContext(this);
             return new NestedContext(this);
             }
 
         /**
          * Verify that this is a forked context.
          */
-        void checkForked()
+        protected void checkForked()
             {
-            if (m_ctxInner != this)
+            if (getInnerContext() != this)
                 {
                 throw new IllegalStateException();
                 }
@@ -345,7 +379,7 @@ public abstract class Statement
 
             for (Context ctx : contexts)
                 {
-                if (ctx.m_ctxOuter != this)
+                if (ctx.getOuterContext() != this)
                     {
                     throw new IllegalStateException("not a fork of this context");
                     }
@@ -353,15 +387,15 @@ public abstract class Statement
 
             // TODO merge info
 
-            m_ctxInner = null;
+            setInnerContext(null);
             }
 
         /**
          * Verify that this is the innermost context.
          */
-        void checkInnermost()
+        protected void checkInnermost()
             {
-            if (m_ctxInner != null)
+            if (getInnerContext() != null)
                 {
                 throw new IllegalStateException();
                 }
@@ -377,7 +411,7 @@ public abstract class Statement
             checkInnermost();
 
             Context ctxInner = new NestedContext(this);
-            m_ctxInner = ctxInner;
+            setInnerContext(ctxInner);
             return ctxInner;
             }
 
@@ -387,16 +421,19 @@ public abstract class Statement
          * <p/>
          * Note: This can only be used during the validate() stage.
          */
-        public Context exitScope() // TODO override on capture context
+        public Context exitScope()
             {
+            // note: changes to this method should be carefully evaluated for inclusion in the
+            // CaptureContext.exitScope() sub-class method as well
+
             checkInnermost();
 
-            Context ctxOuter = m_ctxOuter;
-            assert ctxOuter.m_ctxInner == this;
+            Context ctxOuter = getOuterContext();
+            assert ctxOuter.getInnerContext() == this;
 
             // copy variable assignment information from this scope to outer scope
-            Map<String, Assignment> mapInner = m_mapAssigned;
-            if (mapInner != null)
+            Map<String, Assignment> mapInner = getDefiniteAssignments();
+            if (!mapInner.isEmpty())
                 {
                 Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
                 for (Entry<String, Assignment> entry : mapInner.entrySet())
@@ -416,13 +453,19 @@ public abstract class Statement
                         }
                     else
                         {
-                        mapOuter.put(sName, entry.getValue());
+                        mapOuter.put(sName, asn);
                         }
                     }
                 }
 
-            m_ctxOuter = null;
-            ctxOuter.m_ctxInner = null;
+            Set<String> setRsvd = getReservedNameSet();
+            if (!setRsvd.isEmpty())
+                {
+                ctxOuter.ensureReservedNameSet().addAll(setRsvd);
+                }
+
+            setOuterContext(null);
+            ctxOuter.setInnerContext(null);
             return ctxOuter;
             }
 
@@ -491,9 +534,10 @@ public abstract class Statement
                 return arg;
                 }
 
-            return m_ctxOuter == null
+            Context ctxOuter = getOuterContext();
+            return ctxOuter == null
                     ? null
-                    : m_ctxOuter.getVar(name, errs);
+                    : ctxOuter.getVar(name, errs);
             }
 
         /**
@@ -506,8 +550,9 @@ public abstract class Statement
          */
         public boolean isLocalVar(String sName)
             {
+            Context ctxOuter = getOuterContext();
             return getNameMap().containsKey(sName)
-                    || (m_ctxOuter != null && m_ctxOuter.isLocalVar(sName));
+                    || (ctxOuter != null && ctxOuter.isLocalVar(sName));
             }
 
         /**
@@ -525,11 +570,11 @@ public abstract class Statement
             }
 
         /**
-         * TODO
+         * Obtain the assignment information for a variable name.
          *
-         * @param sName
+         * @param sName  the variable name
          *
-         * @return
+         * @return the Assignment (VAS data) for the variable name
          */
         public Assignment getVarAssignment(String sName)
             {
@@ -543,18 +588,17 @@ public abstract class Statement
             // status in this scope
             assert !getNameMap().containsKey(sName);
 
-            return m_ctxOuter == null
+            Context ctxOuter = getOuterContext();
+            return ctxOuter == null
                     ? null
-                    : m_ctxOuter.getVarAssignment(sName);
+                    : ctxOuter.getVarAssignment(sName);
             }
 
         /**
-         * TODO
+         * Associate assignment information with a variable name.
          *
-         * @param sName
-         * @param asn
-         *
-         * @return
+         * @param sName  the variable name
+         * @param asn    the Assignment (VAS data) to associate with the variable name
          */
         public void setVarAssignment(String sName, Assignment asn)
             {
@@ -573,6 +617,11 @@ public abstract class Statement
          */
         public boolean isVarReadable(String sName)
             {
+            if (resolveReservedName(sName) != null)
+                {
+                return isReservedNameReadable(sName);
+                }
+
             Assignment asn = getVarAssignment(sName);
             assert asn != null;
             return asn.isDefinitelyAssigned();
@@ -585,7 +634,14 @@ public abstract class Statement
          */
         public final void markVarRead(String sName)
             {
-            markVarRead(sName, null, null);
+            if (resolveReservedName(sName) == null)
+                {
+                markVarRead(sName, null, null);
+                }
+            else
+                {
+                markReservedNameRead(sName, null, null);
+                }
             }
 
         /**
@@ -596,7 +652,15 @@ public abstract class Statement
          */
         public final void markVarRead(Token tokName, ErrorListener errs)
             {
-            markVarRead(tokName.getValueText(), tokName, errs);
+            String sName = tokName.getValueText();
+            if (resolveReservedName(sName) == null)
+                {
+                markVarRead(sName, tokName, errs);
+                }
+            else
+                {
+                markReservedNameRead(sName, tokName, errs);
+                }
             }
 
         /**
@@ -608,6 +672,12 @@ public abstract class Statement
          */
         protected void markVarRead(String sName, Token tokName, ErrorListener errs)
             {
+            if (resolveReservedName(sName) != null)
+                {
+                markReservedNameRead(sName, tokName, errs);
+                return;
+                }
+
             // this method isn't supposed to be called for variable names that don't exist
             assert getVar(sName) != null;
 
@@ -630,6 +700,73 @@ public abstract class Statement
             }
 
         /**
+         * Determine if the name refers to a readable reserved name.
+         * <p/>
+         * Note: This can only be used during the validate() stage.
+         *
+         * @param sName  the reserved name
+         *
+         * @return true iff the name refers to a reserved name, and the reserved name can be read
+         */
+        public boolean isReservedNameReadable(String sName)
+            {
+            return getOuterContext().isReservedNameReadable(sName);
+            }
+
+        /**
+         * Mark the specified reserved name as being read from within this context.
+         *
+         * @param sName  the reserved name
+         */
+        public final void markReservedNameRead(String sName)
+            {
+            markReservedNameRead(sName, null, null);
+            }
+
+        /**
+         * Mark the specified reserved name as being read from within this context.
+         *
+         * @param tokName  the reserved name as a token from the source code
+         * @param errs     the error list to log to
+         */
+        public final void markReservedNameRead(Token tokName, ErrorListener errs)
+            {
+            markReservedNameRead(tokName.getValueText(), tokName, errs);
+            }
+
+        /**
+         * Mark the specified reserved name as being read from within this context.
+         *
+         * @param sName    the reserved name
+         * @param tokName  the reserved name as a token from the source code (optional)
+         * @param errs     the error list to log to (optional)
+         */
+        protected void markReservedNameRead(String sName, Token tokName, ErrorListener errs)
+            {
+            // store the name in the set of accessed names regardless, to avoid reporting the same
+            // error more than once
+            Set<String> setRsvd = ensureReservedNameSet();
+            if (!setRsvd.contains(sName))
+                {
+                if (isReservedNameReadable(sName))
+                    {
+                    setRsvd.add(sName);
+                    }
+                else if (tokName != null && errs != null)
+                    {
+                    tokName.log(errs, getSource(), Severity.ERROR,
+                            sName.startsWith("this") ? Compiler.NO_THIS     :
+                            sName.equals("super")    ? Compiler.NO_SUPER    :
+                                                       Compiler.NAME_MISSING, sName);
+
+                    // add the variable to the reserved names that are allowed, to avoid repeating
+                    // the same error logging
+                    setRsvd.add(sName);
+                    }
+                }
+            }
+
+        /**
          * Determine if the name refers to a writable variable.
          * <p/>
          * Note: This can only be used during the validate() stage.
@@ -647,7 +784,8 @@ public abstract class Statement
                 return true;
                 }
 
-            return m_ctxOuter != null && m_ctxOuter.isVarWritable(sName);
+            Context ctxOuter = getOuterContext();
+            return ctxOuter != null && ctxOuter.isVarWritable(sName);
             }
 
         /**
@@ -723,6 +861,32 @@ public abstract class Statement
                 m_mapAssigned = map = new HashMap<>();
                 }
             return map;
+            }
+
+        /**
+         * @return a read-only map containing reserved names that are used; never null
+         */
+        protected Set<String> getReservedNameSet()
+            {
+            Set<String> set = m_setReservedNames;
+            return set == null
+                    ? Collections.EMPTY_SET
+                    : set;
+            }
+
+        /**
+         * Set of reserved names that are used.
+         *
+         * @return a readable and writable set of used reserved names; never null
+         */
+        protected Set<String> ensureReservedNameSet()
+            {
+            Set<String> set = m_setReservedNames;
+            if (set == null)
+                {
+                m_setReservedNames = set = new HashSet<>();
+                }
+            return set;
             }
 
         /**
@@ -852,7 +1016,7 @@ public abstract class Statement
                 return arg;
                 }
 
-            return m_ctxOuter.resolveRegularName(name, errs);
+            return getOuterContext().resolveRegularName(name, errs);
             }
 
         /**
@@ -893,7 +1057,7 @@ public abstract class Statement
          */
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
-            return m_ctxOuter.resolveReservedName(sName, name, errs);
+            return getOuterContext().resolveReservedName(sName, name, errs);
             }
 
         /**
@@ -930,18 +1094,28 @@ public abstract class Statement
          * Create a context that bridges from the current context into a special compilation mode in
          * which the values (or references / variables) of the outer context can be <i>captured</i>.
          *
-         * @param body  the StatementBlock of the lambda, anonymous inner class, or statement
-         *              expression
+         * @param body         the StatementBlock of the lambda, anonymous inner class, or statement
+         *                     expression
+         * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
+         * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
          *
          * @return a capturing context
          */
-        public CaptureContext createCaptureContext(StatementBlock body)
+        public CaptureContext createCaptureContext(StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
             {
-            return new CaptureContext(this, body);
+            return new CaptureContext(this, body, atypeParams, asParams);
             }
 
-        Context m_ctxOuter;
-        Context m_ctxInner;
+        /**
+         * The outer context. The root context will not have an outer context, and an artificial
+         * context may not have an outer context.
+         */
+        private Context m_ctxOuter;
+
+        /**
+         * The inner context, if this is not the inner-most context. (Set to "this" when forked.)
+         */
+        private Context m_ctxInner;
 
         /**
          * Each variable declared within this hcontext is registered in this map, along with the
@@ -954,7 +1128,13 @@ public abstract class Statement
          * represents multiple assignments.
          */
         private Map<String, Assignment> m_mapAssigned;
+        
+        /**
+         * The set of accessed reserved names within the context. 
+         */
+        private Set<String> m_setReservedNames;
         }
+
 
     /**
      * The outermost compiler context for compiling a method body. This context maintains a link
@@ -1061,6 +1241,41 @@ public abstract class Statement
             }
 
         @Override
+        public boolean isReservedNameReadable(String sName)
+            {
+            checkValidating();
+
+            switch (sName)
+                {
+                case "this":
+                case "this:struct":
+                    return !isFunction();
+
+                case "this:target":
+                case "this:public":
+                case "this:protected":
+                case "this:private":
+                    return !isFunction() && !isConstructor();
+
+                case "this:module":
+                case "this:service":
+                    return true;
+
+                case "super":
+                    {
+                    TypeConstant   typePro    = pool().ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    TypeInfo       info       = typePro.ensureTypeInfo();
+                    MethodConstant idMethod   = getMethod().getIdentityConstant();
+                    MethodInfo     infoMethod = info.getMethodById(idMethod);
+                    return infoMethod.hasSuper(info);
+                    }
+
+                default:
+                    throw new IllegalArgumentException("no such reserved name: " + sName);
+                }
+            }
+
+        @Override
         public boolean isVarWritable(String sName)
             {
             Argument arg = ensureNameMap().get(sName);
@@ -1127,9 +1342,7 @@ public abstract class Statement
                 return arg;
                 }
 
-            boolean      fNoFunction  = true;   // is this name disallowed in a function?
-            boolean      fNoConstruct = true;   // is this name disallowed in a constructor?
-            ConstantPool pool         = pool();
+            ConstantPool pool = pool();
             TypeConstant type;
             int          nReg;
             switch (sName)
@@ -1139,11 +1352,9 @@ public abstract class Statement
                         {
                         type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
                         nReg = Op.A_STRUCT;
-                        fNoConstruct = false;
                         break;
                         }
                     // fall through
-
                 case "this:target":
                     type = getThisType();
                     nReg = Op.A_TARGET;
@@ -1168,29 +1379,16 @@ public abstract class Statement
                 case "this:struct":
                     type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
                     nReg = Op.A_STRUCT;
-                    fNoConstruct = false;
                     break;
 
                 case "this:service":
                     type = pool.typeService();
                     nReg = Op.A_SERVICE;
-                    fNoFunction  = false;
-                    fNoConstruct = false;
                     break;
 
                 case "super":
                     {
-                    TypeConstant    typePro    = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
-                    TypeInfo        info       = typePro.ensureTypeInfo(errs);
-                    MethodConstant  idMethod   = getMethod().getIdentityConstant();
-                    MethodInfo      infoMethod = info.getMethodById(idMethod);
-
-                    if (name != null && (infoMethod == null || !infoMethod.hasSuper(info)))
-                        {
-                        name.log(errs, getSource(), Severity.ERROR, Compiler.NO_SUPER);
-                        }
-
-                    type = idMethod.getSignature().asFunctionType();
+                    type = getMethod().getIdentityConstant().getSignature().asFunctionType();
                     nReg = Op.A_SUPER;
                     break;
                     }
@@ -1201,13 +1399,6 @@ public abstract class Statement
 
                 default:
                     return null;
-                }
-
-            if (name != null && !m_fLoggedNoThis
-                    && ((fNoFunction && isFunction() || fNoConstruct && isConstructor())))
-                {
-                name.log(errs, getSource(), Severity.ERROR, Compiler.NO_THIS);
-                m_fLoggedNoThis = true;
                 }
 
             arg = new Register(type, nReg);
@@ -1224,7 +1415,7 @@ public abstract class Statement
                 {
                 Parameter param = method.getParam(i);
                 String    sName = param.getName();
-                if (!sName.equals(Id.IGNORED))
+                if (!sName.equals(Id.IGNORED.TEXT))
                     {
                     mapByName.put(sName, new Register(param.getType(), i));
 
@@ -1322,7 +1513,7 @@ public abstract class Statement
         public Context emittingContext()
             {
             checkValidating();
-            m_ctxInner.exitScope();
+            getInnerContext().exitScope();
             m_fEmitting = true;
             return this;
             }
@@ -1361,6 +1552,7 @@ public abstract class Statement
             super(ctxOuter);
             }
         }
+
 
     /**
      * A delegating context that allows an expression to resolve names based on the specified type's
@@ -1410,7 +1602,8 @@ public abstract class Statement
                 }
 
             Component.SimpleCollector collector = new Component.SimpleCollector();
-            return m_typeLeft.resolveContributedName(sName, collector) == Component.ResolutionResult.RESOLVED
+            return m_typeLeft.resolveContributedName(sName, collector) ==
+                    Component.ResolutionResult.RESOLVED
                     ? collector.getResolvedConstant()
                     : null;
             }
@@ -1418,7 +1611,7 @@ public abstract class Statement
         @Override
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
-            m_ctxOuter.registerVar(tokName, reg, errs);
+            getOuterContext().registerVar(tokName, reg, errs);
             }
 
         TypeConstant m_typeLeft;
@@ -1436,29 +1629,89 @@ public abstract class Statement
         /**
          * Construct a CaptureContext.
          *
-         * @param ctxOuter  the context within which this context is nested
-         * @param body      the StatementBlock of the lambda / inner class, whose parent is one of:
-         *                  NewExpression, LambdaExpression, or StatementExpression
+         * @param ctxOuter     the context within which this context is nested
+         * @param body         the StatementBlock of the lambda / inner class, whose parent is one
+         *                     of: NewExpression, LambdaExpression, or StatementExpression
+         * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
+         * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
          */
-        public CaptureContext(Context ctxOuter, StatementBlock body)
+        public CaptureContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
             {
             super(ctxOuter);
+
+            assert atypeParams == null && asParams == null
+                || atypeParams != null && asParams != null && atypeParams.length == asParams.length;
+            m_atypeParams = atypeParams;
+            m_asParams    = asParams;
             }
 
-        // TODO
+        @Override
+        public Context exitScope()
+            {
+            checkInnermost();
+    
+            Context ctxOuter = getOuterContext();
+            assert ctxOuter.getInnerContext() == this;
+
+            // apply variable assignment information from the capture scope to the variables
+            // captured from the outer scope
+            for (Entry<String, Boolean> entry : getCaptureMap().entrySet())
+                {
+                if (entry.getValue())
+                    {
+                    String     sName  = entry.getKey();
+                    Assignment asnOld = ctxOuter.getVarAssignment(sName);
+                    Assignment asnNew = asnOld.applyAssignmentFromCapture();
+                    ctxOuter.setVarAssignment(sName, asnNew);
+                    }
+                }
+
+            Set<String> setRsvd = getReservedNameSet();
+            if (!setRsvd.isEmpty())
+                {
+                ctxOuter.ensureReservedNameSet().addAll(setRsvd);
+                }
+
+            setOuterContext(null);
+            ctxOuter.setInnerContext(null);
+            return ctxOuter;
+            }
 
         @Override
         protected void markVarRead(String sName, Token tokName, ErrorListener errs)
             {
-            Map<String, Boolean> map = ensureCaptureMap();
-            if (!m_mapCapture.containsKey(sName))
+            if (isVarReadable(sName))
                 {
-                m_mapCapture.put(sName, false);
-                }
+                Argument argRsvd = resolveReservedName(sName);
+                if (argRsvd == null)
+                    {
+                    Map<String, Boolean> map = ensureCaptureMap();
+                    if (!m_mapCapture.containsKey(sName))
+                        {
+                        m_mapCapture.put(sName, false);
+                        }
+                    }
+                else if (argRsvd instanceof Register)
+                    {
+                    // TODO "this" means that the lambda must be a method
+                    switch (((Register) argRsvd).getIndex())
+                        {
+                        case Op.A_TARGET:
+                        case Op.A_PUBLIC:
+                        case Op.A_PROTECTED:
+                        case Op.A_PRIVATE:
+                            // the lambda has to be a method
+                            // TODO
+                            break;
 
-            // TODO make sure that sName is in our list of "must be captured as value (or Ref<T>)"
-            // TODO "this" means that the lambda must be a method
-            // TODO make sure that the variable is marked in the ***containing*** context as being read
+                        case Op.A_STRUCT:
+                            // this is a special problem TODO
+                            throw new UnsupportedOperationException();
+
+                        case Op.A_SUPER:
+                        }
+                    }
+                }
 
             super.markVarRead(sName, tokName, errs);
             }
@@ -1484,6 +1737,27 @@ public abstract class Statement
                     : m_mapCapture;
             }
 
+        @Override
+        protected void initNameMap(Map<String, Argument> mapByName)
+            {
+            TypeConstant[] atypeParams = m_atypeParams;
+            String[]       asParams    = m_asParams;
+            int            cParams     = atypeParams == null ? 0 : atypeParams.length;
+            for (int i = 0; i < cParams; ++i)
+                {
+                TypeConstant type  = atypeParams[i];
+                String       sName = asParams[i];
+                if (!sName.equals(Id.IGNORED.TEXT))
+                    {
+                    mapByName.put(sName, new Register(type));
+
+                    // the variable has been definitely assigned, but not multiple times (i.e. it's
+                    // still effectively final)
+                    ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
+                    }
+                }
+            }
+
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
@@ -1500,6 +1774,9 @@ public abstract class Statement
 
             return map;
             }
+
+        private TypeConstant[] m_atypeParams;
+        private String[] m_asParams;
 
         private Map<String, Boolean> m_mapCapture;
         }

@@ -240,13 +240,6 @@ public class StatementBlock
             }
         }
 
-    public TypeConstant determineLambdaResultType(Context ctx)
-        {
-        ctx = ctx.createCaptureContext(this);
-        // TODO
-        return null;
-        }
-
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
