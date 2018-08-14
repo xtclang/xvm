@@ -2943,8 +2943,11 @@ public abstract class TypeConstant
                 {
                 for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
-                    fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                            mapProps, mapMethods, listExplode, errs);
+                    if (!method.getIdentityConstant().isLambda())
+                        {
+                        fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
+                                mapProps, mapMethods, listExplode, errs);
+                        }
                     }
                 }
             else if (child instanceof PropertyStructure)

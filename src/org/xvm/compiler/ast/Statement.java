@@ -416,6 +416,60 @@ public abstract class Statement
             }
 
         /**
+         * Create a delegating context that allows an expression to resolve names based on the
+         * specified type's contributions.
+         *
+         * As a result, it allows us to write:
+         * <pre><code>
+         *    Color color = Red;
+         * </code></pre>
+         *  instead of
+         * <pre><code>
+         *    Color color = Color.Red;
+         * </code></pre>
+         * or
+         * <pre><code>
+         *    if (color == Red)
+         * </code></pre>
+         *  instead of
+         * <pre><code>
+         *    if (color == Color.Red)
+         * </code></pre>
+         *
+         * @param typeLeft  the "infer from" type
+         *
+         * @return a new context
+         */
+        public InferringContext enterInferring(TypeConstant typeLeft)
+            {
+            checkInnermost();
+
+            InferringContext ctxInner = new InferringContext(this, typeLeft);
+            setInnerContext(ctxInner);
+            return ctxInner;
+            }
+
+        /**
+         * Create a context that bridges from the current context into a special compilation mode in
+         * which the values (or references / variables) of the outer context can be <i>captured</i>.
+         *
+         * @param body         the StatementBlock of the lambda, anonymous inner class, or statement
+         *                     expression
+         * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
+         * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
+         *
+         * @return a capturing context
+         */
+        public CaptureContext enterCapture(StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
+            {
+            checkInnermost();
+
+            CaptureContext ctxInner = new CaptureContext(this, body, atypeParams, asParams);
+            setInnerContext(ctxInner);
+            return ctxInner;
+            }
+
+        /**
          * Exit the scope that was created by calling {@link #enterScope()}. Used in the validation
          * phase to track scopes.
          * <p/>
@@ -1061,52 +1115,6 @@ public abstract class Statement
             }
 
         /**
-         * Create a delegating context that allows an expression to resolve names based on the
-         * specified type's contributions.
-         *
-         * As a result, it allows us to write:
-         * <pre><code>
-         *    Color color = Red;
-         * </code></pre>
-         *  instead of
-         * <pre><code>
-         *    Color color = Color.Red;
-         * </code></pre>
-         * or
-         * <pre><code>
-         *    if (color == Red)
-         * </code></pre>
-         *  instead of
-         * <pre><code>
-         *    if (color == Color.Red)
-         * </code></pre>
-         *
-         * @param typeLeft  the "infer from" type
-         *
-         * @return a new context
-         */
-        public InferringContext createInferringContext(TypeConstant typeLeft)
-            {
-            return new InferringContext(this, typeLeft);
-            }
-
-        /**
-         * Create a context that bridges from the current context into a special compilation mode in
-         * which the values (or references / variables) of the outer context can be <i>captured</i>.
-         *
-         * @param body         the StatementBlock of the lambda, anonymous inner class, or statement
-         *                     expression
-         * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
-         * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
-         *
-         * @return a capturing context
-         */
-        public CaptureContext createCaptureContext(StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
-            {
-            return new CaptureContext(this, body, atypeParams, asParams);
-            }
-
-        /**
          * The outer context. The root context will not have an outer context, and an artificial
          * context may not have an outer context.
          */
@@ -1128,13 +1136,12 @@ public abstract class Statement
          * represents multiple assignments.
          */
         private Map<String, Assignment> m_mapAssigned;
-        
+
         /**
-         * The set of accessed reserved names within the context. 
+         * The set of accessed reserved names within the context.
          */
         private Set<String> m_setReservedNames;
         }
-
 
     /**
      * The outermost compiler context for compiling a method body. This context maintains a link
@@ -1649,7 +1656,7 @@ public abstract class Statement
         public Context exitScope()
             {
             checkInnermost();
-    
+
             Context ctxOuter = getOuterContext();
             assert ctxOuter.getInnerContext() == this;
 

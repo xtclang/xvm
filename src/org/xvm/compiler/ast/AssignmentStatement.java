@@ -102,10 +102,11 @@ public class AssignmentStatement
         // provide the l-value's type to the r-value so that it can "infer" its type as necessary,
         // and can validate that assignment can occur
         TypeConstant typeLeft = lvalue.getType();
-        if (typeLeft != null)
+        boolean      fInfer   = typeLeft != null;
+        if (fInfer)
             {
             // allow the r-value to resolve names based on the l-value type's contributions
-            ctx = ctx.createInferringContext(typeLeft);
+            ctx = ctx.enterInferring(typeLeft);
             }
 
         Expression rvalueNew = isConditional()
@@ -120,11 +121,15 @@ public class AssignmentStatement
                 }
             }
 
+        if (fInfer)
+            {
+            ctx = ctx.exitScope();
+            }
+
         if (lvalue.isVoid())
             {
             lvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
-                    Math.max(1, rvalue.getValueCount()),
-                    0);
+                    Math.max(1, rvalue.getValueCount()), 0);
             }
         else
             {

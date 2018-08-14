@@ -6,8 +6,10 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -15,8 +17,13 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 
+import org.xvm.asm.Op;
+import org.xvm.asm.Register;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.FBind;
+import org.xvm.asm.op.MBind;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -139,7 +146,6 @@ public class LambdaExpression
         // need to be able to answer all of the questions about names and types and so on
         if (m_lambda == null)
             {
-            mgr.requestRevisit();
             mgr.deferChildren();
             }
         }
@@ -150,7 +156,6 @@ public class LambdaExpression
         // see note above
         if (m_lambda == null)
             {
-            mgr.requestRevisit();
             mgr.deferChildren();
             }
         }
@@ -161,7 +166,6 @@ public class LambdaExpression
         // see note above
         if (m_lambda == null)
             {
-            mgr.requestRevisit();
             mgr.deferChildren();
             }
         }
@@ -257,10 +261,13 @@ public class LambdaExpression
             asParams   [i] = !sName.equals(Id.IGNORED.TEXT) && setNames.add(sName) ? sName : Id.IGNORED.TEXT;
             atypeParams[i] = param.getType().ensureTypeConstant();
             }
-        ctx = ctx.createCaptureContext(blockTemp, atypeParams, asParams);
 
-        // the resulting returned types come back in m_listRetTypes
-        if (blockTemp.validate(ctx, ErrorListener.BLACKHOLE) == null)
+        ctx       = ctx.enterCapture(blockTemp, atypeParams, asParams);
+        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
+        ctx       = ctx.exitScope();
+
+        // the resulting returned types come back in m_listRetTypes (if everything succeeds)
+        if (blockTemp == null)
             {
             m_listRetTypes = null;
             return null;
@@ -340,7 +347,6 @@ public class LambdaExpression
         // evaluate the parameter declarations
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
-        Set<String>    setNames    = new HashSet<>();
         if (hasOnlyParamNames())
             {
             if (atypeReqParams == null)
@@ -350,6 +356,7 @@ public class LambdaExpression
                 fValid = false;
                 }
 
+            Set<String> setNames = new HashSet<>();
             for (int i = 0; i < cParams; ++i)
                 {
                 Expression expr = paramNames.get(i);
@@ -380,6 +387,7 @@ public class LambdaExpression
             }
         else
             {
+            Set<String> setNames = new HashSet<>();
             for (int i = 0; i < cParams; ++i)
                 {
                 Parameter param = params.get(i);
@@ -416,7 +424,7 @@ public class LambdaExpression
 
         TypeFit        fit       = TypeFit.Fit;
         StatementBlock blockTemp = (StatementBlock) body.clone();
-        CaptureContext ctxLambda = ctx.createCaptureContext(blockTemp, atypeParams, asParams);
+        CaptureContext ctxLambda = ctx.enterCapture(blockTemp, atypeParams, asParams);
         StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
         if (blockNew == null)
             {
@@ -449,10 +457,26 @@ public class LambdaExpression
         // the variables go out of scope in the method body that contains this lambda, so we need
         // to store off the data from the capture context, and defer the signature creation to the
         // generateAssignment() method
-        // TODO record captures
-        ctxLambda.getCaptureMap();
+        m_mapCapture     = ctxLambda.getCaptureMap();
+        m_setCaptureRsvd = ctxLambda.getReservedNameSet();
 
         return finishValidation(typeRequired, typeActual, fit, null, errs);
+        }
+
+    @Override
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        checkDebug(); // TODO remove
+
+        Argument[] aargBind = calculateBindings(ctx, code, errs);
+        if (m_lambda.isFunction() && aargBind.length == 0)
+            {
+            // if no binding is required (either MBIND or FBIND) then the resulting argument is the
+            // identity of the lambda function itself
+            return m_lambda.getIdentityConstant();
+            }
+
+        return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
         }
 
     @Override
@@ -460,13 +484,107 @@ public class LambdaExpression
         {
         checkDebug(); // TODO remove
 
-        // this is the first time that we have a chance to put together the signature, because
-        // this is the first time that we called after validate
+        Argument[] aBindArgs = calculateBindings(ctx, code, errs);
+        int        cBindArgs = aBindArgs.length;
 
-        // TODO somehow, at the end of validate (after all the various things that could happen could happen, i.e. all assignments before & after this),
-        // TODO ... we build the lambda signature, and set it on the MethodConstant
-        // TODO
-        super.generateAssignment(ctx, code, LVal, errs);
+        boolean fBindTarget = !m_lambda.isFunction();
+        boolean fBindParams = cBindArgs > 0;
+
+        int[] anBind = null;
+        if (fBindParams)
+            {
+            anBind = new int[cBindArgs];
+            for (int i = 0; i < cBindArgs; ++i)
+                {
+                anBind[i] = i;
+                }
+            }
+
+        MethodConstant idLambda = m_lambda.getIdentityConstant();
+        if (fBindTarget | fBindParams)
+            {
+            if (LVal.isLocalArgument())
+                {
+                super.generateAssignment(ctx, code, LVal, errs);
+                }
+            else
+                {
+                Argument argResult = LVal.getLocalArgument();
+                if (fBindTarget & fBindParams)
+                    {
+                    Register regTemp = new Register(idLambda.getSignature().asFunctionType(), Op.A_STACK);
+                    code.add(new MBind(ctx.resolveReservedName("this:target"), idLambda, regTemp));
+                    code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
+                    }
+                else if (fBindTarget)
+                    {
+                    code.add(new MBind(ctx.resolveReservedName("this:target"), idLambda, argResult));
+                    }
+                else if (fBindParams)
+                    {
+                    code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
+                    }
+                }
+            }
+        else
+            {
+            // neither target nor param binding
+            LVal.assign(idLambda, code, errs);
+            }
+        }
+
+    /**
+     * Determine if MBIND and/or FBIND is necessary. If MBIND is necessary, then make the structure
+     * used for the lambda into a method (not a function). If FBIND is necessary, then build the
+     * list of arguments needed to bind those parameters. Regardless, build the actual signature of
+     * the structure used for the lambda.
+     *
+     * @param ctx   the compilation context for the lambda
+     * @param code  the code block being compiled into
+     * @param errs  the error list to log any errors to
+     *
+     * @return an array of arguments to pass to FBIND
+     */
+    protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
+        {
+        assert m_lambda != null && m_lambda.getIdentityConstant().isLambda();
+        assert m_mapCapture != null && m_setCaptureRsvd != null;
+
+        if (m_lambda.getIdentityConstant().isNascent())
+            {
+            // this is the first time that we have a chance to put together the signature, because
+            // this is the first time that we are being called after validate()
+            TypeConstant   typeFn       = getType();
+            ConstantPool   pool         = ctx.pool();
+            TypeConstant[] atypeParams  = extractParamTypes(pool, typeFn);
+            TypeConstant[] atypeReturns = extractReturnTypes(pool, typeFn);
+            boolean        fBindTarget  = false;
+            boolean        fBindParams  = false;
+            Argument[]     aBindArgs    = NO_RVALUES;
+
+            if (!m_setCaptureRsvd.isEmpty())
+                {
+                // TODO
+                }
+            if (!m_mapCapture.isEmpty())
+                {
+                // TODO
+                }
+
+            // store the resulting signature for the lambda
+            m_lambda.getIdentityConstant().setSignature(pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeReturns));
+
+            // MBIND is indicated by the method structure *NOT* being static
+            if (fBindTarget)
+                {
+                m_lambda.setStatic(false);
+                }
+
+            // FBIND is indicated by >0 bind arguments being returned from this method
+            m_aBindArgs = aBindArgs;
+            }
+
+        return m_aBindArgs;
         }
 
     // TODO remove
@@ -492,7 +610,8 @@ public class LambdaExpression
      */
     TypeConstant getRequiredType()
         {
-        return isValidated() ? getType() : m_typeRequired;
+        TypeConstant[] aRetTypes = extractReturnTypes(pool(), isValidated() ? getType() : m_typeRequired);
+        return aRetTypes == null || aRetTypes.length == 0 ? null : aRetTypes[0];
         }
 
     void addReturnType(TypeConstant typeRet)
@@ -746,10 +865,34 @@ public class LambdaExpression
     protected StatementBlock   body;
     protected long             lStartPos;
 
-    private MethodStructure m_lambda;
 
-    private transient TypeConstant       m_typeRequired;
-    private transient List<TypeConstant> m_listRetTypes;
+    /**
+     * The required type (stored here so that it can be picked up by other nodes below this node in
+     * the AST).
+     */
+    private transient TypeConstant         m_typeRequired;
+    /**
+     * A list of types from various return statements (collected here from information provided by
+     * other nodes below this node in the AST).
+     */
+    private transient List<TypeConstant>   m_listRetTypes;
+    /**
+     * The lambda structure itself.
+     */
+    private transient MethodStructure      m_lambda;
+    /**
+     * The variables captured by the lambda, with an associated "true" flag if the lambda needs to
+     * capture the variable in a read/write mode.
+     */
+    private transient Map<String, Boolean> m_mapCapture;
+    /**
+     * The reserved names captured by the lambda.
+     */
+    private transient Set<String>          m_setCaptureRsvd;
+    /**
+     * A cached array of bound arguments. Private to calculateBindings().
+     */
+    private transient Argument[]           m_aBindArgs;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
     }

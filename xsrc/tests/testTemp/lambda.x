@@ -13,11 +13,14 @@ module TestLambda.xqiz.it
         testVarCapture();
         }
 
+// TODO add test for void lambda
+
     void testBasic()
         {
         console.println("\n** testBasic()");
 
-        System.out.println("result=" + () -> 4);
+        function Int() f = () -> 4;
+        console.println("result=" + f());
         }
 
     // test with params
@@ -28,14 +31,16 @@ module TestLambda.xqiz.it
         console.println("\n** testEffectivelyFinalCapture()");
 
         Int i = 4;
-        System.out.println("result=" + () -> i);
+        function Int() f = () -> i;
+        console.println("result=" + f());
         }
 
     void testThisCapture()
         {
         console.println("\n** testThisCapture()");
 
-        System.out.println("result=" + () -> foo());
+        function String() f = () -> foo();
+        console.println("result=" + f());
         }
     String foo()
         {
@@ -49,7 +54,8 @@ module TestLambda.xqiz.it
         Int i = 0;
         do
             {
-            System.out.println("result=" + () -> i);
+            function Int() f = () -> i;
+            console.println("result=" + f());
             }
         while (i++ < 5);
         }
@@ -61,7 +67,8 @@ module TestLambda.xqiz.it
         Int i = 0;
         while (i < 5)
             {
-            System.out.println("result=" + () -> ++i);
+            function Int() f = () -> ++i;
+            console.println("result=" + f());
             }
         }
 
@@ -72,8 +79,10 @@ module TestLambda.xqiz.it
         Int i = 0;
         while (i < 5)
             {
-            System.out.println("result=" + () -> i);    // initially would appear to be "Int", but must be "Ref<Int>"
-            System.out.println("result=" + () -> ++i);
+            function Int() f1 = () -> i;
+            console.println("result=" + f1());    // initially would appear to be "Int", but must be "Ref<Int>"
+            function Int() f2 = () -> ++i;
+            console.println("result=" + f2());
             }
         }
     }

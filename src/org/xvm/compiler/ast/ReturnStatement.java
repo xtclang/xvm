@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class ReturnStatement
 
     public ReturnStatement(Token keyword, Expression expr)
         {
-        this(keyword, Collections.singletonList(expr));
+        this(keyword, Arrays.asList(new Expression[]{expr}));
         }
 
     public ReturnStatement(Token keyword, List<Expression> exprs)

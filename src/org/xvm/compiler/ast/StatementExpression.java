@@ -87,9 +87,13 @@ public class StatementExpression
         StatementBlock blockTemp = (StatementBlock) body.clone();
 
         // the resulting returned types come back in m_listRetTypes
-        if (blockTemp.validate(ctx.createCaptureContext(blockTemp, null, null), ErrorListener.BLACKHOLE) == null
-                || m_listRetTypes == null)
+        ctx       = ctx.enterCapture(blockTemp, null, null);
+        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
+        ctx       = ctx.exitScope();
+
+        if (blockTemp == null || m_listRetTypes == null || m_listRetTypes.isEmpty())
             {
+            m_listRetTypes = null;
             return null;
             }
 
@@ -111,7 +115,9 @@ public class StatementExpression
 
         // clone the body and validate it using the requested type to test if that type will work
         m_typeRequired = typeRequired;
-        ((StatementBlock) body.clone()).validate(ctx.createCaptureContext(body, null, null), ErrorListener.BLACKHOLE);
+        ctx = ctx.enterCapture(body, null, null);
+        ((StatementBlock) body.clone()).validate(ctx, ErrorListener.BLACKHOLE);
+        ctx = ctx.exitScope();
         m_typeRequired = null;
 
         // the resulting returned types come back in m_listRetTypes
@@ -126,9 +132,7 @@ public class StatementExpression
 
             // calculate the resulting type
             TypeConstant typeResult = ListExpression.inferCommonType(aTypes);
-            return typeResult != null && typeResult.isA(typeRequired)
-                    ? TypeFit.Fit
-                    : TypeFit.NoFit;
+            return calcFit(ctx, typeResult, typeRequired);
             }
         }
 

@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
@@ -119,14 +118,19 @@ public class CmpExpression
 
         // allow the second expression to resolve names based on the first value type's
         // contributions
-        Context ctx2 = type1 == null
-                ? ctx
-                : ctx.createInferringContext(type1);
+        boolean fInfer = type1 != null;
+        if (fInfer)
+            {
+            ctx = ctx.enterInferring(type1);
+            }
+        TypeConstant type2 = expr2.getImplicitType(ctx);
+        if (fInfer)
+            {
+            ctx = ctx.exitScope();
+            }
 
-        TypeConstant type2       = expr2.getImplicitType(ctx2);
         TypeConstant typeRequest = selectType(type1, type2, errs);
-
-        Expression expr1New = expr1.validate(ctx, typeRequest, errs);
+        Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
             fValid = false;
@@ -145,7 +149,16 @@ public class CmpExpression
                 }
             }
 
-        Expression expr2New = expr2.validate(ctx2, typeRequest, errs);
+        if (fInfer)
+            {
+            ctx = ctx.enterInferring(type1);
+            }
+        Expression expr2New = expr2.validate(ctx, typeRequest, errs);
+        if (fInfer)
+            {
+            ctx = ctx.exitScope();
+            }
+
         if (expr2New == null)
             {
             fValid = false;

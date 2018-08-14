@@ -493,7 +493,8 @@ public class MethodConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        assert !isNascent();
+        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors, this assertion is currently invalid
+        // assert !isNascent();
 
         m_constParent = (MultiMethodConstant) pool.register(m_constParent);
         m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
@@ -503,11 +504,12 @@ public class MethodConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        assert !isNascent();
+        // TODO - since we go ahead and build everything even after we hit otherwise-fatal errors, this assertion is currently invalid
+        // assert !isNascent();
 
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constParent.getPosition());
-        writePackedLong(out, m_constSig.getPosition());
+        writePackedLong(out, Constant.indexOf(m_constSig));
         writePackedLong(out, m_iLambda);
         }
 

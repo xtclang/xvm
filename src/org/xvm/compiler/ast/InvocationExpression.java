@@ -300,8 +300,6 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        // ConstantPool pool = pool();
-
         List<Expression> aArgExprs = args;
         int              cArgs     = aArgExprs == null ? 0 : aArgExprs.size();
         TypeConstant[]   aArgTypes = new TypeConstant[cArgs];
@@ -395,6 +393,11 @@ public class InvocationExpression
             TypeConstant typeArg;
             if (argMethod instanceof PropertyConstant)
                 {
+                if (typeLeft == null)
+                    {
+                    typeLeft = ctx.getThisType();
+                    }
+
                 PropertyConstant idProp = (PropertyConstant) argMethod;
                 typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
                 }

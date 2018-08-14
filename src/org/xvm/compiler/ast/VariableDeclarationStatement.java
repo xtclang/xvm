@@ -199,9 +199,12 @@ public class VariableDeclarationStatement
 
         TypeConstant typeVar  = type.ensureTypeConstant();
         Expression   valueNew = null;
-
-        // allow the r-value to resolve names based on the l-value type's contributions
-        ctx = ctx.createInferringContext(typeVar);
+        boolean      fInfer   = true;   // TODO false if "var" or "val"
+        if (fInfer)
+            {
+            // allow the r-value to resolve names based on the l-value type's contributions
+            ctx = ctx.enterInferring(typeVar);
+            }
 
         if (isConditional())
             {
@@ -311,6 +314,12 @@ public class VariableDeclarationStatement
                 {
                 value = valueNew;
                 }
+            }
+
+        // back out of the inferring scope into the declaring scope
+        if (fInfer)
+            {
+            ctx = ctx.exitScope();
             }
 
         // use the type of the RValue to update the type of the LValue, if desired
