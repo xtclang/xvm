@@ -16,14 +16,16 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.MBind;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -61,7 +63,7 @@ public class LambdaExpression
             }
         else
             {
-            assert params.stream().allMatch(org.xvm.asm.Parameter.class::isInstance);
+            assert params.stream().allMatch(Parameter.class::isInstance);
             this.params = params;
             }
 
@@ -106,6 +108,40 @@ public class LambdaExpression
             }
 
         return 0;
+        }
+
+    /**
+     * @return an array of parameter names
+     */
+    public String[] getParamNames()
+        {
+        int c = getParamCount();
+        if (c == 0)
+            {
+            return NO_NAMES;
+            }
+
+        String[] as = new String[c];
+        if (hasOnlyParamNames())
+            {
+            for (int i = 0; i < c; ++i)
+                {
+                Expression expr = paramNames.get(i);
+                as[i] = expr instanceof NameExpression
+                        ? ((NameExpression) expr).getName()
+                        : null;
+                }
+            }
+        else
+            {
+            for (int i = 0; i < c; ++i)
+                {
+                Parameter param = params.get(i);
+                as[i] = param.getName();
+                }
+            }
+
+        return as;
         }
 
     /**
@@ -467,9 +503,13 @@ public class LambdaExpression
         m_setCaptureRsvd = ctxLambda.getReservedNameSet();
 
         TypeConstant   typeActual = buildFunctionType(pool, atypeParams, atypeRets);
-        MethodConstant constVal   = m_mapCapture.isEmpty() && m_setCaptureRsvd.isEmpty()
-                ? m_lambda.getIdentityConstant()
-                : null;
+        MethodConstant constVal   = null;
+        if (fit.isFit() && m_mapCapture.isEmpty() && m_setCaptureRsvd.isEmpty())
+            {
+            // there are no bindings, so the lambda is a constant i.e. the function is the value
+            configureLambda(atypeParams, asParams, atypeRets);
+            constVal = m_lambda.getIdentityConstant();
+            }
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
         }
 
@@ -543,74 +583,6 @@ public class LambdaExpression
             }
         }
 
-    /**
-     * Determine if MBIND and/or FBIND is necessary. If MBIND is necessary, then make the structure
-     * used for the lambda into a method (not a function). If FBIND is necessary, then build the
-     * list of arguments needed to bind those parameters. Regardless, build the actual signature of
-     * the structure used for the lambda.
-     *
-     * @param ctx   the compilation context for the lambda
-     * @param code  the code block being compiled into
-     * @param errs  the error list to log any errors to
-     *
-     * @return an array of arguments to pass to FBIND
-     */
-    protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
-        {
-        assert m_lambda != null && m_lambda.getIdentityConstant().isLambda();
-        assert m_mapCapture != null && m_setCaptureRsvd != null;
-
-        if (m_lambda.getIdentityConstant().isNascent())
-            {
-            // this is the first time that we have a chance to put together the signature, because
-            // this is the first time that we are being called after validate()
-            TypeConstant   typeFn       = getType();
-            ConstantPool   pool         = ctx.pool();
-            TypeConstant[] atypeParams  = extractParamTypes(pool, typeFn);
-            TypeConstant[] atypeReturns = extractReturnTypes(pool, typeFn);
-            boolean        fBindTarget  = false;
-            boolean        fBindParams  = false;
-            Argument[]     aBindArgs    = NO_RVALUES;
-
-            if (!m_setCaptureRsvd.isEmpty())
-                {
-                // TODO
-                }
-            if (!m_mapCapture.isEmpty())
-                {
-                // TODO
-                }
-
-            // store the resulting signature for the lambda
-            m_lambda.getIdentityConstant().setSignature(pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeReturns));
-
-            // MBIND is indicated by the method structure *NOT* being static
-            if (fBindTarget)
-                {
-                m_lambda.setStatic(false);
-                }
-
-            // FBIND is indicated by >0 bind arguments being returned from this method
-            m_aBindArgs = aBindArgs;
-            }
-
-        return m_aBindArgs;
-        }
-
-    // TODO remove
-    static LambdaExpression exprDebug;
-    void checkDebug()
-        {
-        if (exprDebug == null && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy"))
-            {
-            exprDebug = this;
-            }
-        if (this == exprDebug)
-            {
-            String s = toString();
-            }
-        }
-
 
     // ----- compilation helpers -------------------------------------------------------------------
 
@@ -658,6 +630,157 @@ public class LambdaExpression
             aTypes[i] = param.getType().ensureTypeConstant();
             }
         return aTypes;
+        }
+
+    MethodStructure instantiateLambda(ErrorListener errs)
+        {
+        TypeConstant[] atypes   = null;
+        String[]       asParams = null;
+        if (paramNames == null)
+            {
+            // build an array of types and an array of names
+            int cParams = params == null ? 0 : params.size();
+            atypes   = new TypeConstant[cParams];
+            asParams = new String[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Parameter param = params.get(i);
+                atypes  [i] = param.getType().ensureTypeConstant();
+                asParams[i] = param.getName();
+                }
+            }
+        else
+            {
+            // build an array of names
+            int cParams = paramNames.size();
+            asParams = new String[cParams];
+            for (int i = 0; i < cParams; ++i)
+                {
+                Expression expr = paramNames.get(i);
+                if (expr instanceof NameExpression)
+                    {
+                    // note: could also be an IgnoredNameExpression
+                    asParams[i] = ((NameExpression) expr).getName();
+                    }
+                else
+                    {
+                    expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
+                    asParams[i] = Id.IGNORED.TEXT;
+                    }
+                }
+            }
+
+        Component            container = getParent().getComponent();
+        MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
+        MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
+
+        return lambda;
+        }
+
+    /**
+     * Determine if MBIND and/or FBIND is necessary. If MBIND is necessary, then make the structure
+     * used for the lambda into a method (not a function). If FBIND is necessary, then build the
+     * list of arguments needed to bind those parameters. Regardless, build the actual signature of
+     * the structure used for the lambda.
+     *
+     * @param ctx   the compilation context for the lambda
+     * @param code  the code block being compiled into
+     * @param errs  the error list to log any errors to
+     *
+     * @return an array of arguments to pass to FBIND
+     */
+    protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
+        {
+        assert m_lambda != null && m_lambda.getIdentityConstant().isLambda();
+        assert m_mapCapture != null && m_setCaptureRsvd != null;
+
+        if (m_lambda.getIdentityConstant().isNascent())
+            {
+            // this is the first time that we have a chance to put together the signature, because
+            // this is the first time that we are being called after validate()
+            TypeConstant   typeFn       = getType();
+            ConstantPool   pool         = ctx.pool();
+            TypeConstant[] atypeParams  = extractParamTypes(pool, typeFn);
+            TypeConstant[] atypeReturns = extractReturnTypes(pool, typeFn);
+            boolean        fBindTarget  = false;
+            boolean        fBindParams  = false;
+            Argument[]     aBindArgs    = NO_RVALUES;
+
+            if (!m_setCaptureRsvd.isEmpty())
+                {
+                // TODO
+                }
+            if (!m_mapCapture.isEmpty())
+                {
+                // TODO
+                }
+
+            // MBIND is indicated by the method structure *NOT* being static
+            if (fBindTarget)
+                {
+                m_lambda.setStatic(false);
+                }
+
+            // FBIND is indicated by >0 bind arguments being returned from this method
+            m_aBindArgs = aBindArgs;
+
+            // store the resulting signature for the lambda
+            configureLambda(atypeParams, getParamNames(), atypeReturns);
+            }
+
+        return m_aBindArgs;
+        }
+
+    /**
+     * TODO
+     *
+     * @param atypeParams
+     * @param asParams
+     * @param atypeRets
+     */
+    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, TypeConstant[] atypeRets)
+        {
+        MethodStructure   lambda = m_lambda;
+        ConstantPool      pool   = lambda.getConstantPool();
+        SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeRets);
+
+        int cParams = atypeParams.length;
+        int cNames  = asParams.length;
+        org.xvm.asm.Parameter[] aparamParams = new org.xvm.asm.Parameter[cParams];
+        for (int i = 0; i < cParams; ++i)
+            {
+            String sName = i < cNames ? asParams[i] : null;
+            if (sName != null && sName.equals(Id.IGNORED.TEXT))
+                {
+                sName = null;
+                }
+
+            aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, false);
+            }
+
+        int cRets = atypeRets.length;
+        org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
+        for (int i = 0; i < cRets; ++i)
+            {
+            aparamRets[i] = new org.xvm.asm.Parameter(pool, atypeRets[i], null, null, true, i, false);
+            }
+
+        lambda.configureLambda(aparamParams, aparamRets);
+        lambda.getIdentityConstant().setSignature(sig);
+        }
+
+    // TODO remove
+    static LambdaExpression exprDebug;
+    void checkDebug()
+        {
+        if (exprDebug == null && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy"))
+            {
+            exprDebug = this;
+            }
+        if (this == exprDebug)
+            {
+            String s = toString();
+            }
         }
 
     /**
@@ -729,51 +852,6 @@ public class LambdaExpression
             }
 
         return null;
-        }
-
-    MethodStructure instantiateLambda(ErrorListener errs)
-        {
-        TypeConstant[] atypes   = null;
-        String[]       asParams = null;
-        if (paramNames == null)
-            {
-            // build an array of types and an array of names
-            int cParams = params == null ? 0 : params.size();
-            atypes   = new TypeConstant[cParams];
-            asParams = new String[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
-                Parameter param = params.get(i);
-                atypes  [i] = param.getType().ensureTypeConstant();
-                asParams[i] = param.getName();
-                }
-            }
-        else
-            {
-            // build an array of names
-            int cParams = paramNames.size();
-            asParams = new String[cParams];
-            for (int i = 0; i < cParams; ++i)
-                {
-                Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression)
-                    {
-                    // note: could also be an IgnoredNameExpression
-                    asParams[i] = ((NameExpression) expr).getName();
-                    }
-                else
-                    {
-                    expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
-                    asParams[i] = Id.IGNORED.TEXT;
-                    }
-                }
-            }
-
-        Component            container = getParent().getComponent();
-        MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
-        MethodStructure      lambda    = structMM.createLambda(atypes, asParams);
-
-        return lambda;
         }
 
 
@@ -902,7 +980,7 @@ public class LambdaExpression
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */
-    private transient Argument[]           m_aBindArgs;
+    private transient Argument[]           m_aBindArgs = NO_RVALUES;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
     }

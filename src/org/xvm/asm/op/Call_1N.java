@@ -205,6 +205,12 @@ public class Call_1N
         registerArguments(m_aArgReturn, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return Argument.toIdString(m_argValue, m_nArgValue);
+        }
+
     private int m_nArgValue;
 
     private Argument m_argValue;

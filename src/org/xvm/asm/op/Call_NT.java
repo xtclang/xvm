@@ -191,6 +191,12 @@ public class Call_NT
         m_argReturn = registerArgument(m_argReturn, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return getParamsString(m_anArgValue, m_aArgValue);
+        }
+
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;

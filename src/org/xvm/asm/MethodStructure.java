@@ -315,6 +315,21 @@ public class MethodStructure
         }
 
     /**
+     * Fill in the parameters and returns for a lambda. (They are generally unknonwn when the method
+     * is first created.)
+     *
+     * @param aParams   an array of parameter information
+     * @param aReturns  an array of return type information
+     */
+    public void configureLambda(Parameter[] aParams, Parameter[] aReturns)
+        {
+        assert getIdentityConstant().isLambda() && getIdentityConstant().isNascent();
+
+        m_aParams  = aParams;
+        m_aReturns = aReturns;
+        }
+
+    /**
      * @return the number of return values
      */
     public int getReturnCount()

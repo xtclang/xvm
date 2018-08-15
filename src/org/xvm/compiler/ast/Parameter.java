@@ -98,8 +98,8 @@ public class Parameter
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression type;
-    protected Token name;
-    protected Expression value;
+    protected Token          name;
+    protected Expression     value;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");
     }

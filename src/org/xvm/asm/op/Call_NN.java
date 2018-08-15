@@ -188,6 +188,12 @@ public class Call_NN
         registerArguments(m_aArgReturn, registry);
         }
 
+    @Override
+    protected String getParamsString()
+        {
+        return getParamsString(m_anArgValue, m_aArgValue);
+        }
+
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
