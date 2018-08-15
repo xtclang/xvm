@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -116,16 +115,6 @@ public class ImmutableTypeConstant
         // slightly different
         // REVIEW what about in the case of "this:class"?
         return m_constType.buildTypeInfo(errs);
-        }
-
-    // ----- type comparison support ---------------------------------------------------------------
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft, ContributionChain chain)
-        {
-        // the l-value (this) is immutable; so should be the r-value (that)
-        return typeRight.isImmutable()
-            && super.validateContributionFrom(typeRight, accessLeft, chain);
         }
 
 

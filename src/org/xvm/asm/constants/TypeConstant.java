@@ -24,7 +24,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
@@ -3502,11 +3501,24 @@ public abstract class TypeConstant
 
         // WARNING: thread-unsafe
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
-        Relation relation = mapRelations.get(typeLeft);
 
+        Relation relation = mapRelations.get(typeLeft);
         if (relation == null)
             {
-            relation = checkReservedCompatibility(typeLeft, this);
+            // since we're caching the relations on the constant itself, there is no reason to do it
+            // unless it's registered
+            TypeConstant typeRight         = this;
+            TypeConstant typeRightResolved = (TypeConstant)
+                    typeRight.getConstantPool().register(typeRight.resolveTypedefs());
+            TypeConstant typeLeftResolved  = (TypeConstant)
+                    typeLeft.getConstantPool().register(typeLeft.resolveTypedefs());
+
+            if (typeLeftResolved != typeLeft || typeRightResolved != typeRight)
+                {
+                return typeRightResolved.calculateRelation(typeLeftResolved);
+                }
+
+            relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null)
                 {
                 mapRelations.put(typeLeft, relation);
@@ -3516,15 +3528,15 @@ public abstract class TypeConstant
             mapRelations.put(typeLeft, Relation.IN_PROGRESS);
             try
                 {
-                TypeConstant typeLeftResolved  = typeLeft.resolveTypedefs();
-                TypeConstant typeRightResolved = this.resolveTypedefs();
+                relation = typeRight.calculateRelationToLeft(typeLeft);
 
-                List<ContributionChain> chains = typeRightResolved.collectContributions(
-                    typeLeftResolved, new ArrayList<>(), new ArrayList<>());
-
-                relation = chains.isEmpty()
-                    ? Relation.INCOMPATIBLE
-                    : validateChains(chains, typeRightResolved, typeLeftResolved);
+                if (relation == Relation.INCOMPATIBLE && !typeLeft.isClassType())
+                    {
+                    // left is an interface; check the duck-typing
+                    relation = typeLeft.isInterfaceAssignableFrom(
+                            typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty()
+                        ? Relation.IS_A : Relation.INCOMPATIBLE;
+                    }
 
                 mapRelations.put(typeLeft, relation);
                 }
@@ -3548,6 +3560,224 @@ public abstract class TypeConstant
             mapRelations.put(typeLeft, relation = Relation.IS_A);
             }
         return relation;
+        }
+
+    /**
+     * @return a relation between this (R-Value) and specified (L-Value) types
+     */
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
+        {
+        return typeLeft.calculateRelationToRight(this);
+        }
+
+    /**
+     * @return a relation between this (L-Value) and specified (R-Value) types
+     */
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
+        {
+        return typeRight.findContribution(this);
+        }
+
+    /**
+     * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
+     * type. Both types must be non-relational and single defining constant.
+     *
+     * @return a relation between this and the specified types
+     */
+    protected Relation findContribution(TypeConstant typeLeft)
+        {
+        ConstantPool pool      = ConstantPool.getCurrentPool();
+        TypeConstant typeRight = this;
+
+        assert !typeLeft.isRelationalType() && typeLeft.isSingleDefiningConstant();
+        assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
+
+        Constant constIdLeft  = typeLeft.getDefiningConstant();
+        Constant constIdRight = typeRight.getDefiningConstant();
+
+        // check the access modifier first
+        Access accessLeft  = typeLeft.getAccess();
+        Access accessRight = typeRight.getAccess();
+        switch (accessRight)
+            {
+            case STRUCT:
+                if (typeLeft.equals(pool.typeStruct()))
+                    {
+                    return Relation.IS_A;
+                    }
+                if (accessLeft != Access.STRUCT)
+                    {
+                    // struct is not assignable to anything but a struct
+                    return Relation.INCOMPATIBLE;
+                    }
+                break;
+
+            case PUBLIC:
+            case PROTECTED:
+            case PRIVATE:
+                if (accessLeft.compareTo(accessRight) > 0)
+                    {
+                    // for now, disallow any access widening
+                    return Relation.INCOMPATIBLE;
+                    }
+                break;
+            }
+
+        Relation relation;
+        Format   format;
+        switch (format = constIdRight.getFormat())
+            {
+            case Module:
+            case Package:
+                return constIdRight.equals(constIdLeft) ? Relation.IS_A : Relation.INCOMPATIBLE;
+
+            case Class:
+            case NativeClass:
+                {
+                ClassStructure clzRight = (ClassStructure)
+                    ((IdentityConstant) constIdRight).getComponent();
+
+                // continue recursively with the right side analysis
+                relation = clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
+                break;
+                }
+
+            case Property:
+                {
+                // scenarios we can handle here are:
+                // 1. r-value (this) = T (formal parameter type)
+                //    l-value (that) = T (formal parameter type, equal by name only)
+
+                // 2. r-value (this) = T (formal parameter type), constrained by U (other formal type)
+                //    l-value (that) = U (formal parameter type)
+                //
+                // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
+                //    l-value (that) = V (real type), where U "is a" V
+                PropertyConstant idRight = (PropertyConstant) constIdRight;
+                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property &&
+                    (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
+                    {
+                    return Relation.IS_A;
+                    }
+
+                // the typeRight is a formal parameter type and cannot have any modifiers
+                assert typeRight instanceof TerminalTypeConstant;
+                relation = idRight.getReferredToType().calculateRelation(typeLeft);
+                break;
+                }
+
+            case TypeParameter:
+                {
+                // scenarios we can handle here are:
+                // 1. r-value (this) = T (type parameter type)
+                //    l-value (that) = T (type parameter type, equal by register only)
+
+                // 2. r-value (this) = T (type parameter type), constrained by U (other type parameter type)
+                //    l-value (that) = U (type parameter type)
+                //
+                // 3. r-value (this) = T (type parameter type), constrained by U (real type)
+                //    l-value (that) = V (real type), where U "is a" V
+                TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
+                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.TypeParameter &&
+                    (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
+                    {
+                    return Relation.IS_A;
+                    }
+
+                // the typeRight is a type parameter and cannot have any modifiers
+                assert typeRight instanceof TerminalTypeConstant;
+                relation = idRight.getReferredToType().calculateRelation(typeLeft);
+                break;
+                }
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                PseudoConstant idRight = (PseudoConstant) constIdRight;
+                if (constIdLeft != null && constIdLeft.getFormat() == format
+                        && idRight.isCongruentWith((PseudoConstant) constIdLeft))
+                    {
+                    // without any additional context, it should be assignable in some direction
+                    typeRight = typeRight.resolveAutoNarrowing(pool, null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
+
+                    Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
+                    return relRightIsLeft == Relation.INCOMPATIBLE
+                        ? typeLeft.calculateRelation(typeRight)
+                        : relRightIsLeft;
+                    }
+
+                ClassStructure clzRight = (ClassStructure)
+                        idRight.getDeclarationLevelClass().getComponent();
+                relation = clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
+                break;
+                }
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdRight);
+            }
+
+        if (relation != Relation.INCOMPATIBLE)
+            {
+            // now check immutability modifiers (after the auto-narrowing)
+            if (typeLeft.isImmutable() && !typeRight.isImmutable())
+                {
+                return Relation.INCOMPATIBLE;
+                }
+            }
+        return relation;
+        }
+
+    /**
+     * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
+     * intersection type. This type must not be an intersection type.
+     *
+     * @return a relation between this and the specified types
+     */
+    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+        {
+        assert !(this instanceof IntersectionTypeConstant);
+
+        TypeConstant typeRight = this;
+
+        // this method is overridden by relational types, so by the time we come here.
+        // typeRight must be a non-relational one
+        assert !typeRight.isRelationalType() && typeRight.isSingleDefiningConstant();
+
+        Constant constIdRight = typeRight.getDefiningConstant();
+        switch (constIdRight.getFormat())
+            {
+            case Module:
+            case Package:
+            case Property:
+            case TypeParameter:
+                return Relation.INCOMPATIBLE;
+
+            case Class:
+            case NativeClass:
+                {
+                ClassStructure clzRight = (ClassStructure)
+                    ((IdentityConstant) constIdRight).getComponent();
+
+                // continue recursively with the right side analysis
+                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                }
+
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                {
+                PseudoConstant idRight = (PseudoConstant) constIdRight;
+                ClassStructure clzRight = (ClassStructure)
+                        idRight.getDeclarationLevelClass().getComponent();
+                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                }
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdRight);
+            }
         }
 
     /**
@@ -3591,111 +3821,6 @@ public abstract class TypeConstant
             }
 
         return null;
-        }
-
-    /**
-     * Validate the list of chains that were collected by the collectContribution() method, but
-     * now from the L-value's perspective. The chains that deemed to be non-fitting will be
-     * deleted from the chain list.
-     */
-    protected static Relation validateChains(List<ContributionChain> chains,
-                                             TypeConstant typeRight, TypeConstant typeLeft)
-        {
-        for (Iterator<ContributionChain> iter = chains.iterator(); iter.hasNext();)
-            {
-            ContributionChain chain = iter.next();
-
-            if (!typeLeft.validateContributionFrom(typeRight, Access.PUBLIC, chain))
-                {
-                // rejected
-                iter.remove();
-                continue;
-                }
-
-            Contribution contrib = chain.first();
-            switch (contrib.getComposition())
-                {
-                case MaybeDuckType:
-                    {
-                    TypeConstant typeIface = contrib.getTypeConstant();
-                    if (typeIface == null)
-                        {
-                        typeIface = typeLeft;
-                        }
-
-                    if (!typeIface.isInterfaceAssignableFrom(
-                            typeRight, Access.PUBLIC, Collections.EMPTY_LIST).isEmpty())
-                        {
-                        iter.remove();
-                        }
-                    break;
-                    }
-
-                case AutoNarrowed:
-                    {
-                    ConstantPool pool = ConstantPool.getCurrentPool();
-
-                    // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.resolveAutoNarrowing(pool, null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
-
-                    Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
-                    return relRightIsLeft == Relation.INCOMPATIBLE
-                        ? typeLeft.calculateRelation(typeRight)
-                        : relRightIsLeft;
-                    }
-
-                default:
-                    return chain.isWeakMatch() ? Relation.IS_A_WEAK : Relation.IS_A;
-                }
-            }
-
-        return chains.isEmpty() ? Relation.INCOMPATIBLE : Relation.IS_A;
-        }
-
-    /**
-     * Check if the specified TypeConstant (L-value) represents a type that is assignable to
-     * values of the type represented by this TypeConstant (R-Value).
-     *
-     * @param typeLeft   the type to match (L-value)
-     * @param listRight  the list of actual generic parameters for this type
-     * @param chains     the list of chains to modify
-     *
-     * @return a list of ContributionChain objects that describe how "that" type could be found in
-     *         the contribution tree of "this" type; empty if the types are incompatible
-     */
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
-        {
-        return getUnderlyingType().collectContributions(typeLeft, listRight, chains);
-        }
-
-    /**
-     * Collect the contributions for the specified class that match this type (L-value).
-     * Note that the parameter list is for the passed-in class rather than this type.
-     *
-     * @param clzRight   the class to check for a contribution
-     * @param listRight  the list of actual generic parameters applicable to clzThat
-     * @param chains     the list of chains to modify
-     *
-     * @return a list of ContributionChain objects that describe how this type could be found in
-     *         the contribution tree of the specified class; empty if none is found
-     */
-    protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
-        {
-        return getUnderlyingType().collectClassContributions(clzRight, listRight, chains);
-        }
-
-    /**
-     * Check if this TypeConstant (L-value) represents a type that is assignable to
-     * values of the type represented by the specified TypeConstant (R-Value) due to
-     * the specified contribution chain.
-     */
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
-                                               ContributionChain chain)
-        {
-        return getUnderlyingType().validateContributionFrom(typeRight, accessLeft, chain);
         }
 
     /**
@@ -4324,7 +4449,24 @@ public abstract class TypeConstant
     /**
      * Relationship options.
      */
-    public enum Relation {IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE}
+    public enum Relation
+        {
+        IN_PROGRESS, IS_A, IS_A_WEAK, INCOMPATIBLE;
+
+        public Relation bestOf(Relation that)
+            {
+            assert this != IN_PROGRESS && that != IN_PROGRESS;
+
+            return this.ordinal() < that.ordinal() ? this : that;
+            }
+
+        public Relation worseOf(Relation that)
+            {
+            assert this != IN_PROGRESS && that != IN_PROGRESS;
+
+            return this.ordinal() < that.ordinal() ? that : this;
+            }
+        }
 
     /**
      * Consumption/production options.

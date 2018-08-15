@@ -86,7 +86,11 @@ public class Container
             throw new IllegalStateException("Already started");
             }
 
+        ConstantPool.setCurrentPool(f_moduleRoot.getConstantPool());
+
         f_templates.loadNativeTemplates(f_moduleRoot);
+
+        ConstantPool.setCurrentPool(null);
 
         ModuleStructure structModule = (ModuleStructure) f_constModule.getComponent();
         if (f_sAppName.equals("TestApp"))
@@ -101,12 +105,16 @@ public class Container
             m_hModule = ((xModule) m_app).ensureModuleHandle(f_constModule);
             }
 
+        ConstantPool.setCurrentPool(structModule.getConstantPool());
+
         m_contextMain = createServiceContext(f_sAppName, structModule);
         xService.makeHandle(m_contextMain,
             xService.INSTANCE.getCanonicalClass(),
             xService.INSTANCE.getCanonicalType());
 
         initResources();
+
+        ConstantPool.setCurrentPool(null);
         }
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)

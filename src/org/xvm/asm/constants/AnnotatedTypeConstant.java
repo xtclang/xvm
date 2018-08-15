@@ -5,9 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.Annotation;
@@ -207,63 +204,38 @@ public class AnnotatedTypeConstant
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
-                m_annotation.getParams(), type);
+            m_annotation.getParams(), type);
         }
 
 
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public List<Component.ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<Component.ContributionChain> chains)
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
         // this logic is identical to the union of the annotation type and the underlying type
-        assert listRight.isEmpty();
-
+        if (typeLeft instanceof UnionTypeConstant || typeLeft.isAnnotated())
+            {
+            return super.calculateRelationToLeft(typeLeft);
+            }
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeOrig = getUnderlyingType();
 
-        List<Component.ContributionChain> chains1 = typeAnno.collectContributions(typeLeft, listRight, new ArrayList<>());
-        List<Component.ContributionChain> chains2 = typeOrig.collectContributions(typeLeft, new ArrayList<>(), new ArrayList<>());
-
-        // any contribution would do
-        if (!chains1.isEmpty())
-            {
-            validateChains(chains1, typeAnno, typeLeft);
-            }
-
-        if (!chains2.isEmpty())
-            {
-            validateChains(chains2, typeOrig, typeLeft);
-            }
-
-        chains.addAll(chains1);
-        chains.addAll(chains2);
-
-        return chains;
+        Relation rel1 = typeAnno.calculateRelation(typeLeft);
+        Relation rel2 = typeOrig.calculateRelation(typeLeft);
+        return rel1.bestOf(rel2);
         }
 
     @Override
-    protected List<Component.ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<Component.ContributionChain> chains)
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
         // this logic is identical to the union of the annotation type and the underlying type
-        assert listRight.isEmpty();
+        TypeConstant typeAnno = getAnnotationType();
+        TypeConstant typeOrig = getUnderlyingType();
 
-        TypeConstant typeAnno = getUnderlyingType();
-        TypeConstant typeOrig = getUnderlyingType2();
-
-        List<Component.ContributionChain> chains1 = typeAnno.collectClassContributions(clzRight, listRight, new ArrayList<>());
-        List<Component.ContributionChain> chains2 = typeOrig.collectClassContributions(clzRight, new ArrayList<>(), new ArrayList<>());
-
-        // both branches have to have contributions
-        if (!chains1.isEmpty() && !chains2.isEmpty())
-            {
-            chains.addAll(chains1);
-            chains.addAll(chains2);
-            }
-
-        return chains;
+        Relation rel1 = typeRight.calculateRelation(typeAnno);
+        Relation rel2 = typeRight.calculateRelation(typeOrig);
+        return rel1.worseOf(rel2);
         }
 
     // ----- run-time support ----------------------------------------------------------------------

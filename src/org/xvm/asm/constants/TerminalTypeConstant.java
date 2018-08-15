@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,15 +16,12 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.TypedefStructure;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -145,10 +141,10 @@ public class TerminalTypeConstant
                 return true;
 
             case Property:
-                return getPropertyTypeType(((PropertyConstant) constant)).isImmutable();
+                return ((PropertyConstant) constant).getReferredToType().isImmutable();
 
             case TypeParameter:
-                return getTypeParameterType(((TypeParameterConstant) constant)).isImmutable();
+                return (((TypeParameterConstant) constant)).getReferredToType().isImmutable();
 
             case NativeClass:
                 constant = ((NativeRebaseConstant) constant).getClassConstant();
@@ -277,7 +273,7 @@ public class TerminalTypeConstant
         {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() != Format.Typedef ||
-                getTypedefType((TypedefConstant) constId).isSingleDefiningConstant();
+                ((TypedefConstant) constId).getReferredToType().isSingleDefiningConstant();
         }
 
     @Override
@@ -285,7 +281,7 @@ public class TerminalTypeConstant
         {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
-                ? getTypedefType((TypedefConstant) constId).getDefiningConstant()
+                ? ((TypedefConstant) constId).getReferredToType().getDefiningConstant()
                 : constId;
         }
 
@@ -326,7 +322,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).resolveContributedName(sName, collector);
+            return constId.getReferredToType().resolveContributedName(sName, collector);
             }
 
         Constant constant = getDefiningConstant();
@@ -356,7 +352,7 @@ public class TerminalTypeConstant
                         .resolveContributedName(sName, collector);
 
             case Typedef:
-                return getTypedefType((TypedefConstant) constant).
+                return ((TypedefConstant) constant).getReferredToType().
                     resolveContributedName(sName, collector);
 
             case UnresolvedName:
@@ -372,7 +368,7 @@ public class TerminalTypeConstant
         {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
-                ? getTypedefType((TypedefConstant) constId).resolveTypedefs()
+                ? ((TypedefConstant) constId).getReferredToType().resolveTypedefs()
                 : this;
         }
 
@@ -383,7 +379,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).resolveGenerics(pool, resolver);
+            return constId.getReferredToType().resolveGenerics(pool, resolver);
             }
 
         Constant constId = getDefiningConstant();
@@ -424,7 +420,8 @@ public class TerminalTypeConstant
                 return this;
 
             case Typedef:
-                return getTypedefType((TypedefConstant) constId).adoptParameters(pool, atypeParams);
+                return ((TypedefConstant) constId).getReferredToType().
+                    adoptParameters(pool, atypeParams);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constId);
@@ -484,7 +481,8 @@ public class TerminalTypeConstant
                 break;
 
             case Typedef:
-                return getTypedefType((TypedefConstant) constId).adoptParentTypeParameters(pool);
+                return ((TypedefConstant) constId).getReferredToType().
+                    adoptParentTypeParameters(pool);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constId);
@@ -506,7 +504,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).resolveAutoNarrowing(pool, typeTarget);
+            return constId.getReferredToType().resolveAutoNarrowing(pool, typeTarget);
             }
 
         Constant constant = getDefiningConstant();
@@ -546,7 +544,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).inferAutoNarrowing(pool, constThisClass);
+            return constId.getReferredToType().inferAutoNarrowing(pool, constThisClass);
             }
 
         Constant constId = getDefiningConstant();
@@ -570,7 +568,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isTuple();
+            return constId.getReferredToType().isTuple();
             }
 
         Constant constant = getDefiningConstant();
@@ -589,7 +587,7 @@ public class TerminalTypeConstant
                 break;
 
             case TypeParameter:
-                constant = getTypeParameterType((TypeParameterConstant) constant);
+                constant = ((TypeParameterConstant) constant).getReferredToType();
                 break;
 
             case ThisClass:
@@ -612,7 +610,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).buildTypeInfo(errs);
+            return constId.getReferredToType().buildTypeInfo(errs);
             }
 
         Constant constant = getDefiningConstant();
@@ -626,11 +624,11 @@ public class TerminalTypeConstant
 
             case Property:
                 return new TypeInfo(this,
-                        getPropertyTypeType(((PropertyConstant) constant)).buildTypeInfo(errs));
+                        ((PropertyConstant) constant).getReferredToType().buildTypeInfo(errs));
 
             case TypeParameter:
                 return new TypeInfo(this,
-                        getTypeParameterType((TypeParameterConstant) constant).buildTypeInfo(errs));
+                        ((TypeParameterConstant) constant).getReferredToType().buildTypeInfo(errs));
 
             case ThisClass:
             case ParentClass:
@@ -665,7 +663,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).extendsClass(constClass);
+            return constId.getReferredToType().extendsClass(constClass);
             }
 
         Constant constant = getDefiningConstant();
@@ -678,10 +676,10 @@ public class TerminalTypeConstant
                         .getComponent()).extendsClass(constClass);
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constant).extendsClass(constClass);
+                return ((PropertyConstant) constant).getReferredToType().extendsClass(constClass);
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constant).extendsClass(constClass);
+                return ((TypeParameterConstant) constant).getReferredToType().extendsClass(constClass);
 
             case ThisClass:
             case ParentClass:
@@ -701,7 +699,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isClassType();
+            return constId.getReferredToType().isClassType();
             }
 
         Constant constant = getDefiningConstant();
@@ -712,6 +710,10 @@ public class TerminalTypeConstant
                 // these are always class types (not interface types)
                 return true;
 
+            case NativeClass:
+                // native rebase is only for an interface
+                return false;
+
             case Class:
                 {
                 // examine the structure to determine if it represents a class or interface
@@ -720,10 +722,10 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constant).isClassType();
+                return ((PropertyConstant) constant).getReferredToType().isClassType();
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constant).isClassType();
+                return ((TypeParameterConstant) constant).getReferredToType().isClassType();
 
             case ThisClass:
             case ParentClass:
@@ -753,7 +755,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isSingleUnderlyingClass(fAllowInterface);
+            return constId.getReferredToType().isSingleUnderlyingClass(fAllowInterface);
             }
 
         Constant constant = getDefiningConstant();
@@ -772,11 +774,11 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constant).
+                return ((PropertyConstant) constant).getReferredToType().
                     isSingleUnderlyingClass(fAllowInterface);
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constant).
+                return ((TypeParameterConstant) constant).getReferredToType().
                     isSingleUnderlyingClass(fAllowInterface);
 
             case ThisClass:
@@ -800,7 +802,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).getSingleUnderlyingClass(fAllowInterface);
+            return constId.getReferredToType().getSingleUnderlyingClass(fAllowInterface);
             }
 
         Constant constant = getDefiningConstant();
@@ -821,11 +823,11 @@ public class TerminalTypeConstant
                 return (IdentityConstant) constant;
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constant).
+                return ((PropertyConstant) constant).getReferredToType().
                     getSingleUnderlyingClass(fAllowInterface);
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constant).
+                return ((TypeParameterConstant) constant).getReferredToType().
                     getSingleUnderlyingClass(fAllowInterface);
 
             case ParentClass:
@@ -845,7 +847,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isExplicitClassIdentity(fAllowParams);
+            return constId.getReferredToType().isExplicitClassIdentity(fAllowParams);
             }
 
         Constant constant = getDefiningConstant();
@@ -876,7 +878,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).getExplicitClassFormat();
+            return constId.getReferredToType().getExplicitClassFormat();
             }
 
         Constant constant = getDefiningConstant();
@@ -912,7 +914,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).getExplicitClassInto();
+            return constId.getReferredToType().getExplicitClassInto();
             }
 
         Constant       constId = getDefiningConstant();
@@ -1022,7 +1024,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isConstant();
+            return constId.getReferredToType().isConstant();
             }
 
         Constant constant = getDefiningConstant();
@@ -1056,7 +1058,7 @@ public class TerminalTypeConstant
         {
         Constant constId = ensureResolvedConstant();
         return constId.getFormat() == Format.Typedef
-                ? getTypedefType((TypedefConstant) constId).isTypeOfType()
+                ? ((TypedefConstant) constId).getReferredToType().isTypeOfType()
                 : this.equals(getConstantPool().typeType());
         }
 
@@ -1067,256 +1069,7 @@ public class TerminalTypeConstant
         }
 
 
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Dereference a typedef constant to find the type to which it refers.
-     *
-     * @param constTypedef  a typedef constant
-     *
-     * @return the type that the typedef refers to
-     */
-    public static TypeConstant getTypedefType(TypedefConstant constTypedef)
-        {
-        return ((TypedefStructure) constTypedef.getComponent()).getType();
-        }
-
-    /**
-     * Dereference a property constant that is used for a type parameter, to obtain the constraint
-     * type of that type parameter.
-     *
-     * @param constProp the property constant for the property that holds the type parameter type
-     *
-     * @return the constraint type of the type parameter
-     */
-    public static TypeConstant getPropertyTypeType(PropertyConstant constProp)
-        {
-        // the type points to a property, which means that the type is a parameterized type;
-        // the type of the property will be "Type<X>", so return X
-        TypeConstant typeProp = ((PropertyStructure) constProp.getComponent()).getType();
-        assert typeProp.isEcstasy("Type") && typeProp.isParamsSpecified();
-        return typeProp.getParamTypesArray()[0];
-        }
-
-    /**
-     * Dereference a TypeParameterConstant that is used for a type parameter, to obtain the
-     * constraint type of that type parameter.
-     *
-     * @param constTypeParam  the type parameter constant
-     *
-     * @return the constraint type of the type parameter
-     */
-    public static TypeConstant getTypeParameterType(TypeParameterConstant constTypeParam)
-        {
-        // the type points to a register, which means that the type is a parameterized type;
-        // the type of the register will be "Type<X>", so return X
-        MethodConstant   constMethod = constTypeParam.getMethod();
-        int              nReg        = constTypeParam.getRegister();
-        TypeConstant[]   atypeParams = constMethod.getRawParams();
-        assert atypeParams.length > nReg;
-        TypeConstant     typeParam   = atypeParams[nReg];
-        assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
-        return typeParam.getParamTypesArray()[0];
-        }
-
-
     // ----- type comparison support ---------------------------------------------------------------
-
-    @Override
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
-        {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).collectContributions(typeLeft, listRight, chains);
-            }
-
-        Constant constIdRight = getDefiningConstant();
-        Constant constIdLeft  = null;
-
-        if (typeLeft.isSingleDefiningConstant())
-            {
-            constIdLeft = typeLeft.getDefiningConstant();
-
-            if (constIdRight.equals(constIdLeft))
-                {
-                chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
-                return chains;
-                }
-            }
-
-        Format format;
-        switch (format = constIdRight.getFormat())
-            {
-            case Module:
-            case Package:
-                break;
-
-            case Class:
-            case NativeClass:
-                {
-                ClassStructure clzRight = (ClassStructure)
-                    ((IdentityConstant) constIdRight).getComponent();
-
-                chains.addAll(typeLeft.collectClassContributions(
-                    clzRight, listRight, new ArrayList<>()));
-                break;
-                }
-
-            case Property:
-                {
-                // scenarios we can handle here are:
-                // 1. r-value (this) = T (formal parameter type)
-                //    l-value (that) = T (formal parameter type, equal by name only)
-
-                // 2. r-value (this) = T (formal parameter type), constrained by U (other formal type)
-                //    l-value (that) = U (formal parameter type)
-                //
-                // 3. r-value (this) = T (formal parameter type), constrained by U (real type)
-                //    l-value (that) = V (real type), where U "is a" V
-                PropertyConstant idRight = (PropertyConstant) constIdRight;
-                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.Property &&
-                    (((PropertyConstant) constIdLeft).getName().equals(idRight.getName())))
-                    {
-                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
-                    break;
-                    }
-
-                return getPropertyTypeType(idRight).
-                    collectContributions(typeLeft, listRight, chains);
-                }
-
-            case TypeParameter:
-                {
-                // scenarios we can handle here are:
-                // 1. r-value (this) = T (type parameter type)
-                //    l-value (that) = T (type parameter type, equal by register only)
-
-                // 2. r-value (this) = T (type parameter type), constrained by U (other type parameter type)
-                //    l-value (that) = U (type parameter type)
-                //
-                // 3. r-value (this) = T (type parameter type), constrained by U (real type)
-                //    l-value (that) = V (real type), where U "is a" V
-                TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (typeLeft.isGenericType() && constIdLeft.getFormat() == Format.TypeParameter &&
-                    (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
-                    {
-                    chains.add(new ContributionChain(new Contribution(Composition.Equal, null)));
-                    break;
-                    }
-
-                return getTypeParameterType(idRight).
-                    collectContributions(typeLeft, listRight, chains);
-                }
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                PseudoConstant idRight = (PseudoConstant) constIdRight;
-                if (constIdLeft != null && constIdLeft.getFormat() == format
-                        && idRight.isCongruentWith((PseudoConstant) constIdLeft))
-                    {
-                    chains.add(new ContributionChain(
-                        new Contribution(Composition.AutoNarrowed, typeLeft)));
-                    break;
-                    }
-
-                ClassStructure clzRight = (ClassStructure)
-                        idRight.getDeclarationLevelClass().getComponent();
-                chains.addAll(typeLeft.collectClassContributions(
-                        clzRight, listRight, new ArrayList<>()));
-                break;
-                }
-
-            default:
-                throw new IllegalStateException("unexpected constant: " + constIdRight);
-            }
-        return chains;
-        }
-
-    @Override
-    protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
-        {
-        if (!isSingleDefiningConstant())
-            {
-            // this can only happen if this type is a Typedef referring to a relational type
-            TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).collectClassContributions(clzRight, listRight, chains);
-            }
-
-        Constant constIdLeft = getDefiningConstant();
-        switch (constIdLeft.getFormat())
-            {
-            case Module:
-            case Package:
-                break;
-
-            case NativeClass:
-                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-                // fall through
-            case Class:
-                {
-                ClassConstant constClzLeft = (ClassConstant) constIdLeft;
-                if (constClzLeft.equals(getConstantPool().clzObject()))
-                    {
-                    // everything is considered to extend Object (even interfaces)
-                    chains.add(new ContributionChain(
-                        new Contribution(Composition.Extends, getConstantPool().typeObject())));
-                    break;
-                    }
-
-                List<ContributionChain> chainsClz =
-                    clzRight.collectContributions(constClzLeft, listRight, new ArrayList<>(), true);
-                if (chainsClz.isEmpty())
-                    {
-                    ClassStructure clzLeft = (ClassStructure) constClzLeft.getComponent();
-                    if (clzLeft.getFormat() == Component.Format.INTERFACE)
-                        {
-                        chains.add(new ContributionChain(
-                            new Contribution(Composition.MaybeDuckType, null)));
-                        }
-                    }
-                else
-                    {
-                    chains.addAll(chainsClz);
-                    }
-                break;
-                }
-
-            case Property:
-            case TypeParameter:
-                // r-value (that) is a real type; it cannot have a formal type contribution
-                // (assigned to a formal type)
-                break;
-
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                ClassStructure clzLeft = (ClassStructure)
-                    ((PseudoConstant) constIdLeft).getDeclarationLevelClass().getComponent();
-                return clzLeft.getIdentityConstant().getType().
-                    collectClassContributions(clzRight, listRight, chains);
-                }
-
-            default:
-                throw new IllegalStateException("unexpected constant: " + constIdLeft);
-            }
-
-        return chains;
-        }
-
-    @Override
-    protected boolean validateContributionFrom(
-            TypeConstant typeRight, Access accessLeft, ContributionChain chain)
-        {
-        // there is nothing that could change the result of "checkAssignableTo"
-        return true;
-        }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
@@ -1326,7 +1079,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+            return constId.getReferredToType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
             }
 
         Constant constIdLeft = getDefiningConstant();
@@ -1345,8 +1098,12 @@ public class TerminalTypeConstant
                 return clzLeft.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
                 }
 
+            case Property:
+                return ((PropertyConstant) constIdLeft).getReferredToType().
+                    isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constIdLeft).
+                return ((TypeParameterConstant) constIdLeft).getReferredToType().
                     isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
             case ThisClass:
@@ -1368,7 +1125,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).containsSubstitutableMethod(signature, access, listParams);
+            return constId.getReferredToType().containsSubstitutableMethod(signature, access, listParams);
             }
 
         Constant constIdThis = getDefiningConstant();
@@ -1385,11 +1142,11 @@ public class TerminalTypeConstant
                 }
 
             case Property:
-                return getPropertyTypeType((PropertyConstant) constIdThis).
+                return ((PropertyConstant) constIdThis).getReferredToType().
                     containsSubstitutableMethod(signature, access, listParams);
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constIdThis).
+                return ((TypeParameterConstant) constIdThis).getReferredToType().
                     containsSubstitutableMethod(signature, access, listParams);
 
             case ThisClass:
@@ -1410,7 +1167,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).checkConsumption(sTypeName, access, listParams);
+            return constId.getReferredToType().checkConsumption(sTypeName, access, listParams);
             }
 
         Constant constIdThis = getDefiningConstant();
@@ -1466,7 +1223,7 @@ public class TerminalTypeConstant
                 return Usage.NO;
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constIdThis).
+                return ((TypeParameterConstant) constIdThis).getReferredToType().
                     checkConsumption(sTypeName, access, listParams);
 
             case ThisClass:
@@ -1487,7 +1244,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).checkProduction(sTypeName, access, listParams);
+            return constId.getReferredToType().checkProduction(sTypeName, access, listParams);
             }
 
         Constant constIdThis = getDefiningConstant();
@@ -1565,7 +1322,7 @@ public class TerminalTypeConstant
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).getOpSupport(registry);
+            return constId.getReferredToType().getOpSupport(registry);
             }
 
         Constant constIdThis = getDefiningConstant();
@@ -1580,7 +1337,7 @@ public class TerminalTypeConstant
                 return registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
 
             case TypeParameter:
-                return getTypeParameterType((TypeParameterConstant) constIdThis).getOpSupport(registry);
+                return ((TypeParameterConstant) constIdThis).getReferredToType().getOpSupport(registry);
 
             case ThisClass:
             case ParentClass:
@@ -1635,7 +1392,7 @@ public class TerminalTypeConstant
             }
         if (getFormat() == Format.Typedef)
             {
-            return getTypedefType((TypedefConstant) constId).containsUnresolved();
+            return ((TypedefConstant) constId).getReferredToType().containsUnresolved();
             }
         return false;
         }
@@ -1715,7 +1472,7 @@ public class TerminalTypeConstant
                 {
                 // this can only happen if this type is a Typedef referring to a relational type
                 TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-                return getTypedefType(constId).validate(errs);
+                return constId.getReferredToType().validate(errs);
                 }
 
             Constant constant = getDefiningConstant();

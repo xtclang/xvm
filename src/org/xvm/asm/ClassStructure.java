@@ -18,12 +18,15 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TupleElementsTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.L_Set;
@@ -836,26 +839,174 @@ public class ClassStructure
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * For this class structure representing the R-Value recursively find a contribution by the
-     * specified class id (representing an L-Value) and add the corresponding ContributionChain
-     * objects to the list of chains.
+     * Calculate assignability between two parameterized types of this class.
      *
-     * @param idClzLeft   the identity of the class to look for
+     *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
+     */
+    public Relation calculateAssignability(List<TypeConstant> listLeft, Access accessLeft,
+                                           List<TypeConstant> listRight)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        int cParamsLeft  = listLeft.size();
+        int cParamsRight = listRight.size();
+        boolean fTuple   = getIdentityConstant().equals(pool.clzTuple());
+
+        // we only have to check all the parameters on the left side,
+        // since if an assignment C<L1> = C<R1> is allowed, then
+        // an assignment C<L1> = C<R1, R2> is allowed for any R2
+
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = getTypeParamsAsList();
+
+        if (!fTuple)
+            {
+            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
+                {
+                // soft assert
+                System.err.println("Invalid number of arguments for " + getName()
+                        + ": required=" + listFormalEntries.size()
+                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        boolean fWeak = false;
+        for (int i = 0; i < cParamsLeft; i++)
+            {
+            String sName;
+            TypeConstant typeCanonical;
+
+            if (fTuple)
+                {
+                sName         = null;
+                typeCanonical = pool.typeObject();
+                }
+            else
+                {
+                Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
+
+                sName         = entryFormal.getKey().getValue();
+                typeCanonical = entryFormal.getValue();
+                }
+
+            TypeConstant typeLeft = listLeft.get(i);
+            TypeConstant typeRight;
+            boolean fProduce;
+            boolean fLeftIsRight = false;
+
+            if (i < cParamsRight)
+                {
+                typeRight = listRight.get(i);
+
+                if (typeLeft.equals(typeRight))
+                    {
+                    continue;
+                    }
+
+                fProduce = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fLeftIsRight = typeLeft.isA(typeRight);
+
+                if (fLeftIsRight && !fProduce)
+                    {
+                    // consumer only methods; rule 1.2.1
+                    continue;
+                    }
+                }
+            else
+                {
+                // assignment  C<L1, L2> = C<R1> is not the same as
+                //             C<L1, L2> = C<R1, [canonical type for R2]>;
+                // the former is only allowed if class C produces L2
+                // and then all L2 consuming methods (if any) must be "wrapped"
+                typeRight = typeCanonical;
+                fProduce  = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                }
+
+            if (typeRight.isA(typeLeft))
+                {
+                if (fLeftIsRight)
+                    {
+                    // both hold true:
+                    //   typeLeft.isA(typeRight), and
+                    //   typeRight.isA(typeLeft)
+                    // we take it that the types are congruent
+                    // (e,g. "this:class", but with different declaration levels)
+                    continue;
+                    }
+
+                if (fProduce)
+                    {
+                    // there are some producing methods; rule 1.2.2.2
+                    // consuming methods may need to be "wrapped"
+                    if (fTuple || consumesFormalType(sName, accessLeft, listLeft))
+                        {
+                        fWeak = true;
+                        }
+                    continue;
+                    }
+                }
+
+            // this parameter didn't match
+            return Relation.INCOMPATIBLE;
+            }
+        return fWeak ? Relation.IS_A_WEAK : Relation.IS_A;
+        }
+
+    /**
+     * For this class structure representing the R-Value find a contribution assignable to the
+     * specified L-Value type.
+     *
+     * @param typeLeft    the L-Value type
      * @param listRight   the list of actual generic parameters for this class
-     * @param chains      the list of chains to add to
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
-     * @return the resulting list of ContributionChain objects
+     * @return the relation
      */
-    public List<ContributionChain> collectContributions(
-            ClassConstant idClzLeft, List<TypeConstant> listRight,
-            List<ContributionChain> chains, boolean fAllowInto)
+    public Relation findContribution(TypeConstant typeLeft,
+                                     List<TypeConstant> listRight, boolean fAllowInto)
         {
-        if (idClzLeft.equals(getIdentityConstant()))
+        assert typeLeft.isSingleDefiningConstant();
+
+        ConstantPool     pool        = ConstantPool.getCurrentPool();
+        Constant         constIdLeft = typeLeft.getDefiningConstant();
+        IdentityConstant idClzRight  = getIdentityConstant();
+
+        switch (constIdLeft.getFormat())
             {
-            chains.add(new ContributionChain(
-                new Contribution(Composition.Equal, (TypeConstant) null)));
-            return chains;
+            case Module:
+            case Package:
+                // modules and packages are never parameterized
+                return constIdLeft.equals(idClzRight) ? Relation.IS_A : Relation.INCOMPATIBLE;
+
+            case NativeClass:
+                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
+                // fall through
+            case Class:
+                if (constIdLeft.equals(pool.clzObject()))
+                    {
+                    return Relation.IS_A;
+                    }
+
+                if (constIdLeft.equals(idClzRight))
+                    {
+                    return calculateAssignability(
+                        typeLeft.getParamTypes(), typeLeft.getAccess(), listRight);
+                    }
+                break;
+
+            case Property:
+            case TypeParameter:
+                // r-value (this) is a real type; it cannot be assigned to a formal type
+                return Relation.INCOMPATIBLE;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                assert typeLeft.isAutoNarrowing();
+                return findContribution(typeLeft.resolveAutoNarrowing(pool, null), listRight, fAllowInto);
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdLeft);
             }
 
         TypeConstant typeRebase = getRebaseType();
@@ -863,90 +1014,154 @@ public class ClassStructure
             {
             ClassStructure clzRebase = (ClassStructure)
                 typeRebase.getSingleUnderlyingClass(true).getComponent();
-            clzRebase.collectContributions(idClzLeft, listRight, chains, false);
+
+            // rebase types are never parameterized and therefor cannot be "weak"
+            if (clzRebase.findContribution(typeLeft, Collections.EMPTY_LIST, fAllowInto) == Relation.IS_A)
+                {
+                return Relation.IS_A;
+                }
             }
 
-    nextContribution:
+        Relation relation = Relation.INCOMPATIBLE;
+
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Delegates:
-                case Implements:
-                    break;
-
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue nextContribution;
+                        break;
+                        }
+                    // fall through
+                case Annotation:
+                case Delegates:
+                case Implements:
+                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    if (typeContrib != null)
+                        {
+                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
                         }
                     break;
 
-                case Annotation:
                 case Incorporates:
                 case Extends:
+                    {
                     // the identity constant for those contribution is always a class
                     assert typeContrib.isSingleDefiningConstant();
+
+                    ClassConstant constContrib = (ClassConstant)
+                        typeContrib.getSingleUnderlyingClass(true);
+
+                    if (constContrib.equals(pool.clzObject()))
+                        {
+                        // ignore trivial "extends Object" contribution
+                        continue;
+                        }
+
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(pool, this, listRight);
+                    if (listContribActual != null)
+                        {
+                        relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                            findContribution(typeLeft, listContribActual, false));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
+                        }
                     break;
+                    }
 
                 default:
                     throw new IllegalStateException();
                 }
-
-            List<ContributionChain> chainsContrib = null;
-            if (typeContrib.isSingleDefiningConstant())
-                {
-                ClassConstant constContrib = (ClassConstant)
-                    typeContrib.getSingleUnderlyingClass(true);
-
-                if (constContrib.equals(idClzLeft))
-                    {
-                    chains.add(new ContributionChain(contrib));
-                    continue;
-                    }
-
-                if (constContrib.equals(getConstantPool().clzObject()))
-                    {
-                    // trivial Object contribution
-                    continue;
-                    }
-
-                // TODO: incorrect, but this method is to be removed
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(ConstantPool.getCurrentPool(), this, listRight);
-
-                if (listContribActual != null)
-                    {
-                    chainsContrib = ((ClassStructure) constContrib.getComponent()).
-                        collectContributions(idClzLeft, listContribActual, new ArrayList<>(), false);
-                    }
-                }
-            else
-                {
-                // while we could trivially resolve the actual types:
-                //
-                //   typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
-                //
-                // the only contributions of relation type could be delegations and implementations
-                // and since they cannot be conditional at any level, the actual types won't matter
-                // for further recursion
-                chainsContrib = typeContrib.collectContributions(
-                    idClzLeft.getType(), new ArrayList<>(), new ArrayList<>());
-                }
-
-            if (chainsContrib != null && !chainsContrib.isEmpty())
-                {
-                for (ContributionChain chain : chainsContrib)
-                    {
-                    chain.add(contrib);
-                    }
-
-                chains.addAll(chainsContrib);
-                }
             }
 
-        return chains;
+        return relation;
+        }
+
+    /**
+     * For this class structure representing the R-Value find a contribution assignable to the
+     * specified L-Value type.
+     *
+     * @param typeLeft    the L-Value type
+     * @param listRight   the list of actual generic parameters for this class
+     *
+     * @return the relation
+     */
+    public Relation findIntersectionContribution(IntersectionTypeConstant typeLeft,
+                                                 List<TypeConstant> listRight)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        Relation relation = Relation.INCOMPATIBLE;
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                    {
+                    // the identity constant for extension is always a class
+                    assert typeContrib.isSingleDefiningConstant();
+
+                    ClassConstant constContrib = (ClassConstant)
+                        typeContrib.getSingleUnderlyingClass(true);
+
+                    if (constContrib.equals(pool.clzObject()))
+                        {
+                        // ignore trivial "extends Object" contribution
+                        continue;
+                        }
+
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(pool, this, listRight);
+
+                    relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                        findIntersectionContribution(typeLeft, listContribActual));
+                    if (relation == Relation.IS_A)
+                        {
+                        return Relation.IS_A;
+                        }
+                    break;
+                    }
+
+                case Into:
+                case Annotation:
+                case Implements:
+                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    if (typeContrib != null)
+                        {
+                        if (typeContrib.equals(pool.typeObject()))
+                            {
+                            return Relation.INCOMPATIBLE;
+                            }
+
+                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
+                        }
+                    break;
+
+                case Delegates:
+                case Incorporates:
+                    // delegation and incorporation cannot be of an intersection type
+                    return Relation.INCOMPATIBLE;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        return relation;
         }
 
     /**

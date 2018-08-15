@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -309,14 +308,6 @@ public abstract class RelationalTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
-                                               ContributionChain chain)
-        {
-        // there is nothing that could change the result of "collectContributions"
-        return true;
-        }
 
     @Override
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)

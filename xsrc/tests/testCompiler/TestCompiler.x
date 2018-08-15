@@ -411,7 +411,7 @@ class TestCompiler<TestType1 extends Number,
         List<Int> li2 = [1, 2, 3];
         }
 
-    class Person
+    static class Person
         {
         Person parent;
         List<Person> dependents;
@@ -425,7 +425,7 @@ class TestCompiler<TestType1 extends Number,
             }
         }
 
-    class Employee
+    static class Employee
             extends Person
         {
         void testAutoNarrow()

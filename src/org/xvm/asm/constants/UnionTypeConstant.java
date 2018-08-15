@@ -4,12 +4,9 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
@@ -146,54 +143,41 @@ public class UnionTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        assert listRight.isEmpty();
-
+        // A + B <= A' + B' must be decomposed from the left
+        if (typeLeft instanceof UnionTypeConstant || typeLeft.isAnnotated())
+            {
+            return super.calculateRelationToLeft(typeLeft);
+            }
         TypeConstant thisRight1 = getUnderlyingType();
         TypeConstant thisRight2 = getUnderlyingType2();
 
-        List<ContributionChain> chains1 = thisRight1.collectContributions(typeLeft, listRight, new ArrayList<>());
-        List<ContributionChain> chains2 = thisRight2.collectContributions(typeLeft, new ArrayList<>(), new ArrayList<>());
-
-        // any contribution would do
-        if (!chains1.isEmpty())
-            {
-            validateChains(chains1, thisRight1, typeLeft);
-            }
-
-        if (!chains2.isEmpty())
-            {
-            validateChains(chains2, thisRight2, typeLeft);
-            }
-
-        chains.addAll(chains1);
-        chains.addAll(chains2);
-
-        return chains;
+        Relation rel1 = thisRight1.calculateRelation(typeLeft);
+        Relation rel2 = thisRight2.calculateRelation(typeLeft);
+        return rel1.bestOf(rel2);
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        assert listRight.isEmpty();
-
         TypeConstant thisLeft1 = getUnderlyingType();
         TypeConstant thisLeft2 = getUnderlyingType2();
 
-        List<ContributionChain> chains1 = thisLeft1.collectClassContributions(clzRight, listRight, new ArrayList<>());
-        List<ContributionChain> chains2 = thisLeft2.collectClassContributions(clzRight, new ArrayList<>(), new ArrayList<>());
+        Relation rel1 = typeRight.calculateRelation(thisLeft1);
+        Relation rel2 = typeRight.calculateRelation(thisLeft2);
+        return rel1.worseOf(rel2);
+        }
 
-        // both branches have to have contributions
-        if (!chains1.isEmpty() && !chains2.isEmpty())
-            {
-            chains.addAll(chains1);
-            chains.addAll(chains2);
-            }
+    @Override
+    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+        {
+        TypeConstant thisRight1 = getUnderlyingType();
+        TypeConstant thisRight2 = getUnderlyingType2();
 
-        return chains;
+        Relation rel1 = thisRight1.findIntersectionContribution(typeLeft);
+        Relation rel2 = thisRight2.findIntersectionContribution(typeLeft);
+        return rel1.bestOf(rel2);
         }
 
     @Override

@@ -83,6 +83,24 @@ public class TypeParameterConstant
         return m_iReg;
         }
 
+    /**
+     * Dereference this TypeParameterConstant to obtain its constraint type.
+     *
+     * @return the constraint type of the type parameter
+     */
+    public TypeConstant getReferredToType()
+        {
+        // the type points to a register, which means that the type is a parameterized type;
+        // the type of the register will be "Type<X>", so return X
+        MethodConstant   constMethod = getMethod();
+        int              nReg        = getRegister();
+        TypeConstant[]   atypeParams = constMethod.getRawParams();
+        assert atypeParams.length > nReg;
+        TypeConstant     typeParam   = atypeParams[nReg];
+        assert typeParam.isEcstasy("Type") && typeParam.isParamsSpecified();
+        return typeParam.getParamTypesArray()[0];
+        }
+
 
     // ----- Constant methods ----------------------------------------------------------------------
 

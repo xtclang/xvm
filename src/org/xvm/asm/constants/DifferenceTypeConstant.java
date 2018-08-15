@@ -6,10 +6,6 @@ import java.io.IOException;
 
 import java.util.List;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.Composition;
-import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
@@ -140,30 +136,24 @@ public class DifferenceTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // this R-value is a difference type, which is a "dynamic" interface, so it can only
-        // "duck type" to another interface
-
-        if (!typeLeft.isClassType())
-            {
-            chains.add(new ContributionChain(
-                new Contribution(Composition.MaybeDuckType, null)));
-            }
-        return chains;
+        // this will be answered via duck-type check
+        return Relation.INCOMPATIBLE;
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        // the difference type is always an interface, so it can only
-        // "duck type" to another interface
+        // this will be answered via duck-type check
+        return Relation.INCOMPATIBLE;
+        }
 
-        chains.add(new ContributionChain(
-            new Contribution(Composition.MaybeDuckType, null)));
-        return chains;
+    @Override
+    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+        {
+        // this will be answered via duck-type check
+        return Relation.INCOMPATIBLE;
         }
 
     @Override
