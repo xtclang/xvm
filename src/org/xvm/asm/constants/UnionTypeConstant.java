@@ -181,12 +181,15 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
+    protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight,
+                                                               Access accessLeft, List<TypeConstant> listLeft)
         {
         assert !isClassType();
 
-        Set<SignatureConstant> setMiss1 = getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-        Set<SignatureConstant> setMiss2 = getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        Set<SignatureConstant> setMiss1 =
+                getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        Set<SignatureConstant> setMiss2 =
+                getUnderlyingType2().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
 
         setMiss1.retainAll(setMiss2); // signatures in both (intersection) are still missing
         return setMiss1;

@@ -238,6 +238,14 @@ public class AnnotatedTypeConstant
         return rel1.worseOf(rel2);
         }
 
+    @Override
+    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+        {
+        // the annotation cannot be of an intersection type
+        return Relation.INCOMPATIBLE;
+        }
+
+
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
