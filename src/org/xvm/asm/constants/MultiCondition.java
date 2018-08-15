@@ -309,11 +309,7 @@ public abstract class MultiCondition
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        final ConditionalConstant[] aconstCond = m_aconstCond;
-        for (int i = 0, c = aconstCond.length; i < c; ++i)
-            {
-            aconstCond[i] = (ConditionalConstant) pool.register(aconstCond[i]);
-            }
+        m_aconstCond = (ConditionalConstant[]) registerConstants(pool, m_aconstCond);
         }
 
     @Override

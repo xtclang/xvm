@@ -868,8 +868,7 @@ public class NameExpression
 
                         // we will use the private access info here since the access restrictions
                         // must have been already checked by the "resolveName"
-                        ConstantPool pool    = idProp.getConstantPool();
-                        TypeInfo     infoClz = pool.ensureAccessTypeConstant(clzTop.getFormalType(),
+                        TypeInfo     infoClz = pool().ensureAccessTypeConstant(clzTop.getFormalType(),
                             Access.PRIVATE).ensureTypeInfo(errs);
 
                         PropertyInfo infoProp = infoClz.findProperty(idProp);
@@ -1162,7 +1161,7 @@ public class NameExpression
             case ThisClass:
                 m_plan = Plan.None;
                 return pool.ensureAccessTypeConstant(
-                    constant.getType().adoptParameters(ctx.getThisType()), Access.PRIVATE);
+                    constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
 
             case ParentClass:
                 if (name.getValueText().equals("this"))
@@ -1170,7 +1169,7 @@ public class NameExpression
                     assert left instanceof NameExpression;
                     m_plan = Plan.OuterThis;
                     return pool.ensureAccessTypeConstant(
-                        constant.getType().adoptParameters(ctx.getThisType()), Access.PRIVATE);
+                        constant.getType().adoptParameters(pool, ctx.getThisType()), Access.PRIVATE);
                     }
                 // fall through
             // class ID
@@ -1285,7 +1284,7 @@ public class NameExpression
                 m_plan = Plan.TypeOfTypedef;
                 TypeConstant typeRef = ((TypedefConstant) constant).getReferredToType();
                 return pool.ensureParameterizedTypeConstant(
-                        pool.typeType(), typeRef.adoptParameters(ctx.getThisType()));
+                        pool.typeType(), typeRef.adoptParameters(pool, ctx.getThisType()));
 
             default:
                 throw new IllegalStateException("constant=" + constant);

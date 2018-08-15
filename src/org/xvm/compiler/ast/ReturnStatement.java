@@ -87,7 +87,8 @@ public class ReturnStatement
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        ConstantPool pool   = pool();
+        boolean      fValid = true;
 
         AstNode        container = getCodeContainer();
         boolean        fConditional;
@@ -111,7 +112,7 @@ public class ReturnStatement
                 {
                 // part of the purpose of validating this statement is to determine the return type
                 // of the enclosing StatementExpression, so assume a single value of any type
-                typeRequired = pool().typeObject();
+                typeRequired = pool.typeObject();
                 }
 
             aRetTypes    = new TypeConstant[] {typeRequired};
@@ -122,9 +123,9 @@ public class ReturnStatement
             throw new IllegalStateException("container=" + container);
             }
 
-        int              cRets        = aRetTypes.length;
-        List<Expression> listExprs    = this.exprs;
-        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        int              cRets     = aRetTypes.length;
+        List<Expression> listExprs = this.exprs;
+        int              cExprs    = listExprs == null ? 0 : listExprs.size();
 
         // resolve auto-narrowing
         for (int i = 0; i < cRets; i++)
@@ -132,7 +133,7 @@ public class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.isAutoNarrowing())
                 {
-                aRetTypes[i] = typeRet.resolveAutoNarrowing(ctx.getThisType());
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, ctx.getThisType());
                 }
             }
 
@@ -211,7 +212,6 @@ public class ReturnStatement
             else
                 {
                 // 2) it could be a tuple return
-                ConstantPool pool      = pool();
                 TypeConstant typeTuple = pool.ensureParameterizedTypeConstant(pool.typeTuple(), aRetTypes);
                 if (exprOld.testFit(ctx, typeTuple).isFit())
                     {
@@ -292,8 +292,7 @@ public class ReturnStatement
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types
-            ConstantPool pool = pool();
-            Argument     arg  = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
+            Argument arg = listExprs.get(0).generateArgument(ctx, code, true, true, errs);
             code.add(new Return_T(arg));
             }
         else

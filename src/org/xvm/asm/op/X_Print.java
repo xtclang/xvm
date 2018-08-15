@@ -70,8 +70,8 @@ public class X_Print
                 }
 
             // call the "to<String>()" method for the object to get the value
-            ConstantPool pool = frame.f_context.f_pool;
-            CallChain chain = hValue.getComposition().getMethodCallChain(pool.sigToString());
+            ConstantPool pool  = frame.poolContext();
+            CallChain    chain = hValue.getComposition().getMethodCallChain(pool.sigToString());
 
             int iResult;
             if (chain.isNative())

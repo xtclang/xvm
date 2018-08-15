@@ -52,9 +52,9 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+    protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        return getConstantPool().ensureUnionTypeConstant(type1, type2);
+        return pool.ensureUnionTypeConstant(type1, type2);
         }
 
 
@@ -67,11 +67,11 @@ public class UnionTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         return isNullable()
-                ? getConstantPool().ensureUnionTypeConstant(m_constType1.removeNullable(),
-                                                            m_constType2.removeNullable())
+                ? pool.ensureUnionTypeConstant(m_constType1.removeNullable(pool),
+                                               m_constType2.removeNullable(pool))
                 : this;
         }
 

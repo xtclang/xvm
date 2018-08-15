@@ -205,7 +205,7 @@ public class TupleExpression
                 }
             }
 
-        return typeTuple.adoptParameters(atypeFields);
+        return typeTuple.adoptParameters(pool, atypeFields);
         }
 
     @Override
@@ -329,7 +329,7 @@ public class TupleExpression
             aFieldTypes[i] = typeField;
             }
 
-        typeResult = (typeResult == null ? pool.typeTuple() : typeResult).adoptParameters(aFieldTypes);
+        typeResult = (typeResult == null ? pool.typeTuple() : typeResult).adoptParameters(pool, aFieldTypes);
         ArrayConstant constVal   = aFieldVals == null ? null : pool.ensureTupleConstant(typeResult, aFieldVals);
         Expression    exprResult = finishValidation(typeRequired, typeResult, fit, constVal, errs);
         return fHalted ? null : exprResult;

@@ -121,9 +121,9 @@ public class AccessTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureAccessTypeConstant(type, m_access);
+        return pool.ensureAccessTypeConstant(type, m_access);
         }
 
     @Override

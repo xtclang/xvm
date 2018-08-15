@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.function.Supplier;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;

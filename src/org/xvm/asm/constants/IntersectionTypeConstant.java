@@ -54,9 +54,9 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+    protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        return getConstantPool().ensureIntersectionTypeConstant(type1, type2);
+        return pool.ensureIntersectionTypeConstant(type1, type2);
         }
 
 
@@ -70,7 +70,7 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         if (!isNullable())
             {
@@ -80,17 +80,17 @@ public class IntersectionTypeConstant
         if (m_constType1.isOnlyNullable())
             {
             assert !m_constType2.isOnlyNullable();
-            return m_constType2.removeNullable();
+            return m_constType2.removeNullable(pool);
             }
 
         if (m_constType2.isOnlyNullable())
             {
             assert !m_constType1.isOnlyNullable();
-            return m_constType1.removeNullable();
+            return m_constType1.removeNullable(pool);
             }
 
-        return getConstantPool().ensureIntersectionTypeConstant(m_constType1.removeNullable(),
-                                                                m_constType2.removeNullable());
+        return pool.ensureIntersectionTypeConstant(m_constType1.removeNullable(pool),
+                                                   m_constType2.removeNullable(pool));
         }
 
     @Override

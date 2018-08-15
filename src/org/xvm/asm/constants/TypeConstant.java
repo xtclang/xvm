@@ -185,13 +185,17 @@ public abstract class TypeConstant
         }
 
     /**
+     * Create a potentially new type that represents "this" immutable type.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
      * @return a type constant that represents an immutable type of this type constant
      */
-    public TypeConstant ensureImmutable()
+    public TypeConstant ensureImmutable(ConstantPool pool)
         {
         return isImmutable()
                 ? this
-                : getConstantPool().ensureImmutableTypeConstant(this);
+                : pool.ensureImmutableTypeConstant(this);
         }
 
     /**
@@ -279,7 +283,7 @@ public abstract class TypeConstant
         if (isSingleDefiningConstant())
             {
             ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-            TypeConstant type = clz.getGenericParamType(sName, getParamTypes());
+            TypeConstant type = clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
             return type != null;
             }
 
@@ -301,7 +305,7 @@ public abstract class TypeConstant
             // materializing the TypeInfo at this point, just answer the question without it
             ClassStructure clz = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
 
-            return clz.getGenericParamType(sName, getParamTypes());
+            return clz.getGenericParamType(getConstantPool(), sName, getParamTypes());
             }
 
         return null;
@@ -438,27 +442,35 @@ public abstract class TypeConstant
      * If null cannot be assigned to this type, then create a new type that minimally encompasses
      * this type and the Null value.
      *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
      * @return the type, modified if necessary to allow it to support Null values
      */
-    public TypeConstant ensureNullable()
+    public TypeConstant ensureNullable(ConstantPool pool)
         {
-        return getConstantPool().ensureNullableTypeConstant(this);
+        return pool.ensureNullableTypeConstant(this);
         }
 
     /**
      * If this type is a nullable type, calculate the type without the nullability.
      *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
      * @return this TypeConstant without Nullable
      */
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         return this;
         }
 
     /**
-     * @return clone this single defining type based on the underlying type
+     * Create a copy of this single defining type that is based on the specified underlying type.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
+     * @return clone this type based on the underlying type
      */
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         throw new UnsupportedOperationException();
         }
@@ -484,30 +496,39 @@ public abstract class TypeConstant
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         return constResolved == constOriginal
             ? this
-            : cloneSingle(constResolved);
+            : cloneSingle(getConstantPool(), constResolved);
         }
 
     /**
-     * @return this same type, but without any generic types in it
+     * Create a semantically equivalent type that resolves the formal type parameters
+     * based on the specified resolver.
+     *
+     * Note: the resolved parameters could in turn also be formal parameters.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
+     * @return a semantically equivalent type with resolved formal parameters
      */
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
 
         return constResolved == constOriginal
                 ? this
-                : cloneSingle(constResolved);
+                : cloneSingle(pool, constResolved);
         }
 
     /**
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
      * @return this same type, but with the number of parameters equal to the number of
      *         formal parameters for the the underlying terminal type, assigning missing
      *         type parameters to the corresponding canonical types
      */
-    public TypeConstant normalizeParameters()
+    public TypeConstant normalizeParameters(ConstantPool pool)
         {
-        return adoptParameters((TypeConstant[]) null);
+        return adoptParameters(pool, (TypeConstant[]) null);
         }
 
     /**
@@ -516,13 +537,14 @@ public abstract class TypeConstant
      * formal parameters for the underlying terminal type, where missing parameters are assigned
      * to the resolved canonical types).
      *
+     * @param pool      the ConstantPool to place a potentially created new constant into
      * @param typeFrom  the type to adopt type parameters from
      *
      * @return potentially new normalized type parameterized by the specified type parameters
      */
-    public TypeConstant adoptParameters(TypeConstant typeFrom)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant typeFrom)
         {
-        return adoptParameters(typeFrom.getParamTypesArray());
+        return adoptParameters(pool, typeFrom.getParamTypesArray());
         }
 
     /**
@@ -531,19 +553,20 @@ public abstract class TypeConstant
      * for the underlying terminal type, where missing parameters are assigned to the resolved
      * canonical types).
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param atypeParams the parameters to adopt or null if the parameters of this type are
      *                    simply to be normalized
      *
      * @return potentially new normalized type that is parameterized by the specified types
      */
-    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.adoptParameters(atypeParams);
+        TypeConstant constResolved = constOriginal.adoptParameters(pool, atypeParams);
 
         return constResolved == constOriginal
                 ? this
-                : cloneSingle(constResolved);
+                : cloneSingle(pool, constResolved);
         }
 
     /**
@@ -556,16 +579,18 @@ public abstract class TypeConstant
      *   <li>it is not idempotent; calling it twice will cause an assertion or corrupted result type
      * </ul>
      *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     *
      * @return potentially new type that contains parent's formal type parameters
      */
-    public TypeConstant adoptParentTypeParameters()
+    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters(pool);
 
         return constResolved == constOriginal
             ? this
-            : cloneSingle(constResolved);
+            : cloneSingle(pool, constResolved);
         }
 
     /**
@@ -574,19 +599,20 @@ public abstract class TypeConstant
      *
      * Note that the target identity must be a sub-type of this type.
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param typeTarget  the context target type
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
 
         return constResolved == constOriginal
             ? this
-            : cloneSingle(constResolved);
+            : cloneSingle(pool, constResolved);
         }
 
     /**
@@ -599,20 +625,20 @@ public abstract class TypeConstant
      * </ul>
      * where TC is ThisClassConstant
      *
+     * @param pool            the ConstantPool to place a potentially created new constant into
      * @param constThisClass  the class "context" in which the inference is calculated
      *
      * @return this same type, but with the underlying class of "this" replaced with the
      *         {@link ThisClassConstant}
-     * @param constThisClass
      */
-    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constInferred = constOriginal.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred = constOriginal.inferAutoNarrowing(pool, constThisClass);
 
         return constInferred == constOriginal
                 ? this
-                : cloneSingle(constInferred);
+                : cloneSingle(pool, constInferred);
         }
 
     /**
@@ -621,18 +647,19 @@ public abstract class TypeConstant
      *
      * Note, that a TerminalTypeConstant doesn't have an underlying type and is not "transformable".
      *
+     * @param pool         the ConstantPool to place a potentially created new constant into
      * @param transformer  the transformation function
      *
      * @return potentially transformed type
      */
-    public TypeConstant replaceUnderlying(Function<TypeConstant, TypeConstant> transformer)
+    public TypeConstant replaceUnderlying(ConstantPool pool, Function<TypeConstant, TypeConstant> transformer)
         {
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = transformer.apply(constOriginal);
 
         return constResolved == constOriginal
                 ? this
-                : cloneSingle(constResolved);
+                : cloneSingle(pool, constResolved);
         }
 
     /**
@@ -676,10 +703,11 @@ public abstract class TypeConstant
      */
     public boolean isSequence()
         {
+        ConstantPool pool      = getConstantPool();
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
 
-        constThis = constThis.resolveAutoNarrowing(null);
+        constThis = constThis.resolveAutoNarrowing(pool, null);
         return     constThis.isEcstasy("String")
                 || constThis.isEcstasy("Array")
                 || constThis.isEcstasy("List")
@@ -776,6 +804,10 @@ public abstract class TypeConstant
             return info;
             }
 
+        // any newly created derivative types should be placed into the same pool where this type
+        // comes from
+        ConstantPool pool = getConstantPool();
+
         // validate this TypeConstant (necessary before we build the TypeInfo)
         if (info == null)
             {
@@ -785,8 +817,8 @@ public abstract class TypeConstant
             // - resolve the auto-narrowing;
             // - normalize the type to make sure that all formal parameters are filled in
             TypeConstant typeResolved = resolveTypedefs().
-                                        resolveAutoNarrowing(null).
-                                        normalizeParameters();
+                                        resolveAutoNarrowing(pool, null).
+                                        normalizeParameters(pool);
             if (typeResolved != this)
                 {
                 info = typeResolved.ensureTypeInfo(errs);
@@ -810,7 +842,7 @@ public abstract class TypeConstant
 
         // there is a place-holder that signifies that a type is busy building a TypeInfo;
         // mark the type as having its TypeInfo building "in progress"
-        setTypeInfo(getConstantPool().TYPEINFO_PLACEHOLDER);
+        setTypeInfo(pool.TYPEINFO_PLACEHOLDER);
 
         // since this can only be used "from the outside", there should be no deferred TypeInfo
         // objects at this point
@@ -1124,7 +1156,7 @@ public abstract class TypeConstant
                 // REVIEW if we do, then we need to explicitly retain the PropertyInfo.getFieldIdentity()
                 if (prop.isVirtual())
                     {
-                    mapVirtProps.put(id.resolveNestedIdentity(this), prop);
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, this), prop);
                     }
                 mapProps.put(id, prop);
                 }
@@ -1182,7 +1214,7 @@ public abstract class TypeConstant
                                 PropertyConstant id = entry.getKey();
                                 if (prop.isVirtual())
                                     {
-                                    Object nid = id.resolveNestedIdentity(this);
+                                    Object nid = id.resolveNestedIdentity(pool, this);
                                     if (mapVirtProps.containsKey(nid))
                                         {
                                         continue;
@@ -1266,7 +1298,8 @@ public abstract class TypeConstant
                     }
                 }
 
-            TypeConstant typeNormalized = this.normalizeParameters();
+            ConstantPool pool           = getConstantPool();
+            TypeConstant typeNormalized = this.normalizeParameters(pool);
 
             for (int i = 0; i < cClassParams; ++i)
                 {
@@ -1276,7 +1309,7 @@ public abstract class TypeConstant
                 TypeConstant                        typeActual      = null;
 
                 // resolve any generic dependencies in the type constraint
-                typeConstraint = typeConstraint.resolveGenerics(typeNormalized);
+                typeConstraint = typeConstraint.resolveGenerics(pool, typeNormalized);
 
                 // validate the actual type, if there is one
                 if (i < cTypeParams)
@@ -1434,7 +1467,7 @@ public abstract class TypeConstant
                 }
 
             // has to be an explicit class identity
-            TypeConstant typeMixin = contrib.resolveGenerics(this);
+            TypeConstant typeMixin = contrib.resolveGenerics(pool, this);
             if (!typeMixin.isExplicitClassIdentity(false))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
@@ -1543,7 +1576,7 @@ public abstract class TypeConstant
                     }
 
                 // the "extends" clause must specify a class identity
-                typeExtends = contrib.resolveGenerics(this);
+                typeExtends = contrib.resolveGenerics(pool, this);
                 if (!typeExtends.isExplicitClassIdentity(true))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1594,7 +1627,7 @@ public abstract class TypeConstant
                 if (fInto)
                     {
                     ++iContrib;
-                    typeInto = contrib.resolveGenerics(this);
+                    typeInto = contrib.resolveGenerics(pool, this);
 
                     // load the next contribution
                     contrib = iContrib < cContribs ? listContribs.get(iContrib) : null;
@@ -1606,7 +1639,7 @@ public abstract class TypeConstant
                     {
                     ++iContrib;
 
-                    typeExtends = contrib.resolveGenerics(this);
+                    typeExtends = contrib.resolveGenerics(pool, this);
                     if (!typeExtends.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
@@ -1673,7 +1706,7 @@ public abstract class TypeConstant
             {
             // only process annotations
             Contribution contrib     = listContribs.get(iContrib);
-            TypeConstant typeContrib = contrib.resolveGenerics(this);
+            TypeConstant typeContrib = contrib.resolveGenerics(pool, this);
 
             switch (contrib.getComposition())
                 {
@@ -2029,8 +2062,9 @@ public abstract class TypeConstant
             Map<Object, MethodInfo  >           mapVirtMethods,
             ErrorListener                       errs)
         {
-        boolean fIncomplete = false;
-        boolean fNative     = constId instanceof NativeRebaseConstant;
+        ConstantPool pool        = getConstantPool();
+        boolean      fIncomplete = false;
+        boolean      fNative     = constId instanceof NativeRebaseConstant;
 
         for (int i = listProcess.size()-1; i >= 0; --i)
             {
@@ -2202,7 +2236,7 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object       nid       = entry.getKey().resolveNestedIdentity(this);
+                            Object       nid       = entry.getKey().resolveNestedIdentity(pool, this);
                             PropertyInfo infoCheck = mapVirtProps.put(nid, infoNew);
                             assert infoOld == infoCheck;
                             }
@@ -2232,7 +2266,7 @@ public abstract class TypeConstant
                         if (infoNew.isVirtual())
                             {
                             assert infoOld.isVirtual();
-                            Object     nid       = entry.getKey().resolveNestedIdentity(this);
+                            Object     nid       = entry.getKey().resolveNestedIdentity(pool, this);
                             MethodInfo infoCheck = mapVirtMethods.put(nid, infoNew);
                             assert infoOld == infoCheck;
                             }
@@ -2333,7 +2367,7 @@ public abstract class TypeConstant
                 MethodInfo     infoGet = new MethodInfo(bodyGet);
 
                 mapMethods.put(idGet, infoGet);
-                mapVirtMethods.put(idGet.resolveNestedIdentity(this), infoGet);
+                mapVirtMethods.put(idGet.resolveNestedIdentity(pool, this), infoGet);
                 }
             }
 
@@ -2368,13 +2402,15 @@ public abstract class TypeConstant
             TypeInfo                            infoContrib,
             ErrorListener                       errs)
         {
+        ConstantPool pool = getConstantPool();
+
         // basically, everything in infoContrib needs to be "indented" (nested) within the nested
         // identity of the property
         Map<PropertyConstant, PropertyInfo> mapContribProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet())
             {
-            Object           nidContrib = entry.getKey().resolveNestedIdentity(this);
-            PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(nidContrib);
+            Object           nidContrib = entry.getKey().resolveNestedIdentity(pool, this);
+            PropertyConstant idContrib  = (PropertyConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribProps.put(idContrib, entry.getValue());
             }
         layerOnProps(constId, false, mapTypeParams, mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
@@ -2382,8 +2418,8 @@ public abstract class TypeConstant
         Map<MethodConstant, MethodInfo> mapContribMethods = new HashMap<>();
         for (Entry<MethodConstant, MethodInfo> entry : infoContrib.getMethods().entrySet())
             {
-            Object         nidContrib = entry.getKey().resolveNestedIdentity(this);
-            MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(nidContrib);
+            Object         nidContrib = entry.getKey().resolveNestedIdentity(pool, this);
+            MethodConstant idContrib  = (MethodConstant) idProp.appendNestedIdentity(pool, nidContrib);
             mapContribMethods.put(idContrib, entry.getValue());
             }
         layerOnMethods(constId, false, mapTypeParams, mapMethods, mapVirtMethods,
@@ -2445,8 +2481,9 @@ public abstract class TypeConstant
             PropertyInfo                        propContrib,
             ErrorListener                       errs)
         {
-        Object           nidContrib = idContrib.resolveNestedIdentity(this);
-        PropertyConstant idResult   = (PropertyConstant) constId.appendNestedIdentity(nidContrib);
+        ConstantPool     pool       = getConstantPool();
+        Object           nidContrib = idContrib.resolveNestedIdentity(pool, this);
+        PropertyConstant idResult   = (PropertyConstant) constId.appendNestedIdentity(pool, nidContrib);
 
         // the property is not virtual if it is a constant, if it is private/private, or if
         // it is inside a method (which coincidentally must be private/private). in this
@@ -2541,6 +2578,7 @@ public abstract class TypeConstant
         // signatures are recorded in a separate set, so that it is possible to determine if
         // they should be capped (and to identify any errors).
 
+        ConstantPool             pool            = getConstantPool();
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
@@ -2548,7 +2586,7 @@ public abstract class TypeConstant
             MethodConstant idContrib     = entry.getKey();
             MethodInfo     methodContrib = entry.getValue();
             Object         nidContrib    = idContrib.resolveNestedIdentity(
-                methodContrib.isFunction() ? null : this);
+                pool, methodContrib.isFunction() ? null : this);
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or some other structure (such as a property) that is
@@ -2558,7 +2596,7 @@ public abstract class TypeConstant
                 // TODO check for collision, because a function could theoretically replace a virtual method
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
-                mapMethods.put((MethodConstant) constId.appendNestedIdentity(nidContrib), methodContrib);
+                mapMethods.put((MethodConstant) constId.appendNestedIdentity(pool, nidContrib), methodContrib);
                 continue;
                 }
 
@@ -2651,7 +2689,7 @@ public abstract class TypeConstant
             {
             Object         nid  = entry.getKey();
             MethodInfo     info = entry.getValue();
-            MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(nid);
+            MethodConstant id   = (MethodConstant) constId.appendNestedIdentity(pool, nid);
 
             mapMethods.put(id, info);
             mapVirtMethods.put(nid, info);
@@ -2832,6 +2870,8 @@ public abstract class TypeConstant
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps)
         {
+        ConstantPool pool = getConstantPool();
+
         for (Component child : struct.children())
             {
             if (child instanceof PropertyStructure)
@@ -2841,7 +2881,7 @@ public abstract class TypeConstant
                     {
                     PropertyConstant id = prop.getIdentityConstant();
 
-                    mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
+                    mapProps.put(id, new PropertyInfo(new PropertyBody(pool, prop,
                                         mapTypeParams.get(id.getName()))));
                     }
                 }
@@ -2877,16 +2917,17 @@ public abstract class TypeConstant
             List<PropertyConstant>              listExplode,
             ErrorListener                       errs)
         {
-        boolean fComplete = true;
-        boolean fNative   = constId instanceof NativeRebaseConstant;
+        ConstantPool pool      = getConstantPool();
+        boolean      fComplete = true;
+        boolean      fNative   = constId instanceof NativeRebaseConstant;
 
         if (structContrib instanceof MethodStructure)
             {
             MethodStructure   method       = (MethodStructure) structContrib;
             boolean           fHasNoCode   = !method.hasCode();
-            boolean           fHasAbstract = method.findAnnotation(getConstantPool().clzAbstract()) != null;
+            boolean           fHasAbstract = method.findAnnotation(pool.clzAbstract()) != null;
             MethodConstant    id           = method.getIdentityConstant();
-            SignatureConstant sig          = id.getSignature().resolveGenericTypes(this);
+            SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool, this);
             MethodBody        body         = new MethodBody(id, sig,
                     fInterface && fHasNoCode    ? Implementation.Declared :
                     fInterface                  ? Implementation.Default  :
@@ -2926,11 +2967,10 @@ public abstract class TypeConstant
                 //       method, so lacking that, this "jams in" the additional type parameters that
                 //       the property relies on (as if they had been correctly populated by going
                 //       through collectTypeParameters)
-                ConstantPool     pool      = id.getConstantPool();
                 PropertyConstant idParam   = pool.ensurePropertyConstant(id, "RefType");
-                Object           nidParam  = idParam.resolveNestedIdentity(this);
+                Object           nidParam  = idParam.resolveNestedIdentity(pool, this);
                 ParamInfo        param     = new ParamInfo(nidParam, "RefType", pool.typeObject(), info.getType());
-                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(null, param));
+                PropertyInfo     propParam = new PropertyInfo(new PropertyBody(pool, null, param));
                 mapTypeParams.put(nidParam, param);
                 mapProps.put(idParam, propParam);
                 }
@@ -3359,7 +3399,7 @@ public abstract class TypeConstant
             fRO = false;
             }
 
-        TypeConstant typeProp = prop.getType().adoptParentTypeParameters().resolveGenerics(this);
+        TypeConstant typeProp = prop.getType().adoptParentTypeParameters(pool).resolveGenerics(pool, this);
 
         return new PropertyInfo(new PropertyBody(prop, impl, null,
                 typeProp, fRO, fRW, cCustomMethods > 0,
@@ -3593,9 +3633,11 @@ public abstract class TypeConstant
 
                 case AutoNarrowed:
                     {
+                    ConstantPool pool = ConstantPool.getCurrentPool();
+
                     // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.resolveAutoNarrowing(null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(null);
+                    typeRight = typeRight.resolveAutoNarrowing(pool, null);
+                    typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
 
                     Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
                     return relRightIsLeft == Relation.INCOMPATIBLE

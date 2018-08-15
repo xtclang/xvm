@@ -141,7 +141,7 @@ public abstract class OpCallable extends Op
             if (typeRet == null)
                 {
                 typeRet = m_typeRetReg = method.getReturnTypes()[0].
-                    resolveGenerics(frame.getGenericsResolver());
+                    resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -158,11 +158,11 @@ public abstract class OpCallable extends Op
             TypeConstant typeRet = m_typeRetReg;
             if (typeRet == null)
                 {
-                ConstantPool pool = method.getConstantPool();
+                ConstantPool pool = frame.poolContext();
 
                 typeRet = m_typeRetReg = pool.ensureParameterizedTypeConstant(
                     pool.typeTuple(), method.getReturnTypes()).
-                        resolveGenerics(frame.getGenericsResolver());
+                        resolveGenerics(pool, frame.getGenericsResolver());
                 }
 
             frame.introduceResolvedVar(m_nRetValue, typeRet);
@@ -173,6 +173,8 @@ public abstract class OpCallable extends Op
     protected void checkReturnRegisters(Frame frame, MethodStructure method)
         {
         assert isMultiReturn();
+
+        ConstantPool pool = frame.poolContext();
 
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
@@ -185,7 +187,7 @@ public abstract class OpCallable extends Op
                     atypeRet = m_atypeRetReg = method.getReturnTypes(); // a clone
                     for (int j = 0, cRet = atypeRet.length; j < cRet; j++)
                         {
-                        atypeRet[j] = atypeRet[j].resolveGenerics(frame.getGenericsResolver());
+                        atypeRet[j] = atypeRet[j].resolveGenerics(pool, frame.getGenericsResolver());
                         }
                     }
 

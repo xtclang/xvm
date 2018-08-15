@@ -2,6 +2,7 @@ package org.xvm.compiler;
 
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
@@ -156,7 +157,55 @@ public class Compiler
         }
 
     /**
-     * Second pass: Resolve all of the globally-visible dependencies and names. This pass does not
+     * Second pass: Link the modules together based on their declared dependencies.
+     * <p/>
+     * This method uses the ModuleRepository.
+     * <p/>
+     * Any error results are logged to the ErrorListener.
+     */
+    public void linkModules()
+        {
+        validateCompiler();
+        ensureReached(Stage.Registered);
+
+        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        if (alreadyReached(Stage.Loaded))
+            {
+            return;
+            }
+
+        enter();
+
+        // first time through, load any module dependencies
+        setStage(Stage.Loading);
+        for (String sModule : m_structFile.moduleNames())
+            {
+            if (!sModule.equals(m_structFile.getModuleName()))
+                {
+                ModuleStructure structFingerprint = m_structFile.getModule(sModule);
+                assert structFingerprint.isFingerprint();
+                assert structFingerprint.getFingerprintOrigin() == null;
+
+                // load the module against which the compilation will occur
+                if (!m_repos.getModuleNames().contains(sModule))
+                    {
+                    // no error is logged here; the package that imports the module will detect
+                    // the error when it is asked to resolve global names; see
+                    // TypeCompositionStatement
+                    continue;
+                    }
+
+                ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
+                structFingerprint.setFingerprintOrigin(structActual);
+                }
+            }
+
+        exit();
+        setStage(Stage.Loaded);
+        }
+
+    /**
+     * Third pass: Resolve all of the globally-visible dependencies and names. This pass does not
      * recurse into methods.
      * <p/>
      * This method uses the ModuleRepository.
@@ -178,34 +227,7 @@ public class Compiler
             return true;
             }
 
-        if (!alreadyReached(Stage.Loaded))
-            {
-            // first time through, load any module dependencies
-            setStage(Stage.Loading);
-            for (String sModule : m_structFile.moduleNames())
-                {
-                if (!sModule.equals(m_structFile.getModuleName()))
-                    {
-                    ModuleStructure structFingerprint = m_structFile.getModule(sModule);
-                    assert structFingerprint.isFingerprint();
-                    assert structFingerprint.getFingerprintOrigin() == null;
-
-                    // load the module against which the compilation will occur
-                    if (!m_repos.getModuleNames().contains(sModule))
-                        {
-                        // no error is logged here; the package that imports the module will detect
-                        // the error when it is asked to resolve global names; see
-                        // TypeCompositionStatement
-                        continue;
-                        }
-
-                    ModuleStructure structActual = m_repos.loadModule(sModule); // TODO versions etc.
-                    structFingerprint.setFingerprintOrigin(structActual);
-                    }
-                }
-
-            setStage(Stage.Loaded);
-            }
+        enter();
 
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
         // in one pass, then store it off in a list to tackle next time
@@ -221,11 +243,12 @@ public class Compiler
             setStage(Stage.Resolved);
             }
 
+        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
     /**
-     * Third pass: Resolve all types and constants. This does recurse to the full depth of the AST
+     * Fourth pass: Resolve all types and constants. This does recurse to the full depth of the AST
      * tree.
      * <p/>
      * This method uses the ModuleRepository.
@@ -247,6 +270,8 @@ public class Compiler
             return true;
             }
 
+        enter();
+
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
         // in one pass, the manager will keep track of what remains to be done
         if (!alreadyReached(Stage.Validating))
@@ -261,6 +286,7 @@ public class Compiler
             setStage(Stage.Validated);
             }
 
+        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
@@ -287,6 +313,8 @@ public class Compiler
             return true;
             }
 
+        enter();
+
         // recursively resolve all of the unresolved global names, and if anything couldn't get done
         // in one pass, then store it off in a list to tackle next time
         if (!alreadyReached(Stage.Emitting))
@@ -305,6 +333,7 @@ public class Compiler
             m_structFile.setErrorListener(null);
             }
 
+        exit();
         return m_mgr.isComplete() || m_errs.isAbortDesired();
         }
 
@@ -386,6 +415,22 @@ public class Compiler
             {
             m_stage = stage;
             }
+        }
+
+    /**
+     * Start a stage processing.
+     */
+    private void enter()
+        {
+        ConstantPool.setCurrentPool(m_structFile.getConstantPool());
+        }
+
+    /**
+     * Finish a stage processing.
+     */
+    private void exit()
+        {
+        ConstantPool.setCurrentPool(null);
         }
 
 

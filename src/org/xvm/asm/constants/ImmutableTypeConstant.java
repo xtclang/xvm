@@ -96,17 +96,17 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         return isNullable()
-                ? getConstantPool().ensureImmutableTypeConstant(m_constType.removeNullable())
+                ? pool.ensureImmutableTypeConstant(m_constType.removeNullable(pool))
                 : this;
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureImmutableTypeConstant(type);
+        return pool.ensureImmutableTypeConstant(type);
         }
 
     @Override

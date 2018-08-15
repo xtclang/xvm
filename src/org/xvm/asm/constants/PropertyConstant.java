@@ -143,7 +143,7 @@ public class PropertyConstant
         }
 
     @Override
-    public Object resolveNestedIdentity(GenericTypeResolver resolver)
+    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()

@@ -287,6 +287,6 @@ public class TemplateRegistry
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
         return typeActual.getOpSupport(this).getTemplate(typeActual).
-            ensureClass(typeActual.normalizeParameters());
+            ensureClass(typeActual.normalizeParameters(typeActual.getConstantPool()));
         }
     }

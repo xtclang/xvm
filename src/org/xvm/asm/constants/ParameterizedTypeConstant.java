@@ -151,7 +151,7 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = m_constType.getExplicitClassInto();
 
         return constResolved.isParamsSpecified()
-            ? constResolved.resolveGenerics(this)
+            ? constResolved.resolveGenerics(getConstantPool(), this)
             : constResolved;
         }
 
@@ -187,10 +187,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -200,7 +200,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
+            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, resolver);
             if (constParamOriginal != constParamResolved)
                 {
                 if (constParamResolved instanceof TupleElementsTypeConstant)
@@ -222,29 +222,28 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
-                // REVIEW GG this is wrong to use "this.getConstantPool()" ... the constant pool must come from the resolver!
-                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
         }
 
     @Override
-    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal = m_constType;
 
         assert constOriginal instanceof TerminalTypeConstant;
 
-        return constOriginal.adoptParameters(atypeParams == null ? m_atypeParams : atypeParams);
+        return constOriginal.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters()
+    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
         TypeConstant constOriginal = m_constType;
 
         assert constOriginal instanceof TerminalTypeConstant;
 
-        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters(pool);
         if (constResolved == constOriginal)
             {
             return this;
@@ -263,10 +262,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -276,7 +275,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(typeTarget);
+            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, typeTarget);
             if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == aconstOriginal)
@@ -294,10 +293,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constInferred = constOriginal.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred = constOriginal.inferAutoNarrowing(pool, constThisClass);
         boolean      fDiff         = constOriginal != constInferred;
 
         TypeConstant[] aconstOriginal = m_atypeParams;
@@ -305,7 +304,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(constThisClass);
+            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(pool, constThisClass);
             if (constParamOriginal != constParamInferred)
                 {
                 if (aconstInferred == aconstOriginal)
@@ -323,9 +322,9 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
+        return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
 
@@ -377,7 +376,8 @@ public class ParameterizedTypeConstant
                     ClassStructure clzRight = (ClassStructure)
                         getSingleUnderlyingClass(true).getComponent();
 
-                    listRight = chain.propagateActualTypes(clzRight, listRight);
+                    // TODO: incorrect, but this method is to be removed
+                    listRight = chain.propagateActualTypes(ConstantPool.getCurrentPool(), clzRight, listRight);
                     break;
                     }
 
@@ -458,7 +458,8 @@ public class ParameterizedTypeConstant
                 ClassStructure clzRight = (ClassStructure)
                     typeRight.getSingleUnderlyingClass(true).getComponent();
 
-                listRight = chain.propagateActualTypes(clzRight, listRight);
+                // TODO: incorrect, but this method is to be removed
+                listRight = chain.propagateActualTypes(ConstantPool.getCurrentPool(), clzRight, listRight);
                 break;
                 }
 
@@ -781,18 +782,8 @@ public class ParameterizedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constType = (TypeConstant) pool.register(m_constType);
-
-        TypeConstant[] atypeParams = m_atypeParams;
-        for (int i = 0, c = atypeParams.length; i < c; ++i)
-            {
-            TypeConstant constOld = atypeParams[i];
-            TypeConstant constNew = (TypeConstant) pool.register(constOld);
-            if (constNew != constOld)
-                {
-                atypeParams[i] = constNew;
-                }
-            }
+        m_constType   = (TypeConstant) pool.register(m_constType);
+        m_atypeParams = (TypeConstant[]) registerConstants(pool, m_atypeParams);
         }
 
     @Override

@@ -343,10 +343,12 @@ public class PropertyStructure
     /**
      * Check if this property could be accessed via the specified signature.
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param sigThat     the signature of the matching property (resolved)
      * @param listActual  the actual generic types
      */
-    public boolean isSubstitutableFor(SignatureConstant sigThat, List<TypeConstant> listActual)
+    public boolean isSubstitutableFor(ConstantPool pool,
+                                      SignatureConstant sigThat, List<TypeConstant> listActual)
         {
         assert getName().equals(sigThat.getName());
         assert sigThat.getRawParams().length == 0;
@@ -356,7 +358,7 @@ public class PropertyStructure
         if (!listActual.isEmpty())
             {
             ClassStructure clzThis = (ClassStructure) getParent();
-            sigThis = sigThis.resolveGenericTypes(clzThis.new SimpleTypeResolver(listActual));
+            sigThis = sigThis.resolveGenericTypes(pool, clzThis.new SimpleTypeResolver(listActual));
             }
 
         // TODO: if read-only then isA() would suffice

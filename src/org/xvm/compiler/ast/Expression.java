@@ -533,7 +533,7 @@ public abstract class Expression
         // expression
         if (constVal != null)
             {
-            typeActual = typeActual.ensureImmutable();
+            typeActual = typeActual.ensureImmutable(pool());
             }
 
         // if a required type is specified and the expression type isn't of the required type, then
@@ -563,7 +563,7 @@ public abstract class Expression
                         {
                         // pretend that it was a constant
                         constVal   = generateFakeConstant(typeRequired);
-                        typeActual = typeActual.ensureImmutable();
+                        typeActual = typeActual.ensureImmutable(pool());
                         }
                     }
                 }
@@ -601,7 +601,7 @@ public abstract class Expression
         {
         if (typeRequired.isParamsSpecified() && !typeActual.isParamsSpecified())
             {
-            TypeConstant typeInferred = typeActual.adoptParameters(typeRequired);
+            TypeConstant typeInferred = typeActual.adoptParameters(pool(), typeRequired);
             if (typeInferred.isA(typeRequired))
                 {
                 return typeInferred;
@@ -667,7 +667,8 @@ public abstract class Expression
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
             }
 
-        boolean fCloneActual = true;
+        ConstantPool pool         = pool();
+        boolean      fCloneActual = true;
 
         // for expressions that yield constant values, make sure that the types reflect that
         if (aconstVal != null)
@@ -675,7 +676,7 @@ public abstract class Expression
             for (int i = 0; i < cActual; ++i)
                 {
                 TypeConstant typeOrg = atypeActual[i];
-                TypeConstant typeImm = typeOrg.ensureImmutable();
+                TypeConstant typeImm = typeOrg.ensureImmutable(pool);
 
                 if (!typeOrg.equals(typeImm))
                     {
@@ -714,7 +715,7 @@ public abstract class Expression
                             {
                             // pretend that it was a constant
                             aconstVal[i] = generateFakeConstant(typeRequired);
-                            typeActual   = typeActual.ensureImmutable();
+                            typeActual   = typeActual.ensureImmutable(pool);
                             }
 
                         if (fCloneActual)

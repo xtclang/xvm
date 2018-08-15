@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.util.Comparator;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -317,6 +318,39 @@ public abstract class Constant
      */
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
+        }
+
+    /**
+     * Check whether this constant and all its underlying constants are registered with
+     * ConstantPools that are upstream (linked to by this constant's containing pool).
+     *
+     * This method is used only as an assertion for debugging purposes.
+     */
+    public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth)
+        {
+        // check this pool
+        if (!setValidPools.contains(getConstantPool()))
+            {
+            if (setValidPools.isEmpty())
+                {
+                // the modules are not yet linked
+                return;
+                }
+
+            // TODO explanatory error message should go here
+            throw new IllegalStateException("attempt to register a constant that refers to an " +
+                    "unknown upstream constant pool: " + getConstantPool());
+            }
+
+        if (anDepth[0]++ > 100)
+            {
+            throw new IllegalStateException("Suspected infinite loop in checkValidPools()");
+            }
+
+        // check children
+        forEachUnderlying(constant -> constant.checkValidPools(setValidPools, anDepth));
+
+        anDepth[0]--;
         }
 
     /**
@@ -669,6 +703,34 @@ public abstract class Constant
     protected List<TypeConstant> takeDeferredTypeInfo()
         {
         return getConstantPool().takeDeferredTypeInfo();
+        }
+
+    /**
+     * Register each of the constants in the passed array.
+     * <p/>
+     * Important note: the caller may share the array with a cloned constant in a different pool;
+     * so we need to clone the array before changing its content.
+     *
+     * @param pool    the ConstantPool
+     * @param aconst  an array of constants
+     */
+    protected static Constant[] registerConstants(ConstantPool pool, Constant[] aconst)
+        {
+        Constant[] aconstNew = null;
+        for (int i = 0, c = aconst.length; i < c; ++i)
+            {
+            Constant constOld = aconst[i];
+            Constant constNew = pool.register(constOld);
+            if (constOld != constNew)
+                {
+                if (aconstNew == null)
+                    {
+                    aconstNew = aconst.clone();
+                    }
+                aconstNew[i] = constNew;
+                }
+            }
+        return aconstNew == null ? aconst : aconstNew;
         }
 
 

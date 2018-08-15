@@ -60,7 +60,7 @@ public class xClass
 
             frame.pushStack(m_mapHandles.computeIfAbsent(typeTarget, type ->
                 new ClassHandle(frame.ensureClass(
-                    type.resolveGenerics(frame.getGenericsResolver())))));
+                    type.resolveGenerics(frame.poolContext(), frame.getGenericsResolver())))));
             return Op.R_NEXT;
             }
 

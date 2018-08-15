@@ -55,22 +55,24 @@ public class SimulatedLinkerContext
     /**
      * Construct a SimulatedLinkerContext using the specified conditions.
      *
+     * @param pool   the ConstantPool to place a new constant into
      * @param conds  any number of conditions, which will be treated as if they all need to be met
      */
-    public SimulatedLinkerContext(ConditionalConstant... conds)
+    public SimulatedLinkerContext(ConstantPool pool, ConditionalConstant... conds)
         {
-        this(toCondition(conds));
+        this(toCondition(pool, conds));
         }
 
     /**
      * Turn an optional array of conditions into a condition.
      *
-     * @param conds an array of conditions, or null
+     * @param pool   the ConstantPool to place a potentially created new constant into
+     * @param conds  an array of conditions, or null
      *
      * @return null iff the array is null or zero-length, otherwise a condition representing the
      *         contents of the array
      */
-    private static ConditionalConstant toCondition(ConditionalConstant[] conds)
+    private static ConditionalConstant toCondition(ConstantPool pool, ConditionalConstant[] conds)
         {
         if (conds == null || conds.length == 0)
             {
@@ -82,7 +84,7 @@ public class SimulatedLinkerContext
             }
         else
             {
-            return new AllCondition(conds[0].getConstantPool(), conds);
+            return new AllCondition(pool, conds);
             }
         }
 

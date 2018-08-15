@@ -88,18 +88,15 @@ public class PropertyBody
     /**
      * Construct a PropertyBody that represents the specified type parameter.
      *
+     * @param pool    the ConstantPool to place any new constants into
      * @param struct  the property structure that this body is derived from
      * @param param   the type parameter information
      */
-    public PropertyBody(PropertyStructure struct, ParamInfo param)
+    public PropertyBody(ConstantPool pool, PropertyStructure struct, ParamInfo param)
         {
         assert param  != null;
         assert struct == null || struct.getName().equals(param.getName());
         assert struct != null || param.getNestedIdentity() instanceof NestedIdentity;
-
-        ConstantPool pool = struct == null
-                ? ((NestedIdentity) param.getNestedIdentity()).getIdentityConstant().getConstantPool()
-                : struct.getConstantPool();
 
         TypeConstant typeActual = param.getActualType();
         TypeConstant typeType   = typeActual instanceof TupleElementsTypeConstant

@@ -50,10 +50,11 @@ public class AsExpression
         if (expr1 instanceof NameExpression
                 && ((NameExpression) expr1).getName().equals("this"))
             {
-            TypeConstant typeThis = typeAs.getConstantPool().
-                ensureThisTypeConstant(ctx.getThisClass().getIdentityConstant(), null);
+            ConstantPool pool     = pool();
+            TypeConstant typeThis = pool.ensureThisTypeConstant(
+                                        ctx.getThisClass().getIdentityConstant(), null);
 
-            return typeAs.replaceUnderlying(typeUnder ->
+            return typeAs.replaceUnderlying(pool, typeUnder ->
                 typeUnder instanceof TerminalTypeConstant ? typeThis : typeUnder);
             }
         return typeAs;

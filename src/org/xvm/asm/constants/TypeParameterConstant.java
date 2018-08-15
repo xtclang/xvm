@@ -122,20 +122,7 @@ public class TypeParameterConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
-        if (fReEntry)
-            {
-            return;
-            }
-
-        fReEntry = true;
-        try
-            {
-            visitor.accept(m_constMethod);
-            }
-        finally
-            {
-            fReEntry = false;
-            }
+        // the method constant is not "a child"; this would cause an infinite loop
         }
 
     @Override

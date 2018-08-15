@@ -76,8 +76,9 @@ public class MapExpression
                 }
             }
 
+        ConstantPool pool    = pool();
         TypeConstant typeMap = typeExplicit == null
-                ? pool().typeMap()
+                ? pool.typeMap()
                 : typeExplicit;
 
         // see if there is an implicit key and value type
@@ -93,7 +94,7 @@ public class MapExpression
                     {
                     aTypes[i] = keys.get(i).getImplicitType(ctx);
                     }
-                typeKey = ListExpression.inferCommonType(aTypes);
+                typeKey = ListExpression.inferCommonType(pool, aTypes);
                 }
 
             if (typeVal == null)
@@ -102,12 +103,12 @@ public class MapExpression
                     {
                     aTypes[i] = values.get(i).getImplicitType(ctx);
                     }
-                typeVal = ListExpression.inferCommonType(aTypes);
+                typeVal = ListExpression.inferCommonType(pool, aTypes);
                 }
 
             if (typeKey != null)
                 {
-                typeMap = typeMap.adoptParameters(typeVal == null
+                typeMap = typeMap.adoptParameters(pool, typeVal == null
                         ? new TypeConstant[] {typeKey}
                         : new TypeConstant[] {typeKey, typeVal});
                 }
@@ -181,7 +182,7 @@ public class MapExpression
                 {
                 aTypes[i] = listKeys.get(i).getImplicitType(ctx);
                 }
-            typeKey = ListExpression.inferCommonType(aTypes);
+            typeKey = ListExpression.inferCommonType(pool, aTypes);
             }
 
         // infer value type
@@ -195,14 +196,14 @@ public class MapExpression
                 {
                 aTypes[i] = listVals.get(i).getImplicitType(ctx);
                 }
-            typeVal = ListExpression.inferCommonType(aTypes);
+            typeVal = ListExpression.inferCommonType(pool, aTypes);
             }
 
         // build actual type from map type, key type, value type
         if (typeKey != null && (!typeKey.equals(typeActual.getGenericParamType("KeyType")) ||
                 typeVal != null && !typeVal.equals(typeActual.getGenericParamType("ValueType"))))
             {
-            typeActual = typeActual.adoptParameters(typeVal == null
+            typeActual = typeActual.adoptParameters(pool, typeVal == null
                     ? new TypeConstant[] {typeKey}
                     : new TypeConstant[] {typeKey, typeVal});
             }

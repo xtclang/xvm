@@ -377,13 +377,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).resolveGenerics(resolver);
+            return getTypedefType(constId).resolveGenerics(pool, resolver);
             }
 
         Constant constId = getDefiningConstant();
@@ -399,7 +399,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         Constant constId = ensureResolvedConstant();
 
@@ -424,7 +424,7 @@ public class TerminalTypeConstant
                 return this;
 
             case Typedef:
-                return getTypedefType((TypedefConstant) constId).adoptParameters(atypeParams);
+                return getTypedefType((TypedefConstant) constId).adoptParameters(pool, atypeParams);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constId);
@@ -446,7 +446,7 @@ public class TerminalTypeConstant
         if (struct.isParameterized())
             {
             return getConstantPool().ensureParameterizedTypeConstant(this,
-                struct.normalizeParameters(atypeParams));
+                struct.normalizeParameters(pool, atypeParams));
             }
 
         // this type cannot adopt anything
@@ -454,7 +454,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters()
+    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
         if (isTuple())
             {
@@ -484,7 +484,7 @@ public class TerminalTypeConstant
                 break;
 
             case Typedef:
-                return getTypedefType((TypedefConstant) constId).adoptParentTypeParameters();
+                return getTypedefType((TypedefConstant) constId).adoptParentTypeParameters(pool);
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constId);
@@ -500,13 +500,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).resolveAutoNarrowing(typeTarget);
+            return getTypedefType(constId).resolveAutoNarrowing(pool, typeTarget);
             }
 
         Constant constant = getDefiningConstant();
@@ -540,13 +540,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return getTypedefType(constId).inferAutoNarrowing(constThisClass);
+            return getTypedefType(constId).inferAutoNarrowing(pool, constThisClass);
             }
 
         Constant constId = getDefiningConstant();
@@ -653,7 +653,7 @@ public class TerminalTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return this;
         }
@@ -1437,12 +1437,13 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
+                    ConstantPool   pool    = ConstantPool.getCurrentPool();
                     ClassStructure clzThis = (ClassStructure)
                         ((IdentityConstant) constIdThis).getComponent();
 
                     Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
 
-                    listParams = clzThis.normalizeParameters(listParams);
+                    listParams = clzThis.normalizeParameters(pool, listParams);
 
                     Iterator<TypeConstant> iterParams = listParams.iterator();
                     Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1516,12 +1517,13 @@ public class TerminalTypeConstant
                     }
                 else if (!listParams.isEmpty())
                     {
+                    ConstantPool   pool    = ConstantPool.getCurrentPool();
                     ClassStructure clzThis = (ClassStructure)
                         ((IdentityConstant) constIdThis).getComponent();
 
                     Map<StringConstant, TypeConstant> mapFormal = clzThis.getTypeParams();
 
-                    listParams = clzThis.normalizeParameters(listParams);
+                    listParams = clzThis.normalizeParameters(pool, listParams);
 
                     Iterator<TypeConstant> iterParams = listParams.iterator();
                     Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();

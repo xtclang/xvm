@@ -64,7 +64,7 @@ public class ToIntExpression
                 {
                 pintVal = pintVal.sub(pintOffset);
                 }
-            val = constOrig.getConstantPool().ensureIntConstant(pintVal);
+            val = pool().ensureIntConstant(pintVal);
             }
 
         m_pintOffset = pintOffset;

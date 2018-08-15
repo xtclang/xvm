@@ -85,7 +85,7 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
-        m_annotation = new Annotation(constClass, aconstParam);
+        m_annotation = new Annotation(pool, constClass, aconstParam);
         m_constType  = constType;
         }
 
@@ -141,7 +141,7 @@ public class AnnotatedTypeConstant
             {
             ClassStructure struct = (ClassStructure) ((ClassConstant) constAnno).getComponent();
 
-            return struct.getFormalType().resolveGenerics(m_constType);
+            return struct.getFormalType().resolveGenerics(getConstantPool(), m_constType);
             }
 
         // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual
@@ -195,19 +195,19 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         return isNullable()
-                ? getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
-                        getAnnotationParams(), m_constType.removeNullable())
+                ? pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
+                        getAnnotationParams(), m_constType.removeNullable(pool))
                 : this;
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
-            m_annotation.getParams(), type);
+        return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),
+                m_annotation.getParams(), type);
         }
 
 

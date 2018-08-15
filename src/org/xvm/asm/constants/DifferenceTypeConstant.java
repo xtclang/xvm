@@ -53,9 +53,9 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+    protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        return getConstantPool().ensureDifferenceTypeConstant(type1, type2);
+        return pool.ensureDifferenceTypeConstant(type1, type2);
         }
 
 

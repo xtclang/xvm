@@ -519,7 +519,7 @@ public abstract class Component
      */
     public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
-        addAnnotation(new Annotation(constType, aconstParam));
+        addAnnotation(new Annotation(getConstantPool(), constType, aconstParam));
         }
 
     /**
@@ -2232,8 +2232,8 @@ public abstract class Component
             StringConstant constOldKey = entry.getKey();
             StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
 
-            TypeConstant       constOldVal = entry.getValue();
-            TypeConstant       constNewVal = (TypeConstant) pool.register(constOldVal);
+            TypeConstant   constOldVal = entry.getValue();
+            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey)
                 {
@@ -2684,23 +2684,24 @@ public abstract class Component
         /**
          * Resolve this contribution type based on the specified resolver.
          *
+         * @param pool      the ConstantPool to place a potentially created new constant into
          * @param resolver  the resolver
          *
          * @return the transformed type or null if the conditional incorporation
          *         does not apply for the resulting type
          */
-        public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
             {
             TypeConstant typeContrib = getTypeConstant();
 
-            typeContrib = typeContrib.normalizeParameters();
+            typeContrib = typeContrib.normalizeParameters(pool);
             if (!typeContrib.isParamsSpecified() && !typeContrib.isRelationalType())
                 {
                 // non-parameterized contribution
                 return typeContrib;
                 }
 
-            typeContrib = typeContrib.resolveGenerics(resolver);
+            typeContrib = typeContrib.resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib.getParamTypes()) ?
@@ -2711,20 +2712,21 @@ public abstract class Component
          * Transform the specified list of actual types for the specified class based on
          * this contribution definition.
          *
+         * @param pool        the ConstantPool to place a potentially created new constant into
          * @param clzParent   the parent class structure
          * @param listActual  the actual type list
          *
          * @return the transformed list of types or null if the conditional incorporation
          *         does not apply for the specified types
          */
-        public List<TypeConstant> transformActualTypes(ClassStructure clzParent,
+        public List<TypeConstant> transformActualTypes(ConstantPool pool, ClassStructure clzParent,
                                                        List<TypeConstant> listActual)
             {
             TypeConstant typeContrib = getTypeConstant();
 
             assert typeContrib.isSingleDefiningConstant();
 
-            typeContrib = typeContrib.normalizeParameters();
+            typeContrib = typeContrib.normalizeParameters(pool);
             if (!typeContrib.isParamsSpecified())
                 {
                 return Collections.emptyList();
@@ -2737,7 +2739,7 @@ public abstract class Component
 
             for (TypeConstant typeContribParam : aContribParam)
                 {
-                listContribActual.add(typeContribParam.resolveGenerics(resolver));
+                listContribActual.add(typeContribParam.resolveGenerics(pool, resolver));
                 }
 
             return getComposition() != Composition.Incorporates ||
@@ -3094,13 +3096,15 @@ public abstract class Component
         /**
          * Propagate the actual parameter types through this contribution chain.
          *
+         * @param pool        the ConstantPool to place a potentially created new constant into
          * @param clzParent   the class structure for the chain's top
          * @param listActual  the actual generic types for the chain's top
          *
          * @return  the actual types for the chain's origin or null if
          *          the contribution didn't apply (conditional incorporation)
          */
-        public List<TypeConstant> propagateActualTypes(ClassStructure clzParent, List<TypeConstant> listActual)
+        public List<TypeConstant> propagateActualTypes(ConstantPool pool,
+                                                       ClassStructure clzParent, List<TypeConstant> listActual)
             {
             List<Contribution> listContrib = m_list;
             assert !listContrib.isEmpty();
@@ -3109,12 +3113,12 @@ public abstract class Component
                 {
                 if (clzParent.getTypeParams().size() != listActual.size())
                     {
-                    listActual = clzParent.normalizeParameters(listActual);
+                    listActual = clzParent.normalizeParameters(pool, listActual);
                     }
 
                 Contribution contrib = listContrib.get(i);
 
-                listActual = contrib.transformActualTypes(clzParent, listActual);
+                listActual = contrib.transformActualTypes(pool, clzParent, listActual);
 
                 if (listActual == null)
                     {
