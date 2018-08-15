@@ -854,7 +854,7 @@ public class NameExpression
             if (arg == null)
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                        sName, ctx.getMethod().getIdentityConstant().getSignature());
+                        sName, ctx.getMethod().getIdentityConstant().getValueString());
                 }
             else if (arg instanceof Constant)
                 {

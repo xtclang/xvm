@@ -372,10 +372,20 @@ public abstract class AstNode
     protected ConstantPool pool()
         {
         AstNode nodeParent = getParent();
-        return nodeParent == null
-                ? null
-                : nodeParent.pool();
+        if (nodeParent == null)
+            {
+            return null;
+            }
+
+        if (++s_cDepth > 25)
+            {
+            throw new IllegalStateException();
+            }
+        ConstantPool pool = nodeParent.pool();
+        --s_cDepth;
+        return pool;
         }
+private static int s_cDepth = 0;
 
     /**
      * For nested nodes, determine the default access if the nodes need to specify an accessibility.

@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
@@ -162,11 +163,11 @@ public class NewExpression
             return null;
             }
 
-        ClassConstant clzTarget = (ClassConstant) typeTarget.getSingleUnderlyingClass(false);
-        ClassConstant clzParent;
+        ClassConstant    clzTarget = (ClassConstant) typeTarget.getSingleUnderlyingClass(false);
+        IdentityConstant clzParent;
         if (left == null)
             {
-            clzParent = (ClassConstant) getComponent().getContainingClass().getIdentityConstant();
+            clzParent = getComponent().getContainingClass().getIdentityConstant();
             }
         else
             {
@@ -177,12 +178,12 @@ public class NewExpression
                 return null;
                 }
 
-            clzParent = (ClassConstant) typeParent.getSingleUnderlyingClass(false);
+            clzParent = typeParent.getSingleUnderlyingClass(false);
             }
 
-        return clzParent.equals(clzTarget)
-            ? typeTarget
-            : clzParent.calculateAutoNarrowingConstant(clzTarget).getType();
+        return clzParent instanceof ClassConstant && !clzParent.equals(clzTarget)
+                ? ((ClassConstant) clzParent).calculateAutoNarrowingConstant(clzTarget).getType()
+                : typeTarget;
         }
 
     @Override

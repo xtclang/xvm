@@ -177,15 +177,6 @@ public class LambdaExpression
 
         checkDebug(); // TODO remove
 
-        // if the lambda was somehow determined to produce a constant value with no side-effects,
-        // then there shouldn't be a lambda body and we're already done here
-        if (isConstant())
-            {
-            assert method == null;
-            mgr.deferChildren();
-            return;
-            }
-
         // the method body containing this must validate the lambda expression, which then will
         // create the lambda body (the method structure), and that has to happen before we try to
         // spit out any code
@@ -440,17 +431,32 @@ public class LambdaExpression
         // collected VAS information from the lambda context
         ctxLambda.exitScope();
 
-        TypeConstant typeActual = null;
-        if (m_listRetTypes != null)
+        TypeConstant[] atypeRets;
+        if (m_listRetTypes == null || m_listRetTypes.isEmpty()
+                || m_listRetTypes.stream().allMatch(e -> e == null))
             {
-            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
-            m_listRetTypes = null;
-            typeActual = ListExpression.inferCommonType(aTypes);
+            // the lambda is a void function that is missing a closing return; the statement block
+            // will automatically add a trailing "return" when it is compiled
+            atypeRets = TypeConstant.NO_TYPES;
             }
-        if (typeActual == null)
+        else
             {
-            fit = TypeFit.NoFit;
+            int            cReturns   = m_listRetTypes.size();
+            TypeConstant[] aReturns   = m_listRetTypes.toArray(new TypeConstant[cReturns]);
+            TypeConstant   typeReturn = ListExpression.inferCommonType(aReturns);
+            if (typeReturn == null)
+                {
+                atypeRets = cReqReturns == 0
+                        ? TypeConstant.NO_TYPES
+                        : atypeReqReturns;
+                fit = TypeFit.NoFit;
+                }
+            else
+                {
+                atypeRets = new TypeConstant[] {typeReturn};
+                }
             }
+        m_listRetTypes = null;
 
         // while we have enough info at this point to build a signature, what we lack is the
         // effectively final data that will only get reported (via exitScope() on the context) as
@@ -460,7 +466,11 @@ public class LambdaExpression
         m_mapCapture     = ctxLambda.getCaptureMap();
         m_setCaptureRsvd = ctxLambda.getReservedNameSet();
 
-        return finishValidation(typeRequired, typeActual, fit, null, errs);
+        TypeConstant   typeActual = buildFunctionType(pool, atypeParams, atypeRets);
+        MethodConstant constVal   = m_mapCapture.isEmpty() && m_setCaptureRsvd.isEmpty()
+                ? m_lambda.getIdentityConstant()
+                : null;
+        return finishValidation(typeRequired, typeActual, fit, constVal, errs);
         }
 
     @Override
@@ -505,10 +515,6 @@ public class LambdaExpression
             {
             if (LVal.isLocalArgument())
                 {
-                super.generateAssignment(ctx, code, LVal, errs);
-                }
-            else
-                {
                 Argument argResult = LVal.getLocalArgument();
                 if (fBindTarget & fBindParams)
                     {
@@ -524,6 +530,10 @@ public class LambdaExpression
                     {
                     code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
                     }
+                }
+            else
+                {
+                super.generateAssignment(ctx, code, LVal, errs);
                 }
             }
         else
