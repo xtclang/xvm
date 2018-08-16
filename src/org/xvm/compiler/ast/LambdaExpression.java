@@ -277,7 +277,7 @@ public class LambdaExpression
         ctx = new BlackholeContext(ctx);
 
         // create a capture context for the lambda
-        int     cParams     = getParamCount();
+        int            cParams     = getParamCount();
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
         Set<String>    setNames    = new HashSet<>();
@@ -307,7 +307,7 @@ public class LambdaExpression
             TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
             m_listRetTypes = null;
 
-            TypeConstant typeRet = ListExpression.inferCommonType(aTypes);
+            TypeConstant typeRet = ListExpression.inferCommonType(pool(), aTypes);
             if (typeRet == null)
                 {
                 return null;
@@ -479,7 +479,7 @@ public class LambdaExpression
             {
             int            cReturns   = m_listRetTypes.size();
             TypeConstant[] aReturns   = m_listRetTypes.toArray(new TypeConstant[cReturns]);
-            TypeConstant   typeReturn = ListExpression.inferCommonType(aReturns);
+            TypeConstant   typeReturn = ListExpression.inferCommonType(pool, aReturns);
             if (typeReturn == null)
                 {
                 atypeRets = cReqReturns == 0
