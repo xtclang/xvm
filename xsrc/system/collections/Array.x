@@ -84,7 +84,7 @@ class Array<ElementType>
         }
 
     @Override
-    Ref<ElementType> elementAt(Int index)
+    Var<ElementType> elementAt(Int index)
         {
         if (index < 0 || index >= size)
             {

@@ -307,7 +307,7 @@ class TestApp
             else
                 {
                 @Future Int iRet;
-                runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, cDelay); // &iRet.set(0)
+                runtimeClock.scheduleAlarm(() -> {iRet = cDelay;}, DateTime.now()); // &iRet.set(0)
                 return iRet;
                 }
             }
@@ -380,13 +380,13 @@ class TestApp
         print(as1);
         print(as1[4]);
 
-        Ref<String> rs = &as1[0];
+        Var<String> rs = as1.elementAt(0);
         print(rs.get());
         rs.set("zero");
         print(as1[0]);
 
-        Int[] ai = [1, 2, 3]; // constant
-        print(ai[2]);
+        Int[] ai2 = [1, 2, 3]; // constant
+        print(ai2[2]);
         }
 
      static conditional String testConditional(Int i)

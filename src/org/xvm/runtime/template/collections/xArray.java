@@ -59,7 +59,7 @@ public class xArray
 
         markNativeMethod("construct", INT);
         markNativeMethod("construct", new String[]{"Int64", "Function"});
-        markNativeMethod("elementAt", INT, new String[] {"Ref<ElementType>"});
+        markNativeMethod("elementAt", INT, new String[] {"Var<ElementType>"});
         markNativeMethod("reify", VOID, new String[]{"collections.Array<ElementType>"});
         }
 

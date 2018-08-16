@@ -14,4 +14,9 @@ const DateTime(Date date, Time time)
         {
         TODO
         }
+
+    static DateTime now()
+        {
+        TODO
+        }
     }

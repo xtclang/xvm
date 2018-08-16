@@ -48,7 +48,7 @@ const Property<TargetType, PropertyType>(Method<TargetType, Tuple<>, Tuple<Ref<P
     void set(TargetType target, PropertyType value)
         {
         Ref<PropertyType> ref = this.of(target);
-        if (ref instanceof Var<PropertyType>)
+        if (ref.is(Var<PropertyType>))
             {
             ref.set(value);
             }
