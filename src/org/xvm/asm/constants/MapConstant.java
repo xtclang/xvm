@@ -350,14 +350,8 @@ public class MapConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constType = (TypeConstant) pool.register(m_constType);
-
-        Constant[] aconstKey = m_aconstKey;
-        Constant[] aconstVal = m_aconstVal;
-        for (int i = 0, c = aconstKey.length; i < c; ++i)
-            {
-            aconstKey[i] = pool.register(aconstKey[i]);
-            aconstVal[i] = pool.register(aconstVal[i]);
-            }
+        m_aconstKey = registerConstants(pool, m_aconstKey);
+        m_aconstVal = registerConstants(pool, m_aconstKey);
         }
 
     @Override

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -76,7 +75,8 @@ public abstract class RelationalTypeConstant
     /**
      * @return clone this relational type based on the underlying types
      */
-    protected abstract TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2);
+    protected abstract TypeConstant cloneRelational(ConstantPool pool,
+                                                    TypeConstant type1, TypeConstant type2);
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
@@ -188,70 +188,70 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(constResolved1, constResolved2);
+                : cloneRelational(getConstantPool(), constResolved1, constResolved2);
         }
 
     @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveGenerics(resolver);
-        TypeConstant constResolved2 = constOriginal2.resolveGenerics(resolver);
+        TypeConstant constResolved1 = constOriginal1.resolveGenerics(pool, resolver);
+        TypeConstant constResolved2 = constOriginal2.resolveGenerics(pool, resolver);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(constResolved1, constResolved2);
+                : cloneRelational(pool, constResolved1, constResolved2);
         }
 
     @Override
-    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.adoptParameters(atypeParams);
-        TypeConstant constResolved2 = constOriginal2.adoptParameters(atypeParams);
+        TypeConstant constResolved1 = constOriginal1.adoptParameters(pool, atypeParams);
+        TypeConstant constResolved2 = constOriginal2.adoptParameters(pool, atypeParams);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(constResolved1, constResolved2);
+                : cloneRelational(pool, constResolved1, constResolved2);
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters()
+    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
         // relational type cannot have a parent class
         return this;
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(typeTarget);
-        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(typeTarget);
+        TypeConstant constResolved1 = constOriginal1.resolveAutoNarrowing(pool, typeTarget);
+        TypeConstant constResolved2 = constOriginal2.resolveAutoNarrowing(pool, typeTarget);
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(constResolved1, constResolved2);
+                : cloneRelational(pool, constResolved1, constResolved2);
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
-        TypeConstant constInferred1 = constOriginal1.inferAutoNarrowing(constThisClass);
-        TypeConstant constInferred2 = constOriginal2.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred1 = constOriginal1.inferAutoNarrowing(pool, constThisClass);
+        TypeConstant constInferred2 = constOriginal2.inferAutoNarrowing(pool, constThisClass);
 
         return constInferred1 == constOriginal1 && constInferred2 == constOriginal2
                 ? this
-                : cloneRelational(constInferred1, constInferred2);
+                : cloneRelational(pool, constInferred1, constInferred2);
         }
 
     @Override
-    public TypeConstant replaceUnderlying(Function<TypeConstant, TypeConstant> transformer)
+    public TypeConstant replaceUnderlying(ConstantPool pool, Function<TypeConstant, TypeConstant> transformer)
         {
         TypeConstant constOriginal1 = m_constType1;
         TypeConstant constOriginal2 = m_constType2;
@@ -260,7 +260,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(constResolved1, constResolved2);
+                : cloneRelational(pool, constResolved1, constResolved2);
         }
 
     @Override
@@ -308,14 +308,6 @@ public abstract class RelationalTypeConstant
 
 
     // ----- type comparison support ---------------------------------------------------------------
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
-                                               ContributionChain chain)
-        {
-        // there is nothing that could change the result of "collectContributions"
-        return true;
-        }
 
     @Override
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)

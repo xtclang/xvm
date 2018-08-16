@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import org.xvm.asm.Component;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -121,9 +119,9 @@ public class AccessTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureAccessTypeConstant(type, m_access);
+        return pool.ensureAccessTypeConstant(type, m_access);
         }
 
     @Override
@@ -149,58 +147,10 @@ public class AccessTypeConstant
 
 
     @Override
-    public List<ContributionChain> collectContributions(TypeConstant typeLeft, List<TypeConstant> listRight,
-                                                        List<ContributionChain> chains)
-        {
-        switch (m_access)
-            {
-            case STRUCT:
-                if (typeLeft.equals(getConstantPool().typeStruct()))
-                    {
-                    // any struct is a Struct
-                    chains.add(new ContributionChain(
-                        new Component.Contribution(Component.Composition.Equal, null)));
-                    return chains;
-                    }
-                if (typeLeft.getAccess() != Access.STRUCT)
-                    {
-                    // struct is not assignable to anything but a struct
-                    return chains;
-                    }
-                break;
-
-            case PUBLIC:
-            case PROTECTED:
-            case PRIVATE:
-                if (typeLeft.getAccess().compareTo(m_access) > 0)
-                    {
-                    // for now, disallow any access widening
-                    // TODO: allow for MaybeDuckType
-                    return chains;
-                    }
-                break;
-            }
-        return super.collectContributions(typeLeft, listRight, chains);
-        }
-
-    @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)
         {
         return super.isInterfaceAssignableFrom(typeRight, m_access, listLeft);
-        }
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
-                                               ContributionChain chain)
-        {
-        if (chain.first().getComposition() != Component.Composition.MaybeDuckType &&
-                typeRight.getAccess().compareTo(m_access) < 0)
-            {
-            // the l-value (this) should have access no greater that the r-value (that)
-            return false;
-            }
-        return super.validateContributionFrom(typeRight, m_access, chain);
         }
 
     @Override

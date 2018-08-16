@@ -91,7 +91,8 @@ public class SwitchExpression
                 listTypes.add(((Expression) node).getImplicitType(ctx));
                 }
             }
-        return ListExpression.inferCommonType(listTypes.toArray(new TypeConstant[listTypes.size()]));
+        return ListExpression.inferCommonType(pool(),
+                listTypes.toArray(new TypeConstant[listTypes.size()]));
         }
 
     @Override
@@ -339,7 +340,7 @@ public class SwitchExpression
             }
 
         TypeConstant typeActual = ListExpression.inferCommonType(
-                listTypes.toArray(new TypeConstant[listTypes.size()]));
+                pool, listTypes.toArray(new TypeConstant[listTypes.size()]));
         if (typeActual == null)
             {
             typeActual = typeRequest == null

@@ -92,7 +92,8 @@ public class xTuple
             return Op.R_NEXT;
             }
 
-        TypeConstant typeTuple = constTuple.getType().resolveGenerics(frame.getGenericsResolver());
+        TypeConstant typeTuple = constTuple.getType().resolveGenerics(
+            frame.poolContext(), frame.getGenericsResolver());
 
         ObjectHandle[] ahValue = new ObjectHandle[c];
         for (int i = 0; i < c; i++)

@@ -18,12 +18,15 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TupleElementsTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.L_Set;
@@ -406,7 +409,7 @@ public class ClassStructure
                 GenericTypeResolver resolver = new SimpleTypeResolver(new ArrayList<>());
                 for (TypeConstant typeParam : mapParams.values())
                     {
-                    atypeParam[ix++] = typeParam.resolveGenerics(resolver);
+                    atypeParam[ix++] = typeParam.resolveGenerics(pool, resolver);
                     }
                 typeCanonical = pool.ensureClassTypeConstant(constClz, null, atypeParam);
                 }
@@ -421,51 +424,54 @@ public class ClassStructure
      * Note: the specified list is allowed to skip some number of actual parameters (at the tail);
      *       they will be replaced by the corresponding resolved canonical types
      *
-     * @param  listActual  the list of actual types
+     * @param pool        the ConstantPool to place a potentially created new constant into
+     * @param listActual  the list of actual types
      *
      * @return the resolved type
      */
-    public TypeConstant resolveType(List<TypeConstant> listActual)
+    public TypeConstant resolveType(ConstantPool pool, List<TypeConstant> listActual)
         {
         return listActual.isEmpty() && !isParameterized()
             ? getCanonicalType()
-            : getFormalType().resolveGenerics(new SimpleTypeResolver(listActual));
+            : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(listActual));
         }
 
     /**
      * If the specified list of actual parameters is missing some number of actual parameters,
      * add the corresponding resolved canonical types to the end of the list.
      *
-     * @param  listActual  the list of actual types
+     * @param pool        the ConstantPool to place a potentially created new constant into
+     * @param listActual  the list of actual types
      *
      * @return a list of types that has exact size as the map of formal parameters for this class
      */
-    public List<TypeConstant> normalizeParameters(List<TypeConstant> listActual)
+    public List<TypeConstant> normalizeParameters(ConstantPool pool, List<TypeConstant> listActual)
         {
         int cActual = listActual.size();
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? listActual
-            : resolveType(listActual).getParamTypes();
+            : resolveType(pool, listActual).getParamTypes();
         }
 
     /**
      * If the specified array of actual parameters is missing some number of actual parameters,
      * add the corresponding resolved canonical types to the end of the list.
      *
-     * @param  atypeActual  the array of actual types
+     * @param pool         the ConstantPool to place a potentially created new constant into
+     * @param atypeActual  the array of actual types
      *
      * @return an array of types that has exact size as the map of formal parameters for this class
      */
-    public TypeConstant[] normalizeParameters(TypeConstant[] atypeActual)
+    public TypeConstant[] normalizeParameters(ConstantPool pool, TypeConstant[] atypeActual)
         {
         int cActual = atypeActual.length;
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
             ? atypeActual
-            : resolveType(Arrays.asList(atypeActual)).getParamTypesArray();
+            : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
         }
 
 
@@ -754,18 +760,20 @@ public class ClassStructure
      * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
      * functionality since the TypeInfo generation itself uses it.
      */
-    public TypeConstant getGenericParamType(String sName, List<TypeConstant> listActual)
+    public TypeConstant getGenericParamType(ConstantPool pool, String sName,
+                                            List<TypeConstant> listActual)
         {
-        return getGenericParamTypeImpl(sName, listActual, true);
+        return getGenericParamTypeImpl(pool, sName, listActual, true);
         }
 
     /**
      * Recursive implementation of getActualParamType method.
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      */
-    protected TypeConstant getGenericParamTypeImpl(String sName, List<TypeConstant> listActual,
-                                                   boolean fAllowInto)
+    protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
+                                                   List<TypeConstant> listActual, boolean fAllowInto)
         {
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0)
@@ -790,7 +798,7 @@ public class ClassStructure
                 }
 
             List<TypeConstant> listContribTypes =
-                contrib.transformActualTypes(this, listActual);
+                contrib.transformActualTypes(pool, this, listActual);
             if (listContribTypes == null)
                 {
                 // conditional incorporation
@@ -812,7 +820,7 @@ public class ClassStructure
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(true).getComponent();
                     TypeConstant type = clzContrib.getGenericParamTypeImpl(
-                            sName, listContribTypes, false);
+                            pool, sName, listContribTypes, false);
                     if (type != null)
                         {
                         return type;
@@ -831,26 +839,174 @@ public class ClassStructure
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * For this class structure representing the R-Value recursively find a contribution by the
-     * specified class id (representing an L-Value) and add the corresponding ContributionChain
-     * objects to the list of chains.
+     * Calculate assignability between two parameterized types of this class.
      *
-     * @param idClzLeft   the identity of the class to look for
+     *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
+     */
+    public Relation calculateAssignability(List<TypeConstant> listLeft, Access accessLeft,
+                                           List<TypeConstant> listRight)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        int cParamsLeft  = listLeft.size();
+        int cParamsRight = listRight.size();
+        boolean fTuple   = getIdentityConstant().equals(pool.clzTuple());
+
+        // we only have to check all the parameters on the left side,
+        // since if an assignment C<L1> = C<R1> is allowed, then
+        // an assignment C<L1> = C<R1, R2> is allowed for any R2
+
+        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = getTypeParamsAsList();
+
+        if (!fTuple)
+            {
+            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
+                {
+                // soft assert
+                System.err.println("Invalid number of arguments for " + getName()
+                        + ": required=" + listFormalEntries.size()
+                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
+                return Relation.INCOMPATIBLE;
+                }
+            }
+
+        boolean fWeak = false;
+        for (int i = 0; i < cParamsLeft; i++)
+            {
+            String sName;
+            TypeConstant typeCanonical;
+
+            if (fTuple)
+                {
+                sName         = null;
+                typeCanonical = pool.typeObject();
+                }
+            else
+                {
+                Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
+
+                sName         = entryFormal.getKey().getValue();
+                typeCanonical = entryFormal.getValue();
+                }
+
+            TypeConstant typeLeft = listLeft.get(i);
+            TypeConstant typeRight;
+            boolean fProduce;
+            boolean fLeftIsRight = false;
+
+            if (i < cParamsRight)
+                {
+                typeRight = listRight.get(i);
+
+                if (typeLeft.equals(typeRight))
+                    {
+                    continue;
+                    }
+
+                fProduce = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                fLeftIsRight = typeLeft.isA(typeRight);
+
+                if (fLeftIsRight && !fProduce)
+                    {
+                    // consumer only methods; rule 1.2.1
+                    continue;
+                    }
+                }
+            else
+                {
+                // assignment  C<L1, L2> = C<R1> is not the same as
+                //             C<L1, L2> = C<R1, [canonical type for R2]>;
+                // the former is only allowed if class C produces L2
+                // and then all L2 consuming methods (if any) must be "wrapped"
+                typeRight = typeCanonical;
+                fProduce  = fTuple || producesFormalType(sName, accessLeft, listLeft);
+                }
+
+            if (typeRight.isA(typeLeft))
+                {
+                if (fLeftIsRight)
+                    {
+                    // both hold true:
+                    //   typeLeft.isA(typeRight), and
+                    //   typeRight.isA(typeLeft)
+                    // we take it that the types are congruent
+                    // (e,g. "this:class", but with different declaration levels)
+                    continue;
+                    }
+
+                if (fProduce)
+                    {
+                    // there are some producing methods; rule 1.2.2.2
+                    // consuming methods may need to be "wrapped"
+                    if (fTuple || consumesFormalType(sName, accessLeft, listLeft))
+                        {
+                        fWeak = true;
+                        }
+                    continue;
+                    }
+                }
+
+            // this parameter didn't match
+            return Relation.INCOMPATIBLE;
+            }
+        return fWeak ? Relation.IS_A_WEAK : Relation.IS_A;
+        }
+
+    /**
+     * For this class structure representing the R-Value find a contribution assignable to the
+     * specified L-Value type.
+     *
+     * @param typeLeft    the L-Value type
      * @param listRight   the list of actual generic parameters for this class
-     * @param chains      the list of chains to add to
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
      *
-     * @return the resulting list of ContributionChain objects
+     * @return the relation
      */
-    public List<ContributionChain> collectContributions(
-            ClassConstant idClzLeft, List<TypeConstant> listRight,
-            List<ContributionChain> chains, boolean fAllowInto)
+    public Relation findContribution(TypeConstant typeLeft,
+                                     List<TypeConstant> listRight, boolean fAllowInto)
         {
-        if (idClzLeft.equals(getIdentityConstant()))
+        assert typeLeft.isSingleDefiningConstant();
+
+        ConstantPool     pool        = ConstantPool.getCurrentPool();
+        Constant         constIdLeft = typeLeft.getDefiningConstant();
+        IdentityConstant idClzRight  = getIdentityConstant();
+
+        switch (constIdLeft.getFormat())
             {
-            chains.add(new ContributionChain(
-                new Contribution(Composition.Equal, (TypeConstant) null)));
-            return chains;
+            case Module:
+            case Package:
+                // modules and packages are never parameterized
+                return constIdLeft.equals(idClzRight) ? Relation.IS_A : Relation.INCOMPATIBLE;
+
+            case NativeClass:
+                constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
+                // fall through
+            case Class:
+                if (constIdLeft.equals(pool.clzObject()))
+                    {
+                    return Relation.IS_A;
+                    }
+
+                if (constIdLeft.equals(idClzRight))
+                    {
+                    return calculateAssignability(
+                        typeLeft.getParamTypes(), typeLeft.getAccess(), listRight);
+                    }
+                break;
+
+            case Property:
+            case TypeParameter:
+                // r-value (this) is a real type; it cannot be assigned to a formal type
+                return Relation.INCOMPATIBLE;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                assert typeLeft.isAutoNarrowing();
+                return findContribution(typeLeft.resolveAutoNarrowing(pool, null), listRight, fAllowInto);
+
+            default:
+                throw new IllegalStateException("unexpected constant: " + constIdLeft);
             }
 
         TypeConstant typeRebase = getRebaseType();
@@ -858,89 +1014,154 @@ public class ClassStructure
             {
             ClassStructure clzRebase = (ClassStructure)
                 typeRebase.getSingleUnderlyingClass(true).getComponent();
-            clzRebase.collectContributions(idClzLeft, listRight, chains, false);
+
+            // rebase types are never parameterized and therefor cannot be "weak"
+            if (clzRebase.findContribution(typeLeft, Collections.EMPTY_LIST, fAllowInto) == Relation.IS_A)
+                {
+                return Relation.IS_A;
+                }
             }
 
-    nextContribution:
+        Relation relation = Relation.INCOMPATIBLE;
+
         for (Contribution contrib : getContributionsAsList())
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
             switch (contrib.getComposition())
                 {
-                case Delegates:
-                case Implements:
-                    break;
-
                 case Into:
                     if (!fAllowInto)
                         {
-                        continue nextContribution;
+                        break;
+                        }
+                    // fall through
+                case Annotation:
+                case Delegates:
+                case Implements:
+                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    if (typeContrib != null)
+                        {
+                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
                         }
                     break;
 
-                case Annotation:
                 case Incorporates:
                 case Extends:
+                    {
                     // the identity constant for those contribution is always a class
                     assert typeContrib.isSingleDefiningConstant();
+
+                    ClassConstant constContrib = (ClassConstant)
+                        typeContrib.getSingleUnderlyingClass(true);
+
+                    if (constContrib.equals(pool.clzObject()))
+                        {
+                        // ignore trivial "extends Object" contribution
+                        continue;
+                        }
+
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(pool, this, listRight);
+                    if (listContribActual != null)
+                        {
+                        relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                            findContribution(typeLeft, listContribActual, false));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
+                        }
                     break;
+                    }
 
                 default:
                     throw new IllegalStateException();
                 }
-
-            List<ContributionChain> chainsContrib = null;
-            if (typeContrib.isSingleDefiningConstant())
-                {
-                ClassConstant constContrib = (ClassConstant)
-                    typeContrib.getSingleUnderlyingClass(true);
-
-                if (constContrib.equals(idClzLeft))
-                    {
-                    chains.add(new ContributionChain(contrib));
-                    continue;
-                    }
-
-                if (constContrib.equals(getConstantPool().clzObject()))
-                    {
-                    // trivial Object contribution
-                    continue;
-                    }
-
-                List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listRight);
-
-                if (listContribActual != null)
-                    {
-                    chainsContrib = ((ClassStructure) constContrib.getComponent()).
-                        collectContributions(idClzLeft, listContribActual, new ArrayList<>(), false);
-                    }
-                }
-            else
-                {
-                // while we could trivially resolve the actual types:
-                //
-                //   typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
-                //
-                // the only contributions of relation type could be delegations and implementations
-                // and since they cannot be conditional at any level, the actual types won't matter
-                // for further recursion
-                chainsContrib = typeContrib.collectContributions(
-                    idClzLeft.getType(), new ArrayList<>(), new ArrayList<>());
-                }
-
-            if (chainsContrib != null && !chainsContrib.isEmpty())
-                {
-                for (ContributionChain chain : chainsContrib)
-                    {
-                    chain.add(contrib);
-                    }
-
-                chains.addAll(chainsContrib);
-                }
             }
 
-        return chains;
+        return relation;
+        }
+
+    /**
+     * For this class structure representing the R-Value find a contribution assignable to the
+     * specified L-Value type.
+     *
+     * @param typeLeft    the L-Value type
+     * @param listRight   the list of actual generic parameters for this class
+     *
+     * @return the relation
+     */
+    public Relation findIntersectionContribution(IntersectionTypeConstant typeLeft,
+                                                 List<TypeConstant> listRight)
+        {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        Relation relation = Relation.INCOMPATIBLE;
+
+        for (Contribution contrib : getContributionsAsList())
+            {
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                    {
+                    // the identity constant for extension is always a class
+                    assert typeContrib.isSingleDefiningConstant();
+
+                    ClassConstant constContrib = (ClassConstant)
+                        typeContrib.getSingleUnderlyingClass(true);
+
+                    if (constContrib.equals(pool.clzObject()))
+                        {
+                        // ignore trivial "extends Object" contribution
+                        continue;
+                        }
+
+                    List<TypeConstant> listContribActual =
+                        contrib.transformActualTypes(pool, this, listRight);
+
+                    relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
+                        findIntersectionContribution(typeLeft, listContribActual));
+                    if (relation == Relation.IS_A)
+                        {
+                        return Relation.IS_A;
+                        }
+                    break;
+                    }
+
+                case Into:
+                case Annotation:
+                case Implements:
+                    typeContrib = typeContrib.resolveGenerics(pool, new SimpleTypeResolver(listRight));
+                    if (typeContrib != null)
+                        {
+                        if (typeContrib.equals(pool.typeObject()))
+                            {
+                            return Relation.INCOMPATIBLE;
+                            }
+
+                        relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
+                        }
+                    break;
+
+                case Delegates:
+                case Incorporates:
+                    // delegation and incorporation cannot be of an intersection type
+                    return Relation.INCOMPATIBLE;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        return relation;
         }
 
     /**
@@ -957,6 +1178,7 @@ public class ClassStructure
         {
         assert indexOfGenericParameter(sName) >= 0;
 
+        ConstantPool pool = ConstantPool.getCurrentPool();
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -983,7 +1205,7 @@ public class ClassStructure
                 TypeConstant constType = property.getType();
                 if (!listActual.isEmpty())
                     {
-                    constType = constType.resolveGenerics(new SimpleTypeResolver(listActual));
+                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
                     }
 
                 // TODO: add correct access check when added to the structure
@@ -1035,7 +1257,7 @@ public class ClassStructure
             if (typeContrib.isSingleDefiningConstant())
                 {
                 List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listActual);
+                    contrib.transformActualTypes(pool, this, listActual);
 
                 if (listContribActual == null || listContribActual.isEmpty())
                     {
@@ -1049,7 +1271,7 @@ public class ClassStructure
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
-                    typeContrib.getParamTypes());
+                    pool, typeContrib.getParamTypes());
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1103,6 +1325,7 @@ public class ClassStructure
             return false;
             }
 
+        ConstantPool pool = ConstantPool.getCurrentPool();
         for (Component child : children())
             {
             if (child instanceof MultiMethodStructure)
@@ -1129,7 +1352,7 @@ public class ClassStructure
                 TypeConstant constType = property.getType();
                 if (!listActual.isEmpty())
                     {
-                    constType = constType.resolveGenerics(new SimpleTypeResolver(listActual));
+                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(listActual));
                     }
 
                 // TODO: add correct access check when added to the structure
@@ -1181,7 +1404,7 @@ public class ClassStructure
             if (typeContrib.isSingleDefiningConstant())
                 {
                 List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listActual);
+                    contrib.transformActualTypes(pool, this, listActual);
 
                 if (listContribActual == null || listContribActual.isEmpty())
                     {
@@ -1195,7 +1418,7 @@ public class ClassStructure
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
-                    typeContrib.getParamTypes());
+                    pool, typeContrib.getParamTypes());
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
                 Iterator<StringConstant> iterNames = mapFormal.keySet().iterator();
@@ -1242,8 +1465,9 @@ public class ClassStructure
     public Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                             List<TypeConstant> listLeft)
         {
-        Set<SignatureConstant> setMiss = new HashSet<>();
-        GenericTypeResolver resolver = null;
+        ConstantPool           pool     = ConstantPool.getCurrentPool();
+        Set<SignatureConstant> setMiss  = new HashSet<>();
+        GenericTypeResolver    resolver = null;
 
         for (Component child : children())
             {
@@ -1269,7 +1493,7 @@ public class ClassStructure
                             {
                             resolver = new SimpleTypeResolver(listLeft);
                             }
-                        sig = sig.resolveGenericTypes(resolver);
+                        sig = sig.resolveGenericTypes(pool, resolver);
                         }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
@@ -1296,7 +1520,7 @@ public class ClassStructure
                             {
                             resolver = new SimpleTypeResolver(listLeft);
                             }
-                        sig = sig.resolveGenericTypes(resolver);
+                        sig = sig.resolveGenericTypes(pool, resolver);
                         }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
@@ -1313,7 +1537,7 @@ public class ClassStructure
             if (contrib.getComposition() == Composition.Extends)
                 {
                 List<TypeConstant> listSuperActual =
-                    contrib.transformActualTypes(this, listLeft);
+                    contrib.transformActualTypes(pool, this, listLeft);
 
                 ClassStructure clzSuper = (ClassStructure)
                     contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
@@ -1346,7 +1570,8 @@ public class ClassStructure
                                                       List<TypeConstant> listParams,
                                                       IdentityConstant idClass, boolean fAllowInto)
         {
-        Component child = getChild(signature.getName());
+        ConstantPool pool  = ConstantPool.getCurrentPool();
+        Component    child = getChild(signature.getName());
 
         if (signature.isProperty())
             {
@@ -1356,7 +1581,7 @@ public class ClassStructure
 
                 // TODO: check access
 
-                if (property.isSubstitutableFor(signature, listParams))
+                if (property.isSubstitutableFor(pool, signature, listParams))
                     {
                     return true;
                     }
@@ -1371,14 +1596,14 @@ public class ClassStructure
                 GenericTypeResolver resolver = listParams.isEmpty() ? null :
                     new SimpleTypeResolver(listParams);
 
-                signature = signature.resolveGenericTypes(resolver);
+                signature = signature.resolveGenericTypes(pool, resolver);
 
                 for (MethodStructure method : mms.methods())
                     {
                     if (!method.isStatic() && method.isAccessible(access))
                         {
                         SignatureConstant sigMethod = method.getIdentityConstant().
-                            getSignature().resolveGenericTypes(resolver);
+                            getSignature().resolveGenericTypes(pool, resolver);
                         if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                             {
                             return true;
@@ -1420,7 +1645,7 @@ public class ClassStructure
             if (typeContrib.isSingleDefiningConstant())
                 {
                 List<TypeConstant> listContribActual =
-                    contrib.transformActualTypes(this, listParams);
+                    contrib.transformActualTypes(pool, this, listParams);
 
                 if (listContribActual != null)
                     {
@@ -1436,7 +1661,7 @@ public class ClassStructure
                 }
             else
                 {
-                typeContrib = contrib.resolveGenerics(new SimpleTypeResolver(listParams));
+                typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(listParams));
 
                 if (typeContrib.containsSubstitutableMethod(signature, access, new ArrayList<>()))
                     {
@@ -1723,7 +1948,7 @@ public class ClassStructure
                         {
                         // the canonical type itself could be formal, depending on another parameter
                         TypeConstant typeCanonical = entries.get(i).getValue();
-                        listActual.set(i, typeCanonical.resolveGenerics(this));
+                        listActual.set(i, typeCanonical.resolveGenerics(pool, this));
                         }
                     }
                 }

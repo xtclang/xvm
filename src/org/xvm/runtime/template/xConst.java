@@ -183,7 +183,7 @@ public class xConst
                     }
 
                 TypeConstant typeProp = getProperty(sProp).getType().
-                    resolveGenerics(frameCaller.getGenericsResolver());
+                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -257,7 +257,7 @@ public class xConst
                     }
 
                 TypeConstant typeProp = getProperty(sProp).getType().
-                    resolveGenerics(frameCaller.getGenericsResolver());
+                    resolveGenerics(frameCaller.poolContext(), frameCaller.getGenericsResolver());
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
                     {

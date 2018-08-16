@@ -92,7 +92,7 @@ public class ListExpression
                 {
                 aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
                 }
-            TypeConstant typeElement = inferCommonType(aElementTypes);
+            TypeConstant typeElement = inferCommonType(pool(), aElementTypes);
             if (typeElement != null)
                 {
                 typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
@@ -154,10 +154,10 @@ public class ListExpression
                 {
                 aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
-            typeElement = inferCommonType(aElementTypes);
+            typeElement = inferCommonType(pool, aElementTypes);
             if (typeElement != null)
                 {
-                typeActual  = typeActual.adoptParameters(new TypeConstant[] {typeElement});
+                typeActual  = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
                 }
             }
 
@@ -203,12 +203,13 @@ public class ListExpression
     /**
      * Determine if the passed array of types indicates a particular common type.
      *
+     * @param pool    the ConstantPool to place a potentially created new type into
      * @param aTypes  an array of types, which can be null and which can contain nulls
      *
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    static TypeConstant inferCommonType(TypeConstant[] aTypes)
+    static TypeConstant inferCommonType(ConstantPool pool, TypeConstant[] aTypes)
         {
         if (aTypes == null || aTypes.length == 0)
             {
@@ -263,7 +264,7 @@ public class ListExpression
                 }
             }
 
-        return fImmutable ? typeCommon.ensureImmutable() : typeCommon;
+        return fImmutable ? typeCommon.ensureImmutable(pool) : typeCommon;
         }
 
     @Override

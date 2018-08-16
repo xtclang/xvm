@@ -224,17 +224,18 @@ public class MethodConstant
      * Note 1: this functionality is not applicable to functions.
      * Note 2: the target type must be "isA" of this method's containing class
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param typeTarget  the type of a method's target (null if the target is the containing class)
      *
      * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public SignatureConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         assert !isFunction();
         assert typeTarget == null || typeTarget.isA(getClassIdentity().getType());
 
-        return getSignature().resolveAutoNarrowing(typeTarget);
+        return getSignature().resolveAutoNarrowing(pool, typeTarget);
         }
 
 
@@ -339,7 +340,7 @@ public class MethodConstant
         }
 
     @Override
-    public Object resolveNestedIdentity(GenericTypeResolver resolver)
+    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         // REVIEW: should we resolveAutoNarrowing()
         if (getComponent() == null)
@@ -350,7 +351,7 @@ public class MethodConstant
             }
         return getNamespace().isNested()
                 ? new NestedIdentity(resolver)
-                : getSignature().resolveGenericTypes(resolver);
+                : getSignature().resolveGenericTypes(pool, resolver);
         }
 
     @Override
@@ -395,7 +396,7 @@ public class MethodConstant
             return getSignature().getRefType(null);
             }
 
-        return resolveAutoNarrowing(typeTarget).getRefType(typeTarget);
+        return resolveAutoNarrowing(getConstantPool(), typeTarget).getRefType(typeTarget);
         }
 
     @Override

@@ -88,7 +88,15 @@ public class Register
         return m_typeReg != null;
         }
 
-    public TypeConstant ensureRegType(boolean fRO)
+    /**
+     * Obtain a register type.
+     *
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     * @param fRO   true iff the register is read-only
+     *
+     * @return the type of the register
+     */
+    public TypeConstant ensureRegType(ConstantPool pool, boolean fRO)
         {
         assert fRO | !m_fRO;
 
@@ -97,7 +105,6 @@ public class Register
             return m_typeReg;
             }
 
-        ConstantPool pool = m_type.getConstantPool();
         return pool.ensureParameterizedTypeConstant(fRO ? pool.typeRef() : pool.typeVar(), m_type);
         }
 
@@ -420,7 +427,7 @@ public class Register
             }
 
         @Override
-        public TypeConstant ensureRegType(boolean fRO)
+        public TypeConstant ensureRegType(ConstantPool pool, boolean fRO)
             {
             throw new UnsupportedOperationException();
             }

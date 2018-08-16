@@ -52,7 +52,7 @@ public class ElvisExpression
             }
 
         // nulls in the first expression are eliminated by using the second expression
-        type1 = type1.removeNullable();
+        type1 = type1.removeNullable(pool());
         TypeConstant typeResult = selectType(type1, type2, ErrorListener.BLACKHOLE);
 
         // hey, wouldn't it be nice if we could just do this?
@@ -67,7 +67,7 @@ public class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired)
         {
-        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable());
+        TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(pool()));
         if (fit.isFit())
             {
             fit.combineWith(expr2.testFit(ctx, typeRequired));
@@ -78,8 +78,9 @@ public class ElvisExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        ConstantPool pool     = pool();
         TypeFit      fit      = TypeFit.Fit;
-        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable();
+        TypeConstant type1Req = typeRequired == null ? null : typeRequired.ensureNullable(pool);
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
         TypeConstant type1    = null;
         if (expr1New == null)
@@ -92,7 +93,7 @@ public class ElvisExpression
             type1 = expr1New.getType();
             }
 
-        TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(), null, errs);
+        TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(pool), null, errs);
         if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
             {
             type2Req = typeRequired;
@@ -118,14 +119,13 @@ public class ElvisExpression
             return replaceThisWith(expr2New);
             }
 
-        ConstantPool pool = pool();
         if (!pool.typeNull().isA(type1))
             {
             expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
             return replaceThisWith(expr1New);
             }
 
-        TypeConstant type1Non   = type1.removeNullable();
+        TypeConstant type1Non   = type1.removeNullable(pool);
         TypeConstant type2      = expr2New.getType();
         TypeConstant typeResult = selectType(type1Non, type2, errs);
         if (typeResult == null)
@@ -168,12 +168,14 @@ public class ElvisExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        if (isConstant() || pool().typeNull().isA(getType()))
+        ConstantPool pool = pool();
+
+        if (isConstant() || pool.typeNull().isA(getType()))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = getType().ensureNullable();
+        TypeConstant typeTemp = getType().ensureNullable(pool);
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
         return var.getRegister();

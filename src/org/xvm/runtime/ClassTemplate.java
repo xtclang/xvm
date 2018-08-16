@@ -170,9 +170,9 @@ public abstract class ClassTemplate
         ConstantPool pool = f_struct.getConstantPool();
 
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionClassConstant().getType(), typeParams).normalizeParameters();
+            getInceptionClassConstant().getType(), typeParams).normalizeParameters(pool);
 
-        TypeConstant typeMask = getCanonicalType().adoptParameters(typeParams);
+        TypeConstant typeMask = getCanonicalType().adoptParameters(pool, typeParams);
 
         return ensureClass(typeInception, typeMask);
         }
@@ -200,7 +200,7 @@ public abstract class ClassTemplate
                 {
                 return type instanceof TerminalTypeConstant
                     ? constInception.getType()
-                    : type.replaceUnderlying(this);
+                    : type.replaceUnderlying(typeActual.getConstantPool(), this);
                 }
             };
 
@@ -217,10 +217,12 @@ public abstract class ClassTemplate
      */
     protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
         {
+        ConstantPool pool = typeInception.getConstantPool();
+
         assert !typeInception.isAccessSpecified();
         assert !typeMask.isAccessSpecified();
-        assert typeInception.normalizeParameters().equals(typeInception);
-        assert typeMask.normalizeParameters().equals(typeMask);
+        assert typeInception.normalizeParameters(pool).equals(typeInception);
+        assert typeMask.normalizeParameters(pool).equals(typeMask);
 
         return m_mapCompositions.computeIfAbsent(typeInception, (typeI) ->
             {
@@ -1119,13 +1121,15 @@ public abstract class ClassTemplate
     /**
      * Create a property Ref or Var for the specified target and property.
      *
+     * @param pool       the ConstantPool to place a potentially created new type into
      * @param hTarget    the target handle
      * @param constProp  the property constant
      * @param fRO        true if the
      *
      * @return the corresponding {@link RefHandle}
      */
-    public RefHandle createPropertyRef(ObjectHandle hTarget, PropertyConstant constProp, boolean fRO)
+    public RefHandle createPropertyRef(ConstantPool pool, ObjectHandle hTarget,
+                                       PropertyConstant constProp, boolean fRO)
         {
         GenericHandle hThis = (GenericHandle) hTarget;
 
@@ -1141,7 +1145,7 @@ public abstract class ClassTemplate
             return ((RefHandle) hThis.getField(sPropName));
             }
 
-        TypeConstant typeReferent = constProp.getType().resolveGenerics(hTarget.getType());
+        TypeConstant typeReferent = constProp.getType().resolveGenerics(pool, hTarget.getType());
 
         TypeComposition clzRef = fRO
             ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)

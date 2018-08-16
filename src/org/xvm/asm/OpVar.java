@@ -63,7 +63,7 @@ public abstract class OpVar
         {
         if (m_reg != null)
             {
-            m_nType = encodeArgument(getRegisterType(), registry);
+            m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
             }
 
         out.writeByte(getOpCode());
@@ -75,9 +75,11 @@ public abstract class OpVar
      *
      * @return the type of the register
      */
-    public TypeConstant getRegisterType()
+    public TypeConstant getRegisterType(ConstantPool pool)
         {
-        return m_reg.isDVar() ? m_reg.ensureRegType(!m_reg.isWritable()) : m_reg.getType();
+        return m_reg.isDVar()
+                ? m_reg.ensureRegType(pool, !m_reg.isWritable())
+                : m_reg.getType();
         }
 
     /**

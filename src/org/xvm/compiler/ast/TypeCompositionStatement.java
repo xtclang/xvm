@@ -1199,6 +1199,14 @@ public class TypeCompositionStatement
         ClassStructure component     = (ClassStructure) getComponent();
         Format         format        = component.getFormat();
         boolean        fModuleImport = false;
+
+        if (format == Format.MODULE)
+            {
+            // the upstream modules were all linked in the previous pass, so this pass is able to
+            // start out by building the entire (transitive closure) set of pools that are upstream
+            component.getConstantPool().buildValidPoolSet();
+            }
+
         if (format == Format.PACKAGE && moduleImported == null)
             {
             for (Composition composition : compositions)

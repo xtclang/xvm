@@ -153,7 +153,7 @@ public class SignatureConstant
      */
     public List<TypeConstant> getParams()
         {
-        return Arrays.asList(m_aconstParams);
+        return Arrays.asList(m_aconstParams.clone());
         }
 
     /**
@@ -181,9 +181,14 @@ public class SignatureConstant
         }
 
     /**
-     * @return an equivalent signature without any generic types
+     * Create an equivalent signature with generic types resolved based on the specified resolver.
+     *
+     * @param pool      the ConstantPool to place a potentially created new constant into
+     * @param resolver  the resolver
+     *
+     * @return a resolved signature
      */
-    public SignatureConstant resolveGenericTypes(GenericTypeResolver resolver)
+    public SignatureConstant resolveGenericTypes(ConstantPool pool, GenericTypeResolver resolver)
         {
         if (resolver == null)
             {
@@ -191,55 +196,43 @@ public class SignatureConstant
             }
 
         TypeConstant[] aconstParamOriginal = m_aconstParams;
-        TypeConstant[] aconstParamResolved = null;
+        TypeConstant[] aconstParamResolved = aconstParamOriginal;
+        boolean        fDiff               = false;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+            TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved)
                 {
-                if (aconstParamResolved == null)
+                if (aconstParamResolved == aconstParamOriginal)
                     {
-                    aconstParamResolved = new TypeConstant[c];
-                    System.arraycopy(aconstParamOriginal, 0, aconstParamResolved, 0, c);
+                    aconstParamResolved = aconstParamOriginal.clone();
+                    fDiff               = true;
                     }
                 aconstParamResolved[i] = constResolved;
                 }
             }
 
         TypeConstant[] aconstReturnOriginal = m_aconstReturns;
-        TypeConstant[] aconstReturnResolved = null;
+        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+            TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved)
                 {
-                if (aconstReturnResolved == null)
+                if (aconstReturnResolved == aconstReturnOriginal)
                     {
-                    aconstReturnResolved = new TypeConstant[c];
-                    System.arraycopy(aconstReturnOriginal, 0, aconstReturnResolved, 0, c);
+                    aconstReturnResolved = aconstReturnOriginal.clone();
+                    fDiff                = true;
                     }
                 aconstReturnResolved[i] = constResolved;
                 }
             }
 
-        if (aconstParamResolved == null && aconstReturnResolved == null)
-            {
-            return this;
-            }
-
-        if (aconstParamResolved == null)
-            {
-            aconstParamResolved = aconstParamOriginal;
-            }
-        if (aconstReturnResolved == null)
-            {
-            aconstReturnResolved = aconstReturnOriginal;
-            }
-
-        return getConstantPool().
-            ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
+        return fDiff
+                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
+                : this;
         }
 
     /**
@@ -247,63 +240,52 @@ public class SignatureConstant
      * auto-narrowing types), replace the any auto-narrowing portion with an explicit class identity
      * in the context of the specified type.
      *
+     * @param pool        the ConstantPool to place a potentially created new constant into
      * @param typeTarget  the target type
      *
      * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public SignatureConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         TypeConstant[] aconstParamOriginal = m_aconstParams;
-        TypeConstant[] aconstParamResolved = null;
+        TypeConstant[] aconstParamResolved = aconstParamOriginal;
+        boolean        fDiff               = false;
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
             if (constOriginal != constResolved)
                 {
-                if (aconstParamResolved == null)
+                if (aconstParamResolved == aconstParamOriginal)
                     {
-                    aconstParamResolved = new TypeConstant[c];
-                    System.arraycopy(aconstParamOriginal, 0, aconstParamResolved, 0, c);
+                    aconstParamResolved = aconstParamOriginal.clone();
+                    fDiff               = true;
                     }
                 aconstParamResolved[i] = constResolved;
                 }
             }
 
         TypeConstant[] aconstReturnOriginal = m_aconstReturns;
-        TypeConstant[] aconstReturnResolved = null;
+        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
             if (constOriginal != constResolved)
                 {
-                if (aconstReturnResolved == null)
+                if (aconstReturnResolved == aconstReturnOriginal)
                     {
-                    aconstReturnResolved = new TypeConstant[c];
-                    System.arraycopy(aconstReturnOriginal, 0, aconstReturnResolved, 0, c);
+                    aconstReturnResolved = aconstReturnOriginal.clone();
+                    fDiff                = true;
                     }
                 aconstReturnResolved[i] = constResolved;
                 }
             }
 
-        if (aconstParamResolved == null && aconstReturnResolved == null)
-            {
-            return this;
-            }
-
-        if (aconstParamResolved == null)
-            {
-            aconstParamResolved = aconstParamOriginal;
-            }
-        if (aconstReturnResolved == null)
-            {
-            aconstReturnResolved = aconstReturnOriginal;
-            }
-
-        return getConstantPool().
-            ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved);
+        return fDiff
+                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
+                : this;
         }
 
     /**
@@ -530,9 +512,9 @@ public class SignatureConstant
                 if (atypeNewParams == atypeOldParams)
                     {
                     atypeNewParams = atypeOldParams.clone();
+                    fDiff          = true;
                     }
                 atypeNewParams[i] = constNew;
-                fDiff = true;
                 }
             }
 
@@ -548,9 +530,9 @@ public class SignatureConstant
                 if (atypeNewReturns == atypeOldReturns)
                     {
                     atypeNewReturns = atypeOldReturns.clone();
+                    fDiff           = true;
                     }
                 atypeNewReturns[i] = constNew;
-                fDiff = true;
                 }
             }
 
@@ -659,9 +641,9 @@ public class SignatureConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constName = (StringConstant) pool.register(m_constName);
-        registerTypes(pool, m_aconstParams);
-        registerTypes(pool, m_aconstReturns);
+        m_constName     = (StringConstant) pool.register(m_constName);
+        m_aconstParams  = (TypeConstant[]) registerConstants(pool, m_aconstParams);
+        m_aconstReturns = (TypeConstant[]) registerConstants(pool, m_aconstReturns);
         }
 
     @Override
@@ -737,20 +719,6 @@ public class SignatureConstant
             aconst[i] = (TypeConstant) pool.getConstant(an[i]);
             }
         return aconst;
-        }
-
-    /**
-     * Register each of the type constants in the passed array.
-     *
-     * @param pool    the ConstantPool
-     * @param aconst  an array of constants
-     */
-    protected static void registerTypes(ConstantPool pool, TypeConstant[] aconst)
-        {
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
-            aconst[i] = (TypeConstant) pool.register(aconst[i]);
-            }
         }
 
     /**

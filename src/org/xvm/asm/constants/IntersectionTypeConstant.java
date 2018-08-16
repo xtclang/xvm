@@ -4,12 +4,9 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
@@ -54,9 +51,9 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneRelational(TypeConstant type1, TypeConstant type2)
+    protected TypeConstant cloneRelational(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        return getConstantPool().ensureIntersectionTypeConstant(type1, type2);
+        return pool.ensureIntersectionTypeConstant(type1, type2);
         }
 
 
@@ -70,7 +67,7 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public TypeConstant removeNullable()
+    public TypeConstant removeNullable(ConstantPool pool)
         {
         if (!isNullable())
             {
@@ -80,17 +77,17 @@ public class IntersectionTypeConstant
         if (m_constType1.isOnlyNullable())
             {
             assert !m_constType2.isOnlyNullable();
-            return m_constType2.removeNullable();
+            return m_constType2.removeNullable(pool);
             }
 
         if (m_constType2.isOnlyNullable())
             {
             assert !m_constType1.isOnlyNullable();
-            return m_constType1.removeNullable();
+            return m_constType1.removeNullable(pool);
             }
 
-        return getConstantPool().ensureIntersectionTypeConstant(m_constType1.removeNullable(),
-                                                                m_constType2.removeNullable());
+        return pool.ensureIntersectionTypeConstant(m_constType1.removeNullable(pool),
+                                                   m_constType2.removeNullable(pool));
         }
 
     @Override
@@ -160,48 +157,48 @@ public class IntersectionTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        assert listRight.isEmpty();
-
         TypeConstant thisRight1 = getUnderlyingType();
         TypeConstant thisRight2 = getUnderlyingType2();
 
-        List<ContributionChain> chains1 = thisRight1.collectContributions(typeLeft, listRight, new ArrayList<>());
-        List<ContributionChain> chains2 = thisRight2.collectContributions(typeLeft, new ArrayList<>(), new ArrayList<>());
-
-        // both branches need to contribute
-        if (!chains1.isEmpty() && !chains2.isEmpty())
-            {
-            validateChains(chains1, thisRight1, typeLeft);
-            validateChains(chains2, thisRight2, typeLeft);
-
-            if (!chains1.isEmpty() && !chains2.isEmpty())
-                {
-                chains.addAll(chains1);
-                chains.addAll(chains2);
-                }
-            }
-
-        return chains;
+        Relation rel1 = thisRight1.calculateRelation(typeLeft);
+        Relation rel2 = thisRight2.calculateRelation(typeLeft);
+        return rel1.worseOf(rel2);
         }
 
     @Override
-    protected List<ContributionChain> collectClassContributions(
-            ClassStructure clzRight, List<TypeConstant> listRight, List<ContributionChain> chains)
+    protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
+        // A | B <= A' | B' must have been decomposed from the right
+        assert !(typeRight instanceof IntersectionTypeConstant);
+
         TypeConstant thisLeft1 = getUnderlyingType();
         TypeConstant thisLeft2 = getUnderlyingType2();
 
-        List<ContributionChain> chains1 = thisLeft1.collectClassContributions(clzRight, listRight, new ArrayList<>());
-        List<ContributionChain> chains2 = thisLeft2.collectClassContributions(clzRight, listRight, new ArrayList<>());
+        Relation rel1 = typeRight.calculateRelation(thisLeft1);
+        Relation rel2 = typeRight.calculateRelation(thisLeft2);
+        Relation rel  = rel1.bestOf(rel2);
+        if (rel == Relation.INCOMPATIBLE)
+            {
+            // to deal with a scenario of A | B <= M [+ X], where M is a mixin into A' | B'
+            // should be looked at holistically, without immediate decomposition;
+            // since a mixin is the only (for purposes of "isA" decision making) terminal type
+            // that allows an intersection as an "into" contribution
+            return typeRight.findIntersectionContribution(this);
+            }
+        return rel;
+        }
 
-        // any contribution would do
-        chains.addAll(chains1);
-        chains.addAll(chains2);
+    @Override
+    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+        {
+        TypeConstant thisRight1 = getUnderlyingType();
+        TypeConstant thisRight2 = getUnderlyingType2();
 
-        return chains;
+        Relation rel1 = thisRight1.findIntersectionContribution(typeLeft);
+        Relation rel2 = thisRight2.findIntersectionContribution(typeLeft);
+        return rel1.worseOf(rel2);
         }
 
     @Override

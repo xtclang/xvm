@@ -301,7 +301,8 @@ public class ArrayConstant
     protected void disassemble(DataInput in)
             throws IOException
         {
-        final ConstantPool pool = getConstantPool();
+        ConstantPool pool = getConstantPool();
+
         m_constType = (TypeConstant) pool.getConstant(m_iType);
 
         int[]      aiConst = m_aiVal;
@@ -318,12 +319,7 @@ public class ArrayConstant
     protected void registerConstants(ConstantPool pool)
         {
         m_constType = (TypeConstant) pool.register(m_constType);
-
-        Constant[] aconst = m_aconstVal;
-        for (int i = 0, c = aconst.length; i < c; ++i)
-            {
-            aconst[i] = pool.register(aconst[i]);
-            }
+        m_aconstVal = registerConstants(pool, m_aconstVal);
         }
 
     @Override

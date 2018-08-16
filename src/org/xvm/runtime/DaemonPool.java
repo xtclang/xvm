@@ -5,6 +5,7 @@ import java.util.List;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.util.Notifier;
 import org.xvm.util.SimpleNotifier;
 
@@ -115,11 +116,15 @@ public class DaemonPool
                         fNothingToDo = false;
                         try
                             {
+                            ConstantPool.setCurrentPool(frame.poolContext());
+
                             frame = context.execute(frame);
                             if (frame != null)
                                 {
                                 context.suspendFiber(frame);
                                 }
+
+                            ConstantPool.setCurrentPool(null);
                             }
                         catch (Throwable e)
                             {

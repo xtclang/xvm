@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -123,6 +124,12 @@ public class ConstantPool
                 constant = constant.adoptedBy(this);
                 }
 
+            // once all of the modules are linked together, we know all of the valid upstream
+            // constant pools that we are allowed to refer to from this constant pool, so this
+            // is an assertion to make sure that we don't accidentally refer to a constant pool
+            // that isn't in that set of valid pools
+            constant.checkValidPools(m_setValidPools, new int[] {0});
+
             // add the Constant
             constant.setPosition(m_listConst.size());
             m_listConst.add(constant);
@@ -161,6 +168,39 @@ public class ConstantPool
             }
 
         return constant;
+        }
+
+    /**
+     * Create a set or ConstantPools (upstream) that this ConstantPool is allowed to depend on.
+     */
+    public void buildValidPoolSet()
+        {
+        Set<ConstantPool> set = m_setValidPools;
+        if (set.isEmpty())
+            {
+            contributeToValidPoolSet(set);
+            }
+        }
+
+    /**
+     * Add ConstantPool references that this one is allowed to depend on to the specified set.
+     */
+    private void contributeToValidPoolSet(Set<ConstantPool> set)
+        {
+        if (set.add(this))
+            {
+            FileStructure file = getFileStructure();
+            for (String sModule : file.moduleNames())
+                {
+                ModuleStructure moduleFingerprint = file.getModule(sModule);
+                if (moduleFingerprint.isFingerprint())
+                    {
+                    ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
+                    assert moduleUpstream != null;
+                    moduleUpstream.getConstantPool().contributeToValidPoolSet(set);
+                    }
+                }
+            }
         }
 
     /**
@@ -2362,7 +2402,17 @@ public class ConstantPool
     @Override
     public String getDescription()
         {
-        return "size=" + m_listConst.size() + ", recurse-reg=" + m_fRecurseReg;
+        StringBuilder sb = new StringBuilder();
+        sb.append("module=")
+          .append(getFileStructure().getModuleName())
+          .append(", size=")
+          .append(m_listConst.size());
+
+        if (m_fRecurseReg)
+            {
+            sb.append(", recursive registration on");
+            }
+        return sb.toString();
         }
 
     @Override
@@ -2734,6 +2784,28 @@ public class ConstantPool
         }
 
 
+    // ----- out-of-context helpers  ---------------------------------------------------------------
+
+    /**
+     * @return a ContextPool associated with the current thread
+     */
+    public static ConstantPool getCurrentPool()
+        {
+        return s_tloPool.get();
+        }
+
+    /**
+     * Associate the specified ConstantPool with the current thread.
+     *
+     * @param pool  a ContextPool
+     */
+    public static void setCurrentPool(ConstantPool pool)
+        {
+        assert pool == null || getCurrentPool() == null;
+        s_tloPool.set(pool);
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -2755,6 +2827,12 @@ public class ConstantPool
      * Reverse lookup structure to find a particular constant by locator.
      */
     private final EnumMap<Format, HashMap<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+
+    /**
+     * Set of references to ConstantPool instances, defining the only ConstantPool references that
+     * may be referred to (directly or indirectly) from constants stored in this pool.
+     */
+    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap());
 
     private static final Set<String> KNOWN_CONSTS = new HashSet<>();
     static
@@ -2918,4 +2996,9 @@ public class ConstantPool
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
     private final ThreadLocal<List<TypeConstant>> m_tlolistDeferred = new ThreadLocal<>();
+
+    /**
+     * Thread local allowing to get the "current" ConstantPool without any context.
+     */
+    private static final ThreadLocal<ConstantPool> s_tloPool = new ThreadLocal<>();
     }

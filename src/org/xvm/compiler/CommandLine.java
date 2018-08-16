@@ -667,6 +667,11 @@ public class CommandLine
      */
     protected void resolveDependencies()
         {
+        for (Compiler compiler : modulesByName.values())
+            {
+            compiler.linkModules();
+            }
+
         int cTries = 0;
         do
             {

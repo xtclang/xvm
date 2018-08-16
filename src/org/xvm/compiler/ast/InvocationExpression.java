@@ -300,6 +300,8 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
+        ConstantPool pool = pool();
+
         List<Expression> aArgExprs = args;
         int              cArgs     = aArgExprs == null ? 0 : aArgExprs.size();
         TypeConstant[]   aArgTypes = new TypeConstant[cArgs];
@@ -376,7 +378,7 @@ public class InvocationExpression
 
                 if (m_fCall)
                     {
-                    return (m_fMethod ? constMethod.resolveAutoNarrowing(typeLeft)
+                    return (m_fMethod ? constMethod.resolveAutoNarrowing(pool, typeLeft)
                                       : constMethod.getSignature()
                            ).getRawReturns();
                     }
@@ -407,7 +409,7 @@ public class InvocationExpression
                 typeArg = argMethod.getType().resolveTypedefs();
                 }
 
-            assert typeArg.isA(pool().typeFunction());
+            assert typeArg.isA(pool.typeFunction());
 
             return m_fCall
                     ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
@@ -562,7 +564,7 @@ public class InvocationExpression
                         TypeConstant[] atypeResult;
                         if (m_fCall)
                             {
-                            atypeResult = (m_fMethod ? constMethod.resolveAutoNarrowing(typeLeft)
+                            atypeResult = (m_fMethod ? constMethod.resolveAutoNarrowing(pool, typeLeft)
                                                      : constMethod.getSignature()
                                           ).getRawReturns();
                             }
@@ -590,7 +592,7 @@ public class InvocationExpression
                         typeArg = argMethod.getType().resolveTypedefs();
                         }
 
-                    assert typeArg.isA(pool().typeFunction());
+                    assert typeArg.isA(pool.typeFunction());
                     TypeConstant[] atypeResult = m_fCall
                             ? typeArg.getParamTypesArray()[F_RETS].getParamTypesArray()
                             : new TypeConstant[] {typeArg};
@@ -1317,12 +1319,13 @@ public class InvocationExpression
             TypeConstant[] aArgs,
             ErrorListener  errs)
         {
+        ConstantPool pool = pool();
+
         // if a match is found, then that is the function to use, and it is an error if the
         // type of that variable is not a function or a reference that has an @Auto
         // conversion to a function. (Done.)
-        typeFn = typeFn.resolveTypedefs().resolveGenerics(ctx.getThisType());
+        typeFn = typeFn.resolveTypedefs().resolveGenerics(pool, ctx.getThisType());
 
-        ConstantPool   pool      = pool();
         boolean        fFunction = typeFn.isA(pool.typeFunction());
         MethodConstant idConvert = null;
         if (!fFunction)

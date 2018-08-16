@@ -519,7 +519,7 @@ public abstract class Component
      */
     public void addAnnotation(TypeConstant constType, Constant[] aconstParam)
         {
-        addAnnotation(new Annotation(constType, aconstParam));
+        addAnnotation(new Annotation(getConstantPool(), constType, aconstParam));
         }
 
     /**
@@ -2232,8 +2232,8 @@ public abstract class Component
             StringConstant constOldKey = entry.getKey();
             StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
 
-            TypeConstant       constOldVal = entry.getValue();
-            TypeConstant       constNewVal = (TypeConstant) pool.register(constOldVal);
+            TypeConstant   constOldVal = entry.getValue();
+            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey)
                 {
@@ -2366,25 +2366,12 @@ public abstract class Component
          * The constant is a ModuleConstant.
          */
         ImportEmbedded,
-        /**
-         * Synthetic (transient) composition indicating a potential duck-type relation.
-         * <p/>
-         * The constant is a ClassConstant.
-         */
-        MaybeDuckType,
-        /**
+            /**
          * Synthetic (transient) composition indicating an equivalency.
          * <p/>
          * The constant is a ClassConstant.
          */
         Equal,
-
-        /**
-         * Synthetic (transient) composition indicating an auto-narrowing.
-         * <p/>
-         * The constant is a ClassConstant.
-         */
-        AutoNarrowed,
         ;
 
         /**
@@ -2498,8 +2485,6 @@ public abstract class Component
                         }
 
                 case Equal:
-                case AutoNarrowed:
-                case MaybeDuckType:
                     break;
 
                 case Delegates:
@@ -2684,23 +2669,24 @@ public abstract class Component
         /**
          * Resolve this contribution type based on the specified resolver.
          *
+         * @param pool      the ConstantPool to place a potentially created new constant into
          * @param resolver  the resolver
          *
          * @return the transformed type or null if the conditional incorporation
          *         does not apply for the resulting type
          */
-        public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+        public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
             {
             TypeConstant typeContrib = getTypeConstant();
 
-            typeContrib = typeContrib.normalizeParameters();
+            typeContrib = typeContrib.normalizeParameters(pool);
             if (!typeContrib.isParamsSpecified() && !typeContrib.isRelationalType())
                 {
                 // non-parameterized contribution
                 return typeContrib;
                 }
 
-            typeContrib = typeContrib.resolveGenerics(resolver);
+            typeContrib = typeContrib.resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
                     checkConditionalIncorporate(typeContrib.getParamTypes()) ?
@@ -2711,20 +2697,21 @@ public abstract class Component
          * Transform the specified list of actual types for the specified class based on
          * this contribution definition.
          *
+         * @param pool        the ConstantPool to place a potentially created new constant into
          * @param clzParent   the parent class structure
          * @param listActual  the actual type list
          *
          * @return the transformed list of types or null if the conditional incorporation
          *         does not apply for the specified types
          */
-        public List<TypeConstant> transformActualTypes(ClassStructure clzParent,
+        public List<TypeConstant> transformActualTypes(ConstantPool pool, ClassStructure clzParent,
                                                        List<TypeConstant> listActual)
             {
             TypeConstant typeContrib = getTypeConstant();
 
             assert typeContrib.isSingleDefiningConstant();
 
-            typeContrib = typeContrib.normalizeParameters();
+            typeContrib = typeContrib.normalizeParameters(pool);
             if (!typeContrib.isParamsSpecified())
                 {
                 return Collections.emptyList();
@@ -2737,7 +2724,7 @@ public abstract class Component
 
             for (TypeConstant typeContribParam : aContribParam)
                 {
-                listContribActual.add(typeContribParam.resolveGenerics(resolver));
+                listContribActual.add(typeContribParam.resolveGenerics(pool, resolver));
                 }
 
             return getComposition() != Composition.Incorporates ||
@@ -2880,8 +2867,6 @@ public abstract class Component
                     break;
 
                 case Equal:
-                case AutoNarrowed:
-                case MaybeDuckType:
                     sb.append(m_composition.toString())
                       .append(' ');
                     break;
@@ -3007,133 +2992,6 @@ public abstract class Component
          * The name-to-type information for "incorporates conditional" constraints.
          */
         private ListMap<StringConstant, TypeConstant> m_mapParams;
-        }
-
-    /**
-     * A trivial data structure representing a chain of contributions.
-     */
-    public static class ContributionChain
-        {
-        public ContributionChain(Contribution contrib)
-            {
-            add(contrib);
-            }
-
-        /**
-         * Add a link to the chain.
-         *
-         * @param contrib  the Contribution that will become the new link at the end of the chain
-         */
-        public void add(Contribution contrib)
-            {
-            m_list.add(contrib);
-            }
-
-        /**
-         * Snip the last "link" off of the "chain". The first link in the chain cannot be snipped.
-         *
-         * @return the Contribution represented by the last link in the chain, or null if the chain
-         *         contains no Contributions
-         */
-        public Contribution snip()
-            {
-            int c = m_list.size();
-            return m_list.isEmpty()
-                    ? null
-                    : m_list.remove(c-1);
-            }
-
-        /**
-         * @return the first Contribution in the chain (the "origin" link), or null if the chain
-         *         contains no Contributions
-         */
-        public Contribution first()
-            {
-            return m_list.isEmpty()
-                    ? null
-                    : m_list.get(0);
-            }
-
-        /**
-         * @return the last Contribution added to the chain, or null if the chain contains no
-         *         Contributions
-         */
-        public Contribution last()
-            {
-            return m_list.isEmpty()
-                    ? null
-                    : m_list.get(m_list.size()-1);
-            }
-
-        /**
-         * @return the length of the chain; the number of Contributions in the chain
-         */
-        public int getLength()
-            {
-            return m_list.size();
-            }
-
-        /**
-         * @return the chain as a list
-         */
-        public List<Contribution> asList()
-            {
-            return m_list;
-            }
-
-        public boolean isWeakMatch()
-            {
-            return m_fWeakMatch;
-            }
-
-        public void markWeakMatch()
-            {
-            m_fWeakMatch = true;
-            }
-
-        /**
-         * Propagate the actual parameter types through this contribution chain.
-         *
-         * @param clzParent   the class structure for the chain's top
-         * @param listActual  the actual generic types for the chain's top
-         *
-         * @return  the actual types for the chain's origin or null if
-         *          the contribution didn't apply (conditional incorporation)
-         */
-        public List<TypeConstant> propagateActualTypes(ClassStructure clzParent, List<TypeConstant> listActual)
-            {
-            List<Contribution> listContrib = m_list;
-            assert !listContrib.isEmpty();
-
-            for (int c = listContrib.size(), i = c - 1; i >= 0; i--)
-                {
-                if (clzParent.getTypeParams().size() != listActual.size())
-                    {
-                    listActual = clzParent.normalizeParameters(listActual);
-                    }
-
-                Contribution contrib = listContrib.get(i);
-
-                listActual = contrib.transformActualTypes(clzParent, listActual);
-
-                if (listActual == null)
-                    {
-                    // conditional incorporation doesn't apply
-                    break;
-                    }
-
-                if (i > 0)
-                    {
-                    clzParent = (ClassStructure)
-                        contrib.getTypeConstant().getSingleUnderlyingClass(true).getComponent();
-                    }
-                }
-
-            return listActual;
-            }
-
-        private ArrayList<Contribution> m_list = new ArrayList<>(5);
-        private boolean m_fWeakMatch;
         }
 
 

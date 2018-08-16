@@ -183,6 +183,7 @@ public class NewExpression
 
         return clzParent instanceof ClassConstant && !clzParent.equals(clzTarget)
                 ? ((ClassConstant) clzParent).calculateAutoNarrowingConstant(clzTarget).getType()
+                    .adoptParameters(pool(), typeTarget);
                 : typeTarget;
         }
 

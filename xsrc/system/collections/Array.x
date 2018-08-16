@@ -222,11 +222,10 @@ class Array<ElementType>
         }
 
     @Override
-    Collection<ElementType> clone()
+    Array<ElementType> clone()
         {
         TODO;
         }
-
 
     static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {

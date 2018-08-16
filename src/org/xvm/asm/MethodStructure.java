@@ -684,8 +684,10 @@ public class MethodStructure
      */
     public boolean isInitializer(TypeConstant type, GenericTypeResolver resolver)
         {
+        ConstantPool pool = getConstantPool();
         return isPotentialInitializer() && (getReturn(0).getType().equals(type) || resolver != null &&
-                getReturn(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
+                getReturn(0).getType().resolveGenerics(pool, resolver).
+                    equals(type.resolveGenerics(pool, resolver)));
         }
 
     /**
@@ -715,8 +717,10 @@ public class MethodStructure
      */
     public boolean isGetter(TypeConstant type, GenericTypeResolver resolver)
         {
+        ConstantPool pool = getConstantPool();
         return isPotentialGetter() && (getReturn(0).getType().equals(type) || resolver != null &&
-                getReturn(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
+                getReturn(0).getType().resolveGenerics(pool, resolver).
+                    equals(type.resolveGenerics(pool, resolver)));
         }
 
     /**
@@ -746,8 +750,10 @@ public class MethodStructure
      */
     public boolean isSetter(TypeConstant type, GenericTypeResolver resolver)
         {
+        ConstantPool pool = getConstantPool();
         return isPotentialSetter() && (getParam(0).getType().equals(type) || resolver != null &&
-                    getParam(0).getType().resolveGenerics(resolver).equals(type.resolveGenerics(resolver)));
+                getParam(0).getType().resolveGenerics(pool, resolver).
+                    equals(type.resolveGenerics(pool, resolver)));
         }
 
     /**

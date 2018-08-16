@@ -199,7 +199,7 @@ public abstract class IdentityConstant
                 : null;
         }
 
-    public Object resolveNestedIdentity(GenericTypeResolver resolver)
+    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         return isNested()
                 ? new NestedIdentity(resolver)
@@ -289,19 +289,20 @@ public abstract class IdentityConstant
      * Apply the specified "relative" identity starting from this identity, and return the resulting
      * identity.
      *
-     * @param nid
+     * @param pool  the ConstantPool to place a potentially created new constant into
+     * @param nid   the id
      *
-     * @return
+     * @return a resulting nested identity
      */
-    public IdentityConstant appendNestedIdentity(Object nid)
+    public IdentityConstant appendNestedIdentity(ConstantPool pool, Object nid)
         {
         if (nid instanceof String)
             {
-            return getConstantPool().ensurePropertyConstant(this, (String) nid);
+            return pool.ensurePropertyConstant(this, (String) nid);
             }
         else if (nid instanceof SignatureConstant)
             {
-            return getConstantPool().ensureMethodConstant(this, (SignatureConstant) nid);
+            return pool.ensureMethodConstant(this, (SignatureConstant) nid);
             }
         else if (nid instanceof NestedIdentity)
             {
@@ -397,9 +398,10 @@ public abstract class IdentityConstant
 
         private Object resolve(Object element)
             {
+            ConstantPool pool = ConstantPool.getCurrentPool();
             // REVIEW: should we resolveAutoNarrowing()
             return m_resolver != null && element instanceof SignatureConstant
-                    ? ((SignatureConstant) element).resolveGenericTypes(m_resolver)
+                    ? ((SignatureConstant) element).resolveGenericTypes(pool, m_resolver)
                     : element;
             }
 

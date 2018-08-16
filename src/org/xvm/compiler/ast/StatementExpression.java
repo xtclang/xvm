@@ -99,7 +99,7 @@ public class StatementExpression
 
         TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
         m_listRetTypes = null;
-        return ListExpression.inferCommonType(aTypes);
+        return ListExpression.inferCommonType(pool(), aTypes);
         }
 
     @Override
@@ -131,7 +131,7 @@ public class StatementExpression
             m_listRetTypes = null;
 
             // calculate the resulting type
-            TypeConstant typeResult = ListExpression.inferCommonType(aTypes);
+            TypeConstant typeResult = ListExpression.inferCommonType(pool(), aTypes);
             return calcFit(ctx, typeResult, typeRequired);
             }
         }
@@ -159,7 +159,7 @@ public class StatementExpression
             {
             TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
             m_listRetTypes = null;
-            typeActual = ListExpression.inferCommonType(aTypes);
+            typeActual = ListExpression.inferCommonType(pool(), aTypes);
             }
         if (typeActual == null)
             {

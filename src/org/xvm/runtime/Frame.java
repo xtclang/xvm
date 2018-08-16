@@ -824,12 +824,22 @@ public class Frame
         }
 
     /**
-     * @return the ConstantPool to be used for this frame
+     * @return the ConstantPool to be used for this frame when reading constants referred to by the
+     *         compiled code
      */
-    public ConstantPool pool()
+    public ConstantPool poolCode()
         {
-        MethodStructure function = f_function;
-        return function == null ? f_context.f_pool : function.getConstantPool();
+        assert f_function != null;
+        return f_function.getConstantPool();
+        }
+
+    /**
+     * @return the ConstantPool to be used to create new constants that may be required by the
+     *         tun-time execution
+     */
+    public ConstantPool poolContext()
+        {
+        return f_context.f_pool;
         }
 
     /**
@@ -843,7 +853,7 @@ public class Frame
     public Constant getConstant(int iArg)
         {
         assert iArg <= Op.CONSTANT_OFFSET;
-        return pool().getConstant(Op.CONSTANT_OFFSET - iArg);
+        return poolCode().getConstant(Op.CONSTANT_OFFSET - iArg);
         }
 
     public int checkWaitingRegisters()
@@ -911,7 +921,7 @@ public class Frame
             ? getRegisterType(iArg)
             : iArg <= Op.CONSTANT_OFFSET
                 // "local property" type needs to be resolved
-                ? getConstant(iArg).getType().resolveGenerics(getGenericsResolver())
+                ? getConstant(iArg).getType().resolveGenerics(poolContext(), getGenericsResolver())
                 : getPredefinedArgumentType(iArg);
         }
 
@@ -938,7 +948,7 @@ public class Frame
 
         // "local property"
         TypeConstant typeProp = getConstant(iArg).getType();
-        return ensureClass(typeProp.resolveGenerics(getGenericsResolver()));
+        return ensureClass(typeProp.resolveGenerics(poolContext(), getGenericsResolver()));
         }
 
     public TypeComposition resolveClass(int iArg)
@@ -959,7 +969,7 @@ public class Frame
     public TypeConstant resolveType(int iArg)
         {
         TypeConstant type = (TypeConstant) getConstant(iArg); // must exist
-        return type.resolveGenerics(getGenericsResolver());
+        return type.resolveGenerics(poolContext(), getGenericsResolver());
         }
 
     /**
@@ -1617,14 +1627,14 @@ public class Frame
                 {
                 if (m_resolver == null)
                     {
-                    type = (TypeConstant) pool().getConstant(m_nTypeId);
+                    type = (TypeConstant) poolCode().getConstant(m_nTypeId);
                     }
                 else
                     {
                     type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
                     }
 
-                m_type = type = type.resolveGenerics(getGenericsResolver());
+                m_type = type = type.resolveGenerics(poolContext(), getGenericsResolver());
                 }
             return type;
             }
@@ -1748,7 +1758,7 @@ public class Frame
                     ? typeArray.getParamTypesArray()[iAuxId]
                     : typeArray.getParamTypesArray()[0];
                 }
-            return frame.pool().typeObject();
+            return frame.poolCode().typeObject();
             }
         };
 
@@ -1758,7 +1768,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
             TypeConstant typeEl = ARRAY_ELEMENT_RESOLVER.resolve(frame, nTargetReg, iAuxId);
-            ConstantPool pool = frame.pool();
+            ConstantPool pool = frame.poolContext();
             return pool.ensureParameterizedTypeConstant(pool.typeRef(), typeEl);
             }
         };
@@ -1770,15 +1780,15 @@ public class Frame
         @Override
         public TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId)
             {
-            ConstantPool pool = frame.pool();
+            ConstantPool pool = frame.poolContext();
 
             PropertyConstant constProperty = (PropertyConstant) pool.getConstant(iAuxId);
             TypeConstant typeTarget = frame.getLocalType(nTargetReg);
 
             return typeTarget.containsGenericParam(constProperty.getName())
                 ? pool.ensureParameterizedTypeConstant(pool.typeType(),
-                    constProperty.getFormalType().resolveGenerics(typeTarget))
-                : constProperty.getType().resolveGenerics(typeTarget);
+                    constProperty.getFormalType().resolveGenerics(pool, typeTarget))
+                : constProperty.getType().resolveGenerics(pool, typeTarget);
             }
         };
 

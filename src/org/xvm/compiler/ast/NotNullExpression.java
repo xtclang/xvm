@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -78,18 +79,19 @@ public class NotNullExpression
         TypeConstant type = expr.getImplicitType(ctx);
         return type == null
                 ? null
-                : type.removeNullable();
+                : type.removeNullable(pool());
         }
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        ConstantPool pool = pool();
         TypeFit      fit  = TypeFit.Fit;
         TypeConstant type = null;
 
         TypeConstant typeRequest = typeRequired == null
                 ? null
-                : typeRequired.ensureNullable();
+                : typeRequired.ensureNullable(pool);
         Expression   exprNew     = expr.validate(ctx, typeRequest, errs);
         if (exprNew == null)
             {
@@ -99,9 +101,9 @@ public class NotNullExpression
             {
             expr = exprNew;
             type = exprNew.getType();
-            if (pool().typeNull().isA(type))
+            if (pool.typeNull().isA(type))
                 {
-                type = type.removeNullable();
+                type = type.removeNullable(pool);
                 }
             else
                 {
@@ -123,13 +125,14 @@ public class NotNullExpression
     public Argument generateArgument(
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
+        ConstantPool pool     = pool();
         TypeConstant typeExpr = getType();
-        if (isConstant() || pool().typeNull().isA(typeExpr))
+        if (isConstant() || pool.typeNull().isA(typeExpr))
             {
             return super.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
             }
 
-        TypeConstant typeTemp = typeExpr.ensureNullable();
+        TypeConstant typeTemp = typeExpr.ensureNullable(pool);
         Assignable   var      = createTempVar(code, typeTemp, false, errs);
         generateAssignment(ctx, code, var, errs);
         return var.getRegister().narrowType(typeExpr);

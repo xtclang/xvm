@@ -7,16 +7,12 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.ContributionChain;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -151,7 +147,7 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = m_constType.getExplicitClassInto();
 
         return constResolved.isParamsSpecified()
-            ? constResolved.resolveGenerics(this)
+            ? constResolved.resolveGenerics(getConstantPool(), this)
             : constResolved;
         }
 
@@ -187,10 +183,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveGenerics(GenericTypeResolver resolver)
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveGenerics(resolver);
+        TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -200,7 +196,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(resolver);
+            TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, resolver);
             if (constParamOriginal != constParamResolved)
                 {
                 if (constParamResolved instanceof TupleElementsTypeConstant)
@@ -222,29 +218,28 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
-                // REVIEW GG this is wrong to use "this.getConstantPool()" ... the constant pool must come from the resolver!
-                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
         }
 
     @Override
-    public TypeConstant adoptParameters(TypeConstant[] atypeParams)
+    public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal = m_constType;
 
         assert constOriginal instanceof TerminalTypeConstant;
 
-        return constOriginal.adoptParameters(atypeParams == null ? m_atypeParams : atypeParams);
+        return constOriginal.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
         }
 
     @Override
-    public TypeConstant adoptParentTypeParameters()
+    public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
         TypeConstant constOriginal = m_constType;
 
         assert constOriginal instanceof TerminalTypeConstant;
 
-        TypeConstant constResolved = constOriginal.adoptParentTypeParameters();
+        TypeConstant constResolved = constOriginal.adoptParentTypeParameters(pool);
         if (constResolved == constOriginal)
             {
             return this;
@@ -263,10 +258,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
         boolean      fDiff         = constOriginal != constResolved;
 
         assert !constResolved.isParamsSpecified();
@@ -276,7 +271,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(typeTarget);
+            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, typeTarget);
             if (constParamOriginal != constParamResolved)
                 {
                 if (aconstResolved == aconstOriginal)
@@ -294,10 +289,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant inferAutoNarrowing(IdentityConstant constThisClass)
+    public TypeConstant inferAutoNarrowing(ConstantPool pool, IdentityConstant constThisClass)
         {
         TypeConstant constOriginal = m_constType;
-        TypeConstant constInferred = constOriginal.inferAutoNarrowing(constThisClass);
+        TypeConstant constInferred = constOriginal.inferAutoNarrowing(pool, constThisClass);
         boolean      fDiff         = constOriginal != constInferred;
 
         TypeConstant[] aconstOriginal = m_atypeParams;
@@ -305,7 +300,7 @@ public class ParameterizedTypeConstant
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
             {
             TypeConstant constParamOriginal = aconstOriginal[i];
-            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(constThisClass);
+            TypeConstant constParamInferred = constParamOriginal.inferAutoNarrowing(pool, constThisClass);
             if (constParamOriginal != constParamInferred)
                 {
                 if (aconstInferred == aconstOriginal)
@@ -323,268 +318,13 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected TypeConstant cloneSingle(TypeConstant type)
+    protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return getConstantPool().ensureParameterizedTypeConstant(type, m_atypeParams);
+        return pool.ensureParameterizedTypeConstant(type, m_atypeParams);
         }
 
 
     // ----- type comparison support --------------------------------------------------------------
-
-    @Override
-    public List<ContributionChain> collectContributions(
-            TypeConstant typeLeft, List<TypeConstant> listRight, List<ContributionChain> chains)
-        {
-        assert listRight.isEmpty();
-
-        listRight = getParamTypes();
-
-        chains = super.collectContributions(typeLeft, listRight, chains);
-        if (chains.isEmpty())
-            {
-            return chains;
-            }
-
-        nextChain:
-        for (Iterator<ContributionChain> iter = chains.iterator(); iter.hasNext();)
-            {
-            ContributionChain chain = iter.next();
-
-            switch (chain.first().getComposition())
-                {
-                case MaybeDuckType:
-                    // will be resolved later via interface method matching
-                    continue nextChain;
-
-                case AutoNarrowed:
-                    // will be resolved later explicitly
-                    assert chain.getLength() == 1;
-                    return chains;
-
-                case Equal:
-                    assert chain.getLength() == 1;
-                    break;
-
-                case Delegates:
-                case Implements:
-                    // Note: relational types split the contributions into multiple chains,
-                    //       so the chain can only be represented by a single defining constant
-                    assert chain.first().getTypeConstant().isSingleDefiningConstant();
-                case Extends:
-                case Incorporates:
-                case Into:
-                    {
-                    ClassStructure clzRight = (ClassStructure)
-                        getSingleUnderlyingClass(true).getComponent();
-
-                    listRight = chain.propagateActualTypes(clzRight, listRight);
-                    break;
-                    }
-
-                default:
-                    throw new IllegalStateException();
-                }
-
-            // by now we know that the "contrib" and "that" have equivalent terminal types
-            if (listRight == null)
-                {
-                // a conditional contribution didn't apply
-                iter.remove();
-                continue;
-                }
-
-            if (!typeLeft.isParamsSpecified())
-                {
-                // "that" type is not parameterized, nothing else to check here;
-                // assignment C = C<T> is always allowed
-                continue;
-                }
-
-            ClassStructure clzLeft = (ClassStructure)
-                typeLeft.getSingleUnderlyingClass(true).getComponent();
-
-            if (!validateAssignability(clzLeft, typeLeft.getParamTypes(),
-                    typeLeft.getAccess(), listRight, chain))
-                {
-                iter.remove();
-                }
-            }
-
-        return chains;
-        }
-
-    @Override
-    protected boolean validateContributionFrom(TypeConstant typeRight, Access accessLeft,
-                                               ContributionChain chain)
-        {
-        // we know that from the "right" perspective it is assignable to "left" (this)
-        if (typeRight.isParamsSpecified() || typeRight.isRelationalType())
-            {
-            // the type correspondence have already been checked
-            return true;
-            }
-
-        List<TypeConstant> listLeft  = getParamTypes();
-        List<TypeConstant> listRight = Collections.EMPTY_LIST;
-
-        // r-value is not parameterized, while l-value is; e.g.
-        //      C<T> = C
-        // which is only allowed for producing types
-        // and then all consuming methods (if any) must be "wrapped"
-
-        switch (chain.first().getComposition())
-            {
-            case MaybeDuckType:
-                // will be resolved later via interface method matching
-                return true;
-
-            case AutoNarrowed:
-                // will be resolved later explicitly
-                assert chain.getLength() == 1;
-                return true;
-
-            case Equal:
-                assert chain.getLength() == 1;
-                break;
-
-            case Delegates:
-            case Implements:
-                assert chain.first().getTypeConstant().isSingleDefiningConstant();
-
-            case Extends:
-            case Incorporates:
-            case Into:
-                {
-                ClassStructure clzRight = (ClassStructure)
-                    typeRight.getSingleUnderlyingClass(true).getComponent();
-
-                listRight = chain.propagateActualTypes(clzRight, listRight);
-                break;
-                }
-
-            default:
-                throw new IllegalStateException();
-            }
-
-        ClassStructure clzLeft = (ClassStructure)
-            this.getSingleUnderlyingClass(true).getComponent();
-
-        return validateAssignability(clzLeft, listLeft, accessLeft, listRight, chain);
-        }
-
-    /**
-     * Check if the specified class is assignable for the specified parameters.
-     *
-     *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
-     */
-    protected boolean validateAssignability(
-            ClassStructure clz, List<TypeConstant> listLeft, Access accessLeft,
-            List<TypeConstant> listRight, ContributionChain chain)
-        {
-        ConstantPool pool = getConstantPool();
-
-        int cParamsLeft  = listLeft.size();
-        int cParamsRight = listRight.size();
-        boolean fTuple   = clz.getIdentityConstant().equals(pool.clzTuple());
-
-        // we only have to check all the parameters on the left side,
-        // since if an assignment C<L1> = C<R1> is allowed, then
-        // an assignment C<L1> = C<R1, R2> is allowed for any R2
-
-        List<Map.Entry<StringConstant, TypeConstant>> listFormalEntries = clz.getTypeParamsAsList();
-
-        if (!fTuple)
-            {
-            if (Math.max(cParamsRight, cParamsLeft) > listFormalEntries.size())
-                {
-                // soft assert
-                System.err.println("Invalid number of arguments for " + clz.getName()
-                        + ": required=" + listFormalEntries.size()
-                        + ", provided " + Math.max(cParamsRight, cParamsLeft));
-                return false;
-                }
-            }
-
-        for (int i = 0; i < cParamsLeft; i++)
-            {
-            String sName;
-            TypeConstant typeCanonical;
-
-            if (fTuple)
-                {
-                sName         = null;
-                typeCanonical = pool.typeObject();
-                }
-            else
-                {
-                Map.Entry<StringConstant, TypeConstant> entryFormal = listFormalEntries.get(i);
-
-                sName         = entryFormal.getKey().getValue();
-                typeCanonical = entryFormal.getValue();
-                }
-
-            TypeConstant typeLeft = listLeft.get(i);
-            TypeConstant typeRight;
-            boolean fProduce;
-            boolean fLeftIsRight = false;
-
-            if (i < cParamsRight)
-                {
-                typeRight = listRight.get(i);
-
-                if (typeLeft.equals(typeRight))
-                    {
-                    continue;
-                    }
-
-                fProduce = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
-                fLeftIsRight = typeLeft.isA(typeRight);
-
-                if (fLeftIsRight && !fProduce)
-                    {
-                    // consumer only methods; rule 1.2.1
-                    continue;
-                    }
-                }
-            else
-                {
-                // assignment  C<L1, L2> = C<R1> is not the same as
-                //             C<L1, L2> = C<R1, [canonical type for R2]>;
-                // the former is only allowed if class C produces L2
-                // and then all L2 consuming methods (if any) must be "wrapped"
-                typeRight = typeCanonical;
-                fProduce  = fTuple || clz.producesFormalType(sName, accessLeft, listLeft);
-                }
-
-            if (typeRight.isA(typeLeft))
-                {
-                if (fLeftIsRight)
-                    {
-                    // both hold true:
-                    //   typeLeft.isA(typeRight), and
-                    //   typeRight.isA(typeLeft)
-                    // we take it that the types are congruent
-                    // (e,g. "this:class", but with different declaration levels)
-                    continue;
-                    }
-
-                if (fProduce)
-                    {
-                    // there are some producing methods; rule 1.2.2.2
-                    // consuming methods will need to be "wrapped"
-                    if (fTuple || clz.consumesFormalType(sName, accessLeft, listLeft))
-                        {
-                        chain.markWeakMatch();
-                        }
-                    continue;
-                    }
-                }
-
-            // didn't match; remove
-            return false;
-            }
-        return true;
-        }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
@@ -781,18 +521,8 @@ public class ParameterizedTypeConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constType = (TypeConstant) pool.register(m_constType);
-
-        TypeConstant[] atypeParams = m_atypeParams;
-        for (int i = 0, c = atypeParams.length; i < c; ++i)
-            {
-            TypeConstant constOld = atypeParams[i];
-            TypeConstant constNew = (TypeConstant) pool.register(constOld);
-            if (constNew != constOld)
-                {
-                atypeParams[i] = constNew;
-                }
-            }
+        m_constType   = (TypeConstant) pool.register(m_constType);
+        m_atypeParams = (TypeConstant[]) registerConstants(pool, m_atypeParams);
         }
 
     @Override

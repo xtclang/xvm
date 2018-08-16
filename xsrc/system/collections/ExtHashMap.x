@@ -368,7 +368,7 @@ class ExtHashMap<KeyType, ValueType>
         public/private Int keyhash;
 
         @Override
-        ValueType value;
+        public ValueType value;
 
         /**
          * HashedEntry objects form a linked list within a hash bucket.

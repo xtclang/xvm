@@ -82,6 +82,20 @@ public class PropertyConstant
         }
 
     /**
+     * Dereference a property constant that is used for a type parameter, to obtain the constraint
+     * type of that type parameter.
+     *
+     * @return the constraint type of the type parameter
+     */
+    public TypeConstant getReferredToType()
+        {
+        // the type of the property must be "Type<X>", so return X
+        TypeConstant typeProp = getType();
+        assert typeProp.isEcstasy("Type") && typeProp.isParamsSpecified();
+        return typeProp.getParamTypesArray()[0];
+        }
+
+    /**
      * @return true iff this property is a type parameter
      */
     public boolean isTypeParameter()
@@ -143,7 +157,7 @@ public class PropertyConstant
         }
 
     @Override
-    public Object resolveNestedIdentity(GenericTypeResolver resolver)
+    public Object resolveNestedIdentity(ConstantPool pool, GenericTypeResolver resolver)
         {
         // property can be identified with only a name, assuming it is not recursively nested
         return getNamespace().isNested()
