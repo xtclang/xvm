@@ -132,6 +132,9 @@ public class MethodConstant
         return fLambda;
         }
 
+    /**
+     * @return the lambda index, which serves as its identity (instead of the signature)
+     */
     public int getLambdaIndex()
         {
         return m_iLambda;

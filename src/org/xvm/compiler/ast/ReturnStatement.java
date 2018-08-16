@@ -108,7 +108,7 @@ public class ReturnStatement
                 {
                 // part of the purpose of validating this statement is to determine the return type
                 // of the enclosing LambdaExpression, so assume a single value of any type
-                typeRequired = pool().typeObject();
+                typeRequired = pool.typeObject();
                 }
 
             aRetTypes    = new TypeConstant[] {typeRequired};

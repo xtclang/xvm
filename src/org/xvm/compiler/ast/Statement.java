@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import java.util.Set;
 import java.util.TreeMap;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
@@ -22,8 +22,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
-
 import org.xvm.asm.Register.Assignment;
+
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -36,8 +36,8 @@ import org.xvm.asm.op.Label;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
-
 import org.xvm.compiler.Token.Id;
+
 import org.xvm.util.Severity;
 
 

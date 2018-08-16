@@ -328,7 +328,8 @@ public class Compiler
             {
             setStage(Stage.Emitted);
 
-            // do a final validation on the entire module structure
+            // "purge" the constant pool and do a final validation on the entire module structure
+            m_structFile.reregisterConstants(true);
             m_structFile.validate(m_errs);
             m_structFile.setErrorListener(null);
             }
@@ -762,7 +763,7 @@ public class Compiler
      */
     public static final String ANNOTATION_UNEXPECTED              = "COMPILER-35";
     /**
-     * Could not find name \"{0}\" within \"{1}\".
+     * Could not find name "{0}" within "{1}".
      */
     public static final String NAME_MISSING                       = "COMPILER-36";
     /**
