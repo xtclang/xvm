@@ -754,41 +754,6 @@ public abstract class Statement
             }
 
         /**
-         * Determine if the name refers to a readable reserved name.
-         * <p/>
-         * Note: This can only be used during the validate() stage.
-         *
-         * @param sName  the reserved name
-         *
-         * @return true iff the name refers to a reserved name, and the reserved name can be read
-         */
-        public boolean isReservedNameReadable(String sName)
-            {
-            return getOuterContext().isReservedNameReadable(sName);
-            }
-
-        /**
-         * Mark the specified reserved name as being read from within this context.
-         *
-         * @param sName  the reserved name
-         */
-        public final void markReservedNameRead(String sName)
-            {
-            markReservedNameRead(sName, null, null);
-            }
-
-        /**
-         * Mark the specified reserved name as being read from within this context.
-         *
-         * @param tokName  the reserved name as a token from the source code
-         * @param errs     the error list to log to
-         */
-        public final void markReservedNameRead(Token tokName, ErrorListener errs)
-            {
-            markReservedNameRead(tokName.getValueText(), tokName, errs);
-            }
-
-        /**
          * Mark the specified reserved name as being read from within this context.
          *
          * @param sName    the reserved name
@@ -1073,6 +1038,32 @@ public abstract class Statement
             return getOuterContext().resolveRegularName(name, errs);
             }
 
+        /**
+         * Determine if the specified name refers to a reserved name.
+         *
+         * @param sName  the name to test
+         *
+         * @return true iff the name is a reserved name
+         */
+        public boolean isReservedName(String sName)
+            {
+            switch (sName)
+                {
+                case "this":
+                case "this:target":
+                case "this:public":
+                case "this:protected":
+                case "this:private":
+                case "this:struct":
+                case "this:service":
+                case "super":
+                case "this:module":
+                    return true;
+
+                default:
+                    return false;
+                }
+            }
         /**
          * Resolve a reserved name to an argument.
          *
