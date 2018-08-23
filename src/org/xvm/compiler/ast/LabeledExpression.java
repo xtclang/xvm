@@ -135,6 +135,12 @@ public class LabeledExpression
         }
 
     @Override
+    public void requireAssignable(Context ctx, ErrorListener errs)
+        {
+        expr.requireAssignable(ctx, errs);
+        }
+
+    @Override
     public boolean isAborting()
         {
         return expr.isAborting();

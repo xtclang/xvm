@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
@@ -25,6 +26,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.MBind;
+import org.xvm.asm.op.MoveRef;
+import org.xvm.asm.op.MoveVar;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -499,15 +502,16 @@ public class LambdaExpression
         // the variables go out of scope in the method body that contains this lambda, so we need
         // to store off the data from the capture context, and defer the signature creation to the
         // generateAssignment() method
-        m_mapCapture     = ctxLambda.getCaptureMap();
-        m_setCaptureRsvd = ctxLambda.getReservedNameSet();
+        m_mapCapture      = ctxLambda.getCaptureMap();
+        m_mapRegisters    = ctxLambda.getRegisterMap();
+        m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
 
         TypeConstant   typeActual = buildFunctionType(pool, atypeParams, atypeRets);
         MethodConstant constVal   = null;
-        if (fit.isFit() && m_mapCapture.isEmpty() && m_setCaptureRsvd.isEmpty())
+        if (fit.isFit() && m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
             {
             // there are no bindings, so the lambda is a constant i.e. the function is the value
-            configureLambda(atypeParams, asParams, atypeRets);
+            configureLambda(atypeParams, asParams, null, atypeRets);
             constVal = m_lambda.getIdentityConstant();
             }
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
@@ -692,28 +696,21 @@ public class LambdaExpression
     protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs)
         {
         assert m_lambda != null && m_lambda.getIdentityConstant().isLambda();
-        assert m_mapCapture != null && m_setCaptureRsvd != null;
+        assert m_mapCapture != null;
 
         if (m_lambda.getIdentityConstant().isNascent())
             {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
-            TypeConstant   typeFn       = getType();
-            ConstantPool   pool         = ctx.pool();
-            TypeConstant[] atypeParams  = extractParamTypes(pool, typeFn);
-            TypeConstant[] atypeReturns = extractReturnTypes(pool, typeFn);
-            boolean        fBindTarget  = false;
-            boolean        fBindParams  = false;
-            Argument[]     aBindArgs    = NO_RVALUES;
-
-            if (!m_setCaptureRsvd.isEmpty())
-                {
-                // TODO
-                }
-            if (!m_mapCapture.isEmpty())
-                {
-                // TODO
-                }
+            TypeConstant   typeFn          = getType();
+            ConstantPool   pool            = ctx.pool();
+            TypeConstant[] atypeParams     = extractParamTypes(pool, typeFn);
+            String[]       asParams        = getParamNames();
+            TypeConstant[] atypeReturns    = extractReturnTypes(pool, typeFn);
+            boolean        fBindTarget     = m_fLambdaIsMethod;
+            boolean        fBindParams     = !m_mapCapture.isEmpty();
+            Argument[]     aBindArgs       = NO_RVALUES;
+            boolean[]      afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
             if (fBindTarget)
@@ -722,23 +719,86 @@ public class LambdaExpression
                 }
 
             // FBIND is indicated by >0 bind arguments being returned from this method
+            if (fBindParams)
+                {
+                Map<String, Boolean>  mapCapture     = m_mapCapture;
+                Map<String, Register> mapRegisters   = m_mapRegisters;
+                int                   cBindArgs      = mapCapture.size();
+                int                   cLambdaParams  = atypeParams.length;
+                int                   cAllParams     = cBindArgs + cLambdaParams;
+                TypeConstant[]        atypeAllParams = new TypeConstant[cAllParams];
+                String[]              asAllParams    = new String[cAllParams];
+                int                   iParam         = 0;
+
+                aBindArgs = new Argument[cBindArgs];
+                for (Entry<String, Boolean> entry : mapCapture.entrySet())
+                    {
+                    String       sCapture    = entry.getKey();
+                    Argument     argCapture  = mapRegisters.get(sCapture);
+                    TypeConstant typeCapture = argCapture.getType();
+                    boolean      fImplicitDeref = false;
+                    if (entry.getValue())
+                        {
+                        // it's a read/write capture; capture the Var
+                        typeCapture = pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
+                        Register regVal = (Register) argCapture;
+                        Register regVar = new Register(typeCapture, Op.A_STACK);
+                        code.add(new MoveVar(regVal, regVar));
+                        argCapture     = regVar;
+                        fImplicitDeref = true;
+                        }
+                    else if (argCapture instanceof Register && !((Register) argCapture).isEffectivelyFinal())
+                        {
+                        // it's a read-only capture, but since we were unable to prove that the
+                        // register was effectively final, we need to capture the Ref
+                        typeCapture = pool.ensureParameterizedTypeConstant(pool.typeRef(), typeCapture);
+                        Register regVal = (Register) argCapture;
+                        Register regVar = new Register(typeCapture, Op.A_STACK);
+                        code.add(new MoveRef(regVal, regVar));
+                        argCapture     = regVar;
+                        fImplicitDeref = true;
+                        }
+
+                    asAllParams   [iParam] = sCapture;
+                    atypeAllParams[iParam] = typeCapture;
+                    aBindArgs     [iParam] = argCapture;
+
+                    if (fImplicitDeref)
+                        {
+                        if (afImplicitDeref == null)
+                            {
+                            afImplicitDeref = new boolean[cBindArgs];
+                            }
+                        afImplicitDeref[iParam] = true;
+                        }
+
+                    ++iParam;
+                    }
+                assert iParam == cBindArgs;
+
+                System.arraycopy(atypeParams, 0, atypeAllParams, cBindArgs, cLambdaParams);
+                System.arraycopy(asParams   , 0, asAllParams   , cBindArgs, cLambdaParams);
+                atypeParams = atypeAllParams;
+                asParams    = asAllParams;
+                }
             m_aBindArgs = aBindArgs;
 
             // store the resulting signature for the lambda
-            configureLambda(atypeParams, getParamNames(), atypeReturns);
+            configureLambda(atypeParams, asParams, afImplicitDeref, atypeReturns);
             }
 
         return m_aBindArgs;
         }
 
     /**
-     * TODO
-     *
-     * @param atypeParams
-     * @param asParams
-     * @param atypeRets
+     * Configure the lambda's parameters, and fill in the lambda's signature information.
+     * @param atypeParams     the type of each lambda parameter
+     * @param asParams        the name of each lambda parameter
+     * @param afImpliedDeref  indicates whether each lambda parameter needs an implicit de-reference
+     * @param atypeRets       the type of each lambda return value
      */
-    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, TypeConstant[] atypeRets)
+    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams,
+            boolean[] afImpliedDeref, TypeConstant[] atypeRets)
         {
         MethodStructure   lambda = m_lambda;
         ConstantPool      pool   = lambda.getConstantPool();
@@ -756,6 +816,12 @@ public class LambdaExpression
                 }
 
             aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, false);
+
+            // check if the parameter needs to be marked as being an implicit de-reference
+            if (afImpliedDeref != null && afImpliedDeref.length > i && afImpliedDeref[i])
+                {
+                aparamParams[i].markImplicitDeref();
+                }
             }
 
         int cRets = atypeRets.length;
@@ -773,7 +839,9 @@ public class LambdaExpression
     static LambdaExpression exprDebug;
     void checkDebug()
         {
-        if (exprDebug == null && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy"))
+        if (exprDebug == null
+                && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy")
+                && toString().contains("return i;"))
             {
             exprDebug = this;
             }
@@ -953,7 +1021,6 @@ public class LambdaExpression
     protected StatementBlock   body;
     protected long             lStartPos;
 
-
     /**
      * The required type (stored here so that it can be picked up by other nodes below this node in
      * the AST).
@@ -974,9 +1041,13 @@ public class LambdaExpression
      */
     private transient Map<String, Boolean> m_mapCapture;
     /**
+     * A map from variable name to register, built by the lambda context.
+     */
+    private Map<String, Register>          m_mapRegisters;
+    /**
      * The reserved names captured by the lambda.
      */
-    private transient Set<String>          m_setCaptureRsvd;
+    private transient boolean              m_fLambdaIsMethod;
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */

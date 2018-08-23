@@ -595,6 +595,31 @@ public class NameExpression
                 }
             }
 
+        // TODO the "no deref" thing is very awkward here, because we still need to force a capture,
+        //      even if we are not de-referencing the variable (i.e. the markVarRead() API is wrong)
+        if (left == null && !isSuppressDeref() && getParent().isRValue(this))
+            {
+            switch (getMeaning())
+                {
+                case Reserved:
+                case Variable:
+                    ctx.markVarRead(getNameToken(), errs);
+                    break;
+
+                case Property:
+                    // "this" is used only if the property is not a constant
+                    if (!((PropertyConstant) argRaw).getComponent().isStatic())
+                        {
+                        // there is a read of the implicit "this" variable
+                        Token tokName = getNameToken();
+                        long  lPos    = tokName.getStartPosition();
+                        Token tokThis = new Token(lPos, lPos, Id.THIS);
+                        ctx.markVarRead(tokThis, errs);
+                        }
+                    break;
+                }
+            } // TODO else account for ".this"???
+
         return finishValidation(typeRequired, type, fit, constant, errs);
         }
 
@@ -626,7 +651,7 @@ public class NameExpression
             switch (getMeaning())
                 {
                 case Variable:
-                    return m_plan == Plan.None;
+                    return m_plan == Plan.None || m_plan == Plan.RegisterDeref;
 
                 case Property:
                     return m_plan == Plan.PropertyDeref;
@@ -634,6 +659,40 @@ public class NameExpression
             }
 
         return false;
+        }
+
+    @Override
+    public void requireAssignable(Context ctx, ErrorListener errs)
+        {
+        if (isAssignable())
+            {
+            if (left == null)
+                {
+                switch (getMeaning())
+                    {
+                    case Reserved:
+                    case Variable:
+                        ctx.markVarWrite(getNameToken(), errs);
+                        break;
+
+                    case Property:
+                        // "this" is used only if the property is not a constant
+                        if (!((PropertyConstant) resolveRawArgument(ctx, false, errs)).getComponent().isStatic())
+                            {
+                            // there is a read of the implicit "this" variable
+                            Token tokName = getNameToken();
+                            long  lPos    = tokName.getStartPosition();
+                            Token tokThis = new Token(lPos, lPos, Id.THIS);
+                            ctx.markVarWrite(tokThis, errs);
+                            }
+                        break;
+                    }
+                } // TODO else account for ".this"???
+            }
+        else
+            {
+            super.requireAssignable(ctx, errs);
+            }
         }
 
     @Override
@@ -784,6 +843,7 @@ public class NameExpression
 
             case PropertyRef:
             case RegisterRef:
+                // TODO
                 throw new UnsupportedOperationException("&" + getName());
 
             case TypeOfTypedef:
@@ -1140,18 +1200,28 @@ public class NameExpression
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                 }
 
-            Register reg = (Register) argRaw;
-            if (isSuppressDeref())
+            Register reg            = (Register) argRaw;
+            boolean  fSuppressDeref = isSuppressDeref();
+            boolean  fAutoDeref     = reg.isImplicitDeref();
+            if (fSuppressDeref & !fAutoDeref)
                 {
                 assert !reg.isPredefined();
                 m_plan = Plan.RegisterRef;
                 return pool.ensureParameterizedTypeConstant(
                         m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getType());
                 }
-
-            // use the register itself (the "T" column in the table above)
-            m_plan = Plan.None;
-            return argRaw.getType();
+            else if (!fSuppressDeref && fAutoDeref)
+                {
+                assert reg.getType().isA(pool().typeRef()) && reg.getType().getParamsCount() >= 1;
+                m_plan = Plan.RegisterDeref;
+                return reg.getType().getParamTypesArray()[0];
+                }
+            else
+                {
+                // use the register itself (the "T" column in the table above)
+                m_plan = Plan.None;
+                return reg.getType();
+                }
             }
 
         assert argRaw instanceof Constant;
@@ -1541,7 +1611,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, OuterThis, RegisterDeref, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.

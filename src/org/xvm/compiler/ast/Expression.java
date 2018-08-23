@@ -972,9 +972,10 @@ public abstract class Expression
     /**
      * Check to make sure that the expression can be assigned to, and log an error if it cannot.
      *
+     * @param ctx   the validation context
      * @param errs  the error list to log to
      */
-    public void requireAssignable(ErrorListener errs)
+    public void requireAssignable(Context ctx, ErrorListener errs)
         {
         if (!isAssignable())
             {

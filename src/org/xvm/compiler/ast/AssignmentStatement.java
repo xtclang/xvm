@@ -83,6 +83,12 @@ public class AssignmentStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean isRValue(Expression exprChild)
+        {
+        return exprChild != lvalue;
+        }
+
+    @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
         boolean fValid = true;
@@ -138,7 +144,11 @@ public class AssignmentStatement
                 {
                 cValues++;
                 }
-            if (cValues != rvalue.getValueCount())
+            if (cValues == rvalue.getValueCount())
+                {
+                lvalue.requireAssignable(ctx, errs);
+                }
+            else
                 {
                 rvalue.log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY,
                     cValues, rvalue.getValueCount());

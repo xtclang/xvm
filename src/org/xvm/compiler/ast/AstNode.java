@@ -343,6 +343,23 @@ public abstract class AstNode
         }
 
     /**
+     * Test if the specified child is used as an R-Value, which is something that yields a value.
+     * <p/>
+     * In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
+     * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
+     * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
+     * pre-/post-increment/-decrement operators.
+     *
+     * @param exprChild  an expression that is a child of this node
+     *
+     * @return true iff the child is used as an R-Value
+     */
+    protected boolean isRValue(Expression exprChild)
+        {
+        return true;
+        }
+
+    /**
      * Test if the specified child is allowed to short-circuit.
      *
      * @param exprChild  an expression that is a child of this node

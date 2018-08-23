@@ -291,6 +291,16 @@ public class Register
         }
 
     /**
+     * Treat the register as the value contained within the Ref that is held by the register; in
+     * other words, the register must be de-referenced on every access.
+     */
+    public void markImplicitDeref()
+        {
+        assert getType().isA(getType().getConstantPool().typeRef());
+        m_fImplicitDeref = true;
+        }
+
+    /**
      * Determine if this register is writable. This is equivalent to the Ref for the register
      * supporting the set() operation.
      *
@@ -301,9 +311,20 @@ public class Register
         return !m_fRO;
         }
 
+    /**
+     * @return true iff this register has been marked as being effectively final
+     */
     public boolean isEffectivelyFinal()
         {
         return m_fEffectivelyFinal;
+        }
+
+    /**
+     * @return true iff this register holds a Ref or Var that must be implicitly de-referenced
+     */
+    public boolean isImplicitDeref()
+        {
+        return m_fImplicitDeref;
         }
 
     /**
@@ -311,7 +332,7 @@ public class Register
      */
     public boolean isNormal()
         {
-        return !isPredefined() && isReadable() && isWritable() && !isDVar();
+        return !isPredefined() && isReadable() && isWritable() && !isDVar() && !isImplicitDeref();
         }
 
     @Override
@@ -487,6 +508,12 @@ public class Register
             }
 
         @Override
+        public boolean isImplicitDeref()
+            {
+            return Register.this.isImplicitDeref();
+            }
+
+        @Override
         public boolean isNormal()
             {
             return Register.this.isNormal();
@@ -632,4 +659,9 @@ public class Register
      * Effectively final flag.
      */
     private boolean m_fEffectivelyFinal;
+
+    /**
+     * Implicit dereference flag.
+     */
+    private boolean m_fImplicitDeref;
     }

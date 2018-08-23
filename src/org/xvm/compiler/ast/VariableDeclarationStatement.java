@@ -348,6 +348,12 @@ public class VariableDeclarationStatement
 
         ctx.registerVar(name, m_reg, errs);
 
+        if (m_scenario != Scenario.DeclareOnly)
+            {
+            // TODO this is not correct for conditional cases ("when true" vs. "when false")
+            ctx.markVarWrite(name, errs);
+            }
+
         return fValid ? this : null;
         }
 

@@ -13,7 +13,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
@@ -512,12 +511,6 @@ public abstract class Statement
                     }
                 }
 
-            Set<String> setRsvd = getReservedNameSet();
-            if (!setRsvd.isEmpty())
-                {
-                ctxOuter.ensureReservedNameSet().addAll(setRsvd);
-                }
-
             setOuterContext(null);
             ctxOuter.setInnerContext(null);
             return ctxOuter;
@@ -543,6 +536,7 @@ public abstract class Statement
                 }
 
             ensureNameMap().put(sName, reg);
+            ensureDefiniteAssignments().put(sName, Assignment.Unassigned);
             }
 
         /**
@@ -591,23 +585,24 @@ public abstract class Statement
             Context ctxOuter = getOuterContext();
             return ctxOuter == null
                     ? null
-                    : ctxOuter.getVar(name, errs);
+                    : ctxOuter.getVar(sName, name, errs);
             }
 
-        /**
-         * Determine if the specified variable name refers to a local variable (including
-         * parameters, but not including reserved names, for example).
-         *
-         * @param sName  the variable name
-         *
-         * @return true iff a variable of that name exists in this scope
-         */
-        public boolean isLocalVar(String sName)
-            {
-            Context ctxOuter = getOuterContext();
-            return getNameMap().containsKey(sName)
-                    || (ctxOuter != null && ctxOuter.isLocalVar(sName));
-            }
+        // TODO remove?
+//        /**
+//         * Determine if the specified variable name refers to a local variable (including
+//         * parameters, but not including reserved names, for example).
+//         *
+//         * @param sName  the variable name
+//         *
+//         * @return true iff a variable of that name exists in this scope
+//         */
+//        public boolean isLocalVar(String sName)
+//            {
+//            Context ctxOuter = getOuterContext();
+//            return getNameMap().containsKey(sName)
+//                    || (ctxOuter != null && ctxOuter.isLocalVar(sName));
+//            }
 
         /**
          * Determine if the specified variable name is already declared in the current scope.
@@ -640,7 +635,7 @@ public abstract class Statement
 
             // if the variable was declared in this scope, then we should have a variable assignment
             // status in this scope
-            assert !getNameMap().containsKey(sName);
+            assert !getNameMap().containsKey(sName) || isReservedName(sName);
 
             Context ctxOuter = getOuterContext();
             return ctxOuter == null
@@ -671,31 +666,25 @@ public abstract class Statement
          */
         public boolean isVarReadable(String sName)
             {
-            if (resolveReservedName(sName) != null)
+            Assignment asn = getVarAssignment(sName);
+            if (asn != null)
                 {
-                return isReservedNameReadable(sName);
+                return asn.isDefinitelyAssigned();
                 }
 
-            Assignment asn = getVarAssignment(sName);
-            assert asn != null;
-            return asn.isDefinitelyAssigned();
+            // the only other readable variable names are reserved variables, and we need to ask
+            // the containing context whether those are readable
+            return isReservedName(sName) && getOuterContext().isVarReadable(sName);
             }
 
         /**
          * Mark the specified variable as being read from within this context.
          *
-         * @param sName     the variable name
+         * @param sName  the variable name
          */
         public final void markVarRead(String sName)
             {
-            if (resolveReservedName(sName) == null)
-                {
-                markVarRead(sName, null, null);
-                }
-            else
-                {
-                markReservedNameRead(sName, null, null);
-                }
+            markVarRead(false, sName, null, null);
             }
 
         /**
@@ -706,81 +695,63 @@ public abstract class Statement
          */
         public final void markVarRead(Token tokName, ErrorListener errs)
             {
-            String sName = tokName.getValueText();
-            if (resolveReservedName(sName) == null)
-                {
-                markVarRead(sName, tokName, errs);
-                }
-            else
-                {
-                markReservedNameRead(sName, tokName, errs);
-                }
+            markVarRead(false, tokName.getValueText(), tokName, errs);
             }
+
+        // TODO need separate "mark var required"
 
         /**
          * Mark the specified variable as being read from within this context.
          *
+         * @param fNested  true if the variable is being read from within a context nested within
+         *                 this context
          * @param sName    the variable name
          * @param tokName  the variable name as a token from the source code (optional)
          * @param errs     the error list to log to (optional)
          */
-        protected void markVarRead(String sName, Token tokName, ErrorListener errs)
+        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
             {
-            if (resolveReservedName(sName) != null)
+            if (fNested || isVarReadable(sName))
                 {
-                markReservedNameRead(sName, tokName, errs);
-                return;
+                if (!isVarDeclaredInThisScope(sName))
+                    {
+                    // the idea here is that we will communicate up the chain of contexts that the
+                    // specified variable is being read, so that (for example) a capture can occur
+                    // if necessary
+                    Context ctxOuter = getOuterContext();
+                    if (ctxOuter != null)
+                        {
+                        ctxOuter.markVarRead(true, sName, tokName, errs);
+                        }
+                    }
                 }
-
-            // this method isn't supposed to be called for variable names that don't exist
-            assert getVar(sName) != null;
-
-            // a read of an unassigned value shouldn't occur
-            if (!isVarReadable(sName))
+            else
                 {
                 if (tokName != null && errs != null)
                     {
-                    tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
+                    if (isReservedName(sName))
+                        {
+                        tokName.log(errs, getSource(), Severity.ERROR,
+                                sName.startsWith("this") ? Compiler.NO_THIS     :
+                                sName.equals("super")    ? Compiler.NO_SUPER    :
+                                                           Compiler.NAME_MISSING, sName);
 
-                    // record that the variable is definitely assigned so that the error will
-                    // not be repeated unnecessarily within this context
-                    setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
+                        // add the variable to the reserved names that are allowed, to avoid
+                        // repeating the same error logging
+                        setVarAssignment(sName, Assignment.AssignedOnce);
+                        }
+                    else
+                        {
+                        tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
+
+                        // record that the variable is definitely assigned so that the error will
+                        // not be repeated unnecessarily within this context
+                        setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
+                        }
                     }
                 else
                     {
                     throw new IllegalStateException("illegal var read: name=" + sName);
-                    }
-                }
-            }
-
-        /**
-         * Mark the specified reserved name as being read from within this context.
-         *
-         * @param sName    the reserved name
-         * @param tokName  the reserved name as a token from the source code (optional)
-         * @param errs     the error list to log to (optional)
-         */
-        protected void markReservedNameRead(String sName, Token tokName, ErrorListener errs)
-            {
-            // store the name in the set of accessed names regardless, to avoid reporting the same
-            // error more than once
-            Set<String> setRsvd = ensureReservedNameSet();
-            if (!setRsvd.contains(sName))
-                {
-                if (isReservedNameReadable(sName))
-                    {
-                    setRsvd.add(sName);
-                    }
-                else if (tokName != null && errs != null)
-                    {
-                    tokName.log(errs, getSource(), Severity.ERROR,
-                            sName.startsWith("this") ? Compiler.NO_THIS     :
-                            sName.equals("super")    ? Compiler.NO_SUPER    :
-                                                       Compiler.NAME_MISSING, sName);
-
-                    // add the variable to the reserved names that are allowed, to avoid repeating
-                    // the same error logging
-                    setRsvd.add(sName);
                     }
                 }
             }
@@ -798,11 +769,13 @@ public abstract class Statement
             {
             if (isVarDeclaredInThisScope(sName))
                 {
-                // TODO a "val" cannot be written to once it is definitely assigned
-                // TODO add compiler option to disallow writes to parameters
-                return true;
+                Argument arg = getVar(sName);
+                return arg instanceof Register && ((Register) arg).isWritable();
                 }
 
+            // we don't actually explicitly check for reserved names, but this has the effect of
+            // reporting them as "not writable" by walking up to the root and then rejecting them
+            // (since no context will answer "yes" to this question along the way)
             Context ctxOuter = getOuterContext();
             return ctxOuter != null && ctxOuter.isVarWritable(sName);
             }
@@ -823,7 +796,7 @@ public abstract class Statement
          * @param tokName  the variable name as a token from the source code
          * @param errs     the error list to log to (optional)
          */
-        public final void markVarWrite(Token tokName, ErrorList errs)
+        public final void markVarWrite(Token tokName, ErrorListener errs)
             {
             markVarWrite(tokName.getValueText(), tokName, errs);
             }
@@ -880,32 +853,6 @@ public abstract class Statement
                 m_mapAssigned = map = new HashMap<>();
                 }
             return map;
-            }
-
-        /**
-         * @return a read-only map containing reserved names that are used; never null
-         */
-        protected Set<String> getReservedNameSet()
-            {
-            Set<String> set = m_setReservedNames;
-            return set == null
-                    ? Collections.EMPTY_SET
-                    : set;
-            }
-
-        /**
-         * Set of reserved names that are used.
-         *
-         * @return a readable and writable set of used reserved names; never null
-         */
-        protected Set<String> ensureReservedNameSet()
-            {
-            Set<String> set = m_setReservedNames;
-            if (set == null)
-                {
-                m_setReservedNames = set = new HashSet<>();
-                }
-            return set;
             }
 
         /**
@@ -1127,11 +1074,6 @@ public abstract class Statement
          * represents multiple assignments.
          */
         private Map<String, Assignment> m_mapAssigned;
-
-        /**
-         * The set of accessed reserved names within the context.
-         */
-        private Set<String> m_setReservedNames;
         }
 
     /**
@@ -1221,24 +1163,38 @@ public abstract class Statement
             }
 
         @Override
-        public boolean isVarReadable(String sName)
+        public Assignment getVarAssignment(String sName)
             {
-            if (isVarDeclaredInThisScope(sName))
+            if (isReservedName(sName))
                 {
-                return super.isVarReadable(sName);
+                return isReservedNameReadable(sName)
+                        ? Assignment.AssignedOnce
+                        : Assignment.Unassigned;
                 }
 
-            Argument arg = ensureNameMap().get(sName);
-            if (arg instanceof Register)
-                {
-                return ((Register) arg).isReadable();
-                }
-
-            // module constant (this:module) or property constant (local property access)
-            return arg instanceof IdentityConstant;
+            return super.getVarAssignment(sName);
             }
 
         @Override
+        public boolean isVarReadable(String sName)
+            {
+            Assignment asn = getVarAssignment(sName);
+            if (asn != null)
+                {
+                return asn.isDefinitelyAssigned();
+                }
+
+            // the only other readable variable names are reserved variables
+            return isReservedName(sName) && isReservedNameReadable(sName);
+            }
+
+        /**
+         * Determine if the specified reserved name is available (has a value) in this context.
+         *
+         * @param sName  the reserved name
+         *
+         * @return true iff the reserved name is accessiable in this context
+         */
         public boolean isReservedNameReadable(String sName)
             {
             checkValidating();
@@ -1247,13 +1203,13 @@ public abstract class Statement
                 {
                 case "this":
                 case "this:struct":
-                    return !isFunction();
+                    return isMethod() || isConstructor();
 
                 case "this:target":
                 case "this:public":
                 case "this:protected":
                 case "this:private":
-                    return !isFunction() && !isConstructor();
+                    return isMethod();
 
                 case "this:module":
                 case "this:service":
@@ -1331,8 +1287,6 @@ public abstract class Statement
         @Override
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
-            checkValidating();
-
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
             if (arg instanceof Register && ((Register) arg).isPredefined())
@@ -1408,6 +1362,7 @@ public abstract class Statement
         protected void initNameMap(Map<String, Argument> mapByName)
             {
             MethodStructure         method      = m_method;
+            boolean                 fLambda     = method.getIdentityConstant().isLambda();
             Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
@@ -1625,7 +1580,7 @@ public abstract class Statement
             extends Context
         {
         /**
-         * Construct a CaptureContext.
+         * Construct a Lambda CaptureContext.
          *
          * @param ctxOuter     the context within which this context is nested
          * @param body         the StatementBlock of the lambda / inner class, whose parent is one
@@ -1653,22 +1608,21 @@ public abstract class Statement
 
             // apply variable assignment information from the capture scope to the variables
             // captured from the outer scope
-            for (Entry<String, Boolean> entry : getCaptureMap().entrySet())
+            Map<String, Boolean>  mapCapture = getCaptureMap();
+            Map<String, Register> mapVars    = mapCapture.isEmpty() ? Collections.EMPTY_MAP : new HashMap<>();
+            for (Entry<String, Boolean> entry : mapCapture.entrySet())
                 {
+                String sName = entry.getKey();
                 if (entry.getValue())
                     {
-                    String     sName  = entry.getKey();
                     Assignment asnOld = ctxOuter.getVarAssignment(sName);
                     Assignment asnNew = asnOld.applyAssignmentFromCapture();
                     ctxOuter.setVarAssignment(sName, asnNew);
                     }
-                }
 
-            Set<String> setRsvd = getReservedNameSet();
-            if (!setRsvd.isEmpty())
-                {
-                ctxOuter.ensureReservedNameSet().addAll(setRsvd);
+                mapVars.put(sName, (Register) getVar(sName));
                 }
+            m_mapRegisters = mapVars;
 
             setOuterContext(null);
             ctxOuter.setInnerContext(null);
@@ -1676,50 +1630,64 @@ public abstract class Statement
             }
 
         @Override
-        protected void markVarRead(String sName, Token tokName, ErrorListener errs)
+        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
             {
-            if (isVarReadable(sName))
+            // variable capture will create a parameter (a variable in this scope) for the lambda,
+            // so if the variable isn't already declared in this scope but it exists in the outer
+            // scope, then capture it
+            final Context ctxOuter = getOuterContext();
+            if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))
                 {
-                Argument argRsvd = resolveReservedName(sName);
-                if (argRsvd == null)
+                boolean fCapture = true;
+                if (isReservedName(sName))
                     {
-                    Map<String, Boolean> map = ensureCaptureMap();
-                    if (!m_mapCapture.containsKey(sName))
+                    switch (sName)
                         {
-                        m_mapCapture.put(sName, false);
-                        }
-                    }
-                else if (argRsvd instanceof Register)
-                    {
-                    // TODO "this" means that the lambda must be a method
-                    switch (((Register) argRsvd).getIndex())
-                        {
-                        case Op.A_TARGET:
-                        case Op.A_PUBLIC:
-                        case Op.A_PROTECTED:
-                        case Op.A_PRIVATE:
-                            // the lambda has to be a method
-                            // TODO
+                        case "this":
+                        case "this:target":
+                        case "this:public":
+                        case "this:protected":
+                        case "this:private":
+                        case "this:struct":
+                            // the only names that we capture _without_ a capture parameter are the
+                            // various "this" references that refer to "this" object
+                            if (ctxOuter.isMethod())
+                                {
+                                m_fLambdaIsMethod = true;
+                                return;
+                                }
                             break;
 
-                        case Op.A_STRUCT:
-                            // this is a special problem TODO
-                            throw new UnsupportedOperationException();
+                        case "this:service":
+                        case "this:module":
+                            // these two are available globally, and are _not_ captured
+                            return;
+                        }
+                    }
 
-                        case Op.A_SUPER:
+                if (fCapture)
+                    {
+                    // capture the variable
+                    Map<String, Boolean> map = ensureCaptureMap();
+                    if (!map.containsKey(sName))
+                        {
+                        map.put(sName, false);
                         }
                     }
                 }
 
-            super.markVarRead(sName, tokName, errs);
+            super.markVarRead(fNested, sName, tokName, errs);
             }
 
         @Override
-        protected void markVarWrite(String sName, Token tokName,
-                ErrorListener errs)
+        protected void markVarWrite(String sName, Token tokName, ErrorListener errs)
             {
-            // TODO make sure that sName is in our list of "must be captured as Var<T>"
-            // TODO make sure that the variable is marked in the ***containing*** context as being written
+            // names in the name map but not in the capture map are lambda parameters; all other
+            // names become captures
+            if (!getNameMap().containsKey(sName) || getCaptureMap().containsKey(sName))
+                {
+                ensureCaptureMap().put(sName, true);
+                }
 
             super.markVarWrite(sName, tokName, errs);
             }
@@ -1733,6 +1701,24 @@ public abstract class Statement
             return m_mapCapture == null
                     ? Collections.EMPTY_MAP
                     : m_mapCapture;
+            }
+
+        /**
+         * @return a map of variable name to Register for all of variables to capture, built by
+         *         exitScope()
+         */
+        public Map<String, Register> getRegisterMap()
+            {
+            return m_mapRegisters;
+            }
+
+        /**
+         * @return true iff the lambda is built as a method (and not as a function) in order to
+         *         capture the "this" object reference
+         */
+        public boolean isLambdaMethod()
+            {
+            return m_fLambdaIsMethod;
             }
 
         @Override
@@ -1774,9 +1760,24 @@ public abstract class Statement
             }
 
         private TypeConstant[] m_atypeParams;
-        private String[] m_asParams;
+        private String[]       m_asParams;
 
+        /**
+         * A map from variable name to read/write flag (false is read-only, true is read-write) for
+         * the variables to capture.
+         */
         private Map<String, Boolean> m_mapCapture;
+
+        /**
+         * A map from variable name to register, built by exitScope().
+         */
+        private Map<String, Register> m_mapRegisters;
+
+        /**
+         * Set to true iff the lambda function has to actually be a method so that it can capture
+         * "this".
+         */
+        private boolean m_fLambdaIsMethod;
         }
 
 

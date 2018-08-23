@@ -61,6 +61,13 @@ public class MultipleDeclarationStatement
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    @Override
+    protected boolean isRValue(Expression exprChild)
+        {
+        // TODO
+        throw new UnsupportedOperationException("TODO");
+        }
+
     // TODO
 
 

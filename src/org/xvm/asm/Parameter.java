@@ -212,6 +212,25 @@ public class Parameter
         m_constDefault = constDefault;
         }
 
+    /**
+     * Mark the parameter as representing a Ref/Var that must be implicitly de-referenced on every
+     * access.
+     */
+    public void markImplicitDeref()
+        {
+        assert getType().isA(getConstantPool().typeRef());
+        m_fImplicitDeref = true;
+        }
+
+    /**
+     * @return true iff the parameter has been marked as requiring an implicit de-reference on every
+     *         access
+     */
+    public boolean isImplicitDeref()
+        {
+        return m_fImplicitDeref;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -382,4 +401,10 @@ public class Parameter
      * True if there will be a default value, even if it is not yet known.
      */
     private transient boolean m_fHasDefault;
+
+    /**
+     * True if the parameter represents a Ref or Var that must be implicitly de-referenced on each
+     * access.
+     */
+    private transient boolean m_fImplicitDeref;
     }

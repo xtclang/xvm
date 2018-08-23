@@ -1545,3 +1545,26 @@ else
     }               // commit 2b
                     // commit 1 (forces join of 1.t+1.f
 
+// read/write
+
+x = 1;              // write to x
+foo(x);             // implicit read from "this", read from x
+x = p;              // write to x, implicit read from "this" (property p)
+x.y.z = 4;          // read from x (it's always the left-most that is the one marked for read or write)
+p = 4;              // implicit read from "this" (property p)
+x.foo();            // read from x
+++x;                // read from x, write to x
+
+// so basically, any use of a variable name (typically a name that has no "left") means "read" by default
+// - the use of a name without a left can mean "this", which means that the "this" is read by default
+// - the use of "&" before the name suppresses any read or write marking
+
+// mark read:
+// - NameExpression
+// - InvocationExpression (if there is no "left left", and the left needs an implicit "this")
+
+// the only things that "mark write" on a variable:
+// - SequentialAssignExpression - pre- and post- increment and decrement
+// - AssignmentStatement
+// - VariableDeclarationStatement
+// - MultipleDeclarationStatement

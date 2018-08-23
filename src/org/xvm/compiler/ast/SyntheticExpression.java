@@ -3,7 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.ast.Statement.Context;
 
 
 /**
@@ -69,6 +72,12 @@ public abstract class SyntheticExpression
     public boolean isAssignable()
         {
         return expr.isAssignable();
+        }
+
+    @Override
+    public void requireAssignable(Context ctx, ErrorListener errs)
+        {
+        expr.requireAssignable(ctx, errs);
         }
 
     @Override
