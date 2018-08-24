@@ -86,7 +86,8 @@ public class MoveCast
         TypeConstant typeFrom = hValue.getType();
         TypeConstant typeTo   = frame.getArgumentType(m_nToValue);
 
-        return typeFrom.isA(typeTo)
+        // typeTo could be null if the "to" argument is on the stack
+        return typeTo == null || typeFrom.isA(typeTo)
             ? frame.assignValue(m_nToValue, hValue)
             : frame.raiseException(xException.makeHandle(typeFrom.getValueString())); // TODO: use a stock exception
         }
