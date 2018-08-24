@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParentClassConstant;
@@ -34,12 +35,13 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
+import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.P_Get;
-
 import org.xvm.asm.op.P_Ref;
 import org.xvm.asm.op.P_Var;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -816,6 +818,21 @@ public class NameExpression
                     default:
                         throw new IllegalStateException("arg=" + argRaw);
                     }
+
+            case RegisterDeref:
+                {
+                TypeConstant   typeRef     = argRaw.getType();
+                ConstantPool   pool        = pool();
+                assert typeRef.isA(pool.typeRef()) && typeRef.getParamsCount() >= 1;
+                TypeConstant   typeDeref   = typeRef.getParamTypesArray()[0];
+                TypeConstant   typeOfDeref = pool.ensureParameterizedTypeConstant(pool.typeType(), typeDeref);
+                MethodConstant idGet       = typeRef.ensureTypeInfo(errs).findCallable(
+                        "get", true, false, new TypeConstant[] {typeOfDeref}, null, null);
+                Assignable     LValDeref   = createTempVar(code, typeDeref, fUsedOnce, errs);
+                Argument       argDeref    = LValDeref.getLocalArgument();
+                code.add(new Invoke_01(argRaw, idGet, argDeref));
+                return argDeref;
+                }
 
             case PropertyDeref:
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties

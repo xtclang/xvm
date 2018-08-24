@@ -119,6 +119,10 @@ public class Container
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
+        // REVIEW GG
+        ConstantPool poolPrev = ConstantPool.getCurrentPool();
+        ConstantPool.setCurrentPool(f_moduleRoot.getConstantPool());
+
         try
             {
             TypeInfo infoApp = m_app.getCanonicalType().ensureTypeInfo();
@@ -166,8 +170,13 @@ public class Container
             }
         catch (Exception e)
             {
+            // REVIEW GG
+            ConstantPool.setCurrentPool(poolPrev);
             throw new RuntimeException("failed to run: " + f_constModule, e);
             }
+
+        // REVIEW GG
+        ConstantPool.setCurrentPool(poolPrev);
         }
 
     protected void initResources()

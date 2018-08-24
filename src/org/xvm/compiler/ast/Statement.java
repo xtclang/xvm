@@ -1362,7 +1362,6 @@ public abstract class Statement
         protected void initNameMap(Map<String, Argument> mapByName)
             {
             MethodStructure         method      = m_method;
-            boolean                 fLambda     = method.getIdentityConstant().isLambda();
             Map<String, Assignment> mapAssigned = ensureDefiniteAssignments();
             for (int i = 0, c = method.getParamCount(); i < c; ++i)
                 {
@@ -1370,7 +1369,13 @@ public abstract class Statement
                 String    sName = param.getName();
                 if (!sName.equals(Id.IGNORED.TEXT))
                     {
-                    mapByName.put(sName, new Register(param.getType(), i));
+                    Register reg = new Register(param.getType(), i);
+                    if (param.isImplicitDeref())
+                        {
+                        reg.markImplicitDeref();
+                        }
+
+                    mapByName.put(sName, reg);
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
@@ -1606,14 +1611,46 @@ public abstract class Statement
             Context ctxOuter = getOuterContext();
             assert ctxOuter.getInnerContext() == this;
 
+            Map<String, Assignment> mapInner = getDefiniteAssignments();
+            if (!mapInner.isEmpty())
+                {
+                Map<String, Assignment> mapOuter = ctxOuter.ensureDefiniteAssignments();
+                for (Entry<String, Assignment> entry : mapInner.entrySet())
+                    {
+                    String     sName = entry.getKey();
+                    Assignment asn   = entry.getValue();
+                    if (isVarDeclaredInThisScope(sName))
+                        {
+                        // we have unwound all the way back to the declaration context for the
+                        // variable at this point, so if it is proven to be effectively final, that
+                        // information is stored off, for example so that captures can make use of
+                        // that knowledge (i.e. capturing a value of type T, instead of a Ref<T>)
+                        if (asn.isEffectivelyFinal())
+                            {
+                            ((Register) getVar(sName)).markEffectivelyFinal();
+                            }
+                        }
+                    else
+                        {
+                        mapOuter.put(sName, asn);
+                        }
+                    }
+                }
+
             // apply variable assignment information from the capture scope to the variables
             // captured from the outer scope
-            Map<String, Boolean>  mapCapture = getCaptureMap();
+            Map<String, Boolean>  mapCapture = ensureCaptureMap();
             Map<String, Register> mapVars    = mapCapture.isEmpty() ? Collections.EMPTY_MAP : new HashMap<>();
             for (Entry<String, Boolean> entry : mapCapture.entrySet())
                 {
                 String sName = entry.getKey();
-                if (entry.getValue())
+                boolean fMod = entry.getValue();
+                if (!fMod && getDefiniteAssignments().containsKey(sName))
+                    {
+                    entry.setValue(true);
+                    fMod = true;
+                    }
+                if (fMod)
                     {
                     Assignment asnOld = ctxOuter.getVarAssignment(sName);
                     Assignment asnNew = asnOld.applyAssignmentFromCapture();

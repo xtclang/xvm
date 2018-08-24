@@ -801,7 +801,7 @@ public class LambdaExpression
             boolean[] afImpliedDeref, TypeConstant[] atypeRets)
         {
         MethodStructure   lambda = m_lambda;
-        ConstantPool      pool   = lambda.getConstantPool();
+        ConstantPool      pool   = pool();
         SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeRets);
 
         int cParams = atypeParams.length;
@@ -841,7 +841,7 @@ public class LambdaExpression
         {
         if (exprDebug == null
                 && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy")
-                && toString().contains("foo()"))
+                && getParent().getComponent().getName().equals("testRefCapture"))
             {
             exprDebug = this;
             }

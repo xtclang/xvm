@@ -167,7 +167,7 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
         {
-        ConstantPool pool = f_struct.getConstantPool();
+        ConstantPool pool = ConstantPool.getCurrentPool(); // REVIEW GG - was: f_struct.getConstantPool();
 
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), typeParams).normalizeParameters(pool);

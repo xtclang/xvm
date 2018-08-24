@@ -69,6 +69,7 @@ module TestLambda.xqiz.it
             {
             function Int() f = () -> ++i;
             console.println("result=" + f());
+            // console.println("i=" + i + ", result=" + f() + ", i=" + i);
             }
         }
 

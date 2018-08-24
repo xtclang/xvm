@@ -442,7 +442,8 @@ public class TerminalTypeConstant
         ClassStructure struct = (ClassStructure) idClz.getComponent();
         if (struct.isParameterized())
             {
-            return getConstantPool().ensureParameterizedTypeConstant(this,
+            // REVIEW GG
+            return ConstantPool.getCurrentPool().ensureParameterizedTypeConstant(this,
                 struct.normalizeParameters(pool, atypeParams));
             }
 
