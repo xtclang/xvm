@@ -16,6 +16,15 @@ import org.xvm.util.Handy;
 public class MethodBody
     {
     /**
+     * Construct a MethodBody for a lambda.
+     */
+    public MethodBody(MethodConstant id)
+        {
+        this(id, id.getSignature(), Implementation.Explicit, null);
+        assert id.isLambda();
+        }
+
+    /**
      * Construct an implicit, abstract, native, or normal byte-code method body.
      *
      * @param id    the method constant that this body represents

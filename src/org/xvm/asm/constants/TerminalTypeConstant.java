@@ -765,7 +765,7 @@ public class TerminalTypeConstant
             case Package:
             case NativeClass:
                 // these are always class types (not interface types)
-                return fAllowInterface;
+                return true;
 
             case Class:
                 {
@@ -775,11 +775,11 @@ public class TerminalTypeConstant
 
             case Property:
                 return ((PropertyConstant) constant).getReferredToType().
-                    isSingleUnderlyingClass(fAllowInterface);
+                        isSingleUnderlyingClass(fAllowInterface);
 
             case TypeParameter:
                 return ((TypeParameterConstant) constant).getReferredToType().
-                    isSingleUnderlyingClass(fAllowInterface);
+                        isSingleUnderlyingClass(fAllowInterface);
 
             case ThisClass:
             case ParentClass:

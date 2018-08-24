@@ -7,6 +7,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.MethodConstant;
 
 
 /**
@@ -23,6 +24,13 @@ public class CallChain
         assert aMethods != null;
 
         f_aMethods = aMethods;
+        }
+
+    // Construct a CallChain for a lambda
+    public CallChain(MethodConstant idLambda)
+        {
+        assert idLambda.isLambda();
+        f_aMethods = new MethodBody[] {new MethodBody(idLambda)};
         }
 
     public int getDepth()

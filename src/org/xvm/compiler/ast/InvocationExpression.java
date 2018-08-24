@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -54,6 +55,7 @@ import org.xvm.asm.op.MBind;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Statement.Context;
 
 import org.xvm.util.Severity;
@@ -538,6 +540,32 @@ public class InvocationExpression
                 Argument argMethod = resolveName(ctx, true, typeLeft, aRedundant, aArgs, errs);
                 if (argMethod != null)
                     {
+                    // when the expression is a name, and it is NOT a ".name", then we have to
+                    // record the dependency on the name, whether it's a variable (or an instance
+                    // property on the implicit "this") that contains a function reference, or (most
+                    // commonly) an implicit "this" for a method call
+                    if (exprLeft == null)
+                        {
+                        if (argMethod instanceof Register)
+                            {
+                            ctx.markVarRead(exprName.getNameToken(), errs);
+                            }
+                        else if (argMethod instanceof MethodConstant || argMethod instanceof PropertyConstant)
+                            {
+                            // note that the identity for a "capped" method has no body, so assume
+                            // that a missing body indicates virtual, and hence requires "this"
+                            Component component = ((IdentityConstant) argMethod).getComponent();
+                            if (component == null || !component.isStatic())
+                                {
+                                // there is a read of the implicit "this" variable
+                                Token tokName = exprName.getNameToken();
+                                long  lPos    = tokName.getStartPosition();
+                                Token tokThis = new Token(lPos, lPos, Id.THIS);
+                                ctx.markVarRead(tokThis, errs);
+                                }
+                            }
+                        }
+
                     // handle conversion to function
                     if (m_idConvert != null)
                         {
@@ -574,6 +602,7 @@ public class InvocationExpression
                             }
                         // TODO if (m_fBindTarget) { // bind; result will be a Function
 
+// TODO if exprLeft == null then markVarRead on "this"
                         return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
                         }
 
@@ -585,11 +614,13 @@ public class InvocationExpression
                         {
                         PropertyConstant idProp = (PropertyConstant) argMethod;
                         typeArg = typeLeft.ensureTypeInfo().findProperty(idProp).getType();
+// TODO if exprLeft == null then markVarRead on "this"
                         }
                     else
                         {
                         assert argMethod instanceof Register;
                         typeArg = argMethod.getType().resolveTypedefs();
+// TODO markVarRead on argMethod
                         }
 
                     assert typeArg.isA(pool.typeFunction());

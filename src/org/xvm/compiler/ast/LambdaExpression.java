@@ -841,7 +841,7 @@ public class LambdaExpression
         {
         if (exprDebug == null
                 && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy")
-                && toString().contains("return i;"))
+                && toString().contains("foo()"))
             {
             exprDebug = this;
             }

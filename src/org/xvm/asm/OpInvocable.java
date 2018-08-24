@@ -142,7 +142,9 @@ public abstract class OpInvocable extends Op
 
         TypeComposition clazz = m_clazz = hTarget.getComposition();
 
-        return m_chain = clazz.getMethodCallChain(constMethod.getSignature());
+        return m_chain = constMethod.isLambda()
+                ? new CallChain(constMethod)
+                : clazz.getMethodCallChain(constMethod.getSignature());
         }
 
     // check if a register for the return value needs to be allocated
