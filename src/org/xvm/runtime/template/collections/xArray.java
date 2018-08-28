@@ -2,6 +2,7 @@ package org.xvm.runtime.template.collections;
 
 
 import java.util.Arrays;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -23,6 +24,7 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xFunction.FunctionHandle;
 import org.xvm.runtime.template.xInt64;
 
@@ -69,6 +71,25 @@ public class xArray
         return false;
         }
 
+    @Override
+    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+        {
+        assert typeParams.length == 1;
+
+        TypeConstant typeEl = typeParams[0];
+
+        // TODO: we should obtain the array template from the element's template
+        if (typeEl.equals(pool.typeInt()))
+            {
+            TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
+                pool.typeArray(), typeEl);
+            return xIntArray.INSTANCE.ensureClass(typeInception, typeInception);
+            }
+
+        return super.ensureParameterizedClass(pool, typeParams);
+        }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         ArrayConstant constArray = (ArrayConstant) constant;
@@ -76,24 +97,15 @@ public class xArray
         assert constArray.getFormat() == Constant.Format.Array;
 
         TypeConstant typeArray = constArray.getType();
-
         TypeConstant typeEl = typeArray.getGenericParamType("ElementType");
-        ClassTemplate templateEl = f_templates.getTemplate(typeEl);
+        TypeComposition clzArray = ensureParameterizedClass(frame.poolContext(), typeEl);
 
         Constant[] aconst = constArray.getValue();
         int cSize = aconst.length;
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cSize, Op.A_STACK);
-        if (nR == Op.R_EXCEPTION)
-            {
-            throw new IllegalStateException("Failed to create an array " + typeArray);
-            }
-
-        ArrayHandle hArray = (ArrayHandle) frame.popStack();
-        IndexSupport templateArray = (IndexSupport) hArray.getOpSupport();
-
         ObjectHeap heap = frame.f_context.f_heapGlobal;
 
+        ObjectHandle[] ahValue = new ObjectHandle[cSize];
         for (int i = 0; i < cSize; i++)
             {
             ObjectHandle hValue = heap.ensureConstHandle(frame, aconst[i]);
@@ -102,16 +114,43 @@ public class xArray
                 {
                 throw new UnsupportedOperationException("not implemented"); // TODO
                 }
-
-            if (templateArray.assignArrayValue(frame, hArray, i, hValue) == Op.R_EXCEPTION)
-                {
-                return Op.R_EXCEPTION;
-                }
+            ahValue[i] = hValue;
             }
+
+        xArray template = (xArray) clzArray.getTemplate();
+        ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahValue);
 
         hArray.makeImmutable();
         frame.pushStack(hArray);
         return Op.R_NEXT;
+        }
+
+    /**
+     * Create a one dimensional array for a specified class and content.
+     *
+     * @param frame      the current frame
+     * @param clzArray   the class of the array
+     * @param ahArg      the array elements
+     *
+     * @return the array handle
+     */
+    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, ObjectHandle[] ahArg)
+        {
+        return new GenericArrayHandle(clzArray, ahArg);
+        }
+
+    /**
+     * Create a one dimensional array for a specified type and arity.
+     *
+     * @param frame      the current frame
+     * @param clzArray   the class of the array
+     * @param cCapacity  the array size
+     *
+     * @return the array handle
+     */
+    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, long cCapacity)
+        {
+        return new GenericArrayHandle(clzArray, cCapacity);
         }
 
     @Override
@@ -119,18 +158,16 @@ public class xArray
                          TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
         {
         // this is a native constructor
-        TypeConstant typeEl = clzArray.getActualParamType("ElementType");
-        ClassTemplate templateEl = f_templates.getTemplate(typeEl);
-
         long cCapacity = ((JavaLong) ahVar[0]).getValue();
 
-        int nR = templateEl.createArrayStruct(frame, typeEl, cCapacity, Op.A_STACK);
-        if (nR == Op.R_EXCEPTION)
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
             {
-            return Op.R_EXCEPTION;
+            return frame.raiseException(
+                xException.makeHandle("Invalid array size: " + cCapacity));
             }
 
-        ArrayHandle hArray = (ArrayHandle) frame.popStack();
+        xArray      template = (xArray) clzArray.getTemplate();
+        ArrayHandle hArray   = template.createArrayHandle(frame, clzArray, cCapacity);
 
         if (cCapacity > 0)
             {
@@ -402,21 +439,6 @@ public class xArray
         }
 
     // ----- ObjectHandle helpers -----
-
-    public static GenericArrayHandle makeHandle(long cCapacity)
-        {
-        return new GenericArrayHandle(INSTANCE.getCanonicalClass(), cCapacity);
-        }
-
-    public static GenericArrayHandle makeHandle(TypeConstant typeEl, ObjectHandle[] ahValue)
-        {
-        return new GenericArrayHandle(INSTANCE.ensureParameterizedClass(typeEl), ahValue); // ElementType
-        }
-
-    public static GenericArrayHandle makeHandle(TypeConstant typeEl, long cCapacity)
-        {
-        return new GenericArrayHandle(INSTANCE.ensureParameterizedClass(typeEl), cCapacity);
-        }
 
     // generic array handle
     public static class GenericArrayHandle

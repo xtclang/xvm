@@ -46,7 +46,6 @@ import org.xvm.runtime.template.xString;
 import org.xvm.runtime.template.xVar;
 
 import org.xvm.runtime.template.collections.xTuple;
-import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -163,12 +162,11 @@ public abstract class ClassTemplate
     /**
      * Produce a TypeComposition for this template using the actual types for formal parameters.
      *
-     * Note: all passed actual types should be fully resolved (no formal parameters)
+     * @param pool        the ConstantPool to place a potentially created new type into
+     * @param typeParams  the type parameters
      */
-    public TypeComposition ensureParameterizedClass(TypeConstant... typeParams)
+    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
         {
-        ConstantPool pool = ConstantPool.getCurrentPool(); // REVIEW GG - was: f_struct.getConstantPool();
-
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), typeParams).normalizeParameters(pool);
 
@@ -1148,38 +1146,11 @@ public abstract class ClassTemplate
         TypeConstant typeReferent = constProp.getType().resolveGenerics(pool, hTarget.getType());
 
         TypeComposition clzRef = fRO
-            ? xRef.INSTANCE.ensureParameterizedClass(typeReferent)
-            : xVar.INSTANCE.ensureParameterizedClass(typeReferent);
+            ? xRef.INSTANCE.ensureParameterizedClass(pool, typeReferent)
+            : xVar.INSTANCE.ensureParameterizedClass(pool, typeReferent);
 
         return new RefHandle(clzRef, hThis, sPropName);
         }
-
-
-    // ----- array operations ----------------------------------------------------------------------
-
-    /**
-     * Create a one dimensional array for a specified type and arity.
-     *
-     * @param frame      the current frame
-     * @param typeEl     the array type
-     * @param cCapacity  the array size
-     * @param iReturn    the register id to place the array handle into
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION},
-     *         or {@link Op#R_BLOCK} values
-     */
-    public int createArrayStruct(Frame frame, TypeConstant typeEl,
-                                 long cCapacity, int iReturn)
-        {
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(
-                xException.makeHandle("Invalid array size: " + cCapacity));
-            }
-
-        return frame.assignValue(iReturn, xArray.makeHandle(typeEl, cCapacity));
-        }
-
 
     // ----- support for equality and comparison ---------------------------------------------------
 

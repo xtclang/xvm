@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -71,12 +72,13 @@ public class xType
             {
             ahMethods[i] = xMethod.makeHandle(aMethods[i], typeTarget);
             }
-        return xArray.makeHandle(xMethod.TYPE, ahMethods);
+        return null; // TODO xArray.createArrayHandle(frame, xMethod.TYPE, ahMethods);
         }
 
     public static TypeHandle makeHandle(TypeConstant type)
         {
-        return new TypeHandle(INSTANCE.ensureParameterizedClass(type));
+        ConstantPool pool = ConstantPool.getCurrentPool();
+        return new TypeHandle(INSTANCE.ensureParameterizedClass(pool, type));
         }
 
     // most of the time the TypeHandle is based on the underlying DataType (Type);

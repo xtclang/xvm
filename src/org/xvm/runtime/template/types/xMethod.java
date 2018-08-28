@@ -97,12 +97,12 @@ public class xMethod
 
     public static MethodHandle makeHandle(MethodStructure method, TypeConstant typeTarget)
         {
-        ConstantPool pool = method.getConstantPool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
 
         TypeConstant typeRet = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getReturnTypes());
         TypeConstant typeArg = pool.ensureParameterizedTypeConstant(pool.typeTuple(), method.getParamTypes());
 
-        TypeComposition clzMethod = INSTANCE.ensureParameterizedClass(typeTarget, typeRet, typeArg);
+        TypeComposition clzMethod = INSTANCE.ensureParameterizedClass(pool, typeTarget, typeRet, typeArg);
 
         return new MethodHandle(clzMethod, method);
         }

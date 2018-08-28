@@ -44,7 +44,7 @@ public interface IndexSupport
     int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue);
 
     /**
-     * @return the [declared] element type at the specifed index
+     * @return the [declared] element type at the specified index
      */
      TypeConstant getElementType(ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException;
@@ -72,8 +72,8 @@ public interface IndexSupport
             TypeConstant typeEl = getElementType(hTarget, lIndex);
 
             TypeComposition clzRef = fReadOnly
-                ? xRef.INSTANCE.ensureParameterizedClass(typeEl)
-                : xVar.INSTANCE.ensureParameterizedClass(typeEl);
+                ? xRef.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl)
+                : xVar.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

@@ -7,15 +7,12 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.Op;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
-
-import org.xvm.runtime.template.collections.xIntArray;
 
 
 /**
@@ -69,18 +66,6 @@ public class xUncheckedInt64
             }
 
         return super.createConstHandle(frame, constant);
-        }
-
-    @Override
-    public int createArrayStruct(Frame frame, TypeConstant typeEl, long cCapacity, int iReturn)
-        {
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(xException.makeHandle("Invalid array size: " + cCapacity));
-            }
-
-        // TODO: use xUncheckedIntArray
-        return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
         }
 
     @Override
