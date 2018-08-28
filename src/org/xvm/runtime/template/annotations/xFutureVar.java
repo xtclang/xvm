@@ -278,7 +278,7 @@ public class xFutureVar
             }
 
         @Override
-        public boolean isAssigned(Frame frame)
+        public boolean isAssigned()
             {
             return m_future != null && m_future.isDone();
             }

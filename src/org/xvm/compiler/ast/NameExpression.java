@@ -685,7 +685,7 @@ public class NameExpression
                             Token tokName = getNameToken();
                             long  lPos    = tokName.getStartPosition();
                             Token tokThis = new Token(lPos, lPos, Id.THIS);
-                            ctx.markVarWrite(tokThis, errs);
+                            ctx.markVarRead(tokThis, errs);
                             }
                         break;
                     }

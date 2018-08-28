@@ -436,14 +436,13 @@ public class TerminalTypeConstant
         if (isTuple())
             {
             // copy parameters as is
-            return getConstantPool().ensureParameterizedTypeConstant(this, atypeParams);
+            return pool.ensureParameterizedTypeConstant(this, atypeParams);
             }
 
         ClassStructure struct = (ClassStructure) idClz.getComponent();
         if (struct.isParameterized())
             {
-            // REVIEW GG
-            return ConstantPool.getCurrentPool().ensureParameterizedTypeConstant(this,
+            return pool.ensureParameterizedTypeConstant(this,
                 struct.normalizeParameters(pool, atypeParams));
             }
 
@@ -493,7 +492,7 @@ public class TerminalTypeConstant
         ClassStructure parent = struct.getInstanceParent();
 
         return parent != null && parent.isParameterized()
-            ? getConstantPool().ensureParameterizedTypeConstant(this,
+            ? pool.ensureParameterizedTypeConstant(this,
                     parent.getFormalType().getParamTypesArray())
             : this;
         }
@@ -554,7 +553,7 @@ public class TerminalTypeConstant
             ClassConstant constClass = (ClassConstant) constId;
             if (constThisClass.equals(constClass))
                 {
-                return getConstantPool().ensureThisTypeConstant(constClass, null);
+                return pool.ensureThisTypeConstant(constClass, null);
                 }
 
             // TODO: parents & children

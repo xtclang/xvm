@@ -75,6 +75,10 @@ public class Container
         else
             {
             ModuleStructure module = repository.loadModule(sAppName);
+            if (module == null)
+                {
+                throw new IllegalStateException("Module \"" + sAppName + "\" cannot not loaded");
+                }
             f_constModule = module.getIdentityConstant();
             }
         }

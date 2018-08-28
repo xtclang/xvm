@@ -82,7 +82,7 @@ public class MoveRef
                 }
 
             // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+            frame.assignRef(m_nToValue, hRef);
             }
         else
             {
@@ -96,7 +96,7 @@ public class MoveRef
                 }
 
             // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+            frame.assignRef(m_nToValue, hRef);
             }
 
         return iPC + 1;

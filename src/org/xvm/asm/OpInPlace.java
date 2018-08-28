@@ -138,6 +138,12 @@ public abstract class OpInPlace
                         frame.introduceVarCopy(m_nRetValue, nTarget);
                         }
 
+                    // REVIEW CP - the following is a short-term compensation
+                    if (hTarget instanceof RefHandle)
+                        {
+                        // this must be a capture promotion from a register to a Var
+                        return completeWithVar(frame, (RefHandle) hTarget);
+                        }
                     return completeWithRegister(frame, hTarget);
                     }
                 }

@@ -1386,9 +1386,22 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return a call chain for the specified op or null if non exists
+     * @return a call chain for the specified op; throw if non exists
      */
     protected CallChain getOpChain(ObjectHandle hTarget, String sOp, int cArgs)
+        {
+        CallChain chain = findOpChain(hTarget, sOp, cArgs);
+        if (chain == null)
+            {
+            throw new IllegalStateException("Invalid op for " + this);
+            }
+        return chain;
+        }
+
+    /**
+     * @return a call chain for the specified op or null if non exists
+     */
+    protected CallChain findOpChain(ObjectHandle hTarget, String sOp, int cArgs)
         {
         TypeComposition clz = hTarget.getComposition();
         TypeInfo info = clz.getType().ensureTypeInfo();
@@ -1403,8 +1416,7 @@ public abstract class ClassTemplate
                 return chain;
                 }
             }
-
-        throw new IllegalStateException("Invalid op for " + this);
+        return null;
         }
 
 

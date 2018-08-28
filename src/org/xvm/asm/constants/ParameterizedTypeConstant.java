@@ -254,7 +254,7 @@ public class ParameterizedTypeConstant
         System.arraycopy(aconstParent, 0, aconstResolved, 0, aconstParent.length);
         System.arraycopy(aconstThis,   0, aconstResolved, aconstParent.length, aconstThis.length);
 
-        return getConstantPool().ensureParameterizedTypeConstant(constOriginal, aconstResolved);
+        return pool.ensureParameterizedTypeConstant(constOriginal, aconstResolved);
         }
 
     @Override
@@ -284,7 +284,7 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
-                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
         }
 
@@ -313,7 +313,7 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
-            ? getConstantPool().ensureParameterizedTypeConstant(constInferred, aconstInferred)
+            ? pool.ensureParameterizedTypeConstant(constInferred, aconstInferred)
             : this;
         }
 

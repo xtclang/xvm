@@ -88,7 +88,7 @@ public class xRef
                     }
 
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
 
             case "refName":
                 String sName = hRef.getName();
@@ -202,7 +202,7 @@ public class xRef
         switch (method.getName())
             {
             case "peek":
-                if (hRef.isAssigned(frame))
+                if (hRef.isAssigned())
                     {
                     switch (get(frame, hRef, Op.A_STACK))
                         {
@@ -279,8 +279,13 @@ public class xRef
                 }
 
             default:
-                assert hTarget.m_iVar >= 0;
-                return frame.assignValue(iReturn, frame.f_ahVar[hTarget.m_iVar]);
+                {
+                Frame frameRef = hTarget.m_frame;
+                int   nVar     = hTarget.m_iVar;
+                assert frameRef != null && nVar >= 0;
+
+                return frame.assignValue(iReturn, frameRef.f_ahVar[nVar]);
+                }
             }
         }
 
@@ -364,6 +369,7 @@ public class xRef
         {
         protected ObjectHandle m_hDelegate; // can point to another Ref for the same referent
         protected String m_sName;
+        protected Frame m_frame;
         protected int m_iVar;
 
         // indicates that the m_hDelegate field holds a referent
@@ -433,16 +439,16 @@ public class xRef
             if (refCurrent == null)
                 {
                 infoSrc.setRef(this);
+                m_frame = frame;
+                m_iVar = iVar;
                 }
             else
                 {
                 // there is already a Ref pointing to that register;
                 // simply link to it
-                iVar = REF_REF;
+                m_iVar = REF_REF;
                 m_hDelegate = refCurrent;
                 }
-
-            m_iVar = iVar;
             }
 
         public ObjectHandle getValue()
@@ -465,7 +471,7 @@ public class xRef
             return (VarSupport) getOpSupport();
             }
 
-        public boolean isAssigned(Frame frame)
+        public boolean isAssigned()
             {
             switch (m_iVar)
                 {
@@ -474,10 +480,10 @@ public class xRef
                     return m_hDelegate != null;
 
                 case REF_REF:
-                    return ((RefHandle) m_hDelegate).isAssigned(frame);
+                    return ((RefHandle) m_hDelegate).isAssigned();
 
-                default: // assertion m_iVar >= 0
-                    return frame.f_ahVar[m_iVar] != null;
+                default: // assertion m_frame != null && m_iVar >= 0
+                    return m_frame.f_ahVar[m_iVar] != null;
                 }
             }
 
@@ -492,6 +498,7 @@ public class xRef
             assert m_iVar >= 0;
 
             m_hDelegate = frame.f_ahVar[m_iVar];
+            m_frame = null;
             m_iVar = REF_REFERENT;
             }
 

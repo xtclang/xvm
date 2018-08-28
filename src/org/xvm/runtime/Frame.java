@@ -546,7 +546,7 @@ public class Frame
                             }
 
                         FutureHandle hFuture = (FutureHandle) hValue;
-                        if (hFuture.isAssigned(this))
+                        if (hFuture.isAssigned())
                             {
                             return hFuture.getVarSupport().get(this, hFuture, nVar);
                             }
@@ -628,7 +628,7 @@ public class Frame
             default:
                 try
                     {
-                    // the return value must point to a local property
+                    // the value must point to a local property
                     PropertyConstant constProperty = (PropertyConstant) getConstant(nVar);
                     ObjectHandle hThis = getThis();
 
@@ -640,6 +640,28 @@ public class Frame
                     {
                     throw new IllegalArgumentException("nVar=" + nVar);
                     }
+            }
+        }
+
+    // assign a specified register on this frame to the specified Ref
+    // return R_NEXT
+    public int assignRef(int nVar, RefHandle hRef)
+        {
+        assert hRef != null;
+
+        switch (nVar)
+            {
+            case Op.A_IGNORE:
+                return Op.R_NEXT;
+
+            case Op.A_STACK:
+                pushStack(hRef);
+                return Op.R_NEXT;
+
+            default:
+                assert nVar >= 0;
+                f_ahVar[nVar] = hRef;
+                return Op.R_NEXT;
             }
         }
 
@@ -866,7 +888,7 @@ public class Frame
             if (info != null && info.isWaiting())
                 {
                 FutureHandle hFuture = (FutureHandle) f_ahVar[i];
-                if (hFuture.isAssigned(this))
+                if (hFuture.isAssigned())
                     {
                     info.stopWaiting();
 
@@ -1288,7 +1310,7 @@ public class Frame
         {
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
-        return hRef.isAssigned(this) ? hRef : null;
+        return hRef.isAssigned() ? hRef : null;
         }
 
     /**
