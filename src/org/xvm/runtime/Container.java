@@ -174,13 +174,12 @@ public class Container
             }
         catch (Exception e)
             {
-            // REVIEW GG
-            ConstantPool.setCurrentPool(poolPrev);
             throw new RuntimeException("failed to run: " + f_constModule, e);
             }
-
-        // REVIEW GG
-        ConstantPool.setCurrentPool(poolPrev);
+        finally
+            {
+            ConstantPool.setCurrentPool(poolPrev);
+            }
         }
 
     protected void initResources()

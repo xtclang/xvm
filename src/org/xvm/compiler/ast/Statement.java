@@ -3,10 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.xvm.asm.ClassStructure;
@@ -23,7 +21,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 import org.xvm.asm.Register.Assignment;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -840,7 +837,7 @@ public abstract class Statement
 
         /**
          * Map from variable name to Boolean value or null, with null indicating "not assigned
-         * within this context", false indicating "assgined once within this context", and true
+         * within this context", false indicating "assigned once within this context", and true
          * indicating "assigned multiple times within this context".
          *
          * @return a readable and writable set of definitely assigned variable names; never null
@@ -1064,7 +1061,7 @@ public abstract class Statement
         private Context m_ctxInner;
 
         /**
-         * Each variable declared within this hcontext is registered in this map, along with the
+         * Each variable declared within this context is registered in this map, along with the
          * Argument that represents it.
          */
         private Map<String, Argument> m_mapByName;
@@ -1193,7 +1190,7 @@ public abstract class Statement
          *
          * @param sName  the reserved name
          *
-         * @return true iff the reserved name is accessiable in this context
+         * @return true iff the reserved name is accessible in this context
          */
         public boolean isReservedNameReadable(String sName)
             {
@@ -1577,7 +1574,7 @@ public abstract class Statement
 
 
     /**
-     * A context for compiling lamba expressions, anonymous inner classes, and any other construct
+     * A context for compiling lambda expressions, anonymous inner classes, and any other construct
      * that "captures" variables from an outer context.
      * <p/>TODO capture "this" (makes a lambda into a method, or a static anonymous class into an instance anonymous class)
      */

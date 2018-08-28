@@ -238,7 +238,7 @@ public class LambdaExpression
         //   (via generateAssignment), it was then able to use that VAS information to build the
         //   final signature for the lambda, including all of the parameters necessary to capture
         //   the various variables in the lexical scope of the lambda declaration that needed to be
-        //   passed to the lambda (via fbind)
+        //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
         if (catchUpChildren(errs))
@@ -592,7 +592,7 @@ public class LambdaExpression
 
     /**
      * @return the required type, which is the specified required type during validation, or the
-     *         actual type once the expression is validatd
+     *         actual type once the expression is validated
      */
     TypeConstant getRequiredType()
         {

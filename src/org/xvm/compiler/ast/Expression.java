@@ -1071,8 +1071,7 @@ public abstract class Expression
      * language construct that requires a constant, but for a natural reason does not have the
      * ability to represent that value at compile time. For example, this could be useful for
      * switch cases of types that are known to be constant, but whose object values will not be
-     * assemblable until runtime.ssion a constant, but it can provide its constant values to the
-     * compiler.
+     * assemblable until runtime.
      *
      * @return true iff the Expression is a constant value that is representable by a constant in
      *         the ConstantPool or by a single constant value at runtime
@@ -1086,7 +1085,7 @@ public abstract class Expression
      * (Post-validation) Determine if the expression needs to generate code, even if if it yields
      * a compile-time constant value.
      *
-     * @return true iff the expression needs to produce code, regardless of wheterh it yields a
+     * @return true iff the expression needs to produce code, regardless of whether it yields a
      *         compile-time constant value
      */
     public boolean hasSideEffects()
@@ -2729,7 +2728,7 @@ public abstract class Expression
             {
             return this.compareTo(PostInc) <= 0;
             }
-        
+
         /**
          * @return true iff the operation is a "blind" increment or decrement
          */
@@ -2747,15 +2746,15 @@ public abstract class Expression
             }
 
         /**
-         * @return true iff the operation is a pre-increment or pre-decrement 
+         * @return true iff the operation is a pre-increment or pre-decrement
          */
         public boolean isPre()
             {
             return this == PreInc | this == PreDec;
             }
-        
+
         /**
-         * @return true iff the operation is a post-increment or post-decrement 
+         * @return true iff the operation is a post-increment or post-decrement
          */
         public boolean isPost()
             {
