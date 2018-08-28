@@ -5,27 +5,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.asm.op.IIP_Dec;
-import org.xvm.asm.op.IIP_Inc;
-import org.xvm.asm.op.IIP_PostDec;
-import org.xvm.asm.op.IIP_PostInc;
-import org.xvm.asm.op.IIP_PreDec;
-import org.xvm.asm.op.IIP_PreInc;
-import org.xvm.asm.op.IP_Dec;
-import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.IP_PostDec;
-import org.xvm.asm.op.IP_PostInc;
-import org.xvm.asm.op.IP_PreDec;
-import org.xvm.asm.op.IP_PreInc;
-import org.xvm.asm.op.PIP_Dec;
-import org.xvm.asm.op.PIP_Inc;
-import org.xvm.asm.op.PIP_PostDec;
-import org.xvm.asm.op.PIP_PostInc;
-import org.xvm.asm.op.PIP_PreDec;
-import org.xvm.asm.op.PIP_PreInc;
 
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -59,7 +39,7 @@ public class SequentialAssignExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return true iff this is a pre-inc or pre-dec; false iff this is a post-inc or  post-dec
+     * @return true iff this is a pre-inc or pre-dec; false iff this is a post-inc or post-dec
      */
     public boolean isPre()
         {
@@ -72,6 +52,16 @@ public class SequentialAssignExpression
     public boolean isInc()
         {
         return operator.getId() == Id.INC;
+        }
+
+    /**
+     * @return the Sequential representing this expression
+     */
+    protected Sequential getSeq()
+        {
+        return isInc()
+                ? isPre() ? Sequential.PreInc : Sequential.PostInc
+                : isPre() ? Sequential.PreDec : Sequential.PostDec;
         }
 
 
@@ -123,136 +113,22 @@ public class SequentialAssignExpression
     @Override
     public void generateVoid(Context ctx, Code code, ErrorListener errs)
         {
-        Assignable LVal = ensureTarget(ctx, code, errs);
-        switch (LVal.getForm())
-            {
-            case Assignable.LocalVar:
-                code.add(isInc()
-                        ? new IP_Inc(LVal.getRegister())
-                        : new IP_Dec(LVal.getRegister()));
-                break;
+        Assignable LValTarget = ensureTarget(ctx, code, errs);
+        LValTarget.assignSequential(isInc() ? Sequential.Inc : Sequential.Dec, null, false, code, errs);
+        }
 
-            case Assignable.LocalProp:
-                code.add(isInc()
-                        ? new IP_Inc(LVal.getProperty())
-                        : new IP_Dec(LVal.getProperty()));
-                break;
-
-            case Assignable.TargetProp:
-                code.add(isInc()
-                        ? new PIP_Inc(LVal.getProperty(), LVal.getTarget())
-                        : new PIP_Dec(LVal.getProperty(), LVal.getTarget()));
-                break;
-
-            case Assignable.Indexed:
-                code.add(isInc()
-                        ? new IIP_Inc(LVal.getArray(), LVal.getIndex())
-                        : new IIP_Dec(LVal.getArray(), LVal.getIndex()));
-                break;
-
-            case Assignable.IndexedN:
-                // TODO
-                throw notImplemented();
-
-            case Assignable.IndexedProp:
-                code.add(isInc()
-                        ? new IIP_Inc(LVal.getProperty(), LVal.getIndex())
-                        : new IIP_Dec(LVal.getProperty(), LVal.getIndex()));
-                break;
-
-            case Assignable.IndexedNProp:
-                // TODO
-                throw notImplemented();
-
-            case Assignable.BlackHole:
-            default:
-                throw new IllegalStateException();
-            }
+    @Override
+    public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        Assignable LValTarget = ensureTarget(ctx, code, errs);
+        return LValTarget.assignSequential(getSeq(), null, false, code, errs);
         }
 
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        switch (LVal.getForm())
-            {
-            case Assignable.BlackHole:
-                generateVoid(ctx, code, errs);
-                break;
-
-            case Assignable.LocalVar:
-            case Assignable.LocalProp:
-                Argument   argReturn  = LVal.getLocalArgument();
-                Assignable LValTarget = ensureTarget(ctx, code, errs);
-                switch (LValTarget.getForm())
-                    {
-                    case Assignable.LocalVar:
-                    case Assignable.LocalProp:
-                        {
-                        Argument argTarget = LValTarget.getLocalArgument();
-                        code.add(isPre()
-                                ? isInc()
-                                        ? new IP_PreInc(argTarget, argReturn)       // ++x
-                                        : new IP_PreDec(argTarget, argReturn)       // --x
-                                : isInc()
-                                        ? new IP_PostInc(argTarget, argReturn)      // x++
-                                        : new IP_PostDec(argTarget, argReturn));    // x--
-                        }
-                        break;
-
-                    case Assignable.TargetProp:
-                        {
-                        Argument         argTarget  = LValTarget.getLocalArgument();
-                        PropertyConstant propTarget = LValTarget.getProperty();
-                        code.add(isPre()
-                                ? isInc()
-                                        ? new PIP_PreInc(propTarget, argTarget, argReturn)
-                                        : new PIP_PreDec(propTarget, argTarget, argReturn)
-                                : isInc()
-                                        ? new PIP_PostInc(propTarget, argTarget, argReturn)
-                                        : new PIP_PostDec(propTarget, argTarget, argReturn));
-                        }
-                        break;
-
-                    case Assignable.Indexed:
-                    case Assignable.IndexedProp:
-                        {
-                        Argument argTarget = LValTarget.getLocalArgument();
-                        Argument argIndex  = LValTarget.getIndex();
-                        code.add(isPre()
-                                ? isInc()
-                                        ? new IIP_PreInc(argTarget, argIndex, argReturn)
-                                        : new IIP_PreDec(argTarget, argIndex, argReturn)
-                                : isInc()
-                                        ? new IIP_PostInc(argTarget, argIndex, argReturn)
-                                        : new IIP_PostDec(argTarget, argIndex, argReturn));
-                        }
-                        break;
-
-                    case Assignable.IndexedN:
-                        // TODO
-                        throw notImplemented();
-
-                    case Assignable.IndexedNProp:
-                        // TODO
-                        throw notImplemented();
-
-                    case Assignable.BlackHole:
-                    default:
-                        throw new IllegalStateException();
-                    }
-                break;
-
-            case Assignable.TargetProp:
-            case Assignable.Indexed:
-            case Assignable.IndexedN:
-            case Assignable.IndexedProp:
-            case Assignable.IndexedNProp:
-                super.generateAssignment(ctx, code, LVal, errs);
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
+        Assignable LValTarget = ensureTarget(ctx, code, errs);
+        LValTarget.assignSequential(getSeq(), LVal, false, code, errs);
         }
 
 

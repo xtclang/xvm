@@ -9,6 +9,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 
 import org.xvm.asm.OpCallable;
+import org.xvm.asm.Register;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -195,6 +196,27 @@ public class FBind
         super.registerConstants(registry);
 
         registerArguments(m_aArgParam, registry);
+        }
+
+    @Override
+    protected String getParamsString()
+        {
+        StringBuilder sb = new StringBuilder();
+        int cArgNums = m_anParamValue == null ? 0 : m_anParamValue.length;
+        int cArgRefs = m_aArgParam    == null ? 0 : m_aArgParam   .length;
+        for (int i = 0, c = m_anParamIx.length; i < c; ++i)
+            {
+            if (i > 0)
+                {
+                sb.append(", ");
+                }
+            sb.append('[')
+              .append(m_anParamIx[i])
+              .append("]=")
+              .append(Argument.toIdString(i < cArgRefs ? m_aArgParam[i] : null,
+                      i < cArgNums ? m_anParamValue[i] : Register.UNKNOWN));
+            }
+        return sb.toString();
         }
 
     private int[] m_anParamIx;

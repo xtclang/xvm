@@ -21,13 +21,35 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.asm.op.IIP_Dec;
+import org.xvm.asm.op.IIP_Inc;
+import org.xvm.asm.op.IIP_PostDec;
+import org.xvm.asm.op.IIP_PostInc;
+import org.xvm.asm.op.IIP_PreDec;
+import org.xvm.asm.op.IIP_PreInc;
+import org.xvm.asm.op.IP_Dec;
+import org.xvm.asm.op.IP_Inc;
+import org.xvm.asm.op.IP_PostDec;
+import org.xvm.asm.op.IP_PostInc;
+import org.xvm.asm.op.IP_PreDec;
+import org.xvm.asm.op.IP_PreInc;
+import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.I_Set;
+import org.xvm.asm.op.Invoke_01;
+import org.xvm.asm.op.Invoke_10;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.L_Set;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
+import org.xvm.asm.op.PIP_Dec;
+import org.xvm.asm.op.PIP_Inc;
+import org.xvm.asm.op.PIP_PostDec;
+import org.xvm.asm.op.PIP_PostInc;
+import org.xvm.asm.op.PIP_PreDec;
+import org.xvm.asm.op.PIP_PreInc;
+import org.xvm.asm.op.P_Get;
 import org.xvm.asm.op.P_Set;
 import org.xvm.asm.op.Var;
 
@@ -1929,7 +1951,7 @@ public abstract class Expression
          */
         public Assignable(Register regVar)
             {
-            m_nForm = LocalVar;
+            m_nForm = regVar.isImplicitDeref() ? CaptureVar : LocalVar;
             m_arg   = regVar;
             }
 
@@ -2017,6 +2039,9 @@ public abstract class Expression
                 case LocalVar:
                     return getRegister().getType();
 
+                case CaptureVar:
+                    return getRegister().getType().getParamTypesArray()[0];
+
                 case LocalProp:
                 case TargetProp:
                     return getProperty().getType();
@@ -2041,6 +2066,8 @@ public abstract class Expression
          * <li>{@link #BlackHole} - a write-only register that anyone can assign to, resulting in
          *     the value being discarded</li>
          * <li>{@link #LocalVar} - a local variable of a method that can be assigned</li>
+         * <li>{@link #CaptureVar} - a local variable that holds a "Var" and requires dereference on
+         *     every access and mutation to work with the underlying value</li>
          * <li>{@link #LocalProp} - a local (this:private) property that can be assigned</li>
          * <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
          * <li>{@link #Indexed} - an index into a single-dimensioned array</li>
@@ -2050,7 +2077,8 @@ public abstract class Expression
          * </ul>
          *
          * @return the form of the Assignable, one of: {@link #BlackHole}, {@link #LocalVar},
-         *         {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed}, {@link #IndexedN}
+         *         {@link #CaptureVar}, {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed},
+         *         {@link #IndexedN}, or {@link #IndexedNProp}
          */
         public int getForm()
             {
@@ -2058,11 +2086,19 @@ public abstract class Expression
             }
 
         /**
+         * @return true iff this Assignable represents a "black hole"
+         */
+        public boolean isBlackhole()
+            {
+            return m_nForm == BlackHole;
+            }
+
+        /**
          * @return the register, iff this Assignable represents a local variable
          */
         public Register getRegister()
             {
-            if (m_nForm != LocalVar)
+            if (m_nForm != LocalVar && m_nForm != CaptureVar)
                 {
                 throw new IllegalStateException();
                 }
@@ -2197,6 +2233,133 @@ public abstract class Expression
             }
 
         /**
+         * Generate an RValue argument that represents the value that is in the LValue. The RValue
+         * may be the same as the LValue, for example when the LValue is a local variable, or it may
+         * be a copy.
+         *
+         * @param LValResult    the L-value to store the result in, or null
+         * @param fLocalPropOk  if no L-value is provided, then this is used to indicate whether the
+         *                      resulting argument can be a property constant indicating a local
+         *                      property value
+         * @param fUsedOnce     if no L-value is provided, then this is used to indicate whether the
+         *                      result is used only once (e.g. could the temporary stack be used for
+         *                      the result)
+         * @param code          the code object to which the assembly is added
+         * @param errs          the error listener to log to
+         *
+         * @return an argument, if an Assignable was not provided
+         */
+        public Argument getValue(Assignable LValResult, boolean fLocalPropOk, boolean fUsedOnce,
+                Code code, ErrorListener errs)
+            {
+            switch (m_nForm)
+                {
+                case BlackHole:
+                    // blackhole has no value
+                    throw new IllegalStateException();
+
+                case LocalVar:
+                    if (LValResult == null)
+                        {
+                        return getRegister();
+                        }
+                    else
+                        {
+                        LValResult.assign(getRegister(), code, errs);
+                        return null;
+                        }
+
+                case CaptureVar:
+                    {
+                    Register       regVar    = getRegister();
+                    TypeConstant   typeVar   = regVar.getType();
+                    ConstantPool   pool      = pool();
+                    assert typeVar.isA(pool.typeRef()) && typeVar.getParamsCount() >= 1;
+                    TypeConstant   typeVal   = typeVar.getParamTypesArray()[0];
+                    TypeConstant   typeOfVal = pool.ensureParameterizedTypeConstant(pool.typeType(),
+                            typeVal);
+                    MethodConstant idGet     = typeVar.ensureTypeInfo(errs).findCallable(
+                            "get", true, false, new TypeConstant[] {typeOfVal}, null, null);
+                    Assignable     LValTemp  = LValResult == null || !LValResult.isLocalArgument()
+                            ? createTempVar(code, typeVal, fUsedOnce, errs)
+                            : LValResult;
+
+                    code.add(new Invoke_01(regVar, idGet, LValTemp.getLocalArgument()));
+                    if (LValResult == null)
+                        {
+                        return LValTemp.getLocalArgument();
+                        }
+                    else
+                        {
+                        if (LValResult != LValTemp)
+                            {
+                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
+                            }
+                        return null;
+                        }
+                    }
+
+                case LocalProp:
+                    if (LValResult == null && fLocalPropOk)
+                        {
+                        return getProperty();
+                        }
+                    // fall through
+                case TargetProp:
+                    {
+                    Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
+                            ? createTempVar(code, getType(), fUsedOnce, errs)
+                            : LValResult;
+                    code.add(new P_Get(getProperty(), getTarget(), LValTemp.getLocalArgument()));
+                    if (LValResult == null)
+                        {
+                        return LValTemp.getLocalArgument();
+                        }
+                    else
+                        {
+                        if (LValResult != LValTemp)
+                            {
+                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
+                            }
+                        return null;
+                        }
+                    }
+
+                case Indexed:
+                case IndexedProp:
+                    {
+                    Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
+                            ? createTempVar(code, getType(), fUsedOnce, errs)
+                            : LValResult;
+                    Argument argTarget = m_nForm == Indexed
+                            ? getArray()
+                            : getProperty();
+                    code.add(new I_Get(argTarget, getIndex(), LValTemp.getLocalArgument()));
+                    if (LValResult == null)
+                        {
+                        return LValTemp.getLocalArgument();
+                        }
+                    else
+                        {
+                        if (LValResult != LValTemp)
+                            {
+                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
+                            }
+                        return null;
+                        }
+                    }
+
+                case IndexedN:
+                case IndexedNProp:
+                    // TODO
+                    throw notImplemented();
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
          * Generate the assignment-specific assembly code.
          *
          * @param arg   the Argument, representing the R-value
@@ -2214,6 +2377,19 @@ public abstract class Expression
                     code.add(new Move(arg, getRegister()));
                     break;
 
+                case CaptureVar:
+                    {
+                    Register       regVar    = getRegister();
+                    TypeConstant   typeVar   = regVar.getType();
+                    ConstantPool   pool      = pool();
+                    assert typeVar.isA(pool.typeVar()) && typeVar.getParamsCount() >= 1;
+                    TypeConstant   typeVal   = typeVar.getParamTypesArray()[0];
+                    MethodConstant idSet     = typeVar.ensureTypeInfo(errs).findCallable("set",
+                            true, false, TypeConstant.NO_TYPES, new TypeConstant[] {typeVal}, null);
+                    code.add(new Invoke_10(regVar, idSet, arg));
+                    break;
+                    }
+
                 case LocalProp:
                     code.add(new L_Set(getProperty(), arg));
                     break;
@@ -2226,14 +2402,13 @@ public abstract class Expression
                     code.add(new I_Set(getArray(), getIndex(), arg));
                     break;
 
-                case IndexedN:
-                    throw notImplemented();
-
                 case IndexedProp:
                     code.add(new I_Set(getProperty(), getIndex(), arg));
                     break;
 
+                case IndexedN:
                 case IndexedNProp:
+                    // TODO
                     throw notImplemented();
 
                 default:
@@ -2241,17 +2416,295 @@ public abstract class Expression
                 }
             }
 
+        /**
+         * Generate the sequential operation assembly code. This method is basically a combination
+         * of generationVoid(), generateArgument(), and generateAssignment(), for blind-, pre-, and
+         * post-, and for both -increment, and -decrement.
+         *
+         * @param seq         the type of sequential operation
+         * @param LValResult  the L-value to store the result in, or null
+         * @param fUsedOnce   if no L-value is provided, and the expression has a resulting
+         *                    argument, then this is used to indicate whether the result is used
+         *                    only once (e.g. could the temporary stack be used for the result)
+         * @param code        the code object to which the assembly is added
+         * @param errs        the error listener to log to
+         *
+         * @return an argument, if the specified operation produces a value and an Assignable was
+         *         not passed
+         */
+        public Argument assignSequential(Sequential seq, Assignable LValResult, boolean fUsedOnce,
+                Code code, ErrorListener errs)
+            {
+            // a blind operation cannot have a result; all other operations will either assign to
+            // the result or return a result
+            assert !seq.isBlind() || LValResult == null;
+
+            // black-hole optimization
+            if (LValResult != null && LValResult.isBlackhole())
+                {
+                seq = seq.toBlind();
+                LValResult = null;
+                }
+
+            switch (m_nForm)
+                {
+                case LocalVar:
+                case LocalProp:
+                    {
+                    Argument argTarget = getLocalArgument();
+                    switch (seq)
+                        {
+                        case Inc:
+                            code.add(new IP_Inc(argTarget));
+                            return null;
+
+                        case Dec:
+                            code.add(new IP_Dec(argTarget));
+                            return null;
+
+                        case PreInc:
+                            if (LValResult == null)
+                                {
+                                code.add(new IP_Inc(argTarget));
+                                return argTarget;
+                                }
+                            else if (LValResult.isLocalArgument())
+                                {
+                                code.add(new IP_PreInc(argTarget, LValResult.getLocalArgument()));
+                                return null;
+                                }
+                            else
+                                {
+                                code.add(new IP_Inc(argTarget));
+                                LValResult.assign(argTarget, code, errs);
+                                return null;
+                                }
+
+                        case PreDec:
+                            if (LValResult == null)
+                                {
+                                code.add(new IP_Dec(argTarget));
+                                return argTarget;
+                                }
+                            else if (LValResult.isLocalArgument())
+                                {
+                                code.add(new IP_PreDec(argTarget, LValResult.getLocalArgument()));
+                                return null;
+                                }
+                            else
+                                {
+                                code.add(new IP_Dec(argTarget));
+                                LValResult.assign(argTarget, code, errs);
+                                return null;
+                                }
+
+                        case PostInc:
+                        case PostDec:
+                            {
+                            Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                                    ? LValResult
+                                    : createTempVar(code, getType(), fUsedOnce, errs);
+                            code.add(seq.isInc()
+                                    ? new IP_PostInc(argTarget, LValTemp.getLocalArgument())
+                                    : new IP_PostDec(argTarget, LValTemp.getLocalArgument()));
+                            if (LValResult == null)
+                                {
+                                return LValTemp.getRegister();
+                                }
+
+                            if (LValResult != LValTemp)
+                                {
+                                LValResult.assign(LValTemp.getRegister(), code, errs);
+                                }
+                            return null;
+                            }
+                        }
+                    break;
+                    }
+
+                case TargetProp:
+                    {
+                    PropertyConstant prop      = getProperty();
+                    Argument         argTarget = getTarget();
+                    if (seq.isBlind())
+                        {
+                        code.add(seq.isInc()
+                                ? new PIP_Inc(prop, argTarget)
+                                : new PIP_Dec(prop, argTarget));
+                        return null;
+                        }
+                    else
+                        {
+                        Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                                ? LValResult
+                                : createTempVar(code, getType(), fUsedOnce, errs);
+
+                        Argument argReturn = LValTemp.getLocalArgument();
+                        code.add(seq.isPre()
+                                ? seq.isInc()
+                                    ? new PIP_PreInc(prop, argTarget, argReturn)
+                                    : new PIP_PreDec(prop, argTarget, argReturn)
+                                : seq.isInc()
+                                    ? new PIP_PostInc(prop, argTarget, argReturn)
+                                    : new PIP_PostDec(prop, argTarget, argReturn));
+                        if (LValResult == null)
+                            {
+                            return argReturn;
+                            }
+
+                        if (LValResult != LValTemp)
+                            {
+                            LValResult.assign(argReturn, code, errs);
+                            }
+                        return null;
+                        }
+                    }
+
+                case Indexed:
+                case IndexedProp:
+                    {
+                    Argument argArray = m_nForm == Indexed
+                            ? getArray()
+                            : getProperty();
+                    Argument argIndex = getIndex();
+                    if (seq.isBlind())
+                        {
+                        code.add(seq.isInc()
+                                ? new IIP_Inc(argArray, argIndex)
+                                : new IIP_Dec(argArray, argIndex));
+                        return null;
+                        }
+                    else
+                        {
+                        Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
+                                ? LValResult
+                                : createTempVar(code, getType(), fUsedOnce, errs);
+
+                        Argument argReturn = LValTemp.getLocalArgument();
+                        code.add(seq.isPre()
+                                ? seq.isInc()
+                                ? new IIP_PreInc(argArray, argIndex, argReturn)
+                                : new IIP_PreDec(argArray, argIndex, argReturn)
+                                : seq.isInc()
+                                ? new IIP_PostInc(argArray, argIndex, argReturn)
+                                : new IIP_PostDec(argArray, argIndex, argReturn));
+                        if (LValResult == null)
+                            {
+                            return argReturn;
+                            }
+
+                        if (LValResult != LValTemp)
+                            {
+                            LValResult.assign(argReturn, code, errs);
+                            }
+                        return null;
+                        }
+                    }
+
+                case CaptureVar:
+                    // TODO for now just use the default implementations, but it would be nice if
+                    //      there were a way to send the pre/post inc/dec to the Var instead of
+                    //      pulling the value out, doing the op, and shoving it back in
+                case IndexedN:
+                case IndexedNProp:
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+            // generic implementation
+            switch (seq)
+                {
+                case Inc:
+                case Dec:
+                    {
+                    Assignable LValTemp = createTempVar(code, getType(), false, errs);
+
+                    // get the original value
+                    getValue(LValTemp, false, false, code, errs);
+
+                    // perform the sequential operation on the temp
+                    LValTemp.assignSequential(seq, null, false, code, errs);
+
+                    // store the operation's result
+                    assign(LValTemp.getRegister(), code, errs);
+
+                    return null;
+                    }
+
+                case PreInc:
+                case PreDec:
+                    {
+                    Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
+                            ? LValResult
+                            : createTempVar(code, getType(), false, errs);
+
+                    // get the original value
+                    getValue(LValTemp, false, false, code, errs);
+
+                    // perform the sequential operation on the temp
+                    Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
+                    LValTemp.assignSequential(seqVoid, null, false, code, errs);
+
+                    // store the operation's result
+                    assign(LValTemp.getRegister(), code, errs);
+
+                    // return the operation's result
+                    if (LValResult == null)
+                        {
+                        return LValTemp.getRegister();
+                        }
+
+                    if (LValResult != LValTemp)
+                        {
+                        LValResult.assign(LValTemp.getRegister(), code, errs);
+                        }
+                    return null;
+                    }
+
+                case PostInc:
+                case PostDec:
+                    {
+                    Assignable LValTemp  = createTempVar(code, getType(), false, errs);
+                    Argument   argResult = null;
+                    if (LValResult == null)
+                        {
+                        LValResult = createTempVar(code, getType(), fUsedOnce, errs);
+                        argResult  = LValResult.getRegister();
+                        }
+
+                    // get the original value
+                    getValue(LValTemp, false, false, code, errs);
+                    LValResult.assign(LValTemp.getRegister(), code, errs);
+
+                    // perform the sequential operation on the temp
+                    Sequential seqVoid = seq.isInc() ? Sequential.Inc : Sequential.Dec;
+                    LValTemp.assignSequential(seqVoid, null, false, code, errs);
+
+                    // store the operation's result
+                    assign(LValTemp.getRegister(), code, errs);
+
+                    // return the value that preceded the operation
+                    return argResult;
+                    }
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
 
         // ----- fields ------------------------------------------------------------------------
 
         public static final byte BlackHole    = 0;
         public static final byte LocalVar     = 1;
-        public static final byte LocalProp    = 2;
-        public static final byte TargetProp   = 3;
-        public static final byte Indexed      = 4;
-        public static final byte IndexedN     = 5;
-        public static final byte IndexedProp  = 6;
-        public static final byte IndexedNProp = 7;
+        public static final byte CaptureVar   = 2;
+        public static final byte LocalProp    = 3;
+        public static final byte TargetProp   = 4;
+        public static final byte Indexed      = 5;
+        public static final byte IndexedN     = 6;
+        public static final byte IndexedProp  = 7;
+        public static final byte IndexedNProp = 8;
 
         private byte             m_nForm;
         private Argument         m_arg;
@@ -2260,8 +2713,58 @@ public abstract class Expression
         }
 
 
-    // ----- TypeFit enumeration -------------------------------------------------------------------
+    // ----- Sequential enumeration ----------------------------------------------------------------
 
+    /**
+     * Describes a pre/post increment/decrement operation.
+     */
+    public enum Sequential
+        {
+        Inc, PreInc, PostInc, Dec, PreDec, PostDec;
+
+        /**
+         * @return true iff the operation is an increment
+         */
+        public boolean isInc()
+            {
+            return this.compareTo(PostInc) <= 0;
+            }
+        
+        /**
+         * @return true iff the operation is a "blind" increment or decrement
+         */
+        public boolean isBlind()
+            {
+            return this == Inc | this == Dec;
+            }
+
+        /**
+         * @return the "blind" form of this operation
+         */
+        public Sequential toBlind()
+            {
+            return this.isInc() ? Inc : Dec;
+            }
+
+        /**
+         * @return true iff the operation is a pre-increment or pre-decrement 
+         */
+        public boolean isPre()
+            {
+            return this == PreInc | this == PreDec;
+            }
+        
+        /**
+         * @return true iff the operation is a post-increment or post-decrement 
+         */
+        public boolean isPost()
+            {
+            return this == PostInc | this == PostDec;
+            }
+        }
+
+
+    // ----- TypeFit enumeration -------------------------------------------------------------------
 
     /**
      * Represents the ability of an expression to yield a requested type:
