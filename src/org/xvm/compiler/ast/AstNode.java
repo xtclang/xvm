@@ -856,11 +856,11 @@ public abstract class AstNode
         }
 
     /**
-     * TODO
+     * Ensure that the passed list is an ArrayList, replacing it with an ArrayList if necessary.
      *
-     * @param list
+     * @param list  a List
      *
-     * @return
+     * @return an ArrayList
      */
     protected static <T> ArrayList<T> ensureArrayList(List<T> list)
         {
@@ -870,12 +870,12 @@ public abstract class AstNode
         }
 
     /**
-     * TODO
+     * Collect fields by name.
      *
-     * @param clz
-     * @param names
+     * @param clz    the class on which the fields exist
+     * @param names  the field names
      *
-     * @return
+     * @return an array of fields corresponding to the specified names on the specified class
      */
     protected static Field[] fieldsForNames(Class clz, String... names)
         {
