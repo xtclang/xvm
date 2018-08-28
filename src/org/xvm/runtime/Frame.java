@@ -1716,7 +1716,7 @@ public class Frame
             {
             if (m_ref != null)
                 {
-                m_ref.dereference(Frame.this);
+                m_ref.dereference();
                 }
             }
 

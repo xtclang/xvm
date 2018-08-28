@@ -493,11 +493,11 @@ public class xRef
             }
 
         // dereference the Ref from a register-bound to a handle-bound
-        public void dereference(Frame frame)
+        public void dereference()
             {
-            assert m_iVar >= 0;
+            assert m_frame != null && m_iVar >= 0;
 
-            m_hDelegate = frame.f_ahVar[m_iVar];
+            m_hDelegate = m_frame.f_ahVar[m_iVar];
             m_frame = null;
             m_iVar = REF_REFERENT;
             }
@@ -542,7 +542,7 @@ public class xRef
             }
 
         @Override
-        public void dereference(Frame frame)
+        public void dereference()
             {
             // no op
             }
