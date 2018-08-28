@@ -11,6 +11,7 @@ module TestLambda.xqiz.it
         testThisCapture();
         testRefCapture();
         testVarCapture();
+        testComplexCapture();
         }
 
 // TODO add test for void lambda
@@ -75,7 +76,7 @@ module TestLambda.xqiz.it
 
     void testComplexCapture()
         {
-        console.println("\n** testVarCapture()");
+        console.println("\n** testComplexCapture()");
 
         Int i = 0;
         while (i < 5)

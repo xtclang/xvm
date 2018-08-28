@@ -136,9 +136,14 @@ public class xVar
                 }
 
             default:
-                assert hTarget.m_iVar >= 0;
-                frame.f_ahVar[hTarget.m_iVar] = hValue;
+                {
+                Frame frameRef = hTarget.m_frame;
+                int   nVar     = hTarget.m_iVar;
+                assert frameRef != null && nVar >= 0;
+
+                frameRef.f_ahVar[nVar] = hValue;
                 return Op.R_NEXT;
+                }
             }
         }
 
