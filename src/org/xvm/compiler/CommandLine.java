@@ -1048,8 +1048,6 @@ public class CommandLine
         @Override
         public String name()
             {
-            assert progress.ordinal() >= Progress.NAMED.ordinal();
-
             String sName = null;
             if (pkgNode != null)
                 {
