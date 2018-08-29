@@ -2784,6 +2784,77 @@ public class ConstantPool
         }
 
 
+    // ----- TypeConstant helpers  -----------------------------------------------------------------
+
+    /**
+     * Build a TypeConstant for a function.
+     *
+     * @param atypeParams   the parameter types of the function
+     * @param atypeReturns  the return types of the function
+     *
+     * @return the function type
+     */
+    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant[] atypeReturns)
+        {
+        return ensureParameterizedTypeConstant(
+                typeFunction(),
+                ensureParameterizedTypeConstant(typeTuple(), atypeParams),
+                ensureParameterizedTypeConstant(typeTuple(), atypeReturns));
+        }
+
+    /**
+     * Get the parameter types from a function type.
+     *
+     * @param typeFunction  the type to extract from
+     *
+     * @return the parameter types for the function, or null if the types cannot be determined
+     */
+    public TypeConstant[] extractFunctionParams(TypeConstant typeFunction)
+        {
+        if (typeFunction != null)
+            {
+            if (typeFunction.isA(typeFunction())
+                    && typeFunction.isParamsSpecified()
+                    && typeFunction.getParamsCount() > 0)
+                {
+                TypeConstant typeParams = typeFunction.getParamTypesArray()[0];
+                if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
+                    {
+                    return typeParams.getParamTypesArray();
+                    }
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * Get the return types from a function type.
+     *
+     * @param typeFunction  the type to extract from
+     *
+     * @return the return types of the function, or null if the types cannot be determined
+     */
+    public TypeConstant[] extractFunctionReturns(TypeConstant typeFunction)
+        {
+        if (typeFunction != null)
+            {
+            if (typeFunction.isA(typeFunction())
+                    && typeFunction.isParamsSpecified()
+                    && typeFunction.getParamsCount() > 1)
+                {
+                TypeConstant typeParams = typeFunction.getParamTypesArray()[1];
+                if (typeParams.isA(typeTuple()) && typeParams.isParamsSpecified())
+                    {
+                    return typeParams.getParamTypesArray();
+                    }
+                }
+            }
+
+        return null;
+        }
+
+
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
     /**

@@ -124,9 +124,56 @@
 +GP_NEG     rvalue, lvalue                          ; -T -> T
 +GP_COMPL   rvalue, lvalue                          ; ~T -> T
 
-// consider generic ops (GP_ as well as IP_, PIP_, IIP_ and MIP_)
- GP_UNI     OP, rvalue, lvalue                      ; OP is a StringConstant
- GP_REL     OP, rvalue1, rvalue2, lvalue            ; OP is a StringConstant
+                                                    ; Target Description  rTARGET/lTARGET
+// generic ops                                      ; ------------------  ----------------------------
+ LOP subop-code parameters                          ; local var/property  register index or PROPERTY
+ DOP subop-code parameters                          ; auto-deref local    register index or PROPERTY
+ POP subop-code parameters                          ; target property     PROPERTY, rvalue-target
+ IOP subop-code parameters                          ; indexed             rvalue-target, rvalue-ix
+ MOP subop-code parameters                          ; indexed-n           rvalue-target, #:(rvalue-ix)
+// SubOp      Code  Parameters
+// -----      ----  -----------------------------------------------
+// _GET       00    rTARGET, lvalue-local
+// _VAR       01    rTARGET, lvalue-local
+// _REF       02    rTARGET, lvalue-local
+// _NEG       03    rTARGET, lvalue-local
+// _COMPL     04    rTARGET, lvalue-local
+//
+// _ADD       11    rTARGET, rvalue2, lvalue-local
+// _SUB       12    rTARGET, rvalue2, lvalue-local
+// _MUL       13    rTARGET, rvalue2, lvalue-local
+// _DIV       14    rTARGET, rvalue2, lvalue-local
+// _MOD       15    rTARGET, rvalue2, lvalue-local
+// _SHL       16    rTARGET, rvalue2, lvalue-local
+// _SHR       17    rTARGET, rvalue2, lvalue-local
+// _USHR      18    rTARGET, rvalue2, lvalue-local
+// _AND       19    rTARGET, rvalue2, lvalue-local
+// _OR        1A    rTARGET, rvalue2, lvalue-local
+// _XOR       1B    rTARGET, rvalue2, lvalue-local
+// _DOTDOT    1C    rTARGET, rvalue2, lvalue-local
+//
+// _DIVMOD    20    rTARGET, rvalue2, lvalue-local, lvalue-local
+//
+// _IP_SET    30    lTARGET, rvalue-local
+// _IP_ADD    31    lTARGET, rvalue-local
+// _IP_SUB    32    lTARGET, rvalue-local
+// _IP_MUL    33    lTARGET, rvalue-local
+// _IP_DIV    34    lTARGET, rvalue-local
+// _IP_MOD    35    lTARGET, rvalue-local
+// _IP_SHL    36    lTARGET, rvalue-local
+// _IP_SHR    37    lTARGET, rvalue-local
+// _IP_USHR   38    lTARGET, rvalue-local
+// _IP_AND    39    lTARGET, rvalue-local
+// _IP_OR     3A    lTARGET, rvalue-local
+// _IP_XOR    3B    lTARGET, rvalue-local
+//
+// _IP_INC    40    lTARGET
+// _IP_DEC    41    lTARGET
+//
+// _IP_INCA   50    lTARGET, lvalue-local
+// _IP_DECA   51    lTARGET, lvalue-local
+// _IP_INCB   52    lTARGET, lvalue-local
+// _IP_DECB   53    lTARGET, lvalue-local
 
 // ("L"=) local property and ("P"=) property load/store operations
 // - lvalue return values can specify the "next register" to allocate

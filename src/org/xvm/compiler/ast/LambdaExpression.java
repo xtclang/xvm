@@ -214,8 +214,6 @@ public class LambdaExpression
         {
         MethodStructure method = m_lambda;
 
-        checkDebug(); // TODO remove
-
         // the method body containing this must validate the lambda expression, which then will
         // create the lambda body (the method structure), and that has to happen before we try to
         // spit out any code
@@ -257,8 +255,6 @@ public class LambdaExpression
             {
             return getType();
             }
-
-        checkDebug(); // TODO remove
 
         assert m_typeRequired == null && m_listRetTypes == null;
 
@@ -319,7 +315,7 @@ public class LambdaExpression
             atypeReturns = new TypeConstant[] {typeRet};
             }
 
-        return buildFunctionType(pool(), buildParamTypes(), atypeReturns);
+        return pool().buildFunctionType(buildParamTypes(), atypeReturns);
         }
 
     @Override
@@ -344,8 +340,6 @@ public class LambdaExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        checkDebug(); // TODO remove
-
         // validation only occurs once, but we'll put some extra checks in up front, because we do
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
         // expression validation, but use another copy of the body for the lambda method/function
@@ -358,8 +352,8 @@ public class LambdaExpression
         TypeConstant[] atypeReqReturns = null;
         if (typeRequired != null)
             {
-            atypeReqParams  = extractParamTypes(pool, typeRequired);
-            atypeReqReturns = extractReturnTypes(pool, typeRequired);
+            atypeReqParams  = pool.extractFunctionParams(typeRequired);
+            atypeReqReturns = pool.extractFunctionReturns(typeRequired);
             }
 
         boolean fValid      = true;
@@ -506,7 +500,7 @@ public class LambdaExpression
         m_mapRegisters    = ctxLambda.getRegisterMap();
         m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
 
-        TypeConstant   typeActual = buildFunctionType(pool, atypeParams, atypeRets);
+        TypeConstant   typeActual = pool.buildFunctionType(atypeParams, atypeRets);
         MethodConstant constVal   = null;
         if (fit.isFit() && m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
             {
@@ -520,8 +514,6 @@ public class LambdaExpression
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
-        checkDebug(); // TODO remove
-
         Argument[] aargBind = calculateBindings(ctx, code, errs);
         if (m_lambda.isFunction() && aargBind.length == 0)
             {
@@ -536,8 +528,6 @@ public class LambdaExpression
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
-        checkDebug(); // TODO remove
-
         Argument[] aBindArgs = calculateBindings(ctx, code, errs);
         int        cBindArgs = aBindArgs.length;
 
@@ -596,7 +586,8 @@ public class LambdaExpression
      */
     TypeConstant getRequiredType()
         {
-        TypeConstant[] aRetTypes = extractReturnTypes(pool(), isValidated() ? getType() : m_typeRequired);
+        TypeConstant[] aRetTypes = pool().extractFunctionReturns(
+                isValidated() ? getType() : m_typeRequired);
         return aRetTypes == null || aRetTypes.length == 0 ? null : aRetTypes[0];
         }
 
@@ -704,9 +695,9 @@ public class LambdaExpression
             // this is the first time that we are being called after validate()
             TypeConstant   typeFn          = getType();
             ConstantPool   pool            = ctx.pool();
-            TypeConstant[] atypeParams     = extractParamTypes(pool, typeFn);
+            TypeConstant[] atypeParams     = pool.extractFunctionParams(typeFn);
             String[]       asParams        = getParamNames();
-            TypeConstant[] atypeReturns    = extractReturnTypes(pool, typeFn);
+            TypeConstant[] atypeReturns    = pool.extractFunctionReturns(typeFn);
             boolean        fBindTarget     = m_fLambdaIsMethod;
             boolean        fBindParams     = !m_mapCapture.isEmpty();
             Argument[]     aBindArgs       = NO_RVALUES;
@@ -833,93 +824,6 @@ public class LambdaExpression
 
         lambda.configureLambda(aparamParams, aparamRets);
         lambda.getIdentityConstant().setSignature(sig);
-        }
-
-    // TODO remove
-    static LambdaExpression exprDebug;
-    void checkDebug()
-        {
-        if (exprDebug == null
-                && !getComponent().getIdentityConstant().getModuleConstant().toString().contains("Ecstasy")
-                && getParent().getComponent().getName().equals("testRefCapture"))
-            {
-            exprDebug = this;
-            }
-        if (this == exprDebug)
-            {
-            String s = toString();
-            }
-        }
-
-    /**
-     * TODO make this a helper somewhere
-     *
-     * @param pool          the ConstantPool
-     * @param atypeParams   the parameter types of the function
-     * @param atypeReturns  the return types of the function
-     *
-     * @return the function type
-     */
-    public static TypeConstant buildFunctionType(ConstantPool pool, TypeConstant[] atypeParams, TypeConstant[] atypeReturns)
-        {
-        return pool.ensureParameterizedTypeConstant(
-                pool.typeFunction(),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeParams),
-                pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeReturns));
-        }
-
-    /**
-     * TODO make this a helper somewhere
-     *
-     * @param pool          the ConstantPool
-     * @param typeFunction  the type to extract from
-     *
-     * @return the parameter types for the function, or null if the types cannot be determined
-     */
-    public static TypeConstant[] extractParamTypes(ConstantPool pool, TypeConstant typeFunction)
-        {
-        if (typeFunction != null)
-            {
-            if (typeFunction.isA(pool.typeFunction())
-                    && typeFunction.isParamsSpecified()
-                    && typeFunction.getParamsCount() > 0)
-                {
-                TypeConstant typeParams = typeFunction.getParamTypesArray()[0];
-                if (typeParams.isA(pool.typeTuple()) && typeParams.isParamsSpecified())
-                    {
-                    return typeParams.getParamTypesArray();
-                    }
-                }
-            }
-
-        return null;
-        }
-
-    /**
-     * TODO make this a helper somewhere
-     *
-     * @param pool          the ConstantPool
-     * @param typeFunction  the type to extract from
-     *
-     * @return the return types of the function, or null if the types cannot be determined
-     */
-    public static TypeConstant[] extractReturnTypes(ConstantPool pool, TypeConstant typeFunction)
-        {
-        if (typeFunction != null)
-            {
-            if (typeFunction.isA(pool.typeFunction())
-                    && typeFunction.isParamsSpecified()
-                    && typeFunction.getParamsCount() > 1)
-                {
-                TypeConstant typeParams = typeFunction.getParamTypesArray()[1];
-                if (typeParams.isA(pool.typeTuple()) && typeParams.isParamsSpecified())
-                    {
-                    return typeParams.getParamTypesArray();
-                    }
-                }
-            }
-
-        return null;
         }
 
 
