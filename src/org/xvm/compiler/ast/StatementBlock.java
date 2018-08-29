@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.ErrorListener;
+import org.xvm.asm.*;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -17,6 +17,7 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Return_0;
 
+import org.xvm.asm.op.Var_C;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -285,8 +286,32 @@ public class StatementBlock
         if (stmts != null && !stmts.isEmpty())
             {
             // there is an implicit scope for the top-most statement block of a method
-            boolean fImplicitScope = getParent() instanceof MethodDeclarationStatement;
-            if (!fImplicitScope)
+            AstNode parent         = getParent();
+            boolean fMethod        = parent instanceof MethodDeclarationStatement;
+            boolean fLambda        = parent instanceof LambdaExpression;
+            boolean fImplicitScope = fMethod | fLambda;
+
+            if (fLambda)
+                {
+                // go through all of the parameters looking for any implicit de-reference params
+                // (a new local variable will be created for each, effectively hiding the original
+                // parameter)
+                for (org.xvm.asm.Parameter param : ctx.getMethod().getParamArray())
+                    {
+                    if (param.isImplicitDeref())
+                        {
+                        String       sName   = param.getName();
+                        TypeConstant typeVar = param.getType();
+                        TypeConstant typeVal = typeVar.getParamTypesArray()[0];
+                        Register     reg     = new Register(typeVal);
+                        Argument     argVar  = ctx.getVar(sName);
+                        assert argVar instanceof Register;
+                        code.add(new Var_C(reg, argVar));
+                        ctx.ensureNameMap().put(sName, reg);
+                        }
+                    }
+                }
+            else if (!fImplicitScope)
                 {
                 code.add(new Enter());
                 }
@@ -302,6 +327,7 @@ public class StatementBlock
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
                 }
+
             if (!fImplicitScope)
                 {
                 code.add(new Exit());

@@ -789,7 +789,7 @@ Literal
     CustomLiteral
 
 StringLiteral
-    "\"" CharacterString-opt "\""
+    "$\"" CharacterString-opt "\""
     FreeformLiteral
 
 # all BinaryLiteral contents must be whitespace or nibbles

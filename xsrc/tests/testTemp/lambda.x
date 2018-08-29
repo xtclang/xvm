@@ -6,6 +6,7 @@ module TestLambda.xqiz.it
         {
         console.println("Lambda tests:");
 
+        // testVoid();
         testBasic();
         testEffectivelyFinalCapture();
         testThisCapture();
@@ -14,7 +15,14 @@ module TestLambda.xqiz.it
         testComplexCapture();
         }
 
-// TODO add test for void lambda
+    void testVoid()
+        {
+        console.println("\n** testBasic()");
+
+        function void() f = () -> console.println("in the lambda!");
+
+        f();
+        }
 
     void testBasic()
         {

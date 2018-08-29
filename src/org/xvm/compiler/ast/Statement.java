@@ -527,7 +527,7 @@ public abstract class Statement
             checkInnermost();
 
             String sName = tokName.getValueText();
-            if (isVarDeclaredInThisScope(sName)) // TODO allow explicit shadowing?
+            if (isVarDeclaredInThisScope(sName))
                 {
                 tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_DEFINED, sName);
                 }
@@ -584,22 +584,6 @@ public abstract class Statement
                     ? null
                     : ctxOuter.getVar(sName, name, errs);
             }
-
-        // TODO remove?
-//        /**
-//         * Determine if the specified variable name refers to a local variable (including
-//         * parameters, but not including reserved names, for example).
-//         *
-//         * @param sName  the variable name
-//         *
-//         * @return true iff a variable of that name exists in this scope
-//         */
-//        public boolean isLocalVar(String sName)
-//            {
-//            Context ctxOuter = getOuterContext();
-//            return getNameMap().containsKey(sName)
-//                    || (ctxOuter != null && ctxOuter.isLocalVar(sName));
-//            }
 
         /**
          * Determine if the specified variable name is already declared in the current scope.
