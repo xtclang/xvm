@@ -86,7 +86,8 @@ public class MoveVar
             }
         else
             {
-            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(infoSrc.getType());
+            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(
+                frame.poolContext(), infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 

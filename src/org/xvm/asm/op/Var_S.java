@@ -16,6 +16,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -26,22 +27,6 @@ import org.xvm.runtime.template.collections.xArray;
 public class Var_S
         extends OpVar
     {
-    /**
-     * Construct a VAR_S op.
-     *
-     * @param nType       the variable type id
-     * @param anValueId   the value ids for the sequence
-     *
-     * @deprecated
-     */
-    public Var_S(int nType, int[] anValueId)
-        {
-        super();
-
-        m_nType = nType;
-        m_anArgValue = anValueId;
-        }
-
     /**
      * Construct a VAR_S op for the specified type and arguments.
      *
@@ -115,9 +100,6 @@ public class Var_S
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant typeSequence = frame.resolveType(m_nType);
-        TypeConstant typeEl = typeSequence.getGenericParamType("ElementType");
-
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
@@ -126,7 +108,18 @@ public class Var_S
                 return R_REPEAT;
                 }
 
-            ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
+            TypeConstant    typeSequence = frame.resolveType(m_nType);
+            TypeComposition clzArray     = m_clzArray;
+
+            if (clzArray == null)
+                {
+                TypeConstant typeEl = typeSequence.getGenericParamType("ElementType");
+                m_clzArray = clzArray = xArray.INSTANCE.
+                    ensureParameterizedClass(frame.poolContext(), typeEl);
+                }
+
+            xArray template = (xArray) clzArray.getTemplate();
+            ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahArg);
             hArray.makeImmutable();
 
             frame.introduceResolvedVar(m_nVar, typeSequence, null, Frame.VAR_STANDARD, hArray);
@@ -150,4 +143,7 @@ public class Var_S
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
+
+    // cached TypeComposition for the underlying array
+    private transient TypeComposition m_clzArray;
     }

@@ -34,7 +34,7 @@ public class MoveRef
         super((Argument) null, null);
 
         m_nFromValue = nSource;
-        m_nToValue = nDest;
+        m_nToValue   = nDest;
         }
 
     /**
@@ -86,7 +86,8 @@ public class MoveRef
             }
         else
             {
-            TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(infoSrc.getType());
+            TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
+                frame.poolContext(), infoSrc.getType());
 
             RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
 

@@ -4,12 +4,8 @@ package org.xvm.runtime.template.collections;
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
-
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
-import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
@@ -55,26 +51,21 @@ public class xIntArray
         }
 
     @Override
-    public int createConstHandle(Frame frame, Constant constant)
+    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, ObjectHandle[] ahArg)
         {
-        ArrayConstant constArray = (ArrayConstant) constant;
-
-        assert constArray.getFormat() == Constant.Format.Array;
-
-        Constant[] aconst = constArray.getValue();
-        int c = aconst.length;
-
-        long[] alValue = new long[c];
+        int    c  = ahArg.length;
+        long[] al = new long[c];
         for (int i = 0; i < c; i++)
             {
-            alValue[i] = ((IntConstant) aconst[i]).getValue().getLong();
+            al[i] = ((JavaLong) ahArg[i]).getValue();
             }
+        return new IntArrayHandle(clzArray, al);
+        }
 
-        ArrayHandle hArray = makeIntArrayInstance(alValue);
-        hArray.makeImmutable();
-
-        frame.pushStack(hArray);
-        return Op.R_NEXT;
+    @Override
+    public ArrayHandle createArrayHandle(Frame frame, TypeComposition clzArray, long cCapacity)
+        {
+        return new IntArrayHandle(clzArray, cCapacity);
         }
 
     @Override
@@ -86,6 +77,7 @@ public class xIntArray
             {
             return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
             }
+        // TODO: should be a handle of the element's class
         return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_alValue[(int) lIndex]));
         }
 
@@ -136,6 +128,7 @@ public class xIntArray
             return frame.raiseException(IndexSupport.outOfRange(lIndex, hArray.m_cSize));
             }
 
+        // TODO: should be a handle of the element's class
         return frame.assignValue(iReturn,
                 xInt64.makeHandle(++hArray.m_alValue[(int) lIndex]));
         }
@@ -163,16 +156,6 @@ public class xIntArray
             }
 
         return Arrays.equals(hArray1.m_alValue, hArray2.m_alValue);
-        }
-
-    public static IntArrayHandle makeIntArrayInstance(long[] alValue)
-        {
-        return new IntArrayHandle(INSTANCE.getCanonicalClass(), alValue);
-        }
-
-    public static IntArrayHandle makeIntArrayInstance(long cCapacity)
-        {
-        return new IntArrayHandle(INSTANCE.getCanonicalClass(), cCapacity);
         }
 
     public static class IntArrayHandle

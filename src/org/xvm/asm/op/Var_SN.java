@@ -17,6 +17,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
@@ -30,24 +31,6 @@ import static org.xvm.util.Handy.writePackedLong;
 public class Var_SN
         extends OpVar
     {
-    /**
-     * Construct a VAR_SN op.
-     *
-     * @param nType      the variable type id
-     * @param nNameId    the name of the variable id
-     * @param anValueId  the value ids for the sequence
-     *
-     * @deprecated
-     */
-    public Var_SN(int nType, int nNameId, int[] anValueId)
-        {
-        super();
-
-        m_nType = nType;
-        m_nNameId = nNameId;
-        m_anArgValue = anValueId;
-        }
-
     /**
      * Construct a VAR_SN op for the specified type, name and arguments.
      *
@@ -128,9 +111,6 @@ public class Var_SN
     @Override
     public int process(Frame frame, int iPC)
         {
-        TypeConstant typeSequence = frame.resolveType(m_nType);
-        TypeConstant typeEl = typeSequence.getGenericParamType("ElementType");
-
         try
             {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
@@ -139,10 +119,22 @@ public class Var_SN
                 return R_REPEAT;
                 }
 
-            ArrayHandle hArray = xArray.makeHandle(typeEl, ahArg);
+            TypeConstant    typeSequence = frame.resolveType(m_nType);
+            TypeComposition clzArray     = m_clzArray;
+
+            if (clzArray == null)
+                {
+                TypeConstant typeEl = typeSequence.getGenericParamType("ElementType");
+                m_clzArray = clzArray = xArray.INSTANCE.
+                    ensureParameterizedClass(frame.poolContext(), typeEl);
+                }
+
+            xArray template = (xArray) clzArray.getTemplate();
+            ArrayHandle hArray = template.createArrayHandle(frame, clzArray, ahArg);
             hArray.makeImmutable();
 
-            frame.introduceVar(m_nVar, convertId(m_nType), m_nNameId, Frame.VAR_STANDARD, hArray);
+            frame.introduceResolvedVar(m_nVar, typeSequence, frame.getString(m_nNameId),
+                Frame.VAR_STANDARD, hArray);
 
             return iPC + 1;
             }
@@ -166,4 +158,7 @@ public class Var_SN
 
     private StringConstant m_constName;
     private Argument[]     m_aArgValue;
+
+    // cached TypeComposition for the underlying array
+    private transient TypeComposition m_clzArray;
     }

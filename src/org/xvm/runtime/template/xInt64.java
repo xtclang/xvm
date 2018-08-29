@@ -3,14 +3,10 @@ package org.xvm.runtime.template;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
-
-import org.xvm.runtime.template.collections.xIntArray;
 
 
 /**
@@ -43,17 +39,6 @@ public class xInt64
     public void initDeclared()
         {
         super.initDeclared();
-        }
-
-    @Override
-    public int createArrayStruct(Frame frame, TypeConstant typeEl, long cCapacity, int iReturn)
-        {
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(xException.makeHandle("Invalid array size: " + cCapacity));
-            }
-
-        return frame.assignValue(iReturn, xIntArray.makeIntArrayInstance(cCapacity));
         }
 
     @Override
