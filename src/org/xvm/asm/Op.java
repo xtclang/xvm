@@ -756,6 +756,8 @@ public abstract class Op
             case OP_VAR_IN:      return new Var_IN      (in, aconst);
             case OP_VAR_D:       return new Var_D       (in, aconst);
             case OP_VAR_DN:      return new Var_DN      (in, aconst);
+            case OP_VAR_C:       return new Var_C       (in, aconst);
+            case OP_VAR_CN:      return new Var_CN      (in, aconst);
             case OP_VAR_S:       return new Var_S       (in, aconst);
             case OP_VAR_SN:      return new Var_SN      (in, aconst);
             case OP_VAR_T:       return new Var_T       (in, aconst);
@@ -958,6 +960,8 @@ public abstract class Op
             case OP_VAR_IN:      return "VAR_IN";
             case OP_VAR_D:       return "VAR_D";
             case OP_VAR_DN:      return "VAR_DN";
+            case OP_VAR_C:       return "VAR_C";
+            case OP_VAR_CN:      return "VAR_CN";
             case OP_VAR_S:       return "VAR_S";
             case OP_VAR_SN:      return "VAR_SN";
             case OP_VAR_T:       return "VAR_T";
@@ -1194,6 +1198,8 @@ public abstract class Op
     public static final int OP_VAR_IN       = 0x41;
     public static final int OP_VAR_D        = 0x42;
     public static final int OP_VAR_DN       = 0x43;
+    public static final int OP_VAR_C        = 0xE7; // TODO re-order
+    public static final int OP_VAR_CN       = 0xE8; // TODO re-order
     public static final int OP_VAR_S        = 0x44;
     public static final int OP_VAR_SN       = 0x45;
     public static final int OP_VAR_T        = 0x46;
