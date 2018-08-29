@@ -88,6 +88,8 @@
 +VAR_IN     TYPE, STRING, rvalue-src                ; ("I"=) initialized ("N"=) named variable
 +VAR_D      TYPE                                    ; anonymous ("D"=) dynamic reference
 +VAR_DN     TYPE, STRING                            ; ("N"=) named ("D"=) dynamic reference
+-VAR_C      rvalue-ref                              ; ("C"=) capture variable: rvalue must be of type Ref or Var; local property mode is supported
+-VAR_CN     rvalue-ref, STRING                      ; ("N"=) named ("C"=) capture variable: rvalue must be of type Ref or Var; local property mode is supported
 +VAR_S      TYPE, #values:(rvalue)                  ; initialized anonymous ("S"=) Sequence variable
 +VAR_SN     TYPE, STRING, #values:(rvalue)          ; initialized ("N"=) named ("S"=) Sequence variable
 +VAR_T      TYPE. #values:(rvalue)                  ; initialized anonymous ("T"=) Tuple variable
@@ -125,9 +127,9 @@
 +GP_COMPL   rvalue, lvalue                          ; ~T -> T
 
                                                     ; Target Description  rTARGET/lTARGET
-// generic ops                                      ; ------------------  ----------------------------
+// generic ops (DEFERRED PROJECT)                   ; ------------------  ----------------------------
  LOP subop-code parameters                          ; local var/property  register index or PROPERTY
- DOP subop-code parameters                          ; auto-deref local    register index or PROPERTY
+ DOP subop-code parameters                          ; auto-deref local    register index or PROPERTY (i.e. of type Ref/Var)
  POP subop-code parameters                          ; target property     PROPERTY, rvalue-target
  IOP subop-code parameters                          ; indexed             rvalue-target, rvalue-ix
  MOP subop-code parameters                          ; indexed-n           rvalue-target, #:(rvalue-ix)
