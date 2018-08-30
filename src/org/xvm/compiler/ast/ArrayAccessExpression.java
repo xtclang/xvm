@@ -162,8 +162,11 @@ public class ArrayAccessExpression
             }
 
         // check for a matching setter
-        m_idSet = findOpMethod(ctx, typeArray, "setElement", "[]=", aexprIndexes,
-                               typeArray.isTuple() ? null : typeRequired, false, errs);
+        Expression[] aExprSet = new Expression[cIndexes + 1];
+        System.arraycopy(aexprIndexes, 0, aExprSet, 0, cIndexes);
+        // note: cannot fill in the expression that represents the value being set because it hasn't
+        //       yet been validated (for example, if our parent is an AssignmentStatement)
+        m_idSet = findOpMethod(ctx, typeArray, "setElement", "[]=", aExprSet, null, false, errs);
 
         // the type of a tuple access expression is determinable iff the type is a tuple, it has
         // a known number of field types, and the index is a constant that specifies a field within
