@@ -251,9 +251,9 @@ class Array<ElementType>
     private Element? tail;
 
     private class Element(ElementType value, Element? next = null)
-            delegates Ref<ElementType>(valueRef)
+            delegates Var<ElementType>(valueRef)
         {
-        Ref<ElementType> valueRef.get()
+        Var<ElementType> valueRef.get()
             {
             return &value;
             }

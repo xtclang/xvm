@@ -6,8 +6,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
-
 import org.xvm.asm.constants.NativeRebaseConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -463,7 +463,12 @@ public class xRef
 
         public String getName()
             {
-            return m_sName;
+            String sName = m_sName;
+            if (sName == null && m_iVar >= 0)
+                {
+                m_sName = sName = m_frame.f_aInfo[m_iVar].getName();
+                }
+            return sName;
             }
 
         public VarSupport getVarSupport()
@@ -485,6 +490,13 @@ public class xRef
                 default: // assertion m_frame != null && m_iVar >= 0
                     return m_frame.f_ahVar[m_iVar] != null;
                 }
+            }
+
+        public TypeConstant getDeclaredType()
+            {
+            assert m_frame != null && m_iVar >= 0;
+
+            return m_frame.f_aInfo[m_iVar].getType();
             }
 
         public boolean isSelfContained()

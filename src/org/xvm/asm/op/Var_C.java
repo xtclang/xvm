@@ -11,6 +11,9 @@ import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -26,7 +29,7 @@ public class Var_C
      * Construct a VAR_C op for the specified register and argument.
      *
      * @param reg       the register
-     * @param argValue   the value argument of type Ref or Var
+     * @param argValue  the value argument of type Ref or Var
      */
     public Var_C(Register reg, Argument argValue)
         {
@@ -56,7 +59,7 @@ public class Var_C
         {
         super(in, aconst);
 
-        m_nValueId = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
         }
 
     @Override
@@ -67,10 +70,10 @@ public class Var_C
 
         if (m_argValue != null)
             {
-            m_nValueId = encodeArgument(m_argValue, registry);
+            m_nArgValue = encodeArgument(m_argValue, registry);
             }
 
-        writePackedLong(out, m_nValueId);
+        writePackedLong(out, m_nArgValue);
         }
 
     @Override
@@ -82,8 +85,19 @@ public class Var_C
     @Override
     public int process(Frame frame, int iPC)
         {
-        // TODO GG frame.introduceVar(m_nVar, ...
-        return iPC + 1;
+        try
+            {
+            RefHandle hRef = (RefHandle) frame.getArgument(m_nArgValue);
+
+            frame.introduceResolvedVar(m_nVar, hRef.getDeclaredType(),
+                hRef.getName(), Frame.VAR_DYNAMIC_REF, hRef);
+
+            return iPC + 1;
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
         }
 
     @Override
@@ -98,10 +112,10 @@ public class Var_C
     public String toString()
         {
         return super.toString()
-                + ' ' + Argument.toIdString(m_argValue, m_nValueId);
+                + ' ' + Argument.toIdString(m_argValue, m_nArgValue);
         }
 
-    private int m_nValueId;
+    private int m_nArgValue;
 
     private Argument m_argValue;
     }

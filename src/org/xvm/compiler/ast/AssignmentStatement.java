@@ -44,9 +44,30 @@ public class AssignmentStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return true iff the assignment statement uses the "=" operator and is a single assignment
+     */
+    public boolean isSimple()
+        {
+        return lvalue.isSingle() && op.getId() == Token.Id.ASN;
+        }
+
+    /**
+     * @return true iff the assignment statement uses the ":" operator
+     */
     public boolean isConditional()
         {
         return op.getId() == Token.Id.COLON;
+        }
+
+    public Expression getLValue()
+        {
+        return lvalue;
+        }
+
+    public Expression getRValue()
+        {
+        return rvalue;
         }
 
     @Override
@@ -174,7 +195,7 @@ public class AssignmentStatement
                break;
             }
 
-        if (lvalue.isSingle() && op.getId() == Token.Id.ASN)
+        if (isSimple())
             {
             boolean    fCompletes = fReachable;
             Assignable asnL       = lvalue.generateAssignable(ctx, code, errs);

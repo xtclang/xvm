@@ -1105,7 +1105,8 @@ public class Frame
     /**
      * Introduce a new variable for the specified type, style and an optional value.
      */
-    public void introduceResolvedVar(int nVar, TypeConstant type, String sName, int nStyle, ObjectHandle hValue)
+    public void introduceResolvedVar(int nVar, TypeConstant type, String sName,
+                                     int nStyle, ObjectHandle hValue)
         {
         // TODO: remove along with the manually compiled code
         if (nVar == -1)
@@ -1114,7 +1115,7 @@ public class Frame
             }
         else
             {
-            f_anNextVar[m_iScope] = nVar + 1;
+            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
             }
 
         VarInfo info = new VarInfo(type, nStyle);
@@ -1156,7 +1157,7 @@ public class Frame
             }
         else
             {
-            f_anNextVar[m_iScope] = nVar + 1;
+            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
             }
 
         f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
@@ -1210,7 +1211,7 @@ public class Frame
             }
         else
             {
-            f_anNextVar[m_iScope] = nVar + 1;
+            f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
             }
 
         if (nVarFrom >= 0)
