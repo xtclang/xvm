@@ -15,14 +15,15 @@ module TestLambda.xqiz.it
         testComplexCapture();
         }
 
-    void testVoid()
-        {
-        console.println("\n** testBasic()");
-
-        function void() f = () -> console.println("in the lambda!");
-
-        f();
-        }
+// TODO
+//    void testVoid()
+//        {
+//        console.println("\n** testBasic()");
+//
+//        function void() f = () -> console.println("in the lambda!");
+//
+//        f();
+//        }
 
     void testBasic()
         {

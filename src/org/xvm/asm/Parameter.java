@@ -231,6 +231,27 @@ public class Parameter
         return m_fImplicitDeref;
         }
 
+    /**
+     * Obtain the register that de-references the implicitly de-referenced register.
+     *
+     * @param regVar  the implicitly de-referenced register
+     *
+     * @return the register representing the de-reference of the passed register
+     */
+    public Register deref(Register regVar)
+        {
+        assert isImplicitDeref();
+
+        if (m_regDeref == null)
+            {
+            TypeConstant typeVar = getType();
+            TypeConstant typeVal = typeVar.getParamTypesArray()[0];
+            m_regDeref = new Register(typeVal);
+            }
+
+        return m_regDeref;
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 
@@ -406,5 +427,10 @@ public class Parameter
      * True if the parameter represents a Ref or Var that must be implicitly de-referenced on each
      * access.
      */
-    private transient boolean m_fImplicitDeref;
+    private transient boolean  m_fImplicitDeref;
+
+    /**
+     * The register that we create to act as the implicit de-ref.
+     */
+    private transient Register m_regDeref;
     }

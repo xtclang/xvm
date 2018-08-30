@@ -22,7 +22,6 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.ParentClassConstant;
@@ -35,7 +34,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
-import org.xvm.asm.op.Invoke_01;
 import org.xvm.asm.op.L_Get;
 import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.P_Get;
@@ -653,7 +651,7 @@ public class NameExpression
             switch (getMeaning())
                 {
                 case Variable:
-                    return m_plan == Plan.None || m_plan == Plan.RegisterDeref;
+                    return m_plan == Plan.None;
 
                 case Property:
                     return m_plan == Plan.PropertyDeref;
@@ -818,21 +816,6 @@ public class NameExpression
                     default:
                         throw new IllegalStateException("arg=" + argRaw);
                     }
-
-            case RegisterDeref:
-                {
-                TypeConstant   typeRef     = argRaw.getType();
-                ConstantPool   pool        = pool();
-                assert typeRef.isA(pool.typeRef()) && typeRef.getParamsCount() >= 1;
-                TypeConstant   typeDeref   = typeRef.getParamTypesArray()[0];
-                TypeConstant   typeOfDeref = pool.ensureParameterizedTypeConstant(pool.typeType(), typeDeref);
-                MethodConstant idGet       = typeRef.ensureTypeInfo(errs).findCallable(
-                        "get", true, false, new TypeConstant[] {typeOfDeref}, null, null);
-                Assignable     LValDeref   = createTempVar(code, typeDeref, fUsedOnce, errs);
-                Argument       argDeref    = LValDeref.getLocalArgument();
-                code.add(new Invoke_01(argRaw, idGet, argDeref));
-                return argDeref;
-                }
 
             case PropertyDeref:
                 // TODO this is not complete; the "implicit this" covers both nested properties and outer properties
@@ -1219,19 +1202,12 @@ public class NameExpression
 
             Register reg            = (Register) argRaw;
             boolean  fSuppressDeref = isSuppressDeref();
-            boolean  fAutoDeref     = reg.isImplicitDeref();
-            if (fSuppressDeref & !fAutoDeref)
+            if (fSuppressDeref)
                 {
                 assert !reg.isPredefined();
                 m_plan = Plan.RegisterRef;
                 return pool.ensureParameterizedTypeConstant(
                         m_fAssignable ? pool.typeVar() : pool.typeRef(), reg.getType());
-                }
-            else if (!fSuppressDeref && fAutoDeref)
-                {
-                assert reg.getType().isA(pool().typeRef()) && reg.getType().getParamsCount() >= 1;
-                m_plan = Plan.RegisterDeref;
-                return reg.getType().getParamTypesArray()[0];
                 }
             else
                 {
@@ -1628,7 +1604,7 @@ public class NameExpression
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, RegisterDeref, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
+    enum Plan {None, OuterThis, RegisterRef, PropertyDeref, PropertyRef, TypeOfClass, TypeOfTypedef, Singleton}
 
     /**
      * Cached validation info: The raw argument that the name refers to.

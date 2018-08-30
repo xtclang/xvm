@@ -1370,11 +1370,6 @@ public abstract class Statement
                 if (!sName.equals(Id.IGNORED.TEXT))
                     {
                     Register reg = new Register(param.getType(), i);
-                    if (param.isImplicitDeref())
-                        {
-                        reg.markImplicitDeref();
-                        }
-
                     mapByName.put(sName, reg);
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's

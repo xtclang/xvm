@@ -1950,7 +1950,7 @@ public abstract class Expression
          */
         public Assignable(Register regVar)
             {
-            m_nForm = regVar.isImplicitDeref() ? CaptureVar : LocalVar;
+            m_nForm = LocalVar;
             m_arg   = regVar;
             }
 
@@ -2038,9 +2038,6 @@ public abstract class Expression
                 case LocalVar:
                     return getRegister().getType();
 
-                case CaptureVar:
-                    return getRegister().getType().getParamTypesArray()[0];
-
                 case LocalProp:
                 case TargetProp:
                     return getProperty().getType();
@@ -2065,8 +2062,6 @@ public abstract class Expression
          * <li>{@link #BlackHole} - a write-only register that anyone can assign to, resulting in
          *     the value being discarded</li>
          * <li>{@link #LocalVar} - a local variable of a method that can be assigned</li>
-         * <li>{@link #CaptureVar} - a local variable that holds a "Var" and requires dereference on
-         *     every access and mutation to work with the underlying value</li>
          * <li>{@link #LocalProp} - a local (this:private) property that can be assigned</li>
          * <li>{@link #TargetProp} - a property of a specified reference that can be assigned</li>
          * <li>{@link #Indexed} - an index into a single-dimensioned array</li>
@@ -2076,8 +2071,8 @@ public abstract class Expression
          * </ul>
          *
          * @return the form of the Assignable, one of: {@link #BlackHole}, {@link #LocalVar},
-         *         {@link #CaptureVar}, {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed},
-         *         {@link #IndexedN}, or {@link #IndexedNProp}
+         *         {@link #LocalProp}, {@link #TargetProp}, {@link #Indexed}, {@link #IndexedN},
+         *         or {@link #IndexedNProp}
          */
         public int getForm()
             {
@@ -2097,7 +2092,7 @@ public abstract class Expression
          */
         public Register getRegister()
             {
-            if (m_nForm != LocalVar && m_nForm != CaptureVar)
+            if (m_nForm != LocalVar)
                 {
                 throw new IllegalStateException();
                 }
@@ -2268,36 +2263,6 @@ public abstract class Expression
                         return null;
                         }
 
-                case CaptureVar:
-                    {
-                    Register       regVar    = getRegister();
-                    TypeConstant   typeVar   = regVar.getType();
-                    ConstantPool   pool      = pool();
-                    assert typeVar.isA(pool.typeRef()) && typeVar.getParamsCount() >= 1;
-                    TypeConstant   typeVal   = typeVar.getParamTypesArray()[0];
-                    TypeConstant   typeOfVal = pool.ensureParameterizedTypeConstant(pool.typeType(),
-                            typeVal);
-                    MethodConstant idGet     = typeVar.ensureTypeInfo(errs).findCallable(
-                            "get", true, false, new TypeConstant[] {typeOfVal}, null, null);
-                    Assignable     LValTemp  = LValResult == null || !LValResult.isLocalArgument()
-                            ? createTempVar(code, typeVal, fUsedOnce, errs)
-                            : LValResult;
-
-                    code.add(new Invoke_01(regVar, idGet, LValTemp.getLocalArgument()));
-                    if (LValResult == null)
-                        {
-                        return LValTemp.getLocalArgument();
-                        }
-                    else
-                        {
-                        if (LValResult != LValTemp)
-                            {
-                            LValResult.assign(LValTemp.getLocalArgument(), code, errs);
-                            }
-                        return null;
-                        }
-                    }
-
                 case LocalProp:
                     if (LValResult == null && fLocalPropOk)
                         {
@@ -2375,19 +2340,6 @@ public abstract class Expression
                 case LocalVar:
                     code.add(new Move(arg, getRegister()));
                     break;
-
-                case CaptureVar:
-                    {
-                    Register       regVar    = getRegister();
-                    TypeConstant   typeVar   = regVar.getType();
-                    ConstantPool   pool      = pool();
-                    assert typeVar.isA(pool.typeVar()) && typeVar.getParamsCount() >= 1;
-                    TypeConstant   typeVal   = typeVar.getParamTypesArray()[0];
-                    MethodConstant idSet     = typeVar.ensureTypeInfo(errs).findCallable("set",
-                            true, false, TypeConstant.NO_TYPES, new TypeConstant[] {typeVal}, null);
-                    code.add(new Invoke_10(regVar, idSet, arg));
-                    break;
-                    }
 
                 case LocalProp:
                     code.add(new L_Set(getProperty(), arg));
@@ -2600,12 +2552,9 @@ public abstract class Expression
                         }
                     }
 
-                case CaptureVar:
-                    // TODO for now just use the default implementations, but it would be nice if
-                    //      there were a way to send the pre/post inc/dec to the Var instead of
-                    //      pulling the value out, doing the op, and shoving it back in
                 case IndexedN:
                 case IndexedNProp:
+                    // TODO
                     break;
 
                 default:
@@ -2697,13 +2646,12 @@ public abstract class Expression
 
         public static final byte BlackHole    = 0;
         public static final byte LocalVar     = 1;
-        public static final byte CaptureVar   = 2;
-        public static final byte LocalProp    = 3;
-        public static final byte TargetProp   = 4;
-        public static final byte Indexed      = 5;
-        public static final byte IndexedN     = 6;
-        public static final byte IndexedProp  = 7;
-        public static final byte IndexedNProp = 8;
+        public static final byte LocalProp    = 2;
+        public static final byte TargetProp   = 3;
+        public static final byte Indexed      = 4;
+        public static final byte IndexedN     = 5;
+        public static final byte IndexedProp  = 6;
+        public static final byte IndexedNProp = 7;
 
         private byte             m_nForm;
         private Argument         m_arg;

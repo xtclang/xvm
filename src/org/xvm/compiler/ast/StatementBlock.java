@@ -7,17 +7,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.xvm.asm.*;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
-import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.Register;
+import org.xvm.asm.Register.Assignment;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Return_0;
-
 import org.xvm.asm.op.Var_C;
+
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -249,6 +249,26 @@ public class StatementBlock
         if (stmts != null && !stmts.isEmpty())
             {
             ctx = ctx.enterScope();
+
+            if (getParent() instanceof LambdaExpression)
+                {
+                // go through all of the parameters looking for any implicit de-reference params
+                // (a new local variable will be created for each, effectively hiding the original
+                // parameter)
+                for (org.xvm.asm.Parameter param : ctx.getMethod().getParamArray())
+                    {
+                    if (param.isImplicitDeref())
+                        {
+                        String     sName  = param.getName();
+                        Register   regVar = (Register) ctx.getVar(sName);
+                        Assignment asnVar = ctx.getVarAssignment(sName);
+                        Register regVal = param.deref(regVar);
+                        ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
+                        ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment
+                        }
+                    }
+                }
+
             for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
                 Statement stmtOld = stmts.get(i);
@@ -300,14 +320,9 @@ public class StatementBlock
                     {
                     if (param.isImplicitDeref())
                         {
-                        String       sName   = param.getName();
-                        TypeConstant typeVar = param.getType();
-                        TypeConstant typeVal = typeVar.getParamTypesArray()[0];
-                        Register     reg     = new Register(typeVal);
-                        Argument     argVar  = ctx.getVar(sName);
-                        assert argVar instanceof Register;
-                        code.add(new Var_C(reg, argVar));
-                        ctx.ensureNameMap().put(sName, reg);
+                        Register regVar = (Register) ctx.getVar(param.getName());
+                        Register regVal = param.deref(regVar);
+                        code.add(new Var_C(regVal, regVar));
                         }
                     }
                 }
