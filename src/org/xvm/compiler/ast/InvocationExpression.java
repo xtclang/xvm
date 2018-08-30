@@ -1398,7 +1398,7 @@ public class InvocationExpression
                 {
                 TypeConstant typeParam = aParams[i];
                 TypeConstant typeArg   = aArgs[i];
-                if (typeArg != null && typeParam != null && !typeArg.isA(typeParam))
+                if (typeArg != null && typeParam != null && !typeArg.isAssignableTo(typeParam))
                     {
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                             typeParam.getValueString(), typeArg.getValueString());
