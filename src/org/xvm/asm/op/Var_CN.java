@@ -13,6 +13,9 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.xRef.RefHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -61,7 +64,7 @@ public class Var_CN
         super(in, aconst);
 
         m_nNameId  = readPackedInt(in);
-        m_nValueId = readPackedInt(in);
+        m_nArgValue = readPackedInt(in);
         }
 
     @Override
@@ -73,11 +76,11 @@ public class Var_CN
         if (m_argValue != null)
             {
             m_nNameId  = encodeArgument(m_constName, registry);
-            m_nValueId = encodeArgument(m_argValue, registry);
+            m_nArgValue = encodeArgument(m_argValue, registry);
             }
 
         writePackedLong(out, m_nNameId);
-        writePackedLong(out, m_nValueId);
+        writePackedLong(out, m_nArgValue);
         }
 
     @Override
@@ -89,8 +92,19 @@ public class Var_CN
     @Override
     public int process(Frame frame, int iPC)
         {
-        // TODO GG frame.introduceVar(m_nVar, ...
-        return iPC + 1;
+        try
+            {
+            RefHandle hRef = (RefHandle) frame.getArgument(m_nArgValue);
+
+            frame.introduceResolvedVar(m_nVar, hRef.getDeclaredType(),
+                frame.getString(m_nNameId), Frame.VAR_DYNAMIC_REF, hRef);
+
+            return iPC + 1;
+            }
+        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
         }
 
     @Override
@@ -103,7 +117,7 @@ public class Var_CN
         }
 
     private int m_nNameId;
-    private int m_nValueId;
+    private int m_nArgValue;
 
     private StringConstant m_constName;
     private Argument       m_argValue;
