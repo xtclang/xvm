@@ -342,10 +342,8 @@ public class MethodBody
         {
         // must be a method (not a function)
         // the number of parameters must match
-        // must have at least one return value
         if (isFunction()
-                || cParams >= 0 && m_id.getRawParams().length != cParams
-                || m_id.getRawReturns().length == 0)
+                || cParams >= 0 && m_id.getRawParams().length != cParams)
             {
             return false;
             }

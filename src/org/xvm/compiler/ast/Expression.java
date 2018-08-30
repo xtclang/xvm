@@ -1715,8 +1715,8 @@ public abstract class Expression
 
             if (typeReturn != null)
                 {
-                TypeConstant typeOpReturn = idOp.getRawReturns()[0];
-                if (!typeOpReturn.isAssignableTo(typeReturn))
+                TypeConstant[] atypeOpReturns = idOp.getRawReturns();
+                if (atypeOpReturns.length == 0 || !atypeOpReturns[0].isAssignableTo(typeReturn))
                     {
                     continue NextOp;
                     }
