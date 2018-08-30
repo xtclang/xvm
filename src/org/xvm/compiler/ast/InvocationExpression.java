@@ -582,13 +582,13 @@ public class InvocationExpression
                         }
 
                     // handle method or function
+                    if (typeLeft == null)
+                        {
+                        typeLeft = ctx.getThisType();
+                        }
                     if (argMethod instanceof MethodConstant)
                         {
                         MethodConstant constMethod = (MethodConstant) argMethod;
-                        if (typeLeft == null)
-                            {
-                            typeLeft = ctx.getThisType();
-                            }
                         TypeConstant[] atypeResult;
                         if (m_fCall)
                             {

@@ -906,9 +906,11 @@ public abstract class Statement
          */
         protected Map<String, Argument> getNameMap()
             {
-            return m_mapByName == null
-                    ? Collections.EMPTY_MAP
-                    : m_mapByName;
+            return hasInitialNames()
+                    ? ensureNameMap()
+                    : m_mapByName == null
+                            ? Collections.EMPTY_MAP
+                            : m_mapByName;
             }
 
         /**
@@ -921,11 +923,22 @@ public abstract class Statement
             if (mapByName == null)
                 {
                 mapByName = new HashMap<>();
-                initNameMap(mapByName);
+                if (hasInitialNames())
+                    {
+                    initNameMap(mapByName);
+                    }
                 m_mapByName = mapByName;
                 }
 
             return mapByName;
+            }
+
+        /**
+         * @return true iff the context has to register initial names
+         */
+        protected boolean hasInitialNames()
+            {
+            return false;
             }
 
         /**
@@ -1356,6 +1369,12 @@ public abstract class Statement
             }
 
         @Override
+        protected boolean hasInitialNames()
+            {
+            return true;
+            }
+
+        @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
             MethodStructure         method      = m_method;
@@ -1753,6 +1772,12 @@ public abstract class Statement
         public boolean isLambdaMethod()
             {
             return m_fLambdaIsMethod;
+            }
+
+        @Override
+        protected boolean hasInitialNames()
+            {
+            return true;
             }
 
         @Override
