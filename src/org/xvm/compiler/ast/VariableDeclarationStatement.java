@@ -158,10 +158,13 @@ public class VariableDeclarationStatement
 
         // before validating the type, disassociate any annotations that do not apply to the
         // underlying type
-        ConstantPool   pool     = pool();
-        TypeExpression typeOld  = type;
-        TypeExpression typeEach = typeOld;
-        boolean        fVar     = false;
+        ConstantPool   pool      = pool();
+        TypeExpression typeOld   = type;
+        TypeExpression typeEach  = typeOld;
+        boolean        fVar      = false;
+        boolean        fInjected = false;
+        boolean        fAssigned = false;
+        boolean        fFinal    = false;
         while (typeEach != null)
             {
             if (typeEach instanceof AnnotatedTypeExpression)
@@ -181,6 +184,19 @@ public class VariableDeclarationStatement
                         }
                     m_listRefAnnotations.add(annoAst);
                     fVar |= typeInto.getIntoVariableType().isA(pool.typeVar());
+
+                    if (annoAsm.getAnnotationClass().equals(pool.clzInject()))
+                        {
+                        if (fInjected)
+                            {
+                            // TODO log error
+                            }
+
+                        // @Inject implies assignment & final
+                        fAssigned = fFinal = fInjected = true;
+                        }
+
+                    // TODO fFinal (@Final?)
                     }
                 }
 
@@ -208,6 +224,9 @@ public class VariableDeclarationStatement
 
         if (isConditional())
             {
+            // TODO fAssigned / fFinal (when true/false)
+            fAssigned = true;
+
             // what it means to be conditional:
             // 1. there is a boolean value that the RVal expression must yield that satisfies the
             //    "conditional" portion of the statement
@@ -301,6 +320,13 @@ public class VariableDeclarationStatement
                 valueNew   = value.validate(ctx, typeVar, errs);
                 m_scenario = Scenario.DeclareAssign;
                 }
+
+            if (fInjected)
+                {
+                // TODO log error
+                }
+
+            fAssigned = true;
             }
         else
             {
@@ -332,26 +358,30 @@ public class VariableDeclarationStatement
         // create the register
         m_reg = new Register(typeVar);
 
+        ctx.registerVar(name, m_reg, errs);
+
+        if (fAssigned)
+            {
+            ctx.markVarWrite(name, errs);
+            }
+
+        if (fFinal)
+            {
+            m_reg.markEffectivelyFinal();
+            }
+
         // for DVAR registers, specify the DVAR "register type" (separate from the type of the value
         // that gets held in the register)
         if (m_listRefAnnotations != null)
             {
             TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
                     fVar ? pool.typeVar() : pool.typeRef(), typeVar);
-            for (int i = m_listRefAnnotations.size()-1; i >= 0; --i)
+            for (int i = m_listRefAnnotations.size()- 1; i >= 0; --i)
                 {
                 typeReg = pool.ensureAnnotatedTypeConstant(
                         m_listRefAnnotations.get(i).ensureAnnotation(pool), typeReg);
                 }
             m_reg.specifyRegType(typeReg);
-            }
-
-        ctx.registerVar(name, m_reg, errs);
-
-        if (m_scenario != Scenario.DeclareOnly)
-            {
-            // TODO this is not correct for conditional cases ("when true" vs. "when false")
-            ctx.markVarWrite(name, errs);
             }
 
         return fValid ? this : null;
