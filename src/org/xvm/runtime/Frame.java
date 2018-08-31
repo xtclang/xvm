@@ -536,7 +536,7 @@ public class Frame
                 case VAR_STANDARD:
                     if (hValue instanceof FutureHandle)
                         {
-                        if (info.getType() == hValue.getType())
+                        if (info.getType().equals(hValue.getType()))
                             {
                             // TODO: allow hValue to be a subclass?
                             // this can only be a trivial assignment, for example:
@@ -568,8 +568,13 @@ public class Frame
                         return Op.R_BLOCK;
                         }
 
+                    // TODO: this needs to be improved
                     if (hValue instanceof RefHandle)
                         {
+                        if (hValue.getType().isA(info.getType()))
+                            {
+                            break;
+                            }
                         RefHandle hRef = (RefHandle) hValue;
                         return hRef.getVarSupport().get(this, hRef, nVar);
                         }
@@ -612,7 +617,7 @@ public class Frame
                         throw new UnsupportedOperationException("TODO - wrap"); // TODO: wrap the handle
 
                     default:
-                        // why did the compiler/verifier shouldn't have allowed this
+                        // why did the compiler/verifier allow this?
                         System.out.println("Suspicious assignment from: " + typeFrom.getValueString()
                             + " to: " + typeTo.getValueString());
                     }
