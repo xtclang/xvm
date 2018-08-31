@@ -764,3 +764,43 @@ class C<T>
     @Override
     C<T> foo(); // the return type is "this:class<T>"
     }
+
+// -- abstract / sanscode
+
+class C
+    {
+    @Override
+    @Abstract void foo()
+        {
+        beep();
+        }
+    }
+
+class D extends C
+    {
+    @Override
+    void foo(); // does not need a pointless "{ super(); }"
+    }
+
+
+// instance child
+
+class B<T>
+    {
+    class C
+        {
+        }
+
+    void foo()
+        {
+        C c1 = new C(); // compile time type is B<T>.C
+
+        B<Int> b2 = ...;
+        C c2 = b2.new C(); // compile time error; type is B<Int>.C; not assignable to B<T>.C
+        B<Int>.C c2 = b2.new C(); // OK
+
+        B b3 = ...;
+        C c3 = b3.new C(); // compile time error; type is B<?>.C; not assignable to B<T>.C
+        B.C c3 = b3.new C(); // OK
+        }
+    }
