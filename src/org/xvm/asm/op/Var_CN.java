@@ -96,7 +96,7 @@ public class Var_CN
             {
             RefHandle hRef = (RefHandle) frame.getArgument(m_nArgValue);
 
-            frame.introduceResolvedVar(m_nVar, hRef.getDeclaredType(),
+            frame.introduceResolvedVar(m_nVar, hRef.getType(),
                 frame.getString(m_nNameId), Frame.VAR_DYNAMIC_REF, hRef);
 
             return iPC + 1;

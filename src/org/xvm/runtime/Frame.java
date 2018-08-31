@@ -567,6 +567,12 @@ public class Frame
                         f_ahVar[nVar] = hFuture;
                         return Op.R_BLOCK;
                         }
+
+                    if (hValue instanceof RefHandle)
+                        {
+                        RefHandle hRef = (RefHandle) hValue;
+                        return hRef.getVarSupport().get(this, hRef, nVar);
+                        }
                     break;
 
                 case VAR_DYNAMIC_REF:
@@ -1589,7 +1595,7 @@ public class Frame
         private int m_nNameId;
         private String m_sVarName;
         private int m_nStyle; // one of the VAR_* values
-        private RefHandle m_ref; // an "active" reference to this register
+        private RefHandle m_ref; // an "active" reference to this register TODO: should be a WeakRef
         private VarTypeResolver m_resolver;
         private int m_nTargetId; // an id of the target used to resolve this VarInfo's type
 

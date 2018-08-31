@@ -492,13 +492,6 @@ public class xRef
                 }
             }
 
-        public TypeConstant getDeclaredType()
-            {
-            assert m_frame != null && m_iVar >= 0;
-
-            return m_frame.f_aInfo[m_iVar].getType();
-            }
-
         public boolean isSelfContained()
             {
             return m_hDelegate == null || m_hDelegate.isSelfContained();
