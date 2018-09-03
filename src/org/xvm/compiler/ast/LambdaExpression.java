@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.FBind;
@@ -256,7 +257,7 @@ public class LambdaExpression
             return getType();
             }
 
-        assert m_typeRequired == null && m_listRetTypes == null;
+        assert m_typeRequired == null && m_collector == null;
 
         // consider three lambdas:
         // 1) a lambda defined with no parameters: "() -> ..."
@@ -292,27 +293,23 @@ public class LambdaExpression
         blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
         ctx       = ctx.exitScope();
 
-        // the resulting returned types come back in m_listRetTypes (if everything succeeds)
+        // the resulting returned types come back in m_collector (if everything succeeds)
         if (blockTemp == null)
             {
-            m_listRetTypes = null;
+            m_collector = null;
             return null;
             }
 
         // extract return types
         TypeConstant[] atypeReturns = TypeConstant.NO_TYPES;
-        if (m_listRetTypes != null && !m_listRetTypes.isEmpty())
+        if (m_collector != null)
             {
-            TypeConstant[] aTypes = m_listRetTypes.toArray(new TypeConstant[m_listRetTypes.size()]);
-            m_listRetTypes = null;
-
-            TypeConstant typeRet = ListExpression.inferCommonType(pool(), aTypes);
-            if (typeRet == null)
+            atypeReturns = m_collector.inferMulti(); // TODO conditional
+            m_collector  = null;
+            if (atypeReturns == null)
                 {
                 return null;
                 }
-
-            atypeReturns = new TypeConstant[] {typeRet};
             }
 
         return pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -326,9 +323,8 @@ public class LambdaExpression
             return calcFit(ctx, getType(), typeRequired);
             }
 
-        // short-circuit for simple cases
-        TypeConstant typeFunction = pool().typeFunction();
-        TypeFit fit = calcFit(ctx, typeFunction, typeRequired);
+        // short-circuit for simple cases (i.e. where any function type will do)
+        TypeFit fit = calcFit(ctx, pool().typeFunction(), typeRequired);
         if (fit.isFit())
             {
             return fit;
@@ -344,7 +340,7 @@ public class LambdaExpression
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
         // expression validation, but use another copy of the body for the lambda method/function
         // compilation itself
-        assert m_typeRequired == null && m_listRetTypes == null && m_lambda == null;
+        assert m_typeRequired == null && m_collector == null && m_lambda == null;
 
         // extract the required types for the parameters and return values
         ConstantPool pool = pool();
@@ -465,8 +461,7 @@ public class LambdaExpression
         ctxLambda.exitScope();
 
         TypeConstant[] atypeRets;
-        if (m_listRetTypes == null || m_listRetTypes.isEmpty()
-                || m_listRetTypes.stream().allMatch(e -> e == null))
+        if (m_collector == null)
             {
             // the lambda is a void function that is missing a closing return; the statement block
             // will automatically add a trailing "return" when it is compiled
@@ -474,22 +469,17 @@ public class LambdaExpression
             }
         else
             {
-            int            cReturns   = m_listRetTypes.size();
-            TypeConstant[] aReturns   = m_listRetTypes.toArray(new TypeConstant[cReturns]);
-            TypeConstant   typeReturn = ListExpression.inferCommonType(pool, aReturns);
-            if (typeReturn == null)
+            atypeRets   = m_collector.inferMulti(); // TODO conditional
+            m_collector = null;
+
+            if (atypeRets == null)
                 {
                 atypeRets = cReqReturns == 0
                         ? TypeConstant.NO_TYPES
                         : atypeReqReturns;
                 fit = TypeFit.NoFit;
                 }
-            else
-                {
-                atypeRets = new TypeConstant[] {typeReturn};
-                }
             }
-        m_listRetTypes = null;
 
         // while we have enough info at this point to build a signature, what we lack is the
         // effectively final data that will only get reported (via exitScope() on the context) as
@@ -580,25 +570,23 @@ public class LambdaExpression
 
     // ----- compilation helpers -------------------------------------------------------------------
 
-    /**
-     * @return the required type, which is the specified required type during validation, or the
-     *         actual type once the expression is validated
-     */
-    TypeConstant getRequiredType()
+    @Override
+    public TypeConstant[] getRequiredTypes()
         {
-        TypeConstant[] aRetTypes = pool().extractFunctionReturns(
-                isValidated() ? getType() : m_typeRequired);
-        return aRetTypes == null || aRetTypes.length == 0 ? null : aRetTypes[0];
+        TypeConstant   typeFn    = isValidated() ? getType() : m_typeRequired;
+        TypeConstant[] aRetTypes = pool().extractFunctionReturns(typeFn);
+        return aRetTypes;
         }
 
-    void addReturnType(TypeConstant typeRet)
+    @Override
+    public void addReturnTypes(TypeConstant[] atypeRet)
         {
-        List<TypeConstant> list = m_listRetTypes;
-        if (list == null)
+        TypeCollector collector = m_collector;
+        if (collector == null)
             {
-            m_listRetTypes = list = new ArrayList<>();
+            m_collector = collector = new TypeCollector();
             }
-        list.add(typeRet);
+        collector.add(atypeRet);
         }
 
     /**
@@ -816,6 +804,7 @@ public class LambdaExpression
                 }
             }
 
+        // TODO support "conditional"
         int cRets = atypeRets.length;
         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
         for (int i = 0; i < cRets; ++i)
@@ -935,7 +924,7 @@ public class LambdaExpression
      * A list of types from various return statements (collected here from information provided by
      * other nodes below this node in the AST).
      */
-    private transient List<TypeConstant>   m_listRetTypes;
+    private transient TypeCollector        m_collector;
     /**
      * The lambda structure itself.
      */

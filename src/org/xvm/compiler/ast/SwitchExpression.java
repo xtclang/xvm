@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Assert;
@@ -80,21 +81,49 @@ public class SwitchExpression
 
     // ----- compilation ---------------------------------------------------------------------------
 
+    // TODO multi
+    // @Override
+    // protected boolean hasSingleValueImpl()
+    //     {
+    //     return false;
+    //     }
+    //
+    // @Override
+    // protected boolean hasMultiValueImpl()
+    //     {
+    //     return true;
+    //     }
+
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        List<TypeConstant> listTypes = new ArrayList<>();
+        TypeCollector collector = new TypeCollector();
         for (AstNode node : contents)
             {
             if (node instanceof Expression)
                 {
-                listTypes.add(((Expression) node).getImplicitType(ctx));
+                collector.add(((Expression) node).getImplicitType(ctx));
                 }
             }
-        return ListExpression.inferCommonType(pool(),
-                listTypes.toArray(new TypeConstant[listTypes.size()]));
+        return collector.inferSingle();
         }
 
+    // TODO multi
+    // @Override
+    // public TypeConstant[] getImplicitTypes(Context ctx)
+    //     {
+    //     TypeCollector collector = new TypeCollector();
+    //     for (AstNode node : contents)
+    //         {
+    //         if (node instanceof Expression)
+    //             {
+    //             collector.add(((Expression) node).getImplicitTypes(ctx));
+    //             }
+    //         }
+    //     return collector.inferMulti();
+    //     }
+
+    // TODO multi
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
@@ -151,21 +180,21 @@ public class SwitchExpression
                 ? getImplicitType(ctx)
                 : typeRequired;
 
-        Constant           constVal     = null;
-        List<Constant>     listVals     = fIfSwitch ? null : new ArrayList<>();
-        Set<Constant>      setCase      = fIfSwitch ? null : new HashSet<>();
-        boolean            fAllConsts   = true;
-        boolean            fIntConsts   = !fIfSwitch && typeCase.isIntConvertible();
-        PackedInteger      pintMin      = null;
-        PackedInteger      pintMax      = null;
-        boolean            fGrabNext    = false;
-        List<Label>        listLabels   = fIfSwitch ? null : new ArrayList<>();
-        Label              labelCurrent = null;
-        Label              labelDefault = null;
-        Constant           constDefault = null;
-        int                cLabels      = 0;
-        List<TypeConstant> listTypes    = new ArrayList<>();
-        List<AstNode>      listNodes    = contents;
+        Constant       constVal     = null;
+        List<Constant> listVals     = fIfSwitch ? null : new ArrayList<>();
+        Set<Constant>  setCase      = fIfSwitch ? null : new HashSet<>();
+        boolean        fAllConsts   = true;
+        boolean        fIntConsts   = !fIfSwitch && typeCase.isIntConvertible();
+        PackedInteger  pintMin      = null;
+        PackedInteger  pintMax      = null;
+        boolean        fGrabNext    = false;
+        List<Label>    listLabels   = fIfSwitch ? null : new ArrayList<>();
+        Label          labelCurrent = null;
+        Label          labelDefault = null;
+        Constant       constDefault = null;
+        int            cLabels      = 0;
+        TypeCollector  collector    = new TypeCollector();
+        List<AstNode>  listNodes    = contents;
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
@@ -285,10 +314,7 @@ public class SwitchExpression
                         listNodes.set(iNode, exprNew);
                         }
 
-                    if (listTypes != null)
-                        {
-                        listTypes.add(exprNew.getType());
-                        }
+                    collector.add(exprNew.getType());
 
                     if (exprNew.isConstant())
                         {
@@ -339,8 +365,7 @@ public class SwitchExpression
             fValid = false;
             }
 
-        TypeConstant typeActual = ListExpression.inferCommonType(
-                pool, listTypes.toArray(new TypeConstant[listTypes.size()]));
+        TypeConstant typeActual = collector.inferSingle();
         if (typeActual == null)
             {
             typeActual = typeRequest == null
@@ -417,6 +442,7 @@ public class SwitchExpression
         return finishValidation(typeRequired, typeActual, fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
         }
 
+    // TODO multi
     @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {

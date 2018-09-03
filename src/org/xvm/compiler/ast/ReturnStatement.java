@@ -88,11 +88,10 @@ public class ReturnStatement
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
-        ConstantPool pool   = pool();
-        boolean      fValid = true;
-
+        ConstantPool   pool      = pool();
+        boolean        fValid    = true;
         AstNode        container = getCodeContainer();
-        boolean        fConditional;
+        boolean        fConditional = false;
         TypeConstant[] aRetTypes;
         if (container instanceof MethodDeclarationStatement)
             {
@@ -100,37 +99,10 @@ public class ReturnStatement
             fConditional = structMethod.isConditionalReturn();
             aRetTypes    = structMethod.getReturnTypes();
             }
-        else if (container instanceof LambdaExpression)
-            {
-            LambdaExpression expr         = (LambdaExpression) container;
-            TypeConstant     typeRequired = expr.getRequiredType();
-            if (typeRequired == null)
-                {
-                // part of the purpose of validating this statement is to determine the return type
-                // of the enclosing LambdaExpression, so assume a single value of any type
-                typeRequired = pool.typeObject();
-                }
-
-            aRetTypes    = new TypeConstant[] {typeRequired};
-            fConditional = false;
-            }
-        else if (container instanceof StatementExpression)
-            {
-            StatementExpression expr         = (StatementExpression) container;
-            TypeConstant        typeRequired = expr.getRequiredType();
-            if (typeRequired == null)
-                {
-                // part of the purpose of validating this statement is to determine the return type
-                // of the enclosing StatementExpression, so assume a single value of any type
-                typeRequired = pool.typeObject();
-                }
-
-            aRetTypes    = new TypeConstant[] {typeRequired};
-            fConditional = false;
-            }
         else
             {
-            throw new IllegalStateException("container=" + container);
+            aRetTypes    = container.getRequiredTypes();
+            fConditional = aRetTypes != null && container.isConditionalReturn();
             }
 
         int              cRets     = aRetTypes.length;
@@ -259,13 +231,16 @@ public class ReturnStatement
 
         if (fValid)
             {
+            // TODO
+            getCodeContainer().addReturnTypes();
+
             if (container instanceof LambdaExpression)
                 {
-                ((LambdaExpression) container).addReturnType(listExprs.get(0).getType());
+                ((LambdaExpression) container).addReturnTypes(listExprs.get(0).getType());
                 }
             else if (container instanceof StatementExpression)
                 {
-                ((StatementExpression) container).addReturnType(listExprs.get(0).getType());
+                ((StatementExpression) container).addReturnTypes(listExprs.get(0).getType());
                 }
             }
 
@@ -282,8 +257,19 @@ public class ReturnStatement
             {
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression REVIEW tuple return, #exprs > 1
-            Assignable LVal = ((StatementExpression) container).getAssignable();
-            exprs.get(0).generateAssignment(ctx, code, LVal, errs);
+            Assignable aLVals[] = ((StatementExpression) container).getAssignables();
+            int        cLVals   = aLVals.length;
+            for (int i = 0, cExprs = exprs.size(); i < cExprs; ++i)
+                {
+                if (i < cLVals)
+                    {
+                    exprs.get(i).generateAssignment(ctx, code, aLVals[i], errs);
+                    }
+                else
+                    {
+                    exprs.get(i).generateVoid(ctx, code, errs);
+                    }
+                }
 
             // "return" does not complete
             return false;
@@ -297,7 +283,7 @@ public class ReturnStatement
         List<Expression> listExprs    = this.exprs;
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
 
-        if (m_fTupleReturn)
+        if (m_fTupleReturn) // REVIEW
             {
             // the return statement has a single expression; the type that the expression has to
             // generate is the "tuple of" all of the return types

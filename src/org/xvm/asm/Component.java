@@ -369,7 +369,7 @@ public abstract class Component
         }
 
     /**
-     * @return true iff the component is marked as synthetic
+     * @return true iff the component is marked as having a conditional return
      */
     protected boolean isConditionalReturn()
         {

@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ast.Statement.Context;
@@ -94,7 +95,8 @@ public class MapExpression
                     {
                     aTypes[i] = keys.get(i).getImplicitType(ctx);
                     }
-                typeKey = ListExpression.inferCommonType(pool, aTypes);
+                typeKey = TypeCollector.inferFrom(aTypes);
+
                 }
 
             if (typeVal == null)
@@ -103,7 +105,7 @@ public class MapExpression
                     {
                     aTypes[i] = values.get(i).getImplicitType(ctx);
                     }
-                typeVal = ListExpression.inferCommonType(pool, aTypes);
+                typeVal = TypeCollector.inferFrom(aTypes);
                 }
 
             if (typeKey != null)
@@ -182,7 +184,7 @@ public class MapExpression
                 {
                 aTypes[i] = listKeys.get(i).getImplicitType(ctx);
                 }
-            typeKey = ListExpression.inferCommonType(pool, aTypes);
+            typeKey = TypeCollector.inferFrom(aTypes);
             }
 
         // infer value type
@@ -196,7 +198,7 @@ public class MapExpression
                 {
                 aTypes[i] = listVals.get(i).getImplicitType(ctx);
                 }
-            typeVal = ListExpression.inferCommonType(pool, aTypes);
+            typeVal = TypeCollector.inferFrom(aTypes);
             }
 
         // build actual type from map type, key type, value type

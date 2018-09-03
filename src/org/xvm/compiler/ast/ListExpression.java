@@ -11,7 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Var_S;
@@ -92,7 +92,7 @@ public class ListExpression
                 {
                 aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
                 }
-            TypeConstant typeElement = inferCommonType(pool(), aElementTypes);
+            TypeConstant typeElement = TypeCollector.inferFrom(aElementTypes);
             if (typeElement != null)
                 {
                 typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
@@ -154,7 +154,7 @@ public class ListExpression
                 {
                 aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
-            typeElement = inferCommonType(pool, aElementTypes);
+            typeElement = TypeCollector.inferFrom(aElementTypes);
             if (typeElement != null)
                 {
                 typeActual  = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
@@ -198,73 +198,6 @@ public class ListExpression
             }
 
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
-        }
-
-    /**
-     * Determine if the passed array of types indicates a particular common type.
-     *
-     * @param pool    the ConstantPool to place a potentially created new type into
-     * @param aTypes  an array of types, which can be null and which can contain nulls
-     *
-     * @return the inferred common type (including potentially requiring conversion), or null if no
-     *         common type can be determined
-     */
-    static TypeConstant inferCommonType(ConstantPool pool, TypeConstant[] aTypes)
-        {
-        if (aTypes == null || aTypes.length == 0)
-            {
-            return null;
-            }
-
-        TypeConstant typeCommon = aTypes[0];
-        if (typeCommon == null)
-            {
-            return null;
-            }
-
-        boolean fConvApplied = false;
-        boolean fImmutable   = typeCommon.isImmutable();
-        for (int i = 1, c = aTypes.length; i < c; ++i)
-            {
-            TypeConstant type = aTypes[i];
-            if (type == null)
-                {
-                return null;
-                }
-
-            if (!type.isA(typeCommon))
-                {
-                if (typeCommon.isA(type))
-                    {
-                    typeCommon = type;
-                    fImmutable = fImmutable && type.isImmutable();
-                    continue;
-                    }
-
-                if (type.getConverterTo(typeCommon) != null)
-                    {
-                    fConvApplied = true;
-                    continue;
-                    }
-
-                if (!fConvApplied)
-                    {
-                    MethodConstant idConv = typeCommon.getConverterTo(type);
-                    if (idConv != null)
-                        {
-                        fConvApplied = true;
-                        typeCommon   = type;
-                        fImmutable   = fImmutable && type.isImmutable();
-                        continue;
-                        }
-                    }
-
-                // no obvious common type
-                return null;
-                }
-            }
-
-        return fImmutable ? typeCommon.ensureImmutable(pool) : typeCommon;
         }
 
     @Override

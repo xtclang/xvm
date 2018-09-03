@@ -190,6 +190,26 @@ public class MethodDeclarationStatement
         return null;
         }
 
+    // ----- code container methods ----------------------------------------------------------------
+
+    @Override
+    public TypeConstant[] getRequiredTypes()
+        {
+        return ((MethodStructure) getComponent()).getReturnTypes();
+        }
+
+    @Override
+    public boolean isConditionalReturn()
+        {
+        return conditional != null;
+        }
+
+    @Override
+    public void addReturnTypes(TypeConstant[] atypeRet)
+        {
+        // it's a no-op for a method declaration statement
+        }
+
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override

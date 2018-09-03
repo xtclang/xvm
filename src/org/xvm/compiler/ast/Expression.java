@@ -977,6 +977,8 @@ public abstract class Expression
         return (TypeConstant[]) m_oType;
         }
 
+    // TODO need an "isConditionalResult()" method
+
     /**
      * (Post-validation) Determine if the expression represents an L-Value, which means that this
      * expression can be assigned to.

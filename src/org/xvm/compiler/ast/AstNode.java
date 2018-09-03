@@ -22,6 +22,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler.Stage;
@@ -332,6 +333,39 @@ public abstract class AstNode
         return parent == null
                 ? null
                 : parent.getCodeContainer();
+        }
+
+    /**
+     * Code Container method: TODO
+     *
+     * @return the required return types from the code container, which comes from the signature if
+     *         is specified, or from the specified required type during validation, or from the
+     *         actual type once the expression is validated
+     */
+    public TypeConstant[] getRequiredTypes()
+        {
+        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
+        }
+
+    /**
+     * @return true iff the code container has a conditional return
+     */
+    // TODO MethodDeclarationStatement
+    // TODO LambdaExpression
+    // TODO StatementExpression
+    public boolean isConditionalReturn()
+        {
+        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
+        }
+
+    /**
+     * Code Container method: TODO
+     *
+     * @param atypeRet  the types being returned
+     */
+    public void addReturnTypes(TypeConstant[] atypeRet)
+        {
+        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
         }
 
     /**
