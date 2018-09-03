@@ -17,9 +17,9 @@ module TestLambda.xqiz.it
 
     void testVoid()
         {
-        console.println("\n** testBasic()");
+        console.println("\n** testVoid()");
 
-        function void() f = () -> console.println("in the lambda!");
+        function void() f = () -> { console.println("in the lambda!"); };
 
         f();
         }

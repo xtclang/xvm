@@ -95,7 +95,7 @@ public class MapExpression
                     {
                     aTypes[i] = keys.get(i).getImplicitType(ctx);
                     }
-                typeKey = TypeCollector.inferFrom(aTypes);
+                typeKey = TypeCollector.inferFrom(aTypes, pool);
 
                 }
 
@@ -105,7 +105,7 @@ public class MapExpression
                     {
                     aTypes[i] = values.get(i).getImplicitType(ctx);
                     }
-                typeVal = TypeCollector.inferFrom(aTypes);
+                typeVal = TypeCollector.inferFrom(aTypes, pool);
                 }
 
             if (typeKey != null)
@@ -184,7 +184,7 @@ public class MapExpression
                 {
                 aTypes[i] = listKeys.get(i).getImplicitType(ctx);
                 }
-            typeKey = TypeCollector.inferFrom(aTypes);
+            typeKey = TypeCollector.inferFrom(aTypes, pool);
             }
 
         // infer value type
@@ -198,7 +198,7 @@ public class MapExpression
                 {
                 aTypes[i] = listVals.get(i).getImplicitType(ctx);
                 }
-            typeVal = TypeCollector.inferFrom(aTypes);
+            typeVal = TypeCollector.inferFrom(aTypes, pool);
             }
 
         // build actual type from map type, key type, value type

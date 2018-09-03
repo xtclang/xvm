@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.ConstantPool;
@@ -88,26 +87,15 @@ public class ReturnStatement
     @Override
     protected Statement validate(Context ctx, ErrorListener errs)
         {
-        ConstantPool   pool      = pool();
-        boolean        fValid    = true;
-        AstNode        container = getCodeContainer();
-        boolean        fConditional = false;
-        TypeConstant[] aRetTypes;
-        if (container instanceof MethodDeclarationStatement)
-            {
-            MethodStructure structMethod = ctx.getMethod();
-            fConditional = structMethod.isConditionalReturn();
-            aRetTypes    = structMethod.getReturnTypes();
-            }
-        else
-            {
-            aRetTypes    = container.getRequiredTypes();
-            fConditional = aRetTypes != null && container.isConditionalReturn();
-            }
-
-        int              cRets     = aRetTypes.length;
-        List<Expression> listExprs = this.exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
+        ConstantPool     pool         = pool();
+        boolean          fValid       = true;
+        AstNode          container    = getCodeContainer();
+        TypeConstant[]   aRetTypes    = container.getReturnTypes();
+        boolean          fConditional = container.isReturnConditional();
+        int              cRets        = aRetTypes == null ? -1 : aRetTypes.length;
+        List<Expression> listExprs    = this.exprs;
+        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        TypeConstant[]   atypeActual  = null;
 
         // resolve auto-narrowing
         for (int i = 0; i < cRets; i++)
@@ -122,6 +110,8 @@ public class ReturnStatement
         // void methods are the simplest
         if (cExprs == 0 || cRets == 0)
             {
+            atypeActual = TypeConstant.NO_TYPES;
+
             if (cExprs > 0)
                 {
                 // check the expressions anyhow (even though they can't be used)
@@ -157,6 +147,7 @@ public class ReturnStatement
         else if (cExprs > 1)
             {
             // validate each expression, telling it what return type is expected
+            atypeActual = new TypeConstant[cExprs];
             for (int i = 0; i < cExprs; ++i)
                 {
                 TypeConstant typeRet = i < cRets
@@ -170,12 +161,13 @@ public class ReturnStatement
                     if (exprNew != null)
                         {
                         listExprs.set(i, exprNew);
+                        atypeActual[i] = exprNew.getType();
                         }
                     }
                 }
 
             // make sure the arity is correct (the number of exprs has to match the number of rets)
-            if (cExprs != cRets)
+            if (cRets >= 0 && cExprs != cRets)
                 {
                 log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
                 }
@@ -187,9 +179,9 @@ public class ReturnStatement
             // several possibilities:
             // 1) most likely the expression provides a single value, which matches the single
             //    return type for the method
-            if (cRets == 1 && exprOld.testFit(ctx, aRetTypes[0]).isFit())
+            if (cRets < 0 || cRets == 1 && exprOld.testFit(ctx, aRetTypes[0]).isFit())
                 {
-                exprNew = exprOld.validate(ctx, aRetTypes[0], errs);
+                exprNew = exprOld.validate(ctx, cRets < 0 ? null : aRetTypes[0], errs);
                 }
             else
                 {
@@ -216,6 +208,7 @@ public class ReturnStatement
                 else
                     {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                    // REVIEW: should this set fValid  = false;
                     }
                 }
 
@@ -225,28 +218,23 @@ public class ReturnStatement
                 if (exprNew != null)
                     {
                     listExprs.set(0, exprNew);
+                    atypeActual = m_fTupleReturn
+                            ? exprNew.getType().getParamTypesArray()
+                            : new TypeConstant[] {exprNew.getType()};
                     }
                 }
             }
 
         if (fValid)
             {
-            // TODO
-            getCodeContainer().addReturnTypes();
-
-            if (container instanceof LambdaExpression)
-                {
-                ((LambdaExpression) container).addReturnTypes(listExprs.get(0).getType());
-                }
-            else if (container instanceof StatementExpression)
-                {
-                ((StatementExpression) container).addReturnTypes(listExprs.get(0).getType());
-                }
+            container.collectReturnTypes(atypeActual);
+            return this;
             }
-
-        return fValid
-                ? this
-                : null;
+        else
+            {
+            container.collectReturnTypes(null);
+            return null;
+            }
         }
 
     @Override

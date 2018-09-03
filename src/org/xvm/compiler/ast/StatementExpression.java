@@ -73,6 +73,34 @@ public class StatementExpression
         }
 
 
+    // ----- code container methods ----------------------------------------------------------------
+
+    @Override
+    public TypeConstant[] getReturnTypes()
+        {
+        return isValidated() ? getTypes() : m_atypeRequired;
+        }
+
+    @Override
+    public boolean isReturnConditional()
+        {
+        // this is called during validation, when we're still trying to figure out what exactly does
+        // get returned
+        return false;
+        }
+
+    @Override
+    public void collectReturnTypes(TypeConstant[] atypeRet)
+        {
+        TypeCollector collector = m_collector;
+        if (collector == null)
+            {
+            m_collector = collector = new TypeCollector(pool());
+            }
+        collector.add(atypeRet);
+        }
+
+
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
@@ -204,23 +232,6 @@ public class StatementExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
-
-    @Override
-    public TypeConstant[] getRequiredTypes()
-        {
-        return isValidated() ? getTypes() : m_atypeRequired;
-        }
-
-    @Override
-    public void addReturnTypes(TypeConstant[] atypeRet)
-        {
-        TypeCollector collector = m_collector;
-        if (collector == null)
-            {
-            m_collector = collector = new TypeCollector();
-            }
-        collector.add(atypeRet);
-        }
 
     Assignable[] getAssignables()
         {

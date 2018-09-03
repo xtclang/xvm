@@ -97,7 +97,7 @@ public class SwitchExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeCollector collector = new TypeCollector();
+        TypeCollector collector = new TypeCollector(pool());
         for (AstNode node : contents)
             {
             if (node instanceof Expression)
@@ -112,7 +112,7 @@ public class SwitchExpression
     // @Override
     // public TypeConstant[] getImplicitTypes(Context ctx)
     //     {
-    //     TypeCollector collector = new TypeCollector();
+    //     TypeCollector collector = new TypeCollector(pool());
     //     for (AstNode node : contents)
     //         {
     //         if (node instanceof Expression)
@@ -193,7 +193,7 @@ public class SwitchExpression
         Label          labelDefault = null;
         Constant       constDefault = null;
         int            cLabels      = 0;
-        TypeCollector  collector    = new TypeCollector();
+        TypeCollector  collector    = new TypeCollector(pool);
         List<AstNode>  listNodes    = contents;
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {

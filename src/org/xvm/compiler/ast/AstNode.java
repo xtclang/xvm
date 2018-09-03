@@ -342,20 +342,17 @@ public abstract class AstNode
      *         is specified, or from the specified required type during validation, or from the
      *         actual type once the expression is validated
      */
-    public TypeConstant[] getRequiredTypes()
+    public TypeConstant[] getReturnTypes()
         {
-        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
+        throw notCodeContainer();
         }
 
     /**
      * @return true iff the code container has a conditional return
      */
-    // TODO MethodDeclarationStatement
-    // TODO LambdaExpression
-    // TODO StatementExpression
-    public boolean isConditionalReturn()
+    public boolean isReturnConditional()
         {
-        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
+        throw notCodeContainer();
         }
 
     /**
@@ -363,9 +360,14 @@ public abstract class AstNode
      *
      * @param atypeRet  the types being returned
      */
-    public void addReturnTypes(TypeConstant[] atypeRet)
+    public void collectReturnTypes(TypeConstant[] atypeRet)
         {
-        throw new IllegalStateException("this class=" + this.getClass().getSimpleName());
+        throw notCodeContainer();
+        }
+
+    private RuntimeException notCodeContainer()
+        {
+        throw new IllegalStateException("not code container: " + this.getClass().getSimpleName());
         }
 
     /**

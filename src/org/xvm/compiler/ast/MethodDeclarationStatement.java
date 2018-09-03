@@ -193,19 +193,19 @@ public class MethodDeclarationStatement
     // ----- code container methods ----------------------------------------------------------------
 
     @Override
-    public TypeConstant[] getRequiredTypes()
+    public TypeConstant[] getReturnTypes()
         {
         return ((MethodStructure) getComponent()).getReturnTypes();
         }
 
     @Override
-    public boolean isConditionalReturn()
+    public boolean isReturnConditional()
         {
         return conditional != null;
         }
 
     @Override
-    public void addReturnTypes(TypeConstant[] atypeRet)
+    public void collectReturnTypes(TypeConstant[] atypeRet)
         {
         // it's a no-op for a method declaration statement
         }
@@ -414,12 +414,11 @@ public class MethodDeclarationStatement
         MethodStructure method = (MethodStructure) getComponent();
         if (body != null)
             {
-            MethodConstant constMethod = method.getIdentityConstant();
-            ModuleStructure module = (ModuleStructure) constMethod.getModuleConstant().getComponent();
-            String sPath = module.getName() + "/" + constMethod.getPathString();
-            Code   code  = method.createCode();
-
-            ErrorList errsTemp = new ErrorList(10);
+            MethodConstant  idMethod = method.getIdentityConstant();
+            ModuleStructure module   = (ModuleStructure) idMethod.getModuleConstant().getComponent();
+            String          sPath    = module.getName() + "/" + idMethod.getPathString();
+            Code            code     = method.createCode();
+            ErrorList       errsTemp = new ErrorList(10);
             try
                 {
                 body.compileMethod(code, errsTemp);

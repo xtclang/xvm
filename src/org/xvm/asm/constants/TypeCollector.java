@@ -15,6 +15,16 @@ import org.xvm.asm.ConstantPool;
 public class TypeCollector
     {
     /**
+     * Construct a TypeCollector.
+     *
+     * @param pool  the ConstantPool to use
+     */
+    public TypeCollector(ConstantPool pool)
+        {
+        f_pool = pool;
+        }
+
+    /**
      * Add a void (an absence of any types) to the collection.
      */
     public void addVoid()
@@ -271,7 +281,7 @@ public class TypeCollector
             return null;
             }
 
-        return inferFrom(listTypes.toArray(new TypeConstant[cTypes]));
+        return inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
         }
 
     /**
@@ -306,7 +316,6 @@ public class TypeCollector
         int          cHeight      = 0;
         int          cWidth       = -1;
         boolean      fConditional = true;
-        ConstantPool pool         = ConstantPool.getCurrentPool();
         for (TypeConstant[] aTypes : m_listMulti)
             {
             if (aTypes == null)
@@ -319,7 +328,7 @@ public class TypeCollector
                 {
                 // the only possibility for a one-column multi is a "conditional" type, so if that
                 // is not the case, then we're done
-                if (!fConditional || !aTypes[0].equals(pool.typeFalse()))
+                if (!fConditional || !aTypes[0].equals(f_pool.typeFalse()))
                     {
                     return null;
                     }
@@ -328,7 +337,7 @@ public class TypeCollector
                 {
                 if (cWidth < 0)
                     {
-                    if (cTypes < 2)
+                    if (cTypes == 0)
                         {
                         fConditional = false;
                         }
@@ -368,8 +377,9 @@ public class TypeCollector
                 aColType[iRow] = listTypes.get(iRow)[0];
                 }
 
-            TypeConstant typeResult = inferFrom(aColType);
-            if (!typeResult.equals(pool.typeBoolean()))
+            // conditional results MUST be a boolean for the first value
+            TypeConstant typeResult = inferFrom(aColType, f_pool);
+            if (!typeResult.equals(f_pool.typeBoolean()))
                 {
                 return null;
                 }
@@ -382,13 +392,13 @@ public class TypeCollector
                 for (int iElement = 0, iRow = 0; iElement < cElements; ++iElement)
                     {
                     TypeConstant[] aRowType = listTypes.get(iElement);
-                    if (aRowType.length > iCol)
+                    if (aRowType.length != 1)
                         {
                         aColType[iRow++] = aRowType[iCol];
                         }
                     }
 
-                typeResult = inferFrom(aColType);
+                typeResult = inferFrom(aColType, f_pool);
                 if (typeResult == null)
                     {
                     return null;
@@ -408,7 +418,7 @@ public class TypeCollector
                     {
                     aColType[iRow++] = listTypes.get(iRow)[iCol];
                     }
-                TypeConstant typeResult = inferFrom(aColType);
+                TypeConstant typeResult = inferFrom(aColType, f_pool);
                 if (typeResult == null)
                     {
                     return null;
@@ -431,20 +441,22 @@ public class TypeCollector
         if (m_FConditional == null)
             {
             inferMulti();
+            assert m_FConditional != null;
             }
 
-        return m_FConditional != null && m_FConditional;
+        return m_FConditional;
         }
 
     /**
      * Determine if the passed array of types indicates a particular common type.
      *
      * @param aTypes  an array of types, which can be null and which can contain nulls
+     * @param pool    the constant pool to use
      *
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public static TypeConstant inferFrom(TypeConstant[] aTypes)
+    public static TypeConstant inferFrom(TypeConstant[] aTypes, ConstantPool pool)
         {
         if (aTypes == null)
             {
@@ -505,11 +517,16 @@ public class TypeCollector
                 }
             }
 
-        return fImmutable ? typeCommon.ensureImmutable(ConstantPool.getCurrentPool()) : typeCommon;
+        return fImmutable ? typeCommon.ensureImmutable(pool) : typeCommon;
         }
 
 
     // ----- data members --------------------------------------------------------------------------
+
+    /**
+     * The constant pool used by this TypeCollector.
+     */
+    private final ConstantPool f_pool;
 
     /**
      * A list of single types, with null representing unknown.

@@ -175,6 +175,36 @@ public class LambdaExpression
         }
 
 
+    // ----- code container methods ----------------------------------------------------------------
+
+    @Override
+    public TypeConstant[] getReturnTypes()
+        {
+        TypeConstant   typeFn    = isValidated() ? getType() : m_typeRequired;
+        TypeConstant[] aRetTypes = pool().extractFunctionReturns(typeFn);
+        return aRetTypes;
+        }
+
+    @Override
+    public boolean isReturnConditional()
+        {
+        // this is called during validation, when we're still trying to figure out what exactly does
+        // get returned
+        return false;
+        }
+
+    @Override
+    public void collectReturnTypes(TypeConstant[] atypeRet)
+        {
+        TypeCollector collector = m_collector;
+        if (collector == null)
+            {
+            m_collector = collector = new TypeCollector(pool());
+            }
+        collector.add(atypeRet);
+        }
+
+
     // ----- compilation (Statement) ---------------------------------------------------------------
 
     @Override
@@ -569,25 +599,6 @@ public class LambdaExpression
 
 
     // ----- compilation helpers -------------------------------------------------------------------
-
-    @Override
-    public TypeConstant[] getRequiredTypes()
-        {
-        TypeConstant   typeFn    = isValidated() ? getType() : m_typeRequired;
-        TypeConstant[] aRetTypes = pool().extractFunctionReturns(typeFn);
-        return aRetTypes;
-        }
-
-    @Override
-    public void addReturnTypes(TypeConstant[] atypeRet)
-        {
-        TypeCollector collector = m_collector;
-        if (collector == null)
-            {
-            m_collector = collector = new TypeCollector();
-            }
-        collector.add(atypeRet);
-        }
 
     /**
      * For lambdas that do NOT use the "names only" form of parameter declaration, determine the

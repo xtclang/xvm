@@ -92,7 +92,7 @@ public class ListExpression
                 {
                 aElementTypes[i] = exprs.get(i).getImplicitType(ctx);
                 }
-            TypeConstant typeElement = TypeCollector.inferFrom(aElementTypes);
+            TypeConstant typeElement = TypeCollector.inferFrom(aElementTypes, pool());
             if (typeElement != null)
                 {
                 typeArray = pool().ensureParameterizedTypeConstant(typeArray, typeElement);
@@ -154,7 +154,7 @@ public class ListExpression
                 {
                 aElementTypes[i] = listExprs.get(i).getImplicitType(ctx);
                 }
-            typeElement = TypeCollector.inferFrom(aElementTypes);
+            typeElement = TypeCollector.inferFrom(aElementTypes, pool);
             if (typeElement != null)
                 {
                 typeActual  = typeActual.adoptParameters(pool, new TypeConstant[] {typeElement});
