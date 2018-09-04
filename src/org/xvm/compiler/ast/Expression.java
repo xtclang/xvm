@@ -381,12 +381,6 @@ public abstract class Expression
             return TypeFit.Fit;
             }
 
-        // see if we can infer some type information from the "required" type
-        if (inferTypeFromRequired(typeIn, typeOut) != null)
-            {
-            return TypeFit.Fit;
-            }
-
         // check for the existence of an @Auto conversion
         if (typeIn.ensureTypeInfo().findConversion(typeOut) != null)
             {
