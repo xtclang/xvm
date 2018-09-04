@@ -218,10 +218,14 @@ public class ReturnStatement
                 if (exprNew != null)
                     {
                     listExprs.set(0, exprNew);
-                    atypeActual = m_fTupleReturn
-                            ? exprNew.getType().getParamTypesArray()
-                            : new TypeConstant[] {exprNew.getType()};
                     }
+                }
+
+            if (fValid)
+                {
+                atypeActual = m_fTupleReturn
+                        ? exprNew.getType().getParamTypesArray()
+                        : new TypeConstant[] {exprNew.getType()};
                 }
             }
 

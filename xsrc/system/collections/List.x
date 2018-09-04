@@ -107,7 +107,7 @@ interface List<ElementType>
      * @throws BoundsException  if the specified index is outside of range {@code 0} (inclusive) to
      *         {@code size} (inclusive)
      */
-    Cursor cursor(Int index = 0)
+    Cursor<ElementType> cursor(Int index = 0)
         {
         return new SimpleCursor(index);
         }
