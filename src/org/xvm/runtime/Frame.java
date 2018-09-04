@@ -671,34 +671,6 @@ public class Frame
         }
 
     /**
-     * Assign a specified register on this frame to the specified RefHandle.
-     *
-     * @param nVar  the register id
-     * @param hRef  the RefHandle to assign
-     *
-     * @return R_NEXT
-     */
-    public int assignRef(int nVar, RefHandle hRef)
-        {
-        assert hRef != null;
-
-        switch (nVar)
-            {
-            case Op.A_IGNORE:
-                return Op.R_NEXT;
-
-            case Op.A_STACK:
-                pushStack(hRef);
-                return Op.R_NEXT;
-
-            default:
-                assert nVar >= 0;
-                f_ahVar[nVar] = hRef;
-                return Op.R_NEXT;
-            }
-        }
-
-    /**
      * Specialization of assignValue() that takes two return values.
      *
      * @param anVar     the array of two register ids

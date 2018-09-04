@@ -62,9 +62,11 @@ public class xFunction
             MethodConstant constFunction = (MethodConstant) constant;
             MethodStructure function = (MethodStructure) constFunction.getComponent();
 
-            // TODO: assert if a method
-            // TODO: construct the correct TypeComposition
-            frame.pushStack(new FunctionHandle(getCanonicalClass(), function));
+            assert function.isFunction();
+
+            TypeConstant typeFunction = function.getIdentityConstant().getType();
+
+            frame.pushStack(new FunctionHandle(ensureClass(typeFunction), function));
             return Op.R_NEXT;
             }
 
@@ -378,7 +380,7 @@ public class xFunction
                             {
                             System.arraycopy(atypeParams, iArg + 1, atypeNew, iArg, cParams - iArg);
                             }
-                        typeP = pool.ensureParameterizedTypeConstant(pool.typeType(), atypeNew);
+                        typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple(), atypeNew);
                         }
                     type = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
                     }
