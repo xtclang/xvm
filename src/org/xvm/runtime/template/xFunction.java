@@ -5,11 +5,13 @@ import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
@@ -329,6 +331,7 @@ public class xFunction
         {
         protected int m_iArg; // the bound argument index; -1 stands for the target binding
         protected ObjectHandle m_hArg;
+        protected TypeConstant m_type; // cached resolved type
 
         protected SingleBoundHandle(TypeComposition clazz, FunctionHandle hDelegate,
                                     int iArg, ObjectHandle hArg)
@@ -337,6 +340,51 @@ public class xFunction
 
             m_iArg = iArg;
             m_hArg = hArg;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            TypeConstant type = m_type;
+            if (type == null)
+                {
+                type = m_hDelegate.getType(); // Function<Tuple<Params>, Tuple<Returns>>
+
+                int iArg = m_iArg;
+                if (iArg >= 0)
+                    {
+                    ConstantPool pool = ConstantPool.getCurrentPool();
+
+                    TypeConstant typeP = type.getParamTypesArray()[0];
+                    TypeConstant typeR = type.getParamTypesArray()[1];
+
+                    int cParams = typeP.getParamsCount();
+                    assert typeP.isTuple() && iArg <= cParams;
+
+                    TypeConstant[] atypeParams = typeP.getParamTypesArray();
+                    if (cParams == 1)
+                        {
+                        // canonical Tuple represents Void
+                        typeP = pool.ensureParameterizedTypeConstant(pool.typeTuple());
+                        }
+                    else
+                        {
+                        TypeConstant[] atypeNew = new TypeConstant[--cParams];
+                        if (iArg > 0)
+                            {
+                            System.arraycopy(atypeParams, 0, atypeNew, 0, iArg);
+                            }
+                        if (iArg < cParams)
+                            {
+                            System.arraycopy(atypeParams, iArg + 1, atypeNew, iArg, cParams - iArg);
+                            }
+                        typeP = pool.ensureParameterizedTypeConstant(pool.typeType(), atypeNew);
+                        }
+                    type = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+                    }
+                m_type = type;
+                }
+            return type;
             }
 
         @Override
@@ -404,6 +452,12 @@ public class xFunction
 
             f_hTarget = hTarget;
             f_ahArg = ahArg;
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            return INSTANCE.getCanonicalType();
             }
 
         @Override
@@ -587,16 +641,22 @@ public class xFunction
 
     public static AsyncHandle makeAsyncHandle(CallChain chain, int nDepth)
         {
-        return new AsyncHandle(INSTANCE.getCanonicalClass(), chain, nDepth);
+        TypeConstant typeFunction = chain.getMethod(nDepth).getIdentityConstant().getType();
+
+        return new AsyncHandle(INSTANCE.ensureClass(typeFunction), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(CallChain chain, int nDepth)
         {
-        return new FunctionHandle(INSTANCE.getCanonicalClass(), chain, nDepth);
+        TypeConstant typeFunction = chain.getMethod(nDepth).getIdentityConstant().getType();
+
+        return new FunctionHandle(INSTANCE.ensureClass(typeFunction), chain, nDepth);
         }
 
     public static FunctionHandle makeHandle(MethodStructure function)
         {
-        return new FunctionHandle(INSTANCE.getCanonicalClass(), function);
+        TypeConstant typeFunction = function.getIdentityConstant().getType();
+
+        return new FunctionHandle(INSTANCE.ensureClass(typeFunction), function);
         }
     }
