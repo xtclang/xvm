@@ -77,7 +77,7 @@ public interface IndexSupport
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 
-            return frame.assignValue(iReturn, hRef);
+            return frame.assignRef(iReturn, hRef);
             }
         catch (ExceptionHandle.WrapperException e)
             {

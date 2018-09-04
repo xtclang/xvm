@@ -13,7 +13,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xRef.RefHandle;
 
@@ -90,6 +90,12 @@ public class Var_CN
         }
 
     @Override
+    protected boolean isTypeAware()
+        {
+        return false;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -101,7 +107,7 @@ public class Var_CN
 
             return iPC + 1;
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

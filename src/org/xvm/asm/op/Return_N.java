@@ -83,26 +83,41 @@ public class Return_N
     @Override
     public int process(Frame frame, int iPC)
         {
-        int cArgs = m_anArg.length;
+        int            cArgs = m_anArg.length;
         ObjectHandle[] ahArg = new ObjectHandle[cArgs];
-        boolean fAnyProp = false;
+        boolean[]  afDynamic = null;
+        boolean    fAnyProp  = false;
 
         for (int i = 0; i < cArgs; i++)
             {
-            ObjectHandle hArg = frame.getReturnValue(m_anArg[i]);
+            int          nArg = m_anArg[i];
+            ObjectHandle hArg = frame.getReturnValue(nArg);
 
             ahArg[i] = hArg;
-            fAnyProp |= isDeferred(hArg);
+
+            if (isDeferred(hArg))
+                {
+                fAnyProp = true;
+                }
+            else if (frame.isDynamicVar(nArg))
+                {
+                if (afDynamic != null)
+                    {
+                    afDynamic = new boolean[cArgs];
+                    }
+                afDynamic[i] = true;
+                }
             }
 
         if (fAnyProp)
             {
-            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValues(ahArg);
+            final boolean[] af = afDynamic;
+            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValues(ahArg, af);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
             }
 
-        return frame.returnValues(ahArg);
+        return frame.returnValues(ahArg, afDynamic);
         }
 
     @Override

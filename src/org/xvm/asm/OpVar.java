@@ -54,20 +54,36 @@ public abstract class OpVar
     protected OpVar(DataInput in, Constant[] aconst)
             throws IOException
         {
-        m_nType = readPackedInt(in);
+        if (isTypeAware())
+            {
+            m_nType = readPackedInt(in);
+            }
         }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
             throws IOException
         {
-        if (m_reg != null)
-            {
-            m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
-            }
+        super.write(out, registry);
 
-        out.writeByte(getOpCode());
-        writePackedLong(out, m_nType);
+        if (isTypeAware())
+            {
+            if (m_reg != null)
+                {
+                m_nType = encodeArgument(getRegisterType(ConstantPool.getCurrentPool()), registry);
+                }
+
+            writePackedLong(out, m_nType);
+            }
+        }
+
+    /**
+     * Specifies whether or not this op carries the type information.
+     */
+    protected boolean isTypeAware()
+        {
+        // majority of Var_* op-codes carry the type; only Var_C and Var_CN don't
+        return true;
         }
 
     /**
@@ -115,9 +131,18 @@ public abstract class OpVar
     @Override
     public String toString()
         {
-        return super.toString()
-                + ' ' + Argument.toIdString(null, m_nType)
-                + ", " + (m_reg == null ? "" : m_reg.toString());
+        StringBuilder sb = new StringBuilder(super.toString());
+
+        if (isTypeAware())
+            {
+            sb.append(' ')
+              .append(Argument.toIdString(null, m_nType))
+              .append(',');
+            }
+        sb.append(' ')
+          .append(m_reg == null ? "" : m_reg.toString());
+
+        return sb.toString();
         }
 
     /**
@@ -126,12 +151,12 @@ public abstract class OpVar
     protected transient Register m_reg;
 
     /**
+     * The var index.
+     */
+    protected transient int m_nVar = -1;
+
+    /**
      * The type constant id.
      */
     protected int m_nType;
-
-    /**
-     * The var index.
-     */
-    protected int m_nVar = -1;
     }

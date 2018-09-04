@@ -83,6 +83,12 @@ public class Var_C
         }
 
     @Override
+    protected boolean isTypeAware()
+        {
+        return false;
+        }
+
+    @Override
     public int process(Frame frame, int iPC)
         {
         try
@@ -106,13 +112,6 @@ public class Var_C
         super.registerConstants(registry);
 
         m_argValue = registerArgument(m_argValue, registry);
-        }
-
-    @Override
-    public String toString()
-        {
-        return super.toString()
-                + ' ' + Argument.toIdString(m_argValue, m_nArgValue);
         }
 
     private int m_nArgValue;

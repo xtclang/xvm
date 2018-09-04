@@ -137,7 +137,7 @@ public class P_Var
             frame.introduceResolvedVar(m_nRetValue, hRef.getType());
             }
 
-        return frame.assignValue(m_nRetValue, hRef);
+        return frame.assignRef(m_nRetValue, hRef);
         }
 
     @Override

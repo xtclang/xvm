@@ -919,7 +919,7 @@ public class MethodStructure
                             ctxMain.sendConstantRequest(frame, this);
 
                         // create a pseudo frame to deal with the wait
-                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_STACK);
+                        Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_IGNORE);
                         frameWait.setContinuation(frameCaller -> frameCaller.call(frameNext));
 
                         return frame.call(frameWait);
