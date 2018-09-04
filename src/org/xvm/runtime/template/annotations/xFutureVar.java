@@ -141,7 +141,7 @@ public class xFutureVar
                     frame.f_context.callLater(hRun, Utils.OBJECTS_NONE);
                     });
 
-                return frame.assignValue(iReturn, makeHandle(cf));
+                return frame.assignValue(iReturn, makeHandle(cf), true);
                 }
 
             case "passTo":
@@ -155,7 +155,7 @@ public class xFutureVar
                     frame.f_context.callLater(hConsume, ahArg);
                     });
 
-                return frame.assignValue(iReturn, makeHandle(cf));
+                return frame.assignValue(iReturn, makeHandle(cf), true);
                 }
 
             case "whenComplete":
@@ -172,7 +172,7 @@ public class xFutureVar
                     frame.f_context.callLater(hNotify, ahArg);
                     });
 
-                return frame.assignValue(iReturn, makeHandle(cf));
+                return frame.assignValue(iReturn, makeHandle(cf), true);
                 }
             }
 

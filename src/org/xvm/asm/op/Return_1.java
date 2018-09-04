@@ -85,12 +85,12 @@ public class Return_1
         if (isDeferred(hValue))
             {
             ObjectHandle[] ahValue = new ObjectHandle[]{hValue};
-            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValue(ahValue[0]);
+            Frame.Continuation stepNext = frameCaller -> frameCaller.returnValue(ahValue[0], false);
 
             return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
             }
 
-        return frame.returnValue(hValue);
+        return frame.returnValue(hValue, frame.isDynamicVar(m_nArg));
         }
 
     @Override

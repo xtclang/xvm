@@ -220,17 +220,19 @@ public abstract class Utils
     static public class AssignValues
             implements Frame.Continuation
         {
-        public AssignValues(int[] aiReturn, ObjectHandle[] ahValue)
+        public AssignValues(int[] aiReturn, ObjectHandle[] ahValue, boolean[] afDynamic)
             {
-            this.aiReturn = aiReturn;
-            this.ahValue = ahValue;
+            this.aiReturn  = aiReturn;
+            this.ahValue   = ahValue;
+            this.afDynamic = afDynamic;
             }
 
         public int proceed(Frame frameCaller)
             {
             while (++index < aiReturn.length)
                 {
-                switch (frameCaller.assignValue(aiReturn[index], ahValue[index]))
+                switch (frameCaller.assignValue(aiReturn[index], ahValue[index],
+                            afDynamic != null && afDynamic[index]))
                     {
                     case Op.R_BLOCK:
                         fBlock = true;
@@ -255,6 +257,7 @@ public abstract class Utils
 
         private final int[] aiReturn;
         private final ObjectHandle[] ahValue;
+        private final boolean[] afDynamic;
 
         private int index = -1;
         private boolean fBlock;
@@ -496,7 +499,8 @@ public abstract class Utils
                             {
                             return R_REPEAT;
                             }
-                        return frame.returnValue(hValue);
+                        // getArgument() call has already de-referenced the dynamic register
+                        return frame.returnValue(hValue, false);
                         }
 
                     assert frame.f_iReturn == A_MULTI;
@@ -512,7 +516,7 @@ public abstract class Utils
                         ahValue[i] = hValue;
                         }
 
-                    return frame.returnValues(ahValue);
+                    return frame.returnValues(ahValue, null);
                     }
                 catch (ObjectHandle.ExceptionHandle.WrapperException e)
                     {

@@ -541,7 +541,7 @@ public class xFunction
             {
             if (iReturn >= 0)
                 {
-                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+                return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
                 }
 
             // the return value is either a A_LOCAL or a local property;

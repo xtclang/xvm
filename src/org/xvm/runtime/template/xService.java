@@ -74,7 +74,7 @@ public class xService
 
         CompletableFuture cfService = contextNew.sendConstructRequest(frame, constructor, clazz, ahArg);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfService));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfService), true);
         }
 
     @Override
@@ -187,7 +187,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePreInc);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
         }
 
     @Override
@@ -204,7 +204,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePostInc);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
         }
 
     @Override
@@ -221,7 +221,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePreDec);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
         }
 
     @Override
@@ -238,7 +238,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::invokePostDec);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
         }
 
     @Override
@@ -285,7 +285,7 @@ public class xService
         CompletableFuture<ObjectHandle> cfResult = hService.m_context.sendProperty01Request(
                 frame, sPropName, this::getPropertyValue);
 
-        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult));
+        return frame.assignValue(iReturn, xFutureVar.makeHandle(cfResult), true);
         }
 
     @Override
