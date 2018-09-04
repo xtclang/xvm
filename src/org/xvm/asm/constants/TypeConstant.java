@@ -3521,7 +3521,16 @@ public abstract class TypeConstant
                 return typeRightResolved.calculateRelation(typeLeftResolved);
                 }
 
-            relation = checkReservedCompatibility(typeLeft, typeRight);
+            // first check immutability modifiers
+            if (typeLeft.isImmutabilitySpecified() && !typeRight.isImmutable())
+                {
+                relation = Relation.INCOMPATIBLE;
+                }
+            else
+                {
+                relation = checkReservedCompatibility(typeLeft, typeRight);
+                }
+
             if (relation != null)
                 {
                 mapRelations.put(typeLeft, relation);
@@ -3626,8 +3635,7 @@ public abstract class TypeConstant
                 break;
             }
 
-        Relation relation;
-        Format   format;
+        Format format;
         switch (format = constIdRight.getFormat())
             {
             case Module:
@@ -3641,8 +3649,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                relation = clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
-                break;
+                return clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
                 }
 
             case Property:
@@ -3665,8 +3672,7 @@ public abstract class TypeConstant
 
                 // the typeRight is a formal parameter type and cannot have any modifiers
                 assert typeRight instanceof TerminalTypeConstant;
-                relation = idRight.getReferredToType().calculateRelation(typeLeft);
-                break;
+                return idRight.getReferredToType().calculateRelation(typeLeft);
                 }
 
             case TypeParameter:
@@ -3689,8 +3695,7 @@ public abstract class TypeConstant
 
                 // the typeRight is a type parameter and cannot have any modifiers
                 assert typeRight instanceof TerminalTypeConstant;
-                relation = idRight.getReferredToType().calculateRelation(typeLeft);
-                break;
+                return idRight.getReferredToType().calculateRelation(typeLeft);
                 }
 
             case ThisClass:
@@ -3713,23 +3718,12 @@ public abstract class TypeConstant
 
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                relation = clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
-                break;
+                return clzRight.findContribution(typeLeft, typeRight.getParamTypes(), true);
                 }
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdRight);
             }
-
-        if (relation != Relation.INCOMPATIBLE)
-            {
-            // now check immutability modifiers (after the auto-narrowing)
-            if (typeLeft.isImmutable() && !typeRight.isImmutable())
-                {
-                return Relation.INCOMPATIBLE;
-                }
-            }
-        return relation;
         }
 
     /**
@@ -3790,10 +3784,11 @@ public abstract class TypeConstant
      */
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
         // there's a special case of the conditional return, where
         // "False" _isA_ "ConditionalTuple"
         // TODO: replace with the ConditionalTuple when added
-        ConstantPool pool = typeLeft.getConstantPool();
         if (typeRight.equals(pool.typeFalse())
                 && typeLeft.isTuple()
                 && typeLeft.isParamsSpecified()
@@ -3811,16 +3806,103 @@ public abstract class TypeConstant
         IdentityConstant idLeft  = typeLeft.getSingleUnderlyingClass(true);
         IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
 
-        if (idLeft.equals(pool.clzTuple()) && !idRight.equals(pool.clzTuple()))
+        if (idLeft.equals(pool.clzTuple()))
             {
-            // nothing is assignable to a Tuple
-            return Relation.INCOMPATIBLE;
+            if (!idRight.equals(pool.clzTuple()))
+                {
+                // nothing is assignable to a Tuple
+                return Relation.INCOMPATIBLE;
+                }
+            // TODO: does it make sense to short-circuit?
+            //  Tuple<R1, R2, ...> is assignable to Tuple<L1, L2, ...>
+            return null;
             }
 
-        if (idLeft.equals(pool.clzFunction()) && !idRight.equals(pool.clzFunction()))
+        if (idLeft.equals(pool.clzFunction()))
             {
-            // nothing is assignable to a Function
-            return Relation.INCOMPATIBLE;
+            // the only modification that is allowed on the Function is "this:class"
+            Constant constIdLeft  = typeLeft.getDefiningConstant();
+            Constant constIdRight = typeRight.getDefiningConstant();
+            if (constIdLeft.getFormat()  == Format.ThisClass &&
+                constIdRight.getFormat() == Format.ThisClass)
+                {
+                // to allow assignment of this:class(X) to this:class(Function),
+                // X should be a Function or an Object
+                typeRight = typeRight.resolveAutoNarrowing(pool, null);
+                typeLeft  = typeLeft.resolveAutoNarrowing(pool, null);
+
+                if (typeRight.equals(pool.typeObject()))
+                    {
+                    return Relation.IS_A;
+                    }
+                // continue with auto-narrowing resolved
+                }
+
+            if (!idRight.equals(pool.clzFunction()))
+                {
+                // nothing is assignable to a Function
+                return Relation.INCOMPATIBLE;
+                }
+
+            // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
+            // (RP/RR - right parameters/return, LP/LR - left parameter/return)
+            // 1) TupleLP has the same arity as TupleRP
+            // 2) every parameter type on the right should be assignable to a corresponding parameter
+            //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)"
+            // 3) TupleLR has less or equal arity than TupleRR
+            // 4) every return type on the left should be assignable to a corresponding return
+            //    on the right (e.g. "function Int ()" is assignable to "function Number ()"
+            int cL = typeLeft.getParamsCount();
+            int cR = typeRight.getParamsCount();
+            if (cL == 0)
+                {
+                // Function <- Function<RP, RR> is allowed
+                return Relation.IS_A;
+                }
+            if (cL != 2 || cR != 2)
+                {
+                // either cR == 0 or a compilation error; not our responsibility to report
+                return Relation.INCOMPATIBLE;
+                }
+
+            TypeConstant typeLP = typeLeft.getParamTypesArray()[0];
+            TypeConstant typeLR = typeLeft.getParamTypesArray()[1];
+            TypeConstant typeRP = typeRight.getParamTypesArray()[0];
+            TypeConstant typeRR = typeRight.getParamTypesArray()[1];
+
+            assert typeLP.isTuple() && typeLR.isTuple() && typeRP.isTuple() && typeRR.isTuple();
+
+            int cLP = typeLP.getParamsCount();
+            int cLR = typeLR.getParamsCount();
+            int cRP = typeRP.getParamsCount();
+            int cRR = typeRR.getParamsCount();
+
+            if (cLP != cRP || cLR > cRR)
+                {
+                return Relation.INCOMPATIBLE;
+                }
+
+            // functions do not produce, so we cannot have "weak" relations
+            for (int i = 0; i < cLP; i++)
+                {
+                TypeConstant typeL = typeLP.getParamTypesArray()[i];
+                TypeConstant typeR = typeRP.getParamTypesArray()[i];
+                if (!typeR.isA(typeL))
+                    {
+                    return Relation.INCOMPATIBLE;
+                    }
+                }
+
+            for (int i = 0; i < cLR; i++)
+                {
+                TypeConstant typeL = typeLR.getParamTypesArray()[i];
+                TypeConstant typeR = typeRR.getParamTypesArray()[i];
+                if (!typeL.isA(typeR))
+                    {
+                    return Relation.INCOMPATIBLE;
+                    }
+                }
+            return Relation.IS_A;
             }
 
         return null;

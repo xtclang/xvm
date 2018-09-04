@@ -23,7 +23,7 @@ service Container
         {
         ModuleRepository simpleRepo = new ModuleRepository()
             {
-            immutable collections.Set<String> moduleNames = [moduleName];
+            collections.Set<String> moduleNames = Set:{moduleName};
 
             immutable Byte[] getModule(String name)
                 {
