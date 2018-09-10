@@ -306,8 +306,8 @@ public class PropertyDeclarationStatement
                         "=", Parameter.NO_PARAMS, true, false);
 
                 // wrap it with a pretend function in the AST tree
-                MethodDeclarationStatement stmtInit = new MethodDeclarationStatement(methodInit, value);
-                stmtInit.setParent(this);
+                MethodDeclarationStatement stmtInit = adopt(
+                        new MethodDeclarationStatement(methodInit, value));
 
                 // we're going to compile the initializer now, so that we can determine if it could
                 // be discarded and replaced with a constant
@@ -321,13 +321,13 @@ public class PropertyDeclarationStatement
                 // was a constant value, then just take that constant value and discard the
                 // initializer
                 Expression valueNew = stmtInit.getInitializerExpression();
-                if (valueNew != null && !value.isAborting() && value.isRuntimeConstant())
+                if (valueNew != null && !valueNew.isAborting() && valueNew.isRuntimeConstant())
                     {
-                    value = valueNew;
+                    value = adopt(valueNew);
 
-                    Constant constValue = value.toConstant();
+                    Constant constValue = valueNew.toConstant();
                     assert !constValue.containsUnresolved() && !constValue.getType().containsUnresolved();
-                    prop.setInitialValue(value.validateAndConvertConstant(constValue, type, errs));
+                    prop.setInitialValue(valueNew.validateAndConvertConstant(constValue, type, errs));
 
                     // discard the initializer by removing the entire MultiMethodStructure
                     MultiMethodStructure mms = (MultiMethodStructure) methodInit.getParent();

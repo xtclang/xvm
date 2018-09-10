@@ -174,7 +174,7 @@ public abstract class OpTest
                 type2 = frame.getArgumentType(m_nValue2);
                 }
 
-            TypeConstant typeCommon = selectCommonType(type1, type2);
+            TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
             if (typeCommon == null)
                 {
                 // this shouldn't have compiled

@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -211,8 +212,7 @@ public class NewExpression
         TypeExpression exprTypeOld = this.type;
         TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
                                         typeRequired == null ? null : typeRequired.getType(), errs);
-        TypeConstant   typeTarget  = null;
-        TypeInfo       infoTarget  = null;
+        TypeConstant  typeTarget   = null;
         if (exprTypeNew == null)
             {
             fValid = false;
@@ -232,7 +232,14 @@ public class NewExpression
                     }
                 }
 
-            infoTarget = typeTarget.ensureTypeInfo(errs);
+            if (typeTarget.isSingleUnderlyingClass(false)
+                && typeTarget.getSingleUnderlyingClass(false).isNestMate(
+                    ctx.getThisClass().getIdentityConstant()))
+                {
+                typeTarget = pool().ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                }
+
+            TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
 
             // if the type is not new-able, then it must be an anonymous inner class with a body
             // that makes the type new-able
@@ -284,70 +291,43 @@ public class NewExpression
                 }
             }
 
-        List<Expression> listArgs   = this.args;
-        int              cArgs      = listArgs.size();
-        TypeConstant[]   atypeArgs  = cArgs == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cArgs];
-        String[]         asArgNames = null;
-        for (int i = 0; i < cArgs; ++i)
+        if (fValid)
             {
-            Expression exprArgOld = listArgs.get(i);
-            Expression exprArgNew = exprArgOld.validate(ctx, null, errs);
-            if (exprArgNew == null)
+            List<Expression> listArgs = this.args;
+            MethodConstant   idMethod = findMethod(ctx, typeTarget, "construct", listArgs, null, errs);
+
+            if (idMethod == null)
                 {
                 fValid = false;
                 }
             else
                 {
-                if (exprArgNew != exprArgOld)
+                m_idConstructor = idMethod;
+
+                if (body != null)
                     {
-                    listArgs.set(i, exprArgNew);
+                    // TODO anonymous inner class
+                    log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of anonymous inner classes");
+                    return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
                     }
 
-                atypeArgs[i] = exprArgNew.getType();
-
-                if (exprArgNew instanceof LabeledExpression)
+                List<TypeConstant> listParams = idMethod.getParams();
+                for (int i = 0, c = listArgs.size(); i < c; ++i)
                     {
-                    String sName = ((LabeledExpression) exprArgNew).getName();
-
-                    if (asArgNames == null)
+                    Expression exprArgOld = listArgs.get(i);
+                    Expression exprArgNew = exprArgOld.validate(ctx, listParams.get(i), errs);
+                    if (exprArgNew == null)
                         {
-                        asArgNames = new String[cArgs];
+                        fValid = false;
                         }
                     else
                         {
-                        for (int iPrev = 0; iPrev < i; ++iPrev)
+                        if (exprArgNew != exprArgOld)
                             {
-                            if (asArgNames[iPrev] != null && asArgNames[iPrev].equals(sName))
-                                {
-                                exprArgNew.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
-                                fValid = false;
-                                }
+                            listArgs.set(i, exprArgNew);
                             }
                         }
-                    asArgNames[i] = sName;
                     }
-                }
-            }
-
-        if (body != null)
-            {
-            // TODO anonymous inner class
-            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Instantiation of anonymous inner classes");
-            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
-            }
-
-        if (fValid)
-            {
-            // find the constructor to use
-            MethodConstant idConstruct = infoTarget.findConstructor(atypeArgs, asArgNames);
-            if (idConstruct == null)
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-                fValid = false;
-                }
-            else
-                {
-                m_idConstructor = idConstruct;
                 }
             }
 

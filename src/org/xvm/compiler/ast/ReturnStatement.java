@@ -161,8 +161,11 @@ public class ReturnStatement
                     if (exprNew != null)
                         {
                         listExprs.set(i, exprNew);
-                        atypeActual[i] = exprNew.getType();
                         }
+                    }
+                if (exprNew != null)
+                    {
+                    atypeActual[i] = exprNew.getType();
                     }
                 }
 

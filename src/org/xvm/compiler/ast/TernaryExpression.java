@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -58,7 +59,7 @@ public class TernaryExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return BiExpression.selectType(exprThen.getImplicitType(ctx),
+        return Op.selectCommonType(exprThen.getImplicitType(ctx),
                 exprElse.getImplicitType(ctx), ErrorListener.BLACKHOLE);
         }
 
@@ -95,7 +96,7 @@ public class TernaryExpression
 
             if (typeRequest == null)
                 {
-                typeRequest = BiExpression.selectType(exprNewThen.getType(), null, errs);
+                typeRequest = Op.selectCommonType(exprNewThen.getType(), null, errs);
                 }
             }
 
@@ -119,7 +120,7 @@ public class TernaryExpression
                     : replaceThisWith(exprNewElse);
             }
 
-        TypeConstant typeResult = BiExpression.selectType(typeThen, typeElse, errs);
+        TypeConstant typeResult = Op.selectCommonType(typeThen, typeElse, errs);
         return finishValidation(typeRequired, typeResult, fit, null, errs);
         }
 

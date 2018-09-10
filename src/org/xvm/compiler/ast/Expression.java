@@ -2,6 +2,10 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Constant;
@@ -35,8 +39,6 @@ import org.xvm.asm.op.IP_PreDec;
 import org.xvm.asm.op.IP_PreInc;
 import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.I_Set;
-import org.xvm.asm.op.Invoke_01;
-import org.xvm.asm.op.Invoke_10;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
@@ -1630,43 +1632,39 @@ public abstract class Expression
      * @param typeTarget   the type on which to search for the op
      * @param sMethodName  default name of the op method
      * @param sOp          the operator string
-     * @param aexprParams  the (optional) parameter expressions (which may not yet be validated)
+     * @param aexprArgs    the (optional) argument expressions (which may not yet be validated)
      * @param typeReturn   the (optional) return type from the op
-     * @param fRequired    true if the op method must be found
      * @param errs         listener to log any errors to
      *
-     * @return the MethodConstant for the desired op, or null if an exact match was not found
+     * @return the MethodConstant for the desired op, or null if an exact match was not found,
+     *         in which case an error is reported
      */
-    public MethodConstant findOpMethod(
+    protected MethodConstant findOpMethod(
             Context       ctx,
             TypeConstant  typeTarget,
             String        sMethodName,
             String        sOp,
-            Expression[]  aexprParams,
+            Expression[] aexprArgs,
             TypeConstant  typeReturn,
-            boolean       fRequired,
             ErrorListener errs)
         {
         assert sMethodName != null && sMethodName.length() > 0;
         assert sOp         != null && sOp        .length() > 0;
 
         TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
-        int      cParams    = aexprParams == null ? -1 : aexprParams.length;
+        int      cParams    = aexprArgs == null ? -1 : aexprArgs.length;
         Set<MethodConstant> setMethods = infoTarget.findOpMethods(sMethodName, sOp, cParams);
         if (setMethods.isEmpty())
             {
-            if (fRequired)
+            if (cParams < 0 || infoTarget.findOpMethods(sMethodName, sOp, -1).isEmpty())
                 {
-                if (cParams < 0 || infoTarget.findOpMethods(sMethodName, sOp, -1).isEmpty())
-                    {
-                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
-                            sOp, typeTarget.getValueString());
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
-                            sOp, typeTarget.getValueString(), cParams);
-                    }
+                log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
+                        sOp, typeTarget.getValueString());
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
+                        sOp, typeTarget.getValueString(), cParams);
                 }
             return null;
             }
@@ -1677,7 +1675,7 @@ public abstract class Expression
             atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                Expression exprParam = aexprParams[i];
+                Expression exprParam = aexprArgs[i];
                 if (exprParam != null)
                     {
                     atypeParams[i] = exprParam.isValidated()
@@ -1692,7 +1690,7 @@ public abstract class Expression
             {
             if (cParams > 0)
                 {
-                // TODO eventually this logic has to support parameters with default values
+                // TODO: add support for parameters with default values
                 TypeConstant[] atypeOpParams = idOp.getRawParams();
                 int            cOpParams     = atypeOpParams.length;
                 if (cParams != cOpParams)
@@ -1744,10 +1742,202 @@ public abstract class Expression
                 }
             }
 
-        if (idBest == null && fRequired)
+        if (idBest == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
                     sOp, typeTarget.getValueString(), cParams);
+            }
+
+        return idBest;
+        }
+
+    /**
+     * Given an array of expressions representing actual parameters and the TypeInfo of the target,
+     * find teh best matching method.
+     *
+     * @param ctx          the compilation context
+     * @param typeTarget   the type on which to search for the method
+     * @param sMethodName  the method name
+     * @param listExprArgs the expressions for arguments (which may not yet be validated)
+     * @param atypeReturn  (optional) the array of return types from the method
+     * @param errs         listener to log any errors to
+     *
+     * @return the MethodConstant for the desired method, or null if an exact match was not found,
+     *         in which case an error has been reported
+     */
+    protected MethodConstant findMethod(
+            Context          ctx,
+            TypeConstant     typeTarget,
+            String           sMethodName,
+            List<Expression> listExprArgs,
+            TypeConstant[]   atypeReturn,
+            ErrorListener    errs)
+        {
+        assert sMethodName != null && sMethodName.length() > 0;
+
+        TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
+        int      cParams    = listExprArgs == null ? 0 : listExprArgs.size();
+
+        Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cParams);
+        if (setMethods.isEmpty())
+            {
+            if (sMethodName.equals("construct"))
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                }
+            return null;
+            }
+
+        TypeConstant[]            atypeParams    = null;
+        Map<String, TypeConstant> mapNamedParams = null;
+        if (cParams > 0)
+            {
+            atypeParams = new TypeConstant[cParams];
+
+            for (int i = 0; i < cParams; ++i)
+                {
+                Expression   exprParam = listExprArgs.get(i);
+                TypeConstant typeParam = exprParam.isValidated()
+                    ? exprParam.getType()
+                    : exprParam.getImplicitType(ctx);
+
+                if (exprParam instanceof LabeledExpression)
+                    {
+                    String sName = ((LabeledExpression) exprParam).getName();
+
+                    if (mapNamedParams == null)
+                        {
+                        mapNamedParams = new HashMap<>(cParams-i);
+                        }
+                    else
+                        {
+                        for (int iPrev = 0; iPrev < i; ++iPrev)
+                            {
+                            if (mapNamedParams.containsKey(sName))
+                                {
+                                exprParam.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sName);
+                                return null;
+                                }
+                            }
+                        }
+                    mapNamedParams.put(sName, typeParam);
+                    }
+                else
+                    {
+                    if (mapNamedParams != null)
+                        {
+                        exprParam.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, i);
+                        return null;
+                        }
+                    atypeParams[i] = typeParam;
+                    }
+                }
+            }
+
+        // first, collect all theoretically matching methods
+        Set<MethodConstant> setMatch = new HashSet<>();
+        NextMethod: for (MethodConstant idMethod : setMethods)
+            {
+            TypeConstant[] atypeP = idMethod.getRawParams();
+            if (cParams != atypeP.length)
+                {
+                // TODO: add support for parameters with default values
+                continue NextMethod;
+                }
+
+            for (int i = 0; i < cParams; ++i)
+                {
+                TypeConstant typeParam = atypeParams[i];
+                if (typeParam == null)
+                    {
+                    if (mapNamedParams != null)
+                        {
+                        MethodStructure method = (MethodStructure) idMethod.getComponent();
+                        // TODO: where to go if method is null?
+                        if (method != null)
+                            {
+                            typeParam = mapNamedParams.get(method.getParam(i).getName());
+                            }
+                        }
+                    }
+                if (typeParam == null)
+                    {
+                    // check if the method's parameter type fits the argument expression
+                    if (!listExprArgs.get(i).testFit(ctx, atypeP[i]).isFit())
+                        {
+                        continue NextMethod;
+                        }
+                    }
+                else if (!typeParam.isAssignableTo(atypeP[i]))
+                    {
+                    continue NextMethod;
+                    }
+                }
+
+            if (atypeReturn != null)
+                {
+                TypeConstant[] atypeMethodReturn = idMethod.getRawReturns();
+                if (atypeMethodReturn.length < atypeReturn.length)
+                    {
+                    // not enough return values
+                    continue;
+                    }
+                for (int i = 0, c = atypeReturn.length; i < c; i++)
+                    {
+                    if (!atypeMethodReturn[i].isAssignableTo(atypeReturn[i]))
+                        {
+                        continue NextMethod;
+                        }
+                    }
+                }
+            setMatch.add(idMethod);
+            }
+
+        // now choose the best match
+        MethodConstant idBest = null;
+        for (MethodConstant idMethod : setMatch)
+            {
+            if (idBest == null)
+                {
+                idBest = idMethod;
+                }
+            else
+                {
+                boolean fOldBetter = idMethod.getSignature().isSubstitutableFor(idBest.getSignature(), typeTarget);
+                boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idMethod.getSignature(), typeTarget);
+                if (fOldBetter ^ fNewBetter)
+                    {
+                    if (fNewBetter)
+                        {
+                        idBest = idMethod;
+                        }
+                    }
+                else
+                    {
+                    // note: theoretically could still be one better than either of these two, but
+                    // for now, just assume it's an error at this point
+                    log(errs, Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
+                        idBest.getSignature().getValueString());
+                    return null;
+                    }
+                }
+            }
+
+        if (idBest == null)
+            {
+            if (sMethodName.equals("construct"))
+                {
+                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+                }
+            else
+                {
+                // TODO: create a signature representation of what is known
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+                }
             }
 
         return idBest;

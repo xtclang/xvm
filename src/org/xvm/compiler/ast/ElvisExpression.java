@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -53,7 +54,8 @@ public class ElvisExpression
 
         // nulls in the first expression are eliminated by using the second expression
         type1 = type1.removeNullable(pool());
-        TypeConstant typeResult = selectType(type1, type2, ErrorListener.BLACKHOLE);
+
+        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
         // hey, wouldn't it be nice if we could just do this?
         //
@@ -93,7 +95,9 @@ public class ElvisExpression
             type1 = expr1New.getType();
             }
 
-        TypeConstant type2Req = type1 == null ? null : selectType(type1.removeNullable(pool), null, errs);
+        TypeConstant type2Req = type1 == null ? null :
+                Op.selectCommonType(type1.removeNullable(pool), null, errs);
+
         if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
             {
             type2Req = typeRequired;
@@ -127,7 +131,7 @@ public class ElvisExpression
 
         TypeConstant type1Non   = type1.removeNullable(pool);
         TypeConstant type2      = expr2New.getType();
-        TypeConstant typeResult = selectType(type1Non, type2, errs);
+        TypeConstant typeResult = Op.selectCommonType(type1Non, type2, errs);
         if (typeResult == null)
             {
             typeResult = pool.ensureIntersectionTypeConstant(type1Non, type2);

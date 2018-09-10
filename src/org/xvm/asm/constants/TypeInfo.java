@@ -817,12 +817,14 @@ public class TypeInfo
         if (map == null)
             {
             map = new HashMap<>();
-            for (MethodInfo method : m_mapMethods.values())
+            for (Map.Entry<MethodConstant, MethodInfo> entry : m_mapMethods.entrySet())
                 {
+                MethodConstant idMethod = entry.getKey();
+
                 // only include the non-nested Methods
-                if (method.getIdentity().getNestedDepth() == m_cDepth + 2)
+                if (idMethod.getNestedDepth() == m_cDepth + 2)
                     {
-                    map.put(method.getSignature(), method);
+                    map.put(idMethod.getSignature(), entry.getValue());
                     }
                 }
 
@@ -1191,7 +1193,7 @@ public class TypeInfo
         MethodStructure functionEquals = m_functionEquals;
         if (functionEquals == null)
             {
-            ConstantPool pool = m_type.getConstantPool();
+            ConstantPool pool = pool();
             for (Contribution contrib : m_listProcess)
                 {
                 TypeConstant typeThis = contrib.getTypeConstant();
@@ -1243,7 +1245,7 @@ public class TypeInfo
         MethodStructure functionCompare = m_functionCompare;
         if (functionCompare == null)
             {
-            ConstantPool pool = m_type.getConstantPool();
+            ConstantPool pool = pool();
             for (Contribution contrib : m_listProcess)
                 {
                 TypeConstant typeThis = contrib.getTypeConstant();
@@ -1392,43 +1394,105 @@ public class TypeInfo
      */
     public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams)
         {
-        Set<MethodConstant> setOps = null;
+        Map<String, Set<MethodConstant>> mapOps = m_mapOps;
+        if (mapOps == null)
+            {
+            m_mapOps = mapOps = new HashMap<>();
+            }
 
         String sKey = String.valueOf(sName) + sOp + cParams;
-        if (m_sOp != null && sKey.equals(m_sOp))
+        Set<MethodConstant> setOps = mapOps.get(sKey);
+        if (setOps == null)
             {
-            setOps = m_setOp;
-            }
-        else
-            {
-            ConstantPool pool = m_type.getConstantPool();
-            for (MethodInfo info : getOpMethodInfos())
+            for (MethodInfo method : getOpMethodInfos())
                 {
-                if (info.isOp(sName, sOp, cParams))
+                if (method.isOp(sName, sOp, cParams))
                     {
                     if (setOps == null)
                         {
                         setOps = new HashSet<>(7);
                         }
-                    MethodConstant    idMethod    = info.getIdentity();
-                    SignatureConstant sigOrig     = idMethod.getSignature();
-                    SignatureConstant sigResolved = sigOrig.resolveGenericTypes(pool, m_type)
-                                                           .resolveAutoNarrowing(pool, m_type);
-                    if (!sigResolved.equals(sigOrig))
-                        {
-                        idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
-                        m_cacheById.putIfAbsent(idMethod, info);
-                        }
-                    setOps.add(idMethod);
+                    setOps.add(resolveMethodConstant(method));
                     }
                 }
 
             // cache the result
-            m_sOp   = sKey;
-            m_setOp = setOps = (setOps == null ? Collections.EMPTY_SET : setOps);
+            if (setOps == null)
+                {
+                setOps = Collections.EMPTY_SET;
+                }
+            mapOps.put(sKey, setOps);
             }
 
         return setOps;
+        }
+
+    /**
+     * @return resolved method constant, which may be synthetic (not pointing to a structure)
+     */
+    protected MethodConstant resolveMethodConstant(MethodInfo method)
+        {
+        ConstantPool      pool        = pool();
+        MethodConstant    idMethod    = method.getIdentity();
+        SignatureConstant sigOrig     = idMethod.getSignature();
+        SignatureConstant sigResolved = sigOrig.resolveGenericTypes(pool, m_type)
+                                               .resolveAutoNarrowing(pool, m_type);
+        if (!sigResolved.equals(sigOrig))
+            {
+            idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
+            m_cacheById.putIfAbsent(idMethod, method);
+            }
+        return idMethod;
+        }
+
+    /**
+     * Obtain all of the matching op methods for the specified name and the number of parameters.
+     *
+     * @param sName    the method name
+     * @param cParams  the number of parameters
+     *
+     * @return a set of zero or more method constants
+     */
+    public Set<MethodConstant> findMethods(String sName, int cParams)
+        {
+        Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
+        if (mapMethods == null)
+            {
+            m_mapMethodsByName = mapMethods = new HashMap<>();
+            }
+
+        String sKey = sName + ';' + cParams;
+        Set<MethodConstant> setMethods = mapMethods.get(sKey);
+        if (setMethods == null)
+            {
+            for (Map.Entry<SignatureConstant, MethodInfo> entry : ensureMethodsBySignature().entrySet())
+                {
+                SignatureConstant sig = entry.getKey();
+
+                if (sig.getName().equals(sName))
+                    {
+                    MethodInfo method = entry.getValue();
+
+                    // TODO: account for default parameters
+                    if (sig.getRawParams().length == cParams)
+                        {
+                        if (setMethods == null)
+                            {
+                            setMethods = new HashSet<>(7);
+                            }
+                        setMethods.add(resolveMethodConstant(method));
+                        }
+                    }
+                }
+
+            // cache the result
+            if (setMethods == null)
+                {
+                setMethods = Collections.EMPTY_SET;
+                }
+            mapMethods.put(sKey, setMethods);
+            }
+        return setMethods;
         }
 
     /**
@@ -1925,11 +1989,11 @@ public class TypeInfo
     private final Map<MethodConstant, MethodInfo> m_cacheById;
     private final Map<Object, MethodInfo>         m_cacheByNid;
 
-    private transient TypeInfo            m_into;
-    private transient Set<MethodInfo>     m_setAuto;
-    private transient Set<MethodInfo>     m_setOps;
-    private transient String              m_sOp;
-    private transient Set<MethodConstant> m_setOp;
-    private transient TypeConstant        m_typeAuto;
-    private transient MethodConstant      m_methodAuto;
+    private transient TypeInfo                         m_into;
+    private transient Set<MethodInfo>                  m_setAuto;
+    private transient Set<MethodInfo>                  m_setOps;
+    private transient TypeConstant                     m_typeAuto;
+    private transient MethodConstant                   m_methodAuto;
+    private transient Map<String, Set<MethodConstant>> m_mapOps;
+    private transient Map<String, Set<MethodConstant>> m_mapMethodsByName;
     }

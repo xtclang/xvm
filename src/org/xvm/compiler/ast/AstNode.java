@@ -206,7 +206,7 @@ public abstract class AstNode
 
                 try
                     {
-                    field.set(this, oVal);
+                    field.set(that, oVal);
                     }
                 catch (IllegalAccessException e)
                     {

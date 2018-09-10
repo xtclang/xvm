@@ -341,12 +341,11 @@ public abstract class Op
      *
      * @param type1  the first type
      * @param type2  the second type
+     * @param errs   the error listener
      *
      * @return a target type or null
-     *
-     * @see {@link org.xvm.compiler.ast.BiExpression#selectType}
      */
-    public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2)
+    public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2, ErrorListener errs)
         {
         if (type1 == null && type2 == null)
             {
@@ -365,13 +364,13 @@ public abstract class Op
                 return type2;
                 }
 
-            TypeInfo info1 = type1.ensureTypeInfo();
+            TypeInfo info1 = type1.ensureTypeInfo(errs);
             if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
                 {
                 return info1.getExtends();
                 }
 
-            TypeInfo info2 = type2.ensureTypeInfo();
+            TypeInfo info2 = type2.ensureTypeInfo(errs);
             if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends()))
                 {
                 return info2.getExtends();
@@ -381,7 +380,7 @@ public abstract class Op
             }
 
         TypeConstant typeResult = type1 == null ? type2 : type1;
-        TypeInfo     typeinfo   = typeResult.ensureTypeInfo();
+        TypeInfo     typeinfo   = typeResult.ensureTypeInfo(errs);
         return typeinfo.getFormat() == Format.ENUMVALUE
                 ? typeinfo.getExtends()
                 : typeResult;

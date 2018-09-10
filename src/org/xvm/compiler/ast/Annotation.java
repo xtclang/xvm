@@ -197,7 +197,7 @@ public class Annotation
                     {
                     // there was already at least one arg with a name, so all trailing args MUST
                     // have a name
-                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED);
+                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
                     fNameErr = true;
                     fValid   = false;
                     }

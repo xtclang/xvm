@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -51,7 +52,7 @@ public class ElseExpression
             return null;
             }
 
-        TypeConstant typeResult = selectType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
         return typeResult == null
                 ? pool().ensureIntersectionTypeConstant(type1, type2)
                 : typeResult;
@@ -84,7 +85,7 @@ public class ElseExpression
             type1 = expr1New.getType();
             }
 
-        TypeConstant type2Req = type1 == null ? null : selectType(type1, null, errs);
+        TypeConstant type2Req = type1 == null ? null : Op.selectCommonType(type1, null, errs);
         if (typeRequired != null && (type2Req == null || !expr2.testFit(ctx, type2Req).isFit()))
             {
             type2Req = typeRequired;
@@ -111,7 +112,7 @@ public class ElseExpression
             }
 
         TypeConstant type2      = expr2New.getType();
-        TypeConstant typeResult = selectType(type1, type2, errs);
+        TypeConstant typeResult = Op.selectCommonType(type1, type2, errs);
         if (typeResult == null)
             {
             typeResult = pool().ensureIntersectionTypeConstant(type1, type2);

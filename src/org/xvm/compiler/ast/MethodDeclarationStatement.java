@@ -107,11 +107,12 @@ public class MethodDeclarationStatement
             // turn "<expr>" into the statement block "{ return <expr>; }"
             Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
             ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
+            stmt.adopt(expr);
             body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
-            stmt.setParent(body);
+            body.adopt(stmt);
             }
 
-        body.setParent(this);
+        adopt(body);
         }
 
 
