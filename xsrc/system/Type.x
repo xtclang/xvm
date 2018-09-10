@@ -231,7 +231,7 @@ const Type<DataType>
      */
     Boolean producesFormalType(String typeName)
         {
-        return methods.matchAny(method -> method.producesFormalType(typeName));
+        return methods.whileEach(method -> method.producesFormalType(typeName));
         }
 
     /**
