@@ -1568,3 +1568,19 @@ x.foo();            // read from x
 // - AssignmentStatement
 // - VariableDeclarationStatement
 // - MultipleDeclarationStatement
+
+// ---- assertion with declaration
+
+assert Int i : someConditionalMethod();
+if (i > 4) {...}
+
+// instead of:
+if (Int i : someConditionalMethod())
+    {
+    if (i > 4) {...}
+    }
+else
+    {
+    assert;
+    }
+
