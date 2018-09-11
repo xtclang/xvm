@@ -268,7 +268,7 @@ mixin FutureVar<RefType>
     FutureVar!<RefType> orAny(FutureVar!<RefType> ... others)
         {
         FutureVar<RefType> result = this;
-        others.forEach(other -> {result = result.or(other);});
+        others.iterator().forEach(other -> {result = result.or(other);});
         return result;
         }
 

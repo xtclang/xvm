@@ -12,6 +12,7 @@ const VarInt
 
     private Bit[] bits;
 
+    @Override
     @Lazy Signum sign.get()
         {
         // twos-complement number will have the MSB set if negative
@@ -21,7 +22,7 @@ const VarInt
             }
 
         // any other bits set is positive
-        if (Bit bit : iterator((bit) -> bit == 1))
+        for (Bit bit : bits.iterator((bit) -> bit == 1))
             {
             return Positive;
             }
@@ -30,11 +31,13 @@ const VarInt
         return Zero;
         }
 
+    @Override
     Int bitLength.get()
         {
         return bits.size;
         }
 
+    @Override
     Int byteLength.get()
         {
         return bitLength / 8;

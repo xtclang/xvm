@@ -221,7 +221,7 @@ const Type<DataType>
      */
     Boolean consumesFormalType(String typeName)
         {
-        return methods.matchAny(method -> method.consumesFormal(typeName));
+        return methods.iterator().untilAny(method -> method.consumesFormal(typeName, false));
         }
 
     /**
@@ -231,7 +231,7 @@ const Type<DataType>
      */
     Boolean producesFormalType(String typeName)
         {
-        return methods.whileEach(method -> method.producesFormalType(typeName));
+        return methods.iterator().untilAny(method -> method.producesFormalType(typeName));
         }
 
     /**

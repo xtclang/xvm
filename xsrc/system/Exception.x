@@ -51,7 +51,7 @@ const Exception
     static (String, StackFrame /* firstFrame */) formatStackTrace(Iterable<StackFrame> frames, StackFrame? lastFrame)
         {
         // stack trace
-        StackFrame? firstFrame;
+        StackFrame? firstFrame = null;
         // TODO
 
         Iterator<StackFrame> frames = stackTrace.iterator();
