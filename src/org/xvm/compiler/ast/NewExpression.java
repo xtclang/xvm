@@ -294,8 +294,8 @@ public class NewExpression
         if (fValid)
             {
             List<Expression> listArgs = this.args;
-            MethodConstant   idMethod = findMethod(ctx, typeTarget, "construct", listArgs, null, errs);
-
+            MethodConstant   idMethod = findMethod(ctx, typeTarget, "construct",
+                                                   listArgs, false, true, null, errs);
             if (idMethod == null)
                 {
                 fValid = false;
@@ -311,11 +311,11 @@ public class NewExpression
                     return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
                     }
 
-                List<TypeConstant> listParams = idMethod.getParams();
+                TypeConstant[] atypeParams = idMethod.getRawParams();
                 for (int i = 0, c = listArgs.size(); i < c; ++i)
                     {
                     Expression exprArgOld = listArgs.get(i);
-                    Expression exprArgNew = exprArgOld.validate(ctx, listParams.get(i), errs);
+                    Expression exprArgNew = exprArgOld.validate(ctx, atypeParams[i], errs);
                     if (exprArgNew == null)
                         {
                         fValid = false;

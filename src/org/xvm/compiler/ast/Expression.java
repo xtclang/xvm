@@ -22,6 +22,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -1759,7 +1760,9 @@ public abstract class Expression
      * @param typeTarget   the type on which to search for the method
      * @param sMethodName  the method name
      * @param listExprArgs the expressions for arguments (which may not yet be validated)
-     * @param atypeReturn  (optional) the array of return types from the method
+     * @param atypeReturn  (optional) the array of return types from the method (Type of type)
+     * @param fMethod      true to include methods in the search
+     * @param fFunction    true to include functions in the search
      * @param errs         listener to log any errors to
      *
      * @return the MethodConstant for the desired method, or null if an exact match was not found,
@@ -1770,6 +1773,8 @@ public abstract class Expression
             TypeConstant     typeTarget,
             String           sMethodName,
             List<Expression> listExprArgs,
+            boolean          fMethod,
+            boolean          fFunction,
             TypeConstant[]   atypeReturn,
             ErrorListener    errs)
         {
@@ -1839,9 +1844,16 @@ public abstract class Expression
             }
 
         // first, collect all theoretically matching methods
-        Set<MethodConstant> setMatch = new HashSet<>();
+        Set<MethodConstant> setIs      = new HashSet<>();
+        Set<MethodConstant> setConvert = new HashSet<>();
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
+            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
+            if (infoMethod.isFunction() ? !fFunction : !fMethod)
+                {
+                continue NextMethod;
+                }
+
             TypeConstant[] atypeP = idMethod.getRawParams();
             if (cParams != atypeP.length)
                 {
@@ -1849,9 +1861,12 @@ public abstract class Expression
                 continue NextMethod;
                 }
 
+            boolean fConvert = false;
             for (int i = 0; i < cParams; ++i)
                 {
-                TypeConstant typeParam = atypeParams[i];
+                TypeConstant typeMethodParam = atypeP[i];
+                TypeConstant typeParam       = atypeParams[i];
+
                 if (typeParam == null)
                     {
                     if (mapNamedParams != null)
@@ -1867,14 +1882,32 @@ public abstract class Expression
                 if (typeParam == null)
                     {
                     // check if the method's parameter type fits the argument expression
-                    if (!listExprArgs.get(i).testFit(ctx, atypeP[i]).isFit())
+                    TypeFit fit = listExprArgs.get(i).testFit(ctx, typeMethodParam);
+                    if (!fit.isFit())
                         {
-                        continue NextMethod;
+                        if (fit.isConverting())
+                            {
+                            fConvert = true;
+                            }
+                        else
+                            {
+                            continue NextMethod;
+                            }
                         }
                     }
-                else if (!typeParam.isAssignableTo(atypeP[i]))
+                else
                     {
-                    continue NextMethod;
+                    if (!typeParam.isA(typeMethodParam))
+                        {
+                        if (typeParam.getConverterTo(typeMethodParam) != null)
+                            {
+                            fConvert = true;
+                            }
+                        else
+                            {
+                            continue NextMethod;
+                            }
+                        }
                     }
                 }
 
@@ -1888,32 +1921,97 @@ public abstract class Expression
                     }
                 for (int i = 0, c = atypeReturn.length; i < c; i++)
                     {
-                    if (!atypeMethodReturn[i].isAssignableTo(atypeReturn[i]))
+                    TypeConstant typeMethodReturn = atypeMethodReturn[i];
+                    TypeConstant typeReturnType   = atypeReturn[i];
+
+                    assert typeReturnType.isA(pool().typeType()) && typeReturnType.getParamsCount() == 1;
+
+                    TypeConstant typeReturn = typeReturnType.getParamTypesArray()[0];
+                    if (!typeMethodReturn.isA(typeReturn))
                         {
-                        continue NextMethod;
+                        if (typeMethodReturn.getConverterTo(typeReturn) != null)
+                            {
+                            fConvert = true;
+                            }
+                        else
+                            {
+                            continue NextMethod;
+                            }
                         }
                     }
                 }
-            setMatch.add(idMethod);
-            }
 
-        // now choose the best match
-        MethodConstant idBest = null;
-        for (MethodConstant idMethod : setMatch)
-            {
-            if (idBest == null)
+            if (fConvert)
                 {
-                idBest = idMethod;
+                setConvert.add(idMethod);
                 }
             else
                 {
-                boolean fOldBetter = idMethod.getSignature().isSubstitutableFor(idBest.getSignature(), typeTarget);
-                boolean fNewBetter = idBest.getSignature().isSubstitutableFor(idMethod.getSignature(), typeTarget);
+                setIs.add(idMethod);
+                }
+            }
+
+        // now choose the best match
+        if (!setIs.isEmpty())
+            {
+            return chooseBest(setIs, typeTarget, errs);
+            }
+
+        if (!setConvert.isEmpty())
+            {
+            return chooseBest(setConvert, typeTarget, errs);
+            }
+
+        // report a miss
+        if (sMethodName.equals("construct"))
+            {
+            log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
+            }
+        else
+            {
+            // TODO: create a signature representation of what is known
+            //       for example, if we are looking for "foo" in invocation "a.foo(x-> x.bar())"
+            //       and "bar" is missing - we'll get here complaining about "foo" rather than "bar"
+            log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
+            }
+        return null;
+        }
+
+    /**
+     * Choose the best fit out of a non-empty set of methods.
+     *
+     * @param setMethods  the non-empty set of methods
+     * @param typeTarget  the target type
+     * @param errs        the error
+     *
+     * @return the best matching method or null, if the methods are ambiguous, in which case
+     *         an error has been reported
+     */
+    protected MethodConstant chooseBest(Set<MethodConstant> setMethods, TypeConstant typeTarget,
+                                        ErrorListener errs)
+        {
+        assert !setMethods.isEmpty();
+
+        MethodConstant    idBest  = null;
+        SignatureConstant sigBest = null;
+        for (MethodConstant idMethod : setMethods)
+            {
+            SignatureConstant sigMethod = idMethod.getSignature();
+            if (idBest == null)
+                {
+                idBest  = idMethod;
+                sigBest = sigMethod;
+                }
+            else
+                {
+                boolean fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
+                boolean fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
                 if (fOldBetter ^ fNewBetter)
                     {
                     if (fNewBetter)
                         {
-                        idBest = idMethod;
+                        idBest  = idMethod;
+                        sigBest = sigMethod;
                         }
                     }
                 else
@@ -1926,23 +2024,8 @@ public abstract class Expression
                     }
                 }
             }
-
-        if (idBest == null)
-            {
-            if (sMethodName.equals("construct"))
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-                }
-            else
-                {
-                // TODO: create a signature representation of what is known
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName);
-                }
-            }
-
         return idBest;
         }
-
 
     /**
      * Generate a "this" or some other reserved register.
