@@ -560,7 +560,7 @@ public class InvocationExpression
                         MethodConstant constMethod = (MethodConstant) argMethod;
                         TypeConstant[] atypeArgs   = constMethod.getRawParams();
 
-                        if (validateArgs(ctx, atypeArgs, errs))
+                        if (validateExpressions(ctx, args, atypeArgs, errs) != null)
                             {
                             TypeConstant[] atypeResult;
                             if (m_fCall)
@@ -1403,7 +1403,7 @@ public class InvocationExpression
         ConstantPool   pool      = pool();
         TypeConstant[] atypeArgs = pool.extractFunctionParams(typeFn);
 
-        if (validateArgs(ctx, atypeArgs, errs))
+        if (validateExpressions(ctx, args, atypeArgs, errs) != null)
             {
             if (m_fCall)
                 {
@@ -1419,39 +1419,6 @@ public class InvocationExpression
             return new TypeConstant[] {typeFn};
             }
         return null;
-        }
-
-    /**
-     * Validate the invocation arguments against the required types.
-     *
-     * @param ctx            the context
-     * @param atypeRequired  the required types array
-     * @param errs           the error listener
-     *
-     * @return false iff the validation failed, in which case an error has been reported
-     */
-    protected boolean validateArgs(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
-        {
-        List<Expression> listArgs  = args;
-        int              cReq      = atypeRequired == null ? 0 : atypeRequired.length;
-        boolean          fValid    = true;
-        for (int i = 0, c = listArgs.size(); i < c; ++i)
-            {
-            Expression exprOld = listArgs.get(i);
-            Expression exprNew = exprOld.validate(ctx, i < cReq ? atypeRequired[i] : null, errs);
-            if (exprNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                if (exprNew != exprOld)
-                    {
-                    listArgs.set(i, exprNew);
-                    }
-                }
-            }
-        return fValid;
         }
 
 

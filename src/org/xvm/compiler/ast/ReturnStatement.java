@@ -115,19 +115,8 @@ public class ReturnStatement
             if (cExprs > 0)
                 {
                 // check the expressions anyhow (even though they can't be used)
-                for (int i = 0; i < cExprs; ++i)
-                    {
-                    Expression exprOld = listExprs.get(i);
-                    Expression exprNew = exprOld.validate(ctx, null, errs);
-                    if (exprNew != exprOld)
-                        {
-                        fValid &= exprNew != null;
-                        if (exprNew != null)
-                            {
-                            listExprs.set(i, exprNew);
-                            }
-                        }
-                    }
+                atypeActual = validateExpressions(ctx, listExprs, null, errs);
+                fValid      = atypeActual != null;
 
                 // allow the (strange) use of T0D0 or the (strange) return of a void expression
                 if (cExprs != 1 || !listExprs.get(0).isAborting() || !listExprs.get(0).isVoid())
@@ -147,29 +136,10 @@ public class ReturnStatement
         else if (cExprs > 1)
             {
             // validate each expression, telling it what return type is expected
-            atypeActual = new TypeConstant[cExprs];
-            for (int i = 0; i < cExprs; ++i)
-                {
-                TypeConstant typeRet = i < cRets
-                        ? aRetTypes[i]
-                        : null;
-                Expression exprOld = listExprs.get(i);
-                Expression exprNew = exprOld.validate(ctx, typeRet, errs);
-                if (exprNew != exprOld)
-                    {
-                    fValid &= exprNew != null;
-                    if (exprNew != null)
-                        {
-                        listExprs.set(i, exprNew);
-                        }
-                    }
-                if (exprNew != null)
-                    {
-                    atypeActual[i] = exprNew.getType();
-                    }
-                }
+            atypeActual = validateExpressions(ctx, listExprs, aRetTypes, errs);
+            fValid      = atypeActual != null;
 
-            // make sure the arity is correct (the number of exprs has to match the number of rets)
+            // make sure the arity is correct (the number of exprs has to match the number of returns)
             if (cRets >= 0 && cExprs != cRets)
                 {
                 log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);

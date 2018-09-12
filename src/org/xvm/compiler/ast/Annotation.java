@@ -143,7 +143,7 @@ public class Annotation
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         org.xvm.asm.Annotation anno = m_anno;
         assert anno != null;

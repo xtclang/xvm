@@ -231,7 +231,7 @@ public class LambdaExpression
         }
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         // see note above
         if (m_lambda == null)

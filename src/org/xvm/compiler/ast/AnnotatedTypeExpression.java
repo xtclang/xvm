@@ -113,9 +113,9 @@ public class AnnotatedTypeExpression
     protected TypeConstant instantiateTypeConstant()
         {
         // this is a bit complicated:
-        // 1) we need the class of the annotation, which is resolved during validateExpressions()
+        // 1) we need the class of the annotation, which is resolved during validateContent()
         // 2) we need a constant for each parameter, but those are only guaranteed to be correct
-        //    after validateExpressions()
+        //    after validateContent()
         // 3) a "dis-associated" annotation is one that does not apply to the underlying type, so
         //    the underlying type is unchanged by this AnnotatedTypeExpression
         ConstantPool pool           = pool();

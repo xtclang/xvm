@@ -281,7 +281,7 @@ public class PropertyDeclarationStatement
         }
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         if (!alreadyReached(Stage.Validated))
             {
