@@ -201,7 +201,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection();
+        return new EntryBasedValuesCollection<ValueType>();
         }
 
     @Override

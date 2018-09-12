@@ -826,7 +826,7 @@ interface Map<KeyType, ValueType>
             {
             // this entry class is re-usable for different keys, so return an entry whose key cannot
             // be modified
-            return new KeyBasedEntry(key);
+            return new KeyBasedEntry<KeyType, ValueType>(key);
             }
         }
 
