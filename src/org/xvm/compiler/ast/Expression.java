@@ -561,34 +561,25 @@ public abstract class Expression
         MethodConstant idConv = null;
         if (typeRequired != null && fit.isFit() && !typeActual.isA(typeRequired))
             {
-            // first, see if we can infer some type information from the "required" type
-            TypeConstant typeInferred = inferTypeFromRequired(typeActual, typeRequired);
-            if (typeInferred == null)
+            // a conversion may be necessary to deliver the required type, but only one
+            // conversion (per expression value) is allowed
+            if (fit.isConverting() ||
+                    (idConv = typeActual.ensureTypeInfo().findConversion(typeRequired)) == null)
                 {
-                // a conversion may be necessary to deliver the required type, but only one
-                // conversion (per expression value) is allowed
-                if (fit.isConverting() ||
-                        (idConv = typeActual.ensureTypeInfo().findConversion(typeRequired)) == null)
-                    {
-                    // cannot provide the required type
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                            typeRequired.getValueString(), typeActual.getValueString());
+                // cannot provide the required type
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                        typeRequired.getValueString(), typeActual.getValueString());
 
-                    // pretend that we were able to do the necessary conversion (but note that there
-                    // was a type fit error)
-                    fit        = TypeFit.NoFit;
-                    typeActual = typeRequired;
-                    if (constVal != null)
-                        {
-                        // pretend that it was a constant
-                        constVal   = generateFakeConstant(typeRequired);
-                        typeActual = typeActual.ensureImmutable(pool());
-                        }
+                // pretend that we were able to do the necessary conversion (but note that there
+                // was a type fit error)
+                fit        = TypeFit.NoFit;
+                typeActual = typeRequired;
+                if (constVal != null)
+                    {
+                    // pretend that it was a constant
+                    constVal   = generateFakeConstant(typeRequired);
+                    typeActual = typeActual.ensureImmutable(pool());
                     }
-                }
-            else
-                {
-                typeActual = typeInferred;
                 }
             }
 

@@ -189,6 +189,21 @@ public class NewExpression
         }
 
     @Override
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        if (typeIn != null && typeOut != null)
+            {
+            // right-to-left inference to match the "validate" logic
+            TypeConstant typeInferred = inferTypeFromRequired(typeIn, typeOut);
+            if (typeInferred != null)
+                {
+                typeIn = typeInferred;
+                }
+            }
+        return super.calcFit(ctx, typeIn, typeOut);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         boolean fValid = true;
