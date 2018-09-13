@@ -399,6 +399,11 @@ public class VariableDeclarationStatement
                 {
                 case While:
                 case If:
+                    if (m_scenario == Scenario.FromIterator)
+                        {
+                        // TODO: according to the new spec, this scenario will be removed
+                        notImplemented();
+                        }
                     // in the form "Type var : conditional"
                     // first, declare an unnamed Boolean variable that will hold the conditional result
                     code.add(new Var(pool.typeBoolean()));
@@ -416,7 +421,8 @@ public class VariableDeclarationStatement
                 case For:
                     // in the form "Type var : Iterable"
                     // TODO
-                    throw new UnsupportedOperationException();
+                    notImplemented();
+                    break;
 
                 case Switch:
                     // TODO - this one might just be the same as non-conditional usage

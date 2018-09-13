@@ -143,7 +143,7 @@ public class Annotation
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         org.xvm.asm.Annotation anno = m_anno;
         assert anno != null;
@@ -197,7 +197,7 @@ public class Annotation
                     {
                     // there was already at least one arg with a name, so all trailing args MUST
                     // have a name
-                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED);
+                    exprArg.log(errs, Severity.ERROR, Compiler.ARG_NAME_REQUIRED, iArg);
                     fNameErr = true;
                     fValid   = false;
                     }

@@ -25,6 +25,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Label;
 
+import org.xvm.compiler.ast.Statement.Context;
+
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Source;
 
@@ -206,7 +208,7 @@ public abstract class AstNode
 
                 try
                     {
-                    field.set(this, oVal);
+                    field.set(that, oVal);
                     }
                 catch (IllegalAccessException e)
                     {
@@ -529,7 +531,7 @@ public abstract class AstNode
      * @param mgr   the Stage Manager that is conducting the processing
      * @param errs  the error list to log any errors etc. to
      */
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         }
 
@@ -651,6 +653,47 @@ public abstract class AstNode
         // whether or not they can resolve names), we'll assume that if they haven't been resolved,
         // then they don't know how to resolve names
         return alreadyReached(Stage.Resolving);
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Validate the specified expressions against the required types.
+     *
+     * @param ctx            the compiler context
+     * @param listExpr       the list of expressions (may be modified)
+     * @param atypeRequired  the required types array
+     * @param errs           the error listener
+     *
+     * @return an array of TypeConstants describing the actual expression types or null
+     *         if the validation fails, in which case an error has been reported
+     */
+    protected TypeConstant[] validateExpressions(Context ctx, List<Expression> listExpr,
+                                                 TypeConstant[] atypeRequired, ErrorListener errs)
+        {
+        int            cReq   = atypeRequired == null ? 0 : atypeRequired.length;
+        int            cExprs = listExpr.size();
+        TypeConstant[] atype  = new TypeConstant[cExprs];
+        boolean        fValid = true;
+        for (int i = 0; i < cExprs; ++i)
+            {
+            Expression exprOld = listExpr.get(i);
+            Expression exprNew = exprOld.validate(ctx, i < cReq ? atypeRequired[i] : null, errs);
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else
+                {
+                if (exprNew != exprOld)
+                    {
+                    listExpr.set(i, exprNew);
+                    }
+                atype[i] = exprNew.getType();
+                }
+            }
+        return fValid ? atype : null;
         }
 
 

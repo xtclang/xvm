@@ -177,7 +177,7 @@ public abstract class OpCondJump
                 type2 = frame.getArgumentType(m_nArg2);
                 }
 
-            TypeConstant typeCommon = selectCommonType(type1, type2);
+            TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
             if (typeCommon == null)
                 {
                 // this shouldn't have compiled

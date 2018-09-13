@@ -681,7 +681,7 @@ interface Map<KeyType, ValueType>
             Set<KeyType> newKeys = oldKeys.removeIf(key ->
                 {
                 // REVIEW this line of code is possibly "so wrong" in so many ways:
-                // 1) what does it mean to have a "static" variable inside of a lamba?
+                // 1) what does it mean to have a "static" variable inside of a lambda?
                 //    a) does this mean that the state is owned by the lambda (making it stateFUL)
                 //    b) .. or that the lambda is a method (captures "this") and thus can put a
                 //       property onto the KeyBasedEntrySet itself?
@@ -690,7 +690,20 @@ interface Map<KeyType, ValueType>
                 //    considered to be "unresolved" (so MethodDeclarationStatement.resolveNames()
                 //    requeues itself infinitely because method.resolveTypedefs() cannot succeed)
                 //
-                static KeyBasedCursorEntry<KeyType, ValueType> entry = new KeyBasedCursorEntry(key);
+
+                // this is the code that we actually want:
+                // 1) "static" says that "hey, i need this to be 'here' for some definition of here,
+                //    i.e. available every call into this lambda
+                //    -> is it a property, which forces this lambda to be a method? (NOT ideal)
+                //    -> or is it just a local variable that gets added to the frame that hosts this
+                //       lambda, as if it were declared outside of this lambda and then captured?
+                // 2) "lazy" says "just the first time, initialize it", which could conceivably be
+                //    an implicit thing, written as:
+                static @Lazy KeyBasedCursorEntry<KeyType, ValueType> entry.calc()
+                    {
+                    return new KeyBasedCursorEntry(key);
+                    }
+
                 // temp fix, part 2 of 2:
 //                if (&entry.assigned)
 //                    {
@@ -813,7 +826,7 @@ interface Map<KeyType, ValueType>
             {
             // this entry class is re-usable for different keys, so return an entry whose key cannot
             // be modified
-            return new KeyBasedEntry(key);
+            return new KeyBasedEntry<KeyType, ValueType>(key);
             }
         }
 

@@ -1362,8 +1362,6 @@ public class ConstantPool
      */
     public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access)
         {
-        TypeConstant constAccess = null;
-
         if (access == null)
             {
             access = Access.PUBLIC;
@@ -1375,11 +1373,16 @@ public class ConstantPool
                 {
                 return constType;
                 }
-            else
+
+            if (constType instanceof AccessTypeConstant)
                 {
-                throw new IllegalArgumentException("type already has an access specified");
+                return ensureAccessTypeConstant(constType.getUnderlyingType(), access);
                 }
+            // we cannot simply remove the access modifier
+            throw new IllegalArgumentException("type already has an access specified");
             }
+
+        TypeConstant constAccess = null;
 
         if (access == Access.PUBLIC)
             {

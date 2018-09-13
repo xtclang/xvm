@@ -859,7 +859,7 @@ public class Compiler
      */
     public static final String INVALID_OUTER_THIS                 = "COMPILER-59";
     /**
-     * Because a previous argument specified a parameter name, the {0} argument must specify a parameter name.
+     * Because a previous argument specified a parameter name, the argument {0} must specify a parameter name.
      */
     public static final String ARG_NAME_REQUIRED                  = "COMPILER-60";
     /**

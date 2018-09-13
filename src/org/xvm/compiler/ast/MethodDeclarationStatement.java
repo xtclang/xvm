@@ -107,11 +107,12 @@ public class MethodDeclarationStatement
             // turn "<expr>" into the statement block "{ return <expr>; }"
             Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
             ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
+            stmt.adopt(expr);
             body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
-            stmt.setParent(body);
+            body.adopt(stmt);
             }
 
-        body.setParent(this);
+        adopt(body);
         }
 
 
@@ -216,7 +217,7 @@ public class MethodDeclarationStatement
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
         // methods are opaque, so everything inside can be deferred until we get to the
-        // validateExpressions() stage
+        // validateContent() stage
         mgr.deferChildren();
 
         // create the structure for this method
@@ -310,7 +311,7 @@ public class MethodDeclarationStatement
             }
 
         // methods are opaque, so everything inside can be deferred until we get to the
-        // validateExpressions() stage
+        // validateContent() stage
         mgr.processChildrenExcept((child) -> child == body | child == continuation);
         }
 
@@ -318,7 +319,7 @@ public class MethodDeclarationStatement
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
         // methods are opaque, so everything inside can be deferred until we get to the
-        // validateExpressions() stage
+        // validateContent() stage
         mgr.deferChildren();
 
         if (getComponent() == null)
@@ -384,7 +385,7 @@ public class MethodDeclarationStatement
             }
 
         // methods are opaque, so everything inside the curlies can be deferred until we get to the
-        // validateExpressions() stage
+        // validateContent() stage
         mgr.processChildrenExcept((child) -> child == body | child == continuation);
 
         Component component = getComponent();
@@ -401,7 +402,7 @@ public class MethodDeclarationStatement
         }
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here

@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Op;
 
 
 /**
@@ -379,7 +381,7 @@ public class TypeCollector
 
             // conditional results MUST be a boolean for the first value
             TypeConstant typeResult = inferFrom(aColType, f_pool);
-            if (!typeResult.equals(f_pool.typeBoolean()))
+            if (typeResult == null || !typeResult.equals(f_pool.typeBoolean()))
                 {
                 return null;
                 }
@@ -512,8 +514,12 @@ public class TypeCollector
                         }
                     }
 
-                // no obvious common type
-                return null;
+                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.BLACKHOLE);
+                if (typeCommon == null)
+                    {
+                    // no obvious common type
+                    return null;
+                    }
                 }
             }
 

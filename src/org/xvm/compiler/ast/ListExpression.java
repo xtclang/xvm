@@ -103,6 +103,21 @@ public class ListExpression
         }
 
     @Override
+    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
+        {
+        ConstantPool pool = pool();
+
+        if (type == null && typeOut != null && typeOut.isA(pool.typeSequence()))
+            {
+            // matching the logic in "validate": if there is a required element type,
+            // we'll force the expressions to convert to that type if necessary
+            typeIn = pool.ensureParameterizedTypeConstant(pool.typeArray(),
+                        typeOut.getGenericParamType("ElementType"));
+            }
+        return super.calcFit(ctx, typeIn, typeOut);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         ConstantPool     pool        = pool();
@@ -118,6 +133,7 @@ public class ListExpression
             // if there is a required element type, then we'll use that to force the expressions to
             // convert to that type if necessary
             typeElement = typeRequired.getGenericParamType("ElementType");
+            typeActual  = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
             }
 
         TypeExpression exprOldType = type;
@@ -139,7 +155,14 @@ public class ListExpression
                 typeActual = exprNewType.ensureTypeConstant();
 
                 TypeConstant typeElementTemp = typeActual.getGenericParamType("ElementType");
-                if (typeElementTemp != null)
+                if (typeElementTemp == null)
+                    {
+                    if (typeElement != null)
+                        {
+                        typeActual = pool.ensureParameterizedTypeConstant(typeActual, typeElement);
+                        }
+                    }
+                else
                     {
                     typeElement = typeElementTemp;
                     }

@@ -1129,16 +1129,7 @@ public class NameExpression
                                 typeLeft.getSingleUnderlyingClass(false).isNestMate(
                                         ctx.getThisClass().getIdentityConstant()))
                             {
-                            switch (typeLeft.getAccess())
-                                {
-                                case PROTECTED:
-                                    typeLeft = typeLeft.getUnderlyingType();
-                                    assert !typeLeft.isAccessSpecified();
-                                    // fall through
-                                case PUBLIC:
-                                    typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
-                                    break;
-                                }
+                            typeLeft = pool().ensureAccessTypeConstant(typeLeft, Access.PRIVATE);
                             }
 
                         }

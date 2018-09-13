@@ -201,7 +201,7 @@ class ExtHashMap<KeyType, ValueType>
     @Override
     @Lazy public/private Collection<ValueType> values.calc()
         {
-        return new EntryBasedValuesCollection();
+        return new EntryBasedValuesCollection<ValueType>();
         }
 
     @Override
@@ -351,7 +351,7 @@ class ExtHashMap<KeyType, ValueType>
     protected static class ExtEntry<KeyType, ValueType>
             implements Entry<KeyType, ValueType>
         {
-        construct(KeyType key, Int keyhash, ValueType value, ExtEntry<KeyType, ValueType> next = null)
+        construct(KeyType key, Int keyhash, ValueType value, ExtEntry<KeyType, ValueType>? next = null)
             {
             this.key     = key;
             this.keyhash = keyhash;

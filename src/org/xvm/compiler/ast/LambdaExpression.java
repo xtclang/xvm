@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +30,7 @@ import org.xvm.asm.op.MoveRef;
 import org.xvm.asm.op.MoveVar;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -231,7 +231,7 @@ public class LambdaExpression
         }
 
     @Override
-    public void validateExpressions(StageMgr mgr, ErrorListener errs)
+    public void validateContent(StageMgr mgr, ErrorListener errs)
         {
         // see note above
         if (m_lambda == null)
@@ -300,49 +300,17 @@ public class LambdaExpression
             return null;
             }
 
-        // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTemp = (StatementBlock) body.clone();
-
-        // use a black-hole context (to avoid damaging the original)
-        ctx = new BlackholeContext(ctx);
-
-        // create a capture context for the lambda
         int            cParams     = getParamCount();
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
-        Set<String>    setNames    = new HashSet<>();
-        for (int i = 0; i < cParams; ++i)
-            {
-            Parameter param = params.get(i);
-            String    sName = param.getName();
-            asParams   [i] = !sName.equals(Id.IGNORED.TEXT) && setNames.add(sName) ? sName : Id.IGNORED.TEXT;
-            atypeParams[i] = param.getType().ensureTypeConstant();
-            }
 
-        ctx       = ctx.enterCapture(blockTemp, atypeParams, asParams);
-        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
-        ctx       = ctx.exitScope();
+        collectParamNamedAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE);
 
-        // the resulting returned types come back in m_collector (if everything succeeds)
-        if (blockTemp == null)
-            {
-            m_collector = null;
-            return null;
-            }
+        TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams);
 
-        // extract return types
-        TypeConstant[] atypeReturns = TypeConstant.NO_TYPES;
-        if (m_collector != null)
-            {
-            atypeReturns = m_collector.inferMulti(); // TODO conditional
-            m_collector  = null;
-            if (atypeReturns == null)
-                {
-                return null;
-                }
-            }
-
-        return pool().buildFunctionType(buildParamTypes(), atypeReturns);
+        return atypeReturns == null
+                ? null
+                : pool().buildFunctionType(buildParamTypes(), atypeReturns);
         }
 
     @Override
@@ -353,14 +321,54 @@ public class LambdaExpression
             return calcFit(ctx, getType(), typeRequired);
             }
 
+        ConstantPool pool = pool();
+
         // short-circuit for simple cases (i.e. where any function type will do)
-        TypeFit fit = calcFit(ctx, pool().typeFunction(), typeRequired);
+        TypeFit fit = calcFit(ctx, pool.typeFunction(), typeRequired);
         if (fit.isFit())
             {
             return fit;
             }
 
-        return calcFit(ctx, getImplicitType(ctx), typeRequired);
+        if (typeRequired == null || !hasOnlyParamNames())
+            {
+            return calcFit(ctx, getImplicitType(ctx), typeRequired);
+            }
+
+        TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeRequired);
+        int            cParams        = getParamCount();
+        if (atypeReqParams != null && atypeReqParams.length == cParams)
+            {
+            String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
+            TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
+
+            if (!collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, ErrorListener.BLACKHOLE))
+                {
+                return TypeFit.NoFit;
+                }
+
+            TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams);
+            if (atypeReturns == null)
+                {
+                return TypeFit.NoFit;
+                }
+
+            TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+            int            cReqReturns     = atypeReqReturns.length;
+            if (cReqReturns <= atypeReturns.length)
+                {
+                for (int i = 0; i < cReqReturns; i++)
+                    {
+                    if (!atypeReturns[i].isA(atypeReqReturns[i]))
+                        {
+                        return TypeFit.NoFit;
+                        }
+                    }
+                return TypeFit.Fit;
+                }
+            }
+
+        return TypeFit.NoFit;
         }
 
     @Override
@@ -376,6 +384,7 @@ public class LambdaExpression
         ConstantPool pool = pool();
         TypeConstant[] atypeReqParams  = null;
         TypeConstant[] atypeReqReturns = null;
+
         if (typeRequired != null)
             {
             atypeReqParams  = pool.extractFunctionParams(typeRequired);
@@ -386,6 +395,7 @@ public class LambdaExpression
         int     cReqParams  = atypeReqParams  == null ? 0 : atypeReqParams.length;
         int     cReqReturns = atypeReqReturns == null ? 0 : atypeReqReturns.length;
         int     cParams     = getParamCount();
+
         if (atypeReqParams != null && cParams != cReqParams)
             {
             errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
@@ -397,72 +407,8 @@ public class LambdaExpression
         // evaluate the parameter declarations
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
-        if (hasOnlyParamNames())
-            {
-            if (atypeReqParams == null)
-                {
-                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
-                        getSource(), paramNames.get(0).getStartPosition(), paramNames.get(cParams-1).getEndPosition());
-                fValid = false;
-                }
 
-            Set<String> setNames = new HashSet<>();
-            for (int i = 0; i < cParams; ++i)
-                {
-                Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression)
-                    {
-                    String sName = ((NameExpression) expr).getName();
-                    asParams[i] = sName;
-                    if (!(expr instanceof IgnoredNameExpression))
-                        {
-                        if (!setNames.add(sName))
-                            {
-                            expr.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
-                            fValid = false;
-                            }
-                        }
-                    }
-                else
-                    {
-                    expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
-                    fValid = false;
-                    }
-
-                if (i < cReqParams)
-                    {
-                    atypeParams[i] = atypeReqParams[i];
-                    }
-                }
-            }
-        else
-            {
-            Set<String> setNames = new HashSet<>();
-            for (int i = 0; i < cParams; ++i)
-                {
-                Parameter param = params.get(i);
-                String    sName = param.getName();
-                asParams[i] = sName;
-                if (!sName.equals(Id.IGNORED.TEXT) && !setNames.add(sName))
-                    {
-                    param.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
-                    fValid = false;
-                    }
-
-                atypeParams[i] = param.getType().ensureTypeConstant();
-                if (i < cReqParams)
-                    {
-                    // the types don't have to match exactly, but the lambda must not attempt to
-                    // narrow the required type for a parameter
-                    if (!atypeReqParams[i].isA(atypeParams[i]))
-                        {
-                        param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                atypeReqParams[i].getValueString(), atypeParams[i].getValueString());
-                        fValid = false;
-                        }
-                    }
-                }
-            }
+        fValid |= collectParamNamedAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
         if (!fValid)
             {
@@ -472,8 +418,15 @@ public class LambdaExpression
         m_typeRequired = typeRequired;
         m_lambda       = instantiateLambda(errs);
 
+        // the logic below is basically a copy of the "extractReturnTypes" method,
+        // which we couldn't use since we need two things back: the types and the new context
         TypeFit        fit       = TypeFit.Fit;
         StatementBlock blockTemp = (StatementBlock) body.clone();
+        if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
+            {
+            return finishValidation(typeRequired, null, TypeFit.NoFit, null, errs);
+            }
+
         CaptureContext ctxLambda = ctx.enterCapture(blockTemp, atypeParams, asParams);
         StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errs);
         if (blockNew == null)
@@ -511,24 +464,166 @@ public class LambdaExpression
                 }
             }
 
-        // while we have enough info at this point to build a signature, what we lack is the
-        // effectively final data that will only get reported (via exitScope() on the context) as
-        // the variables go out of scope in the method body that contains this lambda, so we need
-        // to store off the data from the capture context, and defer the signature creation to the
-        // generateAssignment() method
-        m_mapCapture      = ctxLambda.getCaptureMap();
-        m_mapRegisters    = ctxLambda.getRegisterMap();
-        m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
-
-        TypeConstant   typeActual = pool.buildFunctionType(atypeParams, atypeRets);
+        TypeConstant   typeActual = null;
         MethodConstant constVal   = null;
-        if (fit.isFit() && m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
+        if (fit.isFit())
             {
-            // there are no bindings, so the lambda is a constant i.e. the function is the value
-            configureLambda(atypeParams, asParams, null, atypeRets);
-            constVal = m_lambda.getIdentityConstant();
+            // while we have enough info at this point to build a signature, what we lack is the
+            // effectively final data that will only get reported (via exitScope() on the context) as
+            // the variables go out of scope in the method body that contains this lambda, so we need
+            // to store off the data from the capture context, and defer the signature creation to the
+            // generateAssignment() method
+            m_mapCapture      = ctxLambda.getCaptureMap();
+            m_mapRegisters    = ctxLambda.getRegisterMap();
+            m_fLambdaIsMethod = ctxLambda.isLambdaMethod();
+
+            typeActual = pool.buildFunctionType(atypeParams, atypeRets);
+            ;
+            if (m_mapCapture.isEmpty() && !m_fLambdaIsMethod)
+                {
+                // there are no bindings, so the lambda is a constant i.e. the function is the value
+                configureLambda(atypeParams, asParams, null, atypeRets);
+                constVal = m_lambda.getIdentityConstant();
+                }
             }
+
         return finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        }
+
+    /**
+     * Collect the parameter types and names into the specified arrays.
+     *
+     * @param atypeReqParams  the required types
+     * @param atypeParams     the array to collect types into
+     * @param asParams        the array to collect names into
+     * @param errs            the error listener
+     *
+     * @return true iff there were no errors
+     */
+    protected boolean collectParamNamedAndTypes(TypeConstant[] atypeReqParams,
+                                                TypeConstant[] atypeParams, String[] asParams,
+                                                ErrorListener errs)
+        {
+        boolean fValid     = true;
+        int     cReqParams = atypeReqParams == null ? 0 : atypeReqParams.length;
+        int     cParams    = atypeParams.length;
+
+        if (hasOnlyParamNames())
+            {
+            if (atypeReqParams == null)
+                {
+                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
+                        getSource(), paramNames.get(0).getStartPosition(),
+                        paramNames.get(cParams-1).getEndPosition());
+                fValid = false;
+                }
+
+            Set<String> setNames = new HashSet<>();
+            for (int i = 0; i < cParams; ++i)
+                {
+                Expression expr = paramNames.get(i);
+                if (expr instanceof NameExpression)
+                    {
+                    String sName = ((NameExpression) expr).getName();
+                    asParams[i] = sName;
+                    if (!(expr instanceof IgnoredNameExpression))
+                        {
+                        if (!setNames.add(sName))
+                            {
+                            expr.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
+                            fValid = false;
+                            }
+                        }
+                    }
+                else
+                    {
+                    expr.log(errs, Severity.ERROR, Compiler.NAME_REQUIRED);
+                    fValid = false;
+                    }
+
+                atypeParams[i] = i < cReqParams ? atypeReqParams[i] : pool().typeObject();
+                }
+            }
+        else
+            {
+            Set<String> setNames = new HashSet<>();
+            for (int i = 0; i < cParams; ++i)
+                {
+                Parameter param = params.get(i);
+                String    sName = asParams[i] = param.getName();
+
+                if (!sName.equals(Id.IGNORED.TEXT) && !setNames.add(sName))
+                    {
+                    param.log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
+                    asParams[i] = Id.IGNORED.TEXT;
+                    fValid      = false;
+                    }
+
+                TypeConstant typeParam = atypeParams[i] = param.getType().ensureTypeConstant();
+                if (i < cReqParams)
+                    {
+                    // the types don't have to match exactly, but the lambda must not attempt to
+                    // narrow the required type for a parameter
+                    TypeConstant typeReq = atypeReqParams[i];
+                    if (typeReq != null && !typeReq.isA(typeParam))
+                        {
+                        param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                m_typeRequired.getValueString(), typeParam.getValueString());
+                        fValid = false;
+                        }
+                    }
+                }
+            }
+
+        return fValid;
+        }
+
+    /**
+     * Extract the return types from this lambda expression without changing its state.
+     *
+     * @param ctx          the context
+     * @param atypeParams  the type parameters
+     * @param asParams     the parameter names
+     *
+     * @return an array of return types; null if the return types could not be calculated
+     */
+    protected TypeConstant[] extractReturnTypes(Context ctx,
+                                                TypeConstant[] atypeParams, String[] asParams)
+        {
+        // clone the body (to avoid damaging the original) and validate it to calculate its type
+        StatementBlock blockTemp = (StatementBlock) body.clone();
+
+        if (!new StageMgr(blockTemp, Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
+            {
+            return null;
+            }
+
+        // use a black-hole context (to avoid damaging the original)
+        ctx       = new BlackholeContext(ctx);
+        ctx       = ctx.enterCapture(blockTemp, atypeParams, asParams);
+        blockTemp = (StatementBlock) blockTemp.validate(ctx, ErrorListener.BLACKHOLE);
+        ctx       = ctx.exitScope();
+
+        try
+            {
+            // the resulting returned types come back in m_collector (if everything succeeds)
+            if (blockTemp == null)
+                {
+                return null;
+                }
+
+            // extract return types
+            if (m_collector == null)
+                {
+                return TypeConstant.NO_TYPES;
+                }
+
+            return m_collector.inferMulti(); // TODO conditional
+            }
+        finally
+            {
+            m_collector = null;
+            }
         }
 
     @Override

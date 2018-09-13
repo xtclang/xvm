@@ -1,17 +1,20 @@
 interface DecimalFPNumber
         extends FPNumber
     {
-    Int radix.get()
+    @Override
+    @RO Int radix.get()
         {
         return 10;
         }
 
-    Int precision.get()
+    @Override
+    @RO Int precision.get()
         {
         TODO 9×k/32 – 2
         }
 
-    Int emax.get()
+    @Override
+    @RO Int emax.get()
         {
         TODO 3 × 2 ^ (k /16 + 3)
         }

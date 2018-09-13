@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.util.Handy;
 
@@ -496,9 +497,13 @@ public abstract class IdentityConstant
             {
             case Module:
             case Package:
-            case Class:
-            case Typedef:
                 return getType().ensureTypeInfo(errs);
+
+            case Class:
+                return ((ClassStructure) getComponent()).getFormalType().ensureTypeInfo(errs);
+
+            case Typedef:
+                return ((TypedefStructure) getComponent()).getType().ensureTypeInfo(errs);
 
             case Property:
                 throw new UnsupportedOperationException("TODO: TypeInfo for property");

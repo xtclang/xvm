@@ -109,7 +109,7 @@ interface List<ElementType>
      */
     Cursor<ElementType> cursor(Int index = 0)
         {
-        return new SimpleCursor(index);
+        return new SimpleCursor<ElementType>(index);
         }
 
     /**

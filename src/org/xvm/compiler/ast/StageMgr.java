@@ -178,7 +178,7 @@ public class StageMgr
                         break;
 
                     case Validated:
-                        node.validateExpressions(this, m_errs);
+                        node.validateContent(this, m_errs);
                         break;
 
                     case Emitted:

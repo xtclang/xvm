@@ -759,6 +759,8 @@ public class ClassStructure
      * <p/>
      * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
      * functionality since the TypeInfo generation itself uses it.
+     *
+     * @return the corresponding actual type or null if there is no matching formal type
      */
     public TypeConstant getGenericParamType(ConstantPool pool, String sName,
                                             List<TypeConstant> listActual)
@@ -771,6 +773,8 @@ public class ClassStructure
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
      * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     *
+     * @return the corresponding actual type or null if there is no matching formal type
      */
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
                                                    List<TypeConstant> listActual, boolean fAllowInto)

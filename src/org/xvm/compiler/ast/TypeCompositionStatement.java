@@ -244,7 +244,7 @@ public class TypeCompositionStatement
 
         if (enclosed == null)
             {
-            enclosed = new StatementBlock(new ArrayList<>());
+            enclosed = adopt(new StatementBlock(new ArrayList<>()));
             enclosed.markFileBoundary();
             ensureBody().addStatement(enclosed);
             }
@@ -256,8 +256,7 @@ public class TypeCompositionStatement
         {
         if (body == null)
             {
-            body = new StatementBlock(new ArrayList<>());
-            body.setParent(this);
+            body = adopt(new StatementBlock(new ArrayList<>()));
             }
         return body;
         }

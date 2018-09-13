@@ -1769,7 +1769,7 @@ public abstract class Statement
                 {
                 TypeConstant type  = atypeParams[i];
                 String       sName = asParams[i];
-                if (!sName.equals(Id.IGNORED.TEXT))
+                if (!sName.equals(Id.IGNORED.TEXT) && type != null)
                     {
                     mapByName.put(sName, new Register(type));
 

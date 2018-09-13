@@ -1,10 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -129,7 +130,7 @@ public class CmpExpression
             ctx = ctx.exitScope();
             }
 
-        TypeConstant typeRequest = selectType(type1, type2, errs);
+        TypeConstant typeRequest = Op.selectCommonType(type1, type2, errs);
         Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
@@ -145,7 +146,7 @@ public class CmpExpression
             // that the first expression is validated
             if (typeRequest == null)
                 {
-                typeRequest = selectType(type1, type2, errs);
+                typeRequest = Op.selectCommonType(type1, type2, errs);
                 }
             }
 
