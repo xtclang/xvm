@@ -430,7 +430,7 @@ VariableInitializationList
     VariableInitializationList "," VariableInitializer
 
 VariableInitializer
-    TypeExpression-opt Name VariableInitializerFinish
+    VariableTypeExpression-opt Name VariableInitializerFinish
 
 VariableInitializerFinish
     "=" Expression
