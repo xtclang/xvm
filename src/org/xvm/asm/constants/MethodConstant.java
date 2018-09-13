@@ -127,7 +127,7 @@ public class MethodConstant
         // a missing signature can only occur for a lambda
         // a lambda identity always occurs for a lambda
         boolean fLambda = m_iLambda > 0;
-        assert fLambda | m_constSig != null;
+        assert fLambda || m_constSig != null;
         assert fLambda == getName().equals("->");
         return fLambda;
         }

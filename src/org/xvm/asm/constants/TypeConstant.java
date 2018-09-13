@@ -3542,7 +3542,7 @@ public abstract class TypeConstant
                 {
                 relation = typeRight.calculateRelationToLeft(typeLeft);
 
-                if (relation == Relation.INCOMPATIBLE && !typeLeft.isClassType())
+                if (relation == Relation.INCOMPATIBLE && typeLeft.isDuckTypeAble())
                     {
                     // left is an interface; check the duck-typing
                     relation = typeLeft.isInterfaceAssignableFrom(
@@ -3568,7 +3568,7 @@ public abstract class TypeConstant
             // the check on whether C is assignable to I depends on whether the return value of
             // C.foo() is assignable to the return value of I.foo(), which causes a recursion
             //
-            assert !typeLeft.isClassType();
+            assert typeLeft.isInterfaceType();
             mapRelations.put(typeLeft, relation = Relation.IS_A);
             }
         return relation;
@@ -4092,12 +4092,20 @@ public abstract class TypeConstant
 
     /**
      * @return true iff the TypeConstant represents a "class type", which is any type that is not an
-     *         "interface type"
+     *         "interface type" and not a "formal type"
      */
     public boolean isClassType()
         {
-        // generally, a type is a class type if any of the underlying types is a class type
-        return getUnderlyingType().isClassType();
+        return getCategory() == Category.CLASS;
+        }
+
+    /**
+     * @return true iff the TypeConstant represents an "interface type", which is a type that is not
+     *         a "class type" and not a "formal type"
+     */
+    public boolean isInterfaceType()
+        {
+        return getCategory() == Category.IFACE;
         }
 
     /**
@@ -4105,7 +4113,15 @@ public abstract class TypeConstant
      */
     public boolean isFormalType()
         {
-        return false;
+        return getCategory() == Category.FORMAL;
+        }
+
+    /**
+     * @return the category of this TypeConstant
+     */
+    public Category getCategory()
+        {
+        return getUnderlyingType().getCategory();
         }
 
     /**
@@ -4487,6 +4503,24 @@ public abstract class TypeConstant
         return mapProduces;
         }
 
+    private boolean isDuckTypeAble()
+        {
+        // interfaces are duck-type able except Tuple and Function
+        if (isInterfaceType())
+            {
+            if (isTuple())
+                {
+                return false;
+                }
+            if (isSingleUnderlyingClass(true) &&
+                getSingleUnderlyingClass(true).equals(getConstantPool().clzFunction()))
+                {
+                return false;
+                }
+            return true;
+            }
+        return false;
+        }
 
     // ----- inner class: Origin -------------------------------------------------------------------
 
@@ -4524,12 +4558,7 @@ public abstract class TypeConstant
         }
 
 
-    // -----fields ---------------------------------------------------------------------------------
-
-    /**
-     * An immutable, empty, zero-length array of types.
-     */
-    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
+    // ----- enums ---------------------------------------------------------------------------------
 
     /**
      * Relationship options.
@@ -4565,6 +4594,22 @@ public abstract class TypeConstant
             return f ? YES : NO;
             }
         }
+
+    /**
+     * TypeConstant categories.
+     */
+    public enum Category
+        {
+        CLASS, IFACE, FORMAL, OTHER;
+        }
+
+
+    // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * An immutable, empty, zero-length array of types.
+     */
+    public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
      * Keeps track of whether the TypeConstant has been validated.

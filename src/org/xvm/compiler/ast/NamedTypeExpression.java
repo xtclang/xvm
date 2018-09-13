@@ -7,11 +7,13 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
@@ -344,10 +346,93 @@ public class NamedTypeExpression
 
         boolean fValid = true;
 
-        TypeConstant[] atypeParams = null;
-        if (paramTypes != null)
+        TypeConstant type = pool.ensureTerminalTypeConstant(m_constId);
+        if (paramTypes == null)
             {
-            atypeParams = new TypeConstant[paramTypes.size()];
+            // in a context of "this compilation unit", an absence of type parameters
+            // is treated as "formal types" (but only for instance children).
+            // Consider an example:
+            //
+            //  class Parent<T0>
+            //    {
+            //    void foo()
+            //       {
+            //       Parent p;  // (1) means Parent<T0>
+            //       Child1 c1; // (2) means Child1<Parent<T0>>
+            //       Child3 c2; // (3) means Child2<Parent<T0>, ?>
+            //       Child2 c3; // (3) means naked Child3 type
+            //       }
+            //
+            //    class Child1
+            //      {
+            //      void foo()
+            //         {
+            //         Parent p;  // (4) means Parent<T0>
+            //         Child1 c1; // (5) means Child1<Parent<T0>>
+            //         Child2 c2; // (6) means Child2<Parent<T0>, ?>
+            //         }
+            //      }
+            //
+            //    class Child2<T2>
+            //      {
+            //      void foo()
+            //         {
+            //         Parent p;  // (4) means Parent<T0>
+            //         Child2 c2; // (5) means Child1<Parent<T0>, T2>
+            //         Child1 c1; // (7) means Child1<Parent<T0>>
+            //         }
+            //      }
+            //
+            //    static class Child3<T3>
+            //      {
+            //      void foo()
+            //         {
+            //         Parent p; // (8) means "naked" Parent type
+            //         Child3 c; // (9) means Child3<T3>
+            //         }
+            //      }
+            //    }
+            //
+
+            if (m_constId.getFormat() == Format.Class)
+                {
+                IdentityConstant idTarget  = (IdentityConstant) m_constId;
+                ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
+                if (clzTarget.isParameterized())
+                    {
+                    ClassStructure   clzClass   = ctx.getThisClass();
+                    IdentityConstant idClass    = clzClass.getIdentityConstant();
+                    boolean          fUseFormal = false;
+
+                    if (idTarget.equals(idClass))
+                        {
+                        // scenarios (1), (5) and (9)
+                        fUseFormal = true;
+                        }
+                    else if (idTarget.isNestMate(idClass))
+                        {
+                        if (clzClass.isInstanceAscendant(clzTarget))
+                            {
+                            // scenario (2, 3)
+                            fUseFormal = true;
+                            }
+                        else if (clzTarget.isInstanceAscendant(clzClass))
+                            {
+                            // scenario (4)
+                            fUseFormal = true;
+                            }
+                        // TODO: scenarios (6), (7)
+                        }
+                    if (fUseFormal)
+                        {
+                        type = clzTarget.getFormalType();
+                        }
+                    }
+                }
+            }
+        else
+            {
+            TypeConstant[] atypeParams = new TypeConstant[paramTypes.size()];
             for (int i = 0, c = paramTypes.size(); i < c; ++i)
                 {
                 TypeExpression exprOrig = paramTypes.get(i);
@@ -381,13 +466,9 @@ public class NamedTypeExpression
                         }
                     }
                 }
-            }
-
-        TypeConstant type = pool.ensureTerminalTypeConstant(m_constId);
-        if (atypeParams != null)
-            {
             type = pool.ensureParameterizedTypeConstant(type, atypeParams);
             }
+
         TypeConstant typeType = pool.ensureParameterizedTypeConstant(pool.typeType(), type);
 
         return finishValidation(typeRequired, typeType, fValid ? TypeFit.Fit : TypeFit.NoFit, type, errs);

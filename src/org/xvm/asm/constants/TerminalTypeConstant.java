@@ -693,13 +693,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isClassType()
+    public Category getCategory()
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().isClassType();
+            return constId.getReferredToType().getCategory();
             }
 
         Constant constant = getDefiningConstant();
@@ -708,24 +708,23 @@ public class TerminalTypeConstant
             case Module:
             case Package:
                 // these are always class types (not interface types)
-                return true;
+                return Category.CLASS;
 
             case NativeClass:
                 // native rebase is only for an interface
-                return false;
+                return Category.IFACE;
 
             case Class:
                 {
                 // examine the structure to determine if it represents a class or interface
                 ClassStructure clz = (ClassStructure) ((ClassConstant) constant).getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
+                return clz.getFormat() == Component.Format.INTERFACE
+                        ? Category.IFACE : Category.CLASS;
                 }
 
             case Property:
-                return ((PropertyConstant) constant).getReferredToType().isClassType();
-
             case TypeParameter:
-                return ((TypeParameterConstant) constant).getReferredToType().isClassType();
+                return Category.FORMAL;
 
             case ThisClass:
             case ParentClass:
@@ -733,19 +732,13 @@ public class TerminalTypeConstant
                 {
                 ClassStructure clz = (ClassStructure) ((PseudoConstant) constant)
                         .getDeclarationLevelClass().getComponent();
-                return clz.getFormat() != Component.Format.INTERFACE;
+                return clz.getFormat() == Component.Format.INTERFACE
+                        ? Category.IFACE : Category.CLASS;
                 }
 
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
-        }
-
-    @Override
-    public boolean isFormalType()
-        {
-        return isSingleDefiningConstant() &&
-               getDefiningConstant().getFormat() == Format.Property;
         }
 
     @Override
