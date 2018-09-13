@@ -1568,3 +1568,120 @@ x.foo();            // read from x
 // - AssignmentStatement
 // - VariableDeclarationStatement
 // - MultipleDeclarationStatement
+
+// ---- assertion with declaration
+
+assert Int i : someConditionalMethod();
+if (i > 4) {...}
+
+// instead of:
+if (Int i : someConditionalMethod())
+    {
+    if (i > 4) {...}
+    }
+else
+    {
+    assert;
+    }
+
+// property initializers
+class C
+    {
+    construct ()
+        {
+        }
+    finally
+        {
+        i = new I();   // ok (but wouldn't work in a "const")
+        }
+
+    Int x = 0;
+    Int y = x;   // "="(this:struct)
+
+    class I
+        {
+        // ***implicit*** property of type C called C
+        public C C.get() { return MOV_THIS(1); };
+
+        Int z = y; // return MOV_THIS(1).y
+        }
+
+    I i = new I(); // illegal (no "this" yet)
+    }
+// Question 1: Is it possible to allow "this:struct" access inside "=" functions for property initializers? (Or does it have to be passed in?)
+// Solution: No. The structure needs to be passed in as a parameter. This is going to be determined by capture analysis.
+//           Parameter type will be C:struct, name will be "this:struct"
+
+// Question 2: Is it possible to allow MOV_THIS (>0) inside "=" functions for property initializers? (or do outer "this" instances need to be passed in?)
+// Solution: No. The "outer this" needs to be passed in as a parameter. This is going to be determined by capture analysis.
+//           Parameter type will be C:private, name will be "C" (and the inner class must NOT be static)
+//           (In the case of an anonymous inner class, it will automatically be converted to non-static to allow the capture of the outer this.)
+
+// Implication of the above:
+// - the runtime must be able to automatically provide "="() functions (property initializers) with "this:struct" and any required outer this
+
+// IfCondition
+
+@Inject X.io.Console console;
+if (hot)
+    {
+    console.println("This porridge is too hot!");
+    }
+else if (cold)
+    {
+    console.println("This porridge is too cold!");
+    }
+else
+    {
+    console.println("This porridge is just right.");
+    }
+
+void printNext(Iterator<String> iter)
+    {
+    @Inject X.io.Console console;
+    if (String s : iter.next())
+        {
+        console.println("next string=" + s);
+        }
+    else
+        {
+        console.println("iterator is empty");
+        }
+    }
+
+interface FooBar
+    {
+    (Boolean, String, Int, Int) foo();
+    conditional (String, Int, Int) bar();
+    }
+
+FooBar  fb1 = /* ... */;
+FooBar? fb2 = /* ... */;
+
+if (fb1.foo()) {...}
+if (fb1.bar()) {...}
+
+if (String s, Int x, Int y : fb1.foo())
+    {
+    console.println("foo()=True, s={s}, x={x}, y={y}");
+    }
+else
+    {
+    console.println("foo()=False, s={s}, x={x}, y={y}");
+    }
+
+if (String s, Int x, Int y : fb1.bar())
+    {
+    console.println("bar()=True, s={s}, x={x}, y={y}");
+    }
+else
+    {
+    // this line would be illegal, because bar() has a
+    // conditional return, and it returned False:
+    //   console.println("bar()=False, s={s}, x={x}, y={y}");
+    console.println("bar()=False");
+    }
+
+if (fb1.bar()) {...}
+
+if (fb2?.foo()) {...}

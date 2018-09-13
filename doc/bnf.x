@@ -320,7 +320,7 @@ Statement
     AssertStatement
     "break" Name-opt ";"
     "continue" Name-opt ";"
-    "do" StatementBlock "while" "(" WhileCondition ")" ";"
+    "do" StatementBlock "while" "(" IfCondition ")" ";"
     ForStatement
     IfStatement
 	ImportStatement
@@ -329,7 +329,7 @@ Statement
     TryStatement
 	TypeDefStatement
     "using" ResourceDeclaration StatementBlock
-    "while" "(" WhileCondition ")" StatementBlock
+    "while" "(" IfCondition ")" StatementBlock
     WithStatement
     StatementBlock
 	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
@@ -353,7 +353,8 @@ MultipleOptionalDeclaration
     MultipleOptionalDeclaration "," SingleOptionalDeclaration
 
 SingleOptionalDeclaration
-    TypeExpression-opt Assignable
+    Assignable
+    VariableTypeExpression Name
 
 VariableTypeExpression
     "var"
@@ -410,29 +411,26 @@ AssertInstruction
     "assert:always"
 
 Assertion
-    ConditionalDeclaration-opt Expression
+    Expression
+    MultipleOptionalDeclaration ":" Expression
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock
 
 ForCondition
     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-    ConditionalDeclarationList
+    MultipleOptionalDeclaration ":" Expression
 
-WhileCondition
+IfCondition
     Expression
-    ConditionalDeclarationList
-
-ConditionalDeclarationList
-    ConditionalDeclaration Expression
-    ConditionalDeclarationList "," ConditionalDeclaration Expression
+    MultipleOptionalDeclaration ":" Expression
 
 VariableInitializationList
     VariableInitializer
     VariableInitializationList "," VariableInitializer
 
 VariableInitializer
-    TypeExpression-opt Name VariableInitializerFinish
+    VariableTypeExpression-opt Name VariableInitializerFinish
 
 VariableInitializerFinish
     "=" Expression
@@ -443,13 +441,10 @@ VariableModificationList
 
 VariableModification
     Assignment
-    Expression
+    Expression    # note: expression must have side-effects (i.e. not a constant)
 
 IfStatement
-    "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
-
-ConditionalDeclaration
-    TypeExpression-opt Name ":"
+    "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
 
 ElseStatement
     "else" IfStatement
