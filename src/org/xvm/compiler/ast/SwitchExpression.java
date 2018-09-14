@@ -105,7 +105,7 @@ public class SwitchExpression
                 collector.add(((Expression) node).getImplicitType(ctx));
                 }
             }
-        return collector.inferSingle();
+        return collector.inferSingle(null);
         }
 
     // TODO multi
@@ -365,7 +365,7 @@ public class SwitchExpression
             fValid = false;
             }
 
-        TypeConstant typeActual = collector.inferSingle();
+        TypeConstant typeActual = collector.inferSingle(typeRequired);
         if (typeActual == null)
             {
             typeActual = typeRequest == null

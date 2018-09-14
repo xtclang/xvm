@@ -306,7 +306,7 @@ public class LambdaExpression
 
         collectParamNamedAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE);
 
-        TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams);
+        TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams, null);
 
         return atypeReturns == null
                 ? null
@@ -335,9 +335,10 @@ public class LambdaExpression
             return calcFit(ctx, getImplicitType(ctx), typeRequired);
             }
 
-        TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeRequired);
-        int            cParams        = getParamCount();
-        if (atypeReqParams != null && atypeReqParams.length == cParams)
+        TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
+        TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+        int            cParams         = getParamCount();
+        if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
             {
             String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
             TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
@@ -347,14 +348,13 @@ public class LambdaExpression
                 return TypeFit.NoFit;
                 }
 
-            TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams);
+            TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns);
             if (atypeReturns == null)
                 {
                 return TypeFit.NoFit;
                 }
 
-            TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
-            int            cReqReturns     = atypeReqReturns.length;
+            int cReqReturns = atypeReqReturns.length;
             if (cReqReturns <= atypeReturns.length)
                 {
                 for (int i = 0; i < cReqReturns; i++)
@@ -452,7 +452,7 @@ public class LambdaExpression
             }
         else
             {
-            atypeRets   = m_collector.inferMulti(); // TODO conditional
+            atypeRets   = m_collector.inferMulti(atypeReqReturns); // TODO conditional
             m_collector = null;
 
             if (atypeRets == null)
@@ -584,11 +584,13 @@ public class LambdaExpression
      * @param ctx          the context
      * @param atypeParams  the type parameters
      * @param asParams     the parameter names
+     * @param atypeReturns (optional) the required return types
      *
      * @return an array of return types; null if the return types could not be calculated
      */
     protected TypeConstant[] extractReturnTypes(Context ctx,
-                                                TypeConstant[] atypeParams, String[] asParams)
+                                                TypeConstant[] atypeParams, String[] asParams,
+                                                TypeConstant[] atypeReturns)
         {
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTemp = (StatementBlock) body.clone();
@@ -618,7 +620,7 @@ public class LambdaExpression
                 return TypeConstant.NO_TYPES;
                 }
 
-            return m_collector.inferMulti(); // TODO conditional
+            return m_collector.inferMulti(atypeReturns); // TODO conditional
             }
         finally
             {

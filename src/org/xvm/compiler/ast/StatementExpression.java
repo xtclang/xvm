@@ -138,7 +138,7 @@ public class StatementExpression
             return null;
             }
 
-        TypeConstant[] aTypes = m_collector.inferMulti(); // TODO isConditional
+        TypeConstant[] aTypes = m_collector.inferMulti(null); // TODO isConditional
         m_collector = null;
         return aTypes;
         }
@@ -181,7 +181,7 @@ public class StatementExpression
         else
             {
             // calculate the resulting type
-            TypeConstant[] aActualTypes = m_collector.inferMulti();  // TODO isConditional
+            TypeConstant[] aActualTypes = m_collector.inferMulti(atypeRequired);  // TODO isConditional
             m_collector = null;
             return calcFitMulti(ctx, aActualTypes, atypeRequired);
             }
@@ -208,7 +208,7 @@ public class StatementExpression
         TypeConstant[] atypeActual = null;
         if (m_collector != null)
             {
-            atypeActual = m_collector.inferMulti(); // TODO conditional
+            atypeActual = m_collector.inferMulti(atypeRequired); // TODO conditional
             m_collector = null;
             }
         if (atypeActual == null)

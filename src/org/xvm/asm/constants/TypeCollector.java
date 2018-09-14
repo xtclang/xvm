@@ -266,10 +266,12 @@ public class TypeCollector
     /**
      * Determine if the types collected by the TypeConstant indicates a particular common type.
      *
+     * @param typeRequired (optional) required type
+     *
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public TypeConstant inferSingle()
+    public TypeConstant inferSingle(TypeConstant typeRequired)
         {
         assert !isMulti();
 
@@ -283,7 +285,9 @@ public class TypeCollector
             return null;
             }
 
-        return inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
+        TypeConstant typeCommon = inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
+
+        return Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
         }
 
     /**
@@ -291,14 +295,16 @@ public class TypeCollector
      * After calling this method, it is also possible to determine if the resulting type is
      * <i>conditional</i>, by calling {@link #isConditional()}.
      *
+     * @param atypeRequired (optional) an array of required types
+     *
      * @return the inferred common type (including potentially requiring conversion), or null if no
      *         common type can be determined
      */
-    public TypeConstant[] inferMulti()
+    public TypeConstant[] inferMulti(TypeConstant[] atypeRequired)
         {
         if (!isMulti())
             {
-            TypeConstant type = inferSingle();
+            TypeConstant type = inferSingle(atypeRequired == null ? null : atypeRequired[0]);
             return type == null
                     ? null
                     : new TypeConstant[] {type};
@@ -366,7 +372,8 @@ public class TypeCollector
 
         // at this point, we know the width and height of the result types, and whether a
         // conditional type is still a possibility
-        TypeConstant[] aResult  = new TypeConstant[cWidth];
+        int            cRequired = atypeRequired == null ? 0 : atypeRequired.length;
+        TypeConstant[] aResult   = new TypeConstant[cWidth];
         if (cHeight < cElements)
             {
             assert fConditional;
@@ -405,7 +412,8 @@ public class TypeCollector
                     {
                     return null;
                     }
-                aResult[iCol] = typeResult;
+                TypeConstant typeRequired = iCol < cRequired ? atypeRequired[iCol] : null;
+                aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
                 }
             }
         else
@@ -426,6 +434,9 @@ public class TypeCollector
                     return null;
                     }
                 aResult[iCol] = typeResult;
+
+                TypeConstant typeRequired = iCol < cRequired ? atypeRequired[iCol] : null;
+                aResult[iCol] = Op.selectCommonType(typeResult, typeRequired, ErrorListener.BLACKHOLE);
                 }
             }
 
@@ -442,7 +453,7 @@ public class TypeCollector
         {
         if (m_FConditional == null)
             {
-            inferMulti();
+            inferMulti(null);
             assert m_FConditional != null;
             }
 
