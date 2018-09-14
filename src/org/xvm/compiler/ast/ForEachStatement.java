@@ -15,12 +15,12 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * An "Iterable"-based "for" statement.
  */
-public class ForStatement2
+public class ForEachStatement
         extends Statement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ForStatement2(Token keyword, List<Statement> conds, StatementBlock block)
+    public ForEachStatement(Token keyword, List<Statement> conds, StatementBlock block)
         {
         this.keyword = keyword;
         this.conds   = conds;
@@ -110,8 +110,9 @@ public class ForStatement2
     protected List<Statement> conds;
     protected StatementBlock  block;
 
-    private static int s_nLabelCounter;
-    private Label m_labelContinue;
+    private static int   s_nLabelCounter;
+    private        Label m_labelContinue;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement2.class, "conds", "block");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(ForEachStatement.class, "conds", "block");
     }

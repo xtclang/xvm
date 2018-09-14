@@ -1685,3 +1685,17 @@ else
 if (fb1.bar()) {...}
 
 if (fb2?.foo()) {...}
+
+// ---- for changes
+
+conditional (Int, Int) foo() {..}
+while (Int i, Int j : foo()) {....}
+
+(Int, Int) bar() {..}
+for ((Int i, Int j) = bar(); i < 100; ++i, ++j)
+    {
+    ...
+    }
+
+// stand-alone declaration
+(Int i, Int j) = bar();
