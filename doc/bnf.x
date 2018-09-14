@@ -376,8 +376,8 @@ AssignableList
 # with a Name or an ArrayIndexes
 Assignable
     Name
-    Expression "." Name
-    Expression ArrayIndexes
+    TernaryExpression "." Name
+    TernaryExpression ArrayIndexes
 
 AssignmentOperator
     "="                 // straight assignment
@@ -401,7 +401,7 @@ LabeledStatement
     Name ":" Statement
 
 AssertStatement
-    AssertInstruction Assertion-opt ";"
+    AssertInstruction IfCondition-opt ";"
 
 AssertInstruction
     "assert"
@@ -409,10 +409,6 @@ AssertInstruction
     "assert:test"
     "assert:debug"
     "assert:always"
-
-Assertion
-    Expression
-    MultipleOptionalDeclaration ":" Expression
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock
@@ -422,7 +418,7 @@ ForCondition
     MultipleOptionalDeclaration ":" Expression
 
 IfCondition
-    Expression
+    TernaryExpression
     MultipleOptionalDeclaration ":" Expression
 
 VariableInitializationList
@@ -783,9 +779,11 @@ Literal
     VersionLiteral
     CustomLiteral
 
+# TODO unformatted text: $"text"
+# TODO type literal from text: T:$"text" / T:"text"
 StringLiteral
-    "$\"" CharacterString-opt "\""
-    FreeformLiteral
+    "$"-opt "\"" CharacterString-opt "\""
+    "$"-opt FreeformLiteral
 
 # all BinaryLiteral contents must be whitespace or nibbles
 BinaryLiteral
@@ -803,6 +801,7 @@ Nibbles
 Nibble: one of ...
     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "a" "B" "b" "C" "c" "D" "d" "E" "e" "F" "f"
 
+# TODO replace "{}" with "[]" in literals?
 TupleLiteral
     "(" ExpressionList "," Expression ")"
     "Tuple" NoWhitespace TypeParameterTypeList-opt NoWhitespace ":(" ExpressionList-opt ")"
@@ -822,6 +821,7 @@ Entries
 Entry
     Expression "=" Expression
 
+# TODO version literal from text: Version:"2.0" / v:"2.0"
 VersionLiteral
     "v" ":{" Version "}"
     "Version" ":{" Version "}"

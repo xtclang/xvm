@@ -53,13 +53,9 @@ public class VariableTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant()
         {
-        throw new UnsupportedOperationException("TODO");
+        // this will be replaced after the actual type is known
+        return pool().typeObject();
         }
-
-
-    // ----- compile phases ------------------------------------------------------------------------
-
-    // TODO???
 
 
     // ----- debugging assistance ------------------------------------------------------------------

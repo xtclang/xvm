@@ -22,7 +22,6 @@ import org.xvm.compiler.ast.*;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
@@ -879,10 +878,10 @@ public class Parser
                             throw new CompilerException("multi assignment has only " + stmts.size() + " l-values");
                             }
 
-                        expect(Id.ASN);
+                        Token      op    = expect(Id.ASN);
                         Expression value = parseExpression();
                         expect(Id.SEMICOLON);
-                        return new MultipleDeclarationStatement(stmts, value, start.getStartPosition());
+                        return new MultipleDeclarationStatement(stmts, op, value, start.getStartPosition());
                         }
 
                     // at this point, all we encountered was a list of expressions inside of
@@ -1447,7 +1446,7 @@ public class Parser
      *
      * <p/><code><pre>
      * AssertStatement
-     *     AssertInstruction expression ";"
+     *     AssertInstruction IfCondition-opt ";"
      *
      * AssertInstruction
      *     "assert"
@@ -1466,7 +1465,7 @@ public class Parser
         Statement cond = null;
         if (peek().getId() != Id.SEMICOLON)
             {
-            cond = parseConditionalDeclaration(false);
+            cond = parseIfCondition();
             }
 
         expect(Id.SEMICOLON);
@@ -1478,7 +1477,7 @@ public class Parser
      *
      * <p/><code><pre>
      * DoStatement
-     *     "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+     *     "do" StatementBlock "while" "(" IfCondition ")" ";"
      * </pre></code>
      *
      * @return a "do" statement
@@ -1489,7 +1488,7 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
         return new WhileStatement(keyword, cond, block, lEndPos);
@@ -1504,18 +1503,22 @@ public class Parser
      *
      * ForCondition
      *     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-     *     ConditionalDeclarationList
-     *
-     * ConditionalDeclarationList
-     *     ConditionalDeclaration Expression
-     *     ConditionalDeclarationList "," ConditionalDeclaration Expression
+     *     MultipleOptionalDeclaration ":" Expression
      *
      * VariableInitializationList
      *     VariableInitializer
      *     VariableInitializationList "," VariableInitializer
      *
      * VariableInitializer
-     *     TypeExpression-opt Name VariableInitializerFinish
+     *     VariableTypeExpression-opt Name VariableInitializerFinish
+     *
+     * VariableTypeExpression
+     *     "var"
+     *     "val"
+     *     TypeExpression
+     *
+     * VariableInitializerFinish
+     *     "=" Expression
      *
      * VariableModificationList
      *     VariableModification
@@ -1533,9 +1536,16 @@ public class Parser
         Token keyword = expect(Id.FOR);
         expect(Id.L_PAREN);
 
-        // figure out if we're parsing for the conditional declaration or the three-part "for"
+        // figure out which form of the "for" statement this is:
+        // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
+        // 2) MultipleOptionalDeclaration ":" Expression
         List<Statement> init;
-        if (peek().getId() != Id.SEMICOLON)
+        if (peek().getId() == Id.SEMICOLON)
+            {
+            // definitely the 3-part, because the first (optional) part is missing
+            init = Collections.EMPTY_LIST;
+            }
+        else
             {
             init = new ArrayList<>();
             int cConds = 0;
@@ -1566,10 +1576,6 @@ public class Parser
                 // this is the "for (var : iterable) {...}" style
                 return new ForStatement2(keyword, init, parseStatementBlock());
                 }
-            }
-        else
-            {
-            init = Collections.EMPTY_LIST;
             }
 
         // parse the second part
@@ -1627,12 +1633,10 @@ public class Parser
      *
      * <p/><code><pre>
      * IfStatement
-     *     "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
-     *
-     * ConditionalDeclaration
-     *     TypeExpression-opt Name ":"
+     *     "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
      *
      * ElseStatement
+     *     "else" IfStatement
      *     "else" StatementBlock
      * </pre></code>
      *
@@ -1642,7 +1646,7 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
@@ -1931,7 +1935,7 @@ public class Parser
      *
      * <p/><code><pre>
      * WhileStatement
-     *     "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+     *     "while" "(" IfCondition ")" StatementBlock
      * </pre></code>
      *
      * @return a "while" statement
@@ -1940,7 +1944,7 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
         return new WhileStatement(keyword, cond, block);
@@ -2021,6 +2025,118 @@ public class Parser
 
         Token name = expect(Id.IDENTIFIER);
         return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
+        }
+
+    /**
+     * Parse the IfCondition, which is used in "assert", "if", "while", and "do" statements.
+     *
+     * <p/><code><pre>
+     * IfCondition
+     *     TernaryExpression
+     *     MultipleOptionalDeclaration ":" Expression
+     *
+     * MultipleOptionalDeclaration
+     *     SingleOptionalDeclaration
+     *     MultipleOptionalDeclaration "," SingleOptionalDeclaration
+     *
+     * SingleOptionalDeclaration
+     *     Assignable
+     *     VariableTypeExpression Name
+     *
+     * Assignable
+     *     Name
+     *     TernaryExpression "." Name
+     *     TernaryExpression ArrayIndexes
+     *
+     * VariableTypeExpression
+     *     "var"
+     *     "val"
+     *     TypeExpression
+     * </pre></code>
+     *
+     * @return
+     */
+    ConditionalStatement parseIfCondition()
+        {
+        Expression      exprLVal;
+        TypeExpression  typeDecl;
+        Token           tokName;
+        List<Statement> listDecls = null;
+        do
+            {
+            typeDecl = null;
+            exprLVal = null;
+            tokName  = null;
+            if (peek().getId() == Id.VAR || peek().getId() == Id.VAL)
+                {
+                typeDecl = new VariableTypeExpression(current());
+                tokName  = expect(Id.IDENTIFIER);
+                }
+            else
+                {
+                // assuming that we haven't already built a list of declarations, then encountering
+                // an expression followed by a semicolon or right parenthesis means the entire
+                // condition is the expression, and we're done
+                Expression expr = parseTernaryExpression();
+                if (listDecls == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
+                    {
+                    return new ExpressionStatement(expr, false);
+                    }
+
+                // otherwise, that expression could be the type expression or the assignable; if the
+                // next token is a name, then the expression that we parsed must be the type of the
+                // variable declarations
+                if (peek().getId() == Id.IDENTIFIER)
+                    {
+                    typeDecl = expr.toTypeExpression();
+                    tokName  = expect(Id.IDENTIFIER);
+                    }
+                else
+                    {
+                    //otherwise, the expression that we parsed must be an Assignable
+                    if (!(expr instanceof NameExpression || expr instanceof ArrayAccessExpression))
+                        {
+                        log(Severity.ERROR, NOT_ASSIGNABLE, expr.getStartPosition(), expr.getEndPosition());
+                        }
+                    exprLVal = expr;
+                    }
+                }
+
+            // if the next character is a comma, then it's a MultipleOptionalDeclaration
+            if (listDecls == null && peek().getId() == Id.COMMA)
+                {
+                listDecls = new ArrayList<>();
+                }
+
+            // if it's a MultipleOptionalDeclaration, then contribute to the list
+            if (listDecls != null)
+                {
+                Statement stmt = typeDecl == null
+                        ? new ExpressionStatement(exprLVal, false)
+                        : new VariableDeclarationStatement(typeDecl, tokName, null, null);
+                listDecls.add(stmt);
+                }
+
+            // the next character must be a comma (indicating that there's more coming in the
+            // MultipleOptionalDeclaration), or a colon (indicating the conclusion of the same)
+            }
+        while (match(Id.COMMA) != null);
+
+        Token      tokAssign = expect(Id.COLON);
+        Expression exprRVal  = parseExpression();
+
+        // if there is a list, then it's a MultipleOptionalDeclaration; otherwise it's just a single
+        // L-Value expression or variable declaration
+        if (listDecls == null)
+            {
+            return typeDecl == null
+                    ? new AssignmentStatement(exprLVal, tokAssign, exprRVal, false)
+                    : new VariableDeclarationStatement(typeDecl, tokName, tokAssign, exprRVal);
+            }
+        else
+            {
+            return new MultipleDeclarationStatement(listDecls, tokAssign, exprRVal);
+            }
         }
 
     /**
@@ -4999,6 +5115,10 @@ public class Parser
      * Default switch branch is repeated.
      */
     public static final String REPEAT_DEFAULT    = "PARSER-21";
+    /**
+     * Expression cannot be assigned to.
+     */
+    public static final String NOT_ASSIGNABLE    = "PARSER-22";
 
 
     // ----- data members ------------------------------------------------------

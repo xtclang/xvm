@@ -39,7 +39,7 @@ import org.xvm.util.Severity;
  *
  * <p/>Additionally, this can represent the combination of a variable "conditional declaration".
  *
- * <p/>TODO add explicit support for VariableTypeExpression
+ * <p/>TODO add explicit support for VariableTypeExpression: need to call setTypeConstant() !!!
  */
 public class VariableDeclarationStatement
         extends ConditionalStatement
