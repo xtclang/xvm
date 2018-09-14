@@ -3887,7 +3887,7 @@ public abstract class TypeConstant
                 {
                 TypeConstant typeL = typeLP.getParamTypesArray()[i];
                 TypeConstant typeR = typeRP.getParamTypesArray()[i];
-                if (!typeR.isA(typeL))
+                if (!typeL.isA(typeR))
                     {
                     return Relation.INCOMPATIBLE;
                     }
@@ -3897,7 +3897,7 @@ public abstract class TypeConstant
                 {
                 TypeConstant typeL = typeLR.getParamTypesArray()[i];
                 TypeConstant typeR = typeRR.getParamTypesArray()[i];
-                if (!typeL.isA(typeR))
+                if (!typeR.isA(typeL))
                     {
                     return Relation.INCOMPATIBLE;
                     }
