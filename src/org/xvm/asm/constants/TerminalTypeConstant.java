@@ -511,13 +511,17 @@ public class TerminalTypeConstant
         switch (constant.getFormat())
             {
             case ThisClass:
-                if (typeTarget != null && typeTarget.isGenericType())
+                {
+                IdentityConstant idClass = ((ThisClassConstant) constant).getDeclarationLevelClass();
+                if (typeTarget == null)
                     {
-                    assert typeTarget.isA(
-                        ((ThisClassConstant) constant).getDeclarationLevelClass().getType());
-                    return typeTarget;
+                    return idClass.getType();
                     }
-                // fall through
+
+                assert typeTarget.isA(idClass.getType());
+                return typeTarget;
+                }
+
             case ParentClass:
             case ChildClass:
                 {
@@ -529,6 +533,7 @@ public class TerminalTypeConstant
 
                 return ((PseudoConstant) constant).resolveClass(idClass).getType();
                 }
+
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
 

@@ -264,8 +264,6 @@ public class ParameterizedTypeConstant
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, typeTarget);
         boolean      fDiff         = constOriginal != constResolved;
 
-        assert !constResolved.isParamsSpecified();
-
         TypeConstant[] aconstOriginal = m_atypeParams;
         TypeConstant[] aconstResolved = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
@@ -284,7 +282,9 @@ public class ParameterizedTypeConstant
             }
 
         return fDiff
-                ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                ? constResolved.isParamsSpecified()
+                    ? constResolved.adoptParameters(pool, aconstResolved)
+                    : pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
                 : this;
         }
 
