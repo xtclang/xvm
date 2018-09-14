@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -42,7 +43,18 @@ public abstract class TypeExpression
         TypeConstant constType = getTypeConstant();
         if (constType == null)
             {
-            constType = instantiateTypeConstant();
+            if (isValidated())
+                {
+                // once the expression has validated, we know the type
+                TypeConstant type = getType();
+                assert type.getParamsCount() == 1; // Type<DataType>
+                constType = type.getParamTypesArray()[0];
+                }
+            else
+                {
+                constType = instantiateTypeConstant();
+                }
+
             setTypeConstant(constType);
             }
         return constType;
@@ -186,6 +198,17 @@ public abstract class TypeExpression
         return finishValidation(typeRequired, typeReference, TypeFit.Fit, typeReferent, errs);
         }
 
+    @Override
+    protected Expression finishValidation(TypeConstant typeRequired, TypeConstant typeActual,
+                                          TypeFit fit, Constant constVal, ErrorListener errs)
+        {
+        Expression expr = super.finishValidation(typeRequired, typeActual, fit, constVal, errs);
+        if (expr instanceof TypeExpression)
+            {
+            ((TypeExpression) expr).resetTypeConstant();
+            }
+        return expr;
+        }
 
     @Override
     protected TypeConstant inferTypeFromRequired(TypeConstant typeActual, TypeConstant typeRequired)

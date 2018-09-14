@@ -73,10 +73,44 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean isClassType()
+    public Category getCategory()
         {
-        return m_constType1.isClassType()
-             | m_constType2.isClassType();
+        // a union of classes is a class;
+        // a union of a class and an interface is a class
+        // a union of interfaces is an interface
+
+        Category cat1 = m_constType1.getCategory();
+        Category cat2 = m_constType2.getCategory();
+
+        switch (cat1)
+            {
+            case CLASS:
+                switch (cat2)
+                    {
+                    case CLASS:
+                    case IFACE:
+                        return Category.CLASS;
+
+                    default:
+                        return Category.OTHER;
+                    }
+
+            case IFACE:
+                switch (cat2)
+                    {
+                    case CLASS:
+                        return Category.CLASS;
+
+                    case IFACE:
+                        return Category.IFACE;
+
+                    default:
+                        return Category.OTHER;
+                    }
+
+            default:
+                return Category.OTHER;
+            }
         }
 
     @Override
@@ -184,7 +218,7 @@ public class UnionTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight,
                                                                Access accessLeft, List<TypeConstant> listLeft)
         {
-        assert !isClassType();
+        assert isInterfaceType();
 
         Set<SignatureConstant> setMiss1 =
                 getUnderlyingType().isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);

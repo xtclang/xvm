@@ -91,10 +91,39 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public boolean isClassType()
+    public Category getCategory()
         {
-        return m_constType1.isClassType()
-            && m_constType2.isClassType();
+        // an intersection of classes is a class;
+        // an intersection of interfaces is an interface
+
+        Category cat1 = m_constType1.getCategory();
+        Category cat2 = m_constType2.getCategory();
+
+        switch (cat1)
+            {
+            case CLASS:
+                switch (cat2)
+                    {
+                    case CLASS:
+                        return Category.CLASS;
+
+                    default:
+                        return Category.OTHER;
+                    }
+
+            case IFACE:
+                switch (cat2)
+                    {
+                    case IFACE:
+                        return Category.IFACE;
+
+                    default:
+                        return Category.OTHER;
+                    }
+
+            default:
+                return Category.OTHER;
+            }
         }
 
     @Override
@@ -205,31 +234,21 @@ public class IntersectionTypeConstant
     protected Set<SignatureConstant> isInterfaceAssignableFrom(
             TypeConstant typeRight, Access accessLeft, List<TypeConstant> listLeft)
         {
-        assert !isClassType();
+        assert isInterfaceType();
 
         TypeConstant thisLeft1 = getUnderlyingType();
         TypeConstant thisLeft2 = getUnderlyingType2();
 
-        Set<SignatureConstant> setMiss1 = null;
-        Set<SignatureConstant> setMiss2 = null;
-
-        // a class cannot be assignable from an interface
-        if (!thisLeft1.isClassType())
+        Set<SignatureConstant> setMiss1 = thisLeft1.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        if (setMiss1.isEmpty())
             {
-            setMiss1 = thisLeft1.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-            if (setMiss1.isEmpty())
-                {
-                return setMiss1; // type1 is assignable from that
-                }
+            return setMiss1; // type1 is assignable from that
             }
 
-        if (!thisLeft2.isClassType())
+        Set<SignatureConstant> setMiss2 = thisLeft2.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
+        if (setMiss2.isEmpty())
             {
-            setMiss2 = thisLeft2.isInterfaceAssignableFrom(typeRight, accessLeft, listLeft);
-            if (setMiss2.isEmpty() || setMiss1 == null)
-                {
-                return setMiss2; // type2 is assignable from that
-                }
+            return setMiss2; // type2 is assignable from that
             }
 
         // neither is assignable; merge the misses

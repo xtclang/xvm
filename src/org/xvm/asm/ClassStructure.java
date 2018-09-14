@@ -201,6 +201,24 @@ public class ClassStructure
         }
 
     /**
+     * @return true iff the specified class is an instance ascendant of this class
+     */
+    public boolean isInstanceAscendant(ClassStructure clzChild)
+        {
+        IdentityConstant idThis    = getIdentityConstant();
+        ClassStructure   clzParent = clzChild.getInstanceParent();
+        while (clzParent != null)
+            {
+            if (clzParent.getIdentityConstant().equals(idThis))
+                {
+                return true;
+                }
+            clzParent = clzParent.getInstanceParent();
+            }
+        return false;
+        }
+
+    /**
      * @return the number of type parameters for this class
      */
     public int getTypeParamCount()
@@ -918,6 +936,7 @@ public class ClassStructure
                 }
             else
                 {
+                // REVIEW: shouldn't we simply ALWAYS disallow C<L1, L2> = C<R1>?
                 // assignment  C<L1, L2> = C<R1> is not the same as
                 //             C<L1, L2> = C<R1, [canonical type for R2]>;
                 // the former is only allowed if class C produces L2
@@ -1517,7 +1536,8 @@ public class ClassStructure
                         continue;
                         }
 
-                    SignatureConstant sig = method.getIdentityConstant().getSignature();
+                    SignatureConstant sig = method.getIdentityConstant().getSignature().
+                                                resolveAutoNarrowing(pool, null);
                     if (!listLeft.isEmpty())
                         {
                         if (resolver == null)
@@ -1606,8 +1626,9 @@ public class ClassStructure
                     {
                     if (!method.isStatic() && method.isAccessible(access))
                         {
-                        SignatureConstant sigMethod = method.getIdentityConstant().
-                            getSignature().resolveGenericTypes(pool, resolver);
+                        SignatureConstant sigMethod = method.getIdentityConstant().getSignature().
+                                                        resolveAutoNarrowing(pool, null).
+                                                        resolveGenericTypes(pool, resolver);
                         if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                             {
                             return true;

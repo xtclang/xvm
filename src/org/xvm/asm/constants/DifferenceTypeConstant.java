@@ -66,15 +66,35 @@ public class DifferenceTypeConstant
     @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
-        // a difference type is NEVER a class type; it always resolves to an interface type
+        // a difference type is NEVER a class type
         return false;
         }
 
     @Override
-    public boolean isClassType()
+    public Category getCategory()
         {
-        // a difference type is NEVER a class type; it always resolves to an interface type
-        return false;
+        // a difference type for classes or interfaces is an interface
+
+        Category cat1 = m_constType1.getCategory();
+        Category cat2 = m_constType2.getCategory();
+
+        switch (cat1)
+            {
+            case CLASS:
+            case IFACE:
+                switch (cat2)
+                    {
+                    case CLASS:
+                    case IFACE:
+                        return Category.IFACE;
+
+                    default:
+                        return Category.OTHER;
+                    }
+
+            default:
+                return Category.OTHER;
+            }
         }
 
     @Override
