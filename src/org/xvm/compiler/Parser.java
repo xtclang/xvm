@@ -1503,7 +1503,7 @@ public class Parser
      *
      * ForCondition
      *     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-     *     MultipleOptionalDeclaration ":" Expression
+     *     OptionalDeclarationList ":" Expression
      *
      * VariableInitializationList
      *     VariableInitializer
@@ -1538,7 +1538,7 @@ public class Parser
 
         // figure out which form of the "for" statement this is:
         // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-        // 2) MultipleOptionalDeclaration ":" Expression
+        // 2) OptionalDeclarationList ":" Expression
         List<Statement> init;
         if (peek().getId() == Id.SEMICOLON)
             {
@@ -1574,7 +1574,7 @@ public class Parser
             if (match(Id.R_PAREN) != null)
                 {
                 // this is the "for (var : iterable) {...}" style
-                return new ForStatement2(keyword, init, parseStatementBlock());
+                return new ForEachStatement(keyword, init, parseStatementBlock());
                 }
             }
 
@@ -2033,13 +2033,13 @@ public class Parser
      * <p/><code><pre>
      * IfCondition
      *     TernaryExpression
-     *     MultipleOptionalDeclaration ":" Expression
+     *     OptionalDeclarationList ":" Expression
      *
-     * MultipleOptionalDeclaration
-     *     SingleOptionalDeclaration
-     *     MultipleOptionalDeclaration "," SingleOptionalDeclaration
+     * OptionalDeclarationList
+     *     OptionalDeclaration
+     *     OptionalDeclarationList "," OptionalDeclaration
      *
-     * SingleOptionalDeclaration
+     * OptionalDeclaration
      *     Assignable
      *     VariableTypeExpression Name
      *
@@ -2049,8 +2049,8 @@ public class Parser
      *     TernaryExpression ArrayIndexes
      *
      * VariableTypeExpression
-     *     "var"
      *     "val"
+     *     "var"
      *     TypeExpression
      * </pre></code>
      *
@@ -2102,13 +2102,13 @@ public class Parser
                     }
                 }
 
-            // if the next character is a comma, then it's a MultipleOptionalDeclaration
+            // if the next character is a comma, then it's a OptionalDeclarationList
             if (listDecls == null && peek().getId() == Id.COMMA)
                 {
                 listDecls = new ArrayList<>();
                 }
 
-            // if it's a MultipleOptionalDeclaration, then contribute to the list
+            // if it's a OptionalDeclarationList, then contribute to the list
             if (listDecls != null)
                 {
                 Statement stmt = typeDecl == null
@@ -2118,14 +2118,14 @@ public class Parser
                 }
 
             // the next character must be a comma (indicating that there's more coming in the
-            // MultipleOptionalDeclaration), or a colon (indicating the conclusion of the same)
+            // OptionalDeclarationList), or a colon (indicating the conclusion of the same)
             }
         while (match(Id.COMMA) != null);
 
         Token      tokAssign = expect(Id.COLON);
         Expression exprRVal  = parseExpression();
 
-        // if there is a list, then it's a MultipleOptionalDeclaration; otherwise it's just a single
+        // if there is a list, then it's a OptionalDeclarationList; otherwise it's just a single
         // L-Value expression or variable declaration
         if (listDecls == null)
             {

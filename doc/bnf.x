@@ -346,19 +346,19 @@ Statements
 
 VariableDeclaration
     VariableTypeExpression Name VariableInitializerFinish-opt
-    "(" MultipleOptionalDeclaration "," SingleOptionalDeclaration ")" VariableInitializerFinish
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" VariableInitializerFinish
 
-MultipleOptionalDeclaration
-    SingleOptionalDeclaration
-    MultipleOptionalDeclaration "," SingleOptionalDeclaration
+OptionalDeclarationList
+    OptionalDeclaration
+    OptionalDeclarationList "," OptionalDeclaration
 
-SingleOptionalDeclaration
+OptionalDeclaration
     Assignable
     VariableTypeExpression Name
 
 VariableTypeExpression
-    "var"
     "val"
+    "var"
     TypeExpression
 
 Assignment
@@ -415,18 +415,15 @@ ForStatement
 
 ForCondition
     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-    MultipleOptionalDeclaration ":" Expression
-
-IfCondition
-    TernaryExpression
-    MultipleOptionalDeclaration ":" Expression
+    OptionalDeclarationList ":" Expression
 
 VariableInitializationList
     VariableInitializer
     VariableInitializationList "," VariableInitializer
 
 VariableInitializer
-    VariableTypeExpression-opt Name VariableInitializerFinish
+    OptionalDeclaration VariableInitializerFinish
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" VariableInitializerFinish
 
 VariableInitializerFinish
     "=" Expression
@@ -441,6 +438,10 @@ VariableModification
 
 IfStatement
     "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
+
+IfCondition
+    TernaryExpression
+    OptionalDeclarationList ":" Expression
 
 ElseStatement
     "else" IfStatement
