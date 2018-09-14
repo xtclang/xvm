@@ -69,7 +69,8 @@ const Timeout
     {
     construct(Duration remainingTime, Boolean independent = false)
         {
-        assert remainingTime > Duration:"0s";
+        // TODO - this des not parse the "Duration:" as a literal indicator
+        // assert remainingTime > Duration:"0s";
 
         // store off the previous timeout; it will be replaced by this timeout, and restored when
         // this timeout is closed

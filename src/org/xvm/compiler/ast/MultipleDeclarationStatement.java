@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.compiler.Token;
+
 
 /**
  * This is a complicated form of the variable declaration statement that allows for multiple
@@ -18,11 +20,22 @@ public class MultipleDeclarationStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MultipleDeclarationStatement(List<Statement> lvalues, Expression rvalue, long lStartPos)
+    public MultipleDeclarationStatement(List<Statement> lvalues, Token op, Expression rvalue, long lStartPos)
         {
         this.lvalues   = lvalues;
+        this.op        = op;
         this.rvalue    = rvalue;
         this.lStartPos = lStartPos;
+        this.term      = true;
+        }
+
+    public MultipleDeclarationStatement(List<Statement> lvalues, Token op, Expression rvalue)
+        {
+        this.lvalues   = lvalues;
+        this.op        = op;
+        this.rvalue    = rvalue;
+        this.lStartPos = lvalues.get(0).getStartPosition();
+        this.term      = false;
         }
 
 
@@ -95,7 +108,9 @@ public class MultipleDeclarationStatement
             sb.append(stmt);
             }
 
-        sb.append(" = ")
+        sb.append(' ')
+          .append(op.getId().TEXT)
+          .append(' ')
           .append(rvalue)
           .append(';');
 
@@ -112,8 +127,10 @@ public class MultipleDeclarationStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected List<Statement> lvalues;
+    protected Token           op;
     protected Expression      rvalue;
     protected long            lStartPos;
+    protected boolean         term;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MultipleDeclarationStatement.class, "lvalues", "rvalue");
     }
