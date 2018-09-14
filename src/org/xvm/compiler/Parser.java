@@ -1447,7 +1447,7 @@ public class Parser
      *
      * <p/><code><pre>
      * AssertStatement
-     *     AssertInstruction expression ";"
+     *     AssertInstruction IfCondition-opt ";"
      *
      * AssertInstruction
      *     "assert"
@@ -1466,7 +1466,7 @@ public class Parser
         Statement cond = null;
         if (peek().getId() != Id.SEMICOLON)
             {
-            cond = parseConditionalDeclaration(false);
+            cond = parseIfCondition();
             }
 
         expect(Id.SEMICOLON);
@@ -1478,7 +1478,7 @@ public class Parser
      *
      * <p/><code><pre>
      * DoStatement
-     *     "do" StatementBlock "while" "(" ConditionalDeclaration-opt Expression ")" ";"
+     *     "do" StatementBlock "while" "(" IfCondition ")" ";"
      * </pre></code>
      *
      * @return a "do" statement
@@ -1489,7 +1489,7 @@ public class Parser
         StatementBlock block = parseStatementBlock();
         expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         long lEndPos = expect(Id.R_PAREN).getEndPosition();
         expect(Id.SEMICOLON);
         return new WhileStatement(keyword, cond, block, lEndPos);
@@ -1504,18 +1504,22 @@ public class Parser
      *
      * ForCondition
      *     VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
-     *     ConditionalDeclarationList
-     *
-     * ConditionalDeclarationList
-     *     ConditionalDeclaration Expression
-     *     ConditionalDeclarationList "," ConditionalDeclaration Expression
+     *     MultipleOptionalDeclaration ":" Expression
      *
      * VariableInitializationList
      *     VariableInitializer
      *     VariableInitializationList "," VariableInitializer
      *
      * VariableInitializer
-     *     TypeExpression-opt Name VariableInitializerFinish
+     *     VariableTypeExpression-opt Name VariableInitializerFinish
+     *
+     * VariableTypeExpression
+     *     "var"
+     *     "val"
+     *     TypeExpression
+     *
+     * VariableInitializerFinish
+     *     "=" Expression
      *
      * VariableModificationList
      *     VariableModification
@@ -1533,9 +1537,16 @@ public class Parser
         Token keyword = expect(Id.FOR);
         expect(Id.L_PAREN);
 
-        // figure out if we're parsing for the conditional declaration or the three-part "for"
+        // figure out which form of the "for" statement this is:
+        // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
+        // 2) MultipleOptionalDeclaration ":" Expression
         List<Statement> init;
-        if (peek().getId() != Id.SEMICOLON)
+        if (peek().getId() == Id.SEMICOLON)
+            {
+            // definitely the 3-part, because the first (optional) part is missing
+            init = Collections.EMPTY_LIST;
+            }
+        else
             {
             init = new ArrayList<>();
             int cConds = 0;
@@ -1566,10 +1577,6 @@ public class Parser
                 // this is the "for (var : iterable) {...}" style
                 return new ForStatement2(keyword, init, parseStatementBlock());
                 }
-            }
-        else
-            {
-            init = Collections.EMPTY_LIST;
             }
 
         // parse the second part
@@ -1627,12 +1634,10 @@ public class Parser
      *
      * <p/><code><pre>
      * IfStatement
-     *     "if" "(" ConditionalDeclaration-opt Expression ")" StatementBlock ElseStatement-opt
-     *
-     * ConditionalDeclaration
-     *     TypeExpression-opt Name ":"
+     *     "if" "(" IfCondition ")" StatementBlock ElseStatement-opt
      *
      * ElseStatement
+     *     "else" IfStatement
      *     "else" StatementBlock
      * </pre></code>
      *
@@ -1642,7 +1647,7 @@ public class Parser
         {
         Token keyword = expect(Id.IF);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
 
@@ -1931,7 +1936,7 @@ public class Parser
      *
      * <p/><code><pre>
      * WhileStatement
-     *     "while" "(" ConditionalDeclaration-opt Expression ")" StatementBlock
+     *     "while" "(" IfCondition ")" StatementBlock
      * </pre></code>
      *
      * @return a "while" statement
@@ -1940,7 +1945,7 @@ public class Parser
         {
         Token keyword = expect(Id.WHILE);
         expect(Id.L_PAREN);
-        ConditionalStatement cond = parseConditionalDeclaration(false);
+        ConditionalStatement cond = parseIfCondition();
         expect(Id.R_PAREN);
         StatementBlock block = parseStatementBlock();
         return new WhileStatement(keyword, cond, block);
@@ -2021,6 +2026,90 @@ public class Parser
 
         Token name = expect(Id.IDENTIFIER);
         return new VariableDeclarationStatement(type, name, expect(Id.ASN), parseExpression());
+        }
+
+    /**
+     * TODO
+     *
+     * <p/><code><pre>
+     * IfCondition
+     *     TernaryExpression
+     *     MultipleOptionalDeclaration ":" Expression
+     *
+     * MultipleOptionalDeclaration
+     *     SingleOptionalDeclaration
+     *     MultipleOptionalDeclaration "," SingleOptionalDeclaration
+     *
+     * SingleOptionalDeclaration
+     *     Assignable
+     *     VariableTypeExpression Name
+     *
+     * Assignable
+     *     Name
+     *     TernaryExpression "." Name
+     *     TernaryExpression ArrayIndexes
+     *
+     * VariableTypeExpression
+     *     "var"
+     *     "val"
+     *     TypeExpression
+     * </pre></code>
+     *
+     * @return
+     */
+    ConditionalStatement parseIfCondition()
+        {
+        Id idNext = peek().getId();
+        if (idNext != Id.VAR && idNext != Id.VAL)
+            {
+            // the "expression" form is always followed by a semi-colon or a right parenthesis
+            Mark mark = mark();
+            Expression expr = parseTernaryExpression();
+
+            idNext = peek().getId();
+            if (idNext == Id.SEMICOLON || idNext == Id.R_PAREN)
+                {
+                return new ExpressionStatement(expr, false);
+                }
+
+            restore(mark);
+            }
+
+        // at this point, we are parsing ONLY for:  MultipleOptionalDeclaration ":" Expression
+        return parseMultipleOptionalDeclarationWithConditionalAssignment();
+        }
+
+    /**
+     * TODO
+     *
+     * @return
+     */
+    ConditionalStatement parseMultipleOptionalDeclarationWithConditionalAssignment()
+        {
+        do
+            {
+            TypeExpression type = null;
+            Expression     expr = null;
+
+            Id idNext = peek().getId();
+            if (idNext == Id.VAR || idNext == Id.VAL)
+                {
+                type = new VariableTypeExpression(current());
+                }
+            else
+                {
+                expr = parseTernaryExpression();
+                idNext = peek().getId();
+                if (idNext == Id.COMMA || idNext == Id.COLON)
+                if (peek())
+                }
+            if
+            Expression expr =
+            }
+        while (peek().getId() != Id.COLON);
+
+        Token op = expect(Id.COLON);
+        return new VariableDeclarationStatement(type, name, op, parseExpression());
         }
 
     /**

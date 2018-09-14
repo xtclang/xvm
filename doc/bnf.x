@@ -376,8 +376,8 @@ AssignableList
 # with a Name or an ArrayIndexes
 Assignable
     Name
-    Expression "." Name
-    Expression ArrayIndexes
+    TernaryExpression "." Name
+    TernaryExpression ArrayIndexes
 
 AssignmentOperator
     "="                 // straight assignment
@@ -401,7 +401,7 @@ LabeledStatement
     Name ":" Statement
 
 AssertStatement
-    AssertInstruction Assertion-opt ";"
+    AssertInstruction IfCondition-opt ";"
 
 AssertInstruction
     "assert"
@@ -409,10 +409,6 @@ AssertInstruction
     "assert:test"
     "assert:debug"
     "assert:always"
-
-Assertion
-    Expression
-    MultipleOptionalDeclaration ":" Expression
 
 ForStatement
     "for" "(" ForCondition ")" StatementBlock
@@ -422,7 +418,7 @@ ForCondition
     MultipleOptionalDeclaration ":" Expression
 
 IfCondition
-    Expression
+    TernaryExpression
     MultipleOptionalDeclaration ":" Expression
 
 VariableInitializationList

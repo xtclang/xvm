@@ -229,14 +229,15 @@ class Array<ElementType>
 
     static <CompileType extends Array> Boolean equals(CompileType a1, CompileType a2)
         {
-        if (a1.size != a2.size)
+        Int c = a1.size;
+        if (c != a2.size)
             {
             return false;
             }
 
-        for (CompileType.ElementType v1 : a1, CompileType.ElementType v2 : a2)
+        for (Int i = 0; i < c; ++i)
             {
-            if (v1 != v2)
+            if (a1[i] != a2[i])
                 {
                 return false;
                 }
