@@ -70,6 +70,14 @@ public class NonBindingExpression
         }
 
     @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired)
+        {
+        return type == null
+                ? TypeFit.Fit
+                : type.testFit(ctx, typeRequired);
+        }
+
+    @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
         TypeFit      fit      = TypeFit.Fit;
@@ -77,7 +85,12 @@ public class NonBindingExpression
         Constant     constant = null;
 
         TypeExpression exprOldType = this.type;
-        if (exprOldType != null)
+        if (exprOldType == null)
+            {
+            // non binding expression without a specified type should fit anything
+            typeArg = typeRequired;
+            }
+        else
             {
             TypeExpression exprNewType = (TypeExpression) exprOldType.validate(ctx, typeRequired, errs);
             if (exprNewType == null)
@@ -90,13 +103,6 @@ public class NonBindingExpression
                 this.type = exprNewType;
                 typeArg   = exprNewType.ensureTypeConstant();
                 }
-            }
-
-        // unfortunately, we have to make up a type here if none is specified or required; this will
-        // necessarily complicate the logic of the invocation expression
-        if (typeArg == null)
-            {
-            typeArg = pool().typeObject();
             }
 
         return finishValidation(typeRequired, typeArg, fit, constant, errs);

@@ -373,11 +373,13 @@ public class InvocationExpression
                                       : constMethod.getSignature()
                            ).getRawReturns();
                     }
-                else
+                if (m_fBindTarget)
                     {
-                    return new TypeConstant[] {constMethod.getRefType(typeLeft)};
+                    return new TypeConstant[] {constMethod.getType()};
                     }
-                // TODO if (m_fBindTarget) { bind; result will be a Function
+
+                // TODO if (m_fBindParams) { // calculate the resulting (partially or fully bound) result type
+                return new TypeConstant[] {constMethod.getRefType(typeLeft)};
                 }
 
             // must be a property or a variable of type function (@Auto conversion possibility
@@ -569,11 +571,14 @@ public class InvocationExpression
                                                          : constMethod.getSignature()
                                               ).getRawReturns();
                                 }
+                            else if (m_fBindTarget)
+                                {
+                                atypeResult = new TypeConstant[] {constMethod.getType()};
+                                }
                             else
                                 {
                                 atypeResult = new TypeConstant[] {constMethod.getRefType(typeLeft)};
                                 }
-                            // TODO if (m_fBindTarget) { // bind; result will be a Function
 
                             // TODO if exprLeft == null then markVarRead on "this"
                             return finishValidations(atypeRequired, atypeResult, TypeFit.Fit, null, errs);
