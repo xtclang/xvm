@@ -381,6 +381,8 @@ public abstract class AstNode
         }
 
     /**
+     * (LValue method)
+     *
      * @return true iff this AstNode is syntactically capable of being an L-Value
      */
     public boolean isLValueSyntax()
@@ -389,10 +391,27 @@ public abstract class AstNode
         }
 
     /**
+     * (LValue method)
+     *
      * @return the syntactically-capable LValue expression, iff {@link #isLValueSyntax()} returns
      *         true
      */
     public Expression getLValueExpression()
+        {
+        throw notLValue();
+        }
+
+    /**
+     * (LValue method)
+     *
+     * @param type  the type of the RValue
+     */
+    public void updateLValueFromRValueType(TypeConstant type)
+        {
+        throw notLValue();
+        }
+
+    private RuntimeException notLValue()
         {
         assert !isLValueSyntax();
         throw new IllegalStateException("not LValue: " + this.getClass().getSimpleName());

@@ -16,7 +16,7 @@ public class SwitchStatement
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SwitchStatement(Token keyword, Statement cond, StatementBlock block)
+    public SwitchStatement(Token keyword, AstNode cond, StatementBlock block)
         {
         this.keyword = keyword;
         this.cond    = cond;
@@ -64,7 +64,7 @@ public class SwitchStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
-    protected Statement      cond;
+    protected AstNode        cond;
     protected StatementBlock block;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "cond", "block");

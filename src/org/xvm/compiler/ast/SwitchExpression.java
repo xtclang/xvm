@@ -167,7 +167,7 @@ public class SwitchExpression
                     }
                 else
                     {
-                    // switch can't use MultipleDeclarationStatement, for example, and the parser
+                    // switch can't use MultipleLValueStatement, for example, and the parser
                     // should know that
                     throw new IllegalStateException("cond=" + condNew);
                     }
