@@ -381,6 +381,24 @@ public abstract class AstNode
         }
 
     /**
+     * @return true iff this AstNode is syntactically capable of being an L-Value
+     */
+    public boolean isLValueSyntax()
+        {
+        return false;
+        }
+
+    /**
+     * @return the syntactically-capable LValue expression, iff {@link #isLValueSyntax()} returns
+     *         true
+     */
+    public Expression getLValueExpression()
+        {
+        assert !isLValueSyntax();
+        throw new IllegalStateException("not LValue: " + this.getClass().getSimpleName());
+        }
+
+    /**
      * Test if the specified child is used as an R-Value, which is something that yields a value.
      * <p/>
      * In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression

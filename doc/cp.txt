@@ -90,3 +90,13 @@ Contributions and call chains:
   ( ) delegates (from the containing type);
   ( ) "rebase onto" or "mixes into" Ref/Var.
   ( ) default implementation of get() from an interface
+
+--
+
+- get rid of ConditionalStatement
+- VariableDeclStmt and MultiDeclStmt need to be ONLY decl statements (and not have a value), i.e. they only declare
+  - need to provide LValue expression (see AstNode)
+  - can we combine them into one? VarDeclStmt
+- specific expressions and LValue
+  - Name
+  - ArrayAccess
