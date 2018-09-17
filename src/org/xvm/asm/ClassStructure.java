@@ -20,7 +20,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -1980,9 +1979,9 @@ public class ClassStructure
             }
 
         @Override
-        public TypeConstant resolveGenericType(PropertyConstant constProperty)
+        public TypeConstant resolveGenericType(String sFormalName)
             {
-            int ix = indexOfGenericParameter(constProperty.getName());
+            int ix = indexOfGenericParameter(sFormalName);
             if (ix < 0)
                 {
                 return null;

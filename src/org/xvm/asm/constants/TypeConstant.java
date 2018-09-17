@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -99,9 +98,9 @@ public abstract class TypeConstant
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
-    public TypeConstant resolveGenericType(PropertyConstant constProperty)
+    public TypeConstant resolveGenericType(String sFormalName)
         {
-        return getGenericParamType(constProperty.getName());
+        return getGenericParamType(sFormalName);
         }
 
 

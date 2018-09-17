@@ -22,6 +22,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -385,10 +387,26 @@ public class TerminalTypeConstant
         Constant constId = getDefiningConstant();
         if (constId instanceof PropertyConstant)
             {
-            TypeConstant typeResolved = resolver.resolveGenericType((PropertyConstant) constId);
+            TypeConstant typeResolved = resolver.resolveGenericType(
+                    ((PropertyConstant) constId).getName());
             if (typeResolved != null)
                 {
                 return typeResolved;
+                }
+            }
+        if (constId instanceof TypeParameterConstant)
+            {
+            TypeParameterConstant constTypeParam = (TypeParameterConstant) constId;
+            MethodConstant        idMethod       = constTypeParam.getMethod();
+            MethodStructure       method         = (MethodStructure) idMethod.getComponent();
+            if (method != null)
+                {
+                Parameter    param        = method.getParam(constTypeParam.getRegister());
+                TypeConstant typeResolved = resolver.resolveGenericType(param.getName());
+                if (typeResolved != null)
+                    {
+                    return typeResolved;
+                    }
                 }
             }
         return this;
