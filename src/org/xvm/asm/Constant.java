@@ -17,6 +17,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.ValueConstant;
 
 import org.xvm.compiler.Token;
@@ -141,7 +142,14 @@ public abstract class Constant
         }
 
     /**
-     * @return this same type, but without any typedefs in it
+     * Recurse through the constants that make up this constant, replacing typedefs with the types
+     * that they refer to.
+     * <p/>
+     * Note: In addition to resolving typedefs, this method is also used to resolve any
+     *       {@link UnresolvedNameConstant}s used by any structure during the registration phase.
+     *
+     * @return this same type, but without any typedefs or resolvable
+     *         {@link UnresolvedNameConstant}s in it
      */
     public Constant resolveTypedefs()
         {
