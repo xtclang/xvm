@@ -100,7 +100,7 @@ interface Service()
      *
      *   @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
      */
-    ContextToken? findContextToken(String name);
+    <TokenType extends immutable Object> ContextToken<TokenType>? findContextToken(String name);
 
     /**
      * The current CriticalSection for the service, if any.
