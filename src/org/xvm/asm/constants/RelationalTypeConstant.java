@@ -205,6 +205,16 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant getGenericParamType(String sName)
+        {
+        TypeConstant typeActual = m_constType1.getGenericParamType(sName);
+
+        return typeActual == null
+                ? m_constType2.getGenericParamType(sName)
+                : typeActual;
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;
@@ -220,8 +230,14 @@ public abstract class RelationalTypeConstant
     @Override
     public TypeConstant adoptParentTypeParameters(ConstantPool pool)
         {
-        // relational type cannot have a parent class
-        return this;
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.adoptParentTypeParameters(pool);
+        TypeConstant constResolved2 = constOriginal2.adoptParentTypeParameters(pool);
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : cloneRelational(pool, constResolved1, constResolved2);
         }
 
     @Override

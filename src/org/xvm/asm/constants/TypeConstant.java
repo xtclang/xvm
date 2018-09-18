@@ -289,7 +289,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Find the type of the specified formal parameter for this actual type.
+     * Find the type of the specified formal parameter for this type.
      *
      * @param sName  the formal parameter name
      *
