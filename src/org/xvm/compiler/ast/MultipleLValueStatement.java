@@ -127,7 +127,7 @@ public class MultipleLValueStatement
     /**
      * @return the specified label, iff it already exists
      */
-    Label peekShortCircuiatLabel(int i)
+    Label peekShortCircuitLabel(int i)
         {
         return aGroundLabels == null ? null : aGroundLabels[i];
         }
@@ -176,15 +176,26 @@ public class MultipleLValueStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean fCompletes = fReachable;
-        for (AstNode node : LVals)
+
+        List<AstNode> LVals = this.LVals;
+        for (int i = 0, c = LVals.size(); i < c; ++i)
             {
             // REVIEW - how much of the short-circuitable LValue "a?[b]" should be handled here?
             // REVIEW - do we need to create a temp var here for all non-statements? (non-decls) ... or just for short-circuitable expressions?
+
+            AstNode node = LVals.get(i);
             if (node instanceof Statement)
                 {
                 fCompletes = ((Statement) node).emit(ctx, fCompletes, code, errs);
                 }
+
+            Label labelGround = peekShortCircuitLabel(i);
+            if (labelGround != null)
+                {
+                code.add(labelGround);
+                }
             }
+
         return fCompletes;
         }
 

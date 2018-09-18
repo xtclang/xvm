@@ -1721,7 +1721,7 @@ public class Parser
      *     TypeExpression
      * </pre></code>
      *
-     * @return
+     * @return the Expression that provides the condition, or the conditional AssignmentStatement
      */
     AstNode parseIfCondition()
         {
@@ -1747,7 +1747,7 @@ public class Parser
                 Expression expr = parseTernaryExpression();
                 if (listLVals == null && (peek().getId() == Id.SEMICOLON || peek().getId() == Id.R_PAREN))
                     {
-                    return new ExpressionStatement(expr, false);
+                    return expr;
                     }
 
                 // otherwise, that expression could be the type expression or the assignable; if the
